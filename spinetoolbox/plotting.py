@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Functions for plotting on PlotWidget.
-"""
+"""Functions for plotting on PlotWidget."""
 import datetime
 from enum import auto, Enum, unique
 import math
@@ -20,14 +19,12 @@ from dataclasses import dataclass, field, replace
 import functools
 from operator import methodcaller, itemgetter
 from typing import Dict, List, Optional, Union
-
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
-from PySide6.QtCore import Qt, QModelIndex
-
+from PySide6.QtCore import Qt
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
-from spinedb_api import Array, IndexedValue, TimeSeries, DateTime
+from spinedb_api import IndexedValue, DateTime
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
@@ -299,7 +296,7 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     plot_widget.canvas.axes.set_title(plot_title)
     for data in data_list:
         if type(data.x[0]) not in (float, np.float_, int):
-            plot_widget.canvas.axes.tick_params(axis='x', labelrotation=30)
+            plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
     if len(squeezed_data) > 1:
         plot_widget.add_legend(legend_handles)
     if needs_redraw:
@@ -701,7 +698,7 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
 
     Args:
         items (list of dict): parameter value items
-        db_maps (list of DatabaseMappingBase): database mappings corresponding to items
+        db_maps (list of DatabaseMapping): database mappings corresponding to items
         plot_widget (PlotWidget, optional): widget to add plots to
     """
     if not items:
@@ -718,14 +715,12 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
         except PlottingError as error:
             raise PlottingError(f"Failed to plot value in {db_map.codename}: {error}")
         db_name = db_map.codename
-        parameter_name = item["parameter_name"]
-        object_name_list = item["object_name_list"]
-        if object_name_list is not None:
-            object_names = tuple(object_name_list.split(","))
-        else:
-            object_names = (item["object_name"],)
+        parameter_name = item["parameter_definition_name"]
+        entity_byname = item["entity_byname"]
+        if not isinstance(entity_byname, tuple):
+            entity_byname = (entity_byname,)
         alternative_name = item["alternative_name"]
-        indexes = (db_name, parameter_name) + object_names + (alternative_name,)
+        indexes = (db_name, parameter_name) + entity_byname + (alternative_name,)
         index_names = _pivot_index_names(indexes)
         node = root_node
         for i, index in enumerate(indexes[:-1]):

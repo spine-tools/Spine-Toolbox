@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Engine is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains tests for the EngineClient class.
-"""
-
-
+"""Contains tests for the EngineClient class."""
 import unittest
-import json
 import os
 from unittest import mock
 from tempfile import TemporaryDirectory
@@ -26,9 +22,7 @@ from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
 from spine_engine.exception import RemoteEngineInitFailed
-from spine_engine.server.util.event_data_converter import EventDataConverter
-from spine_items.tool.tool_specifications import PythonTool
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, add_dc, add_tool
+from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
 client_sec_dir = os.path.join(str(Path(__file__).parent), "client_secfolder")
@@ -175,65 +169,6 @@ class TestEngineClient(unittest.TestCase):
         self.assertTrue(len(job_id) == 32)
         client.remove_project_from_server(job_id)
         client.close()
-
-    # def test_start_execution(self):
-    #     project_zip_fpath = os.path.join(str(Path(__file__).parent), "helloworld.zip")
-    #     client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
-    #     job_id = client.upload_project("Hello World", project_zip_fpath)
-    #     start_execution_response = client.start_execution("", job_id)
-
-    # def test_engine_client_execution(self):
-    #     """Tests EngineClient part when executing a DC->Tool DAG on a remote server."""
-    #     engine_data = self.make_engine_data_for_helloworld_project()
-    #     msg_data_json = json.dumps(engine_data)
-    #     zip_fname = "helloworld.zip"
-    #     zip_fpath = os.path.join(str(Path(__file__).parent), zip_fname)
-    #     client = EngineClient(self.host, self.port, ClientSecurityModel.NONE, "")
-    #     start_event = client.send(msg_data_json, zip_fpath)
-    #     self.assertEqual("remote_execution_started", start_event[0])
-    #     client.connect_sub_socket(start_event[1])
-    #     while True:
-    #         rcv = client.sub_socket.recv_multipart()
-    #         event = EventDataConverter.deconvert(rcv[1])
-    #         if event[0] == "dag_exec_finished":
-    #             if event[1] != "COMPLETED":
-    #                 self.fail()
-    #             break
-    #     client.close()
-
-    # def make_engine_data_for_helloworld_project(self):
-    #     """Returns an engine data dictionary for SpineEngine() for the project in file helloworld.zip.
-    #
-    #     engine_data dict must be the same as what is passed to SpineEngineWorker() in
-    #     spinetoolbox.project.create_engine_worker()
-    #     """
-    #     specification = PythonTool(name="helloworld2", tooltype="python", path="../../..",
-    #                                includes=["helloworld.py"], inputfiles=["input2.txt"],
-    #                                execute_in_work=True, settings=self.toolbox.qsettings(), logger=mock.Mock())
-    #     self.toolbox.project().add_specification(specification, save_to_disk=False)
-    #     add_tool(self.toolbox.project(), self.toolbox.item_factories, "helloworld", tool_spec="helloworld2")
-    #     add_dc(self.toolbox.project(), self.toolbox.item_factories, "Data Connection 1",
-    #            file_refs=[{"type": "path", "relative": True, "path": "input2.txt"}])
-    #     tool_item_dict = self.toolbox.project().get_item("helloworld").item_dict()
-    #     dc_item_dict = self.toolbox.project().get_item("Data Connection 1").item_dict()
-    #     spec_dict = specification.to_dict()
-    #     spec_dict["definition_file_path"] = "./helloworld/.spinetoolbox/specifications/Tool/helloworld2.json"
-    #     item_dicts = dict()
-    #     item_dicts["helloworld"] = tool_item_dict
-    #     item_dicts["Data Connection 1"] = dc_item_dict
-    #     specification_dicts = dict()
-    #     specification_dicts["Tool"] = [spec_dict]
-    #     engine_data = {
-    #         "items": item_dicts,
-    #         "specifications": specification_dicts,
-    #         "connections": [{"from": ["Data Connection 1", "left"], "to": ["helloworld", "right"]}],
-    #         "jumps": [],
-    #         "execution_permits": {"Data Connection 1": True, "helloworld": True},
-    #         "items_module_name": "spine_items",
-    #         "settings": {},
-    #         "project_dir": "./helloworld",
-    #     }
-    #     return engine_data
 
 
 if __name__ == "__main__":

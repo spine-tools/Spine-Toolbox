@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,17 +10,15 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Spine Toolbox project class.
-"""
+"""Spine Toolbox project class."""
 from enum import auto, Enum, unique
 from itertools import chain
 import os
 from pathlib import Path
 import json
-import random
 from PySide6.QtCore import Signal, QCoreApplication
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QMessageBox
 import networkx as nx
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
@@ -154,8 +153,50 @@ class SpineToolboxProject(MetaObject):
         return list(self._project_items)
 
     @property
+    def n_items(self):
+        return len(self.all_item_names)
+
+    @property
     def settings(self):
         return self._settings
+
+    def has_items(self):
+        """Returns True if project has project items.
+
+        Returns:
+            bool: True if project has items, False otherwise
+        """
+        return bool(self._project_items)
+
+    def get_item(self, name):
+        """Returns project item.
+
+        Args:
+            name (str): Item's name
+
+        Returns:
+            ProjectItem: Project item
+        """
+        return self._project_items[name]
+
+    def get_items(self):
+        """Returns all project items.
+
+        Returns:
+            list of ProjectItem: All project items
+        """
+        return list(self._project_items.values())
+
+    def get_items_by_type(self, _type):
+        """Returns all project items with given _type.
+
+        Args:
+            _type (str): Project Item type
+
+        Returns:
+            list of ProjectItem: Project Items with given type or an empty list if none found
+        """
+        return [item for item in self.get_items() if item.item_type() == _type]
 
     def _create_project_structure(self, directory):
         """Makes the given directory a Spine Toolbox project directory.
@@ -284,6 +325,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             bool: True if the operation was successful, False otherwise
         """
+        self._toolbox.ui.textBrowser_eventlog.clear()
         project_dict = load_project_dict(self.config_dir, self._logger)
         if project_dict is None:
             return False
@@ -315,7 +357,7 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit("Loading project items...")
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
-        self.restore_project_items(items_dict, item_factories, silent=True)
+        self.restore_project_items(items_dict, item_factories)
         self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
         connections = list(map(self.connection_from_dict, connection_dicts))
@@ -574,12 +616,11 @@ class SpineToolboxProject(MetaObject):
                 return None
         return candidate_path
 
-    def add_item(self, item, silent=True):
-        """Adds a project to item project.
+    def add_item(self, item):
+        """Adds a project item to project.
 
         Args:
             item (ProjectItem): item to add
-            silent (bool): if True, don't log messages
         """
         if item.name in self._project_items:
             raise RuntimeError("Item already in project.")
@@ -587,35 +628,6 @@ class SpineToolboxProject(MetaObject):
         name = item.name
         self.item_added.emit(name)
         item.set_up()
-        if not silent:
-            self._logger.msg.emit(f"{item.item_type()} <b>{name}</b> added to project")
-
-    def has_items(self):
-        """Returns True if project has project items.
-
-        Returns:
-            bool: True if project has items, False otherwise
-        """
-        return bool(self._project_items)
-
-    def get_item(self, name):
-        """Returns project item.
-
-        Args:
-            name (str): item's name
-
-        Returns:
-            ProjectItem: project item
-        """
-        return self._project_items[name]
-
-    def get_items(self):
-        """Returns all project items.
-
-        Returns:
-            list of ProjectItem: all project items
-        """
-        return list(self._project_items.values())
 
     def rename_item(self, previous_name, new_name, rename_data_dir_message):
         """Renames a project item
@@ -746,7 +758,24 @@ class SpineToolboxProject(MetaObject):
         self.connection_established.emit(connection)
         self._update_jump_icons()
         if not self._is_dag_valid(dag):
-            return True  # Connection was added successfully even though DAG is not valid.
+            self.remove_connection(connection)
+            msg = "This connection creates a cycle into the DAG.\n\nWould you like to add a Loop connection?"
+            title = f"Add Loop?"
+            message_box = QMessageBox(
+                QMessageBox.Icon.Question,
+                title,
+                msg,
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                parent=self._toolbox,
+            )
+            message_box.button(QMessageBox.StandardButton.Ok).setText("Add Loop")
+            answer = message_box.exec()
+            if answer == QMessageBox.StandardButton.Cancel:
+                return False
+            src_conn = self.get_item(connection.source).get_icon().conn_button(connection.source_position)
+            dst_conn = self.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
+            self._toolbox.ui.graphicsView.add_jump(src_conn, dst_conn)
+            return False
         destination = self._project_items[connection.destination]
         source = self._project_items[connection.source]
         if notify_resource_changes:
@@ -906,13 +935,12 @@ class SpineToolboxProject(MetaObject):
         """Returns the DiGraph that contains the given node (project item) name (str)."""
         return next((x for x in self._dag_iterator() if x.has_node(node)), None)
 
-    def restore_project_items(self, items_dict, item_factories, silent):
+    def restore_project_items(self, items_dict, item_factories):
         """Restores project items from dictionary.
 
         Args:
             items_dict (dict): a mapping from item name to item dict
             item_factories (dict): a mapping from item type to ProjectItemFactory
-            silent (bool): if True, suppress a log messages
         """
         for item_name, item_dict in items_dict.items():
             try:
@@ -940,7 +968,7 @@ class SpineToolboxProject(MetaObject):
                 )
                 continue
             project_item.copy_local_data(item_dict)
-            self.add_item(project_item, silent)
+            self.add_item(project_item)
 
     def remove_item_by_name(self, item_name, delete_data=False):
         """Removes project item by its name.
@@ -1013,7 +1041,7 @@ class SpineToolboxProject(MetaObject):
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
             self._engine_workers.append(worker)
         timestamp = create_timestamp()
-        self._toolbox.start_execution(timestamp)
+        self._toolbox.make_execution_timestamp(timestamp)
         # NOTE: Don't start the workers as they are created. They may finish too quickly, before the others
         # are added to ``_engine_workers``, and thus ``_handle_engine_worker_finished()`` will believe
         # that the project is done executing before it's fully loaded.
@@ -1106,12 +1134,12 @@ class SpineToolboxProject(MetaObject):
         for dag in [dag for dag in self._dag_iterator() if set(names) & dag.nodes]:
             more_dags = self._split_to_subdags(dag, names)
             dags += more_dags
+        valid_dags = self._validate_dags(dags)
         execution_permit_list = list()
-        for dag in dags:
+        for dag in valid_dags:
             execution_permits = {name: name in names for name in dag.nodes}
             execution_permit_list.append(execution_permits)
-        self._validate_dags(dags)
-        self.execute_dags(dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
+        self.execute_dags(valid_dags, execution_permit_list, "Executing Selected Directed Acyclic Graphs")
 
     def _split_to_subdags(self, dag, selected_items):
         """Checks if given dag contains weakly connected components. If it does,
@@ -1127,8 +1155,13 @@ class SpineToolboxProject(MetaObject):
         """
         if len(dag.nodes) == 1:
             return [dag]
+        # Get selected items that are in current dag
+        selected_items_in_this_dag = list()
+        for selected_item in list(selected_items):
+            if selected_item in list(dag.nodes()):
+                selected_items_in_this_dag.append(selected_item)
         # List of Connections that have a selected item as its source or destination item
-        connections = connections_to_selected_items(self._connections, set(selected_items))
+        connections = connections_to_selected_items(self._connections, set(selected_items_in_this_dag))
         edges = dag_edges(connections)
         d = make_dag(edges)  # Make DAG as SpineEngine does it
         if nx.number_weakly_connected_components(d) > 1:
@@ -1412,12 +1445,7 @@ class SpineToolboxProject(MetaObject):
 
     def _is_dag_valid(self, dag):
         if not nx.is_directed_acyclic_graph(dag):
-            edges = _edges_causing_loops(dag)
-            for node in dag.nodes:
-                self._project_items[node].invalidate_workflow(edges)
             return False
-        for node in dag.nodes:
-            self._project_items[node].revalidate_workflow()
         return True
 
     def _update_ranks(self, dag):
@@ -1488,7 +1516,8 @@ class SpineToolboxProject(MetaObject):
         return job_id
 
     def finalize_remote_execution(self, job_id):
-        """Sends a request to server to remove the project directory and removes the project ZIP file from client.y
+        """Sends a request to server to remove the project directory. In addition,
+        removes the project ZIP file from client machine.
 
         Args:
             job_id (str): job id
@@ -1539,31 +1568,8 @@ def node_successors(g):
     return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
 
-def _edges_causing_loops(g):
-    """Returns a list of edges whose removal from g results in it becoming acyclic.
-
-    Args:
-        g (DiGraph)
-
-    Returns:
-        list
-    """
-    result = list()
-    h = g.copy()  # Let's work on a copy of the graph
-    while True:
-        try:
-            cycle = list(nx.find_cycle(h))
-        except nx.NetworkXNoCycle:
-            break
-        edge = random.choice(cycle)
-        h.remove_edge(*edge)
-        result.append(edge)
-    return result
-
-
 def _ranks(node_successors):
-    """
-    Calculates node ranks.
+    """Calculates node ranks.
 
     Args:
         node_successors (dict): a mapping from successor name to a list of predecessor names

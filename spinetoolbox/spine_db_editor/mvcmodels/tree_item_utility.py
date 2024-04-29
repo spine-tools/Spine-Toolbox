@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,14 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A tree model for parameter_value lists.
-"""
-
+"""A tree model for parameter_value lists."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks
+from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 
 
@@ -39,8 +37,7 @@ class StandardTreeItem(TreeItem):
     def icon_code(self):
         return None
 
-    @property
-    def tool_tip(self):
+    def tool_tip(self, column):
         return None
 
     @property
@@ -51,15 +48,15 @@ class StandardTreeItem(TreeItem):
         return QIcon(engine.pixmap())
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ToolTipRole:
+            return self.tool_tip(column)
         if column != 0:
             return None
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return self.display_data
         if role == Qt.ItemDataRole.DecorationRole:
             return self.display_icon
-        if role == Qt.ItemDataRole.ToolTipRole:
-            return self.tool_tip
-        return super().data(column, role)
+        return super().data(0, role)
 
     def set_data(self, column, value, role=Qt.ItemDataRole.DisplayRole):
         return False
@@ -87,7 +84,7 @@ class GrayIfLastMixin:
     """Paints the item gray if it's the last."""
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ForegroundRole and self.child_number() == self.parent_item.child_count() - 1:
+        if role == Qt.ForegroundRole and self.child_number() == self.parent_item.row_count() - 1:
             gray_color = QGuiApplication.palette().text().color()
             gray_color.setAlpha(128)
             gray_brush = QBrush(gray_color)
@@ -134,15 +131,6 @@ class SortChildrenMixin:
                 return False
         return True
 
-    def _resort(self):
-        # FIXME MM Needed?
-        non_empty_children, empty_child = self.children[:-1], self.children[-1]
-        non_empty_children.sort(key=self._children_sort_key)
-        self.children = non_empty_children + [empty_child]
-        top = self.model.index_from_item(self.child(0))
-        bottom = self.model.index_from_item(self.child(-1))
-        self.model.dataChanged.emit(top, bottom)
-
 
 class FetchMoreMixin:
     def __init__(self, *args, **kwargs):
@@ -158,6 +146,7 @@ class FetchMoreMixin:
     def tear_down(self):
         super().tear_down()
         self._natural_fetch_parent.set_obsolete(True)
+        self._natural_fetch_parent.deleteLater()
 
     @property
     def fetch_item_type(self):
@@ -179,6 +168,12 @@ class FetchMoreMixin:
     def _make_child(self, id_):
         raise NotImplementedError()
 
+    def _do_make_child(self, id_):
+        child = self._created_children.get(id_)
+        if child is None:
+            child = self._created_children[id_] = self._make_child(id_)
+        return child
+
     def accepts_item(self, item, db_map):
         return True
 
@@ -197,8 +192,8 @@ class FetchMoreMixin:
                 continue
             ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
             ids.append(item["id"])
-        children_committed = [self._make_child(id_) for id_ in ids_committed]
-        children_uncommitted = [self._make_child(id_) for id_ in ids_uncommitted]
+        children_committed = [self._do_make_child(id_) for id_ in ids_committed]
+        children_uncommitted = [self._do_make_child(id_) for id_ in ids_uncommitted]
         self.insert_children_sorted(children_committed)
         self.insert_children(len(self.non_empty_children), children_uncommitted)
 
@@ -221,21 +216,21 @@ class FetchMoreMixin:
             self.model.dataChanged.emit(index, index)
             if leaf_item.children:
                 top_left = self.model.index_from_item(leaf_item.child(0))
-                bottom_right = self.model.index_from_item(leaf_item.child(-1))
+                bottom_right = self.model.index_from_item(leaf_item.child(leaf_item.child_count() - 1))
                 self.model.dataChanged.emit(top_left, bottom_right)
 
 
 class StandardDBItem(SortChildrenMixin, StandardTreeItem):
     """An item representing a db."""
 
-    def __init__(self, db_map):
+    def __init__(self, model, db_map):
         """Init class.
 
-        Args
-            db_mngr (SpineDBManager)
-            db_map (DiffDatabaseMapping)
+        Args:
+            model (MinimalTreeModel)
+            db_map (DatabaseMapping)
         """
-        super().__init__()
+        super().__init__(model)
         self.db_map = db_map
 
     @property
@@ -252,30 +247,14 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
             return self.db_map.codename
 
 
-class RootItem(SortChildrenMixin, BoldTextMixin, FetchMoreMixin, StandardTreeItem):
-    """A root item."""
-
-    @property
-    def item_type(self):
-        raise NotImplementedError
-
-    @property
-    def db_map(self):
-        return self.parent_item.db_map
-
-
-class EmptyChildRootItem(EmptyChildMixin, RootItem):
-    def empty_child(self):
-        raise NotImplementedError
-
-
 class LeafItem(StandardTreeItem):
-    def __init__(self, identifier=None):
+    def __init__(self, model, identifier=None):
         """
         Args:
+            model (MinimalTreeModel)
             identifier (int, optional): item's database id
         """
-        super().__init__()
+        super().__init__(model)
         self._id = identifier
 
     def _make_item_data(self):
@@ -302,6 +281,11 @@ class LeafItem(StandardTreeItem):
     @property
     def name(self):
         return self.item_data["name"]
+
+    def tool_tip(self, column):
+        if column != 0 and (header_data := self.header_data(column)) == "description":
+            return plain_to_tool_tip(self.item_data.get(header_data))
+        return super().tool_tip(column)
 
     def add_item_to_db(self, db_item):
         raise NotImplementedError()

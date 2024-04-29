@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -25,9 +26,10 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QComboBox, QFormLayout, QHBoxLayout,
-    QHeaderView, QLabel, QSizePolicy, QSpacerItem,
-    QSplitter, QStackedWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QFormLayout,
+    QHBoxLayout, QHeaderView, QLabel, QSizePolicy,
+    QSpacerItem, QSplitter, QStackedWidget, QVBoxLayout,
+    QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import ArrayTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
@@ -69,6 +71,8 @@ class Ui_Form(object):
 
         self.array_table_view = ArrayTableView(self.verticalLayoutWidget)
         self.array_table_view.setObjectName(u"array_table_view")
+        self.array_table_view.setMinimumSize(QSize(250, 0))
+        self.array_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.array_table_view.horizontalHeader().setStretchLastSection(True)
         self.array_table_view.verticalHeader().setVisible(False)
 

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Class for a custom QTextBrowser for showing the logs and tool output.
-"""
-
+"""Class for a custom QTextBrowser for showing the logs and tool output."""
 from contextlib import contextmanager
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QTextCursor, QFontDatabase, QTextBlockFormat, QTextFrameFormat, QBrush, QAction, QPalette
@@ -124,9 +122,9 @@ class CustomQTextBrowser(QTextBrowser):
 
     @staticmethod
     def _make_log_entry_title(title):
-        return f'<b>{title}</b>'
+        return f"<b>{title}</b>"
 
-    def start_execution(self, timestamp):
+    def make_log_entry_point(self, timestamp):
         """Creates cursors (log entry points) for given items in event log.
 
         Args:

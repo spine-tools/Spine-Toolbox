@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,20 +10,17 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the metadata table model.
-"""
+"""Unit tests for the metadata table model."""
 import itertools
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 
 class TestMetadataTableModel(unittest.TestCase):
@@ -39,12 +37,11 @@ class TestMetadataTableModel(unittest.TestCase):
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
         QApplication.processEvents()
         self._model = MetadataTableModel(self._db_mngr, [self._db_map], None)
-        if self._model.canFetchMore(QModelIndex()):
-            self._model.fetchMore(QModelIndex())
+        fetch_model(self._model)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._model.deleteLater()
@@ -104,14 +101,15 @@ class TestMetadataTableModel(unittest.TestCase):
             try:
                 db_map_2 = self._db_mngr.get_db_map(url, logger, codename="2nd database", create=True)
                 self._model.set_db_maps([self._db_map, db_map_2])
-                if self._model.canFetchMore(None):
-                    self._model.fetchMore(None)
+                fetch_model(self._model)
                 index = self._model.index(1, Column.DB_MAP)
                 self.assertTrue(self._model.setData(index, "2nd database"))
                 index = self._model.index(1, Column.NAME)
                 self.assertTrue(self._model.setData(index, "title"))
                 index = self._model.index(1, Column.VALUE)
                 self.assertTrue(self._model.setData(index, "My precious."))
+                while self._model.rowCount() != 3:
+                    QApplication.processEvents()
             finally:
                 self._db_mngr.close_session(url)
         self.assertEqual(self._model.rowCount(), 3)
@@ -124,10 +122,10 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "2nd database")
 
     def test_add_and_update_via_adding_entity_metadata(self):
-        db_map_data = {self._db_map: [{"name": "object class"}]}
-        self._db_mngr.add_object_classes(db_map_data)
+        db_map_data = {self._db_map: [{"name": "object class", "id": 1}]}
+        self._db_mngr.add_entity_classes(db_map_data)
         db_map_data = {self._db_map: [{"class_id": 1, "name": "object"}]}
-        self._db_mngr.add_objects(db_map_data)
+        self._db_mngr.add_entities(db_map_data)
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
         self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
@@ -141,7 +139,7 @@ class TestMetadataTableModel(unittest.TestCase):
                 {"entity_name": "object", "metadata_name": "source", "metadata_value": "The Internet"},
             ]
         }
-        self._db_mngr.add_entity_metadata(db_map_data)
+        self._db_mngr.add_ext_entity_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -251,14 +249,11 @@ class TestMetadataTableModel(unittest.TestCase):
     def test_roll_back(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
         self._db_mngr.add_metadata(db_map_data)
-        with signal_waiter(self._db_mngr.session_committed) as waiter:
-            self._db_mngr.commit_session("Add test data.", self._db_map)
-            waiter.wait()
+        self._db_mngr.commit_session("Add test data.", self._db_map)
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "title"))
         index = self._model.index(1, Column.VALUE)
         self.assertTrue(self._model.setData(index, "My precious."))
-        self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -267,10 +262,7 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(1, Column.VALUE).data(), "My precious.")
         self.assertEqual(self._model.index(1, Column.DB_MAP).data(), "database")
         self._assert_empty_last_row()
-        with signal_waiter(self._db_mngr.session_rolled_back) as waiter:
-            self._db_mngr.rollback_session(self._db_map)
-            waiter.wait()
-        self._model.rollback([self._db_map])
+        self._db_mngr.rollback_session(self._db_map)
         self._db_mngr.add_metadata(db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
@@ -285,5 +277,5 @@ class TestMetadataTableModel(unittest.TestCase):
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "database")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

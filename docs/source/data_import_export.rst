@@ -69,53 +69,48 @@ question so it is easier to visualize how the importer is handling the data.
 Importer specification editor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The left side of the **Importer Specification Editor** contains four dock widgets that deal with the input source data.
-**Source files** contains the filepath to the current input file.
-**Source tables** contains the different tables the file has or that user has set up.
-**Source options** has a few options on how to handle the incoming data.
-The available options depend on the connector type.
-**Source data** allows for previewing of the data selected in **Source files**
-and also of the currently selected mapping.
-
-The right side of the spec editor shows import mappings for the table selected in **Source tables**.
-**Mappings** lets you add, duplicate and remove mappings or
-select a mapping to modify its options. **Mapping options** allow you to specify things like what item type
-you are importing. In **Mapping specification** you can select the specific places in the source data where the
-object names, values etc. will be taken from.
+In the upper part of the specification editor, the name and description for the specification can be set.
+Underneath, the filepath is shown and it is allowed to br modified. Next to the filepath the used connector type
+is shown. On the left side, the different tables the file has or that user has set up are shown. Next to that
+there are the connector specific options and underneath that a preview of the selected table is shown. The items in
+the table are highlighted according to the selected mapping. The mappings are listed on the right side of the editor.
+underneath, the to be imported item types can be specified and other options set. Below that
+you can select the specific places in the source data where the entity names, values etc. will be taken from.
 
 .. image:: img/import_editor_window.png
    :align: center
 
-All tables available in the file selected in **Source files** are listed in **Source tables**.
+All tables available in the file selected in **File path** are listed in the leftmost dock widget.
 If the file does not have tables or the file type does not support them (e.g. CSV), all of the file's data will be
 in a single table called 'data'.
 The tables can be selected and deselected using the check boxes
 and only the selected ones will be imported.
 The option *Select All* is useful for selecting or deselecting all tables.
-If the Importer is opened in `anonymous mode`_, there is also the option to add tables.
+If the Importer is opened in `anonymous mode`_, there is also the option to add tables
 
 .. tip:: Multiple CSV files can be bundled into a *datapackage* which uses its own connector in Importer.
    Specifically, each CSV file in the datapackage shows up as a separate table in **Source tables**.
    See :ref:`Setting up datapackages in Links` for more information on how to pack CSVs into a datapackage
    automatically within your workflow.
 
-**Source options** contains options to "format" the incoming data. The available options can differ depending on the
-selected connector. The above picture shows the available options for Excel files. **Max rows** specifies the amount of
-rows from the input data that are considered by the Importer. The option **Has header** converts the first row into
-headers. **Skip rows** and **Skip columns** skip the first *N* specified rows or columns from the table.
-If the table has empty rows or columns and some other data after that that you don't want to use,
-**Read until empty row/column on first column/row** options can be used to "crop" the imported data to the
-first relevant block of information. Other possible options for different connector types include
-**Encoding**, **Delimiter**, **Custom Delimiter**, **Quotechar** and **Maximum Depth**.
-**Load default mapping** sets all of the selections in the spec editor
-to their default values. Be careful not to press this button unless you want to wipe the whole specification clean.
+Next to the table dock widget, there is a small dock widget that allows to "format" the incoming data.
+The available options can differ depending on the selected connector. The above picture shows the available
+options for Excel files. **Max rows** specifies the amount of rows from the input data that are considered
+by the Importer. The option **Has header** converts the first row into headers. **Skip rows** and **Skip columns**
+skip the first *N* specified rows or columns from the table. If the table has empty rows or columns and some
+other data after that that you don't want to use, **Read until empty row/column on first column/row** options
+can be used to "crop" the imported data to the first relevant block of information. Other possible options for
+different connector types include **Encoding**, **Delimiter**, **Custom Delimiter**, **Quotechar** and
+**Maximum Depth**. **Load default mapping** sets all of the selections in the spec editor to their default values.
+Be careful not to press this button unless you want to wipe the whole specification clean.
 
 .. note:: If you are working on a specification and accidentally press the *load default mapping* button
           you can undo previous changes for the specification from the hamburger menu or by pressing **Ctrl+Z**.
           To redo actions, or press **Crl+Y**.
 
-**Source data** shows the selected table's data and a preview of how the selected mapping will import the data.
-An important aspect of data import is whether each item in the input data should be read as a string, a number,
+When a table is selected, it's data and a preview of how the selected mapping will
+import the data will be presented under the options dock widget. An important aspect of data import is
+whether each item in the input data should be read as a string, a number,
 a time stamp or something else. By default all input data is read as strings.
 However, more often than not things like parameter values are actually numbers. Though types are usually casted automatically,
 it is possible to manually control what type of data each column (and sometimes each row) contains from the preview table.
@@ -127,26 +122,27 @@ Right clicking the column/row header also gives the opportunity to change the da
 
 Under **Mappings** you can manage mappings by adding new ones and removing or duplicating existing ones.
 Each table has it's own mappings and every mapping has its own options. In **Mappings** you can select the mapping
-that you want to start modifying. Having multiple mappings for a single table allows to for example import relationship
-classes and object classes at the same time from a single table in a file.
+that you want to start modifying. Having multiple mappings for a single table allows to for example import
+multiple item types at the same time from a single table in a file.
 
-**Mapping options** helps the importer get a feel for what kind of data it will be importing.
-The available *item type* options are *Object class, Relationship class, Object group, Alternative, Scenario,
-Scenario alternative, Parameter value list, Feature, Tool, Tool feature* and *Tool feature method*. The other available
-options are dependent on the Item type. *Import objects* allows to import objects alongside relationships
-or object groups. *Parameter type* is used to specify what type of parameters, if any, the sheet contains. It has options
+Underneath **Mappings** there are options that help the importer get a feel for what kind of data it will be importing.
+The available *item type* options are *Entity class, Entity group, Alternative, Scenario,
+Scenario alternative* and *Parameter value list*. The other available
+options are dependent on the Item type. *Import entities* allows to import entities alongside
+or entity groups. *Parameter type* is used to specify what type of parameters, if any, the sheet contains. It has options
 *Value, Definition* and *None*. If *Value* or *Definition* is selected
 the value or respectively the default value type can be set from the drop-down list. *Use before alternative* is only
 available for *Scenario alternative* -item type. *Read data from row* lets you specify the row where the importer
 starts to read the data. *Ignore columns* allow you to select individual columns that you want to exclude from the
-whole importing process. *Number of dimensions* sets the amount of dimensions the relationship to be imported has.
+whole importing process. *Number of dimensions* sets the amount of dimensions the entity to be imported has.
 *Repeat time series* sets the repeat flag to true when importing time series. *Map dimensions* sets the
-number of map indexes when importing map values.
+number of map indexes when importing map values. *Use before alternative* maps scenario before alternatives when
+importing scenario alternatives. *Compress Maps* can be used to compress value maps.
 
-Once everything in **Mapping options** is in order, the next step is to set the mapping specification.
-**Mapping specification** is the part where the decisions are made on how the input data is interpreted:
+Once everything in the before mentioned options is in order, the next step is to set the mapping specification.
+Below the options there is the part where the decisions are made on how the input data is interpreted:
 which row or column contains the entity class names, parameter values, time stamps and so on.
-The **Mapping specification** dock widget contains all of the targets that the selected mapping options specify.
+The dock widget contains all of the targets that the selected mapping options specify.
 Each target has a *Source reference* and a *Source type*. *Source type* specifies if the data for the target
 is coming in the form of a column, row, table name etc. In the *Source ref.* section you can pinpoint to the
 exact row, column etc. to use as the data. The *Filter* section can be used to further specify which values to
@@ -172,12 +168,12 @@ opening the spec editor from Toolbox **Main Toolbar**.
 .. image:: img/importer_spec_editor_anonymous_mode.png
    :align: center
 
-In anonymous mode new tables can be created in **Source tables** by double clicking *<rename this to add table>*
-and writing in a name for the new table. The **Source data** will contain an infinite grid of cells on which you
+In anonymous mode new tables can be created by double clicking *<rename this to add table>*
+and writing in a name for the new table. The preview will show an infinite grid of cells on which you
 can create different mappings.
 
 .. note:: You can exit the Anonymous mode by browsing to and selecting an existing file using the controls in
-   **Source files** dock.
+   *File path*.
 
 Exporting data with Exporter
 ****************************
@@ -192,8 +188,8 @@ By default data is mapped to columns but it is also possible to create pivot tab
 
 Exporter also uses specifications so the same configurations
 can be reused by other exporters even in other projects.
-The specification can be edited in *Exporter specification editor*
-which is accessible by the |wrench| button in the item's Properties dock
+The specification can be edited in **Exporter specification editor**
+which is accessible by the |wrench| button in the item's **Properties** dock
 or by double clicking Exporter's icon on the **Design View**.
 A specification that is not associated with any specific Exporter project item can be created
 and edited from the Main toolbar.
@@ -201,14 +197,14 @@ and edited from the Main toolbar.
 Properties dock
 ~~~~~~~~~~~~~~~
 
-Exporter's Properties dock controls project item specific settings
+Exporter's **Properties** dock controls project item specific settings
 that are not part of the item's specification.
 
 .. image:: img/exporter_properties.png
    :align: center
 
 Specification used by the active Exporter item can be selected from the *Specification* combobox.
-The |wrench| button opens *Exporter specification editor*
+The |wrench| button opens **Exporter specification editor**
 where it is possible to edit the specification.
 
 Data Stores that are connected to the exporter and are available for export are listed below
@@ -291,18 +287,18 @@ The currently selected mapping is edited using the controls in *Mapping options*
 The *Mapping options* dock contains controls that apply to the mapping as a whole, e.g. what data the output tables
 contain. It is important to choose *Item type* correctly since it determines what database items the mapping outputs
 and also dictates the mapping types that will be visible in the *Mapping specification* dock widget. It has options
-*Object class, Relationship class, Relationship class with object parameter, Object group, Alternative, Scenario,
-Scenario alternative, Parameter value list, Feature, Tool, Tool feature* and *Tool feature method*. The rest of the
+*Entity class, Entity class with dimension parameter, Entity group, Alternative, Scenario,
+Scenario alternative* and *Parameter value list*. The rest of the
 options besides *Group function* are item type specific and may not be available for all selections.
 
 .. image:: img/exporter_mapping_options_dock.png
    :align: center
 
 Checking the *Always export header* checkbox outputs a table that has fixed headers even if the table is
-otherwise empty. If *Item type* is Relationship class, the *Relationship dimensions* spinbox can be used
-to specify the maximum number of relationships' dimensions that the mapping is able to handle.
-*Selected dimensions* option is only available for the *Relationship class with object parameter* item
-type and it is used to specify the relationship dimension where the object parameters are selected from.
+otherwise empty. If *Item type* is Entity class, the *Entity dimensions* spinbox can be used
+to specify the maximum number of entity's dimensions that the mapping is able to handle.
+*Selected dimensions* option is only available for the *Entity class with dimension parameter* item
+type and it is used to specify the entity dimension where the entity parameters are selected from.
 Parameters can be outputted by choosing their value type using the *Parameter type* combobox. The *Value*
 choice adds rows to *Mapping specification* for parameter values associated with individual entities while
 *Default value* allows outputting parameters' default values. The maximum number of value dimensions in
@@ -322,7 +318,7 @@ Mapping specification
 *Mapping specification* contains a table which defines the structure of the mapping's output tables.
 Like mentioned before, the contents of the table depends on choices on *Mapping options*,
 e.g. the item type, parameter type or dimensions.
-Each row corresponds to an item in the database: object class names, object names, parameter values etc.
+Each row corresponds to an item in the database: entity class names, entity names, parameter values etc.
 The item's name is given in the *Mapping type* column.
 The colors help to identify the corresponding elements in the preview.
 
@@ -331,16 +327,16 @@ that is, where the item is written or otherwise used when the output tables are 
 By default, a plain integral number in this column means that the item is written to that column in the output table.
 From the other choices, *hidden* means that the item will not show on the output.
 *Table name*, on the other hand, uses the item as output table names.
-For example, outputting object classes as table names will generate one new table for every object class
+For example, outputting entity classes as table names will generate one new table for every entity class
 in the database, each named after the class.
-Each table in turn will contain the parameters and objects of the table's object class.
+Each table in turn will contain the parameters and entities of the table's entity class.
 If multiple mappings generate a table with a common name then each mapping appends to the same table
 in the order specified by the *Write order* column on *Mappings* dock.
 
 The *column header* position makes the item a column header for a **buddy item**.
 Buddy items have some kind of logical relationship with their column header,
-for instance the buddy of an object class is its objects;
-setting the object class to *column header* will write the name of the class as the objects' column header.
+for instance the buddy of an entity class is its entities;
+setting the entity class to *column header* will write the name of the class as the entity's column header.
 
 .. note::
    Currently, buddies are fixed and defined only for a small set database items.
@@ -357,12 +353,12 @@ They then act as a pivot header for the data item which is the last non-hidden i
 Once checked as pivoted, an item's position column defines a pivot header row instead of output column.
 
 By default a row ends up in the output table only when all mapping items yield some data.
-For example, when exporting object classes and objects, only classes that have objects get written to output.
-However, sometimes it is useful to export 'empty' object classes as well.
+For example, when exporting entity classes and entities, only classes that have entities get written to output.
+However, sometimes it is useful to export 'empty' entity classes as well.
 For this purpose a mapping can be set as **nullable** in the *Nullable* column.
-Continuing the example, checking the *Nullable* checkbox for *Objects* would produce an output table with
-all object classes including ones without objects.
-The position where objects would normally be outputted are left empty for those classes.
+Continuing the example, checking the *Nullable* checkbox for *Entities* would produce an output table with
+all entity classes including ones without entities.
+The position where entities would normally be outputted are left empty for those classes.
 
 Besides the *column header* position it is possible to give fixed column headers to items
 using the *Header* column in *Mapping specification* dock.
@@ -457,11 +453,11 @@ for these applications.
 
 *Single item*
     Writing the item's name to the field filters out all other items.
-    For example, to output the object class called 'node' only, write :literal:`node` to the *Filter* field.
+    For example, to output the entity class called 'node' only, write :literal:`node` to the *Filter* field.
 
 *OR operator*
     The vertical bar :literal:`|` serves as the OR operator.
-    :literal:`node|unit` as a filter for object classes would output classes named 'node' and 'unit'.
+    :literal:`node|unit` as a filter for entity classes would output classes named 'node' and 'unit'.
 
 *Excluding an item*
     While perhaps not the most suitable task for regular expressions it is still possible to 'negate' a filter.

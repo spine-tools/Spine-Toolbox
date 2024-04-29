@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom context menus and pop-up menus.
-"""
-
+"""Classes for custom context menus and pop-up menus."""
 import os
 from PySide6.QtWidgets import QMenu, QWidgetAction
 from PySide6.QtGui import QIcon, QAction
@@ -238,7 +236,7 @@ class FilterMenuBase(QMenu):
         """
         super().__init__(parent)
         self._filter = None
-        self._remove_filter = QAction('Remove filters', None)
+        self._remove_filter = QAction("Remove filters", None)
         self._filter_action = QWidgetAction(self)
         self.addAction(self._remove_filter)
 
@@ -278,7 +276,3 @@ class FilterMenuBase(QMenu):
 
     def emit_filter_changed(self, valid_values):
         raise NotImplementedError()
-
-    def wipe_out(self):
-        self._filter._filter_model.set_list(set())
-        self.deleteLater()

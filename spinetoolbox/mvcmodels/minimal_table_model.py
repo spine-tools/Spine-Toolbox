@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,17 +10,15 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a minimal table model.
-"""
-
+""" Contains a minimal table model. """
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-    def __init__(self, parent=None, header=None, lazy=True):
-        """Table model for outlining simple tabular data.
+    """Table model for outlining simple tabular data."""
 
+    def __init__(self, parent=None, header=None, lazy=True):
+        """
         Args:
             parent (QObject, optional): the parent object
             header (list of str): header labels
@@ -28,6 +27,7 @@ class MinimalTableModel(QAbstractTableModel):
         super().__init__(parent)
         if header is None:
             header = []
+        self._parent = parent
         self.header = header
         self._main_data = list()
         self._fetched = not lazy

@@ -1,0 +1,79 @@
+{
+    "project": {
+        "version": 13,
+        "description": "",
+        "settings": {
+            "enable_execute_all": true
+        },
+        "specifications": {
+            "Exporter": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Exporter/export_entities.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Test data to Exporter",
+                "from": [
+                    "Test data",
+                    "right"
+                ],
+                "to": [
+                    "Exporter",
+                    "left"
+                ],
+                "options": {
+                    "require_scenario_filter": true
+                },
+                "filter_settings": {
+                    "known_filters": {
+                        "db_url@Test data": {
+                            "scenario_filter": {
+                                "base_scenario": true
+                            }
+                        }
+                    },
+                    "auto_online": true
+                }
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Test data": {
+            "type": "Data Store",
+            "description": "",
+            "x": -115.31149147072384,
+            "y": 22.059589672660213,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": "Test data.sqlite"
+                },
+                "schema": ""
+            }
+        },
+        "Exporter": {
+            "type": "Exporter",
+            "description": "",
+            "x": 17.046046565237432,
+            "y": 22.05958967266021,
+            "output_time_stamps": false,
+            "cancel_on_error": true,
+            "output_labels": [
+                {
+                    "in_label": "db_url@Test data",
+                    "out_label": "data.csv"
+                }
+            ],
+            "specification": "Export entities"
+        }
+    }
+}

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-QUndoCommand subclasses for modifying the project.
-"""
-
+"""QUndoCommand subclasses for modifying the project."""
 from PySide6.QtGui import QUndoCommand
 from spine_engine.project_item.connection import Jump
 
@@ -32,31 +30,37 @@ class SpineToolboxCommand(QUndoCommand):
 
 
 class SetItemSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, item, spec, old_spec):
-        """Command to set the specification for a Tool.
+    """Command to set the specification for a project item."""
 
+    def __init__(self, item_name, spec, old_spec, project):
+        """
         Args:
-            item (ProjectItem): the Item
+            item_name (str): item's name
             spec (ProjectItemSpecification): the new spec
             old_spec (ProjectItemSpecification): the old spec
+            project (SpineToolboxProject): project
         """
         super().__init__()
-        self.item = item
-        self.spec = spec
-        self.old_spec = old_spec
-        self.setText(f"set specification of {item.name}")
+        self._item_name = item_name
+        self._spec = spec
+        self._old_spec = old_spec
+        self._project = project
+        self.setText(f"set specification of {item_name}")
 
     def redo(self):
-        self.item.do_set_specification(self.spec)
+        item = self._project.get_item(self._item_name)
+        item.do_set_specification(self._spec)
 
     def undo(self):
-        self.item.do_set_specification(self.old_spec)
+        item = self._project.get_item(self._item_name)
+        item.do_set_specification(self._old_spec)
 
 
 class MoveIconCommand(SpineToolboxCommand):
-    def __init__(self, icon, project):
-        """Command to move icons in the Design view.
+    """Command to move icons in the Design view."""
 
+    def __init__(self, icon, project):
+        """
         Args:
             icon (ProjectItemIcon): the icon
             project (SpineToolboxProject): project
@@ -89,9 +93,10 @@ class MoveIconCommand(SpineToolboxCommand):
 
 
 class SetProjectDescriptionCommand(SpineToolboxCommand):
-    def __init__(self, project, description):
-        """Command to set the project description.
+    """Command to set the project description."""
 
+    def __init__(self, project, description):
+        """
         Args:
             project (SpineToolboxProject): the project
             description (str): The new description
@@ -110,9 +115,10 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, items_dict, item_factories, silent=True):
-        """Command to add items.
+    """Command to add items."""
 
+    def __init__(self, project, items_dict, item_factories):
+        """
         Args:
             project (SpineToolboxProject): the project
             items_dict (dict): a mapping from item name to item dict
@@ -123,7 +129,6 @@ class AddProjectItemsCommand(SpineToolboxCommand):
         self._project = project
         self._items_dict = items_dict
         self._item_factories = item_factories
-        self._silent = silent
         if not items_dict:
             self.setObsolete(True)
         elif len(items_dict) == 1:
@@ -132,7 +137,7 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self.setText("add multiple items")
 
     def redo(self):
-        self._project.restore_project_items(self._items_dict, self._item_factories, self._silent)
+        self._project.restore_project_items(self._items_dict, self._item_factories)
 
     def undo(self):
         for item_name in self._items_dict:
@@ -140,9 +145,10 @@ class AddProjectItemsCommand(SpineToolboxCommand):
 
 
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, item_factories, delete_data=False):
-        """Command to remove all items from project.
+    """Command to remove all items from project."""
 
+    def __init__(self, project, item_factories, delete_data=False):
+        """
         Args:
             project (SpineToolboxProject): the project
             item_factories (dict): a mapping from item type to ProjectItemFactory
@@ -161,15 +167,16 @@ class RemoveAllProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
+        self._project.restore_project_items(self._items_dict, self._item_factories)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
 
 
 class RemoveProjectItemsCommand(SpineToolboxCommand):
-    def __init__(self, project, item_factories, item_names, delete_data=False):
-        """Command to remove items.
+    """Command to remove items."""
 
+    def __init__(self, project, item_factories, item_names, delete_data=False):
+        """
         Args:
             project (SpineToolboxProject): The project
             item_factories (dict): a mapping from item type to ProjectItemFactory
@@ -200,7 +207,7 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(name, self._delete_data)
 
     def undo(self):
-        self._project.restore_project_items(self._items_dict, self._item_factories, silent=True)
+        self._project.restore_project_items(self._items_dict, self._item_factories)
         for connection_dict in self._connection_dicts:
             self._project.add_connection(self._project.connection_from_dict(connection_dict), silent=True)
         for jump_dict in self._jump_dicts:
@@ -208,9 +215,10 @@ class RemoveProjectItemsCommand(SpineToolboxCommand):
 
 
 class RenameProjectItemCommand(SpineToolboxCommand):
-    def __init__(self, project, previous_name, new_name):
-        """Command to rename project items.
+    """Command to rename project items."""
 
+    def __init__(self, project, previous_name, new_name):
+        """
         Args:
             project (SpineToolboxProject): the project
             previous_name (str): item's previous name
@@ -237,9 +245,10 @@ class RenameProjectItemCommand(SpineToolboxCommand):
 
 
 class AddConnectionCommand(SpineToolboxCommand):
-    def __init__(self, project, source_name, source_position, destination_name, destination_position):
-        """Command to add connection between project items.
+    """Command to add connection between project items."""
 
+    def __init__(self, project, source_name, source_position, destination_name, destination_position):
+        """
         Args:
             project (SpineToolboxProject): project
             source_name (str): source item's name
@@ -282,9 +291,10 @@ class AddConnectionCommand(SpineToolboxCommand):
 
 
 class RemoveConnectionsCommand(SpineToolboxCommand):
-    def __init__(self, project, connections):
-        """Command to remove links.
+    """Command to remove links."""
 
+    def __init__(self, project, connections):
+        """
         Args:
             project (SpineToolboxProject): project
             connections (list of LoggingConnection): the connections
@@ -311,9 +321,10 @@ class RemoveConnectionsCommand(SpineToolboxCommand):
 
 
 class AddJumpCommand(SpineToolboxCommand):
-    def __init__(self, project, source_name, source_position, destination_name, destination_position):
-        """Command to add a jump between project items.
+    """Command to add a jump between project items."""
 
+    def __init__(self, project, source_name, source_position, destination_name, destination_position):
+        """
         Args:
             project (SpineToolboxProject): project
             source_name (str): source item's name
@@ -384,53 +395,66 @@ class RemoveJumpsCommand(SpineToolboxCommand):
 class SetJumpConditionCommand(SpineToolboxCommand):
     """Command to set jump condition."""
 
-    def __init__(self, jump_properties, jump, condition):
+    def __init__(self, project, jump, jump_properties, condition):
         """
         Args:
-            jump_properties (JumpPropertiesWidget): jump's properties tab
+            project (SpineToolboxProject): project
             jump (Jump): target jump
-            condition (str): jump condition
+            jump_properties (JumpPropertiesWidget): jump's properties tab
+            condition (dict): jump condition
         """
         super().__init__()
+        self._project = project
         self._jump_properties = jump_properties
-        self._jump = jump
+        self._jump_source = jump.source
+        self._jump_destination = jump.destination
         self._condition = condition
         self._previous_condition = jump.condition
-        self.setText("change loop condition")
+        self.setText(f"change loop condition for jump {jump.name}")
 
     def redo(self):
-        self._jump_properties.set_condition(self._jump, self._condition)
+        jump = self._project.find_jump(self._jump_source, self._jump_destination)
+        self._jump_properties.set_condition(jump, self._condition)
 
     def undo(self):
-        self._jump_properties.set_condition(self._jump, self._previous_condition)
+        jump = self._project.find_jump(self._jump_source, self._jump_destination)
+        self._jump_properties.set_condition(jump, self._previous_condition)
 
 
 class UpdateJumpCmdLineArgsCommand(SpineToolboxCommand):
-    def __init__(self, jump_properties, jump, cmd_line_args):
-        """Command to update Jump command line args.
+    """Command to update Jump command line args."""
 
+    def __init__(self, project, jump, jump_properties, cmd_line_args):
+        """
         Args:
+            project (SpineToolboxProject): project
+            jump (Jump): jump
             jump_properties (JumpPropertiesWidget): the item
             cmd_line_args (list): list of command line args
         """
         super().__init__()
+        self._project = project
         self._jump_properties = jump_properties
-        self._jump = jump
+        self._jump_source = jump.source
+        self._jump_destination = jump.destination
         self._redo_cmd_line_args = cmd_line_args
-        self._undo_cmd_line_args = self._jump.cmd_line_args
-        self.setText(f"change command line arguments of {jump.name}")
+        self._undo_cmd_line_args = jump.cmd_line_args
+        self.setText(f"change command line arguments of jump {jump.name}")
 
     def redo(self):
-        self._jump_properties.update_cmd_line_args(self._jump, self._redo_cmd_line_args)
+        jump = self._project.find_jump(self._jump_source, self._jump_destination)
+        self._jump_properties.update_cmd_line_args(jump, self._redo_cmd_line_args)
 
     def undo(self):
-        self._jump_properties.update_cmd_line_args(self._jump, self._undo_cmd_line_args)
+        jump = self._project.find_jump(self._jump_source, self._jump_destination)
+        self._jump_properties.update_cmd_line_args(jump, self._undo_cmd_line_args)
 
 
 class SetFiltersOnlineCommand(SpineToolboxCommand):
-    def __init__(self, project, connection, resource, filter_type, online):
-        """Command to toggle filter value.
+    """Command to toggle filter value."""
 
+    def __init__(self, project, connection, resource, filter_type, online):
+        """
         Args:
             project (SpineToolboxProject): project
             connection (Connection): connection
@@ -485,10 +509,39 @@ class SetConnectionDefaultFilterOnlineStatus(SpineToolboxCommand):
         connection.set_filter_default_online_status(not self._checked)
 
 
-class SetConnectionOptionsCommand(SpineToolboxCommand):
-    def __init__(self, project, connection, options):
-        """Command to set connection options.
+class SetConnectionFilterTypeEnabled(SpineToolboxCommand):
+    """Command to enable and disable connection's filter types."""
 
+    def __init__(self, project, connection, filter_type, enabled):
+        """
+        Args:
+            project (SpineToolboxProject): project
+            connection (LoggingConnection): connection
+            filter_type (str): filter type
+            enabled (bool): whether filter type is enabled
+        """
+        super().__init__()
+        self.setText(f"change  {connection.name}")
+        self._project = project
+        self._source_name = connection.source
+        self._destination_name = connection.destination
+        self._filter_type = filter_type
+        self._enabled = enabled
+
+    def redo(self):
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_filter_type_enabled(self._filter_type, self._enabled)
+
+    def undo(self):
+        connection = self._project.find_connection(self._source_name, self._destination_name)
+        connection.set_filter_type_enabled(self._filter_type, not self._enabled)
+
+
+class SetConnectionOptionsCommand(SpineToolboxCommand):
+    """Command to set connection options."""
+
+    def __init__(self, project, connection, options):
+        """
         Args:
             project (SpineToolboxProject): project
             connection (LoggingConnection): project
@@ -513,9 +566,10 @@ class SetConnectionOptionsCommand(SpineToolboxCommand):
 
 
 class AddSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, project, specification, save_to_disk):
-        """Command to add item specification to a project.
+    """Command to add item specification to a project."""
 
+    def __init__(self, project, specification, save_to_disk):
+        """
         Args:
             project (ToolboxUI): the toolbox
             specification (ProjectItemSpecification): the spec
@@ -540,9 +594,10 @@ class AddSpecificationCommand(SpineToolboxCommand):
 
 
 class ReplaceSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, project, name, specification):
-        """Command to replace item specification in project.
+    """Command to replace item specification in project."""
 
+    def __init__(self, project, name, specification):
+        """
         Args:
             project (ToolboxUI): the toolbox
             name (str): the name of the spec to be replaced
@@ -569,9 +624,10 @@ class ReplaceSpecificationCommand(SpineToolboxCommand):
 
 
 class RemoveSpecificationCommand(SpineToolboxCommand):
-    def __init__(self, project, name):
-        """Command to remove specs from a project.
+    """Command to remove specs from a project."""
 
+    def __init__(self, project, name):
+        """
         Args:
             project (SpineToolboxProject): the project
             name (str): specification's name
@@ -590,9 +646,10 @@ class RemoveSpecificationCommand(SpineToolboxCommand):
 
 
 class SaveSpecificationAsCommand(SpineToolboxCommand):
-    def __init__(self, project, name, path):
-        """Command to remove item specs from a project.
+    """Command to remove item specs from a project."""
 
+    def __init__(self, project, name, path):
+        """
         Args:
             project (SpineToolboxProject): the project
             name (str): specification's name

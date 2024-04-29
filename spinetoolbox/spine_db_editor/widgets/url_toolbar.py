@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the UrlToolBar class and helpers.
-"""
+"""Contains the UrlToolBar class and helpers."""
 from PySide6.QtWidgets import (
     QToolBar,
     QLineEdit,
@@ -30,7 +29,6 @@ from PySide6.QtGui import QIcon, QKeySequence, QAction
 from PySide6.QtCore import QSize, Qt, Signal, Slot
 from spinedb_api.filters.tools import (
     SCENARIO_FILTER_TYPE,
-    TOOL_FILTER_TYPE,
     filter_config,
     append_filter_config,
     filter_configs,
@@ -53,7 +51,7 @@ class UrlToolBar(QToolBar):
             QIcon(CharIconEngine("\uf061")), "Go forward", db_editor.load_next_urls
         )
         self.reload_action = self.addAction(QIcon(CharIconEngine("\uf021")), "Reload", db_editor.refresh_session)
-        self.reload_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_R))
+        self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_R.value))
         self._go_back_action.setEnabled(False)
         self._go_forward_action.setEnabled(False)
         self.reload_action.setEnabled(False)
@@ -66,7 +64,7 @@ class UrlToolBar(QToolBar):
         self.addWidget(self._line_edit)
         toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
         self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
-        self.show_toolbox_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Escape))
+        self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Escape.value))
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
@@ -86,34 +84,14 @@ class UrlToolBar(QToolBar):
         menu_button.setToolTip("<p>Open URL from project</p>")
         menu.aboutToShow.connect(self._update_open_project_url_menu)
         menu.triggered.connect(self._open_ds_url)
-        slot = lambda *args: self._update_ds_url_menu_enabled()
-        self._connect_project_item_model_signals(slot)
-        self.destroyed.connect(lambda obj=None, slot=slot: self._disconnect_project_item_model_signals(slot))
         return menu
-
-    def _update_ds_url_menu_enabled(self):
-        ds_items = self._db_editor.toolbox.project_item_model.items("Data Stores")
-        self._open_project_url_menu.setEnabled(bool(ds_items))
-
-    def _connect_project_item_model_signals(self, slot):
-        project_item_model = self._db_editor.toolbox.project_item_model
-        project_item_model.modelReset.connect(slot)
-        project_item_model.rowsRemoved.connect(slot)
-        project_item_model.rowsInserted.connect(slot)
-
-    def _disconnect_project_item_model_signals(self, slot):
-        project_item_model = self._db_editor.toolbox.project_item_model
-        project_item_model.modelReset.disconnect(slot)
-        project_item_model.rowsRemoved.disconnect(slot)
-        project_item_model.rowsInserted.disconnect(slot)
 
     @Slot()
     def _update_open_project_url_menu(self):
-        toolbox = self._db_editor.toolbox
         self._open_project_url_menu.clear()
-        ds_items = toolbox.project_item_model.items("Data Stores")
-        self._project_urls = {ds.name: ds.project_item.sql_alchemy_url() for ds in ds_items}
-        is_url_validated = {ds.name: ds.project_item.is_url_validated() for ds in ds_items}
+        ds_items = self._db_editor.toolbox.project().get_items_by_type("Data Store")
+        self._project_urls = {ds.name: ds.sql_alchemy_url() for ds in ds_items}
+        is_url_validated = {ds.name: ds.is_url_validated() for ds in ds_items}
         for name, url in self._project_urls.items():
             action = self._open_project_url_menu.addAction(name)
             action.setEnabled(url is not None and is_url_validated[name])
@@ -121,7 +99,7 @@ class UrlToolBar(QToolBar):
     @Slot(QAction)
     def _open_ds_url(self, action):
         url = self._project_urls[action.text()]
-        self._db_editor.load_db_urls({url: action.text()})
+        self._db_editor.db_mngr.open_db_editor({url: action.text()}, True)
 
     def add_main_menu(self, menu):
         menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
@@ -130,7 +108,10 @@ class UrlToolBar(QToolBar):
         menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         action = QAction(self)
         action.triggered.connect(menu_button.showMenu)
-        keys = [QKeySequence(Qt.ALT | Qt.Key_F), QKeySequence(Qt.ALT | Qt.Key_E)]
+        keys = [
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_F.value),
+            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_E.value),
+        ]
         action.setShortcuts(keys)
         keys_str = ", ".join([key.toString() for key in keys])
         menu_button.setToolTip(f"<p>Customize and control Spine DB Editor ({keys_str})</p>")
@@ -197,7 +178,7 @@ class _FilterWidget(QTreeWidget):
         self.setIndentation(0)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHeaderLabel(filter_type)
-        items = db_mngr.get_items(db_map, item_type, only_visible=False)
+        items = db_mngr.get_items(db_map, item_type)
         top_level_items = [QTreeWidgetItem([x["name"]]) for x in items]
         self.addTopLevelItems(top_level_items)
         self.resizeColumnToContents(0)
@@ -226,8 +207,8 @@ class _FilterArrayWidget(QWidget):
         self._offset = 0
         self._db_map = db_map
         self._filter_widgets = []
-        active_filter_configs = {cfg['type']: cfg for cfg in filter_configs(db_map.db_url)}
-        for item_type, filter_type in (("scenario", SCENARIO_FILTER_TYPE), ("tool", TOOL_FILTER_TYPE)):
+        active_filter_configs = {cfg["type"]: cfg for cfg in filter_configs(db_map.db_url)}
+        for item_type, filter_type in (("scenario", SCENARIO_FILTER_TYPE),):
             active_cfg = active_filter_configs.get(filter_type, {})
             active_item = name_from_dict(active_cfg) if active_cfg else None
             filter_widget = _FilterWidget(db_mngr, db_map, item_type, filter_type, active_item, parent=self)

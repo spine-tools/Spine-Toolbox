@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models that vertically concatenate two or more table models.
-"""
-
+"""Models that vertically concatenate two or more table models."""
 import bisect
 from PySide6.QtCore import Qt, Signal, Slot, QModelIndex, QTimer
 from ..mvcmodels.minimal_table_model import MinimalTableModel
@@ -385,9 +383,10 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _insert_row_map(self, pos, single_row_map):
         if not single_row_map:
-            # To trigger fetching. The QTimer is to avoid funny situations where the user enters new data
-            # via the empty row model, and those rows need to be removed at the same time as we fetch the added data.
-            # Doing it in the same loop cycle causes bugs.
+            # Emit layoutChanged to trigger fetching.
+            # The QTimer is to avoid funny situations where the user enters new data via the empty row model,
+            # and those rows need to be removed at the same time as we fetch the added data.
+            # Doing it in the same loop cycle was causing bugs.
             QTimer.singleShot(0, self.layoutChanged.emit)
             return
         row = self._get_row_for_insertion(pos)

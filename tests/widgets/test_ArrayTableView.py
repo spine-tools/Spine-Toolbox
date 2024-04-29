@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for ArrayTableView class.
-"""
-
+"""Unit tests for ArrayTableView class."""
 import csv
 import locale
 from io import StringIO
@@ -67,7 +65,7 @@ class TestArrayTableView(unittest.TestCase):
         table_view.selectionModel().select(index, QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        array = [row for row in csv.reader(clip, delimiter='\t')]
+        array = [row for row in csv.reader(clip, delimiter="\t")]
         with system_lc_numeric():
             self.assertEqual(array, [[locale.str(5.5)]])
         table_view.deleteLater()
@@ -82,7 +80,7 @@ class TestArrayTableView(unittest.TestCase):
                 table_view.selectionModel().select(model.index(row, column), QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        array = [row for row in csv.reader(clip, delimiter='\t')]
+        array = [row for row in csv.reader(clip, delimiter="\t")]
         with system_lc_numeric():
             self.assertEqual(array, [["0", locale.str(5.5)]])
         table_view.deleteLater()

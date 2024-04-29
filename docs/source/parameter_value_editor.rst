@@ -4,7 +4,7 @@
 Parameter Value Editor
 **********************
 
-Parameter value editor is used to edit object and relationship parameter values
+Parameter value editor is used to edit entity parameter values
 such as time series, time patterns or durations.
 It can also convert between different value types, e.g. from a time series to a time pattern.
 

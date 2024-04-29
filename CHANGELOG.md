@@ -6,12 +6,53 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- New context menu action (Select superclass) for entity class items in the entity tree.
+- Added Tool Specification type (Python, Gams, etc.) icons on Design View.
+- There is now a new filter type, Alternative filter available in Link properties.
+  Unlike scenario filters, the execution is not parallelized.
+  Instead, a successor item sees parameter values of all selected alternatives.
+  Because of this behavior,
+  alternative filters cannot be used at the same time with scenario filters.
+  Link properties tab has a combo box that lets one choose which filter type to use.
 
 ### Changed
+
+#### Spine data structure
+
+Many parts of the Spine data structure have been redesigned.
+
+- *Entities* have replaced objects and relationships.
+  Zero-dimensional entities correspond to objects while multidimensional entities replace the former relationships.
+  Unlike relationships, the *elements* of multidimensional entities can now be other multidimensional entities.
+- Simple inheritance is now supported by *superclasses*.
+- Tools, features and methods have been removed.
+  The functionality that was previously implemented using the is_active parameter
+  has been replaced by *entity alternatives*.
+  Entity classes have a default setting for the entity alternative called *active by default*.
+  Database migration should automatically replace tools, features and methods
+  by entity alternatives and set active by default to whatever default value `is_active`
+  or similar parameter had.
+  The `is_active` parameter is not removed from entity classes but its values are.
+- Note that new zero-dimensional entity classes have *active by default* set to `false` initially.
+  This means that the entities of those classes are hidden when using scenario filters
+  unless specifically shown using entity alternatives.
+
+#### Miscellaneous changes
+
+- "Rubber band" selection of items in Design and Graph views is now done with **left mouse button**
+  (no need to press Ctrl anymore). The views can be dragged around by holding the **right mouse button**.
+- Spine Database Editor now remembers the configuration of the docs in each view for a specific URL. The docks
+  can be reset from the hamburger menu **View->Docks...->Reset docks**.
+- You can now select a different Julia executable & project or Julia kernel for each Tool spec.
+  This overrides the global setting from Toolbox Settings.
+- Headless mode now supports remote execution (see 'python -m spinetoolbox --help')
+- Commit Viewer's UI has undergone some redesigning and can now handle large databases.
 
 ### Deprecated
 
 ### Removed
+- Project dock widget
+- Dependency on Dagster
 
 ### Fixed
 
@@ -30,14 +71,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - On Toolbox startup, a link appears in Event log that opens Upgrade notification window
   offering information about the upcoming 0.8 update.
 
-## [0.7.2]
+## [0.7.2] - 2023-12-04
 
 ### Added
 
 - Data Connection items now support schemas in database references
 - Importer Specification Editor now supports database schemas
 
-## [0.7.1]
+## [0.7.1] - 2023-10-06
 
 ### Added
 

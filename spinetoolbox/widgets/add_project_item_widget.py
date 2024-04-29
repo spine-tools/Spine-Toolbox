@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Widget shown to user when a new Project Item is created.
-"""
-
+"""Widget shown to user when a new Project Item is created."""
 from PySide6.QtWidgets import QWidget, QStatusBar
 from PySide6.QtCore import Slot, Qt
 from spine_engine.utils.helpers import shorten
@@ -51,20 +49,20 @@ class AddProjectItemWidget(QWidget):
         if toolbox.supports_specifications(class_.item_type()):
             self.ui.comboBox_specification.setModel(toolbox.filtered_spec_factory_models[class_.item_type()])
             if spec:
-                self.ui.comboBox_specification.setCurrentText(spec)
+                self.ui.comboBox_specification.hide()
                 prefix = spec
             else:
                 prefix = class_.item_type()
                 self.ui.comboBox_specification.setCurrentIndex(-1)
         else:
             prefix = class_.item_type()
-            self.ui.comboBox_specification.setEnabled(False)
+            self.ui.comboBox_specification.hide()
         existing_item_names = toolbox.project().all_item_names
         self.name = unique_name(prefix, existing_item_names) if prefix in existing_item_names else prefix
-        self.ui.lineEdit_name.setText(self.name)
-        self.ui.lineEdit_name.selectAll()
         self.description = ""
         self.connect_signals()
+        self.ui.lineEdit_name.setText(self.name)
+        self.ui.lineEdit_name.selectAll()
         self.ui.lineEdit_name.setFocus()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -109,6 +107,10 @@ class AddProjectItemWidget(QWidget):
             self.statusbar.showMessage(msg, 3000)
             return
         self.call_add_item()
+        self._toolbox.ui.graphicsView.scene().clearSelection()
+        for icon in self._toolbox.ui.graphicsView.scene().project_item_icons():
+            if icon.name() == self.name:
+                icon.setSelected(True)
         self.close()
 
     def call_add_item(self):

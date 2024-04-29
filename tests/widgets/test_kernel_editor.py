@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the ``kernel_editor`` module.
-"""
+"""Unit tests for the ``kernel_editor`` module."""
 import json
 import pathlib
 import subprocess
@@ -21,26 +20,27 @@ import unittest
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
-from spine_engine.utils.helpers import resolve_julia_executable
+from spine_engine.utils.helpers import resolve_default_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelEditorBase
 
 
 class MockSettingsWidget(QWidget):
-    qsettings = MagicMock()
+    def __init__(self):
+        super().__init__()
+        self.qsettings = MagicMock()
 
 
 class TestKernelEditorBase(unittest.TestCase):
-    _settings_widget = None
-
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
-        cls._settings_widget = MockSettingsWidget()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls._settings_widget.deleteLater()
+    def setUp(self):
+        self._settings_widget = MockSettingsWidget()
+
+    def tearDown(self):
+        self._settings_widget.deleteLater()
 
     def test_is_package_installed(self):
         self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide6"))
@@ -79,7 +79,7 @@ class TestKernelEditorBase(unittest.TestCase):
     def test_make_julia_kernel(self):
         """Makes a new Julia kernel if Julia is in PATH and the base project (@.) has
         IJulia installed. Test Julia kernel is removed in the end if available."""
-        julia_exec = resolve_julia_executable("")
+        julia_exec = resolve_default_julia_executable()
         if not julia_exec:
             self.skipTest("Julia not found in PATH.")
         kernel_name = "spinetoolbox_test_make_julia_kernel"

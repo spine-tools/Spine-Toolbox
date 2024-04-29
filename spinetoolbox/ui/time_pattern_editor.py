@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -25,8 +26,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHeaderView, QLabel, QSizePolicy,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QHeaderView, QLabel,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 
@@ -45,6 +46,7 @@ class Ui_TimePatternEditor(object):
 
         self.pattern_edit_table = IndexedValueTableView(TimePatternEditor)
         self.pattern_edit_table.setObjectName(u"pattern_edit_table")
+        self.pattern_edit_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.pattern_edit_table.horizontalHeader().setStretchLastSection(True)
 
         self.verticalLayout.addWidget(self.pattern_edit_table)

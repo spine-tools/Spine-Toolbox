@@ -1,0 +1,46 @@
+{
+    "item_type": "Exporter",
+    "output_format": "csv",
+    "name": "Export values",
+    "description": "",
+    "mappings": {
+        "Mapping (1)": {
+            "type": "entity_parameter_values",
+            "mapping": [
+                {
+                    "map_type": "EntityClass",
+                    "position": 0
+                },
+                {
+                    "map_type": "ParameterDefinition",
+                    "position": 1
+                },
+                {
+                    "map_type": "ParameterValueList",
+                    "position": "hidden",
+                    "ignorable": true
+                },
+                {
+                    "map_type": "Entity",
+                    "position": 2
+                },
+                {
+                    "map_type": "Alternative",
+                    "position": 3
+                },
+                {
+                    "map_type": "ParameterValueType",
+                    "position": "hidden"
+                },
+                {
+                    "map_type": "ParameterValue",
+                    "position": 4
+                }
+            ],
+            "enabled": true,
+            "always_export_header": true,
+            "group_fn": "no_group",
+            "use_fixed_table_name": false
+        }
+    }
+}

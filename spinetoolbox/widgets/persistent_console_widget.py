@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
+"""Contains a widget acting as a console for Julia & Python REPL's."""
 import os
 import uuid
 from pygments.styles import get_style_by_name
@@ -381,8 +383,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if self._text_buffer:
             address = uuid.uuid4().hex
             char_format = cursor.charFormat()
-            char_format.setBackground(QColor('white'))
-            char_format.setForeground(QColor('blue'))
+            char_format.setBackground(QColor("white"))
+            char_format.setForeground(QColor("blue"))
             char_format.setAnchor(True)
             char_format.setAnchorHref(address)
             self._skipped[address] = self._text_buffer[-self._MAX_LINES_COUNT :]

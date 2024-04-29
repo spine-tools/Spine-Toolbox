@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,19 +9,16 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""Helper utilites for unit tests that test Database manager's table and tree views."""
+
+"""Helper utilities for unit tests that test Database editor's table and tree views."""
 from types import MethodType
-import unittest
 from unittest import mock
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication
-
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddObjectClassesDialog, AddObjectsDialog
+from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, AddEntitiesDialog
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.widgets.custom_editors import SearchBarEditor
-from ...mock_helpers import TestSpineDBManager
+from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 
 
 class EditorDelegateMocking:
@@ -106,53 +104,14 @@ def add_entity_tree_item(item_names, view, menu_action_text, dialog_class):
         add_items_dialog.accept()
 
 
-def add_object_class(view, class_name):
-    add_entity_tree_item({0: class_name}, view, "Add object classes", AddObjectClassesDialog)
+def add_zero_dimension_entity_class(view, name):
+    view._context_item = view.model().root_item
+    add_entity_tree_item({0: name}, view, "Add entity classes", AddEntityClassesDialog)
 
 
-def add_object(view, object_name, object_class_index=0):
+def add_entity(view, name, entity_class_index=0):
     model = view.model()
     root_index = model.index(0, 0)
-    class_index = model.index(object_class_index, 0, root_index)
+    class_index = model.index(entity_class_index, 0, root_index)
     view._context_item = model.item_from_index(class_index)
-    add_entity_tree_item({1: object_name}, view, "Add objects", AddObjectsDialog)
-
-
-class TestBase(unittest.TestCase):
-    """Base class for Database editor's table and tree view tests."""
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def _common_setup(self, url, create):
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
-        ):
-            mock_settings = mock.MagicMock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = TestSpineDBManager(mock_settings, None)
-            logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=create)
-            self._db_editor = SpineDBEditor(self._db_mngr, {url: "database"})
-        QApplication.processEvents()
-
-    def _common_tear_down(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
-        self._db_editor = None
-
-    def _commit_changes_to_database(self, commit_message):
-        with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
-            commit_msg.return_value = commit_message
-            with signal_waiter(self._db_mngr.session_committed) as waiter:
-                self._db_editor.ui.actionCommit.trigger()
-                waiter.wait()
+    add_entity_tree_item({0: name}, view, "Add entities", AddEntitiesDialog)

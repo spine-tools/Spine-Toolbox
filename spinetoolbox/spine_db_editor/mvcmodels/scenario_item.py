@@ -11,7 +11,6 @@
 
 """Classes to represent items in scenario tree."""
 from PySide6.QtCore import Qt
-
 from .tree_item_utility import (
     BoldTextMixin,
     EditableMixin,
@@ -37,10 +36,10 @@ class ScenarioDBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return "scenario"
 
     def empty_child(self):
-        return ScenarioItem()
+        return ScenarioItem(self._model)
 
     def _make_child(self, id_):
-        return ScenarioItem(id_)
+        return ScenarioItem(self._model, id_)
 
 
 class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMixin, BoldTextMixin, LeafItem):
@@ -58,10 +57,10 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
     def icon_code(self):
         return _SCENARIO_ICON
 
-    @property
-    def tool_tip(self):
-        if not self.id:
+    def tool_tip(self, column):
+        if column == 0 and not self.id:
             return "<p><b>Note</b>: Scenario names longer than 20 characters might appear shortened in generated files.</p>"
+        return super().tool_tip(column)
 
     def _do_set_up(self):
         """Doesn't add children to the last row."""
@@ -93,11 +92,18 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
         curr_alt_count = len(self.non_empty_children)
         if alt_count > curr_alt_count:
             added_count = alt_count - curr_alt_count
-            children = [ScenarioAlternativeItem() for _ in range(added_count)]
+            children = [ScenarioAlternativeItem(self._model) for _ in range(added_count)]
             self.insert_children(curr_alt_count, children)
         elif curr_alt_count > alt_count:
             removed_count = curr_alt_count - alt_count
             self.remove_children(alt_count, removed_count)
+        else:
+            self.model.dataChanged.emit(
+                self.model.index(0, 0, self.index()), self.model.index(self.row_count() - 1, 0, self.index())
+            )
+
+    def accepts_item(self, item, db_map):
+        return db_map == self.db_map and item["scenario_id"] == self.id
 
     def handle_items_added(self, _db_map_data):
         self.update_alternative_id_list()
@@ -110,7 +116,7 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
 
     def empty_child(self):
         """See base class."""
-        return ScenarioAlternativeItem()
+        return ScenarioAlternativeItem(self._model)
 
     def _make_child(self, id_):
         """Not needed - we don't quite add children here, but rather update them in update_alternative_id_list."""
@@ -123,9 +129,10 @@ class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def item_type(self):
         return "scenario_alternative"
 
-    @property
-    def tool_tip(self):
-        return "<p>Drag and drop this item to reorder scenario alternatives</p>"
+    def tool_tip(self, column):
+        if column == 0:
+            return "<p>Drag and drop this item to reorder scenario alternatives</p>"
+        return super().tool_tip(column)
 
     def _make_item_data(self):
         return {"name": "Type scenario alternative name here...", "description": ""}

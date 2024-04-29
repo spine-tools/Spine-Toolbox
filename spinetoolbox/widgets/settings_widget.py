@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,17 +10,14 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Widget for controlling user settings.
-"""
-
+"""Widget for controlling user settings."""
 import os
-from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QApplication, QMenu, QMessageBox
+from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QMenu, QMessageBox
 from PySide6.QtCore import Slot, Qt, QSize, QSettings, QPoint, QEvent
 from PySide6.QtGui import QPixmap, QIcon, QStandardItemModel, QStandardItem
 from spine_engine.utils.helpers import (
-    resolve_python_interpreter,
-    resolve_julia_executable,
+    resolve_current_python_interpreter,
+    resolve_default_julia_executable,
     resolve_gams_executable,
     resolve_conda_executable,
     get_julia_env,
@@ -46,6 +44,7 @@ from ..helpers import (
     dir_is_valid,
     home_dir,
     open_url,
+    is_valid_conda_executable,
 )
 
 
@@ -153,33 +152,49 @@ class SpineDBEditorSettingsMixin:
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
-        self.ui.checkBox_auto_expand_objects.clicked.connect(self.set_auto_expand_objects)
+        self.ui.checkBox_hide_empty_classes.clicked.connect(self.set_hide_empty_classes)
+        self.ui.checkBox_auto_expand_entities.clicked.connect(self.set_auto_expand_entities)
         self.ui.checkBox_merge_dbs.clicked.connect(self.set_merge_dbs)
+        self.ui.checkBox_snap_entities.clicked.connect(self.set_snap_entities)
+        self.ui.spinBox_max_ent_dim_count.valueChanged.connect(self.set_max_entity_dimension_count)
+        self.ui.spinBox_layout_algo_max_iterations.valueChanged.connect(self.set_build_iters)
+        self.ui.spinBox_layout_algo_spread_factor.valueChanged.connect(self.set_spread_factor)
+        self.ui.spinBox_layout_algo_neg_weight_exp.valueChanged.connect(self.set_neg_weight_exp)
 
     def read_settings(self):
         """Read saved settings from app QSettings instance and update UI to display them."""
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
         sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
+        hide_empty_classes = self._qsettings.value("appSettings/hideEmptyClasses", defaultValue="false")
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
-        relationship_items_follow = self._qsettings.value("appSettings/relationshipItemsFollow", defaultValue="true")
-        auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        auto_expand_entities = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        snap_entities = self._qsettings.value("appSettings/snapEntities", defaultValue="false")
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
+        max_ent_dim_count = int(self.qsettings.value("appSettings/maxEntityDimensionCount", defaultValue="5"))
+        build_iters = int(self.qsettings.value("appSettings/layoutAlgoBuildIterations", defaultValue="12"))
+        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
+        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Unchecked)
         elif commit_at_exit == 1:
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Checked)
-        self.ui.checkBox_object_tree_sticky_selection.setChecked(sticky_selection == "true")
+        self.ui.checkBox_entity_tree_sticky_selection.setChecked(sticky_selection == "true")
+        self.ui.checkBox_hide_empty_classes.setChecked(hide_empty_classes == "true")
         self.ui.checkBox_smooth_entity_graph_zoom.setChecked(smooth_zoom == "true")
         self.ui.checkBox_smooth_entity_graph_rotation.setChecked(smooth_rotation == "true")
-        self.ui.checkBox_relationship_items_follow.setChecked(relationship_items_follow == "true")
-        self.ui.checkBox_auto_expand_objects.setChecked(auto_expand_objects == "true")
+        self.ui.checkBox_auto_expand_entities.setChecked(auto_expand_entities == "true")
+        self.ui.checkBox_snap_entities.setChecked(snap_entities == "true")
         self.ui.checkBox_merge_dbs.setChecked(merge_dbs == "true")
         if db_editor_show_undo == 2:
             self.ui.checkBox_db_editor_show_undo.setChecked(True)
+        self.ui.spinBox_max_ent_dim_count.setValue(max_ent_dim_count)
+        self.ui.spinBox_layout_algo_max_iterations.setValue(build_iters)
+        self.ui.spinBox_layout_algo_spread_factor.setValue(spread_factor)
+        self.ui.spinBox_layout_algo_neg_weight_exp.setValue(neg_weight_exp)
 
     def save_settings(self):
         """Get selections and save them to persistent memory."""
@@ -187,38 +202,77 @@ class SpineDBEditorSettingsMixin:
             return False
         commit_at_exit = str(self.ui.checkBox_commit_at_exit.checkState().value)
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
-        sticky_selection = "true" if self.ui.checkBox_object_tree_sticky_selection.checkState().value else "false"
+        sticky_selection = "true" if self.ui.checkBox_entity_tree_sticky_selection.checkState().value else "false"
         self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
+        hide_empty_classes = "true" if self.ui.checkBox_hide_empty_classes.checkState().value else "false"
+        self._qsettings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
         smooth_zoom = "true" if self.ui.checkBox_smooth_entity_graph_zoom.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphZoom", smooth_zoom)
         smooth_rotation = "true" if self.ui.checkBox_smooth_entity_graph_rotation.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
-        relationship_items_follow = "true" if self.ui.checkBox_relationship_items_follow.checkState().value else "false"
-        self._qsettings.setValue("appSettings/relationshipItemsFollow", relationship_items_follow)
-        auto_expand_objects = "true" if self.ui.checkBox_auto_expand_objects.checkState().value else "false"
-        self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_objects)
+        auto_expand_entities = "true" if self.ui.checkBox_auto_expand_entities.checkState().value else "false"
+        self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_entities)
+        snap_entities = "true" if self.ui.checkBox_snap_entities.checkState().value else "false"
+        self._qsettings.setValue("appSettings/snapEntities", snap_entities)
         merge_dbs = "true" if self.ui.checkBox_merge_dbs.checkState().value else "false"
         self._qsettings.setValue("appSettings/mergeDBs", merge_dbs)
         db_editor_show_undo = str(self.ui.checkBox_db_editor_show_undo.checkState().value)
         self._qsettings.setValue("appSettings/dbEditorShowUndo", db_editor_show_undo)
+        max_ent_dim_count = str(self.ui.spinBox_layout_algo_max_iterations.value())
+        self._qsettings.setValue("appSettings/maxEntityDimensionCount", max_ent_dim_count)
+        build_iters = str(self.ui.spinBox_layout_algo_max_iterations.value())
+        self._qsettings.setValue("appSettings/layoutAlgoBuildIterations", build_iters)
+        spread_factor = str(self.ui.spinBox_layout_algo_spread_factor.value())
+        self._qsettings.setValue("appSettings/layoutAlgoSpreadFactor", spread_factor)
+        neg_weight_exp = str(self.ui.spinBox_layout_algo_neg_weight_exp.value())
+        self._qsettings.setValue("appSettings/layoutAlgoNegWeightExp", neg_weight_exp)
         return True
 
     def update_ui(self):
         super().update_ui()
-        auto_expand_objects = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        hide_empty_classes = self._qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
+        auto_expand_entities = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
-        self.set_auto_expand_objects(auto_expand_objects)
+        self.set_hide_empty_classes(hide_empty_classes)
+        self.set_auto_expand_entities(auto_expand_entities)
         self.set_merge_dbs(merge_dbs)
 
     @Slot(bool)
-    def set_auto_expand_objects(self, checked=False):
+    def set_hide_empty_classes(self, checked=False):
         for db_editor in self.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_auto_expand_objects(checked)
+            db_editor.entity_tree_model.hide_empty_classes = checked
+
+    @Slot(bool)
+    def set_auto_expand_entities(self, checked=False):
+        self._set_graph_property("auto_expand_entities", checked)
 
     @Slot(bool)
     def set_merge_dbs(self, checked=False):
+        self._set_graph_property("merge_dbs", checked)
+
+    @Slot(bool)
+    def set_snap_entities(self, checked=False):
+        self._set_graph_property("snap_entities", checked)
+
+    @Slot(int)
+    def set_max_entity_dimension_count(self, value=None):
+        self._set_graph_property("max_entity_dimension_count", value)
+
+    @Slot(int)
+    def set_build_iters(self, value=None):
+        self._set_graph_property("build_iters", value)
+
+    @Slot(int)
+    def set_spread_factor(self, value=None):
+        self._set_graph_property("spread_factor", value)
+
+    @Slot(int)
+    def set_neg_weight_exp(self, value=None):
+        self._set_graph_property("neg_weight_exp", value)
+
+    def _set_graph_property(self, name, value):
         for db_editor in self.db_mngr.get_all_spine_db_editors():
-            db_editor.ui.graphicsView.set_merge_dbs(checked)
+            db_editor.ui.graphicsView.set_property(name, value)
 
 
 class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
@@ -305,6 +359,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.comboBox_julia_kernel.view().customContextMenuRequested.connect(
             self.show_julia_kernel_context_menu_on_combobox_list
         )
+        self.ui.lineEdit_conda_path.textChanged.connect(self._refresh_python_kernels)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
@@ -447,7 +502,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Makes a Python kernel for Jupyter Console based on selected Python interpreter.
         If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
         python_exe = self.ui.lineEdit_python_path.text().strip()
-        python_exe = resolve_python_interpreter(python_exe)
+        if not python_exe:
+            python_exe = resolve_current_python_interpreter()
         python_kernel = _get_kernel_name_by_exe(python_exe, self._python_kernel_model)
         if not python_kernel:
             mpke = MiniPythonKernelEditor(self, python_exe)
@@ -465,7 +521,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         If a kernel using the selected Julia executable and project already exists, sets that kernel
         selected in the comboBox."""
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
-        julia_exe = resolve_julia_executable(julia_exe)
+        if not julia_exe:
+            julia_exe = resolve_default_julia_executable()
         julia_kernel = _get_kernel_name_by_exe(julia_exe, self._julia_kernel_model)
         if julia_kernel:  # Kernel with matching executable found
             match = _selected_project_matches_kernel_project(julia_kernel, julia_project, self._julia_kernel_model)
@@ -574,7 +631,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, "Select Work Directory", home_dir())
-        if answer == '':  # Cancel button clicked
+        if answer == "":  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
         self.ui.lineEdit_work_dir.setText(selected_path)
@@ -622,7 +679,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot(bool)
     def set_toolbar_colored_icons(self, checked=False):
-        self._toolbox.main_toolbar.set_colored_icons(checked)
+        self._toolbox.set_toolbar_colored_icons(checked)
 
     @Slot(bool)
     def _update_properties_widget(self, _checked=False):
@@ -706,14 +763,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_use_julia_jupyter_console.setChecked(True)
         else:
             self.ui.radioButton_use_julia_basic_console.setChecked(True)
-        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_julia_executable(""))
+        self.ui.lineEdit_julia_path.setPlaceholderText(resolve_default_julia_executable())
         self.ui.lineEdit_julia_path.setText(julia_path)
         self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         if use_python_jupyter_console == 2:
             self.ui.radioButton_use_python_jupyter_console.setChecked(True)
         else:
             self.ui.radioButton_use_python_basic_console.setChecked(True)
-        self.ui.lineEdit_python_path.setPlaceholderText(resolve_python_interpreter(""))
+        self.ui.lineEdit_python_path.setPlaceholderText(resolve_current_python_interpreter())
         self.ui.lineEdit_python_path.setText(python_path)
         conda_placeholder_txt = resolve_conda_executable("")
         if conda_placeholder_txt:
@@ -880,6 +937,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/pythonKernel", python_kernel)
         # Conda
         conda_exe = self.ui.lineEdit_conda_path.text().strip()
+        if not is_valid_conda_executable(conda_exe):
+            conda_exe = ""
         self._qsettings.setValue("appSettings/condaPath", conda_exe)
         # Work directory
         work_dir = self.ui.lineEdit_work_dir.text().strip()
@@ -929,12 +988,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         return True
 
     def _get_julia_settings(self):
+        """Returns current Julia execution settings in Settings->Tools widget."""
         use_julia_jupyter_console = "2" if self.ui.radioButton_use_julia_jupyter_console.isChecked() else "0"
         julia_exe = self.ui.lineEdit_julia_path.text().strip()
         julia_project = self.ui.lineEdit_julia_project_path.text().strip()
-        if self.ui.comboBox_julia_kernel.currentIndex() == 0:
-            julia_kernel = ""
-        else:
+        julia_kernel = ""
+        if self.ui.comboBox_julia_kernel.currentIndex() != 0:
             julia_kernel = self.ui.comboBox_julia_kernel.currentText()
         return use_julia_jupyter_console, julia_exe, julia_project, julia_kernel
 
@@ -1000,6 +1059,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.julia_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=4)
         self.julia_kernel_fetcher.kernel_found.connect(self.add_julia_kernel)
         self.julia_kernel_fetcher.finished.connect(self.restore_saved_julia_kernel)
+        self.julia_kernel_fetcher.finished.connect(self.julia_kernel_fetcher.deleteLater)
         self.julia_kernel_fetcher.start()
 
     @Slot()
@@ -1036,18 +1096,23 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_julia_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_julia_kernel.setCurrentIndex(ind)
+        self.julia_kernel_fetcher = None
 
-    def start_fetching_python_kernels(self):
+    def start_fetching_python_kernels(self, conda_path_updated=False):
         """Starts a thread for fetching Python kernels."""
         if self.python_kernel_fetcher is not None and self.python_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
             return
         self._python_kernel_model.clear()
         self.ui.comboBox_python_kernel.addItem("Select Python kernel...")
-        conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        if not conda_path_updated:
+            conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        else:
+            conda_path = self.ui.lineEdit_conda_path.text().strip()
         self.python_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=2)
         self.python_kernel_fetcher.kernel_found.connect(self.add_python_kernel)
         self.python_kernel_fetcher.finished.connect(self.restore_saved_python_kernel)
+        self.python_kernel_fetcher.finished.connect(self.python_kernel_fetcher.deleteLater)
         self.python_kernel_fetcher.start()
 
     @Slot()
@@ -1065,6 +1130,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         item = QStandardItem(kernel_name)
         item.setIcon(icon)
         item.setToolTip(resource_dir)
+        deats["is_conda"] = conda
         item.setData(deats)
         self._python_kernel_model.appendRow(item)
 
@@ -1084,6 +1150,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.comboBox_python_kernel.setCurrentIndex(0)
         else:
             self.ui.comboBox_python_kernel.setCurrentIndex(ind)
+        self.python_kernel_fetcher = None
+
+    @Slot(str)
+    def _refresh_python_kernels(self, conda_path):
+        """Refreshes Python kernels when the conda line edit points to a valid conda
+        executable or when the line edit is cleared.
+
+        Args:
+            conda_path (str): Text in line edit after it's been changed.
+        """
+        if conda_path and not is_valid_conda_executable(conda_path):
+            return
+        self.newly_created_kernel = self.ui.comboBox_python_kernel.currentText()
+        self.start_fetching_python_kernels(conda_path_updated=True)
 
     def closeEvent(self, ev):
         self.stop_fetching_julia_kernels()

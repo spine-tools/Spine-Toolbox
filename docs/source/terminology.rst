@@ -12,7 +12,7 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
 - **Arc** Graph theory term. See *Connection*.
 - **Case study** Spine project has 13 case studies that help to improve, validate and deploy
   different aspects of the SpineOpt.jl and Spine Toolbox.
-- **Connection** an arrow on Spine Toolbox Design View that is used to connect project items
+- **Connection** (aka **Arrow**) an arrow on Spine Toolbox Design View that is used to connect project items
   to each other to form a DAG.
 - **Data Connection** is a project item used to store a collection of data files that may or may not
   be in Spine data format. It facilitates data transfer from original data sources e.g. spreadsheet
@@ -36,10 +36,14 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   vertices and edges. In Spine Toolbox, we use project items as vertices and connections as edges to
   build a DAG that represents a data processing chain (workflow).
 - **Edge** Graph theory term. See *Connection*
-- **GdxExporter** is a project item that allows exporting a Spine data structure from a Data Store into a
-  .gdx file which can be used as an input file in a Tool.
+- **Element** is what the entities making up a multi dimensional entity are called. See also multidimensional
+  entity.
 - **Importer** is a project item that can be used to import data from e.g. an Excel file, transform it
   to Spine data structure, and into a Data Store.
+- **Loop** (aka **jump**) is a special sort of connection which only connects the two attached project
+  items if the user defined loop condition is met.
+- **Multidimensional entity/entity class** (aka N-D entity/class) An entity/entity class that consists of multiple
+  other entities that are as it's members. Acts just like any other entity/entity class.
 - **Node** Graph theory term. See *Project item*.
 - **Predecessor** Graph theory term that is also used in Spine Toolbox. Preceding project
   items of a certain project item in a DAG. For example, in DAG *x->y->z*, nodes *x* and *y* are

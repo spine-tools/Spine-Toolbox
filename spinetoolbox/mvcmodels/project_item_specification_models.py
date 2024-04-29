@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a class for storing Tool specifications.
-"""
-
+"""Contains a class for storing Tool specifications."""
 import bisect
 from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel, QSortFilterProxyModel, Slot, Signal
 
@@ -107,13 +105,6 @@ class ProjectItemSpecificationModel(QAbstractListModel):
         row = index.row()
         if role == Qt.ItemDataRole.DisplayRole:
             return self._spec_names[row]
-        if role == Qt.ItemDataRole.ToolTipRole:
-            if row >= self.rowCount():
-                return ""
-            return (
-                "<p>Drag-and-drop this onto the Design View "
-                f"to create a new <b>{self._spec_names[row]}</b> item.</p>"
-            )
         if role == Qt.ItemDataRole.DecorationRole:
             spec = self.specification(row)
             return self._icons[spec.item_type]

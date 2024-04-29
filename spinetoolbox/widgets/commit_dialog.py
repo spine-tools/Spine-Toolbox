@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add edit and remove database items.
-"""
-
+"""Classes for custom QDialogs to add edit and remove database items."""
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox, QApplication
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtGui import QAction
@@ -30,7 +28,7 @@ class CommitDialog(QDialog):
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowModality(Qt.ApplicationModal)
-        self.setWindowTitle('Commit changes to {}'.format(",".join(db_names)))
+        self.setWindowTitle("Commit changes to {}".format(",".join(db_names)))
         form = QVBoxLayout(self)
         form.setContentsMargins(4, 4, 4, 4)
         self.action_accept = QAction(self)
@@ -44,7 +42,7 @@ class CommitDialog(QDialog):
         self.commit_msg_edit.addAction(self.action_accept)
         button_box = QDialogButtonBox()
         button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
-        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.ButtonRole.AcceptRole)
+        self.commit_button = button_box.addButton("Commit", QDialogButtonBox.ButtonRole.AcceptRole)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         form.addWidget(self.commit_msg_edit)

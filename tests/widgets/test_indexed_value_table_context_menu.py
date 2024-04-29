@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the indexed_value_table_context_menu module.
-"""
-
+"""Unit tests for the indexed_value_table_context_menu module."""
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtWidgets import QApplication
@@ -390,5 +388,5 @@ def _find_action(menu, text):
     return None
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

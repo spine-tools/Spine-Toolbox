@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains machinery to deal with item metadata editor.
-"""
+"""Contains machinery to deal with item metadata editor."""
 from PySide6.QtCore import Slot, QModelIndex
-
-from ..mvcmodels.entity_tree_item import ObjectItem, MemberObjectItem, RelationshipItem
+from ..mvcmodels.entity_tree_item import EntityItem
 from ..mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 
 
@@ -43,10 +41,8 @@ class ItemMetadataEditor:
         Args:
             ui (Ui_MainWindow): DB editor's user interface
         """
-        ui.treeView_object.selectionModel().currentChanged.connect(self._reload_entity_metadata)
-        ui.treeView_relationship.selectionModel().currentChanged.connect(self._reload_entity_metadata)
-        ui.tableView_object_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
-        ui.tableView_relationship_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
+        ui.treeView_entity.selectionModel().currentChanged.connect(self._reload_entity_metadata)
+        ui.tableView_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
 
     def init_models(self, db_maps):
         """Initializes editor's models.
@@ -69,7 +65,7 @@ class ItemMetadataEditor:
         if not current_index.isValid():
             return
         item = current_index.model().item_from_index(current_index)
-        if not isinstance(item, (ObjectItem, RelationshipItem, MemberObjectItem)):
+        if not isinstance(item, EntityItem):
             return
         self._item_metadata_table_model.set_entity_ids(item.db_map_ids)
         self._item_metadata_table_view.setEnabled(True)
@@ -92,11 +88,3 @@ class ItemMetadataEditor:
         db_map_ids = {db_map: id_}
         self._item_metadata_table_model.set_parameter_value_ids(db_map_ids)
         self._item_metadata_table_view.setEnabled(True)
-
-    def rollback(self, db_maps):
-        """Rolls back database changes.
-
-        Args:
-            db_maps (Iterable of DiffDatabaseMapping): rolled back databases
-        """
-        self._item_metadata_table_model.rollback(db_maps)

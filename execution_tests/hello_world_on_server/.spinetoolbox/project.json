@@ -1,0 +1,59 @@
+{
+    "project": {
+        "version": 13,
+        "description": "",
+        "settings": {
+            "enable_execute_all": true
+        },
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/simple_tool_spec.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Data Connection 1 to Simple Tool",
+                "from": [
+                    "Data Connection 1",
+                    "right"
+                ],
+                "to": [
+                    "Simple Tool",
+                    "left"
+                ]
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Data Connection 1": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -184.36899456147438,
+            "y": -16.491179330385762,
+            "file_references": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "input_file.txt"
+                }
+            ],
+            "db_references": []
+        },
+        "Simple Tool": {
+            "type": "Tool",
+            "description": "",
+            "x": -28.398563508064505,
+            "y": 31.54655297939068,
+            "specification": "Simple Tool Spec",
+            "execute_in_work": true,
+            "cmd_line_args": [],
+            "kill_completed_processes": false,
+            "log_process_output": false
+        }
+    }
+}

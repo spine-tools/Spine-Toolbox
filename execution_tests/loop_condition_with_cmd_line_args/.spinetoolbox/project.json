@@ -1,7 +1,10 @@
 {
     "project": {
-        "version": 11,
+        "version": 13,
         "description": "",
+        "settings": {
+            "enable_execute_all": true
+        },
         "specifications": {
             "Tool": [
                 {
@@ -93,7 +96,7 @@
                 ],
                 "condition": {
                     "type": "python-script",
-                    "script": "import sys\nfrom spinedb_api import DatabaseMapping, from_database, import_object_parameter_values\nin_url = sys.argv[1]\nin_db_map = DatabaseMapping(in_url)\nsq = in_db_map.object_parameter_value_sq\nday_count_row = in_db_map.query(sq).filter(sq.c.object_class_name==\"Timeline\", sq.c.object_name==\"days_of_our_lives\", sq.c.parameter_name==\"cumulative_count\").first()\nday_count = from_database(day_count_row.value, day_count_row.type)\ncounter = day_count.values[-1]\nin_db_map.connection.close()\nif counter >= 30:\n    exit(1)\nout_url = sys.argv[2]\nout_db_map = DatabaseMapping(out_url)\nimport_object_parameter_values(out_db_map, ((\"Counter\", \"loop_counter\", \"count\", counter),))\nout_db_map.commit_session(\"Increment counter.\")\nout_db_map.connection.close()\nexit(0)"
+                    "script": "import sys\nfrom spinedb_api import DatabaseMapping, from_database, import_parameter_values\nin_url = sys.argv[1]\nwith DatabaseMapping(in_url) as in_db_map:\n\tsq = in_db_map.entity_parameter_value_sq\n\tday_count_row = in_db_map.query(sq).filter(sq.c.entity_class_name==\"Timeline\", sq.c.entity_name==\"days_of_our_lives\", sq.c.parameter_name==\"cumulative_count\").first()\nday_count = from_database(day_count_row.value, day_count_row.type)\ncounter = day_count.values[-1]\nif counter >= 30:\n    exit(1)\nout_url = sys.argv[2]\nwith DatabaseMapping(out_url) as out_db_map:\n\timport_parameter_values(out_db_map, ((\"Counter\", \"loop_counter\", \"count\", counter),))\n\tout_db_map.commit_session(\"Increment counter.\")\nexit(0)\n"
                 },
                 "cmd_line_args": [
                     {
@@ -106,10 +109,7 @@
                     }
                 ]
             }
-        ],
-        "settings": {
-            "enable_execute_all": true
-        }
+        ]
     },
     "items": {
         "Write data": {
@@ -124,7 +124,9 @@
                     "type": "resource",
                     "arg": "db_url@Loop counter store"
                 }
-            ]
+            ],
+            "kill_completed_processes": false,
+            "log_process_output": false
         },
         "Import": {
             "type": "Importer",
@@ -133,7 +135,6 @@
             "y": -4.007282712511945,
             "specification": "Import data",
             "cancel_on_error": false,
-            "purge_before_writing": false,
             "on_conflict": "merge",
             "file_selection": [
                 [
@@ -181,7 +182,6 @@
             "y": -4.007282712511941,
             "specification": "Counter data importer",
             "cancel_on_error": false,
-            "purge_before_writing": false,
             "on_conflict": "merge",
             "file_selection": [
                 [

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,21 +10,19 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains ResourceFilterModel.
-"""
+""" Contains ResourceFilterModel. """
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QStandardItemModel, QStandardItem
+from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.tool_filter import TOOL_FILTER_TYPE
 from ..project_commands import SetFiltersOnlineCommand
 
 
 class ResourceFilterModel(QStandardItemModel):
     tree_built = Signal()
     _SELECT_ALL = "Select all"
-    _FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Tool filter": TOOL_FILTER_TYPE}
-    _FILTER_TYPE_TO_TEXT = dict(zip(_FILTER_TYPES.values(), _FILTER_TYPES.keys()))
+    FILTER_TYPES = {"Scenario filter": SCENARIO_FILTER_TYPE, "Alternative filter": ALTERNATIVE_FILTER_TYPE}
+    FILTER_TYPE_TO_TEXT = dict(zip(FILTER_TYPES.values(), FILTER_TYPES.keys()))
 
     def __init__(self, connection, project, undo_stack, logger):
         """
@@ -46,13 +45,14 @@ class ResourceFilterModel(QStandardItemModel):
     def build_tree(self):
         """Rebuilds model's contents."""
 
-        def append_filter_items(parent_item, filter_names, filter_type, online, online_default):
+        def append_filter_items(parent_item, filter_names, filter_type, online, online_default, enabled):
             for name in filter_names[filter_type]:
                 filter_item = QStandardItem(name)
                 filter_item.setCheckState(
                     Qt.CheckState.Checked if online.get(name, online_default) else Qt.CheckState.Unchecked
                 )
-                filter_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+                filter_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+                filter_item.setEnabled(enabled)
                 parent_item.appendRow(filter_item)
 
         self.clear()
@@ -62,7 +62,7 @@ class ResourceFilterModel(QStandardItemModel):
             root_item = QStandardItem(resource_label)
             root_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             self.appendRow(root_item)
-            for type_label, type_ in self._FILTER_TYPES.items():
+            for type_label, type_ in self.FILTER_TYPES.items():
                 filter_parent = QStandardItem(type_label)
                 if not filters_by_type.get(type_):
                     no_filters_item = QStandardItem("None available")
@@ -70,15 +70,23 @@ class ResourceFilterModel(QStandardItemModel):
                     filter_parent.appendRow(no_filters_item)
                     root_item.appendRow(filter_parent)
                     continue
-                filter_parent.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                filter_enabled = self._connection.is_filter_type_enabled(type_)
+                filter_parent.setFlags(Qt.ItemIsSelectable)
+                filter_parent.setEnabled(filter_enabled)
                 select_all_item = QStandardItem(self._SELECT_ALL)
-                select_all_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
+                select_all_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
                 select_all_item.setCheckState(Qt.CheckState.Unchecked)
+                select_all_item.setEnabled(filter_enabled)
                 filter_parent.appendRow(select_all_item)
                 root_item.appendRow(filter_parent)
                 online_filters = self._connection.online_filters(resource_label, type_)
                 append_filter_items(
-                    filter_parent, filters_by_type, type_, online_filters, self._connection.is_filter_online_by_default
+                    filter_parent,
+                    filters_by_type,
+                    type_,
+                    online_filters,
+                    self._connection.is_filter_online_by_default,
+                    filter_enabled,
                 )
                 self._set_all_selected_item(resource_label, filter_parent)
         self.tree_built.emit()
@@ -89,12 +97,10 @@ class ResourceFilterModel(QStandardItemModel):
             url = resource.url
             if not url:
                 continue
-            scenario_names = self._connection.get_scenario_names(url)
-            if scenario_names:
-                filters.setdefault(resource.label, {})[SCENARIO_FILTER_TYPE] = scenario_names
-            tool_names = self._connection.get_tool_names(url)
-            if tool_names:
-                filters.setdefault(resource.label, {})[TOOL_FILTER_TYPE] = tool_names
+            for filter_type in (SCENARIO_FILTER_TYPE, ALTERNATIVE_FILTER_TYPE):
+                names = self._connection.get_filter_item_names(filter_type, url)
+                if names:
+                    filters.setdefault(resource.label, {})[filter_type] = names
         return filters
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
@@ -114,7 +120,7 @@ class ResourceFilterModel(QStandardItemModel):
         if item.hasChildren():
             return
         resource_type_item = item.parent()
-        filter_type = self._FILTER_TYPES[resource_type_item.text()]
+        filter_type = self.FILTER_TYPES[resource_type_item.text()]
         root_item = resource_type_item.parent()
         resource_label = root_item.text()
         if item.text() == self._SELECT_ALL:
@@ -131,7 +137,7 @@ class ResourceFilterModel(QStandardItemModel):
 
         Args:
             resource (str): Resource label
-            filter_type (str): Either SCENARIO_FILTER_TYPE or TOOL_FILTER_TYPE, for now.
+            filter_type (str): Always SCENARIO_FILTER_TYPE, for now.
             online (dict): mapping from scenario/tool id to online flag
         """
         self.connection.set_online(resource, filter_type, online)
@@ -159,12 +165,30 @@ class ResourceFilterModel(QStandardItemModel):
         """
         root_item = self.findItems(resource)[0]
         filter_type_item = None
-        filter_type_text = self._FILTER_TYPE_TO_TEXT[filter_type]
+        filter_type_text = self.FILTER_TYPE_TO_TEXT[filter_type]
         for row in range(root_item.rowCount()):
             filter_type_item = root_item.child(row)
             if filter_type_item.text() == filter_type_text:
                 break
         return filter_type_item
+
+    def filter_type_items(self, filter_type):
+        """An iterator to filter type items.
+
+        Args:
+            filter_type (str): filter type
+
+        Yields:
+            QStandardItem: filter type item
+        """
+        filter_text = self.FILTER_TYPE_TO_TEXT[filter_type]
+        root_item = self.invisibleRootItem()
+        for root_row in range(root_item.rowCount()):
+            resource_item = root_item.child(root_row)
+            for resource_row in range(resource_item.rowCount()):
+                filter_type_item = resource_item.child(resource_row)
+                if filter_type_item.text() == filter_text:
+                    yield filter_type_item
 
     def _set_all_selected_item(self, resource, filter_type_item, emit_data_changed=False):
         """Updates 'Select All' item's checked state.
@@ -174,7 +198,7 @@ class ResourceFilterModel(QStandardItemModel):
             filter_type_item (QStandardItem): filter type item
             emit_data_changed (bool): if True, emit dataChanged signal if the state was updated
         """
-        online_filters = self._connection.online_filters(resource, self._FILTER_TYPES[filter_type_item.text()])
+        online_filters = self._connection.online_filters(resource, self.FILTER_TYPES[filter_type_item.text()])
         all_online = all(online_filters.values())
         all_selected_item = filter_type_item.child(0)
         all_selected = all_selected_item.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked.value
@@ -185,3 +209,23 @@ class ResourceFilterModel(QStandardItemModel):
                 self.dataChanged.emit(
                     all_selected_item.index(), all_selected_item.index(), [Qt.ItemDataRole.CheckStateRole]
                 )
+
+    def set_filter_type_enabled(self, filter_type, enabled):
+        """Enables or disables a filter type.
+
+        Args:
+            filter_type (str): filter type
+            enabled (bool): whether the filter is enabled
+        """
+        filter_text = self.FILTER_TYPE_TO_TEXT[filter_type]
+        root_item = self.invisibleRootItem()
+        for root_row in range(root_item.rowCount()):
+            resource_item = root_item.child(root_row)
+            for resource_row in range(resource_item.rowCount()):
+                filter_type_item = resource_item.child(resource_row)
+                if filter_type_item.text() != filter_text:
+                    continue
+                filter_type_item.setEnabled(enabled)
+                for filter_type_row in range(filter_type_item.rowCount()):
+                    filter_item = filter_type_item.child(filter_type_row)
+                    filter_item.setEnabled(enabled)

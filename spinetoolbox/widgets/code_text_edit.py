@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides simple text editor for programming purposes.
-"""
-
+"""Provides simple text editor for programming purposes."""
 from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
 from pygments.util import ClassNotFound
@@ -35,9 +33,9 @@ class CodeTextEdit(QPlainTextEdit):
         self._right_margin = 16
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         self.setFont(font)
-        foreground_color = self._style.styles[Token]
+        self.foreground_color = self._style.styles[Token]
         self.setStyleSheet(
-            f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {foreground_color};}}"
+            f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {self.foreground_color};}}"
         )
         self.blockCountChanged.connect(self._update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
@@ -108,6 +106,14 @@ class CodeTextEdit(QPlainTextEdit):
         bottom = max(old_bottom, new_bottom)
         self._line_number_area.update(0, top, self._line_number_area.width(), bottom - top)
         self._cursor_block = new_cursor_block
+
+    def set_enabled_with_greyed(self, enabled):
+        super().setEnabled(enabled)
+        if enabled:
+            x = f"QPlainTextEdit {{background-color: {self._style.background_color}; color: {self.foreground_color};}}"
+        else:
+            x = f"QPlainTextEdit {{background-color: #737373; color: {self.foreground_color};}}"
+        self.setStyleSheet(x)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

@@ -1,3 +1,8 @@
+.. |add| image:: ../../../spinetoolbox/ui/resources/menu_icons/cube_plus.svg
+   :width: 16
+.. |remove| image:: ../../../spinetoolbox/ui/resources/menu_icons/cube_minus.svg
+   :width: 16
+
 
 Managing data
 -------------
@@ -7,54 +12,52 @@ This section describes the available tools to manage data, i.e., adding, updatin
 .. contents::
    :local:
 
-Managing object groups
-=======================
+Managing entity groups
+======================
 
-To modify object groups, expand the corresponding item in *Object tree* to display the **members** item,
-right-click on the latter and select **Manage members** from the context menu.
-The *Manage parameter tags* dialog will pop up:
+To modify entity groups, expand the corresponding entity class item in **Entity Tree** to display the group item,
+right-click on it and select **Manage members** from the context menu.
+The *Manage members* dialog will pop up:
 
 .. image:: img/manage_members_dialog.png
    :align: center
 
-To add new member objects, select them under *Non members*, and press the button in the middle that has a plus sign.
-To remove current member objects, select them under *Members*, and press the button in the middle that has a minus sign.
+To add new member entities, select them under *Non members*, and press the (|add|>>) button in the middle.
+To remove current members, select them under *Members*, and press the (|remove| <<) button in the middle.
 Multiple selection works in both lists.
 
-When you're happy, press **Ok**.
-
+When you're happy with the members, press **OK**.
 
 .. note:: Changes made using the *Manage members* dialog are not applied to
-   the database until you press **Ok**.
+   the database until you press **OK**.
 
-Managing relationships
-======================
+Managing N-D entities
+=====================
 
-Select **Edit -> Manage relationships** from the menu bar.
-The *Manage relationships* dialog will pop up:
+Right click the root item, or an N-D entity item in **Entity Tree** and from the context menu select
+**Manage elements**. The *Manage elements* dialog will pop up:
 
-.. image:: img/manage_relationships_dialog.png
+.. image:: img/manage_entities_dialog.png
    :align: center
 
-To get started, select a relationship class and a database from the combo boxes at the top.
+To get started, select an entity class and a database from the combo boxes at the top.
 
-To add relationships, select the member objects for each class under *Available objects*
-and press the **Add relationships** button at the middle of the form.
-The relationships will appear at the top of the table under *Existing relationships*.
+To add entities, select the elements for each class under *Available elements*
+and press the add button (|add|>>) in the middle of the form.
+The entities will appear at the top of the table under *Existing entities*.
 
-To add multiple relationships at the same time,
-select multiple objects for one or more of the classes.
+To add multiple entities at the same time,
+select multiple elements for one or more of the classes. All possible permutations
+of the selected elements will be added to *Existing entities*.
 
-.. tip:: To *extend* the selection of objects for a class, 
-   press and hold the **Ctrl** key while clicking on more items.
+.. tip:: To *extend* the selection of entities for a class,
+   press and hold the **Ctrl** key while clicking on more items. Holding down **Shift**
+   allows to select an area of items by clicking the start and end of the selection.
 
-.. note:: The set of relationships to add is determined by applying the *product*
-   operation over the objects selected for each class.
+To remove entities, select the appropriate rows under *Existing entities*
+and press the remove button (|remove|) on the right.
 
-To remove relationships, select the appropriate rows under *Existing relationships*
-and press the **Remove relationships** button on the right.
+When you're happy with your changes, press **OK**.
 
-When you're happy with your changes, press **Ok**.
-
-.. note:: Changes made using the *Manage relationships* dialog are not applied to
-   the database until you press **Ok**.
+.. note:: Changes made using the *Manage elements* dialog are not applied to
+   the database until you press **OK**.

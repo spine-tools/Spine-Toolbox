@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import sys
 import unittest
-from spinedb_api import DatabaseMapping, from_database, Map
+from spinedb_api import create_new_spine_database, DatabaseMapping, from_database, Map
 
 
 class LoopConditionWithCmdLineArgs(unittest.TestCase):
@@ -24,23 +24,20 @@ class LoopConditionWithCmdLineArgs(unittest.TestCase):
             database_path.parent.mkdir(parents=True, exist_ok=True)
             if database_path.exists():
                 database_path.unlink()
-            db_map = DatabaseMapping(url, create=True)
-            db_map.connection.close()
+            create_new_spine_database(url)
 
     def test_execution(self):
         completed = subprocess.run((sys.executable, "-m", "spinetoolbox", "--execute-only", str(self._root_path)))
         self.assertEqual(completed.returncode, 0)
-        db_map = DatabaseMapping(self._loop_counter_database_url)
-        value_rows = db_map.query(db_map.object_parameter_value_sq).all()
-        self.assertEqual(len(value_rows), 1)
-        loop_counter = from_database(value_rows[0].value, value_rows[0].type)
-        db_map.connection.close()
+        with DatabaseMapping(self._loop_counter_database_url) as db_map:
+            value_rows = db_map.query(db_map.parameter_value_sq).all()
+            self.assertEqual(len(value_rows), 1)
+            loop_counter = from_database(value_rows[0].value, value_rows[0].type)
         self.assertEqual(loop_counter, 20.0)
-        db_map = DatabaseMapping(self._output_database_url)
-        value_rows = db_map.query(db_map.object_parameter_value_sq).all()
-        self.assertEqual(len(value_rows), 1)
-        output_value = from_database(value_rows[0].value, value_rows[0].type)
-        db_map.connection.close()
+        with DatabaseMapping(self._output_database_url) as db_map:
+            value_rows = db_map.query(db_map.parameter_value_sq).all()
+            self.assertEqual(len(value_rows), 1)
+            output_value = from_database(value_rows[0].value, value_rows[0].type)
         expected_x = [f"T{i:03}" for i in range(31)]
         expected_y = [float(i) for i in range(31)]
         self.assertEqual(output_value, Map(expected_x, expected_y))

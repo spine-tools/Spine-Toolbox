@@ -1,0 +1,25 @@
+{
+    "item_type": "Exporter",
+    "output_format": "csv",
+    "name": "entities",
+    "description": "",
+    "mappings": {
+        "Mapping (1)": {
+            "type": "entities",
+            "mapping": [
+                {
+                    "map_type": "EntityClass",
+                    "position": 0
+                },
+                {
+                    "map_type": "Entity",
+                    "position": 1
+                }
+            ],
+            "enabled": true,
+            "always_export_header": true,
+            "group_fn": "no_group",
+            "use_fixed_table_name": false
+        }
+    }
+}

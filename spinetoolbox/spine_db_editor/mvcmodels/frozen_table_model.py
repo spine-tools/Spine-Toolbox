@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,14 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains FrozenTableModel class.
-"""
+"""Contains FrozenTableModel class."""
 from itertools import product
-
 from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel, Signal
 from .colors import SELECTED_COLOR
-from ...helpers import rows_to_row_count_tuples
+from ...helpers import plain_to_tool_tip, rows_to_row_count_tuples
 
 
 class FrozenTableModel(QAbstractTableModel):
@@ -42,13 +40,18 @@ class FrozenTableModel(QAbstractTableModel):
 
         Args:
             headers (Iterable of str): headers
+
+        Returns:
+            bool: True if model was reset, False otherwise
         """
         headers = list(headers)
         if self._data and headers == self._data[0]:
-            return
+            return False
         self.beginResetModel()
         self._data = [headers]
+        self._selected_row = None
         self.endResetModel()
+        return True
 
     def clear_model(self):
         self.beginResetModel()
@@ -70,7 +73,8 @@ class FrozenTableModel(QAbstractTableModel):
         self.beginInsertRows(QModelIndex(), old_size, old_size + len(new_values) - 1)
         self._data += new_values
         self.endInsertRows()
-        self._keep_sorted()
+        had_data_before = bool(unique_data)
+        self._keep_sorted(update_selected_row=had_data_before)
 
     def remove_values(self, data):
         """Removes frozen values from the table.
@@ -78,29 +82,25 @@ class FrozenTableModel(QAbstractTableModel):
         Args:
             data (set of tuple): frozen values
         """
-        removed_i = set()
-        for removed_row in data:
-            for i, row in enumerate(self._data[1:]):
-                if row == removed_row:
-                    removed_i.add(i + 1)
-                    break
-        if not removed_i:
+        removed_rows = {i + 1 for i, val in enumerate(self._data[1:]) if val in data}
+        if not removed_rows:
             return
-        frozen_value = self._data[self._selected_row]
-        intervals = rows_to_row_count_tuples(removed_i)
-        for interval in reversed(intervals):
-            end = interval[0] + interval[1]
-            self.beginRemoveRows(QModelIndex(), interval[0], end - 1)
-            del self._data[interval[0] : end]
-            self.endRemoveRows()
-        if self._selected_row in removed_i:
-            self._selected_row = min(self._selected_row, len(self._data) - 1)
-            self.selected_row_changed.emit()
+        if self._selected_row is not None and self._selected_row not in removed_rows:
+            frozen_value = self._data[self._selected_row]
         else:
+            frozen_value = None
+        for first, count in reversed(rows_to_row_count_tuples(removed_rows)):
+            last = first + count - 1
+            self.beginRemoveRows(QModelIndex(), first, last)
+            del self._data[first : last + 1]
+            self.endRemoveRows()
+        if frozen_value is not None:
             selected_row = self._find_first(frozen_value)
-            if selected_row != self._selected_row:
-                self._selected_row = selected_row
-                self.selected_row_changed.emit()
+        else:
+            selected_row = 1 if len(self._data) > 1 else None
+        if selected_row != self._selected_row:
+            self._selected_row = selected_row
+            self.selected_row_changed.emit()
 
     def clear_selected(self):
         """Clears selected row."""
@@ -127,6 +127,14 @@ class FrozenTableModel(QAbstractTableModel):
         new_bottom_right = self.index(self._selected_row, last_column)
         self.dataChanged.emit(new_bottom_right, new_top_left, [Qt.ItemDataRole.BackgroundRole])
         self.selected_row_changed.emit()
+
+    def get_selected(self):
+        """Returns selected row.
+
+        Returns:
+            int: row index or None if no row is selected
+        """
+        return self._selected_row
 
     def get_frozen_value(self):
         """Return currently selected frozen value.
@@ -169,12 +177,12 @@ class FrozenTableModel(QAbstractTableModel):
             self.endInsertColumns()
             return
         column_values = self._unique_values()
-        new_data = [row for row in product(*column_values[:column], values, *column_values[column:])]
-        previous_selected_value = self._data[self._selected_row] if self._selected_row is not None else None
+        new_data = list(product(*column_values[:column], values, *column_values[column:]))
+        previously_selected_value = self._data[self._selected_row] if self._selected_row is not None else None
         self.beginResetModel()
         self._data[0] = headers[:column] + [header] + headers[column:]
         self._data[1:] = new_data
-        self._selected_row = self._find_first(previous_selected_value, column)
+        self._selected_row = self._find_first(previously_selected_value, column)
         self.endResetModel()
         self._keep_sorted()
 
@@ -196,7 +204,7 @@ class FrozenTableModel(QAbstractTableModel):
             self.endRemoveColumns()
             return
         column_values = self._unique_values()
-        new_data = [row for row in product(*column_values[:column], *column_values[column + 1 :])]
+        new_data = list(product(*column_values[:column], *column_values[column + 1 :]))
         selected_data = self._data[self._selected_row]
         self.beginResetModel()
         self._data[0] = headers[:column] + headers[column + 1 :]
@@ -220,7 +228,7 @@ class FrozenTableModel(QAbstractTableModel):
         self._keep_sorted()
         return True
 
-    def _keep_sorted(self):
+    def _keep_sorted(self, update_selected_row=True):
         """Sorts the data table."""
         if len(self._data) < 3:
             return
@@ -235,11 +243,21 @@ class FrozenTableModel(QAbstractTableModel):
             key=lambda x: tuple(self._name_from_data(x[column], header[column]) for column in range(column_count)),
         )
         self._data[1:] = data
+        selected_row_changed = False
         if frozen_value is not None:
-            self._selected_row = self._find_first(frozen_value)
+            if update_selected_row:
+                candidate = self._find_first(frozen_value)
+                if self._selected_row != candidate:
+                    self._selected_row = candidate
+                    selected_row_changed = True
+            elif frozen_value != self.get_frozen_value():
+                # The row did not change but the frozen value did.
+                selected_row_changed = True
         self.layoutChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
             [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
         )
+        if selected_row_changed:
+            self.selected_row_changed.emit()
 
     def _unique_values(self):
         """Turns non-header data into sets of unique values on each column.
@@ -309,22 +327,26 @@ class FrozenTableModel(QAbstractTableModel):
         header = self._data[0][column]
         if header == "parameter":
             db_map, id_ = value
-            return self.db_mngr.get_item(db_map, "parameter_definition", id_)["description"]
-        if header == "alternative":
+            tool_tip = self.db_mngr.get_item(db_map, "parameter_definition", id_).get("description")
+        elif header == "alternative":
             db_map, id_ = value
-            return self.db_mngr.get_item(db_map, "alternative", id_)["description"]
-        if header == "index":
-            return str(value[1])
-        if header == "database":
-            return value.codename
-        db_map, id_ = value
-        return self.db_mngr.get_item(db_map, "object", id_)["description"]
+            tool_tip = self.db_mngr.get_item(db_map, "alternative", id_).get("description")
+        elif header == "index":
+            tool_tip = str(value[1])
+        elif header == "database":
+            tool_tip = value.codename
+        elif header == "entity":
+            db_map, id_ = value
+            tool_tip = self.db_mngr.get_item(db_map, "entity", id_).get("description")
+        else:
+            raise RuntimeError(f"Logic error: unknown header '{header}'")
+        return plain_to_tool_tip(tool_tip)
 
     def _name_from_data(self, value, header):
         """Resolves item name.
 
         Args:
-            value (tuple or DatabaseMappingBase): cell value
+            value (tuple or DatabaseMapping): cell value
             header (str): column header
 
         Returns:
@@ -333,7 +355,7 @@ class FrozenTableModel(QAbstractTableModel):
         if header == "parameter":
             db_map, id_ = value
             item = self.db_mngr.get_item(db_map, "parameter_definition", id_)
-            return item.get("parameter_name")
+            return item.get("name")
         if header == "alternative":
             db_map, id_ = value
             item = self.db_mngr.get_item(db_map, "alternative", id_)
@@ -343,7 +365,7 @@ class FrozenTableModel(QAbstractTableModel):
         if header == "database":
             return value.codename
         db_map, id_ = value
-        item = self.db_mngr.get_item(db_map, "object", id_)
+        item = self.db_mngr.get_item(db_map, "entity", id_)
         return item.get("name")
 
     @property

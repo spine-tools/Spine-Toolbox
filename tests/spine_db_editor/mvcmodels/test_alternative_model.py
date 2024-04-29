@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,14 +9,14 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for :class:`AlternativeModel`."""
-import pickle
 from pathlib import Path
+import pickle
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
-
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_model import AlternativeModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
@@ -23,6 +24,8 @@ from tests.mock_helpers import model_data_to_dict, TestSpineDBManager
 
 
 class TestAlternativeModel(unittest.TestCase):
+    db_codename = "alternative_model_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -32,9 +35,9 @@ class TestAlternativeModel(unittest.TestCase):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -42,7 +45,7 @@ class TestAlternativeModel(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map.connection.closed:
+        while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -51,7 +54,7 @@ class TestAlternativeModel(unittest.TestCase):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         data = model_data_to_dict(model)
-        expected = [[{"test_db": [["Type new alternative name here...", ""]]}, None]]
+        expected = [[{self.db_codename: [["Type new alternative name here...", ""]]}, None]]
         self.assertEqual(data, expected)
 
     def test_add_alternatives(self):
@@ -63,7 +66,7 @@ class TestAlternativeModel(unittest.TestCase):
         expected = [
             [
                 {
-                    "test_db": [
+                    self.db_codename: [
                         ["Base", "Base alternative"],
                         ["alternative_1", ""],
                         ["Type new alternative name here...", ""],
@@ -78,12 +81,18 @@ class TestAlternativeModel(unittest.TestCase):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
         data = model_data_to_dict(model)
         expected = [
             [
-                {"test_db": [["Base", "Base alternative"], ["renamed", ""], ["Type new alternative name here...", ""]]},
+                {
+                    self.db_codename: [
+                        ["Base", "Base alternative"],
+                        ["renamed", ""],
+                        ["Type new alternative name here...", ""],
+                    ]
+                },
                 None,
             ]
         ]
@@ -93,10 +102,12 @@ class TestAlternativeModel(unittest.TestCase):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
         self._db_mngr.remove_items({self._db_map: {"alternative": {2}}})
         data = model_data_to_dict(model)
-        expected = [[{"test_db": [["Base", "Base alternative"], ["Type new alternative name here...", ""]]}, None]]
+        expected = [
+            [{self.db_codename: [["Base", "Base alternative"], ["Type new alternative name here...", ""]]}, None]
+        ]
         self.assertEqual(data, expected)
 
     def test_mimeData(self):
@@ -110,11 +121,13 @@ class TestAlternativeModel(unittest.TestCase):
         self.assertTrue(mime_data.hasText())
         self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
         self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
-        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA))
-        self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): [1]})
+        alternative_data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
+        self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): ["Base"]})
 
 
 class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
+    db_codename = "alternative_model_with_two_databases_test_db"
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -127,9 +140,9 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
         self._db_mngr = TestSpineDBManager(app_settings, None)
         self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db_1", create=True)
         url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db2.sqlite"))
-        self._db_map2 = self._db_mngr.get_db_map(url2, logger, codename="test_db_2", create=True)
+        self._db_map2 = self._db_mngr.get_db_map(url2, logger, codename=self.db_codename, create=True)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: "test_db_2"})
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: self.db_codename})
 
     def tearDown(self):
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
@@ -137,7 +150,7 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
-        while not self._db_map1.connection.closed and not self._db_map2.connection.closed:
+        while not self._db_map1.closed and not self._db_map2.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
@@ -155,7 +168,7 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
         self.assertEqual(source_index.data(), "my_alternative")
         mime_data = model.mimeData([source_index])
         target_index = model.index(1, 0)
-        self.assertEqual(target_index.data(), "test_db_2")
+        self.assertEqual(target_index.data(), self.db_codename)
         target_item = model.item_from_index(target_index)
         model.paste_alternative_mime_data(mime_data, target_item)
         _fetch_all_recursively(model)
@@ -173,7 +186,7 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
             ],
             [
                 {
-                    "test_db_2": [
+                    self.db_codename: [
                         ["Base", "Base alternative"],
                         ["my_alternative", "My test alternative"],
                         ["Type new alternative name here...", ""],
@@ -187,9 +200,10 @@ class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
 
 def _fetch_all_recursively(model):
     for item in model.visit_all():
-        if item.can_fetch_more():
+        while item.can_fetch_more():
             item.fetch_more()
+            qApp.processEvents()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

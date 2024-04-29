@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Engine is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Client for exchanging messages between the toolbox and the Spine Engine Server.
-"""
-
+"""Client for exchanging messages between the toolbox and the Spine Engine Server."""
 import os
 import time
 import random
@@ -56,9 +54,9 @@ class EngineClient:
             # implementation below based on https://github.com/zeromq/pyzmq/blob/main/examples/security/stonehouse.py
             # prepare folders
             base_dir = sec_folder
-            secret_keys_dir = os.path.join(base_dir, 'private_keys')
-            keys_dir = os.path.join(base_dir, 'certificates')
-            public_keys_dir = os.path.join(base_dir, 'public_keys')
+            secret_keys_dir = os.path.join(base_dir, "private_keys")
+            keys_dir = os.path.join(base_dir, "certificates")
+            public_keys_dir = os.path.join(base_dir, "public_keys")
             # We need two certificates, one for the client and one for
             # the server. The client must know the server's public key
             # to make a CURVE connection.
@@ -190,15 +188,15 @@ class EngineClient:
         response_server_message = ServerMessage.parse(response[1])
         return response_server_message.getData()
 
-    def answer_prompt(self, job_id, item_name, accepted):
+    def answer_prompt(self, job_id, prompter_id, answer):
         """Sends a request to answer a prompt from the DAG that is managed by this client.
 
         Args:
             job_id (str): Job Id on server to stop
-            item_name (str)
-            accepted (Bool)
+            prompter_id (int)
+            answer
         """
-        req = ServerMessage("answer_prompt", job_id, json.dumps((item_name, True)), None)
+        req = ServerMessage("answer_prompt", job_id, json.dumps((prompter_id, answer)), None)
         self.socket.send_multipart([req.to_bytes()])
 
     def download_files(self, q):

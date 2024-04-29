@@ -1,7 +1,7 @@
 <RCC>
   <qresource prefix="/symbols">
-    <file>spinetoolbox_on_wht.png</file>
     <file>Spine_symbol.png</file>
+    <file>spinetoolbox_on_wht.png</file>
     <file>app.ico</file>
   </qresource>
   <qresource prefix="/animated_gifs">
@@ -13,6 +13,8 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/bolt-lightning.svg</file>
+    <file>share.svg</file>
     <file>menu_icons/server.svg</file>
     <file>menu_icons/broom.svg</file>
     <file>tractor.svg</file>

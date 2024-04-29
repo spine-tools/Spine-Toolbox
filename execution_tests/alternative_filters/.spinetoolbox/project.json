@@ -1,0 +1,83 @@
+{
+    "project": {
+        "version": 13,
+        "description": "",
+        "settings": {
+            "enable_execute_all": true
+        },
+        "specifications": {
+            "Exporter": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Exporter/export_values.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Data Store to Exporter",
+                "from": [
+                    "Data Store",
+                    "right"
+                ],
+                "to": [
+                    "Exporter",
+                    "left"
+                ],
+                "filter_settings": {
+                    "known_filters": {
+                        "db_url@Data Store": {
+                            "scenario_filter": {},
+                            "alternative_filter": {
+                                "Base": true,
+                                "alt1": false,
+                                "alt2": true
+                            }
+                        }
+                    },
+                    "auto_online": true,
+                    "enabled_filter_types": {
+                        "alternative_filter": true,
+                        "scenario_filter": false
+                    }
+                }
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Data Store": {
+            "type": "Data Store",
+            "description": "",
+            "x": -251.50464049730488,
+            "y": -53.10655755520781,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data_store/Data Store.sqlite"
+                },
+                "schema": ""
+            }
+        },
+        "Exporter": {
+            "type": "Exporter",
+            "description": "",
+            "x": -103.20708355068687,
+            "y": -53.10655755520782,
+            "output_time_stamps": false,
+            "cancel_on_error": true,
+            "output_labels": [
+                {
+                    "in_label": "db_url@Data Store",
+                    "out_label": "out.dat"
+                }
+            ],
+            "specification": "Export values"
+        }
+    }
+}

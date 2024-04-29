@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains base class for metadata table models associated functionality.
-"""
+"""Contains base class for metadata table models associated functionality."""
 from enum import IntEnum, unique
 from operator import itemgetter
-
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from spinetoolbox.helpers import rows_to_row_count_tuples
 from .colors import FIXED_FIELD_COLOR
@@ -51,7 +49,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         """
         Args:
             db_mngr (SpineDBManager): database manager
-            db_maps (Iterable of DatabaseMappingBase): database maps
+            db_maps (Iterable of DatabaseMapping): database maps
             db_editor (SpineDBEditor): DB editor
         """
         super().__init__(db_editor)

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -11,20 +12,12 @@
 
 """Test for `scenario_generator` module."""
 import unittest
-
 from PySide6.QtCore import Qt
-
 from spinetoolbox.spine_db_editor.widgets.scenario_generator import ScenarioGenerator
-from .helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase
 
 
 class TestScenarioGenerator(TestBase):
-    def setUp(self):
-        self._common_setup("sqlite://", create=True)
-
-    def tearDown(self):
-        self._common_tear_down()
-
     def test_alternative_list_contains_alternatives(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alt1"}]})
         alternatives = self._db_mngr.get_items(self._db_map, "alternative")
@@ -76,5 +69,5 @@ class TestScenarioGenerator(TestBase):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

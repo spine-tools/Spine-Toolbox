@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for SpineToolboxProject class.
-"""
+"""Unit tests for the SpineToolboxProject class."""
 import json
 import os.path
 from pathlib import Path
@@ -19,7 +18,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import QVariantAnimation
-from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QMessageBox
 import networkx as nx
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
@@ -28,8 +28,8 @@ from spine_engine.utils.helpers import shorten
 from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
-from spinetoolbox.project_item.logging_connection import LoggingConnection
-from spinetoolbox.config import PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
+from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
+from spinetoolbox.config import LATEST_PROJECT_VERSION, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.project import node_successors
 from tests.mock_helpers import (
     clean_up_toolbox,
@@ -81,12 +81,11 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_data_store(self):
         name = "DS"
         add_ds(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a Data Store
-        self.assertEqual(found_item.item_type(), "Data Store")
+        self.assertEqual(item.item_type(), "Data Store")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -104,36 +103,39 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_add_data_connection(self):
         name = "DC"
         add_dc(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a Data Connection
-        self.assertEqual(found_item.item_type(), "Data Connection")
+        self.assertEqual(item.item_type(), "Data Connection")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
+        # test get_items_by_type()
+        data_connections = self.toolbox.project().get_items_by_type("Data Connection")
+        self.assertEqual(1, len(data_connections))
+        self.assertIsInstance(data_connections[0], ProjectItem)
+        tools = self.toolbox.project().get_items_by_type("Tool")
+        self.assertEqual(0, len(tools))
 
     def test_add_tool(self):
         name = "Tool"
         add_tool(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a Tool
-        self.assertEqual(found_item.item_type(), "Tool")
+        self.assertEqual(item.item_type(), "Tool")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
     def test_add_view(self):
         name = "View"
         add_view(self.toolbox.project(), self.toolbox.item_factories, name)
-        # Check that an item with the created name is found from project item model
-        found_index = self.toolbox.project_item_model.find_item(name)
-        found_item = self.toolbox.project_item_model.item(found_index).project_item
-        self.assertEqual(found_item.name, name)
+        # Check that an item with the created name is in project
+        item = self.toolbox.project().get_item(name)
+        self.assertEqual(item.name, name)
         # Check that the created item is a View
-        self.assertEqual(found_item.item_type(), "View")
+        self.assertEqual(item.item_type(), "View")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -172,6 +174,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(exporter_name, exporter.name)
         merger = p.get_item(merger_name)
         self.assertEqual(merger_name, merger.name)
+        # Test has_items(), and get_items()
+        self.assertTrue(p.has_items())
+        self.assertEqual(8, len(p.get_items()))
         # DAG handler should now have eight graphs, each with one item
         dags = [dag for dag in self.toolbox.project()._dag_iterator()]
         self.assertEqual(8, len(dags))
@@ -196,10 +201,10 @@ class TestSpineToolboxProject(unittest.TestCase):
     def test_remove_item_by_name(self):
         view_name = "View"
         add_view(self.toolbox.project(), self.toolbox.item_factories, view_name)
-        view = self.toolbox.project_item_model.get_item(view_name)
+        view = self.toolbox.project().get_item(view_name)
         self.assertEqual(view_name, view.name)
         self.toolbox.project().remove_item_by_name(view_name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 0)
+        self.assertEqual(self.toolbox.project().n_items, 0)
 
     def test_remove_item_by_name_removes_outgoing_connections(self):
         project = self.toolbox.project()
@@ -208,16 +213,16 @@ class TestSpineToolboxProject(unittest.TestCase):
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
         project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
-        view = self.toolbox.project_item_model.get_item(view1_name)
+        view = self.toolbox.project().get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        view = self.toolbox.project_item_model.get_item(view2_name)
+        view = self.toolbox.project().get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
+        self.assertEqual(self.toolbox.project().n_items, 2)
         self.assertEqual(len(project.connections), 1)
         project.remove_item_by_name(view1_name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        self.assertEqual(self.toolbox.project().n_items, 1)
         self.assertEqual(len(project.connections), 0)
-        view = self.toolbox.project_item_model.get_item(view2_name)
+        view = self.toolbox.project().get_item(view2_name)
         self.assertEqual(view2_name, view.name)
         self.assertTrue(self.node_is_isolated(project, view2_name))
 
@@ -228,16 +233,16 @@ class TestSpineToolboxProject(unittest.TestCase):
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
         project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
-        view = self.toolbox.project_item_model.get_item(view1_name)
+        view = self.toolbox.project().get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        view = self.toolbox.project_item_model.get_item(view2_name)
+        view = self.toolbox.project().get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
+        self.assertEqual(self.toolbox.project().n_items, 2)
         self.assertEqual(len(project.connections), 1)
         project.remove_item_by_name(view2_name)
-        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        self.assertEqual(self.toolbox.project().n_items, 1)
         self.assertEqual(len(project.connections), 0)
-        view = self.toolbox.project_item_model.get_item(view1_name)
+        view = self.toolbox.project().get_item(view1_name)
         self.assertEqual(view1_name, view.name)
         self.assertTrue(self.node_is_isolated(project, view1_name))
 
@@ -364,17 +369,42 @@ class TestSpineToolboxProject(unittest.TestCase):
             self.assertTrue(dc3_executable.execute_called)
             self.assertTrue(dc5_executable.execute_called)
 
-    def test_executing_cyclic_dag_fails_graciously(self):
+    def test_making_a_yellow_feedback_loop_makes_a_jump_instead(self):
         item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
         self.toolbox.project().add_connection(
             LoggingConnection(item1.name, "right", item2.name, "left", toolbox=self.toolbox)
         )
-        self.toolbox.project().add_connection(
-            LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
-        )
-        self.toolbox.project().execute_project()
-        self.assertFalse(self.toolbox.project()._execution_in_progress)
+        # There should be one connection and no jumps in the project
+        self.assertEqual(1, len(self.toolbox.project().connections))
+        self.assertEqual("DC", self.toolbox.project().connections[0].source)
+        self.assertEqual("View", self.toolbox.project().connections[0].destination)
+        self.assertEqual(0, len(self.toolbox.project()._jumps))
+        with mock.patch("PySide6.QtWidgets.QMessageBox.exec") as mock_msgbox_exec:
+            mock_msgbox_exec.return_value = QMessageBox.StandardButton.Cancel
+            self.toolbox.project().add_connection(
+                LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
+            )
+            # Operation was cancelled
+            self.assertEqual(1, len(self.toolbox.project().connections))
+            self.assertEqual(0, len(self.toolbox.project()._jumps))
+            # Do again but click Ok (Add Loop)
+            mock_msgbox_exec.assert_called()
+            self.assertEqual(1, mock_msgbox_exec.call_count)
+            mock_msgbox_exec.return_value = QMessageBox.StandardButton.Ok
+            self.toolbox.project().add_connection(
+                LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
+            )
+            self.assertEqual(2, mock_msgbox_exec.call_count)
+            # There should be one connection and one jump in the project
+            self.assertEqual(1, len(self.toolbox.project().connections))
+            self.assertIsInstance(self.toolbox.project().connections[0], LoggingConnection)
+            self.assertEqual("DC", self.toolbox.project().connections[0].source)
+            self.assertEqual("View", self.toolbox.project().connections[0].destination)
+            self.assertEqual(1, len(self.toolbox.project()._jumps))
+            self.assertIsInstance(self.toolbox.project()._jumps[0], LoggingJump)
+            self.assertEqual("View", self.toolbox.project()._jumps[0].source)
+            self.assertEqual("DC", self.toolbox.project()._jumps[0].destination)
 
     def test_rename_project(self):
         new_name = "New Project Name"
@@ -549,13 +579,13 @@ class TestSpineToolboxProject(unittest.TestCase):
                     "jumps": [],
                     "settings": {"enable_execute_all": True},
                     "specifications": {},
-                    "version": 11,
+                    "version": LATEST_PROJECT_VERSION,
                 },
             },
         )
         with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:
             local_data_dict = json.load(fp)
-        self.assertEqual(local_data_dict, {'items': {'test item': {'a': {'b': 1, 'd': 3}}}})
+        self.assertEqual(local_data_dict, {"items": {"test item": {"a": {"b": 1, "d": 3}}}})
 
     def test_load_when_storing_item_local_data(self):
         project = self.toolbox.project()
@@ -576,10 +606,16 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_and_save_specification(self):
         project = self.toolbox.project()
-        specification = _MockSpecification(
-            "a specification", "Specification for testing.", "Tester", "Testing category"
-        )
-        project.add_specification(specification)
+        self.toolbox.item_factories = {"Tester": ProjectItemFactory()}
+        specification = _MockSpecification("a specification", "Specification for testing.", "Tester")
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
@@ -594,10 +630,18 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_and_save_specification_with_local_data(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         specification = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        project.add_specification(specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         self.assertTrue(specification.is_equivalent(project.get_specification("a specification")))
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
@@ -619,16 +663,24 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_renaming_specification_with_local_data_updates_local_data_file(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         original_specification = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        project.add_specification(original_specification)
-        local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
-        self.assertTrue(local_data_file.exists())
-        specification = _MockSpecificationWithLocalData(
-            "another specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
-        )
-        project.replace_specification("a specification", specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(original_specification)
+            local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
+            self.assertTrue(local_data_file.exists())
+            specification = _MockSpecificationWithLocalData(
+                "another specification", "Specification for testing.", "Tester", "my precious data"
+            )
+            project.replace_specification("a specification", specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
         specification_file = specification_dir / (specification.short_name + ".json")
@@ -646,16 +698,22 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_replace_specification_with_local_data_by_one_without_removes_local_data_from_the_file(self):
         project = self.toolbox.project()
+        self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         specification_with_local_data = _MockSpecificationWithLocalData(
-            "a specification", "Specification for testing.", "Tester", "Testing category", "my precious data"
+            "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        project.add_specification(specification_with_local_data)
-        local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
-        self.assertTrue(local_data_file.exists())
-        specification = _MockSpecification(
-            "another specification", "Specification without local data", "Tester", "Testing category"
-        )
-        project.replace_specification("a specification", specification)
+        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
+            mock_icon.return_value = ":/icons/item_icons/hammer.svg"
+            mock_icon_color.return_value = QColor("white")
+            project.add_specification(specification_with_local_data)
+            local_data_file = Path(self._temp_dir.name) / ".spinetoolbox" / "local" / "specification_local_data.json"
+            self.assertTrue(local_data_file.exists())
+            specification = _MockSpecification("another specification", "Specification without local data", "Tester")
+            project.replace_specification("a specification", specification)
+            mock_icon.assert_called()
+            mock_icon_color.assert_called()
         specification_dir = Path(self._temp_dir.name) / ".spinetoolbox" / "specifications" / "Tester"
         self.assertTrue(specification_dir.exists())
         specification_file = specification_dir / (specification.short_name + ".json")
@@ -670,7 +728,7 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def _make_mock_executable(self, item):
         item_name = item.name
-        item = self.toolbox.project_item_model.get_item(item_name).project_item
+        item = self.toolbox.project().get_item(item_name)
         item_executable = _MockExecutableItem(item_name, self.toolbox.project().project_dir, self.toolbox)
         animation = QVariantAnimation()
         animation.setDuration(0)
@@ -719,10 +777,6 @@ class _MockItemWithLocalData(ProjectItem):
     def item_type():
         return "Tester"
 
-    @staticmethod
-    def item_category():
-        return "Tools"
-
     def set_rank(self, rank):
         pass
 
@@ -747,8 +801,8 @@ class _MockSpecification(ProjectItemSpecification):
 
 
 class _MockSpecificationWithLocalData(ProjectItemSpecification):
-    def __init__(self, name, description, item_type, item_category, local_data):
-        super().__init__(name, description, item_type, item_category)
+    def __init__(self, name, description, item_type, local_data):
+        super().__init__(name, description, item_type)
         self._local_data = local_data
 
     def to_dict(self):
@@ -769,5 +823,5 @@ class _MockSpecificationWithLocalData(ProjectItemSpecification):
         return [("data",)]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

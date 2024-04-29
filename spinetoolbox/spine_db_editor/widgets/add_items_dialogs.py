@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add items to databases.
-
-"""
-
+""" Classes for custom QDialogs to add items to databases. """
+from contextlib import suppress
 from itertools import product
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -36,69 +34,67 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide6.QtGui import QIcon
+from spinedb_api.helpers import name_from_elements, name_from_dimensions
+from ..helpers import string_to_bool, string_to_display_icon
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from .custom_delegates import (
-    ManageObjectClassesDelegate,
-    ManageObjectsDelegate,
-    ManageRelationshipClassesDelegate,
-    ManageRelationshipsDelegate,
-)
+from ...helpers import DB_ITEM_SEPARATOR
+from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate
 from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
-    GetObjectClassesMixin,
-    GetObjectsMixin,
-    GetRelationshipClassesMixin,
+    GetEntityClassesMixin,
+    GetEntitiesMixin,
     ManageItemsDialog,
-    ManageItemsDialogBase,
+    DialogWithTableAndButtons,
 )
-from ...spine_db_commands import AddItemsCommand, RemoveItemsCommand, SpineDBMacro
 
 
-class AddReadyRelationshipsDialog(ManageItemsDialogBase):
-    """A dialog to let the user add new 'ready' relationships."""
+class AddReadyEntitiesDialog(DialogWithTableAndButtons):
+    """A dialog to let the user add new 'ready' multidimensional entities."""
 
-    def __init__(self, parent, relationships_class, relationships, db_mngr, *db_maps):
+    def __init__(self, parent, entity_class, entities, db_mngr, *db_maps, commit_data=True):
         """
         Args:
             parent (SpineDBEditor)
-            relationships_class (dict)
-            relationships (list(list(str))
+            entity_class (dict)
+            entities (list(list(str))
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
-        self.relationship_class = relationships_class
-        self.relationships = relationships
+        self._commit_data = commit_data
+        self.entity_class = entity_class
+        self.entities = entities
         self.db_maps = db_maps
-        label = QLabel("<p>Please check the relationships you want to add and press <b>Ok</b>.</p>")
-        label.setWordWrap(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(0)
-        self.layout().addWidget(label, 0, 0)
-        self.layout().addWidget(self.table_view, 1, 0)
-        self.layout().addWidget(self.button_box, 2, 0, -1, -1)
-        self.setWindowTitle("Add '{0}' relationships".format(self.relationship_class["name"]))
+        self.setWindowTitle("Add '{0}' entities".format(self.entity_class["name"]))
         self.populate_table_view()
         self.connect_signals()
+
+    def _populate_layout(self):
+        label = QLabel("<p>Please check the entities you want to add and press <b>Ok</b>.</p>")
+        label.setWordWrap(True)
+        self.layout().addWidget(label)
+        super()._populate_layout()
 
     def make_table_view(self):
         return QTableWidget(self)
 
     def populate_table_view(self):
-        object_class_name_list = self.relationship_class["object_class_name_list"]
-        self.table_view.setRowCount(len(self.relationships))
-        self.table_view.setColumnCount(len(object_class_name_list) + 1)
-        labels = ("",) + object_class_name_list
+        dimension_name_list = self.entity_class["dimension_name_list"]
+        self.table_view.setRowCount(len(self.entities))
+        self.table_view.setColumnCount(len(dimension_name_list) + 1)
+        labels = ("",) + dimension_name_list
         self.table_view.setHorizontalHeaderLabels(labels)
         self.table_view.verticalHeader().hide()
-        for row, relationship in enumerate(self.relationships):
+        for row, entity in enumerate(self.entities):
             item = QTableWidgetItem()
             item.setFlags(Qt.ItemIsEnabled)
             item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
-            for column, object_name in enumerate(relationship):
-                item = QTableWidgetItem(object_name)
+            for column, element_byname in enumerate(entity):
+                item = QTableWidgetItem(DB_ITEM_SEPARATOR.join(element_byname))
                 item.setFlags(Qt.ItemIsEnabled)
                 self.table_view.setItem(row, column + 1, item)
         self.table_view.resizeColumnsToContents()
@@ -118,16 +114,28 @@ class AddReadyRelationshipsDialog(ManageItemsDialogBase):
         if current.isValid():
             self.table_view.selectionModel().clearCurrentIndex()
 
+    @Slot()
     def accept(self):
+        """Collect info from dialog and try to add items."""
+        if not self._commit_data:
+            super().accept()
+            return
+        db_map_data = self.get_db_map_data()
+        if not db_map_data:
+            self.parent().msg_error.emit("Nothing to add")
+            return
+        self.db_mngr.add_entities(db_map_data)
         super().accept()
+
+    def get_db_map_data(self):
         data = []
         for row in range(self.table_view.rowCount()):
             if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
                 continue
-            relationship = self.relationships[row]
-            data.append([self.relationship_class["name"], relationship])
-        db_map_data = {db_map: {"relationships": data} for db_map in self.db_maps}
-        self.db_mngr.import_data(db_map_data, command_text="Add relationships")
+            element_byname_list = tuple(self.entities[row])
+            byname = tuple(x for byname in element_byname_list for x in byname)
+            data.append({"entity_class_name": self.entity_class["name"], "entity_byname": byname})
+        return {db_map: data for db_map in self.db_maps}
 
 
 class AddItemsDialog(ManageItemsDialog):
@@ -143,9 +151,11 @@ class AddItemsDialog(ManageItemsDialog):
         super().__init__(parent, db_mngr)
         self.db_maps = db_maps
         self.keyed_db_maps = {x.codename: x for x in db_maps}
-        self.remove_rows_button = QToolButton()
+        self.remove_rows_button = QToolButton(self)
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.remove_rows_button.setText("Remove selected rows")
+
+    def _populate_layout(self):
         self.layout().addWidget(self.remove_rows_button, 1, 0)
         self.layout().addWidget(self.button_box, 2, 0, -1, -1)
 
@@ -167,152 +177,22 @@ class AddItemsDialog(ManageItemsDialog):
         return [x.codename for x in self.db_maps]
 
 
-class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new object classes."""
+class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, AddItemsDialog):
+    """A dialog to query user's preferences for new entity classes."""
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
+            item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
-        """
-        super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add object classes")
-        self.model = EmptyRowModel(self)
-        self.table_view.setModel(self.model)
-        self.layout().addWidget(self.table_view, 0, 0)
-        self.layout().addWidget(self.remove_rows_button, 1, 0)
-        self.layout().addWidget(self.button_box, 2, 0, -1, -1)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(['object_class name', 'description', 'display icon', 'databases'])
-        databases = ",".join(list(self.keyed_db_maps.keys()))
-        self.default_display_icon = None
-        self.model.set_default_row(**{'databases': databases, 'display icon': self.default_display_icon})
-        self.model.clear()
-
-    def connect_signals(self):
-        super().connect_signals()
-        # pylint: disable=unnecessary-lambda
-        self.table_view.itemDelegate().icon_color_editor_requested.connect(
-            lambda index: self.show_icon_color_editor(index)
-        )
-
-    def all_db_maps(self, row):
-        """Returns a list of db maps available for a given row.
-        Used by ShowIconColorEditorMixin.
-        """
-        return self.db_maps
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        db_map_data = dict()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            name, description, display_icon, db_names = row_data
-            if db_names is None:
-                db_names = ""
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self.parent().msg_error.emit(f"Invalid database {e} at row {i + 1}")
-                return
-            if not name:
-                self.parent().msg_error.emit(f"Object class missing at row {i + 1}")
-                return
-            if not display_icon:
-                display_icon = self.default_display_icon
-            pre_item = {'name': name, 'description': description, 'display_icon': display_icon}
-            for db_map in db_maps:
-                item = pre_item.copy()
-                db_map_data.setdefault(db_map, []).append(item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to add")
-            return
-        self.db_mngr.add_object_classes(db_map_data)
-        super().accept()
-
-
-class AddObjectsDialog(GetObjectClassesMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new objects."""
-
-    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
-        """
-        Args:
-            parent (SpineDBEditor)
-            parent_item (MultiDBTreeItem)
-            db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add objects")
-        self.model = EmptyRowModel(self)
-        self.model.force_default = force_default
-        self.table_view.setModel(self.model)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
-        self.table_view.setItemDelegate(ManageObjectsDelegate(self))
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(['object_class name', 'object name', 'description', 'databases'])
-        self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
-        class_name = parent_item.display_data if parent_item.item_type != "root" else None
-        db_names = ",".join(x.codename for x in parent_item.db_maps)
-        self.model.set_default_row(**{'object_class name': class_name, 'databases': db_names})
-        self.model.clear()
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        db_map_data = dict()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            class_name, name, description, db_names = row_data
-            if db_names is None:
-                db_names = ""
-            if not name:
-                self.parent().msg_error.emit("Object missing at row {}".format(i + 1))
-                return
-            pre_item = {'name': name, 'description': description}
-            for db_name in db_names.split(","):
-                if db_name not in self.keyed_db_maps:
-                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
-                    return
-                db_map = self.keyed_db_maps[db_name]
-                object_classes = self.db_map_obj_cls_lookup[db_map]
-                if class_name not in object_classes:
-                    self.parent().msg_error.emit(
-                        "Invalid object_class '{}' for db '{}' at row {}".format(class_name, db_name, i + 1)
-                    )
-                    return
-                class_id = object_classes[class_name]["id"]
-                item = pre_item.copy()
-                item['class_id'] = class_id
-                db_map_data.setdefault(db_map, []).append(item)
-        if not db_map_data:
-            self.parent().msg_error.emit("Nothing to add")
-            return
-        self.db_mngr.add_objects(db_map_data)
-        super().accept()
-
-
-class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new relationship classes."""
-
-    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
-        """
-        Args:
-            parent (SpineDBEditor)
-            parent_item (MultiDBTreeItem)
-            db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
-            force_default (bool): if True, defaults are non-editable
-        """
-        super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Add relationship classes")
+        self.setWindowTitle("Add entity classes")
+        self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
+        self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
         self.table_view.setModel(self.model)
@@ -320,32 +200,35 @@ class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMix
         layout = QHBoxLayout(self.dimension_count_widget)
         layout.addWidget(QLabel("Number of dimensions"))
         self.spin_box = QSpinBox(self)
-        self.spin_box.setMinimum(1)
+        self.spin_box.setMinimum(0)
         layout.addWidget(self.spin_box)
         layout.addStretch()
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
+        dimension_one_name = item.name if item.item_type != "root" else None
+        self.number_of_dimensions = 1 if dimension_one_name is not None else 0
+        self.spin_box.setValue(self.number_of_dimensions)
+        self.connect_signals()
+        labels = ["dimension name (1)"] if dimension_one_name is not None else []
+        labels += ["entity class name", "description", "display icon", "active by default", "databases"]
+        self.model.set_horizontal_header_labels(labels)
+        db_names = ",".join(x.codename for x in item.db_maps)
+        self.default_display_icon = None
+        self.model.set_default_row(
+            **{
+                "dimension name (1)": dimension_one_name,
+                "display icon": self.default_display_icon,
+                "active by default": self.number_of_dimensions != 0,
+                "databases": db_names,
+            }
+        )
+        self.model.clear()
+
+    def _populate_layout(self):
         self.layout().addWidget(self.dimension_count_widget, 0, 0, 1, -1)
         self.layout().addWidget(self.table_view, 1, 0)
         self.layout().addWidget(self.remove_rows_button, 2, 0)
         self.layout().addWidget(self.button_box, 3, 0, -1, -1)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cubes_minus.svg"))
-        self.table_view.setItemDelegate(ManageRelationshipClassesDelegate(self))
-        self.number_of_dimensions = 1
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(
-            ['object_class name (1)', 'relationship_class name', 'description', 'display icon', 'databases']
-        )
-        self.db_map_obj_cls_lookup = self.make_db_map_obj_cls_lookup()
-        object_class_one_name = parent_item.display_data if parent_item.item_type != "root" else None
-        db_names = ",".join(x.codename for x in parent_item.db_maps)
-        self.default_display_icon = None
-        self.model.set_default_row(
-            **{
-                'object_class name (1)': object_class_one_name,
-                'display_icon': self.default_display_icon,
-                'databases': db_names,
-            }
-        )
-        self.model.clear()
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -363,13 +246,20 @@ class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMix
             self.insert_column()
         elif i < self.number_of_dimensions:
             self.remove_column()
+        default_value = self.number_of_dimensions != 0
+        self.model.default_row["active by default"] = default_value
+        column = self.model.horizontal_header_labels().index("active by default")
+        last_row = self.model.rowCount() - 1
+        index = self.model.index(last_row, column)
+        if index.data() != default_value:
+            self.model.setData(index, default_value)
         self.spin_box.setEnabled(True)
         self.resize_window_to_columns()
 
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        column_name = "object_class name ({0})".format(self.number_of_dimensions)
+        column_name = "dimension name ({0})".format(self.number_of_dimensions)
         self.model.insertColumns(column, 1)
         self.model.insert_horizontal_header_labels(column, [column_name])
         self.table_view.resizeColumnToContents(column)
@@ -384,42 +274,48 @@ class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMix
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.ItemDataRole.EditRole not in roles:
             return
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
+        if left >= self.number_of_dimensions:
+            return
         right = bottom_right.column()
+        if right >= self.number_of_dimensions:
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            for column in range(left, right + 1):
-                if column >= self.number_of_dimensions:
-                    break
-            else:
-                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
-                if len(obj_cls_names) == 1:
-                    relationship_class_name = obj_cls_names[0] + "__"
-                else:
-                    relationship_class_name = "__".join(obj_cls_names)
-                self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
+            obj_cls_names = [
+                name for j in range(self.number_of_dimensions) if (name := self.model.index(row, j).data())
+            ]
+            relationship_class_name = name_from_dimensions(obj_cls_names)
+            self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
         db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("relationship_class name")
-        description_column = self.model.horizontal_header_labels().index("description")
-        display_icon_column = self.model.horizontal_header_labels().index("display icon")
-        db_column = self.model.horizontal_header_labels().index("databases")
+        header_labels = self.model.horizontal_header_labels()
+        name_column = header_labels.index("entity class name")
+        description_column = header_labels.index("description")
+        display_icon_column = header_labels.index("display icon")
+        active_by_default_column = header_labels.index("active by default")
+        db_column = header_labels.index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
-            relationship_class_name = row_data[name_column]
-            if not relationship_class_name:
-                self.parent().msg_error.emit("Relationship class missing at row {}".format(i + 1))
+            entity_class_name = row_data[name_column]
+            if not entity_class_name:
+                self.parent().msg_error.emit("Entity class missing at row {}".format(i + 1))
                 return
             description = row_data[description_column]
             display_icon = row_data[display_icon_column]
             if not display_icon:
                 display_icon = self.default_display_icon
-            pre_item = {'name': relationship_class_name, 'description': description, 'display_icon': display_icon}
+            active_by_default = row_data[active_by_default_column]
+            pre_item = {
+                "name": entity_class_name,
+                "description": description,
+                "display_icon": display_icon,
+                "active_by_default": active_by_default,
+            }
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
@@ -428,248 +324,277 @@ class AddRelationshipClassesDialog(ShowIconColorEditorMixin, GetObjectClassesMix
                     self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
                 db_map = self.keyed_db_maps[db_name]
-                object_classes = self.db_map_obj_cls_lookup[db_map]
-                object_class_id_list = list()
+                entity_classes = self.db_map_ent_cls_lookup_by_name[db_map]
+                dimension_id_list = list()
                 for column in range(name_column):  # Leave 'name' column outside
-                    object_class_name = row_data[column]
-                    if object_class_name not in object_classes:
+                    dimension_name = row_data[column]
+                    if dimension_name not in entity_classes:
                         self.parent().msg_error.emit(
-                            "Invalid object_class '{}' for db '{}' at row {}".format(object_class_name, db_name, i + 1)
+                            "Invalid dimension '{}' for db '{}' at row {}".format(dimension_name, db_name, i + 1)
                         )
                         return
-                    object_class_id = object_classes[object_class_name]["id"]
-                    object_class_id_list.append(object_class_id)
+                    dimension_id = entity_classes[dimension_name]["id"]
+                    dimension_id_list.append(dimension_id)
                 item = pre_item.copy()
-                item['object_class_id_list'] = object_class_id_list
+                item["dimension_id_list"] = dimension_id_list
                 db_map_data.setdefault(db_map, []).append(item)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
             return
-        self.db_mngr.add_relationship_classes(db_map_data)
+        self.db_mngr.add_entity_classes(db_map_data)
         super().accept()
 
 
-class AddOrManageRelationshipsDialog(GetRelationshipClassesMixin, GetObjectsMixin, AddItemsDialog):
-    """A dialog to query user's preferences for new relationships."""
+class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin, AddItemsDialog):
+    """A dialog to query user's preferences for new entities."""
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.model = self.make_model()
         self.table_view.setModel(self.model)
         self.header_widget = QWidget(self)
         layout = QHBoxLayout(self.header_widget)
-        layout.addWidget(QLabel("Relationship class"))
-        self.rel_cls_combo_box = QComboBox(self)
-        layout.addWidget(self.rel_cls_combo_box)
+        layout.addWidget(QLabel("Entity class"))
+        self.ent_cls_combo_box = QComboBox(self)
+        layout.addWidget(self.ent_cls_combo_box)
         layout.addStretch()
+        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+        self.entity_class_keys = None
+
+    def _class_key_to_str(self, key, *db_maps):
+        raise NotImplementedError()
+
+    def _accepts_class(self, ent_cls):
+        """Returns whether the widget should handle the given entity class.
+
+        Args:
+            ent_cls (MappedItem)
+
+        Returns:
+            bool
+        """
+        raise NotImplementedError()
+
+    def make_model(self):
+        raise NotImplementedError()
+
+    def _do_reset_model(self):
+        raise NotImplementedError()
+
+    @Slot(int)
+    def reset_model(self, index):
+        """Setup model according to current entity class selected in combobox."""
+        self.class_key = self.entity_class_keys[index]
+        self._do_reset_model()
+
+    def _populate_layout(self):
         self.layout().addWidget(self.header_widget, 0, 0, 1, -1)
         self.layout().addWidget(self.table_view, 1, 0)
         self.layout().addWidget(self.remove_rows_button, 2, 0)
         self.layout().addWidget(self.button_box, 3, 0, -1, -1)
-        self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cubes_minus.svg"))
-        self.db_map_obj_lookup = self.make_db_map_obj_lookup()
-        self.db_map_rel_cls_lookup = self.make_db_map_rel_cls_lookup()
-        self.relationship_class_keys = []
-        self.class_name = None
-        self.object_class_name_list = None
-
-    def make_model(self):
-        raise NotImplementedError()
 
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        self.rel_cls_combo_box.currentIndexChanged.connect(self.reset_model)
+        self.ent_cls_combo_box.currentIndexChanged.connect(self.reset_model)
 
-    @Slot(int)
-    def reset_model(self, index):
-        """Called when relationship_class's combobox's index changes.
-        Update relationship_class attribute accordingly and reset model."""
-        raise NotImplementedError()
+    @Slot(QModelIndex, QModelIndex, list)
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
+        if roles and Qt.ItemDataRole.EditRole not in roles or self.entity_class is None:
+            return
+        dimension_count = len(self.dimension_name_list)
+        if dimension_count == 0:
+            return
+        header = self.model.horizontal_header_labels()
+        left = top_left.column()
+        right = bottom_right.column()
+        if left <= header.index("entity name") <= right:
+            return
+        if "databases" in header and left == right == header.index("databases"):
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
+        for row in range(top, bottom + 1):
+            el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
+            entity_name = name_from_elements(el_names)
+            self.model.setData(self.model.index(row, dimension_count), entity_name)
 
 
-class AddRelationshipsDialog(AddOrManageRelationshipsDialog):
-    """A dialog to query user's preferences for new relationships."""
+class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
+    """A dialog to query user's preferences for new entities."""
 
-    def __init__(self, parent, parent_item, db_mngr, *db_maps, force_default=False):
+    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False, commit_data=True):
         """
         Args:
             parent (SpineDBEditor)
-            parent_item (MultiDBTreeItem)
+            item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        grand_parent_item = parent_item.parent_item
-        if grand_parent_item.item_type == "object":
-            object_name = grand_parent_item.display_data
-            object_class_name = grand_parent_item.parent_item.display_data
-            self.object_names_by_class_name = {object_class_name: object_name}
-        else:
-            self.object_names_by_class_name = {}
-        self.relationship_class = None
+        self._commit_data = commit_data
+        self.entity_names_by_class_name = {}
+        if item.item_type == "entity":
+            entity_name = item.name
+            entity_class_name = item.parent_item.name
+            self.entity_names_by_class_name = {entity_class_name: entity_name}
+            if item.parent_item.item_type == "entity_class":
+                self.class_key = item.parent_item.display_id
+        elif item.item_type == "entity_class":
+            self.class_key = item.display_id
         self.model.force_default = force_default
-        self.setWindowTitle("Add relationships")
-        self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
-        self.rel_cls_combo_box.setEnabled(not force_default)
-        self.relationship_class_keys = [
-            key for relationship_classes in self.db_map_rel_cls_lookup.values() for key in relationship_classes
-        ]
-        self.rel_cls_combo_box.addItems(["{0} ({1})".format(*key) for key in self.relationship_class_keys])
-        relationship_class_key = parent_item.display_id
+        self.setWindowTitle("Add entities")
+        self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
+        self.ent_cls_combo_box.setEnabled(not force_default)
+        db_maps_by_keys = {}
+        for db_map, entity_classes in self.db_map_ent_cls_lookup.items():
+            for key, ent_cls in entity_classes.items():
+                if self._accepts_class(ent_cls):
+                    db_maps_by_keys.setdefault(key, set()).add(db_map)
+
+        self.entity_class_keys = sorted(db_maps_by_keys)
+        self.ent_cls_combo_box.addItems(
+            [self._class_key_to_str(key, *db_maps_by_keys[key]) for key in self.entity_class_keys]
+        )
         try:
-            current_index = self.relationship_class_keys.index(relationship_class_key)
+            current_index = self.entity_class_keys.index(self.class_key)
             self.reset_model(current_index)
             self._handle_model_reset()
         except ValueError:
             current_index = -1
-        self.rel_cls_combo_box.setCurrentIndex(current_index)
+        self.ent_cls_combo_box.setCurrentIndex(current_index)
         self.connect_signals()
+
+    def _class_key_to_str(self, key, *db_maps):
+        class_name = self.db_map_ent_cls_lookup[db_maps[0]][key]["name"]
+        if len(db_maps) == len(self.db_maps):
+            return class_name
+        return class_name + "@(" + ", ".join(db_map.codename for db_map in db_maps) + ")"
+
+    def _accepts_class(self, ent_cls):
+        if self.entity_class is None:
+            return True
+        if self.entity_class["dimension_name_list"]:
+            # Base class is multidimensional, check if given ent_cls containts the base in its entirety
+            return set(ent_cls["dimension_name_list"]) >= set(self.entity_class["dimension_name_list"])
+        # Base class is zero-dimensional, check if given ent_cls containts it
+        return self.entity_class["name"] in set(ent_cls["dimension_name_list"]) | {ent_cls["name"]}
 
     def make_model(self):
         return EmptyRowModel(self)
 
-    @Slot(int)
-    def reset_model(self, index):
-        """Setup model according to current relationship_class selected in combobox."""
-        self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
-        header = self.object_class_name_list + ('relationship name', 'databases')
+    def _do_reset_model(self):
+        header = self.dimension_name_list + ("entity name", "databases")
         self.model.set_horizontal_header_labels(header)
-        default_db_maps = [
-            db_map
-            for db_map, rel_cls_list in self.db_map_rel_cls_lookup.items()
-            if (self.class_name, self.object_class_name_list) in rel_cls_list
-        ]
+        default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        defaults = {'databases': db_names}
-        defaults.update(self.object_names_by_class_name)
+        defaults = {"databases": db_names}
+        defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
 
-    @Slot(QModelIndex, QModelIndex, list)
-    def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.ItemDataRole.EditRole not in roles:
-            return
-        header = self.model.horizontal_header_labels()
-        top = top_left.row()
-        left = top_left.column()
-        bottom = bottom_right.row()
-        right = bottom_right.column()
-        number_of_dimensions = self.model.columnCount() - 2
-        for row in range(top, bottom + 1):
-            if header.index('relationship name') not in range(left, right + 1):
-                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
-                obj_names = [col_data(j) for j in range(number_of_dimensions) if col_data(j)]
-                relationship_name = self.class_name + "_"
-                if len(obj_names) == 1:
-                    relationship_name += obj_names[0] + "__"
-                else:
-                    relationship_name += "__".join(obj_names)
-                self.model.setData(self.model.index(row, number_of_dimensions), relationship_name)
-
-    @Slot()
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        db_map_data = dict()
-        name_column = self.model.horizontal_header_labels().index("relationship name")
+    def get_db_map_data(self):
+        db_map_data = {}
+        name_column = self.model.horizontal_header_labels().index("entity name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
-            object_name_list = [row_data[column] for column in range(name_column)]
-            relationship_name = row_data[name_column]
-            if not relationship_name:
-                self.parent().msg_error.emit("Relationship missing at row {}".format(i + 1))
+            element_byname_list = [row_data[column] for column in range(name_column)]
+            entity_name = row_data[name_column]
+            if not entity_name:
+                self.parent().msg_error.emit(f"Entity missing at row {i + 1}")
                 return
-            pre_item = {'name': relationship_name}
+            pre_item = {"name": entity_name}
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
-                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
+                    self.parent().msg_error.emit(f"Invalid database {db_name} at row {i + 1}")
                     return
                 db_map = self.keyed_db_maps[db_name]
-                relationship_classes = self.db_map_rel_cls_lookup[db_map]
-                if (self.class_name, self.object_class_name_list) not in relationship_classes:
-                    self.parent().msg_error.emit(
-                        "Invalid relationship_class '{}' for db '{}' at row {}".format(self.class_name, db_name, i + 1)
-                    )
-                    return
-                rel_cls = relationship_classes[self.class_name, self.object_class_name_list]
-                class_id = rel_cls["id"]
-                object_class_id_list = rel_cls["object_class_id_list"]
-                objects = self.db_map_obj_lookup[db_map]
-                object_id_list = list()
-                for object_class_id, object_name in zip(object_class_id_list, object_name_list):
-                    if (object_class_id, object_name) not in objects:
+                entity_classes = self.db_map_ent_cls_lookup[db_map]
+                ent_cls = entity_classes[self.class_key]
+                class_id = ent_cls["id"]
+                dimension_id_list = ent_cls["dimension_id_list"]
+                entities = self.db_map_ent_lookup[db_map]
+                element_id_list = []
+                for entity_class_id, element_byname in zip(dimension_id_list, element_byname_list):
+                    if (entity_class_id, element_byname) not in entities:
                         self.parent().msg_error.emit(
-                            "Invalid object '{}' for db '{}' at row {}".format(object_name, db_name, i + 1)
+                            f"Invalid element '{element_byname}' for db '{db_name}' at row {i + 1}"
                         )
                         return
-                    object_id = objects[object_class_id, object_name]["id"]
-                    object_id_list.append(object_id)
+                    element_id = entities[entity_class_id, element_byname]["id"]
+                    element_id_list.append(element_id)
                 item = pre_item.copy()
-                item.update({'object_id_list': object_id_list, 'class_id': class_id})
+                item.update({"element_id_list": element_id_list, "class_id": class_id})
                 db_map_data.setdefault(db_map, []).append(item)
+        return db_map_data
+
+    @Slot()
+    def accept(self):
+        """Collect info from dialog and try to add items."""
+        if not self._commit_data:
+            super().accept()
+            return
+        db_map_data = self.get_db_map_data()
+        if db_map_data is None:
+            return
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
             return
-        self.db_mngr.add_relationships(db_map_data)
+        self.db_mngr.add_entities(db_map_data)
         super().accept()
 
 
-class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
-    """A dialog to query user's preferences for managing relationships."""
+class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
+    """A dialog to query user's preferences for managing entity dimensions."""
 
-    def __init__(self, parent, parent_item, db_mngr, *db_maps):
+    def __init__(self, parent, item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            parent_item (MultiDBTreeItem)
+            item (MultiDBTreeItem)
             db_mngr (SpineDBManager): the manager to do the removal
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self.setWindowTitle("Manage relationships")
+        if item.item_type == "entity_class":
+            self.class_key = item.display_id
+        self.setWindowTitle("Manage elements")
         self.table_view.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.remove_rows_button.setToolTip("<p>Remove selected relationships.</p>")
+        self.remove_rows_button.setToolTip("<p>Remove selected entities.</p>")
         self.remove_rows_button.setIconSize(QSize(24, 24))
         self.db_map = db_maps[0]
-        self.relationship_ids = dict()
+        self.entity_ids = {}
         layout = self.header_widget.layout()
         self.db_combo_box = QComboBox(self)
         layout.addSpacing(32)
-        layout.addWidget(QLabel("Database"))
+        layout.addWidget(QLabel("Database", self))
         layout.addWidget(self.db_combo_box)
         self.splitter = QSplitter(self)
+        self.splitter.setChildrenCollapsible(False)
         self.add_button = QToolButton(self)
-        self.add_button.setToolTip("<p>Add relationships by combining selected available objects.</p>")
+        self.add_button.setToolTip("<p>Add entities by combining selected available elements.</p>")
         self.add_button.setIcon(QIcon(":/icons/menu_icons/cubes_plus.svg"))
         self.add_button.setIconSize(QSize(24, 24))
         self.add_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.add_button.setText(">>")
-        label_available = QLabel("Available objects")
-        label_existing = QLabel("Existing relationships")
-        self.layout().addWidget(self.header_widget, 0, 0, 1, 4, Qt.AlignHCenter)
-        self.layout().addWidget(label_available, 1, 0)
-        self.layout().addWidget(label_existing, 1, 2)
-        self.layout().addWidget(self.splitter, 2, 0)
-        self.layout().addWidget(self.add_button, 2, 1)
-        self.layout().addWidget(self.table_view, 2, 2)
-        self.layout().addWidget(self.remove_rows_button, 2, 3)
-        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
+        self._label_available = QLabel("Available elements", self)
+        self._label_existing = QLabel("Existing entities", self)
         self.hidable_widgets = [
             self.add_button,
-            label_available,
-            label_existing,
+            self._label_available,
+            self._label_existing,
             self.table_view,
             self.remove_rows_button,
         ]
@@ -679,8 +604,18 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
         self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_relationship_class_combo_box(db_maps[0].codename, parent_item.display_id)
+        self.reset_entity_class_combo_box(db_maps[0].codename)
         self.connect_signals()
+
+    def _populate_layout(self):
+        self.layout().addWidget(self.header_widget, 0, 0, 1, 4, Qt.AlignHCenter)
+        self.layout().addWidget(self._label_available, 1, 0)
+        self.layout().addWidget(self._label_existing, 1, 2)
+        self.layout().addWidget(self.splitter, 2, 0)
+        self.layout().addWidget(self.add_button, 2, 1)
+        self.layout().addWidget(self.table_view, 2, 2)
+        self.layout().addWidget(self.remove_rows_button, 2, 3)
+        self.layout().addWidget(self.button_box, 3, 0, -1, -1)
 
     def make_model(self):
         return CompoundTableModel(self)
@@ -691,61 +626,69 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        self.db_combo_box.currentTextChanged.connect(self.reset_relationship_class_combo_box)
-        self.add_button.clicked.connect(self.add_relationships)
+        self.db_combo_box.currentTextChanged.connect(self.reset_entity_class_combo_box)
+        self.add_button.clicked.connect(self.add_entities)
+
+    def _accepts_class(self, ent_cls):
+        return bool(ent_cls["dimension_id_list"])
+
+    def _class_key_to_str(self, key, *_db_maps):
+        return self.db_map_ent_cls_lookup[self.db_map][key]["name"]
 
     @Slot(str)
-    def reset_relationship_class_combo_box(self, database, relationship_class_key=None):
+    def reset_entity_class_combo_box(self, database):
         self.db_map = self.keyed_db_maps[database]
-        self.relationship_class_keys = list(self.db_map_rel_cls_lookup[self.db_map])
-        self.rel_cls_combo_box.addItems([f"{name}" for name, _ in self.relationship_class_keys])
+        self.entity_class_keys = [
+            key for key, ent_cls in self.db_map_ent_cls_lookup[self.db_map].items() if self._accepts_class(ent_cls)
+        ]
+        self.ent_cls_combo_box.addItems([self._class_key_to_str(key) for key in self.entity_class_keys])
         try:
-            current_index = self.relationship_class_keys.index(relationship_class_key)
+            current_index = self.entity_class_keys.index(self.class_key)
             self.reset_model(current_index)
             self._handle_model_reset()
         except ValueError:
             current_index = -1
-        self.rel_cls_combo_box.setCurrentIndex(current_index)
+        self.ent_cls_combo_box.setCurrentIndex(current_index)
 
     @Slot(bool)
-    def add_relationships(self, checked=True):
-        object_names = [[item.text(0) for item in wg.selectedItems()] for wg in self.splitter_widgets()]
-        candidate = set(product(*object_names))
+    def add_entities(self, checked=True):
+        element_names = [[item.text(0) for item in wg.selectedItems()] for wg in self.splitter_widgets()]
+        candidate = set(product(*element_names))
         existing = {
-            tuple(objects) for objects in self.new_items_model._main_data + self.existing_items_model._main_data
+            tuple(elements[:-1]) for elements in self.new_items_model._main_data + self.existing_items_model._main_data
         }
         to_add = candidate - existing
         count = len(to_add)
+        if not count:
+            return
         self.new_items_model.insertRows(0, count)
-        self.new_items_model._main_data[0:count] = to_add
+        self.new_items_model._main_data[0:count] = [list(row) + [""] for row in to_add]
         self.model.refresh()
+        self.model.dataChanged.emit(self.model.index(0, 0), self.model.index(count - 1, self.model.columnCount() - 2))
 
-    @Slot(int)
-    def reset_model(self, index):
-        """Setup model according to current relationship_class selected in combobox."""
-        self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
-        object_class_name_list = self.object_class_name_list
-        self.model.set_horizontal_header_labels(object_class_name_list)
-        self.existing_items_model.set_horizontal_header_labels(object_class_name_list)
-        self.new_items_model.set_horizontal_header_labels(object_class_name_list)
-        self.relationship_ids.clear()
+    def _do_reset_model(self):
+        horizontal_header_labels = self.dimension_name_list + ("entity name",)
+        self.model.set_horizontal_header_labels(horizontal_header_labels)
+        self.existing_items_model.set_horizontal_header_labels(horizontal_header_labels)
+        self.new_items_model.set_horizontal_header_labels(horizontal_header_labels)
+        self.entity_ids.clear()
         for db_map in self.db_maps:
-            relationship_classes = self.db_map_rel_cls_lookup[db_map]
-            rel_cls = relationship_classes.get((self.class_name, self.object_class_name_list), None)
-            if rel_cls is None:
+            entity_classes = self.db_map_ent_cls_lookup[db_map]
+            ent_cls = entity_classes.get(self.class_key, None)
+            if ent_cls is None:
                 continue
-            for relationship in self.db_mngr.get_items_by_field(
-                db_map, "relationship", "class_id", rel_cls["id"], only_visible=False
-            ):
-                key = relationship["object_name_list"]
-                self.relationship_ids[key] = relationship["id"]
-        existing_items = sorted(map(list, self.relationship_ids))
+            for entity in self.db_mngr.get_items_by_field(db_map, "entity", "class_id", ent_cls["id"]):
+                key = tuple(DB_ITEM_SEPARATOR.join(byname) for byname in entity["element_byname_list"]) + (
+                    entity["name"],
+                )
+                self.entity_ids[key] = entity["id"]
+        existing_items = sorted(self.entity_ids)
         self.existing_items_model.reset_model(existing_items)
         self.model.refresh()
         self.model.modelReset.emit()
         for wg in self.splitter_widgets():
             wg.deleteLater()
-        for name in object_class_name_list:
+        for name in self.dimension_name_list:
             tree_widget = QTreeWidget(self)
             tree_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
             tree_widget.setColumnCount(1)
@@ -753,10 +696,15 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
             header_item = QTreeWidgetItem([name])
             header_item.setTextAlignment(0, Qt.AlignHCenter)
             tree_widget.setHeaderItem(header_item)
-            objects = self.db_mngr.get_items_by_field(self.db_map, "object", "class_name", name, only_visible=False)
-            items = [QTreeWidgetItem([obj["name"]]) for obj in objects]
+            elements = [
+                x
+                for k in ("entity_class_name", "superclass_name")
+                for x in self.db_mngr.get_items_by_field(self.db_map, "entity", k, name)
+            ]
+            items = [QTreeWidgetItem([DB_ITEM_SEPARATOR.join(el["entity_byname"])]) for el in elements]
             tree_widget.addTopLevelItems(items)
             tree_widget.resizeColumnToContents(0)
+            tree_widget.setMinimumWidth(tree_widget.columnWidth(0) + 10)
             self.splitter.addWidget(tree_widget)
         sizes = [wg.columnWidth(0) for wg in self.splitter_widgets()]
         self.splitter.setSizes(sizes)
@@ -782,34 +730,42 @@ class ManageRelationshipsDialog(AddOrManageRelationshipsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        keys_to_remove = set(self.relationship_ids) - {
-            tuple(objects) for objects in self.existing_items_model._main_data
-        }
-        commands = []
-        to_remove = {self.relationship_ids[key] for key in keys_to_remove}
-        if to_remove:
-            commands.append(RemoveItemsCommand(self.db_mngr, self.db_map, to_remove, "relationship"))
-        to_add = [[self.class_name, object_name_list] for object_name_list in self.new_items_model._main_data]
-        if to_add:
-            commands += list(self.db_mngr.import_data_commands(self.db_map, {"relationships": to_add}))
-        if commands:
-            macro = SpineDBMacro(iter(commands))
-            macro.setText(f"manage {self.class_name}'s dimensions")
-            self.db_mngr.undo_stack[self.db_map].push(macro)
+        to_remove = set()
+        to_update = []
+        new_name_by_element_byname_list = {tuple(row[:-1]): row[-1] for row in self.existing_items_model._main_data}
+        for key, id_ in self.entity_ids.items():
+            element_byname_list, old_name = key[:-1], key[-1]
+            new_name = new_name_by_element_byname_list.get(element_byname_list)
+            if new_name is None:
+                to_remove.add(id_)
+            elif old_name != new_name:
+                to_update.append({"id": id_, "name": new_name})
+        to_add = [
+            {
+                "entity_class_name": self.class_name,
+                "entity_byname": tuple(x for byname in row[:-1] for x in byname.split(DB_ITEM_SEPARATOR)),
+                "name": row[-1],
+            }
+            for row in self.new_items_model._main_data
+        ]
+        identifier = self.db_mngr.get_command_identifier()
+        self.db_mngr.remove_items({self.db_map: {"entity": to_remove}}, identifier=identifier)
+        self.db_mngr.update_items("entity", {self.db_map: to_update}, identifier=identifier)
+        self.db_mngr.add_items("entity", {self.db_map: to_add}, identifier=identifier)
         super().accept()
 
 
-class ObjectGroupDialogBase(QDialog):
-    def __init__(self, parent, object_class_item, db_mngr, *db_maps):
+class EntityGroupDialogBase(QDialog):
+    def __init__(self, parent, entity_class_item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            object_class_item (ObjectClassItem)
+            entity_class_item (EntityClassItem)
             db_mngr (SpineDBManager)
             *db_maps: database mappings
         """
         super().__init__(parent)
-        self.object_class_item = object_class_item
+        self.entity_class_item = entity_class_item
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self.db_map = db_maps[0]
@@ -861,11 +817,11 @@ class ObjectGroupDialogBase(QDialog):
         layout.addWidget(self.button_box, 2, 0, 1, 3)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.db_combo_box.addItems(list(self.db_maps_by_codename))
-        self.db_map_object_ids = {
+        self.db_map_entity_ids = {
             db_map: {
                 x["name"]: x["id"]
                 for x in self.db_mngr.get_items_by_field(
-                    self.db_map, "object", "class_id", self.object_class_item.db_map_id(db_map), only_visible=False
+                    self.db_map, "entity", "class_id", self.entity_class_item.db_map_id(db_map)
                 )
             }
             for db_map in db_maps
@@ -881,19 +837,17 @@ class ObjectGroupDialogBase(QDialog):
 
     def reset_list_widgets(self, database):
         self.db_map = self.db_maps_by_codename[database]
-        object_ids = self.db_map_object_ids[self.db_map]
+        entity_ids = self.db_map_entity_ids[self.db_map]
         members = []
         non_members = []
-        initial_member_ids = self.initial_member_ids()
-        initial_entity_id = self.initial_entity_id()
-        for obj_name in sorted(object_ids):
-            obj_id = object_ids[obj_name]
-            if obj_id in initial_member_ids:
-                members.append(obj_name)
-            elif obj_id != initial_entity_id:
-                non_members.append(obj_name)
-        member_items = [QTreeWidgetItem([obj_name]) for obj_name in members]
-        non_member_items = [QTreeWidgetItem([obj_name]) for obj_name in non_members]
+        for ent_name in sorted(entity_ids):
+            ent_id = entity_ids[ent_name]
+            if ent_id in self.initial_member_ids():
+                members.append(ent_name)
+            elif ent_id != self.initial_entity_id():
+                non_members.append(ent_name)
+        member_items = [QTreeWidgetItem([ent_name]) for ent_name in members]
+        non_member_items = [QTreeWidgetItem([ent_name]) for ent_name in non_members]
         self.members_tree.addTopLevelItems(member_items)
         self.non_members_tree.addTopLevelItems(non_member_items)
 
@@ -921,22 +875,22 @@ class ObjectGroupDialogBase(QDialog):
 
     def _check_validity(self):
         if not self.members_tree.topLevelItemCount():
-            self.parent().msg_error.emit("Please select at least one member object.")
+            self.parent().msg_error.emit("Please select at least one member entity.")
             return False
         return True
 
 
-class AddObjectGroupDialog(ObjectGroupDialogBase):
-    def __init__(self, parent, object_class_item, db_mngr, *db_maps):
+class AddEntityGroupDialog(EntityGroupDialogBase):
+    def __init__(self, parent, entity_class_item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            object_class_item (ObjectClassItem)
+            entity_class_item (EntityClassItem)
             db_mngr (SpineDBManager)
             *db_maps: database mappings
         """
-        super().__init__(parent, object_class_item, db_mngr, *db_maps)
-        self.setWindowTitle("Add object group")
+        super().__init__(parent, entity_class_item, db_mngr, *db_maps)
+        self.setWindowTitle("Add entity group")
         self.group_name_line_edit.setFocus()
         self.group_name_line_edit.setPlaceholderText("Type group name here")
         self.reset_list_widgets(db_maps[0].codename)
@@ -955,9 +909,9 @@ class AddObjectGroupDialog(ObjectGroupDialogBase):
         if not group_name:
             self.parent().msg_error.emit("Please enter a name for the group.")
             return False
-        if group_name in self.db_map_object_ids[self.db_map]:
+        if group_name in self.db_map_entity_ids[self.db_map]:
             self.parent().msg_error.emit(
-                f"An object called {group_name} already exists in this class. Please select a different group name."
+                f"An entity called {group_name} already exists in this class. Please select a different group name."
             )
             return False
         return True
@@ -966,74 +920,65 @@ class AddObjectGroupDialog(ObjectGroupDialogBase):
     def accept(self):
         if not self._check_validity():
             return
-        class_name = self.object_class_item.display_data
+        class_name = self.entity_class_item.name
         group_name = self.group_name_line_edit.text()
         member_names = {item.text(0) for item in self.members_tree.findItems("*", Qt.MatchWildcard)}
         db_map_data = {
             self.db_map: {
-                "objects": [(class_name, group_name)],
-                "object_groups": [
-                    (self.object_class_item.display_data, group_name, member_name) for member_name in member_names
+                "entities": [(class_name, group_name)],
+                "entity_groups": [
+                    (self.entity_class_item.name, group_name, member_name) for member_name in member_names
                 ],
             }
         }
-        self.db_mngr.import_data(db_map_data, command_text="Add object group")
+        self.db_mngr.import_data(db_map_data, command_text="Add entity group")
         super().accept()
 
 
-class ManageMembersDialog(ObjectGroupDialogBase):
-    def __init__(self, parent, object_item, db_mngr, *db_maps):
+class ManageMembersDialog(EntityGroupDialogBase):
+    def __init__(self, parent, entity_item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor): data store widget
-            object_item (entity_tree_item.ObjectItem)
+            entity_item (entity_tree_item.EntityItem)
             db_mngr (SpineDBManager)
             *db_maps: database mappings
         """
-        super().__init__(parent, object_item.parent_item, db_mngr, *db_maps)
+        super().__init__(parent, entity_item.parent_item, db_mngr, *db_maps)
         self.setWindowTitle("Manage members")
         self.group_name_line_edit.setReadOnly(True)
-        self.group_name_line_edit.setText(object_item.display_data)
-        self.object_item = object_item
+        self.group_name_line_edit.setText(entity_item.name)
+        self.entity_item = entity_item
         self.reset_list_widgets(db_maps[0].codename)
         self.connect_signals()
 
     def _entity_groups(self):
-        return self.db_mngr.get_items_by_field(
-            self.db_map, "entity_group", "group_id", self.initial_entity_id(), only_visible=False
-        )
+        return self.db_mngr.get_items_by_field(self.db_map, "entity_group", "group_id", self.initial_entity_id())
 
     def initial_member_ids(self):
         return {x["member_id"] for x in self._entity_groups()}
 
     def initial_entity_id(self):
-        return self.object_item.db_map_id(self.db_map)
+        return self.entity_item.db_map_id(self.db_map)
 
     @Slot()
     def accept(self):
         if not self._check_validity():
             return
-        obj = self.object_item.db_map_data(self.db_map)
+        ent = self.entity_item.db_map_data(self.db_map)
         current_member_ids = {
-            self.db_map_object_ids[self.db_map][item.text(0)]
+            self.db_map_entity_ids[self.db_map][item.text(0)]
             for item in self.members_tree.findItems("*", Qt.MatchWildcard)
         }
         added = current_member_ids - self.initial_member_ids()
         removed = self.initial_member_ids() - current_member_ids
         items_to_add = [
-            {"entity_id": obj["id"], "entity_class_id": obj["class_id"], "member_id": member_id} for member_id in added
+            {"entity_id": ent["id"], "entity_class_id": ent["class_id"], "member_id": member_id} for member_id in added
         ]
-        ids_to_remove = {x["id"] for x in self._entity_groups() if x["member_id"] in removed}
-        if not items_to_add and not ids_to_remove:
-            super().accept()
-            return
-        commands = []
+        ids_to_remove = [x["id"] for x in self._entity_groups() if x["member_id"] in removed]
+        identifier = self.db_mngr.get_command_identifier()
         if items_to_add:
-            commands.append(AddItemsCommand(self.db_mngr, self.db_map, items_to_add, "entity_group"))
+            self.db_mngr.add_items("entity_group", {self.db_map: items_to_add}, identifier=identifier)
         if ids_to_remove:
-            commands.append(RemoveItemsCommand(self.db_mngr, self.db_map, ids_to_remove, "entity_group"))
-        if commands:
-            macro = SpineDBMacro(iter(commands))
-            macro.setText(f"manage {self.object_item.display_data}'s members")
-            self.db_mngr.undo_stack[self.db_map].push(macro)
+            self.db_mngr.remove_items({self.db_map: {"entity_group": ids_to_remove}}, identifier=identifier)
         super().accept()

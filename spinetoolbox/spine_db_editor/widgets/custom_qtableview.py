@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,18 +10,25 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QTableView classes that support copy-paste and the like.
-"""
-
+"""Custom QTableView classes that support copy-paste and the like."""
 from dataclasses import replace
-from PySide6.QtCore import Qt, Signal, Slot, QTimer, QModelIndex, QPoint, QItemSelection, QItemSelectionModel
-from PySide6.QtWidgets import QTableView, QMenu, QWidget
+from PySide6.QtCore import (
+    Qt,
+    Signal,
+    Slot,
+    QTimer,
+    QModelIndex,
+    QPoint,
+    QItemSelection,
+    QItemSelectionModel,
+)
+from PySide6.QtWidgets import QHeaderView, QTableView, QMenu, QWidget
 from PySide6.QtGui import QKeySequence, QAction
 from .scenario_generator import ScenarioGenerator
+from ..helpers import string_to_bool
 from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
-    RelationshipPivotTableModel,
+    ElementPivotTableModel,
     IndexExpansionPivotTableModel,
     ScenarioAlternativePivotTableModel,
 )
@@ -28,7 +36,7 @@ from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
-from ...widgets.custom_qwidgets import TitleWidgetAction, ResizingViewMixin
+from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...plotting import (
     PlottingError,
     ParameterTableHeaderSection,
@@ -48,37 +56,38 @@ from .custom_delegates import (
     ValueListDelegate,
     ParameterValueDelegate,
     ParameterNameDelegate,
-    ObjectClassNameDelegate,
-    ObjectNameDelegate,
-    RelationshipClassNameDelegate,
-    ObjectNameListDelegate,
+    ParameterDefinitionNameAndDescriptionDelegate,
+    EntityClassNameDelegate,
+    EntityBynameDelegate,
     AlternativeNameDelegate,
+    MetadataDelegate,
     ItemMetadataDelegate,
+    BooleanValueDelegate,
 )
 
 
 @Slot(QModelIndex, object)
-def _set_parameter_data(index, new_value):
+def _set_data(index, new_value):
     """Updates (object or relationship) parameter_definition or value with newly edited data."""
     index.model().setData(index, new_value)
 
 
-class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
-    value_column_header: str = NotImplemented
-    """Either "default value" or "value". Used to identify the value column for advanced editing and plotting."""
+class StackedTableView(AutoFilterCopyPasteTableView):
+    """Base stacked view."""
+
+    _COLUMN_SIZE_HINTS = {}
+    _EXPECTED_COLUMN_COUNT: int = NotImplemented
 
     def __init__(self, parent):
         """
         Args:
-            parent (QObject): parent object
+            parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
-        self._open_in_editor_action = None
-        self._plot_action = None
-        self._plot_separator = None
-        self.pinned_values = []
+        header = self.horizontalHeader()
+        header.sectionCountChanged.connect(self._set_column_resize_modes)
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -97,20 +106,172 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
 
         Args:
             column_name (str)
-            delegate_class (ParameterDelegate)
+            delegate_class (TableDelegate)
 
         Returns:
-            ParameterDelegate
+            TableDelegate
         """
         column = self.model().header.index(column_name)
         delegate = delegate_class(self._spine_db_editor, self._spine_db_editor.db_mngr)
         self.setItemDelegateForColumn(column, delegate)
-        delegate.data_committed.connect(_set_parameter_data)
+        delegate.data_committed.connect(_set_data)
         return delegate
 
     def create_delegates(self):
         """Creates delegates for this view"""
         self._make_delegate("database", DatabaseNameDelegate)
+        self._make_delegate("entity_class_name", EntityClassNameDelegate)
+
+    def populate_context_menu(self):
+        """Creates a context menu for this view."""
+        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
+        self._menu.addAction(self._spine_db_editor.ui.actionPaste)
+        self._menu.addSeparator()
+        remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
+        self._menu.addSeparator()
+        self._menu.addAction("Filter by", self.filter_by_selection)
+        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._menu.addSeparator()
+        self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
+        self._menu.addSeparator()
+        # Shortcuts
+        remove_rows_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Delete.value))
+        remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
+        self.addAction(remove_rows_action)
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        index = self.indexAt(event.pos())
+        if not index.isValid():
+            return
+        self._menu.exec(event.globalPos())
+
+    def _selected_rows_per_column(self):
+        """Computes selected rows per column.
+
+        Returns:
+            dict: Mapping columns to selected rows in that column.
+        """
+        selection = self.selectionModel().selection()
+        if not selection:
+            return {}
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        rows_per_column = {}
+        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
+            for j in range(rng.left(), rng.right() + 1):
+                if h_header.isSectionHidden(j):
+                    continue
+                rows = rows_per_column.setdefault(j, set())
+                for i in range(rng.top(), rng.bottom() + 1):
+                    if v_header.isSectionHidden(i):
+                        continue
+                    rows.add(i)
+        return rows_per_column
+
+    @Slot(bool)
+    def filter_by_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        self.model().filter_by(rows_per_column)
+
+    @Slot(bool)
+    def filter_excluding_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        self.model().filter_excluding(rows_per_column)
+
+    def remove_selected(self):
+        """Removes selected indexes."""
+        selection = self.selectionModel().selection()
+        rows = []
+        while not selection.isEmpty():
+            current = selection.takeAt(0)
+            top = current.top()
+            bottom = current.bottom()
+            rows += range(top, bottom + 1)
+        # Get data grouped by db_map
+        db_map_typed_data = {}
+        model = self.model()
+        empty_model = model.empty_model
+        for row in sorted(rows, reverse=True):
+            sub_model = model.sub_model_at_row(row)
+            if sub_model is empty_model:
+                sub_row = model.sub_model_row(row)
+                sub_model.removeRow(sub_row)
+                continue
+            db_map = sub_model.db_map
+            id_ = model.item_at_row(row)
+            db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
+        model.db_mngr.remove_items(db_map_typed_data)
+        self.selectionModel().clearSelection()
+
+    @Slot(QModelIndex, QModelIndex)
+    def _refresh_copy_paste_actions(self, _, __):
+        """Enables or disables copy and paste actions."""
+        self._spine_db_editor.refresh_copy_paste_actions()
+
+    def _initial_column_size(self, column):
+        label = (
+            self.horizontalHeader().model().headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.DisplayRole)
+        )
+        return self._COLUMN_SIZE_HINTS.get(label, 100)
+
+    @Slot(int, int)
+    def _set_column_resize_modes(self, old_column_count, new_column_count):
+        if new_column_count != self._EXPECTED_COLUMN_COUNT:
+            return
+        for column in range(new_column_count):
+            width = self._initial_column_size(column)
+            self.horizontalHeader().resizeSection(column, width)
+
+
+class ParameterTableView(StackedTableView):
+    value_column_header: str = NotImplemented
+    """Either "default_value" or "value". Used to identify the value column for advanced editing and plotting."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
+        super().__init__(parent=parent)
+        self._open_in_editor_action = None
+        self._plot_action = None
+        self._plot_separator = None
+        self.pinned_values = []
+
+    def populate_context_menu(self):
+        """Creates a context menu for this view."""
+        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
+        self._menu.addSeparator()
+        self._plot_action = self._menu.addAction("Plot...", self.plot)
+        self._plot_separator = self._menu.addSeparator()
+        super().populate_context_menu()
+
+    def contextMenuEvent(self, event):
+        """Shows context menu.
+
+        Args:
+            event (QContextMenuEvent)
+        """
+        index = self.indexAt(event.pos())
+        if not index.isValid():
+            return
+        model = self.model()
+        is_value = model.headerData(index.column(), Qt.Orientation.Horizontal) == self.value_column_header
+        self._open_in_editor_action.setEnabled(is_value)
+        self._plot_action.setEnabled(is_value)
+        if is_value:
+            plot_in_window_menu = QMenu("Plot in window")
+            plot_in_window_menu.triggered.connect(self.plot_in_window)
+            prepare_plot_in_window_menu(plot_in_window_menu)
+            self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
+        self._menu.exec(event.globalPos())
+        if is_value:
+            plot_in_window_menu.deleteLater()
 
     def open_in_editor(self):
         """Opens the current index in a parameter_value editor using the connected Spine db editor."""
@@ -153,144 +314,41 @@ class ParameterTableView(ResizingViewMixin, AutoFilterCopyPasteTableView):
         except PlottingError as error:
             report_plotting_failure(error, self._spine_db_editor)
 
-    def populate_context_menu(self):
-        """Creates a context menu for this view."""
-        self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
-        self._menu.addSeparator()
-        self._plot_action = self._menu.addAction("Plot...", self.plot)
-        self._plot_separator = self._menu.addSeparator()
-        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
-        self._menu.addAction(self._spine_db_editor.ui.actionPaste)
-        self._menu.addSeparator()
-        remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
-        self._menu.addSeparator()
-        self._menu.addAction("Filter by", self.filter_by_selection)
-        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
-        self._menu.addSeparator()
-        self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
-        self._menu.addSeparator()
-        # Shortcuts
-        remove_rows_action.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Delete))
-        remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
-        self.addAction(remove_rows_action)
-
-    def contextMenuEvent(self, event):
-        """Shows context menu.
-
-        Args:
-            event (QContextMenuEvent)
-        """
-        index = self.indexAt(event.pos())
-        if not index.isValid():
-            return
-        model = self.model()
-        is_value = model.headerData(index.column(), Qt.Orientation.Horizontal) == self.value_column_header
-        self._open_in_editor_action.setEnabled(is_value)
-        self._plot_action.setEnabled(is_value)
-        if is_value:
-            plot_in_window_menu = QMenu("Plot in window")
-            plot_in_window_menu.triggered.connect(self.plot_in_window)
-            prepare_plot_in_window_menu(plot_in_window_menu)
-            self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
-        self._menu.exec(event.globalPos())
-        if is_value:
-            plot_in_window_menu.deleteLater()
-
-    def _selected_rows_per_column(self):
-        """Computes selected rows per column.
-
-        Returns:
-            dict: Mapping columns to selected rows in that column.
-        """
-        selection = self.selectionModel().selection()
-        if not selection:
-            return {}
-        v_header = self.verticalHeader()
-        h_header = self.horizontalHeader()
-        rows_per_column = {}
-        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
-            for j in range(rng.left(), rng.right() + 1):
-                if h_header.isSectionHidden(j):
-                    continue
-                rows = rows_per_column.setdefault(j, set())
-                for i in range(rng.top(), rng.bottom() + 1):
-                    if v_header.isSectionHidden(i):
-                        continue
-                    rows.add(i)
-        return rows_per_column
-
-    @Slot(bool)
-    def filter_by_selection(self, checked=False):
-        rows_per_column = self._selected_rows_per_column()
-        self.model().filter_by(rows_per_column)
-
-    @Slot(bool)
-    def filter_excluding_selection(self, checked=False):
-        rows_per_column = self._selected_rows_per_column()
-        self.model().filter_excluding(rows_per_column)
-
-    def remove_selected(self):
-        """Removes selected indexes."""
-        selection = self.selectionModel().selection()
-        rows = list()
-        while not selection.isEmpty():
-            current = selection.takeAt(0)
-            top = current.top()
-            bottom = current.bottom()
-            rows += range(top, bottom + 1)
-        # Get parameter data grouped by db_map
-        db_map_typed_data = dict()
-        model = self.model()
-        empty_model = model.empty_model
-        for row in sorted(rows, reverse=True):
-            sub_model = model.sub_model_at_row(row)
-            if sub_model is empty_model:
-                sub_row = model.sub_model_row(row)
-                sub_model.removeRow(sub_row)
-                continue
-            db_map = sub_model.db_map
-            id_ = model.item_at_row(row)
-            db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
-        model.db_mngr.remove_items(db_map_typed_data)
-        self.selectionModel().clearSelection()
-
-    def _do_resize(self):
-        self.resizeColumnsToContents()
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        """Enables or disables copy and paste actions."""
-        self._spine_db_editor.refresh_copy_paste_actions()
-
-
-class ObjectParameterTableMixin:
-    def create_delegates(self):
-        super().create_delegates()
-        self._make_delegate("object_class_name", ObjectClassNameDelegate)
-
-
-class RelationshipParameterTableMixin:
-    def create_delegates(self):
-        super().create_delegates()
-        self._make_delegate("relationship_class_name", RelationshipClassNameDelegate)
-
 
 class ParameterDefinitionTableView(ParameterTableView):
     value_column_header = "default_value"
 
+    _EXPECTED_COLUMN_COUNT = 6
+    _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "parameter_name": 125, "list_value_name": 125, "description": 250}
+
     def create_delegates(self):
         super().create_delegates()
         self._make_delegate("value_list_name", ValueListDelegate)
+        self._make_delegate("parameter_name", ParameterDefinitionNameAndDescriptionDelegate)
+        self._make_delegate("description", ParameterDefinitionNameAndDescriptionDelegate)
         delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
-        raise NotImplementedError()
+        header_sections = [
+            ParameterTableHeaderSection(label) for label in ("database", "entity_class_name", "parameter_name")
+        ]
+        return plot_parameter_table_selection(
+            self.model(), selection, header_sections, self.value_column_header, plot_widget
+        )
 
 
 class ParameterValueTableView(ParameterTableView):
     value_column_header = "value"
+
+    _COLUMN_SIZE_HINTS = {
+        "entity_class_name": 200,
+        "entity_byname": 200,
+        "parameter_name": 125,
+        "alternative_name": 125,
+    }
+    _EXPECTED_COLUMN_COUNT = 6
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
@@ -302,6 +360,8 @@ class ParameterValueTableView(ParameterTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         delegate = self._make_delegate("value", ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
+        delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
 
     def _update_pinned_values(self, _selected, _deselected):
         row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
@@ -309,10 +369,6 @@ class ParameterValueTableView(ParameterTableView):
             {row: pinned_value for row, pinned_value in row_pinned_value_iter if pinned_value is not None}.values()
         )
         self._spine_db_editor.emit_pinned_values_updated()
-
-    @property
-    def _pk_fields(self):
-        raise NotImplementedError()
 
     def _make_pinned_value(self, index):
         db_map, _ = self.model().db_map_id(index)
@@ -323,35 +379,15 @@ class ParameterValueTableView(ParameterTableView):
             return None
         return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
 
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class"""
-        raise NotImplementedError()
-
-
-class ObjectParameterDefinitionTableView(ObjectParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the object parameter_definition pane in Spine db editor."""
+    @property
+    def _pk_fields(self):
+        return "entity_class_name", "entity_byname", "parameter_name", "alternative_name"
 
     def _plot_selection(self, selection, plot_widget=None):
-        """See base class"""
-        header_sections = [
-            ParameterTableHeaderSection(label) for label in ("database", "object_class_name", "parameter_name")
-        ]
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
-
-
-class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, ParameterDefinitionTableView):
-    """A custom QTableView for the relationship parameter_definition pane in Spine db editor."""
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class"""
-        header_sections = [
-            ParameterTableHeaderSection(label)
-            for label in ("database", "relationship_class_name", "object_class_name_list", "parameter_name")
-        ]
+        """See base class."""
+        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
         for i, section in enumerate(header_sections):
-            if section.label == "object_class_name_list":
+            if section.label == "entity_byname":
                 header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
                 break
         return plot_parameter_table_selection(
@@ -359,50 +395,25 @@ class RelationshipParameterDefinitionTableView(RelationshipParameterTableMixin, 
         )
 
 
-class ObjectParameterValueTableView(ObjectParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the object parameter_value pane in Spine db editor."""
+class EntityAlternativeTableView(StackedTableView):
+    """Visualize entities and their alternatives."""
+
+    _EXPECTED_COLUMN_COUNT = 5
+    _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "entity_byname": 200, "alternative_name": 125}
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.set_column_converter_for_pasting("active", string_to_bool)
 
     def create_delegates(self):
         super().create_delegates()
-        self._make_delegate("object_name", ObjectNameDelegate)
-
-    @property
-    def _pk_fields(self):
-        return "object_class_name", "object_name", "parameter_name", "alternative_name"
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class."""
-        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
+        delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
+        delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
+        self._make_delegate("alternative_name", AlternativeNameDelegate)
+        self._make_delegate("active", BooleanValueDelegate)
 
 
-class RelationshipParameterValueTableView(RelationshipParameterTableMixin, ParameterValueTableView):
-    """A custom QTableView for the relationship parameter_value pane in Spine db editor."""
-
-    def create_delegates(self):
-        super().create_delegates()
-        delegate = self._make_delegate("object_name_list", ObjectNameListDelegate)
-        delegate.object_name_list_editor_requested.connect(self._spine_db_editor.show_object_name_list_editor)
-
-    @property
-    def _pk_fields(self):
-        return "relationship_class_name", "object_name_list", "parameter_name", "alternative_name"
-
-    def _plot_selection(self, selection, plot_widget=None):
-        """See base class."""
-        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
-        for i, section in enumerate(header_sections):
-            if section.label == "object_name_list":
-                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
-                break
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
-
-
-class PivotTableView(ResizingViewMixin, CopyPasteTableView):
+class PivotTableView(CopyPasteTableView):
     """Custom QTableView class with pivot capabilities.
 
     Uses 'contexts' to provide different UI elements (table headers, context menus,...) depending on what
@@ -414,8 +425,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
     class _ContextBase:
         """Base class for pivot table view's contexts."""
 
-        _REMOVE_OBJECT = "Remove objects"
-        _REMOVE_RELATIONSHIP = "Remove relationships"
+        _REMOVE_ENTITY = "Remove entities"
         _REMOVE_PARAMETER = "Remove parameter definitions"
         _REMOVE_ALTERNATIVE = "Remove alternatives"
         _REMOVE_SCENARIO = "Remove scenarios"
@@ -431,7 +441,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             """
             self._view = view
             self._db_editor = db_editor
-            self._selected_alternative_indexes = list()
+            self._selected_alternative_indexes = []
             self._header_selection_lists = {"alternative": self._selected_alternative_indexes}
             self._remove_alternatives_action = None
             self._menu = QMenu(self._view)
@@ -501,20 +511,9 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 horizontal_header (QHeaderView): horizontal header
                 vertical_header (QHeaderView): vertical header
             """
-            self._selected_entity_indexes = list()
+            self._selected_entity_indexes = []
             super().__init__(view, db_editor, horizontal_header, vertical_header)
-            self._header_selection_lists["object"] = self._selected_entity_indexes
-
-        def _can_remove_relationships(self):
-            """Checks if it makes sense to remove selected relationships from the database.
-
-            Returns:
-                bool: True if relationships can be removed, False otherwise
-            """
-            return (
-                self._view.source_model.item_type == "parameter_value"
-                and self._db_editor.current_class_type == "relationship_class"
-            )
+            self._header_selection_lists["entity"] = self._selected_entity_indexes
 
         def _clear_selection_lists(self):
             """See base class."""
@@ -525,29 +524,14 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             """See base class."""
             raise NotImplementedError()
 
-        def remove_objects(self):
-            """Removes selected objects from the database."""
-            db_map_typed_data = {}
-            source_model = self._view.source_model
-            for index in self._selected_entity_indexes:
-                db_map, id_ = source_model._header_id(index)
-                db_map_typed_data.setdefault(db_map, {}).setdefault("object", set()).add(id_)
-            self._db_editor.db_mngr.remove_items(db_map_typed_data)
-
-        def remove_relationships(self):
-            """Removes selected relationships from the database."""
-            db_map_relationship_lookup = {
-                db_map: {rel["object_id_list"]: rel["id"] for rel in rels}
-                for db_map, rels in self._db_editor._get_db_map_entities().items()
+        def remove_entities(self):
+            """Removes selected entities from the database."""
+            db_map_typed_data = {
+                db_map: {"entity": entity_ids}
+                for db_map, entity_ids in self._view.source_model.db_map_entity_ids(
+                    self._selected_entity_indexes
+                ).items()
             }
-            db_map_typed_data = {}
-            source_model = self._view.source_model
-            for index in self._selected_entity_indexes:
-                db_map, object_ids = source_model.db_map_object_ids(index)
-                object_id_list = ",".join([str(id_) for id_ in object_ids])
-                id_ = db_map_relationship_lookup.get(db_map, {}).get(object_id_list)
-                if id_:
-                    db_map_typed_data.setdefault(db_map, {}).setdefault("relationship", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
 
         def _update_actions_availability(self):
@@ -568,8 +552,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._open_in_editor_action = None
             self._remove_values_action = None
             self._remove_parameters_action = None
-            self._remove_objects_action = None
-            self._remove_relationships_action = None
+            self._remove_entities_action = None
             self._plot_action = None
             self._plot_in_window_menu = None
             horizontal_header = ParameterValuePivotHeaderView(Qt.Orientation.Horizontal, "columns", view)
@@ -595,10 +578,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
             self._remove_values_action = self._menu.addAction("Remove parameter values", self.remove_values)
-            self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
-            self._remove_relationships_action = self._menu.addAction(
-                self._REMOVE_RELATIONSHIP, self.remove_relationships
-            )
+            self._remove_entities_action = self._menu.addAction(self._REMOVE_ENTITY, self.remove_entities)
             self._remove_parameters_action = self._menu.addAction(self._REMOVE_PARAMETER, self.remove_parameters)
             self._remove_alternatives_action = self._menu.addAction(self._REMOVE_ALTERNATIVE, self.remove_alternatives)
 
@@ -683,20 +663,22 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
 
         def _update_actions_availability(self):
             """See base class."""
-            self._open_in_editor_action.setEnabled(len(self._selected_value_indexes) == 1)
-            self._plot_action.setEnabled(bool(self._selected_value_indexes))
-            self._remove_values_action.setEnabled(bool(self._selected_value_indexes))
-            self._remove_parameters_action.setEnabled(bool(self._selected_parameter_indexes))
-            self._remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
-            self._remove_relationships_action.setEnabled(
-                bool(self._selected_entity_indexes) and self._can_remove_relationships()
+            is_single_editable_selection = (
+                len(self._selected_value_indexes) == 1
+                and (self._selected_value_indexes[0].flags() & Qt.ItemFlag.ItemIsEditable) != Qt.ItemFlag.NoItemFlags
             )
-            self._remove_alternatives_action.setEnabled(bool(self._selected_alternative_indexes))
+            self._open_in_editor_action.setEnabled(is_single_editable_selection)
+            has_selection = bool(self._selected_value_indexes)
+            self._plot_action.setEnabled(has_selection)
+            self._remove_values_action.setEnabled(has_selection)
+            self._remove_parameters_action.setEnabled(has_selection)
+            self._remove_entities_action.setEnabled(has_selection)
+            self._remove_alternatives_action.setEnabled(has_selection)
 
     class _IndexExpansionContext(_ParameterValueContext):
         """Context for expanded parameter values"""
 
-    class _RelationshipContext(_EntityContextBase):
+    class _ElementContext(_EntityContextBase):
         """Context for presenting relationships in the pivot table."""
 
         def __init__(self, view, db_editor):
@@ -705,7 +687,6 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 view (PivotTableView): parent view
                 db_editor (SpineDBEditor): database editor
             """
-            self._remove_objects_action = None
             horizontal_header = PivotTableHeaderView(Qt.Orientation.Horizontal, "columns", view)
             vertical_header = PivotTableHeaderView(Qt.Orientation.Vertical, "rows", view)
             super().__init__(view, db_editor, horizontal_header, vertical_header)
@@ -715,11 +696,9 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self._menu.addAction(self._view.copy_action)
             self._menu.addAction(self._view.paste_action)
             self._menu.addSeparator()
-            self._remove_objects_action = self._menu.addAction(self._REMOVE_OBJECT, self.remove_objects)
 
         def _update_actions_availability(self):
             """See base class."""
-            self._remove_objects_action.setEnabled(bool(self._selected_entity_indexes))
 
     class _ScenarioAlternativeContext(_ContextBase):
         """Context for presenting scenarios and alternatives"""
@@ -773,6 +752,7 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
                 db_map, id_ = source_model._header_id(index)
                 db_map_typed_data.setdefault(db_map, {}).setdefault("scenario", set()).add(id_)
             self._db_editor.db_mngr.remove_items(db_map_typed_data)
+            self._db_editor.do_reload_pivot_table()
 
         def duplicate_scenario(self):
             """Duplicates current scenario in the database."""
@@ -826,8 +806,6 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-        self.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
         # NOTE: order of creation of header tables is important for them to stack properly
         self._left_header_table = CopyPasteTableView(self)
         self._top_header_table = CopyPasteTableView(self)
@@ -860,9 +838,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             self.viewport().stackUnder(header_table)
         for header_table in (self._top_header_table, self._left_header_table):
             header_table.setAttribute(Qt.WA_TransparentForMouseEvents)
-
-    def _do_resize(self):
-        self.resizeColumnsToContents()
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
     @property
     def source_model(self):
@@ -884,8 +861,8 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
         model = self._spine_db_editor.pivot_table_proxy.sourceModel()
         if isinstance(model, ParameterValuePivotTableModel):
             self._context = self._ParameterValueContext(self, self._spine_db_editor)
-        elif isinstance(model, RelationshipPivotTableModel):
-            self._context = self._RelationshipContext(self, self._spine_db_editor)
+        elif isinstance(model, ElementPivotTableModel):
+            self._context = self._ElementContext(self, self._spine_db_editor)
         elif isinstance(model, IndexExpansionPivotTableModel):
             self._context = self._IndexExpansionContext(self, self._spine_db_editor)
         elif isinstance(model, ScenarioAlternativePivotTableModel):
@@ -931,24 +908,45 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
             header_table.selectionModel().select(selected, QItemSelectionModel.Select)
             header_table.selectionModel().select(deselected, QItemSelectionModel.Deselect)
 
+    def indexWidget(self, proxy_index):
+        return self._top_left_header_table.indexWidget(proxy_index)
+
     def setIndexWidget(self, proxy_index, widget):
         self._top_left_header_table.setIndexWidget(proxy_index, widget)
 
     def setHorizontalHeader(self, horizontal_header):
+        horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         super().setHorizontalHeader(horizontal_header)
         horizontal_header.sectionResized.connect(self._update_section_width)
+        resize_precision = horizontal_header.resizeContentsPrecision()
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-            header_table.horizontalHeader().setResizeContentsPrecision(horizontal_header.resizeContentsPrecision())
+            header_table.horizontalHeader().setResizeContentsPrecision(resize_precision)
 
     def setVerticalHeader(self, vertical_header):
         super().setVerticalHeader(vertical_header)
         vertical_header.sectionResized.connect(self._update_section_height)
+        default_section_size = vertical_header.defaultSectionSize()
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
-            header_table.verticalHeader().setDefaultSectionSize(vertical_header.defaultSectionSize())
+            header_table.verticalHeader().setDefaultSectionSize(default_section_size)
 
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self._update_header_tables_geometry()
+
+    def sizeHintForColumn(self, column):
+        base_size = super().sizeHintForColumn(column)
+        proxy_model = self.model()
+        source_model = proxy_model.sourceModel()
+        if column >= source_model.headerColumnCount():
+            return base_size
+        max_width = base_size
+        for row in range(source_model.headerRowCount()):
+            source_index = proxy_model.index(row, column)
+            index_widget = self._top_left_header_table.indexWidget(source_index)
+            if index_widget is None:
+                continue
+            max_width = max(max_width, index_widget.sizeHint().width())
+        return max_width
 
     def _fetch_more_visible(self):
         model = self.model()
@@ -1007,6 +1005,14 @@ class PivotTableView(ResizingViewMixin, CopyPasteTableView):
 class FrozenTableView(QTableView):
     header_dropped = Signal(QWidget, QWidget)
 
+    def __init__(self, parent=None):
+        """
+        Args:
+            parent (QWidget): parent widget
+        """
+        super().__init__(parent)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
     @property
     def area(self):
         return "frozen"
@@ -1032,7 +1038,9 @@ class MetadataTableViewBase(CopyPasteTableView):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+        horizontal_header = self.horizontalHeader()
+        horizontal_header.sectionCountChanged.connect(self._set_horizontal_header_resize_modes)
+        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._menu = QMenu(self)
         self._db_editor = None
 
@@ -1090,12 +1098,22 @@ class MetadataTableViewBase(CopyPasteTableView):
     def _refresh_copy_paste_actions(self):
         self._db_editor.refresh_copy_paste_actions()
 
+    @Slot(int, int)
+    def _set_horizontal_header_resize_modes(self, old_column_count, new_column_count):
+        if new_column_count != 3:
+            return
+        self.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+
 
 class MetadataTableView(MetadataTableViewBase):
     """Table view for metadata."""
 
     def _enable_delegates(self, db_editor):
         """See base class."""
+        name_column_delegate = MetadataDelegate(self)
+        self.setItemDelegateForColumn(MetadataColumn.NAME, name_column_delegate)
+        value_column_delegate = MetadataDelegate(self)
+        self.setItemDelegateForColumn(MetadataColumn.VALUE, value_column_delegate)
         delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
         self.setItemDelegateForColumn(MetadataColumn.DB_MAP, delegate)
         delegate.data_committed.connect(self._set_model_data)

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,12 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QDialogs to add edit and remove database items.
-"""
+"""Classes for custom QDialogs to add edit and remove database items."""
 from PySide6.QtWidgets import QCheckBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Signal, Slot
-
 from spinetoolbox.widgets.custom_qwidgets import SelectDatabaseItemsDialog
 from spinetoolbox.widgets.select_database_items import add_check_boxes
 
@@ -27,7 +25,7 @@ class _SelectDatabases(QWidget):
     def __init__(self, db_maps, checked_states, parent):
         """
         Args:
-            db_maps (tuple of DatabaseMappingBase): database maps
+            db_maps (tuple of DatabaseMapping): database maps
             checked_states (dict, optional): mapping from item name to check state boolean
             parent (QWidget): parent widget
         """

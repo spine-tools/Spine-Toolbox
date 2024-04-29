@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -25,8 +26,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QHeaderView, QPushButton,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QHBoxLayout, QHeaderView,
+    QPushButton, QSizePolicy, QSpacerItem, QVBoxLayout,
+    QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import MapTableView
 
@@ -39,6 +41,7 @@ class Ui_MapEditor(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.map_table_view = MapTableView(MapEditor)
         self.map_table_view.setObjectName(u"map_table_view")
+        self.map_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         self.verticalLayout.addWidget(self.map_table_view)
 
