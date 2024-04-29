@@ -716,7 +716,7 @@ class SpineDBManager(QObject):
             PublicItem: the item
         """
         mapped_table = db_map.mapped_table(item_type)
-        return mapped_table.find_item_by_id(id_)
+        return mapped_table.find_item_by_id(id_).public_item
 
     def get_field(self, db_map, item_type, id_, field):
         return self.get_item(db_map, item_type, id_).get(field)
