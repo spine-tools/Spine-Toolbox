@@ -266,6 +266,7 @@ class SpineDBWorker(QObject):
         items, errors = self._db_map.remove_items(item_type, *ids, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
+        self._db_mngr.update_icons(self._db_map, item_type, items)
         self._db_mngr.items_removed.emit(item_type, {self._db_map: items})
         return items
 

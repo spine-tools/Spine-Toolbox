@@ -610,7 +610,7 @@ def interpret_icon_id(display_icon):
         tuple: icon's code, color code
     """
     if not isinstance(display_icon, int) or display_icon < 0:
-        return 0xF1B2, 0
+        return 0xF1B2, 0xFF000000
     icon_code = display_icon & 65535
     try:
         color_code = display_icon >> 16

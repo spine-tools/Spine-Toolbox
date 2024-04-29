@@ -262,9 +262,16 @@ class GetEntitiesMixin:
 class ShowIconColorEditorMixin:
     """Provides methods to show an `IconColorEditor` upon request."""
 
+    @Slot(object)
+    def reset_data(self, editor):
+        """Resets the editors selections to the default state and closes the editor"""
+        editor.set_data(None)
+        editor.accept()
+
     @busy_effect
     def show_icon_color_editor(self, index):
         editor = IconColorEditor(self)
         editor.set_data(index.data(Qt.ItemDataRole.DisplayRole))
         editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
+        editor.reset_pressed.connect(self.reset_data)
         editor.show()
