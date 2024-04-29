@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -34,7 +35,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScro
     QSpinBox, QSplitter, QStackedWidget, QToolButton,
     QVBoxLayout, QWidget)
 
-from spinetoolbox.widgets.custom_qcombobox import CustomQComboBox
+from spinetoolbox.widgets.custom_combobox import CustomQComboBox
 from spinetoolbox import resources_icons_rc
 
 class Ui_SettingsForm(object):
@@ -362,9 +363,6 @@ class Ui_SettingsForm(object):
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.label_11 = QLabel(self.groupBox_gams)
         self.label_11.setObjectName(u"label_11")
-        font = QFont()
-        font.setPointSize(10)
-        self.label_11.setFont(font)
 
         self.gridLayout_4.addWidget(self.label_11, 1, 0, 1, 1)
 
@@ -386,8 +384,9 @@ class Ui_SettingsForm(object):
 
         self.groupBox_julia = QGroupBox(self.ExternalTools)
         self.groupBox_julia.setObjectName(u"groupBox_julia")
-        self.verticalLayout_16 = QVBoxLayout(self.groupBox_julia)
-        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.verticalLayout_10 = QVBoxLayout(self.groupBox_julia)
+        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
+        self.verticalLayout_10.setContentsMargins(-1, 9, -1, -1)
         self.horizontalLayout_14 = QHBoxLayout()
         self.horizontalLayout_14.setObjectName(u"horizontalLayout_14")
         self.verticalLayout = QVBoxLayout()
@@ -478,14 +477,14 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_14.addLayout(self.verticalLayout_15)
 
 
-        self.verticalLayout_16.addLayout(self.horizontalLayout_14)
+        self.verticalLayout_10.addLayout(self.horizontalLayout_14)
 
         self.line = QFrame(self.groupBox_julia)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.HLine)
         self.line.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_16.addWidget(self.line)
+        self.verticalLayout_10.addWidget(self.line)
 
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
@@ -504,7 +503,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_12.addWidget(self.pushButton_add_up_spine_opt)
 
 
-        self.verticalLayout_16.addLayout(self.horizontalLayout_12)
+        self.verticalLayout_10.addLayout(self.horizontalLayout_12)
 
 
         self.verticalLayout_13.addWidget(self.groupBox_julia)
@@ -514,8 +513,11 @@ class Ui_SettingsForm(object):
         sizePolicy.setHeightForWidth(self.groupBox_python.sizePolicy().hasHeightForWidth())
         self.groupBox_python.setSizePolicy(sizePolicy)
         self.groupBox_python.setMinimumSize(QSize(0, 95))
-        self.horizontalLayout_3 = QHBoxLayout(self.groupBox_python)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.verticalLayout_16 = QVBoxLayout(self.groupBox_python)
+        self.verticalLayout_16.setObjectName(u"verticalLayout_16")
+        self.verticalLayout_16.setContentsMargins(-1, 9, -1, -1)
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
         self.verticalLayout_14 = QVBoxLayout()
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
         self.radioButton_use_python_basic_console = QRadioButton(self.groupBox_python)
@@ -529,14 +531,14 @@ class Ui_SettingsForm(object):
         self.verticalLayout_14.addWidget(self.radioButton_use_python_jupyter_console)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_14)
+        self.horizontalLayout_5.addLayout(self.verticalLayout_14)
 
         self.line_2 = QFrame(self.groupBox_python)
         self.line_2.setObjectName(u"line_2")
         self.line_2.setFrameShape(QFrame.VLine)
         self.line_2.setFrameShadow(QFrame.Sunken)
 
-        self.horizontalLayout_3.addWidget(self.line_2)
+        self.horizontalLayout_5.addWidget(self.line_2)
 
         self.verticalLayout_5 = QVBoxLayout()
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
@@ -580,7 +582,10 @@ class Ui_SettingsForm(object):
         self.verticalLayout_5.addLayout(self.horizontalLayout_11)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_5)
+        self.horizontalLayout_5.addLayout(self.verticalLayout_5)
+
+
+        self.verticalLayout_16.addLayout(self.horizontalLayout_5)
 
 
         self.verticalLayout_13.addWidget(self.groupBox_python)
@@ -618,59 +623,133 @@ class Ui_SettingsForm(object):
         self.SpineDBEditor.setObjectName(u"SpineDBEditor")
         self.verticalLayout_9 = QVBoxLayout(self.SpineDBEditor)
         self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.groupBox_spine_db_editor = QGroupBox(self.SpineDBEditor)
-        self.groupBox_spine_db_editor.setObjectName(u"groupBox_spine_db_editor")
+        self.groupBox_db_editor_general = QGroupBox(self.SpineDBEditor)
+        self.groupBox_db_editor_general.setObjectName(u"groupBox_db_editor_general")
         sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         sizePolicy7.setHorizontalStretch(0)
         sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.groupBox_spine_db_editor.sizePolicy().hasHeightForWidth())
-        self.groupBox_spine_db_editor.setSizePolicy(sizePolicy7)
-        self.verticalLayout_4 = QVBoxLayout(self.groupBox_spine_db_editor)
+        sizePolicy7.setHeightForWidth(self.groupBox_db_editor_general.sizePolicy().hasHeightForWidth())
+        self.groupBox_db_editor_general.setSizePolicy(sizePolicy7)
+        self.verticalLayout_4 = QVBoxLayout(self.groupBox_db_editor_general)
         self.verticalLayout_4.setSpacing(6)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.checkBox_commit_at_exit = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_commit_at_exit = QCheckBox(self.groupBox_db_editor_general)
         self.checkBox_commit_at_exit.setObjectName(u"checkBox_commit_at_exit")
         self.checkBox_commit_at_exit.setTristate(True)
 
         self.verticalLayout_4.addWidget(self.checkBox_commit_at_exit)
 
-        self.checkBox_db_editor_show_undo = QCheckBox(self.groupBox_spine_db_editor)
+        self.checkBox_db_editor_show_undo = QCheckBox(self.groupBox_db_editor_general)
         self.checkBox_db_editor_show_undo.setObjectName(u"checkBox_db_editor_show_undo")
 
         self.verticalLayout_4.addWidget(self.checkBox_db_editor_show_undo)
 
-        self.checkBox_object_tree_sticky_selection = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_object_tree_sticky_selection.setObjectName(u"checkBox_object_tree_sticky_selection")
 
-        self.verticalLayout_4.addWidget(self.checkBox_object_tree_sticky_selection)
+        self.verticalLayout_9.addWidget(self.groupBox_db_editor_general)
 
-        self.checkBox_relationship_items_follow = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_relationship_items_follow.setObjectName(u"checkBox_relationship_items_follow")
+        self.groupBox_entity_tree = QGroupBox(self.SpineDBEditor)
+        self.groupBox_entity_tree.setObjectName(u"groupBox_entity_tree")
+        self.verticalLayout_3 = QVBoxLayout(self.groupBox_entity_tree)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.checkBox_entity_tree_sticky_selection = QCheckBox(self.groupBox_entity_tree)
+        self.checkBox_entity_tree_sticky_selection.setObjectName(u"checkBox_entity_tree_sticky_selection")
 
-        self.verticalLayout_4.addWidget(self.checkBox_relationship_items_follow)
+        self.verticalLayout_3.addWidget(self.checkBox_entity_tree_sticky_selection)
 
-        self.checkBox_smooth_entity_graph_zoom = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_smooth_entity_graph_zoom.setObjectName(u"checkBox_smooth_entity_graph_zoom")
+        self.checkBox_hide_empty_classes = QCheckBox(self.groupBox_entity_tree)
+        self.checkBox_hide_empty_classes.setObjectName(u"checkBox_hide_empty_classes")
 
-        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_zoom)
+        self.verticalLayout_3.addWidget(self.checkBox_hide_empty_classes)
 
-        self.checkBox_smooth_entity_graph_rotation = QCheckBox(self.groupBox_spine_db_editor)
+
+        self.verticalLayout_9.addWidget(self.groupBox_entity_tree)
+
+        self.groupBox_entity_graph = QGroupBox(self.SpineDBEditor)
+        self.groupBox_entity_graph.setObjectName(u"groupBox_entity_graph")
+        self.gridLayout_5 = QGridLayout(self.groupBox_entity_graph)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.checkBox_smooth_entity_graph_rotation = QCheckBox(self.groupBox_entity_graph)
         self.checkBox_smooth_entity_graph_rotation.setObjectName(u"checkBox_smooth_entity_graph_rotation")
 
-        self.verticalLayout_4.addWidget(self.checkBox_smooth_entity_graph_rotation)
+        self.gridLayout_5.addWidget(self.checkBox_smooth_entity_graph_rotation, 4, 0, 1, 1)
 
-        self.checkBox_auto_expand_objects = QCheckBox(self.groupBox_spine_db_editor)
-        self.checkBox_auto_expand_objects.setObjectName(u"checkBox_auto_expand_objects")
+        self.checkBox_smooth_entity_graph_zoom = QCheckBox(self.groupBox_entity_graph)
+        self.checkBox_smooth_entity_graph_zoom.setObjectName(u"checkBox_smooth_entity_graph_zoom")
 
-        self.verticalLayout_4.addWidget(self.checkBox_auto_expand_objects)
+        self.gridLayout_5.addWidget(self.checkBox_smooth_entity_graph_zoom, 3, 0, 1, 1)
 
-        self.checkBox_merge_dbs = QCheckBox(self.groupBox_spine_db_editor)
+        self.spinBox_layout_algo_max_iterations = QSpinBox(self.groupBox_entity_graph)
+        self.spinBox_layout_algo_max_iterations.setObjectName(u"spinBox_layout_algo_max_iterations")
+        self.spinBox_layout_algo_max_iterations.setMinimum(1)
+        self.spinBox_layout_algo_max_iterations.setMaximum(100)
+        self.spinBox_layout_algo_max_iterations.setValue(12)
+
+        self.gridLayout_5.addWidget(self.spinBox_layout_algo_max_iterations, 6, 1, 1, 1)
+
+        self.label_10 = QLabel(self.groupBox_entity_graph)
+        self.label_10.setObjectName(u"label_10")
+
+        self.gridLayout_5.addWidget(self.label_10, 7, 0, 1, 1)
+
+        self.spinBox_layout_algo_spread_factor = QSpinBox(self.groupBox_entity_graph)
+        self.spinBox_layout_algo_spread_factor.setObjectName(u"spinBox_layout_algo_spread_factor")
+        self.spinBox_layout_algo_spread_factor.setMinimum(1)
+        self.spinBox_layout_algo_spread_factor.setMaximum(100)
+        self.spinBox_layout_algo_spread_factor.setValue(100)
+
+        self.gridLayout_5.addWidget(self.spinBox_layout_algo_spread_factor, 7, 1, 1, 1)
+
+        self.label_6 = QLabel(self.groupBox_entity_graph)
+        self.label_6.setObjectName(u"label_6")
+        sizePolicy8 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy8.setHorizontalStretch(2)
+        sizePolicy8.setVerticalStretch(0)
+        sizePolicy8.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
+        self.label_6.setSizePolicy(sizePolicy8)
+
+        self.gridLayout_5.addWidget(self.label_6, 6, 0, 1, 1)
+
+        self.checkBox_auto_expand_entities = QCheckBox(self.groupBox_entity_graph)
+        self.checkBox_auto_expand_entities.setObjectName(u"checkBox_auto_expand_entities")
+
+        self.gridLayout_5.addWidget(self.checkBox_auto_expand_entities, 0, 0, 1, 1)
+
+        self.label_16 = QLabel(self.groupBox_entity_graph)
+        self.label_16.setObjectName(u"label_16")
+
+        self.gridLayout_5.addWidget(self.label_16, 8, 0, 1, 1)
+
+        self.checkBox_snap_entities = QCheckBox(self.groupBox_entity_graph)
+        self.checkBox_snap_entities.setObjectName(u"checkBox_snap_entities")
+
+        self.gridLayout_5.addWidget(self.checkBox_snap_entities, 2, 0, 1, 1)
+
+        self.checkBox_merge_dbs = QCheckBox(self.groupBox_entity_graph)
         self.checkBox_merge_dbs.setObjectName(u"checkBox_merge_dbs")
 
-        self.verticalLayout_4.addWidget(self.checkBox_merge_dbs)
+        self.gridLayout_5.addWidget(self.checkBox_merge_dbs, 1, 0, 1, 1)
+
+        self.spinBox_layout_algo_neg_weight_exp = QSpinBox(self.groupBox_entity_graph)
+        self.spinBox_layout_algo_neg_weight_exp.setObjectName(u"spinBox_layout_algo_neg_weight_exp")
+        self.spinBox_layout_algo_neg_weight_exp.setMinimum(1)
+        self.spinBox_layout_algo_neg_weight_exp.setMaximum(100)
+
+        self.gridLayout_5.addWidget(self.spinBox_layout_algo_neg_weight_exp, 8, 1, 1, 1)
+
+        self.label_3 = QLabel(self.groupBox_entity_graph)
+        self.label_3.setObjectName(u"label_3")
+
+        self.gridLayout_5.addWidget(self.label_3, 5, 0, 1, 1)
+
+        self.spinBox_max_ent_dim_count = QSpinBox(self.groupBox_entity_graph)
+        self.spinBox_max_ent_dim_count.setObjectName(u"spinBox_max_ent_dim_count")
+        self.spinBox_max_ent_dim_count.setMinimum(2)
+        self.spinBox_max_ent_dim_count.setValue(5)
+
+        self.gridLayout_5.addWidget(self.spinBox_max_ent_dim_count, 5, 1, 1, 1)
 
 
-        self.verticalLayout_9.addWidget(self.groupBox_spine_db_editor)
+        self.verticalLayout_9.addWidget(self.groupBox_entity_graph)
 
         self.verticalSpacer_9 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -939,13 +1018,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.lineEdit_conda_path, self.toolButton_browse_conda)
         QWidget.setTabOrder(self.toolButton_browse_conda, self.checkBox_commit_at_exit)
         QWidget.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_db_editor_show_undo)
-        QWidget.setTabOrder(self.checkBox_db_editor_show_undo, self.checkBox_object_tree_sticky_selection)
-        QWidget.setTabOrder(self.checkBox_object_tree_sticky_selection, self.checkBox_relationship_items_follow)
-        QWidget.setTabOrder(self.checkBox_relationship_items_follow, self.checkBox_smooth_entity_graph_zoom)
-        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.checkBox_smooth_entity_graph_rotation)
-        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_auto_expand_objects)
-        QWidget.setTabOrder(self.checkBox_auto_expand_objects, self.checkBox_merge_dbs)
-        QWidget.setTabOrder(self.checkBox_merge_dbs, self.checkBox_save_spec_before_closing)
+        QWidget.setTabOrder(self.checkBox_db_editor_show_undo, self.checkBox_save_spec_before_closing)
         QWidget.setTabOrder(self.checkBox_save_spec_before_closing, self.checkBox_spec_show_undo)
         QWidget.setTabOrder(self.checkBox_spec_show_undo, self.unlimited_engine_process_radio_button)
         QWidget.setTabOrder(self.unlimited_engine_process_radio_button, self.automatic_engine_process_limit_radio_button)
@@ -962,12 +1035,23 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.comboBox_security, self.lineEdit_secfolder)
         QWidget.setTabOrder(self.lineEdit_secfolder, self.toolButton_pick_secfolder)
         QWidget.setTabOrder(self.toolButton_pick_secfolder, self.listWidget)
+        QWidget.setTabOrder(self.listWidget, self.checkBox_entity_tree_sticky_selection)
+        QWidget.setTabOrder(self.checkBox_entity_tree_sticky_selection, self.checkBox_hide_empty_classes)
+        QWidget.setTabOrder(self.checkBox_hide_empty_classes, self.checkBox_smooth_entity_graph_rotation)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_rotation, self.checkBox_smooth_entity_graph_zoom)
+        QWidget.setTabOrder(self.checkBox_smooth_entity_graph_zoom, self.spinBox_layout_algo_max_iterations)
+        QWidget.setTabOrder(self.spinBox_layout_algo_max_iterations, self.spinBox_layout_algo_spread_factor)
+        QWidget.setTabOrder(self.spinBox_layout_algo_spread_factor, self.checkBox_auto_expand_entities)
+        QWidget.setTabOrder(self.checkBox_auto_expand_entities, self.checkBox_snap_entities)
+        QWidget.setTabOrder(self.checkBox_snap_entities, self.checkBox_merge_dbs)
+        QWidget.setTabOrder(self.checkBox_merge_dbs, self.spinBox_layout_algo_neg_weight_exp)
+        QWidget.setTabOrder(self.spinBox_layout_algo_neg_weight_exp, self.spinBox_max_ent_dim_count)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
 
         self.listWidget.setCurrentRow(-1)
-        self.stackedWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(SettingsForm)
@@ -1057,24 +1141,27 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_gams.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick GAMS executable using a file browser (eg. gams.exe on Windows)</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(tooltip)
+        self.groupBox_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Default settings</span> for new Julia Tool specs. Defaults can be changed for each Tool specification separately.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_julia.setTitle(QCoreApplication.translate("SettingsForm", u"Julia", None))
 #if QT_CONFIG(tooltip)
-        self.radioButton_use_julia_basic_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Use basic Julia REPL to execute Julia Tool specs</p></body></html>", None))
+        self.radioButton_use_julia_basic_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Julia Tool specifications in basic Julia REPL.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.radioButton_use_julia_basic_console.setText(QCoreApplication.translate("SettingsForm", u"Basic Console", None))
 #if QT_CONFIG(tooltip)
-        self.radioButton_use_julia_jupyter_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Use Jupyter Console to execute Julia Tool specs. Select a Julia kernel spec to use this option.</p></body></html>", None))
+        self.radioButton_use_julia_jupyter_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Use Jupyter Console to execute Julia Tool specs. Select a Julia kernel spec to use this option.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.radioButton_use_julia_jupyter_console.setText(QCoreApplication.translate("SettingsForm", u"Jupyter Console", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit_julia_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia executable. Leave blank to use Julia defined in your system path.</p></body></html>", None))
+        self.lineEdit_julia_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia executable for Basic Console. Leave blank to use the Julia in your system PATH env. If Julia is not in your PATH, this line edit will be empty, indicating that Julia Tool Specs won't execute.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia executable in system path", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Julia executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.lineEdit_julia_project_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.</p></body></html>", None))
+        self.lineEdit_julia_project_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_julia_project_path.setText("")
         self.lineEdit_julia_project_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using Julia default project", None))
@@ -1083,18 +1170,24 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"...", None))
 #if QT_CONFIG(tooltip)
-        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.</p></body></html>", None))
+        self.comboBox_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel spec for Jupyter Console.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.pushButton_make_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>- Selects a Julia kernel for selected Julia executable and Julia project if it already exists.</p><p>- Creates a Julia kernel for selected Julia executable and Julia project if it does not exist.</p><p>- Overwrites a Julia kernel if a Julia kernel for selected Julia executable already exists but the Julia project is different.</p><p>You can also create Julia kernels manually using the IJulia package.</p></body></html>", None))
+        self.pushButton_make_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Creates a Julia kernel for selected Julia executable and Julia project if it does not exist using the <span style=\" font-weight:700;\">IJulia</span> package. Selects a Julia kernel matching the selected Julia executable and Julia project if it already exists. May overwrite a Julia kernel if one for selected Julia executable already exists but the Julia project is different.</p><p>You can also create Julia kernels manually using the <span style=\" font-weight:700;\">IJulia</span> package.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_make_julia_kernel.setText(QCoreApplication.translate("SettingsForm", u"Make Julia Kernel", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_install_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Installs the latest Julia on your system using Python's <span style=\" font-weight:700;\">jill</span> package</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_install_julia.setText(QCoreApplication.translate("SettingsForm", u"Install Julia", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_add_up_spine_opt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Adds or updates <span style=\" font-weight:700;\">SpineOpt.jl</span> package using the Julia executable &amp; project selected above</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.pushButton_add_up_spine_opt.setText(QCoreApplication.translate("SettingsForm", u"Add/Update SpineOpt", None))
 #if QT_CONFIG(tooltip)
         self.groupBox_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Default settings</span> for new Python Tool specs. Defaults can be changed for each Tool specification separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python (default settings)", None))
+        self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
 #if QT_CONFIG(tooltip)
         self.radioButton_use_python_basic_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Python Tool specifications in basic Python REPL.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
@@ -1104,17 +1197,17 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.radioButton_use_python_jupyter_console.setText(QCoreApplication.translate("SettingsForm", u"Jupyter Console", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit_python_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Python interpreter for Python Console. Leave blank to use the Python that was used in launching Spine Toolbox.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
+        self.lineEdit_python_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Python interpreter for Basic Console. Leave blank to use the Python that was used in launching Spine Toolbox.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_python_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using current Python interpreter", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_browse_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Python interpreter using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.comboBox_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Python kernel spec for Jupyter Console. Open Kernel spec editor to view/add new ones.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
+        self.comboBox_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Python kernel spec for Jupyter Console.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for new Python Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
-        self.pushButton_make_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>- Selects a Python kernel for selected Python interpreter if it already exists.</p><p>- Creates a new Python kernel for selected Python interpreter if it does not exist.</p><p>You can also create Python kernels manually using the ipykernel package.</p></body></html>", None))
+        self.pushButton_make_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Creates a Python kernel for selected Python interpreter if it does not exist using the <span style=\" font-weight:700;\">ipykernel </span>package. Selects a Python kernel matching the selected Python interpreter if it already exists. </p><p>You can also create Python kernels manually using the <span style=\" font-weight:700;\">ipykernel</span> package.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_make_python_kernel.setText(QCoreApplication.translate("SettingsForm", u"Make Python Kernel", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("SettingsForm", u"Conda", None))
@@ -1126,27 +1219,32 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_conda.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Conda executable using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.toolButton_browse_conda.setText("")
-        self.groupBox_spine_db_editor.setTitle(QCoreApplication.translate("SettingsForm", u"Spine database editor", None))
+        self.groupBox_db_editor_general.setTitle(QCoreApplication.translate("SettingsForm", u"General", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't commit session and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Commit session and don't show message box</p><p><br/></p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session before closing", None))
         self.checkBox_db_editor_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
+        self.groupBox_entity_tree.setTitle(QCoreApplication.translate("SettingsForm", u"Entity tree", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_object_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
+        self.checkBox_entity_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_object_tree_sticky_selection.setText(QCoreApplication.translate("SettingsForm", u"Sticky selection in Entity trees", None))
+        self.checkBox_entity_tree_sticky_selection.setText(QCoreApplication.translate("SettingsForm", u"Sticky selection", None))
+        self.checkBox_hide_empty_classes.setText(QCoreApplication.translate("SettingsForm", u"Hide empty classes", None))
+        self.groupBox_entity_graph.setTitle(QCoreApplication.translate("SettingsForm", u"Entity graph", None))
+        self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth rotation", None))
+        self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
+        self.spinBox_layout_algo_max_iterations.setSuffix("")
+        self.label_10.setText(QCoreApplication.translate("SettingsForm", u"Minimum distance between nodes (%)", None))
+        self.label_6.setText(QCoreApplication.translate("SettingsForm", u"Number of build iterations", None))
 #if QT_CONFIG(tooltip)
-        self.checkBox_relationship_items_follow.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>When checked [default], moving Object items causes connected Relationship items to follow.</p></body></html>", None))
+        self.checkBox_auto_expand_entities.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its related N-D entities.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the elements in a N-D entity are included in the Entity graph, the graph automatically includes it.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.checkBox_relationship_items_follow.setText(QCoreApplication.translate("SettingsForm", u"Move relationships along with objects in Entity graph", None))
-        self.checkBox_smooth_entity_graph_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph zoom", None))
-        self.checkBox_smooth_entity_graph_rotation.setText(QCoreApplication.translate("SettingsForm", u"Smooth Entity graph rotation", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_objects.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Checked</span>: Whenever an object is included in the Entity graph, the graph automatically includes <span style=\" font-style:italic;\">all</span> its relationships.</p><p><span style=\" font-weight:600;\">Unchecked</span>: Whenever <span style=\" font-style:italic;\">all</span> the objects in a relationship are included in the Entity graph, the graph automatically includes the relationship.</p><p>Note: This setting is a global default, but can be locally overriden in every Spine DB editor session.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_auto_expand_objects.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand objects by default in Entity graph", None))
-        self.checkBox_merge_dbs.setText(QCoreApplication.translate("SettingsForm", u"Merge databases by default in Entity graph", None))
+        self.checkBox_auto_expand_entities.setText(QCoreApplication.translate("SettingsForm", u"Auto-expand entities", None))
+        self.label_16.setText(QCoreApplication.translate("SettingsForm", u"Decay rate of attraction with distance", None))
+        self.checkBox_snap_entities.setText(QCoreApplication.translate("SettingsForm", u"Snap entities to grid", None))
+        self.checkBox_merge_dbs.setText(QCoreApplication.translate("SettingsForm", u"Merge databases", None))
+        self.label_3.setText(QCoreApplication.translate("SettingsForm", u"Max. entity dimension count", None))
         self.groupBox.setTitle(QCoreApplication.translate("SettingsForm", u"Specification editors", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_save_spec_before_closing.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Unchecked: Don't save specification and don't show message box</p><p>Partially checked: Show message box (default)</p><p>Checked: Save specification and don't show message box</p></body></html>", None))

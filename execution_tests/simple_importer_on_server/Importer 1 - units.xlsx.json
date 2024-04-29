@@ -1,0 +1,44 @@
+{
+    "name": "Importer 1 - units.xlsx",
+    "item_type": "Importer",
+    "mapping": {
+        "table_mappings": {
+            "Sheet1": [
+                {
+                    "": {
+                        "mapping": [
+                            {
+                                "map_type": "EntityClass",
+                                "position": 0
+                            },
+                            {
+                                "map_type": "Entity",
+                                "position": 1
+                            },
+                            {
+                                "map_type": "EntityMetadata",
+                                "position": "hidden"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "selected_tables": [
+            "Sheet1"
+        ],
+        "table_options": {
+            "Sheet1": {}
+        },
+        "table_types": {
+            "Sheet1": {
+                "0": "string",
+                "1": "string"
+            }
+        },
+        "table_default_column_type": {},
+        "table_row_types": {},
+        "source_type": "ExcelConnector"
+    },
+    "description": ""
+}

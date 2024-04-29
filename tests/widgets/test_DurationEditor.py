@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the DuratonEditor widget.
-"""
-
+"""Unit tests for the DuratonEditor widget."""
 import unittest
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Duration
@@ -36,5 +34,5 @@ class TestDurationEditor(unittest.TestCase):
         self.assertEqual(editor.value(), Duration("3M"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

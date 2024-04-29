@@ -49,7 +49,6 @@ Those interested in looking under the hood can check the :ref:`Project item deve
 
 Project Item Properties
 -----------------------
-
 Each project item has its own set of `properties`. You can view and edit them by selecting a project
 item in the **Design View**. The properties are displayed in the **Properties** dock widget on the main
 window. Project item properties are saved into the project save file (``project.json``), which can be

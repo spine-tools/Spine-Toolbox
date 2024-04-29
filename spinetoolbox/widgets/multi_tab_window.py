@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the MultiTabWindow and TabBarPlus classes.
-"""
-
+"""Contains the MultiTabWindow and TabBarPlus classes."""
 from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
 from PySide6.QtCore import Qt, Slot, QPoint, Signal, QEvent
 from PySide6.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
@@ -64,7 +62,7 @@ class MultiTabWindow(QMainWindow):
         """List of other MultiTabWindows of the same type.
 
         Returns:
-            list of MultiTabWindow: other MutliTabWindows windows
+            list of MultiTabWindow: other MultiTabWindows windows
         """
         return [w for w in self._other_editor_windows[type(self).__name__] if w is not self]
 
@@ -78,7 +76,7 @@ class MultiTabWindow(QMainWindow):
         raise NotImplementedError()
 
     def show_plus_button_context_menu(self, global_pos):
-        """Opens a context menu for the tool bar.
+        """Opens a context menu for the toolbar.
 
         Args:
             global_pos (QPoint): menu position on screen
@@ -125,11 +123,17 @@ class MultiTabWindow(QMainWindow):
         Args:
             *args: parameters forwarded to :func:`MutliTabWindow._make_new_tab`
             **kwargs: parameters forwarded to :func:`MultiTabwindow._make_new_tab`
+
+        Returns:
+            bool: True if successful, False otherwise
         """
         if not self._accepting_new_tabs:
-            return
+            return False
         tab = self._make_new_tab(*args, **kwargs)
+        if not tab:
+            return False
         self._add_connect_tab(tab, self.new_tab_title)
+        return True
 
     def insert_new_tab(self, index, *args, **kwargs):
         """Creates a new tab and inserts it at the given index.
@@ -410,7 +414,7 @@ class MultiTabWindow(QMainWindow):
         window_size = self.qsettings.value("windowSize")
         window_pos = self.qsettings.value("windowPosition")
         window_state = self.qsettings.value("windowState")
-        window_maximized = self.qsettings.value("windowMaximized", defaultValue='false')
+        window_maximized = self.qsettings.value("windowMaximized", defaultValue="false")
         n_screens = self.qsettings.value("n_screens", defaultValue=1)
         self.qsettings.endGroup()
         original_size = self.size()
@@ -424,7 +428,7 @@ class MultiTabWindow(QMainWindow):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
         ensure_window_is_on_screen(self, original_size)
-        if window_maximized == 'true':
+        if window_maximized == "true":
             self.setWindowState(Qt.WindowMaximized)
 
     def save_window_state(self):

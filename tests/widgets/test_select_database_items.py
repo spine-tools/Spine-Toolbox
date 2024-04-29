@@ -8,10 +8,10 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for ``select_database_items`` module."""
 import unittest
 from contextlib import contextmanager
-
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.select_database_items import SelectDatabaseItems
 
@@ -23,7 +23,7 @@ class TestSelectDatabaseItems(unittest.TestCase):
             QApplication()
 
     def test_restore_previously_checked_states(self):
-        stored_states = {"feature": True, "object": True}
+        stored_states = {"feature": True, "entity": True}
         with _select_database_items(stored_states) as widget:
             self.assertEqual(
                 widget.checked_states(),
@@ -31,22 +31,18 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "alternative": False,
                     "entity_group": False,
                     "entity_metadata": False,
-                    "feature": True,
                     "list_value": False,
                     "metadata": False,
-                    "object": True,
-                    "object_class": False,
+                    "entity": True,
+                    "entity_class": False,
+                    "superclass_subclass": False,
+                    "entity_alternative": False,
                     "parameter_definition": False,
                     "parameter_value": False,
                     "parameter_value_list": False,
                     "parameter_value_metadata": False,
-                    "relationship": False,
-                    "relationship_class": False,
                     "scenario": False,
                     "scenario_alternative": False,
-                    "tool": False,
-                    "tool_feature": False,
-                    "tool_feature_method": False,
                 },
             )
 
@@ -83,5 +79,5 @@ def _select_database_items(checked_states):
         widget.deleteLater()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

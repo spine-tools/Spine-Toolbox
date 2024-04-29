@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,16 +10,12 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Application constants and style sheets
-"""
-
+"""Application constants and style sheets."""
 import sys
 import os
 from pathlib import Path
 
-# NOTE: All required Python package versions are in setup.cfg
-LATEST_PROJECT_VERSION = 11
+LATEST_PROJECT_VERSION = 13
 
 # For the Add/Update SpineOpt wizard
 REQUIRED_SPINE_OPT_VERSION = "0.6.9"
@@ -26,9 +23,9 @@ REQUIRED_SPINE_OPT_VERSION = "0.6.9"
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is
 # to prevent the user from creating directories like /..../
-INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
+INVALID_CHARS = ["<", ">", ":", '"', "/", "\\", "|", "?", "*", "."]
 # Invalid characters for file names
-INVALID_FILENAME_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*"]
+INVALID_FILENAME_CHARS = ["<", ">", ":", '"', "/", "\\", "|", "?", "*"]
 
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 _frozen = getattr(sys, "frozen", False)
@@ -66,10 +63,12 @@ SETTINGS_SS = (
     "QLabel{color: black;}"
     "QGroupBox{border: 2px solid gray; "
     "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #80B0FF, stop: 1 #e6efff);"
+    "font-size: 14px;"
     "border-radius: 5px;"
     "margin-top: 0.5em;}"
     "QGroupBox:title{border-radius: 2px; "
-    "background-color: ghostwhite;"
+    "background-color: white;"
+    "border-radius: 5px;"
     "subcontrol-origin: margin;"
     "subcontrol-position: top center;"
     "padding-top: 0px;"

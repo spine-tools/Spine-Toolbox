@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,35 +10,23 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Classes for custom QTreeView.
-"""
-import pickle
-
-from PySide6.QtWidgets import QApplication, QMenu, QAbstractItemView
+"""Classes for custom QTreeViews and QTreeWidgets."""
+from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView, QTreeWidget, QTreeWidgetItem
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
-
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
-from spinetoolbox.helpers import busy_effect, CharIconEngine
-from spinetoolbox.widgets.custom_qwidgets import ResizingViewMixin
-from .custom_delegates import ScenarioDelegate, ToolFeatureDelegate, AlternativeDelegate, ParameterValueListDelegate
+from spinetoolbox.helpers import busy_effect, CharIconEngine, DB_ITEM_SEPARATOR
+from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
 
 
-class ResizableTreeView(ResizingViewMixin, CopyPasteTreeView):
-    def _do_resize(self):
-        self.resizeColumnToContents(0)
+class EntityTreeView(CopyPasteTreeView):
+    """Tree view for entity classes and entities."""
 
-
-class EntityTreeView(ResizableTreeView):
-    """Tree view base class for object and relationship tree views."""
-
-    relationship_selection_changed = Signal(dict, bool)
-    object_selection_changed = Signal(dict, bool)
+    tree_selection_changed = Signal(dict)
 
     def __init__(self, parent):
         """
@@ -51,21 +40,29 @@ class EntityTreeView(ResizableTreeView):
         self._spine_db_editor = None
         self._fully_expand_action = None
         self._fully_collapse_action = None
-        self._add_relationship_classes_action = None
-        self._add_relationships_action = None
-        self._manage_relationships_action = None
+        self._add_entity_classes_action = None
+        self._add_entities_action = None
+        self._add_entity_group_action = None
+        self._duplicate_entity_action = None
+        self._manage_elements_action = None
+        self._manage_members_action = None
+        self._select_superclass_action = None
         self._export_action = None
         self._edit_action = None
         self._remove_action = None
         self._cube_plus_icon = QIcon(":/icons/menu_icons/cube_plus.svg")
         self._cube_minus_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self._cube_pen_icon = QIcon(":/icons/menu_icons/cube_pen.svg")
-        self._cubes_plus_icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
         self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
+        self._find_next_action = None
+        self._hide_empty_classes_action = None
+        self._entity_index = None
+        header = self.header()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     def reset(self):
         super().reset()
@@ -82,9 +79,24 @@ class EntityTreeView(ResizableTreeView):
         self.connect_signals()
 
     def _add_middle_actions(self):
-        """Adds action at the middle of the context menu.
-        Subclasses can reimplement at will.
-        """
+        self._add_entity_classes_action = self._menu.addAction(
+            self._cube_plus_icon, "Add entity classes", self.add_entity_classes
+        )
+        self._add_entities_action = self._menu.addAction(self._cube_plus_icon, "Add entities", self.add_entities)
+        self._add_entity_group_action = self._menu.addAction(
+            self._cube_plus_icon, "Add entity group", self.add_entity_group
+        )
+        self._manage_elements_action = self._menu.addAction(
+            self._cubes_pen_icon, "Manage elements", self.manage_elements
+        )
+        self._manage_members_action = self._menu.addAction(self._cube_pen_icon, "Manage members", self.manage_members)
+        self._select_superclass_action = self._menu.addAction(
+            self._cube_pen_icon, "Select superclass", self.select_superclass
+        )
+        self._menu.addSeparator()
+        self._find_next_action = self._menu.addAction(
+            QIcon(CharIconEngine("\uf141")), "Find next occurrence", self.find_next_entity
+        )
 
     def _create_context_menu(self):
         """Creates a context menu for this view."""
@@ -94,6 +106,9 @@ class EntityTreeView(ResizableTreeView):
         self._menu.addSeparator()
         self._edit_action = self._menu.addAction(self._cube_pen_icon, "Edit...", self.edit_selected)
         self._remove_action = self._menu.addAction(self._cube_minus_icon, "Remove...", self.remove_selected)
+        self._duplicate_entity_action = self._menu.addAction(
+            self._cube_plus_icon, "Duplicate entity", self.duplicate_entity
+        )
         self._menu.addSeparator()
         self._export_action = self._menu.addAction(
             QIcon(":/icons/menu_icons/database-export.svg"), "Export", self.export_selected
@@ -105,6 +120,14 @@ class EntityTreeView(ResizableTreeView):
         self._fully_collapse_action = self._menu.addAction(
             QIcon(CharIconEngine("\uf100")), "Fully collapse", self.fully_collapse
         )
+        self._menu.addSeparator()
+        self._hide_empty_classes_action = self._menu.addAction("Hide empty classes", self.toggle_hide_empty_classes)
+        self._hide_empty_classes_action.setCheckable(True)
+        self._hide_empty_classes_action.setChecked(self.model().hide_empty_classes)
+
+    def toggle_hide_empty_classes(self):
+        self.model().hide_empty_classes = self._hide_empty_classes_action.isChecked()
+        self.model().save_hide_empty_classes()
 
     @Slot(QModelIndex, int, QEvent)
     def edit(self, index, trigger, event):
@@ -117,10 +140,12 @@ class EntityTreeView(ResizableTreeView):
     def connect_signals(self):
         """Connects signals."""
         self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+        self.doubleClicked.connect(self.find_next_entity)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
+        QTimer.singleShot(20, self._do_find_next_entity)  # Keep looking for the next entity after new rows are inserted
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)
@@ -151,8 +176,7 @@ class EntityTreeView(ResizableTreeView):
         """Classifies selection by item type and emits signal."""
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
-        self.object_selection_changed.emit(self._selected_indexes, True)
-        self.relationship_selection_changed.emit(self._selected_indexes, False)
+        self.tree_selection_changed.emit(self._selected_indexes)
 
     def _refresh_selected_indexes(self):
         self._selected_indexes.clear()
@@ -199,9 +223,6 @@ class EntityTreeView(ResizableTreeView):
         """Removes selected indexes using the connected Spine db editor."""
         self._spine_db_editor.remove_entity_tree_items(self._selected_indexes)
 
-    def manage_relationships(self):
-        self._spine_db_editor.show_manage_relationships_form(self._context_item)
-
     def contextMenuEvent(self, event):
         """Shows context menu.
 
@@ -243,152 +264,78 @@ class EntityTreeView(ResizableTreeView):
         )
         super().mousePressEvent(new_event)
 
-    def _add_relationship_actions(self):
-        self._add_relationship_classes_action = self._menu.addAction(
-            self._cubes_plus_icon, "Add relationship classes", self.add_relationship_classes
-        )
-        self._add_relationships_action = self._menu.addAction(
-            self._cubes_plus_icon, "Add relationships", self.add_relationships
-        )
-        self._manage_relationships_action = self._menu.addAction(
-            self._cubes_pen_icon, "Manage relationships", self.manage_relationships
-        )
-
     def update_actions_availability(self):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         item = self._context_item
         item_has_children = item.has_children()
         self._fully_expand_action.setEnabled(item_has_children)
         self._fully_collapse_action.setEnabled(item_has_children)
-        self._add_relationships_action.setEnabled(item.item_type == "relationship_class")
-        self._manage_relationships_action.setEnabled(item.item_type in ("root", "relationship_class"))
+        self._add_entity_classes_action.setEnabled(item.item_type in ("root", "entity_class"))
+        self._add_entities_action.setEnabled(
+            item.item_type in ("root", "entity_class")
+            or (item.item_type == "entity" and item.parent_item.item_type == "entity_class")
+        )
+        self._add_entity_group_action.setEnabled(item.item_type == "entity_class")
+        self._duplicate_entity_action.setEnabled(
+            item.item_type == "entity" and not item.is_group and not item.element_name_list
+        )
+        self._manage_members_action.setEnabled(item.item_type == "entity" and item.is_group)
+        self._select_superclass_action.setEnabled(item.item_type == "entity_class")
+        self._manage_elements_action.setEnabled(
+            item.item_type == "root" or (item.item_type == "entity_class" and item.has_dimensions)
+        )
         read_only = item.item_type in ("root", "members")
         self._export_action.setEnabled(not read_only)
         self._edit_action.setEnabled(not read_only)
         self._remove_action.setEnabled(not read_only)
+        self._find_next_action.setEnabled(
+            item.item_type == "entity" and item.parent_item.parent_item.item_type == "entity_class"
+        )
 
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
         self._spine_db_editor.edit_entity_tree_items(self._selected_indexes)
 
+    def add_entity_classes(self):
+        self._spine_db_editor.show_add_entity_classes_form(self._context_item)
 
-class ObjectTreeView(EntityTreeView):
-    """Custom QTreeView class for the object tree in SpineDBEditor."""
+    def add_entities(self):
+        self._spine_db_editor.show_add_entities_form(self._context_item)
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): parent widget
-        """
-        super().__init__(parent=parent)
-        self._add_objects_action = None
-        self._add_object_classes_action = None
-        self._add_object_group_action = None
-        self._manage_members_action = None
-        self._duplicate_object_action = None
-        self._find_next_action = None
-        self._relationship_index = None
-
-    def update_actions_availability(self):
-        super().update_actions_availability()
-        item = self._context_item
-        self._add_object_classes_action.setEnabled(item.item_type == "root")
-        self._add_objects_action.setEnabled(item.item_type in ("root", "object_class"))
-        self._add_object_group_action.setEnabled(item.item_type == "object_class")
-        self._add_relationship_classes_action.setEnabled(item.item_type in ("root", "object_class"))
-        self._manage_members_action.setEnabled(item.item_type == "members")
-        self._duplicate_object_action.setEnabled(item.item_type == "object" and not item.is_group)
-        self._find_next_action.setEnabled(item.item_type == "relationship")
-
-    def _add_middle_actions(self):
-        self._add_object_classes_action = self._menu.addAction(
-            self._cube_plus_icon, "Add object classes", self.add_object_classes
-        )
-        self._add_objects_action = self._menu.addAction(self._cube_plus_icon, "Add objects", self.add_objects)
-        self._add_relationship_actions()
-        self._menu.addSeparator()
-        self._find_next_action = self._menu.addAction(
-            QIcon(CharIconEngine("\uf141")), "Find next relationship", self.find_next_relationship
-        )
-        self._add_object_group_action = self._menu.addAction(
-            self._cube_plus_icon, "Add object group", self.add_object_group
-        )
-        self._manage_members_action = self._menu.addAction(self._cube_pen_icon, "Manage members", self.manage_members)
-        self._duplicate_object_action = self._menu.addAction(
-            self._cube_plus_icon, "Duplicate object", self.duplicate_object
-        )
-
-    def connect_signals(self):
-        super().connect_signals()
-        self.doubleClicked.connect(self.find_next_relationship)
-
-    def rowsInserted(self, parent, start, end):
-        super().rowsInserted(parent, start, end)
-        self._do_find_next_relationship()
-
-    def add_object_classes(self):
-        self._spine_db_editor.show_add_object_classes_form()
-
-    def add_objects(self):
-        self._spine_db_editor.show_add_objects_form(self._context_item)
-
-    def add_relationship_classes(self):
-        self._spine_db_editor.show_add_relationship_classes_form(self._context_item)
-
-    def add_relationships(self):
-        self._spine_db_editor.show_add_relationships_form(self._context_item)
-
-    def find_next_relationship(self):
+    def find_next_entity(self):
         """Finds the next occurrence of the relationship at the current index and expands it."""
-        self._relationship_index = self.currentIndex()
-        self._do_find_next_relationship()
+        self._entity_index = self.currentIndex()
+        self._do_find_next_entity()
 
-    def _do_find_next_relationship(self):
-        if self._relationship_index is None:
+    def _do_find_next_entity(self):
+        if self._entity_index is None:
             return
-        next_index = self.model().find_next_relationship_index(self._relationship_index)
+        next_index = self.model().find_next_entity_index(self._entity_index)
         if not next_index:
             return
-        self._relationship_index = None
+        self._entity_index = None
         self.setCurrentIndex(next_index)
         self.scrollTo(next_index)
         self.expand(next_index)
 
-    def duplicate_object(self):
+    def duplicate_entity(self):
         """Duplicates the object at the current index using the connected Spine db editor."""
-        object_item = self.currentIndex().internalPointer()
-        self._spine_db_editor.duplicate_object(object_item)
+        self._spine_db_editor.duplicate_entity(self._context_item)
 
-    def add_object_group(self):
-        index = self.currentIndex()
-        item = index.internalPointer()
-        self._spine_db_editor.show_add_object_group_form(item)
+    def add_entity_group(self):
+        self._spine_db_editor.show_add_entity_group_form(self._context_item)
+
+    def manage_elements(self):
+        self._spine_db_editor.show_manage_elements_form(self._context_item)
 
     def manage_members(self):
-        index = self.currentIndex()
-        item = index.internalPointer().parent_item
-        self._spine_db_editor.show_manage_members_form(item)
+        self._spine_db_editor.show_manage_members_form(self._context_item)
+
+    def select_superclass(self):
+        self._spine_db_editor.show_select_superclass_form(self._context_item)
 
 
-class RelationshipTreeView(EntityTreeView):
-    """Custom QTreeView class for the relationship tree in SpineDBEditor."""
-
-    def _add_middle_actions(self):
-        self._add_relationship_actions()
-
-    def update_actions_availability(self):
-        super().update_actions_availability()
-        item = self._context_item
-        self._add_relationship_classes_action.setEnabled(item.item_type == "root")
-
-    def add_relationship_classes(self):
-        self._spine_db_editor.show_add_relationship_classes_form(self._context_item)
-
-    def add_relationships(self):
-        self._spine_db_editor.show_add_relationships_form(self._context_item)
-
-
-class ItemTreeView(ResizableTreeView):
+class ItemTreeView(CopyPasteTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent):
@@ -399,6 +346,8 @@ class ItemTreeView(ResizableTreeView):
         super().__init__(parent=parent)
         self._spine_db_editor = None
         self._menu = QMenu(self)
+        header = self.header()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
@@ -449,66 +398,6 @@ class ItemTreeView(ResizableTreeView):
     def _refresh_copy_paste_actions(self, _, __):
         """Refreshes copy and paste actions enabled state."""
         self._spine_db_editor.refresh_copy_paste_actions()
-
-
-class ToolFeatureTreeView(ItemTreeView):
-    """Custom QTreeView class for tools and features in SpineDBEditor."""
-
-    def connect_spine_db_editor(self, spine_db_editor):
-        """see base class"""
-        super().connect_spine_db_editor(spine_db_editor)
-        delegate = ToolFeatureDelegate(self._spine_db_editor)
-        delegate.data_committed.connect(self.model().setData)
-        self.setItemDelegateForColumn(0, delegate)
-
-    def remove_selected(self):
-        """See base class."""
-        if not self.selectionModel().hasSelection():
-            return
-        db_map_typed_data_to_rm = {}
-        items = [self.model().item_from_index(index) for index in self.selectionModel().selectedIndexes()]
-        for db_item in self.model()._invisible_root_item.children:
-            db_map_typed_data_to_rm[db_item.db_map] = {
-                "feature": set(),
-                "tool": set(),
-                "tool_feature": set(),
-                "tool_feature_method": set(),
-            }
-            for feat_item in reversed(db_item.child(0).children[:-1]):
-                if feat_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["feature"].add(feat_item.id)
-            for tool_item in reversed(db_item.child(1).children[:-1]):
-                if tool_item in items:
-                    db_map_typed_data_to_rm[db_item.db_map]["tool"].add(tool_item.id)
-                    continue
-                tool_feat_root_item = tool_item.child(0)
-                for tool_feat_item in reversed(tool_feat_root_item.children):
-                    if tool_feat_item in items:
-                        db_map_typed_data_to_rm[db_item.db_map]["tool_feature"].add(tool_feat_item.id)
-                        continue
-                    tool_feat_meth_root_item = tool_feat_item.child(1)
-                    if tool_feat_meth_root_item is None:
-                        continue
-                    for tool_feat_meth_item in reversed(tool_feat_meth_root_item.children):
-                        if tool_feat_meth_item in items:
-                            db_map_typed_data_to_rm[db_item.db_map]["tool_feature_method"].add(tool_feat_meth_item.id)
-        self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.selectionModel().clearSelection()
-
-    def update_actions_availability(self, item):
-        """See base class."""
-
-    def dragMoveEvent(self, event):
-        super().dragMoveEvent(event)
-        index = self.indexAt(event.position().toPoint())
-        item = self.model().item_from_index(index)
-        if item and item.item_type == "tool":
-            self.expand(index)
-
-    def dragEnterEvent(self, event):
-        super().dragEnterEvent(event)
-        if event.source() is self:
-            event.accept()
 
 
 class AlternativeTreeView(ItemTreeView):

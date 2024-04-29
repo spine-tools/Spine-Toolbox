@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,15 +9,14 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+
 """Unit tests for the ``logging_connection`` module."""
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
-
 from spine_engine.project_item.project_item_resource import database_resource
 from spine_engine.project_item.connection import FilterSettings
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
@@ -181,10 +181,6 @@ class _DataStore(ProjectItem):
     def item_type():
         return "Mock Data Store"
 
-    @staticmethod
-    def item_category():
-        return "Data Stores"
-
     # pylint: disable=no-self-use
     def resources_for_direct_successors(self):
         return [
@@ -203,5 +199,5 @@ class _DataStorePropertiesWidget(PropertiesWidgetBase):
         self.ui = object()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

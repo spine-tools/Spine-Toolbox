@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,19 +10,17 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Models to represent items in a tree.
-"""
+"""Models to represent items in a tree."""
 from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
 
 
 class TreeItem:
     """A tree item that can fetch its children."""
 
-    def __init__(self, model=None):
+    def __init__(self, model):
         """
         Args:
-            model (MinimalTreeModel, optional): The model where the item belongs.
+            model (MinimalTreeModel): The model where the item belongs.
         """
         super().__init__()
         self._children = []
@@ -29,21 +28,21 @@ class TreeItem:
         self._parent_item = None
         self._fetched = False
         self._set_up_once = False
+        self._has_children_initially = False
+        self._created_children = {}
+
+    def set_has_children_initially(self, has_children_initially):
+        self._has_children_initially = has_children_initially
 
     def has_children(self):
         """Returns whether this item has or could have children."""
-        if self.can_fetch_more():
+        if self._has_children_initially:
             return True
         return bool(self.child_count())
 
     @property
     def model(self):
         return self._model
-
-    @property
-    def child_item_class(self):
-        """Returns the type of child items. Reimplement in subclasses to return something more meaningful."""
-        return TreeItem
 
     @property
     def children(self):
@@ -67,30 +66,39 @@ class TreeItem:
         if not isinstance(parent_item, TreeItem) and parent_item is not None:
             raise ValueError("Parent must be instance of TreeItem or None")
         self._parent_item = parent_item
-        if parent_item is not None:
-            self._model = parent_item.model
-            self._model.destroyed.connect(lambda obj=None: self.tear_down())
+
+    def is_valid(self):
+        """Tests if item is valid.
+
+        Return:
+            bool: True if item is valid, False otherwise
+        """
+        return True
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
-        try:
+        if 0 <= row < len(self._children):
             return self.children[row]
-        except IndexError:
-            return None
+        return None
 
     def last_child(self):
         """Returns the last child."""
-        return self.child(-1)
+        return self.child(self.child_count() - 1)
 
     def child_count(self):
         """Returns the number of children."""
         return len(self.children)
 
+    def row_count(self):
+        """Returns the number of rows, which may be different from the number of children.
+        This allows subclasses to hide children."""
+        return self.child_count()
+
     def child_number(self):
         """Returns the rank of this item within its parent or -1 if it's an orphan."""
         if self.parent_item:
             return self.parent_item.children.index(self)
-        return -1
+        return None
 
     def find_children(self, cond=lambda child: True):
         """Returns children that meet condition expressed as a lambda function."""
@@ -108,7 +116,7 @@ class TreeItem:
 
     def previous_sibling(self):
         """Returns the previous sibling or None if it's the first."""
-        if self.child_number() <= 0:
+        if self.child_number() is None:
             return None
         return self.parent_item.child(self.child_number() - 1)
 
@@ -123,6 +131,9 @@ class TreeItem:
     def _do_set_up(self):
         """Do stuff after the item has been inserted."""
 
+    def _polish_children(self, children):
+        """Polishes children just before inserting them."""
+
     def insert_children(self, position, children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
@@ -135,9 +146,10 @@ class TreeItem:
         """
         bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
         if bad_types:
-            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
+            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self).__name__}")
         if position < 0 or position > self.child_count():
             return False
+        self._polish_children(children)
         parent_index = self.index()
         self.model.beginInsertRows(parent_index, position, position + len(children) - 1)
         for child in children:
@@ -156,7 +168,9 @@ class TreeItem:
         """Do stuff after the item has been removed."""
 
     def tear_down_recursively(self):
-        for child in self.children:
+        for child in self._created_children.values():
+            child.tear_down_recursively()
+        for child in self._children:
             child.tear_down_recursively()
         self.tear_down()
 
@@ -176,19 +190,11 @@ class TreeItem:
             return False
         if last >= self.child_count():
             last = self.child_count() - 1
-        children = self.children[first : last + 1]
         self.model.beginRemoveRows(self.index(), first, last)
-        for child in children:
-            child.parent_item = None
         del self.children[first : last + 1]
         self.model.endRemoveRows()
-        for child in children:
-            child.tear_down_recursively()
+        self._has_children_initially = False
         return True
-
-    def clear_children(self):
-        """Clear children list."""
-        self.children.clear()
 
     # pylint: disable=no-self-use
     def flags(self, column):
@@ -287,7 +293,14 @@ class MinimalTreeModel(QAbstractItemModel):
             current = parent_item
 
     def item_from_index(self, index):
-        """Return the item corresponding to the given index."""
+        """Return the item corresponding to the given index.
+
+        Args:
+            index (QModelIndex): model index
+
+        Returns:
+            TreeItem: item at index
+        """
         if index.isValid():
             return index.internalPointer()
         return self._invisible_root_item
@@ -302,7 +315,7 @@ class MinimalTreeModel(QAbstractItemModel):
             QModelIndex: item's index
         """
         row = item.child_number()
-        if row < 0:
+        if row is None:
             return QModelIndex()
         return self.createIndex(row, 0, item)
 
@@ -331,13 +344,15 @@ class MinimalTreeModel(QAbstractItemModel):
         if parent.column() > 0:
             return 0
         parent_item = self.item_from_index(parent)
-        return parent_item.child_count()
+        return parent_item.row_count()
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data stored under the given role for the index."""
         if not index.isValid():
             return None
         item = self.item_from_index(index)
+        if not item.is_valid():
+            return None
         return item.data(index.column(), role)
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):

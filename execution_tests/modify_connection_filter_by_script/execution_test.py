@@ -5,14 +5,15 @@ import shutil
 import subprocess
 import unittest
 from spinedb_api import (
-    DiffDatabaseMapping,
+    DatabaseMapping,
     import_alternatives,
+    import_entities,
+    import_entity_alternatives,
+    import_entity_classes,
+    import_parameter_definitions,
+    import_parameter_values,
     import_scenario_alternatives,
     import_scenarios,
-    import_object_classes,
-    import_objects,
-    import_object_parameters,
-    import_object_parameter_values,
 )
 
 
@@ -29,22 +30,22 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         if self._database_path.exists():
             self._database_path.unlink()
         url = "sqlite:///" + str(self._database_path)
-        db_map = DiffDatabaseMapping(url, create=True)
-        import_object_classes(db_map, ("object_class",))
-        import_objects(db_map, (("object_class", "object"),))
-        import_object_parameters(db_map, (("object_class", "parameter"),))
-        import_alternatives(db_map, ("alternative",))
-        import_object_parameter_values(
-            db_map,
-            (
-                ("object_class", "object", "parameter", 1.0, "Base"),
-                ("object_class", "object", "parameter", 2.0, "alternative"),
-            ),
-        )
-        import_scenarios(db_map, (("scenario", True),))
-        import_scenario_alternatives(db_map, (("scenario", "alternative"),))
-        db_map.commit_session("Add test data.")
-        db_map.connection.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_entity_classes(db_map, (("object_class",),))
+            import_entities(db_map, (("object_class", "object"),))
+            import_parameter_definitions(db_map, (("object_class", "parameter"),))
+            import_alternatives(db_map, ("alternative",))
+            import_entity_alternatives(db_map, (("object_class", "object", "alternative", True),))
+            import_parameter_values(
+                db_map,
+                (
+                    ("object_class", "object", "parameter", 1.0, "Base"),
+                    ("object_class", "object", "parameter", 2.0, "alternative"),
+                ),
+            )
+            import_scenarios(db_map, (("scenario", True),))
+            import_scenario_alternatives(db_map, (("scenario", "alternative"),))
+            db_map.commit_session("Add test data.")
 
     def test_execution(self):
         completed = subprocess.run(

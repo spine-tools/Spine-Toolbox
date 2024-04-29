@@ -19,6 +19,12 @@ Tool Specification Editor
 
 This section describes how to make a new Tool specification and how to edit existing Tool specifications.
 
+.. contents::
+   :local:
+
+General
+-------
+
 To execute a Julia, Python, GAMS, or an executable script in Spine Toolbox, you must first create a Tool
 specification for your project. You can open the Tool specification editor in several ways.
 One way is to press the arrow next to the Tool icon in the toolbar to expand the Tool specifications,
@@ -131,3 +137,39 @@ context-menu.
 You are now ready to execute the Tool specification in Spine Toolbox. You just need to select a Tool item in the
 **Design view**, set the specification *Example Tool specification* for it, and click |play-all| or |play-selected|
 button.
+
+Input & Output Files in Practice
+--------------------------------
+
+The file names can be either hard coded or not. For example, you could have a script that requires (hard coded
+in the script) a file `input.dat` and optionally works with a bunch of files that are expected to have the
+`.csv` extension. In that case you would define
+
+- `input.dat` as an Input file
+- `*.csv` as Optional input files
+
+The *Output files* work similarly; you can hard code the entire file name or use wildcards for *Optional output files*.
+
+When specifying the *Input* and *Output files* in the Specification editor, Toolbox will copy the files to the Tool's
+work directory when the Tool is executed, so they are available for the script in a known location. Note, that you
+can specify subdirectories for the files as well. These will be relative to the work directory.
+
+These options expect some level of hard-coding: file names, or at least file extensions as well as relative
+locations to the work directory need to be known when writing the Tool Spec script.
+
+There is another, more general way to provide *Input files* to the script that does not require any kind of hard
+coding: *command line arguments*. You can set them up in **Tool's Properties** tab. For example, in the project
+below, a Data connection provides *Input files* for the workflow. The files are visible in the
+*Available resources list* in **Tool's Properties** and they have been *dragged and dropped* into the the Tool
+arguments list.
+
+.. image:: img/using_input_output_files_in_tool_scripts.png
+   :align: center
+
+Now, the Python script can access the files using something like::
+
+    import sys
+    file_path1 = sys.argv[1]
+    file_path2 = sys.argv[2]
+
+Of course, more serious scripts would use the `argparse` module.

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Tree items for parameter_value lists.
-"""
-
+"""Tree items for parameter_value lists."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
@@ -41,20 +39,16 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return "parameter_value_list"
 
     def empty_child(self):
-        return ListItem()
+        return ListItem(self._model)
 
     def _make_child(self, id_):
-        return ListItem(id_)
+        return ListItem(self._model, id_)
 
 
 class ListItem(
     GrayIfLastMixin, EditableMixin, EmptyChildMixin, SortChildrenMixin, BoldTextMixin, FetchMoreMixin, LeafItem
 ):
     """A list item."""
-
-    def __init__(self, identifier=None, name=None):
-        super().__init__(identifier=identifier)
-        self._name = name
 
     @property
     def item_type(self):
@@ -65,19 +59,19 @@ class ListItem(
         return "list_value"
 
     def _make_item_data(self):
-        return {"name": "Type new list name here..." if self._name is None else self._name}
+        return {"name": "Type new list name here..."}
 
     def _do_set_up(self):
-        if not self.id and not self._name:
+        if not self.id:
             return
         super()._do_set_up()
 
     # pylint: disable=no-self-use
     def empty_child(self):
-        return ValueItem()
+        return ValueItem(self._model)
 
     def _make_child(self, id_):
-        return ValueItem(id_)
+        return ValueItem(self._model, id_)
 
     def accepts_item(self, item, db_map):
         return item["parameter_value_list_id"] == self.id
@@ -110,7 +104,8 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
         if role == Qt.ItemDataRole.DisplayRole and not self.id:
             return "Enter new list value here..."
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole, PARSED_ROLE):
-            return self.db_mngr.get_value(self.db_map, self.item_type, self.id, role=role)
+            item = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+            return self.db_mngr.get_value(self.db_map, item, role=role)
         return super().data(column, role)
 
     def list_index(self):

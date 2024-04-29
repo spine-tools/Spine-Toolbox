@@ -1,0 +1,104 @@
+{
+    "project": {
+        "version": 13,
+        "description": "",
+        "settings": {
+            "enable_execute_all": true
+        },
+        "specifications": {
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "Importer 1 - units.xlsx.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Raw data to Importer 1",
+                "from": [
+                    "Raw data",
+                    "right"
+                ],
+                "to": [
+                    "Importer 1",
+                    "left"
+                ]
+            },
+            {
+                "name": "from Importer 1 to DS1",
+                "from": [
+                    "Importer 1",
+                    "right"
+                ],
+                "to": [
+                    "DS1",
+                    "left"
+                ],
+                "options": {
+                    "purge_before_writing": true,
+                    "purge_settings": {
+                        "alternative": true,
+                        "scenario": true,
+                        "scenario_alternative": true,
+                        "entity_class": true,
+                        "entity": true,
+                        "entity_group": true,
+                        "entity_alternative": true,
+                        "parameter_value_list": true,
+                        "list_value": true,
+                        "parameter_definition": true,
+                        "parameter_value": true,
+                        "metadata": true,
+                        "entity_metadata": true,
+                        "parameter_value_metadata": true
+                    },
+                    "write_index": 1
+                }
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Importer 1": {
+            "type": "Importer",
+            "description": "",
+            "x": 76.49024590313154,
+            "y": -79.19504574424269,
+            "specification": "Importer 1 - units.xlsx",
+            "cancel_on_error": true,
+            "on_conflict": "replace",
+            "file_selection": [
+                [
+                    "<Raw data>/units.xlsx",
+                    true
+                ]
+            ]
+        },
+        "DS1": {
+            "type": "Data Store",
+            "description": "",
+            "x": 224.4333033622387,
+            "y": -154.05366960162178,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/ds1/DS1.sqlite"
+                }
+            }
+        },
+        "Raw data": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -83.2938157444066,
+            "y": -151.04282579168796,
+            "file_references": [],
+            "db_references": []
+        }
+    }
+}

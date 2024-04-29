@@ -3,6 +3,9 @@
 .. |open-folder| image:: ../../spinetoolbox/ui/resources/menu_icons/folder-open-solid.svg
    :width: 16
 
+.. |share| image:: ../../spinetoolbox/ui/resources/share.svg
+   :width: 16
+
 .. _Settings:
 
 ********
@@ -110,18 +113,22 @@ Choose the settings on how Julia Tools are executed.
 
 - **Select Julia kernel... drop-down menu** Select the kernel you want to launch in Jupyter Console.
 
+.. note:: The Julia settings above are **the default settings for new Julia Tool Specs**. You can select a
+  specific Julia executable & project or Julia kernel for each Tool Spec separately using the
+  **Tool Specification Editor**.
+
 - **Make Julia Kernel** Clicking this button makes a new kernel based on the selected *Julia executable*, and *Julia
   project*. The progress of the operation is shown in another dialog. Installing a Julia kernel requires the **IJulia**
   package which will be installed to the selected *Julia project*. After **IJulia** has been installed, the kernel is
   installed. This process can take a couple of minutes to finish.
 
+- |share| This button sets **all Julia Tools** execution settings in the current project to defaults. This
+  operation is irreversible because the project will be saved afterwards.
+
 - **Install Julia** Installs the latest Julia on your system using the **jill** package.
 
 - **Add/Update SpineOpt** Installs the latest compatible **SpineOpt** to the selected Julia project. If the selected
   *Julia project* already has SpineOpt, it is upgraded if there is a new version available.
-
-.. note:: These Julia settings are *global* application settings. All Julia Tools are executed with the settings
-  selected here.
 
 Settings in the **Python** group:
 
@@ -137,13 +144,17 @@ Choose the settings on how Python Tools are executed.
 
 - **Select Python kernel... drop-down menu** Select the kernel you want to launch in Jupyter Console.
 
+.. note:: The Python settings above are **the default settings for new Python Tool Specs**. You can select a
+  specific Python executable or Python kernel for each Python Tool Spec separately using the
+  **Tool Specification Editor**.
+
 - **Make Python Kernel** clicking this button makes a new kernel based on the selected *Python executable*. The
   progress of the operation is shown in another dialog. Installing a Python kernel (actually IPython kernel)
   requires the **ipykernel** package which will be installed to the selected *Python executables*. After
   **ipykernel** has been installed, the kernel is installed. This process can take a couple of minutes to finish.
 
-.. note:: These Python settings are just the default settings *for new Python Tool Specs*. You can select a
-  specific Python kernel for each Python Tool Spec separately using the **Tool Specification Editor**.
+- |share| This button sets **all Python Tools** execution settings in the current project to defaults. This
+  operation is irreversible because the project will be saved afterwards.
 
 Settings in the **Conda** group:
 
@@ -151,6 +162,8 @@ Settings in the **Conda** group:
   to your Conda executable here.
 
 See :ref:`Setting up Consoles and External Tools` for more information and examples.
+
+.. _DB editor settings:
 
 Db editor Settings
 ------------------
@@ -161,6 +174,8 @@ Db editor Settings
 This tab contains settings for the Spine Database editor. The same settings can be accessed directly
 from the Database editor itself.
 
+Settings in the **General** group:
+
 - **Commit session before closing** This checkbox controls what happens when you close a
   database editor which has uncommitted changes. When this is unchecked, all changes are discarded without
   notice. When this is partially checked (default), a message box warning you about uncommitted
@@ -170,28 +185,38 @@ from the Database editor itself.
 - **Show undo notifications** Checking this will show undo notification boxes in the editor
   every time something undoable happens. Unchecking hides the notifications.
 
+Settings in the **Entity tree** group:
+
 - **Sticky selection in entity trees** Controls how selecting items in Spine database editor's
-  Object and Relationships trees using the left mouse button works.
+  **Entity Tree** using the left mouse button works.
   If checked, multiple selection is enabled and pressing **Ctrl** enables single selection.
   If unchecked, single selection is enabled and pressing **Ctrl** enables multiple selection.
 
-- **Move relationships along with objects in Entity graph** This controls how relationship nodes
-  behave on the Graph view when object nodes are moved around.
-  If checked, connected relationship nodes move along with the object node.
-  If unchecked, connected relationship nodes remain where they are when objects nodes are moved.
+Settings in the **Entity graph** group:
 
-- **Smooth Entity graph zoom** Checking this enables smooth zoom on the Graph view.
+- **Auto-expand entities** This checkbox controls which N-D entities are automatically shown on the Graph view.
+  If checked, all N-D entities that are related to the selection are included automatically.
+  If unchecked, only N-D entities that have all the elements visible in the graph are shown automatically.
 
-- **Smooth Entity graph rotation** Checking this enables smooth rotation on the Graph view.
-
-- **Auto-expand objects by default in Entity graph** This checkbox controls which relationship
-  nodes to show on the Graph view.
-  If checked, all relationships that contain a visible object node are included.
-  If unchecked, relationship nodes are included only if all their objects are show on the Graph view.
-
-- **Merge databases by default in Entity graph** If checked, Graph view will combine all databases
-  that are open on the same table into a single graph if they contains common object nodes.
+- **Merge databases** If checked, Graph view will combine all databases
+  that are open on the same table into a single graph if they contains common entity nodes.
   If unchecked, a separate graph will be drawn for each database.
+
+- **Snap entities to grid** Makes it so that the placement of the entities can’t be arbitrary anymore
+  but instead they can only lay on a grid.
+
+- **Smooth zoom** Checking this enables smooth zoom on the Graph view.
+
+- **Smooth rotation** Checking this enables smooth rotation on the Graph view.
+
+- **Max. entity dimension count** Defines a cutoff for the number of dimensions an entity can have and still be drawn.
+
+- **Number of build iterations** Defines the maximum numbers of iterations the layout generation algorithm can make.
+
+- **Minimum distance between nodes (%)** Used for setting the ideal distance between entities in the graph.
+
+- **Decay rate of attraction with distance** The higher this number, the lesser the attraction between
+  distant vertices when drawing the graph.
 
 Spec. editor Settings
 ---------------------

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Qt-based thread pool executor.
-"""
+"""Qt-based thread pool executor."""
 import os
 from PySide6.QtCore import QMutex, QSemaphore, QThread
 
@@ -20,13 +19,21 @@ class TimeOutError(Exception):
     """An exception to raise when a timeouts expire"""
 
 
+class _CustomQSemaphore(QSemaphore):
+    def tryAcquire(self, n, timeout=None):
+        if timeout is None:
+            timeout = -1
+        timeout *= 1000
+        return super().tryAcquire(n, timeout)
+
+
 class QtBasedQueue:
     """A Qt-based clone of queue.Queue."""
 
     def __init__(self):
         self._items = []
         self._mutex = QMutex()
-        self._semafore = QSemaphore()
+        self._semafore = _CustomQSemaphore()
 
     def put(self, item):
         self._mutex.lock()
@@ -35,9 +42,6 @@ class QtBasedQueue:
         self._semafore.release()
 
     def get(self, timeout=None):
-        if timeout is None:
-            timeout = -1
-        timeout *= 1000
         if not self._semafore.tryAcquire(1, timeout):
             raise TimeOutError()
         self._mutex.lock()
@@ -50,26 +54,42 @@ class QtBasedFuture:
     """A Qt-based clone of concurrent.futures.Future."""
 
     def __init__(self):
-        self._result_queue = QtBasedQueue()
-        self._exception_queue = QtBasedQueue()
+        self._semafore = _CustomQSemaphore()
+        self._done = False
+        self._result = None
+        self._exception = None
+        self._done_callbacks = []
 
     def set_result(self, result):
-        self._exception_queue.put(None)
-        self._result_queue.put(result)
+        self._result = result
+        self._done = True
+        self._semafore.release()
+        for callback in self._done_callbacks:
+            callback(self)
+        self._done_callbacks = []
 
     def set_exception(self, exc):
-        self._exception_queue.put(exc)
-        self._result_queue.put(None)
+        self._exception = exc
+        self._done = True
+        self._semafore.release()
 
     def result(self, timeout=None):
-        result = self._result_queue.get(timeout=timeout)
-        exc = self.exception(timeout=0)
-        if exc is not None:
-            raise exc
-        return result
+        if not self._done and not self._semafore.tryAcquire(1, timeout):
+            raise TimeOutError()
+        if self._exception is not None:
+            raise self._exception
+        return self._result
 
     def exception(self, timeout=None):
-        return self._exception_queue.get(timeout=timeout)
+        if not self._done and not self._semafore.tryAcquire(1, timeout):
+            raise TimeOutError()
+        return self._exception
+
+    def add_done_callback(self, callback):
+        if self._done:
+            callback(self)
+            return
+        self._done_callbacks.append(callback)
 
 
 class QtBasedThread(QThread):
@@ -119,11 +139,7 @@ class QtBasedThreadPoolExecutor:
             if self._shutdown:
                 break
             future, fn, args, kwargs = request
-            try:
-                result = fn(*args, **kwargs)
-                future.set_result(result)
-            except Exception as exc:  # pylint: disable=broad-except
-                future.set_exception(exc)
+            _set_future_result_and_exc(future, fn, *args, **kwargs)
             self._semafore.release()
 
     def shutdown(self):
@@ -134,3 +150,21 @@ class QtBasedThreadPoolExecutor:
             thread = self._threads.pop()
             thread.wait()
             thread.deleteLater()
+
+
+class SynchronousExecutor:
+    def submit(self, fn, *args, **kwargs):
+        future = QtBasedFuture()
+        _set_future_result_and_exc(future, fn, *args, **kwargs)
+        return future
+
+    def shutdown(self):
+        pass
+
+
+def _set_future_result_and_exc(future, fn, *args, **kwargs):
+    try:
+        result = fn(*args, **kwargs)
+        future.set_result(result)
+    except Exception as exc:  # pylint: disable=broad-except
+        future.set_exception(exc)

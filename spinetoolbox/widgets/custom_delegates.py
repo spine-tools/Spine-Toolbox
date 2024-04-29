@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom item delegates.
-"""
-
-from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect
+"""Custom item delegates."""
+from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect, QModelIndex
 from PySide6.QtWidgets import (
     QComboBox,
     QStyledItemDelegate,
@@ -65,7 +63,7 @@ class ComboBoxDelegate(QStyledItemDelegate):
 class CheckBoxDelegate(QStyledItemDelegate):
     """A delegate that places a fully functioning QCheckBox."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def __init__(self, parent, centered=True):
         """

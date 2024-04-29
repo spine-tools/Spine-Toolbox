@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,26 +10,23 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Provides FilterCheckboxListModel for FilterWidget.
-"""
-
+"""Provides FilterCheckboxListModel for FilterWidget."""
 import re
-from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel, Slot
 from spinetoolbox.helpers import bisect_chunks
 
 
 class SimpleFilterCheckboxListModel(QAbstractListModel):
-    _SELECT_ALL_STR = '(Select all)'
-    _SELECT_ALL_FILTERED_STR = '(Select all filtered)'
-    _EMPTY_STR = '(Empty)'
-    _ADD_TO_SELECTION_STR = 'Add current selection to filter'
+    _SELECT_ALL_STR = "(Select all)"
+    _SELECT_ALL_FILTERED_STR = "(Select all filtered)"
+    _EMPTY_STR = "(Empty)"
+    _ADD_TO_SELECTION_STR = "Add current selection to filter"
 
     def __init__(self, parent, show_empty=True):
-        """Init class.
-
+        """
         Args:
-            parent (QWidget)
+            parent (QWidget): parent widget
+            show_empty (bool): if True, adds an empty row to the end of the list
         """
         super().__init__(parent)
         self._data = []
@@ -180,9 +178,13 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         return self._data_set.difference(self._selected)
 
     def set_filter(self, filter_expression):
-        if filter_expression and (isinstance(filter_expression, str) and not filter_expression.isspace()):
+        filter_expression = filter_expression.strip()
+        if filter_expression:
+            try:
+                self._filter_expression = re.compile(filter_expression)
+            except re.error:
+                return
             self._action_rows[0] = self._SELECT_ALL_STR
-            self._filter_expression = re.compile(filter_expression)
             self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered = set(self._data[i] for i in self._filter_index)
             self._add_to_selection = False
@@ -282,11 +284,13 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model."""
 
     def __init__(self, parent, db_mngr, db_maps, fetch_parent, show_empty=True):
-        """Init class.
-
+        """
         Args:
-            parent (SpineDBEditor)
-            fetch_parent (FetchParent)
+            parent (SpineDBEditor): parent widget
+            db_mngr (SpineDBManager): database manager
+            db_maps (Sequence of DatabaseMapping): database maps
+            fetch_parent (FetchParent): fetch parent
+            show_empty (bool): if True, show an empty row at the end of the list
         """
         super().__init__(parent, show_empty=show_empty)
         self._db_mngr = db_mngr
@@ -315,11 +319,11 @@ class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for translating internal data to a value for display role."""
 
     def __init__(self, parent, data_to_value, show_empty=True):
-        """Init class.
-
+        """
         Args:
-            parent (SpineDBEditor)
+            parent (SpineDBEditor): parent widget
             data_to_value (method): a method to translate item data to a value for display role
+            show_empty (bool): if True, add an empty row to the end of the list
         """
         super().__init__(parent, show_empty=show_empty)
         self.data_to_value = data_to_value

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,11 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains ProjectUpgrader class used in upgrading and converting projects
-and project dicts from earlier versions to the latest version.
-"""
-
+"""Contains ProjectUpgrader class used in upgrading and converting projects
+and project dicts from earlier versions to the latest version."""
 import shutil
 import os
 import json
@@ -53,21 +51,35 @@ class ProjectUpgrader:
                 f"Opening project <b>{project_dir}</b> failed. The project's version is {v}, while "
                 f"this version of Spine Toolbox supports project versions up to and "
                 f"including {LATEST_PROJECT_VERSION}. To open this project, you should "
-                f"upgrade Spine Toolbox"
+                f"upgrade Spine Toolbox."
             )
             return False
         if v < LATEST_PROJECT_VERSION:
+            if not self.confirm_upgrade(project_dir):
+                return False
             # Back up project.json file before upgrading
             if not self.backup_project_file(project_dir, v):
-                self._toolbox.msg_error.emit("Upgrading project failed")
+                self._toolbox.msg_error.emit(f"Upgrading project <b>{project_dir}</b> failed")
                 return False
             upgraded_dict = self.upgrade_to_latest(v, project_dict, project_dir)
             # Force save project dict to project.json
             if not self.force_save(upgraded_dict, project_dir):
-                self._toolbox.msg_error.emit("Upgrading project failed")
+                self._toolbox.msg_error.emit(f"Upgrading project <b>{project_dir}</b> failed")
                 return False
             return upgraded_dict
         return project_dict
+
+    def confirm_upgrade(self, project_dir):
+        """Asks user whether to upgrade the project to a new version."""
+        button = QMessageBox.question(
+            self._toolbox,
+            "Upgrade project?",
+            f"Project <b>{project_dir}</b> needs an upgrade to work "
+            f"with this version of Spine Toolbox. <br><br>Upgrade project?",
+        )
+        if button == QMessageBox.StandardButton.Yes:
+            return True
+        return False
 
     def upgrade_to_latest(self, v, project_dict, project_dir):
         """Upgrades the given project dictionary to the latest version.
@@ -80,8 +92,8 @@ class ProjectUpgrader:
         Returns:
             dict: Upgraded project dictionary
         """
-        # TODO: Fix upgrade_vx_to_vx() methods so they do not depend on self._toolbox.item_factories because these are
-        # TODO: going to change
+        # Note: upgrade_vx_to_vx() methods should not depend on self._toolbox.item_factories
+        # because these are likely to change
         while v < LATEST_PROJECT_VERSION:
             if v == 1:
                 project_dict = self.upgrade_v1_to_v2(project_dict, self._toolbox.item_factories)
@@ -103,6 +115,10 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v9_to_v10(project_dict)
             elif v == 10:
                 project_dict = self.upgrade_v10_to_v11(project_dict)
+            elif v == 11:
+                project_dict = self.upgrade_v11_to_v12(project_dict)
+            elif v == 12:
+                project_dict = self.upgrade_v12_to_v13(project_dict)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -524,6 +540,44 @@ class ProjectUpgrader:
         return new
 
     @staticmethod
+    def upgrade_v11_to_v12(old):
+        """Upgrades version 11 project dictionary to version 12.
+
+        Changes:
+            1. Julia's execution settings are now Tool Spec settings instead of global settings
+            Execution settings are local user settings so this only updates the project version
+            to make sure that these projects cannot be opened with an older Toolbox version.
+
+        Args:
+            old (dict): Version 11 project dictionary
+
+        Returns:
+            dict: Version 12 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 12
+        return new
+
+    @staticmethod
+    def upgrade_v12_to_v13(old):
+        """Upgrades version 12 project dictionary to version 13.
+
+        Changes:
+            1. Connections now have enabled filter types field.
+            Old projects should open just fine so this only updates the project version
+            to make sure that these projects cannot be opened with an older Toolbox version.
+
+        Args:
+            old (dict): Version 12 project dictionary
+
+        Returns:
+            dict: Version 13 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 13
+        return new
+
+    @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
 
@@ -579,8 +633,8 @@ class ProjectUpgrader:
             return self.is_valid_v2_to_v8(p, v)
         if 9 <= v <= 10:
             return self.is_valid_v9_to_v10(p)
-        if v == 11:
-            return self.is_valid_v11(p)
+        if 11 <= v <= 13:
+            return self.is_valid_v11_to_v12(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -709,9 +763,9 @@ class ProjectUpgrader:
                 return False
         return True
 
-    def is_valid_v11(self, p):
+    def is_valid_v11_to_v12(self, p):
         """Checks that the given project JSON dictionary contains
-        a valid version 11 Spine Toolbox project. Valid meaning, that
+        a valid version 11 or 12 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
@@ -719,7 +773,7 @@ class ProjectUpgrader:
             p (dict): Project information JSON
 
         Returns:
-            bool: True if project is a valid version 11 project, False otherwise
+            bool: True if project is a valid version 11 or 12 project, False otherwise
         """
         if "project" not in p:
             self._toolbox.msg_error.emit("Invalid project.json file. Key 'project' not found.")

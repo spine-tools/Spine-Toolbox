@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QWidgets for Filtering and Zooming.
-"""
-
+"""Custom QWidgets for Filtering and Zooming."""
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -119,13 +117,13 @@ class FilterWidget(QWidget):
         # parameters
         self._filter_state = set()
         self._filter_empty_state = None
-        self._search_text = ''
+        self._search_text = ""
         self.search_delay = 200
         # create ui elements
         self._ui_vertical_layout = QVBoxLayout(self)
         self._ui_list = QListView()
         self._ui_edit = QLineEdit()
-        self._ui_edit.setPlaceholderText('Search')
+        self._ui_edit.setPlaceholderText("Search")
         self._ui_edit.setClearButtonEnabled(True)
         self._ui_buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
         self._ui_vertical_layout.addWidget(self._ui_edit)
@@ -134,6 +132,7 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
         self._filter_model = make_filter_model(*args, **kwargs)
+        self._filter_model.setParent(self)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
@@ -173,14 +172,14 @@ class FilterWidget(QWidget):
         """Apply current filter and save state."""
         self._filter_model.apply_filter()
         self.save_state()
-        self._ui_edit.setText('')
+        self._ui_edit.setText("")
         self.okPressed.emit()
 
     def _cancel_filter(self):
         """Cancel current edit of filter and set the state to the stored state."""
         self._filter_model.remove_filter()
         self.reset_state()
-        self._ui_edit.setText('')
+        self._ui_edit.setText("")
         self.cancelPressed.emit()
 
     def _filter_list(self):
@@ -345,7 +344,7 @@ class _MenuToolBar(QToolBar):
         for i in range(layout.count()):
             item = layout.itemAt(i)
             if item.widget() in self._buttons:
-                layout.itemAt(i).setAlignment(Qt.AlignBottom)
+                item.setAlignment(Qt.AlignBottom)
 
     def add_frame(self, left, right, title):
         """Add frame around given actions, with given title.
@@ -383,7 +382,7 @@ class _MenuToolBar(QToolBar):
         """Make room for frames if needed."""
         size = super().sizeHint()
         if self._frames:
-            size = QSize(size.width(), size.height() + self.fontMetrics().height())
+            size.setHeight(size.height() + self.fontMetrics().height())
         return size
 
     def paintEvent(self, ev):
@@ -543,7 +542,7 @@ class QWizardProcessPage(QWizardPage):
 
         def __set_name__(self, owner, name):
             self.public_name = name
-            self.private_name = '_' + name
+            self.private_name = "_" + name
 
         def __get__(self, obj, objtype=None):
             return getattr(obj, self.private_name)
@@ -634,7 +633,7 @@ class LabelWithCopyButton(QWidget):
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         line_edit.setFont(font)
         button = QToolButton()
-        font = QFont('Font Awesome 5 Free Solid')
+        font = QFont("Font Awesome 5 Free Solid")
         button.setFont(font)
         button.setText("\uf0c5")
         button.setToolTip("Copy text")
@@ -673,6 +672,12 @@ class HorizontalSpinBox(QToolBar):
     def setMinimum(self, minimum):
         try:
             self._validator.setBottom(minimum)
+        except TypeError:
+            pass
+
+    def setMaximum(self, maximum):
+        try:
+            self._validator.setTop(maximum)
         except TypeError:
             pass
 
@@ -764,19 +769,3 @@ class SelectDatabaseItemsDialog(QDialog):
 
 class PurgeSettingsDialog(SelectDatabaseItemsDialog):
     _ok_button_can_be_disabled = False
-
-
-class ResizingViewMixin:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._resizing_timer = QTimer()
-        self._resizing_timer.setSingleShot(True)
-        self._resizing_timer.setInterval(20)
-        self._resizing_timer.timeout.connect(self._do_resize)
-
-    def rowsInserted(self, parent, start, end):
-        super().rowsInserted(parent, start, end)
-        self._resizing_timer.start()
-
-    def _do_resize(self):
-        raise NotImplementedError()

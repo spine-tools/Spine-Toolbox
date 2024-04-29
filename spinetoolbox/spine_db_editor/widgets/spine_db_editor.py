@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains the SpineDBEditor class.
-"""
-
+"""Contains the SpineDBEditor class."""
 import os
 import json
 from sqlalchemy.engine.url import URL
@@ -26,18 +24,17 @@ from PySide6.QtWidgets import (
     QTabBar,
     QCheckBox,
     QDialog,
-    QInputDialog,
     QToolButton,
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QColor
-from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
+from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
+from spinedb_api import import_data, export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
 from .custom_menus import MainMenu
 from .commit_viewer import CommitViewer
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
-from .parameter_view_mixin import ParameterViewMixin
+from .stacked_view_mixin import StackedViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
@@ -67,8 +64,8 @@ class SpineDBEditorBase(QMainWindow):
 
     msg = Signal(str)
     msg_error = Signal(str)
-    file_exported = Signal(str)
-    sqlite_file_exported = Signal(str)
+    file_exported = Signal(str, float, bool)
+    """filepath, progress between 0 and 1, True if sqlite file"""
 
     def __init__(self, db_mngr):
         """
@@ -114,9 +111,6 @@ class SpineDBEditorBase(QMainWindow):
         self._purge_items_dialog_state = None
         self._export_items_dialog = None
         self._export_items_dialog_state = None
-        # Reload button doesn't want to change color just by setting it disabled, so create two different icons
-        self._enabled_reload_icon = QIcon(CharIconEngine("\uf021"))
-        self._disabled_reload_icon = QIcon(CharIconEngine("\uf021", QColor("Gray")))
         self.update_commit_enabled()
 
     @property
@@ -151,27 +145,27 @@ class SpineDBEditorBase(QMainWindow):
         """
         return True
 
-    def load_db_urls(self, db_url_codenames, create=False, update_history=True):
+    def load_db_urls(self, db_url_codenames, create=False, update_history=True, window=False):
         self.ui.actionImport.setEnabled(False)
         self.ui.actionExport.setEnabled(False)
         self.ui.actionMass_remove_items.setEnabled(False)
         self.ui.actionVacuum.setEnabled(False)
         self.url_toolbar.reload_action.setEnabled(False)
         if not db_url_codenames:
-            return
+            return True
         if not self.tear_down():
-            return
+            return False
         if self.db_maps:
             self.save_window_state()
         self.db_maps = []
         self._changelog.clear()
         self._purge_change_notifiers()
         for url, codename in db_url_codenames.items():
-            db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create)
+            db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create, window=window)
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:
-            return
+            return False
         self.db_urls = [db_map.db_url for db_map in self.db_maps]
         self.ui.actionImport.setEnabled(True)
         self.ui.actionExport.setEnabled(True)
@@ -189,7 +183,10 @@ class SpineDBEditorBase(QMainWindow):
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         if update_history:
             self.url_toolbar.add_urls_to_history(self.db_urls)
-        self.restore_ui()
+        self.update_last_view()
+        self.restore_ui(self.last_view, fresh=True)
+        self.update_commit_enabled()
+        return True
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
@@ -248,6 +245,16 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
+    def reset_docs(self):
+        """Resets the layout of the dock widgets for this URL"""
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        self.qsettings.remove("")
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+        self.last_view = None
+        self.apply_stacked_style()
+
     def _make_docks_menu(self):
         """Returns a menu with all dock toggle/view actions. Called by ``self.add_main_menu()``.
 
@@ -255,20 +262,22 @@ class SpineDBEditorBase(QMainWindow):
             QMenu
         """
         menu = QMenu(self)
-        menu.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
+        reset_docs_action = QAction("Reset docs", self)
+        reset_docs_action.triggered.connect(self.reset_docs)
+        menu.addAction(reset_docs_action)
+        menu.addAction(self.ui.dockWidget_entity_tree.toggleViewAction())
         menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_relationship_parameter_definition.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_entity_tree.toggleViewAction())
+        menu.addSeparator()
+        menu.addAction(self.ui.dockWidget_parameter_value.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_parameter_definition.toggleViewAction())
+        menu.addAction(self.ui.dockWidget_entity_alternative.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_pivot_table.toggleViewAction())
         menu.addAction(self.ui.dockWidget_frozen_table.toggleViewAction())
         menu.addSeparator()
         menu.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
         menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_tool_feature_tree.toggleViewAction())
         menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         menu.addAction(self.ui.alternative_dock_widget.toggleViewAction())
         menu.addAction(self.ui.scenario_dock_widget.toggleViewAction())
@@ -407,9 +416,9 @@ class SpineDBEditorBase(QMainWindow):
     @Slot()
     def _refresh_undo_redo_actions(self):
         self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
-        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}")
+        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}</p><p>Ctrl+Z</p>")
         self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
-        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}")
+        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}</p><p>Ctrl+Y</p>")
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
@@ -419,11 +428,6 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionRollback.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
-        self.url_toolbar.reload_action.setEnabled(not dirty)
-        if dirty:
-            self.url_toolbar.reload_action.setIcon(self._disabled_reload_icon)
-        else:
-            self.url_toolbar.reload_action.setIcon(self._enabled_reload_icon)
 
     def init_models(self):
         """Initializes models."""
@@ -456,13 +460,19 @@ class SpineDBEditorBase(QMainWindow):
         """Pastes data from clipboard."""
         call_on_focused_widget(self, "paste")
 
-    @Slot(dict)
     def import_data(self, data):
+        """Imports data to all database mappings open in the editor.
+
+        Args:
+            data (dict): data to import
+        """
         self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
 
     @Slot(bool)
     def import_file(self, checked=False):
-        """Import file. It supports SQLite, JSON, and Excel."""
+        """Imports file.
+
+        It supports SQLite, JSON, and Excel."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, selected_filter = get_open_file_name_in_last_dir(
             self.qsettings,
@@ -480,7 +490,7 @@ class SpineDBEditorBase(QMainWindow):
             self.import_from_json(file_path)
         elif extension == ".sqlite":
             self.import_from_sqlite(file_path)
-        elif extension == "xlsx":
+        elif extension == ".xlsx":
             self.import_from_excel(file_path)
         else:
             self.msg_error.emit(f"Unrecognized file type {extension} - must be a .json, .sqlite, or .xlsx file")
@@ -492,7 +502,17 @@ class SpineDBEditorBase(QMainWindow):
             except json.decoder.JSONDecodeError as err:
                 self.msg_error.emit(f"File {file_path} is not a valid json: {err}")
                 return
-        self.import_data(data)
+        sanitized_data = {}
+        for item_type, items in data.items():
+            try:
+                sanitized_items = tuple(
+                    tuple(x if not isinstance(x, list) else tuple(x) for x in item) for item in items
+                )
+            except TypeError:
+                self.msg_error.emit(f"Data in {file_path} is not valid for importing.")
+                return
+            sanitized_data[item_type] = sanitized_items
+        self.import_data(sanitized_data)
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
 
@@ -547,29 +567,20 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(bool)
     def export_session(self, checked=False):
-        """Exports changes made in the current session as reported by DiffDatabaseMapping."""
-        db_map_diff_ids = {db_map: db_map.diff_ids() for db_map in self.db_maps}
-        db_map_obj_cls_ids = {db_map: diff_ids["object_class"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_rel_cls_ids = {db_map: diff_ids["relationship_class"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_obj_ids = {db_map: diff_ids["object"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_rel_ids = {db_map: diff_ids["relationship"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_par_val_lst_ids = {
-            db_map: diff_ids["parameter_value_list"] for db_map, diff_ids in db_map_diff_ids.items()
-        }
-        db_map_par_def_ids = {db_map: diff_ids["parameter_definition"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_par_val_ids = {db_map: diff_ids["parameter_value"] for db_map, diff_ids in db_map_diff_ids.items()}
-        db_map_ent_group_ids = {db_map: diff_ids["entity_group"] for db_map, diff_ids in db_map_diff_ids.items()}
+        """Exports changes made in the current session."""
+        db_map_ent_cls_ids = {db_map: db_map.dirty_ids("entity_class") for db_map in self.db_maps}
+        db_map_ent_ids = {db_map: db_map.dirty_ids("entity") for db_map in self.db_maps}
+        db_map_par_val_lst_ids = {db_map: db_map.dirty_ids("parameter_value_list") for db_map in self.db_maps}
+        db_map_par_def_ids = {db_map: db_map.dirty_ids("parameter_definition") for db_map in self.db_maps}
+        db_map_par_val_ids = {db_map: db_map.dirty_ids("parameter_value") for db_map in self.db_maps}
+        db_map_ent_group_ids = {db_map: db_map.dirty_ids("entity_group") for db_map in self.db_maps}
         parcel = SpineDBParcel(self.db_mngr)
-        parcel.push_object_class_ids(db_map_obj_cls_ids)
-        parcel.push_object_ids(db_map_obj_ids)
-        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.push_relationship_ids(db_map_rel_ids)
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "object")
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "relationship")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "object")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "relationship")
+        parcel.push_entity_class_ids(db_map_ent_cls_ids)
+        parcel.push_entity_ids(db_map_ent_ids)
+        parcel.push_parameter_definition_ids(db_map_par_def_ids)
+        parcel.push_parameter_value_ids(db_map_par_val_ids)
         parcel.push_parameter_value_list_ids(db_map_par_val_lst_ids)
-        parcel.push_object_group_ids(db_map_ent_group_ids)
+        parcel.push_entity_group_ids(db_map_ent_group_ids)
         self.export_data(parcel.data)
 
     @Slot(object)
@@ -577,10 +588,8 @@ class SpineDBEditorBase(QMainWindow):
         def _ids(t, types):
             return Asterisk if t in types else ()
 
-        db_map_obj_cls_ids = {db_map: _ids("object_class", types) for db_map, types in db_map_item_types.items()}
-        db_map_rel_cls_ids = {db_map: _ids("relationship_class", types) for db_map, types in db_map_item_types.items()}
-        db_map_obj_ids = {db_map: _ids("object", types) for db_map, types in db_map_item_types.items()}
-        db_map_rel_ids = {db_map: _ids("relationship", types) for db_map, types in db_map_item_types.items()}
+        db_map_ent_cls_ids = {db_map: _ids("entity_class", types) for db_map, types in db_map_item_types.items()}
+        db_map_ent_ids = {db_map: _ids("entity", types) for db_map, types in db_map_item_types.items()}
         db_map_par_val_lst_ids = {
             db_map: _ids("parameter_value_list", types) for db_map, types in db_map_item_types.items()
         }
@@ -594,46 +603,32 @@ class SpineDBEditorBase(QMainWindow):
         db_map_scen_alt_ids = {
             db_map: _ids("scenario_alternative", types) for db_map, types in db_map_item_types.items()
         }
-        db_map_feat_ids = {db_map: _ids("feature", types) for db_map, types in db_map_item_types.items()}
-        db_map_tool_ids = {db_map: _ids("tool", types) for db_map, types in db_map_item_types.items()}
-        db_map_tool_feat_ids = {db_map: _ids("tool_feature", types) for db_map, types in db_map_item_types.items()}
-        db_map_tool_feat_meth_ids = {
-            db_map: _ids("tool_feature_method", types) for db_map, types in db_map_item_types.items()
-        }
         parcel = SpineDBParcel(self.db_mngr)
-        parcel.push_object_class_ids(db_map_obj_cls_ids)
-        parcel.push_object_ids(db_map_obj_ids)
-        parcel.push_relationship_class_ids(db_map_rel_cls_ids)
-        parcel.push_relationship_ids(db_map_rel_ids)
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "object")
-        parcel.push_parameter_definition_ids(db_map_par_def_ids, "relationship")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "object")
-        parcel.push_parameter_value_ids(db_map_par_val_ids, "relationship")
+        parcel.push_entity_class_ids(db_map_ent_cls_ids)
+        parcel.push_entity_ids(db_map_ent_ids)
+        parcel.push_parameter_definition_ids(db_map_par_def_ids)
+        parcel.push_parameter_value_ids(db_map_par_val_ids)
         parcel.push_parameter_value_list_ids(db_map_par_val_lst_ids)
-        parcel.push_object_group_ids(db_map_ent_group_ids)
+        parcel.push_entity_group_ids(db_map_ent_group_ids)
         parcel.push_alternative_ids(db_map_alt_ids)
         parcel.push_scenario_ids(db_map_scen_ids)
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
-        parcel.push_feature_ids(db_map_feat_ids)
-        parcel.push_tool_ids(db_map_tool_ids)
-        parcel.push_tool_feature_ids(db_map_tool_feat_ids)
-        parcel.push_tool_feature_method_ids(db_map_tool_feat_meth_ids)
         self.export_data(parcel.data)
 
-    def duplicate_object(self, object_item):
+    def duplicate_entity(self, entity_item):
         """
-        Duplicates an object.
+        Duplicates an entity.
 
         Args:
-            object_item (ObjectTreeItem of ObjectItem)
+            entity_item (EntityItem)
         """
-        orig_name = object_item.display_data
-        existing_names = {obj.display_data for obj in object_item.parent_item.children}
+        orig_name = entity_item.name
+        class_name = entity_item.entity_class_name
+        existing_names = {
+            ent["name"] for db_map in self.db_maps for ent in db_map.get_items("entity", entity_class_name=class_name)
+        }
         dup_name = unique_name(orig_name, existing_names)
-        parcel = SpineDBParcel(self.db_mngr)
-        db_map_obj_ids = {db_map: {object_item.db_map_id(db_map)} for db_map in object_item.db_maps}
-        parcel.inner_push_object_ids(db_map_obj_ids)
-        self.db_mngr.duplicate_object(parcel.data, orig_name, dup_name, object_item.db_maps)
+        self.db_mngr.duplicate_entity(orig_name, dup_name, class_name, entity_item.db_maps)
 
     def duplicate_scenario(self, db_map, scen_id):
         """
@@ -646,7 +641,7 @@ class SpineDBEditorBase(QMainWindow):
         orig_name = self.db_mngr.get_item(db_map, "scenario", scen_id)["name"]
         parcel = SpineDBParcel(self.db_mngr)
         parcel.full_push_scenario_ids({db_map: {scen_id}})
-        existing_names = {i.name for i in self.db_mngr.get_items(db_map, "scenario", only_visible=False)}
+        existing_names = {i.get("name") for i in self.db_mngr.get_items(db_map, "scenario")}
         dup_name = unique_name(orig_name, existing_names)
         self.db_mngr.duplicate_scenario(parcel.data, dup_name, db_map)
 
@@ -709,13 +704,13 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(msg)
             return
         # Commit done by an 'outside force'.
+        self.init_models()
         self.msg.emit(f"Databases {db_names} reloaded from an external action.")
 
     def receive_session_rolled_back(self, db_maps):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        self.init_models()
         db_names = ", ".join([x.codename for x in db_maps])
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
@@ -771,7 +766,7 @@ class SpineDBEditorBase(QMainWindow):
         self.msg_error.emit(format_string_list(msgs))
 
     def _update_export_enabled(self):
-        """Update export enabled."""
+        """Updates export enabled."""
         # TODO: check if db_mngr has any cache or something like that
 
     def _log_items_change(self, msg):
@@ -794,21 +789,50 @@ class SpineDBEditorBase(QMainWindow):
         msg = f"Successfully removed {count} {item_type} item(s)"
         self._log_items_change(msg)
 
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        self.qsettings.beginGroup(self.settings_group)
-        self.qsettings.beginGroup(self.settings_subgroup)
-        window_state = self.qsettings.value("windowState")
-        self.qsettings.endGroup()
-        self.qsettings.endGroup()
+    def restore_ui(self, view_type, fresh=False):
+        """Restores UI state from previous session.
+
+        Args:
+            view_type (str): What the selected view type is.
+            fresh (bool): If true, the view specified with subgroup will be applied,
+                instead of loading the previous window state of the said view.
+        """
+        if fresh and view_type:
+            # Apply the view instead of loading the window state
+            self.last_view = None
+            options = {
+                "stacked": self.apply_stacked_style,
+                "graph": self.apply_graph_style,
+            }
+            func = options[view_type] if view_type in options else self.apply_pivot_style
+            func(view_type)
+            return
+        window_state = None
+        if view_type:
+            self.qsettings.beginGroup(self.settings_group)
+            self.qsettings.beginGroup(self.settings_subgroup)
+            self.qsettings.beginGroup(view_type)
+            window_state = self.qsettings.value("windowState")
+            self.qsettings.endGroup()
+            self.qsettings.endGroup()
+            self.qsettings.endGroup()
+        else:
+            # To ensure that the first time changes of a window are saved.
+            self.last_view = "stacked"
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     def save_window_state(self):
-        """Save window state parameters (size, position, state) via QSettings."""
+        """Saves window state parameters (size, position, state) via QSettings."""
+        if not self.db_maps or len(self.db_urls) != 1:
+            # Only save window sates of single db tabs
+            return
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
+        self.qsettings.setValue("last_open", self.last_view)
+        self.qsettings.beginGroup(self.last_view)
         self.qsettings.setValue("windowState", self.saveState(version=1))
+        self.qsettings.endGroup()
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 
@@ -837,7 +861,7 @@ class SpineDBEditorBase(QMainWindow):
             self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
         )
         if failed_db_maps:
-            msg = f"Fail to commit due to locked database"
+            msg = f"Failed to commit {[db_map.codename for db_map in failed_db_maps]}"
             self.db_mngr.receive_error_msg({i: [msg] for i in failed_db_maps})
             return False
         return True
@@ -935,7 +959,7 @@ class SpineDBEditorBase(QMainWindow):
         return APPLICATION_PATH
 
 
-class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeViewMixin, SpineDBEditorBase):
+class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
 
     pinned_values_updated = Signal(list)
@@ -957,17 +981,13 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self._timer_refresh_tab_order.setSingleShot(True)
         self.add_main_menu()
         self.connect_signals()
+        self.last_view = None
         self.apply_stacked_style()
         if db_url_codenames is not None:
             self.load_db_urls(db_url_codenames)
 
     def emit_pinned_values_updated(self):
-        pinned_values = [
-            value
-            for view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value)
-            for value in view.pinned_values
-        ]
-        self.pinned_values_updated.emit(pinned_values)
+        self.pinned_values_updated.emit(self.ui.tableView_parameter_value.pinned_values)
 
     def connect_signals(self):
         super().connect_signals()
@@ -1040,6 +1060,14 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
             dock.setVisible(True)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
 
+    def update_last_view(self):
+        self.qsettings.beginGroup(self.settings_group)
+        self.qsettings.beginGroup(self.settings_subgroup)
+        last_view = self.qsettings.value("last_open")
+        self.last_view = last_view
+        self.qsettings.endGroup()
+        self.qsettings.endGroup()
+
     def begin_style_change(self):
         """Begins a style change operation."""
         self._original_size = self.size()
@@ -1061,143 +1089,97 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, ParameterViewMixin, TreeVi
         self.ui.dockWidget_exports.hide()
         self.resize(self._original_size)
 
-    @Slot(bool)
-    def apply_stacked_style(self, _checked=False):
+    @Slot(object)
+    def apply_stacked_style(self, _checked=None):
         """Applies the stacked style, inspired in the former tree view."""
+        if self.last_view:
+            self.save_window_state()
+        self.last_view = "stacked"
         self.begin_style_change()
         self.splitDockWidget(
-            self.ui.dockWidget_object_tree, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Horizontal
+            self.ui.dockWidget_entity_tree, self.ui.dockWidget_parameter_value, Qt.Orientation.Horizontal
         )
         self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
+            self.ui.dockWidget_parameter_value, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
         )
-        self.splitDockWidget(
-            self.ui.alternative_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Horizontal
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
-        )
+        self._finish_stacked_style()
+        self.ui.dockWidget_entity_graph.hide()
+        self.end_style_change()
+        self.restore_ui(self.last_view)
+
+    def _finish_stacked_style(self):
         # right-side
         self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.dockWidget_tool_feature_tree, self.ui.metadata_dock_widget, Qt.Orientation.Vertical
+            self.ui.scenario_dock_widget, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
-        self.tabify_and_raise([self.ui.dockWidget_tool_feature_tree, self.ui.dockWidget_parameter_value_list])
+        self.tabify_and_raise([self.ui.dockWidget_parameter_value_list, self.ui.metadata_dock_widget])
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
+        self.ui.dockWidget_parameter_value_list.raise_()
         # center
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_relationship_parameter_value,
-            Qt.Orientation.Vertical,
-        )
         self.tabify_and_raise(
-            [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
+            [
+                self.ui.dockWidget_parameter_value,
+                self.ui.dockWidget_parameter_definition,
+                self.ui.dockWidget_entity_alternative,
+            ]
         )
-        self.tabify_and_raise(
-            [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
-        )
-        self.ui.dockWidget_entity_graph.hide()
         self.ui.dockWidget_pivot_table.hide()
         self.ui.dockWidget_frozen_table.hide()
-        docks = [
-            self.ui.dockWidget_object_tree,
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.alternative_dock_widget,
-            self.ui.dockWidget_tool_feature_tree,
-        ]
+        docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_parameter_value, self.ui.alternative_dock_widget]
         width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.5 * width, 0.15 * width, 0.15 * width], Qt.Orientation.Horizontal)
-        self.end_style_change()
+        self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
-    @Slot(bool)
-    def apply_pivot_style(self, _checked=False):
+    @Slot(object)
+    def apply_pivot_style(self, _checked=None):
         """Applies the pivot style, inspired in the former tabular view."""
+        if self.last_view:
+            self.save_window_state()
+        self.last_view = _checked if isinstance(_checked, str) else _checked.text()
+        self.current_input_type = self.last_view
         self.begin_style_change()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table, Qt.Orientation.Horizontal)
-        self.splitDockWidget(
-            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
-        )
         self.splitDockWidget(self.ui.dockWidget_frozen_table, self.ui.alternative_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.scenario_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
+            self.ui.scenario_dock_widget, self.ui.dockWidget_parameter_value_list, Qt.Orientation.Vertical
         )
         self.ui.dockWidget_entity_graph.hide()
-        self.ui.dockWidget_object_parameter_value.hide()
-        self.ui.dockWidget_object_parameter_definition.hide()
-        self.ui.dockWidget_relationship_parameter_value.hide()
-        self.ui.dockWidget_relationship_parameter_definition.hide()
-        self.ui.dockWidget_parameter_value_list.hide()
+        self.ui.dockWidget_parameter_value.hide()
+        self.ui.dockWidget_parameter_definition.hide()
+        self.ui.dockWidget_entity_alternative.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
-        docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
+        docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
+        self.restore_ui(self.last_view)
 
-    @Slot(bool)
-    def apply_graph_style(self, _checked=False):
+    @Slot(object)
+    def apply_graph_style(self, _checked=None):
         """Applies the graph style, inspired in the former graph view."""
+        if self.last_view:
+            self.save_window_state()
+        self.last_view = "graph"
         self.begin_style_change()
-        self.ui.dockWidget_pivot_table.hide()
-        self.ui.dockWidget_frozen_table.hide()
-        self.splitDockWidget(self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_entity_graph, Qt.Orientation.Horizontal)
         self.splitDockWidget(
             self.ui.dockWidget_entity_graph, self.ui.alternative_dock_widget, Qt.Orientation.Horizontal
         )
-        # right-side
-        self.splitDockWidget(self.ui.alternative_dock_widget, self.ui.scenario_dock_widget, Qt.Orientation.Vertical)
         self.splitDockWidget(
-            self.ui.scenario_dock_widget, self.ui.dockWidget_tool_feature_tree, Qt.Orientation.Vertical
+            self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value, Qt.Orientation.Vertical
         )
-        self.tabify_and_raise(
-            [
-                self.ui.dockWidget_tool_feature_tree,
-                self.ui.dockWidget_parameter_value_list,
-                self.ui.item_metadata_dock_widget,
-                self.ui.metadata_dock_widget,
-            ]
-        )
-        # left
-        self.splitDockWidget(
-            self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree, Qt.Orientation.Vertical
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_entity_graph, self.ui.dockWidget_object_parameter_value, Qt.Orientation.Vertical
-        )
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_relationship_parameter_value,
-            Qt.Orientation.Vertical,
-        )
-        self.tabify_and_raise(
-            [self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition]
-        )
-        self.tabify_and_raise(
-            [self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition]
-        )
-        docks = [
-            self.ui.dockWidget_entity_graph,
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_relationship_parameter_value,
-        ]
+        self._finish_stacked_style()
+        self.ui.dockWidget_entity_graph.show()
+        docks = [self.ui.dockWidget_entity_graph, self.ui.dockWidget_parameter_value]
         height = sum(d.size().height() for d in docks)
-        self.resizeDocks(docks, [0.6 * height, 0.2 * height, 0.2 * height], Qt.Orientation.Vertical)
-        docks = [self.ui.dockWidget_object_tree, self.ui.dockWidget_entity_graph, self.ui.alternative_dock_widget]
-        width = sum(d.size().width() for d in docks)
-        self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
+        self.resizeDocks(docks, [0.7 * height, 0.3 * height], Qt.Orientation.Vertical)
         self.end_style_change()
+        self.restore_ui(self.last_view)
         self.ui.graphicsView.reset_zoom()
 
-    def receive_session_rolled_back(self, db_maps):
-        super().receive_session_rolled_back(db_maps)
-        self._metadata_editor.rollback(db_maps)
-        self._item_metadata_editor.rollback(db_maps)
-
-    def tear_down(self):
-        if not super().tear_down():
-            return False
-        for model in self._parameter_models:
-            model.stop_invalidating_filter()
-        return True
+    @staticmethod
+    def _get_base_dir():
+        return APPLICATION_PATH

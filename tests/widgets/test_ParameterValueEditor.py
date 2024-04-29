@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for the ParameterValueEditor widget.
-"""
-
+"""Unit tests for the ParameterValueEditor widget."""
 import unittest
 import dateutil.parser
 import numpy as np
@@ -82,11 +80,11 @@ class TestParameterValueEditor(unittest.TestCase):
         self._check_parent_model_updated_when_closed(23.0)
 
     def test_editor_sets_datetime_in_parent_model(self):
-        time_stamp = DateTime(dateutil.parser.parse('2019-07-03T12:00'))
+        time_stamp = DateTime(dateutil.parser.parse("2019-07-03T12:00"))
         self._check_parent_model_updated_when_closed(time_stamp)
 
     def test_editor_sets_duration_in_parent_model(self):
-        duration = Duration(duration_to_relativedelta('3 months'))
+        duration = Duration(duration_to_relativedelta("3 months"))
         self._check_parent_model_updated_when_closed(duration)
 
     def test_editor_sets_time_pattern_in_parent_model(self):
@@ -109,5 +107,5 @@ class TestParameterValueEditor(unittest.TestCase):
         self._check_parent_model_updated_when_closed(time_series)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

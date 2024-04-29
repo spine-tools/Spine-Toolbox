@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -26,11 +27,11 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QFrame,
-    QGraphicsView, QHeaderView, QLabel, QMainWindow,
-    QMenu, QMenuBar, QSizePolicy, QSplitter,
-    QStatusBar, QTabWidget, QToolButton, QTreeView,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QDockWidget, QFrame, QGraphicsView,
+    QHeaderView, QLabel, QMainWindow, QMenu,
+    QMenuBar, QSizePolicy, QSplitter, QStatusBar,
+    QTabWidget, QToolButton, QTreeView, QVBoxLayout,
+    QWidget)
 
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
@@ -293,32 +294,6 @@ class Ui_MainWindow(object):
 
         self.dockWidget_item.setWidget(self.dockWidgetContents_3)
         MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_item)
-        self.dockWidget_project = QDockWidget(MainWindow)
-        self.dockWidget_project.setObjectName(u"dockWidget_project")
-        self.dockWidget_project.setMinimumSize(QSize(136, 344))
-        self.dockWidget_project.setAllowedAreas(Qt.AllDockWidgetAreas)
-        self.dockWidgetContents_4 = QWidget()
-        self.dockWidgetContents_4.setObjectName(u"dockWidgetContents_4")
-        self.verticalLayout_4 = QVBoxLayout(self.dockWidgetContents_4)
-        self.verticalLayout_4.setSpacing(1)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
-        self.treeView_project = QTreeView(self.dockWidgetContents_4)
-        self.treeView_project.setObjectName(u"treeView_project")
-        sizePolicy1.setHeightForWidth(self.treeView_project.sizePolicy().hasHeightForWidth())
-        self.treeView_project.setSizePolicy(sizePolicy1)
-        self.treeView_project.setMaximumSize(QSize(16777215, 16777215))
-        self.treeView_project.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.treeView_project.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.treeView_project.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.treeView_project.setUniformRowHeights(True)
-        self.treeView_project.setAnimated(True)
-        self.treeView_project.header().setVisible(False)
-
-        self.verticalLayout_4.addWidget(self.treeView_project)
-
-        self.dockWidget_project.setWidget(self.dockWidgetContents_4)
-        MainWindow.addDockWidget(Qt.LeftDockWidgetArea, self.dockWidget_project)
         self.dockWidget_console = QDockWidget(MainWindow)
         self.dockWidget_console.setObjectName(u"dockWidget_console")
         self.dockWidget_console.setFloating(False)
@@ -361,15 +336,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = DesignQGraphicsView(self.dockWidgetContents_5)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy1.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
-        self.graphicsView.setSizePolicy(sizePolicy1)
-        self.graphicsView.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.graphicsView.setFrameShape(QFrame.NoFrame)
         self.graphicsView.setFrameShadow(QFrame.Raised)
-        self.graphicsView.setMidLineWidth(0)
-        self.graphicsView.setAlignment(Qt.AlignCenter)
         self.graphicsView.setRenderHints(QPainter.Antialiasing|QPainter.TextAntialiasing)
-        self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphicsView.setDragMode(QGraphicsView.RubberBandDrag)
         self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.graphicsView.setRubberBandSelectionMode(Qt.ContainsItemBoundingRect)
@@ -378,6 +348,10 @@ class Ui_MainWindow(object):
 
         self.dockWidget_design_view.setWidget(self.dockWidgetContents_5)
         MainWindow.addDockWidget(Qt.TopDockWidgetArea, self.dockWidget_design_view)
+        QWidget.setTabOrder(self.graphicsView, self.textBrowser_eventlog)
+        QWidget.setTabOrder(self.textBrowser_eventlog, self.listView_console_executions)
+        QWidget.setTabOrder(self.listView_console_executions, self.toolButton_executions)
+        QWidget.setTabOrder(self.toolButton_executions, self.tabWidget_item_properties)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
@@ -639,7 +613,6 @@ class Ui_MainWindow(object):
         self.dockWidget_item.setWindowTitle(QCoreApplication.translate("MainWindow", u"Properties", None))
         self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select an item to view its properties", None))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QCoreApplication.translate("MainWindow", u"No Selection", None))
-        self.dockWidget_project.setWindowTitle(QCoreApplication.translate("MainWindow", u"Project", None))
         self.dockWidget_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Console", None))
         self.label_no_console.setText(QCoreApplication.translate("MainWindow", u"Select an executing item to see its console", None))
         self.dockWidget_design_view.setWindowTitle(QCoreApplication.translate("MainWindow", u"Design View", None))

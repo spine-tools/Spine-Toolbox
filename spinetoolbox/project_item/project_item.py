@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,13 +9,11 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-Contains base classes for project items and item factories.
-"""
 
+"""Contains base classes for project items and item factories."""
 import os
 import logging
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Slot
 from spine_engine.utils.helpers import shorten
 from ..helpers import create_dir, open_url
 from ..metaobject import MetaObject
@@ -77,14 +76,9 @@ class ProjectItem(LogMixin, MetaObject):
         """
         raise NotImplementedError()
 
-    @staticmethod
-    def item_category():
-        """Item's category.
-
-        Returns:
-            str: category name
-        """
-        raise NotImplementedError()
+    @property
+    def project(self):
+        return self._project
 
     @property
     def logger(self):
@@ -164,7 +158,9 @@ class ProjectItem(LogMixin, MetaObject):
         """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack."""
         if specification == self._specification:
             return
-        self._toolbox.undo_stack.push(SetItemSpecificationCommand(self, specification, self.undo_specification()))
+        self._toolbox.undo_stack.push(
+            SetItemSpecificationCommand(self.name, specification, self.undo_specification(), self._project)
+        )
 
     def do_set_specification(self, specification):
         """Sets specification for this item. Removes specification if None given as argument.
@@ -203,7 +199,12 @@ class ProjectItem(LogMixin, MetaObject):
         self.get_icon().exclamation_icon.add_notification(text)
 
     def remove_notification(self, text):
+        """Remove the first notification that includes given subtext."""
         self.get_icon().exclamation_icon.remove_notification(text)
+
+    def clear_other_notifications(self, text):
+        """Remove notifications that don't include the given subtext."""
+        self.get_icon().exclamation_icon.clear_other_notifications(text)
 
     def set_rank(self, rank):
         """Set rank of this item for displaying in the design view."""
@@ -220,7 +221,7 @@ class ProjectItem(LogMixin, MetaObject):
         """Performs item dependent actions after the execution item has finished successfully.
 
         Args:
-            execution_direction (str): "FORWARD" or "BACKWARD"
+            execution_direction (ExecutionDirection): ExecutionDirection.FORWARD or ExecutionDirection.BACKWARD
             engine_state: engine state after item's execution
         """
 
@@ -304,23 +305,6 @@ class ProjectItem(LogMixin, MetaObject):
             old (list of ProjectItemResource): old resources
             new (list of ProjectItemResource): new resources
         """
-
-    def invalidate_workflow(self, edges):
-        """Notifies that this item's workflow is not acyclic.
-
-        Args:
-            edges (list): A list of edges that make the graph acyclic after removing them.
-        """
-        edges = ", ".join("{0} -> {1}".format(*edge) for edge in edges)
-        self.clear_notifications()
-        self.set_rank(None)
-        self.add_notification(
-            "The workflow defined for this item has loops and thus cannot be executed. "
-            f"Possible fix: remove link(s) {edges}."
-        )
-
-    def revalidate_workflow(self):
-        self.remove_notification("The workflow defined for this item has loops and thus cannot be executed.")
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item.

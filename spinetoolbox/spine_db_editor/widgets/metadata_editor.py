@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains machinery to deal with metadata editor.
-"""
+"""Contains machinery to deal with metadata editor."""
 from PySide6.QtCore import Qt
 from ..mvcmodels.metadata_table_model import MetadataTableModel
 
@@ -56,11 +55,3 @@ class MetadataEditor:
             MetadataModel: model
         """
         return self._metadata_table_model
-
-    def rollback(self, db_maps):
-        """Rolls back database changes.
-
-        Args:
-            db_maps (Iterable of DiffDatabaseMapping): rolled back databases
-        """
-        self._metadata_table_model.rollback(db_maps)

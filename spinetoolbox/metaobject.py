@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,18 +10,16 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-MetaObject class.
-"""
-
+"""MetaObject class."""
 from PySide6.QtCore import QObject
 from spine_engine.utils.helpers import shorten
 
 
 class MetaObject(QObject):
-    def __init__(self, name, description):
-        """Class for an object which has a name, type, and some description.
+    """Class for an object which has a name, type, and some description."""
 
+    def __init__(self, name, description):
+        """
         Args:
             name (str): Object name
             description (str): Object description

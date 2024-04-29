@@ -11,7 +11,5 @@
         "out.dat"
     ],
     "cmdline_args": [],
-    "execute_in_work": true,
-    "includes_main_path": "../../..",
-    "execution_settings": {}
+    "includes_main_path": "../../.."
 }

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains an editor widget for array type parameter values.
-"""
-
+"""Contains an editor widget for array type parameter values."""
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
-from PySide6.QtWidgets import QWidget
-
+from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
 from .array_value_editor import ArrayValueEditor
 from .indexed_value_table_context_menu import ArrayTableContextMenu
@@ -49,7 +46,9 @@ class ArrayEditor(QWidget):
         self._ui.array_table_view.setModel(self._model)
         self._ui.array_table_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.array_table_view.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.array_table_view.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
+        header = self._ui.array_table_view.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.sectionDoubleClicked.connect(self._open_header_editor)
         self._ui.value_type_combo_box.currentTextChanged.connect(self._change_value_type)
         delegate = ParameterValueElementDelegate(self._ui.array_table_view)
         delegate.value_editor_requested.connect(self.open_value_editor)

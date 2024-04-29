@@ -1,6 +1,6 @@
 {
     "project": {
-        "version": 11,
+        "version": 13,
         "description": "Test project to test scenario filtering in a Tool project item.",
         "specifications": {
             "Importer": [

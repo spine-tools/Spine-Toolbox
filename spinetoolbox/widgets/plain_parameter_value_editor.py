@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing plain number database (relationship) parameter values.
-"""
-
+"""An editor widget for editing plain number database (relationship) parameter values."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
 from spinetoolbox.helpers import try_number_from_string

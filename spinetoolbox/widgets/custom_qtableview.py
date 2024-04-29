@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Custom QTableView classes that support copy-paste and the like.
-"""
-
+"""Custom QTableView classes that support copy-paste and the like."""
 import csv
 import ctypes
 import io
@@ -21,7 +19,6 @@ from contextlib import contextmanager
 from numbers import Number
 import re
 from operator import methodcaller
-
 from PySide6.QtWidgets import QTableView, QApplication
 from PySide6.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
 from PySide6.QtGui import QKeySequence, QIcon, QAction
@@ -51,6 +48,7 @@ class CopyPasteTableView(QTableView):
         self._delete_action = QAction("Delete", self)
         self._delete_action.setShortcut(QKeySequence.Delete)
         self.addAction(self._delete_action)
+        self._pasted_data_converters = {}
         self._delete_action.triggered.connect(self.delete_content)
 
     def init_copy_and_paste_actions(self):
@@ -124,11 +122,17 @@ class CopyPasteTableView(QTableView):
                             continue
                         data = self.model().index(i, j).data(Qt.ItemDataRole.EditRole)
                         if data is not None:
-                            try:
-                                number = float(data)
-                                str_data = locale.str(number)
-                            except ValueError:
-                                str_data = str(data)
+                            if isinstance(data, bool):
+                                str_data = "true" if data else "false"
+                            else:
+                                if isinstance(data, int):
+                                    str_data = str(data)
+                                else:
+                                    try:
+                                        number = float(data)
+                                        str_data = locale.str(number)
+                                    except ValueError:
+                                        str_data = str(data)
                         else:
                             str_data = ""
                         row.append(str_data)
@@ -204,6 +208,7 @@ class CopyPasteTableView(QTableView):
         rows = [x for r in selection for x in range(r.top(), r.bottom() + 1) if not is_row_hidden(x)]
         is_column_hidden = self.horizontalHeader().isSectionHidden
         columns = [x for r in selection for x in range(r.left(), r.right() + 1) if not is_column_hidden(x)]
+        converters = self._converters() if self._pasted_data_converters else {}
         model_index = self.model().index
         for row in rows:
             for column in columns:
@@ -213,6 +218,11 @@ class CopyPasteTableView(QTableView):
                     j = (column - columns[0]) % len(data[i])
                     value = data[i][j]
                     indexes.append(index)
+                    if converters:
+                        convert = converters.get(column)
+                        if convert is not None:
+                            values.append(convert(value))
+                            continue
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
@@ -252,15 +262,17 @@ class CopyPasteTableView(QTableView):
             visual_column += 1
         # Insert extra rows if needed:
         last_row = max(rows)
-        row_count = self.model().rowCount()
+        model = self.model()
+        row_count = model.rowCount()
         if last_row >= row_count:
-            self.model().insertRows(row_count, last_row - row_count + 1)
+            model.insertRows(row_count, last_row - row_count + 1)
         # Insert extra columns if needed:
         last_column = max(columns)
-        column_count = self.model().columnCount()
+        column_count = model.columnCount()
         if last_column >= column_count:
-            self.model().insertColumns(column_count, last_column - column_count + 1)
-        model_index = self.model().index
+            model.insertColumns(column_count, last_column - column_count + 1)
+        converters = self._converters() if self._pasted_data_converters else {}
+        model_index = model.index
         for i, row in enumerate(rows):
             try:
                 line = data[i]
@@ -274,9 +286,27 @@ class CopyPasteTableView(QTableView):
                 index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
+                    if converters:
+                        convert = converters.get(column)
+                        if convert is not None:
+                            values.append(convert(value))
+                            continue
                     values.append(value)
-        self.model().batch_set_data(indexes, values)
+        model.batch_set_data(indexes, values)
         return True
+
+    def set_column_converter_for_pasting(self, header, converter):
+        self._pasted_data_converters[header] = converter
+
+    def _converters(self):
+        converters = {}
+        model = self.model()
+        for column in range(model.columnCount()):
+            label = model.headerData(column, Qt.Orientation.Horizontal)
+            converter = self._pasted_data_converters.get(label)
+            if converter is not None:
+                converters[column] = converter
+        return converters
 
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
@@ -289,7 +319,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         """
         super().__init__(parent=parent)
         self._show_filter_menu_action = QAction(self)
-        self._show_filter_menu_action.setShortcut(Qt.ALT | Qt.Key_Down)
+        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
         self._show_filter_menu_action.setShortcutContext(Qt.WidgetShortcut)
         self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
         self.addAction(self._show_filter_menu_action)
@@ -358,7 +388,7 @@ class IndexedParameterValueTableViewBase(CopyPasteTableView):
             else:
                 data_values[row - row_first] = data
         with io.StringIO() as output:
-            writer = csv.writer(output, delimiter='\t')
+            writer = csv.writer(output, delimiter="\t")
             with system_lc_numeric():
                 if all(stamp is None for stamp in data_indexes):
                     for value in data_values:
@@ -397,7 +427,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(clipboard.text())
@@ -437,7 +467,7 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
             list of float: A list of floats
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             with system_lc_numeric():
                 return [locale.atof(row[0]) for row in reader if row]
 
@@ -474,7 +504,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(clipboard.text())
@@ -571,7 +601,7 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             tuple: a tuple (data indexes, data values)
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             single_column = list()
             data_indexes = list()
             data_values = list()
@@ -620,7 +650,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
                 row_values["x" if index.column() == 0 else "y"] = index.data(Qt.ItemDataRole.EditRole)
             with system_lc_numeric():
                 with io.StringIO() as output:
-                    writer = csv.writer(output, delimiter='\t')
+                    writer = csv.writer(output, delimiter="\t")
                     for row_values in values.values():
                         x = row_values.get("x", "")
                         y = row_values.get("y", "")
@@ -630,7 +660,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         else:
             with system_lc_numeric():
                 with io.StringIO() as output:
-                    writer = csv.writer(output, delimiter='\t')
+                    writer = csv.writer(output, delimiter="\t")
                     for index in selected_indexes:
                         y = index.data(Qt.ItemDataRole.EditRole)
                         writer.writerow([locale.str(y) if isinstance(y, Number) else y])
@@ -646,7 +676,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         try:
             pasted_table = self._read_pasted_text(clipboard.text())
@@ -691,7 +721,7 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
             list of str: data column
         """
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             column = [row[0] for row in reader if row]
         return column
 
@@ -766,7 +796,7 @@ class MapTableView(CopyPasteTableView):
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
-        if 'text/plain' not in data_formats:
+        if "text/plain" not in data_formats:
             return False
         pasted_table = self._read_pasted_text(clipboard.text())
         paste_length = len(pasted_table)
@@ -811,7 +841,7 @@ class MapTableView(CopyPasteTableView):
         """
         data = list()
         with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter='\t')
+            reader = csv.reader(input_stream, delimiter="\t")
             with system_lc_numeric():
                 for row in reader:
                     data_row = list()

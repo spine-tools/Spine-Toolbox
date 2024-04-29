@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -8,13 +9,11 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-"""
-A widget and utilities to select database items.
-"""
+
+"""A widget and utilities to select database items."""
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QWidget
-
-from spinedb_api.db_mapping_base import DatabaseMappingBase
+from spinedb_api.db_mapping import DatabaseMapping
 
 
 def add_check_boxes(check_boxes, checked_states, select_all_button, deselect_all_button, state_changed_slot, layout):
@@ -56,8 +55,7 @@ class SelectDatabaseItems(QWidget):
     checked_state_changed = Signal(int)
     COLUMN_COUNT = 3
     _DATA_ITEMS = (
-        "object",
-        "relationship",
+        "entity",
         "entity_group",
         "parameter_value",
         "entity_metadata",
@@ -78,10 +76,11 @@ class SelectDatabaseItems(QWidget):
         self._ui.setupUi(self)
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
         self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
+        checkable_item_types = tuple(type_ for type_ in DatabaseMapping.item_types() if type_ != "commit")
         checked_states = (
-            checked_states if checked_states is not None else {item: False for item in DatabaseMappingBase.ITEM_TYPES}
+            checked_states if checked_states is not None else {item: False for item in checkable_item_types}
         )
-        self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in DatabaseMappingBase.ITEM_TYPES}
+        self._item_check_boxes = {item_type: QCheckBox(item_type, self) for item_type in checkable_item_types}
         add_check_boxes(
             self._item_check_boxes,
             checked_states,

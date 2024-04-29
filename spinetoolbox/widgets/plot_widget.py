@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,14 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-A Qt widget showing a toolbar and a matplotlib plotting canvas.
-"""
-
+"""A Qt widget showing a toolbar and a matplotlib plotting canvas."""
 import itertools
 import io
 import csv
-
 import numpy
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 from PySide6.QtCore import QMetaObject, Qt

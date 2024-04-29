@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains jump properties widget's business logic.
-"""
+"""Contains jump properties widget's business logic."""
 from PySide6.QtCore import Slot, QItemSelection
 from .properties_widget import PropertiesWidgetBase
 from ..project_commands import SetJumpConditionCommand, UpdateJumpCmdLineArgsCommand
@@ -57,25 +56,28 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
     def _load_condition_into_ui(self, condition):
         self._track_changes = False
         self._ui.pushButton_save_script.setEnabled(False)
-        self._ui.condition_script_edit.setEnabled(condition["type"] == "python-script")
+        self._ui.condition_script_edit.set_enabled_with_greyed(condition["type"] == "python-script")
         self._ui.comboBox_tool_spec.setEnabled(condition["type"] == "tool-specification")
         self._ui.toolButton_edit_tool_spec.setEnabled(condition["type"] == "tool-specification")
-        if not condition["type"] == "python-script":
-            self._ui.condition_script_edit.clear()
         if condition["type"] == "python-script":
             self._ui.radioButton_py_script.setChecked(True)
-            if not condition["script"] or condition["script"] != self._ui.condition_script_edit.toPlainText():
-                self._ui.condition_script_edit.setPlainText(condition["script"])
+            self._ui.condition_script_edit.setPlainText(condition["script"])
         elif condition["type"] == "tool-specification":
             self._ui.radioButton_tool_spec.setChecked(True)
             self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
         self._track_changes = True
 
     def _make_condition_from_ui(self):
+        condition = {
+            "script": self._ui.condition_script_edit.toPlainText(),
+            "specification": self._ui.comboBox_tool_spec.currentText(),
+        }
         if self._ui.radioButton_py_script.isChecked():
-            return {"type": "python-script", "script": self._ui.condition_script_edit.toPlainText()}
+            condition["type"] = "python-script"
+            return condition
         if self._ui.radioButton_tool_spec.isChecked():
-            return {"type": "tool-specification", "specification": self._ui.comboBox_tool_spec.currentText()}
+            condition["type"] = "tool-specification"
+            return condition
         return {}
 
     def _change_condition(self):
@@ -84,7 +86,7 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
             return
         condition = self._make_condition_from_ui()
         if self._jump.condition != condition:
-            self._toolbox.undo_stack.push(SetJumpConditionCommand(self, self._jump, condition))
+            self._toolbox.undo_stack.push(SetJumpConditionCommand(self._toolbox.project(), self._jump, self, condition))
 
     @Slot(bool)
     def _show_tool_spec_form(self, _checked=False):
@@ -121,7 +123,9 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
     @Slot(list)
     def _push_update_cmd_line_args_command(self, cmd_line_args):
         if self._jump.cmd_line_args != cmd_line_args:
-            self._toolbox.undo_stack.push(UpdateJumpCmdLineArgsCommand(self, self._jump, cmd_line_args))
+            self._toolbox.undo_stack.push(
+                UpdateJumpCmdLineArgsCommand(self._toolbox.project(), self._jump, self, cmd_line_args)
+            )
 
     @Slot(bool)
     def _remove_arg(self, _=False):

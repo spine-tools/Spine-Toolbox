@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,18 +10,17 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Unit tests for SpineDBEditor classes.
-"""
+"""Unit tests for SpineDBEditor classes."""
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import logging
 import sys
+from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from ...mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager
 
 
 class TestSpineDBEditorWithDBMapping(unittest.TestCase):
@@ -34,8 +34,8 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         logging.basicConfig(
             stream=sys.stderr,
             level=logging.DEBUG,
-            format='%(asctime)s %(levelname)s: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S',
+            format="%(asctime)s %(levelname)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     def setUp(self):
@@ -70,29 +70,53 @@ class TestSpineDBEditorWithDBMapping(unittest.TestCase):
         self.spine_db_editor = None
         self._temp_dir.cleanup()
 
-    def fetch_object_tree_model(self):
-        for item in self.spine_db_editor.object_tree_model.visit_all():
-            if item.can_fetch_more():
+    def fetch_entity_tree_model(self):
+        for item in self.spine_db_editor.entity_tree_model.visit_all():
+            while item.can_fetch_more():
                 item.fetch_more()
+                QApplication.processEvents()
 
-    def test_duplicate_object_in_object_tree_model(self):
+    def test_duplicate_zero_dimensional_entity_in_entity_tree_model(self):
         data = {
-            "object_classes": ["fish", "dog"],
-            "relationship_classes": [("fish__dog", ("fish", "dog"))],
-            "objects": [("fish", "nemo"), ("dog", "pluto")],
-            "relationships": [("fish__dog", ("nemo", "pluto"))],
-            "object_parameters": [("fish", "color")],
-            "object_parameter_values": [("fish", "nemo", "color", "orange")],
+            "entity_classes": [("fish",), ("dog",), ("fish__dog", ("fish", "dog"))],
+            "entities": [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))],
+            "parameter_definitions": [("fish", "color")],
+            "parameter_values": [("fish", "nemo", "color", "orange")],
         }
         self.db_mngr.import_data({self.db_map: data})
-        self.fetch_object_tree_model()
-        root_item = self.spine_db_editor.object_tree_model.root_item
+        self.fetch_entity_tree_model()
+        root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
-        self.spine_db_editor.duplicate_object(nemo_item)
+        with mock.patch.object(self.db_mngr, "error_msg") as error_msg_signal:
+            self.spine_db_editor.duplicate_entity(nemo_item)
+            error_msg_signal.emit.assert_not_called()
+        self.assertEqual(fish_item.row_count(), 2)
         nemo_dupe = fish_item.child(1)
         self.assertEqual(nemo_dupe.display_data, "nemo (1)")
+        fish_dog_item = next(iter(item for item in root_item.children if item.display_data == "fish__dog"))
+        fish_dog_item.fetch_more()
+        self.assertEqual(fish_dog_item.row_count(), 2)
+        nemo_pluto_dupe = fish_dog_item.child(1)
+        self.assertEqual(nemo_pluto_dupe.display_data, "nemo (1) ǀ pluto")
+        root_index = self.spine_db_editor.entity_tree_model.index_from_item(root_item)
+        self.spine_db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
+            root_index, QItemSelectionModel.SelectionFlags.ClearAndSelect
+        )
+        while self.spine_db_editor.parameter_value_model.rowCount() != 3:
+            QApplication.processEvents()
+        expected = [
+            ["fish", "nemo", "color", "Base", "orange", "db"],
+            ["fish", "nemo (1)", "color", "Base", "orange", "db"],
+            [None, None, None, None, None, "db"],
+        ]
+        for row in range(3):
+            for column in range(self.spine_db_editor.parameter_value_model.columnCount()):
+                with self.subTest(row=row, column=column):
+                    self.assertEqual(
+                        self.spine_db_editor.parameter_value_model.index(row, column).data(), expected[row][column]
+                    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

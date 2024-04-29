@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -10,14 +11,11 @@
 ######################################################################################################################
 
 """Unit tests for the ``plot_widget`` module."""
-
 import unittest
 from itertools import product
 from unittest import mock
-
 from matplotlib.gridspec import GridSpec
 from PySide6.QtWidgets import QApplication
-
 from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.plotting import plot_data, TreeNode, turn_node_to_xy_data, convert_indexed_value_to_tree
 from spinetoolbox.widgets.plot_canvas import LegendPosition
@@ -73,5 +71,5 @@ class TestPlotWidget(unittest.TestCase):
         self.assertEqual(repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(1, 2, width_ratios=[1, 0])))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

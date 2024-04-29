@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains a dialog for generating scenarios from selected alternatives.
-"""
+"""Contains a dialog for generating scenarios from selected alternatives."""
 from enum import auto, Enum, unique
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QWidget, QMessageBox
-
 from ...helpers import signal_waiter
 from ..scenario_generation import all_combinations, unique_alternatives
 
@@ -91,8 +89,8 @@ class ScenarioGenerator(QWidget):
         generated_scenario_names = [
             scenario_prefix + suffix.format(count) for count in range(1, len(scenario_alternatives) + 1)
         ]
-        scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario", only_visible=False)
-        existing_scenario_names = {item.name for item in scenario_items}
+        scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario")
+        existing_scenario_names = {item["name"] for item in scenario_items}
         resolution = self._check_existing_scenarios(generated_scenario_names, existing_scenario_names)
         if resolution == _ScenarioNameResolution.CANCEL_OPERATION:
             return
@@ -125,11 +123,11 @@ class ScenarioGenerator(QWidget):
         searchable_scenario_names = set(scenarios_to_modify)
         scenario_definitions_by_id = dict()
         alternative_iter = iter(scenario_alternatives)
-        scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario", only_visible=False)
+        scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario")
         for item in scenario_items:
-            if item.name not in searchable_scenario_names:
+            if item["name"] not in searchable_scenario_names:
                 continue
-            scenario_definitions_by_id[item.id] = [a["id"] for a in next(alternative_iter)]
+            scenario_definitions_by_id[item["id"]] = [a["id"] for a in next(alternative_iter)]
         scenario_alternative_data = [
             {"id": scenario_id, "alternative_id_list": alternative_ids}
             for scenario_id, alternative_ids in scenario_definitions_by_id.items()
@@ -173,7 +171,7 @@ class ScenarioGenerator(QWidget):
         Args:
             check_box_state (int): state of 'Use base alternative' check box
         """
-        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked)
+        self._ui.base_alternative_combo_box.setEnabled(check_box_state == Qt.CheckState.Checked.value)
 
     def _insert_base_alternative(self, scenario_alternatives):
         """Prepends base alternative to scenario alternatives if it has been enabled.

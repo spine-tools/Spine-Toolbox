@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -25,9 +26,9 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QHBoxLayout, QHeaderView,
-    QSizePolicy, QSpacerItem, QSplitter, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QHBoxLayout,
+    QHeaderView, QSizePolicy, QSpacerItem, QSplitter,
+    QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView
 from spinetoolbox.widgets.plot_widget import PlotWidget
@@ -69,6 +70,8 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
 
         self.time_series_table = IndexedValueTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName(u"time_series_table")
+        self.time_series_table.setMinimumSize(QSize(250, 0))
+        self.time_series_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.time_series_table.horizontalHeader().setStretchLastSection(True)
 
         self.left_layout.addWidget(self.time_series_table)

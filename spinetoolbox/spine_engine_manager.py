@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Items.
 # Spine Items is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,9 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-Contains SpineEngineManagerBase.
-"""
+"""Contains SpineEngineManagerBase."""
 import queue
 import threading
 import json
@@ -41,12 +40,12 @@ class SpineEngineManagerBase:
         """Stops a running engine."""
         raise NotImplementedError()
 
-    def answer_prompt(self, item_name, accepted):
+    def answer_prompt(self, prompter_id, answer):
         """Answers prompt.
 
         Args:
-            item_name (str): The item that emitted the prompt
-            accepted (bool): The user's decision.
+            prompter_id (int): The id of the prompter
+            answer: The user's decision.
         """
         raise NotImplementedError()
 
@@ -158,8 +157,8 @@ class LocalSpineEngineManager(SpineEngineManagerBase):
         if self._engine is not None:
             self._engine.stop()
 
-    def answer_prompt(self, item_name, accepted):
-        self._engine.answer_prompt(item_name, accepted)
+    def answer_prompt(self, prompter_id, answer):
+        self._engine.answer_prompt(prompter_id, answer)
 
     def restart_kernel(self, connection_file):
         # pylint: disable=import-outside-toplevel
@@ -326,9 +325,9 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 self.q.put(event)
         self.engine_client.close()
 
-    def answer_prompt(self, item_name, accepted):
+    def answer_prompt(self, prompter_id, answer):
         """See base class."""
-        self.engine_client.answer_prompt(self.exec_job_id, item_name, accepted)
+        self.engine_client.answer_prompt(self.exec_job_id, prompter_id, answer)
 
     def restart_kernel(self, connection_file):
         """See base class."""

@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -28,10 +29,10 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
         return "alternative"
 
     def empty_child(self):
-        return AlternativeItem()
+        return AlternativeItem(self._model)
 
     def _make_child(self, id_):
-        return AlternativeItem(id_)
+        return AlternativeItem(self._model, id_)
 
 
 class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
@@ -45,10 +46,10 @@ class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def icon_code(self):
         return _ALTERNATIVE_ICON
 
-    @property
-    def tool_tip(self):
-        if self.id:
-            return "<p>Drag this item it onto a <b>scenario</b> item in Scenario tree to add it to that scenario.</p>"
+    def tool_tip(self, column):
+        if column == 0 and self.id:
+            return "<p>Drag this item on a <b>scenario</b> item in Scenario tree to add it to that scenario.</p>"
+        return super().tool_tip(column)
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_alternatives({self.db_map: [db_item]})

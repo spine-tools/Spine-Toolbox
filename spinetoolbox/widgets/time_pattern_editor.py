@@ -1,5 +1,6 @@
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -9,13 +10,9 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""
-An editor widget for editing a time pattern type (relationship) parameter values.
-"""
-
+"""An editor widget for editing a time pattern type (relationship) parameter values."""
 from PySide6.QtCore import QPoint, Qt, Slot
-from PySide6.QtWidgets import QWidget
-
+from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import TimePattern
 from ..helpers import inquire_index_name
 from ..mvcmodels.time_pattern_model import TimePatternModel
@@ -40,7 +37,9 @@ class TimePatternEditor(QWidget):
         self._ui.pattern_edit_table.setModel(self._model)
         self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.pattern_edit_table.horizontalHeader().sectionDoubleClicked.connect(self._open_header_editor)
+        header = self._ui.pattern_edit_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.sectionDoubleClicked.connect(self._open_header_editor)
 
     @Slot(QPoint)
     def _show_table_context_menu(self, position):

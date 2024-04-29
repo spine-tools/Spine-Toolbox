@@ -2,6 +2,7 @@
 <!--
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -297,76 +298,6 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_project">
-   <property name="minimumSize">
-    <size>
-     <width>136</width>
-     <height>344</height>
-    </size>
-   </property>
-   <property name="allowedAreas">
-    <set>Qt::AllDockWidgetAreas</set>
-   </property>
-   <property name="windowTitle">
-    <string>Project</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>1</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_4">
-    <layout class="QVBoxLayout" name="verticalLayout_4">
-     <property name="spacing">
-      <number>1</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QTreeView" name="treeView_project">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="contextMenuPolicy">
-        <enum>Qt::CustomContextMenu</enum>
-       </property>
-       <property name="editTriggers">
-        <set>QAbstractItemView::NoEditTriggers</set>
-       </property>
-       <property name="selectionMode">
-        <enum>QAbstractItemView::ExtendedSelection</enum>
-       </property>
-       <property name="uniformRowHeights">
-        <bool>true</bool>
-       </property>
-       <property name="animated">
-        <bool>true</bool>
-       </property>
-       <attribute name="headerVisible">
-        <bool>false</bool>
-       </attribute>
-      </widget>
-     </item>
-    </layout>
-   </widget>
-  </widget>
   <widget class="QDockWidget" name="dockWidget_console">
    <property name="floating">
     <bool>false</bool>
@@ -460,32 +391,17 @@
      </property>
      <item>
       <widget class="DesignQGraphicsView" name="graphicsView">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
-       </property>
        <property name="frameShape">
         <enum>QFrame::NoFrame</enum>
        </property>
        <property name="frameShadow">
         <enum>QFrame::Raised</enum>
        </property>
-       <property name="midLineWidth">
-        <number>0</number>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
        <property name="renderHints">
         <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
        </property>
        <property name="dragMode">
-        <enum>QGraphicsView::ScrollHandDrag</enum>
+        <enum>QGraphicsView::RubberBandDrag</enum>
        </property>
        <property name="resizeAnchor">
         <enum>QGraphicsView::AnchorUnderMouse</enum>
@@ -967,6 +883,10 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>graphicsView</tabstop>
+  <tabstop>textBrowser_eventlog</tabstop>
+  <tabstop>listView_console_executions</tabstop>
+  <tabstop>toolButton_executions</tabstop>
   <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>
