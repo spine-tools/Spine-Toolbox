@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+#### Miscellaneous changes
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## 0.8.0
+
+### Added
+
 - New context menu action (Select superclass) for entity class items in the entity tree.
 - Added Tool Specification type (Python, Gams, etc.) icons on Design View.
 - There is now a new filter type, Alternative filter available in Link properties.
@@ -48,15 +65,10 @@ Many parts of the Spine data structure have been redesigned.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')
 - Commit Viewer's UI has undergone some redesigning and can now handle large databases.
 
-### Deprecated
-
 ### Removed
+
 - Project dock widget
 - Dependency on Dagster
-
-### Fixed
-
-### Security
 
 ## [0.7.4]
 
