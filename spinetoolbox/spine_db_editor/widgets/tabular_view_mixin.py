@@ -417,8 +417,8 @@ class TabularViewMixin:
                 else:
                     item_type = header.header_type
                 if header.header_type == "entity":
-                    accepts_item = (
-                        lambda item, db_map: self.accepts_ith_element_item(header.rank, item, db_map)
+                    accepts_item = lambda item, db_map: (
+                        self.accepts_ith_element_item(header.rank, item, db_map)
                         if self.first_current_entity_class["dimension_id_list"]
                         else self.accepts_entity_item
                     )

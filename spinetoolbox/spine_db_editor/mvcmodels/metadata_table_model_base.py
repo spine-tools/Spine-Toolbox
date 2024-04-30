@@ -361,9 +361,9 @@ class MetadataTableModelBase(QAbstractTableModel):
         for db_map, items in db_map_data.items():
             unique_identifiers = {}
             for item in items:
-                unique_identifiers.setdefault(item[self._ITEM_NAME_KEY], {})[
-                    item[self._ITEM_VALUE_KEY]
-                ] = self._ids_from_added_item(item)
+                unique_identifiers.setdefault(item[self._ITEM_NAME_KEY], {})[item[self._ITEM_VALUE_KEY]] = (
+                    self._ids_from_added_item(item)
+                )
             for i, row in enumerate(self._data):
                 if row[Column.DB_MAP] != db_map:
                     continue

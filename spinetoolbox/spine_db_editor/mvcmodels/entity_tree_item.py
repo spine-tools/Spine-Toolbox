@@ -226,9 +226,11 @@ class EntityItem(MultiDBTreeItem):
         element_byname_list = self.element_byname_list
         if element_byname_list:
             element_byname_list = [
-                x
-                if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.byname
-                else ["\u066D"] * len(x)
+                (
+                    x
+                    if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.byname
+                    else ["\u066D"] * len(x)
+                )
                 for x in element_byname_list
             ]
             return DB_ITEM_SEPARATOR.join([DB_ITEM_SEPARATOR.join(x) for x in element_byname_list])
