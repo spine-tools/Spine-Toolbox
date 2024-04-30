@@ -261,9 +261,9 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     """
     if plot_widget is None:
         plot_widget = PlotWidget(
-            legend_axes_position=LegendPosition.BOTTOM
-            if len(data_list) < LEGEND_PLACEMENT_THRESHOLD
-            else LegendPosition.RIGHT
+            legend_axes_position=(
+                LegendPosition.BOTTOM if len(data_list) < LEGEND_PLACEMENT_THRESHOLD else LegendPosition.RIGHT
+            )
         )
         needs_redraw = False
     else:

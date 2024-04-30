@@ -1047,7 +1047,7 @@ def unique_name(prefix, existing):
         prefix = match[1]
         reserved.add(int(match[2]))
 
-    pattern = re.compile(fr"^{prefix} \(([0-9]+)\)$")
+    pattern = re.compile(rf"^{prefix} \(([0-9]+)\)$")
     for name in existing:
         match = pattern.fullmatch(name)
         if match:

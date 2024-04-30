@@ -71,4 +71,4 @@ ignore_errors = true
 
 [tool.black]
 line-length = 120
-exclude = '\.git|ui|resources_icons_rc.py|resources_logos_rc.py'
+exclude = '\.git|ui|resources_icons_rc.py|resources_logos_rc.py|version.py'

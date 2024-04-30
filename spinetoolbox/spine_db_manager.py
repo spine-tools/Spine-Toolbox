@@ -717,7 +717,7 @@ class SpineDBManager(QObject):
         """
         mapped_table = db_map.mapped_table(item_type)
         item = mapped_table.find_item_by_id(id_)
-        if hasattr(item, 'public_item'):
+        if hasattr(item, "public_item"):
             return item.public_item
         else:
             return item
