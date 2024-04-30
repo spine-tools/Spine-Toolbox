@@ -10,8 +10,8 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains the ObjectNameListEditor class."""
-from PySide6.QtCore import Qt, Slot, Signal, QEvent, QCoreApplication
+"""Contains the ElementNameListEditor class."""
+from PySide6.QtCore import QModelIndex, Qt, Slot, Signal, QEvent, QCoreApplication
 from PySide6.QtWidgets import QItemDelegate
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
@@ -22,7 +22,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 class SearchBarDelegate(QItemDelegate):
     """A custom delegate to use with ElementNameListEditor."""
 
-    data_committed = Signal("QModelIndex", "QVariant")
+    data_committed = Signal(QModelIndex, object)
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
@@ -53,8 +53,7 @@ class ElementNameListEditor(ManageItemsDialog):
     """A dialog to select the element name list for an entity using Google-like search bars."""
 
     def __init__(self, parent, index, entity_class_names, entity_byname_lists, current_element_byname_list):
-        """Initializes widget.
-
+        """
         Args:
             parent (SpineDBEditor)
             index (QModelIndex)

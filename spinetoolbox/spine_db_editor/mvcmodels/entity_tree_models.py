@@ -12,6 +12,7 @@
 
 """Models to represent entities in a tree."""
 from .entity_tree_item import EntityTreeRootItem
+from .multi_db_tree_item import MultiDBTreeItem
 from .multi_db_tree_model import MultiDBTreeModel
 
 
@@ -69,3 +70,25 @@ class EntityTreeModel(MultiDBTreeModel):
             return
         self._hide_empty_classes = hide_empty_classes
         self.root_item.refresh_child_map()
+
+
+def group_items_by_db_map(indexes):
+    """Groups items from given tree indexes by db map.
+
+    Args:
+        indexes (Iterable of QModelIndex): index to entity tree model
+
+    Returns:
+        dict: lists of dictionary items keyed by DatabaseMapping
+    """
+    d = {}
+    for index in indexes:
+        model = index.model()
+        if model is None:
+            continue
+        item = model.item_from_index(index)
+        if item.item_type == "root":
+            continue
+        for db_map in item.db_maps:
+            d.setdefault(db_map, []).append(item.db_map_data(db_map))
+    return d

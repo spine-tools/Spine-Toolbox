@@ -15,6 +15,7 @@ import copy
 from PySide6.QtCore import Signal, Slot, QObject, QThread
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
+from spine_engine.utils.helpers import ExecutionDirection
 from .widgets.options_dialog import OptionsDialog
 from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
 
@@ -34,7 +35,7 @@ def _handle_node_execution_ignored(project_items):
 @Slot(object, object)
 def _handle_node_execution_started(item, direction):
     icon = item.get_icon()
-    if direction == "FORWARD":
+    if direction == ExecutionDirection.FORWARD:
         icon.execution_icon.mark_execution_started()
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_started.emit()
@@ -43,7 +44,7 @@ def _handle_node_execution_started(item, direction):
 @Slot(object, object, object, object)
 def _handle_node_execution_finished(item, direction, item_state):
     icon = item.get_icon()
-    if direction == "FORWARD":
+    if direction == ExecutionDirection.FORWARD:
         icon.execution_icon.mark_execution_finished(item_state)
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()

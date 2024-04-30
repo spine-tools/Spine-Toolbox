@@ -673,6 +673,7 @@ class SpineDBManager(QObject):
             db_map (DatabaseMapping): database map
             entity_class_id (int): entity class id
             for_group (bool): if True, return the group object icon instead
+            color (QColor, optional): icon color
 
         Returns:
             QSvgRenderer: requested renderer or None if no entity class was found
@@ -709,12 +710,17 @@ class SpineDBManager(QObject):
         Args:
             db_map (DatabaseMapping)
             item_type (str)
-            id_ (int)
+            id_ (TempId)
 
         Returns:
             PublicItem: the item
         """
-        return db_map.get_item(item_type, id=id_)
+        mapped_table = db_map.mapped_table(item_type)
+        item = mapped_table.find_item_by_id(id_)
+        if hasattr(item, 'public_item'):
+            return item.public_item
+        else:
+            return item
 
     def get_field(self, db_map, item_type, id_, field):
         return self.get_item(db_map, item_type, id_).get(field)
@@ -968,8 +974,6 @@ class SpineDBManager(QObject):
                 continue
             identifier = self.get_command_identifier()
             for item_type, items in data_for_import:
-                if item_type in ("object_class", "relationship_class", "object", "relationship"):
-                    continue
                 if isinstance(items, tuple):
                     items, errors = items
                     db_map_error_log.setdefault(db_map, []).extend(errors)

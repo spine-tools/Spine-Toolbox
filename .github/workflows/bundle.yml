@@ -1,6 +1,8 @@
 name: PyInstaller Bundle
 
-on: workflow_dispatch
+on:
+  schedule:
+    - cron: "15 9 * * 2"
 
 jobs:
   bundle:
@@ -29,7 +31,7 @@ jobs:
         run: |
           mkdir embedded-python
           cd embedded-python
-          curl -o python.zip https://www.python.org/ftp/python/3.11.8/python-3.11.8-embed-amd64.zip
+          curl -o python.zip https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip
           tar xf python.zip
           del python.zip
       - name: Build bundle

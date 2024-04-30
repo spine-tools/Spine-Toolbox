@@ -221,7 +221,7 @@ class ProjectItem(LogMixin, MetaObject):
         """Performs item dependent actions after the execution item has finished successfully.
 
         Args:
-            execution_direction (str): "FORWARD" or "BACKWARD"
+            execution_direction (ExecutionDirection): ExecutionDirection.FORWARD or ExecutionDirection.BACKWARD
             engine_state: engine state after item's execution
         """
 

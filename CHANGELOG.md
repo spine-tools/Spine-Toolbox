@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+#### Miscellaneous changes
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## 0.8.0
+
+### Added
+
 - New context menu action (Select superclass) for entity class items in the entity tree.
 - Added Tool Specification type (Python, Gams, etc.) icons on Design View.
 - There is now a new filter type, Alternative filter available in Link properties.
@@ -48,14 +65,23 @@ Many parts of the Spine data structure have been redesigned.
 - Headless mode now supports remote execution (see 'python -m spinetoolbox --help')
 - Commit Viewer's UI has undergone some redesigning and can now handle large databases.
 
-### Deprecated
-
 ### Removed
+
 - Project dock widget
+- Dependency on Dagster
 
-### Fixed
+## [0.7.4]
 
-### Security
+### Changed
+
+- Microsoft build tools are not needed anymore when installing Toolbox requirements on Python 3.10 and up.
+
+## [0.7.3]
+
+### Added
+
+- On Toolbox startup, a link appears in Event log that opens Upgrade notification window
+  offering information about the upcoming 0.8 update.
 
 ## [0.7.2] - 2023-12-04
 
@@ -77,7 +103,6 @@ Many parts of the Spine data structure have been redesigned.
   the alternatives in the Scenario Tree
 - Fixed a bug with time series plots
 - Fixed issues with Pivot table
-
 
 ## [0.7.0] - 2023-08-25
 
