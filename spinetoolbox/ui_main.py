@@ -594,7 +594,6 @@ class ToolboxUI(QMainWindow):
             logger=self,
         )
         self.specification_model.connect_to_project(self._project)
-        self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
         self._connect_project_signals()
         self.update_window_title()
@@ -603,6 +602,7 @@ class ToolboxUI(QMainWindow):
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
+        self._enable_project_actions()
         self._plugin_manager.reload_plugins_with_local_data()
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()

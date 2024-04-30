@@ -11,6 +11,8 @@
 ######################################################################################################################
 
 """Unit tests for ToolboxUI class."""
+import json
+import pathlib
 from pathlib import Path
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
@@ -738,6 +740,21 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIn("mainWindow/windowMaximized", saved_dict)
         self.assertIn("mainWindow/n_screens", saved_dict)
         self.assertIn("appSettings/toolbarIconOrdering", saved_dict)
+
+    def test_enable_execute_all_project_setting_is_respected(self):
+        with TemporaryDirectory() as temp_dir:
+            with mock.patch.object(self.toolbox, "_qsettings"):
+                self.toolbox.create_project(temp_dir)
+            self.toolbox.close_project(ask_confirmation=False)
+            project_json = pathlib.Path(temp_dir) / ".spinetoolbox" / "project.json"
+            self.assertTrue(project_json.is_file())
+            with open(project_json) as project_file:
+                project_data = json.load(project_file)
+            project_data["project"]["settings"]["enable_execute_all"] = False
+            with open(project_json, "w") as project_file:
+                json.dump(project_data, project_file)
+            self.toolbox.open_project(temp_dir)
+            self.assertFalse(self.toolbox.ui.actionExecute_project.isEnabled())
 
     @staticmethod
     def find_click_point_of_pi(pi, gv):
