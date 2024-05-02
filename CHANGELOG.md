@@ -3,6 +3,54 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.7.4]
+
+### Changed
+
+- Microsoft build tools are not needed anymore when installing Toolbox requirements on Python 3.10 and up.
+
+## [0.7.3]
+
+### Added
+
+- On Toolbox startup, a link appears in Event log that opens Upgrade notification window
+  offering information about the upcoming 0.8 update.
+
+## [0.7.2]
+
+### Added
+
+- Data Connection items now support schemas in database references
+- Importer Specification Editor now supports database schemas
+
+## [0.7.1]
+
+### Added
+
+- Allow choosing of highlight color for items found in entity graph
+
+### Fixed
+
+- Fixed issues when remote databases were used as references in Data Connections
+- Fixed a bug where the order of scenario alternatives would be messed up when copy-pasting
+  the alternatives in the Scenario Tree
+- Fixed a bug with time series plots
+- Fixed issues with Pivot table
+
 ## [0.7.0] - 2023-08-25
 
 ### Added

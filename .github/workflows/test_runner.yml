@@ -43,13 +43,13 @@ jobs:
         PYTHONUTF8: 1
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install -r requirements.txt
     - name: List packages
       run: 
-        pip list
+        python -m pip list
     - name: Install python3 kernelspecs
       run: |
-        pip install ipykernel
+        python -m pip install ipykernel
         python -m ipykernel install --user
     - name: Run tests
       run: |
@@ -72,6 +72,8 @@ jobs:
     needs: unit-tests
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
@@ -86,10 +88,10 @@ jobs:
         PYTHONUTF8: 1
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install -r requirements.txt
     - name: List packages
       run: 
-        pip list
+        python -m pip list
     - name: Run tests
       run:
         python -m unittest discover --pattern execution_test.py --verbose
