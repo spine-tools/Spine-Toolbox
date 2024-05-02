@@ -111,6 +111,7 @@ from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
 from .kernel_fetcher import KernelFetcher
+from .widgets.upgrade_notification import UpgradeNotificationDialog
 
 
 class ToolboxUI(QMainWindow):
@@ -171,7 +172,7 @@ class ToolboxUI(QMainWindow):
         self._selected_item_names = set()
         self.execution_in_progress = False
         self.sync_item_selection_with_scene = True
-        self._anchor_callbacks = {}
+        self._anchor_callbacks = {"show upgrade notification dialog": self._show_upgrade_notification_dialog}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
@@ -392,7 +393,7 @@ class ToolboxUI(QMainWindow):
         self._item_specification_factories = load_item_specification_factories("spine_items")
 
     def set_work_directory(self, new_work_dir=None):
-        """Creates a work directory if it does not exist or changes the current work directory to given.
+        """Creates a work directory if it does not exist or changes the current work directory to given one.
 
         Args:
             new_work_dir (str, optional): If given, changes the work directory to given
@@ -458,6 +459,7 @@ class ToolboxUI(QMainWindow):
         welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
             getting_started_anchor
         )
+        self._notify_about_upgrades_at_startup()
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
             if (
@@ -2558,3 +2560,22 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
+
+    def _notify_about_upgrades_at_startup(self):
+        """Shows upgrade information at application start-up."""
+        upgrade_notification_anchor = (
+            "<a style='color:#99CCFF;' title='Open notification dialog' "
+            + f"href='show upgrade notification dialog'>Click here</a>"
+        )
+        upgrade_msg = f"{upgrade_notification_anchor} to learn more about the upcoming <b>0.8</b> upgrade"
+        self.msg_warning.emit(upgrade_msg)
+        key = "appSettings/showUpgradeNotification"
+        show_notification_dialog = self._qsettings.value(key, defaultValue=True, type=bool)
+        if show_notification_dialog:
+            self._show_upgrade_notification_dialog()
+        self._qsettings.setValue(key, False)
+
+    def _show_upgrade_notification_dialog(self):
+        """Shows the Upgrade notification dialog."""
+        dialog = UpgradeNotificationDialog(self)
+        dialog.open()
