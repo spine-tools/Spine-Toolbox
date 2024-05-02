@@ -13,12 +13,13 @@
 """Unit tests for the helpers module."""
 import json
 import re
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QLineEdit
+from PySide6.QtWidgets import QApplication, QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
@@ -231,11 +232,19 @@ class TestHelpers(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             executable = Path(temp_dir, "julia.exe")
             executable.touch()
-            with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
-                line_edit = QLineEdit()
-                select_julia_executable(None, line_edit)
-                self.assertEqual(line_edit.text(), str(executable))
-                line_edit.deleteLater()
+            line_edit = QLineEdit()
+            parent_widget = QWidget()
+            if sys.platform == "win32":
+                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                    mock_native_dialog.return_value = [str(executable)]
+                    select_julia_executable(parent_widget, line_edit)
+                    mock_native_dialog.assert_called()
+            else:
+                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                    select_julia_executable(None, line_edit)
+            self.assertEqual(line_edit.text(), str(executable))
+            line_edit.deleteLater()
+            parent_widget.deleteLater()
 
     def test_select_julia_project(self):
         with TemporaryDirectory() as temp_dir:
@@ -251,11 +260,19 @@ class TestHelpers(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             executable = Path(temp_dir, "python.exe")
             executable.touch()
-            with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
-                line_edit = QLineEdit()
-                select_python_interpreter(None, line_edit)
-                self.assertEqual(line_edit.text(), str(executable))
-                line_edit.deleteLater()
+            line_edit = QLineEdit()
+            parent_widget = QWidget()
+            if sys.platform == "win32":
+                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                    mock_native_dialog.return_value = [str(executable)]
+                    select_python_interpreter(parent_widget, line_edit)
+                    mock_native_dialog.assert_called()
+            else:
+                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                    select_python_interpreter(None, line_edit)
+            self.assertEqual(line_edit.text(), str(executable))
+            line_edit.deleteLater()
+            parent_widget.deleteLater()
 
     def test_file_is_valid(self):
         with TemporaryDirectory() as temp_dir:
