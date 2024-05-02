@@ -85,7 +85,7 @@ class TestHelpers(unittest.TestCase):
     def test_interpret_icon_id(self):
         icon_code, color_code = interpret_icon_id(None)
         self.assertEqual(icon_code, 0xF1B2)
-        self.assertEqual(color_code, 0)
+        self.assertEqual(color_code, 0xFF000000)
         icon_code, color_code = interpret_icon_id(3 + (7 << 16))
         self.assertEqual(icon_code, 3)
         self.assertEqual(color_code, 7)

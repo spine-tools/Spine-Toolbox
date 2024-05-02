@@ -15,7 +15,7 @@ from PySide6.QtCore import Qt, QPointF, QRectF, QBuffer
 from PySide6.QtWidgets import QGraphicsScene
 from PySide6.QtGui import QIcon, QFont, QTextOption, QPainter
 from PySide6.QtSvg import QSvgGenerator, QSvgRenderer
-from .helpers import TransparentIconEngine, interpret_icon_id
+from .helpers import TransparentIconEngine, interpret_icon_id, default_icon_id
 
 
 def _align_text_in_item(item):
@@ -65,18 +65,29 @@ class SpineDBIconManager:
     def __init__(self):
         self.display_icons = {}  # A mapping from object_class name to display icon code
         self._class_renderers = {}  # A mapping from class name to associated renderer
-        self._multi_class_renderers = {}  # A mapping from dimension name list to associated renderer
+        self._multi_class_renderers = (
+            {}
+        )  # A mapping from tuple(class name, dimension name list, id) to associated renderer
         self._group_renderers = {}  # A mapping from class name to associated group renderer
         self.icon_renderers = {}
 
     def update_icon_caches(self, classes):
         """Called after adding or updating entity classes.
         Stores display_icons and clears obsolete entries
-        from the relationship class and entity group renderer caches."""
+        from the relationship class and entity group renderer caches.
+
+        Args:
+            classes (list): List of entity classes that were updated.
+        """
         for class_ in classes:
             self.display_icons[class_["name"]] = class_["display_icon"]
-        class_names = [x["name"] for x in classes]
-        dirty_keys = [k for k in self._multi_class_renderers if any(x in class_names for x in k)]
+        class_names = {x["name"] for x in classes}
+        class_dimension_name_lists = {x["dimension_name_list"] for x in classes}
+        # Three cases where deletions are made: class is deleted, renamed, or its element(s) renamed
+        dirty_keys = {
+            k for k in self._multi_class_renderers if k[0] in class_names or k[1] in class_dimension_name_lists
+        }
+        dirty_keys.update(k for k in self._multi_class_renderers if any(x in k[1] for x in class_names))
         for k in dirty_keys:
             del self._multi_class_renderers[k]
         for name in class_names:
@@ -107,12 +118,21 @@ class SpineDBIconManager:
         icon_code, color_code = interpret_icon_id(display_icon)
         self._class_renderers[class_name] = self.icon_renderer(chr(icon_code), color_code)
 
-    def _create_multi_class_renderer(self, dimension_name_list):
-        if not any(dimension_name_list):
-            self._multi_class_renderers[dimension_name_list] = self.icon_renderer("\uf1b3", 0)
-            return
+    def _create_multi_class_renderer(self, name, dimension_name_list, id_):
         font = QFont("Font Awesome 5 Free Solid")
         scene = QGraphicsScene()
+        display_icon = self.display_icons.get(name, None)
+        if display_icon and display_icon != default_icon_id():  # If the entity class has an icon set, use that one.
+            icon_code, color_code = interpret_icon_id(display_icon)
+            self._multi_class_renderers[
+                (
+                    name,
+                    dimension_name_list,
+                    id_,
+                )
+            ] = self.icon_renderer(chr(icon_code), color_code)
+            return
+        # If no icon is set, create a composite from the icons of the class elements.
         x = 0
         for j, dimension_name in enumerate(dimension_name_list):
             display_icon = self.display_icons.get(dimension_name, -1)
@@ -128,20 +148,73 @@ class SpineDBIconManager:
             text_item.setPos(x, y)
             x += 0.875 * 0.5 * text_item.boundingRect().width()
         _center_scene(scene)
-        self._multi_class_renderers[dimension_name_list] = _SceneSvgRenderer(scene)
+        self._multi_class_renderers[
+            (
+                name,
+                dimension_name_list,
+                id_,
+            )
+        ] = _SceneSvgRenderer(scene)
+
+    def update_multi_classes(self, name, dimension_name_list, id_):
+        """Updates the multi class renderers when their members change"""
+        if name not in {x[0] for x in self._multi_class_renderers}:
+            if dimension_name_list in {x[1] for x in self._multi_class_renderers} and id_ in {
+                x[2] for x in self._multi_class_renderers
+            }:  # In this case the class has been renamed and the renderer will be updated accordingly.
+                new_key = None
+                for key, value in self._multi_class_renderers.items():
+                    if key[1] == dimension_name_list:
+                        new_key = (
+                            name,
+                            key[1],
+                            id_,
+                        )
+                        break
+                if new_key:
+                    del self._multi_class_renderers[key]
+                    self._multi_class_renderers[new_key] = value
+            else:
+                self.multi_class_renderer(name, dimension_name_list, id_)
+        new_key = None
+        for key, value in self._multi_class_renderers.items():
+            if key[0] == name:  # Updates the names of the dependency classes if they have changed
+                new_key = (
+                    name,
+                    dimension_name_list,
+                    id_,
+                )
+                break
+        if new_key:
+            del self._multi_class_renderers[key]
+            self._multi_class_renderers[new_key] = value
 
     def class_renderer(self, entity_class):
-        name, dimension_name_list = entity_class["name"], entity_class["dimension_name_list"]
+        name, dimension_name_list, id_ = entity_class["name"], entity_class["dimension_name_list"], entity_class["id"]
         if not dimension_name_list:
             if name not in self._class_renderers:
                 self._create_class_renderer(name)
             return self._class_renderers[name]
-        return self.multi_class_renderer(dimension_name_list)
+        self.update_multi_classes(name, dimension_name_list, id_)
+        return self._multi_class_renderers[
+            (
+                name,
+                dimension_name_list,
+                id_,
+            )
+        ]
 
-    def multi_class_renderer(self, dimension_name_list):
-        if dimension_name_list not in self._multi_class_renderers:
-            self._create_multi_class_renderer(dimension_name_list)
-        return self._multi_class_renderers[dimension_name_list]
+    def multi_class_renderer(self, name, dimension_name_list, id_):
+        """Creates a new multi-class renderer if one doesn't exist already"""
+        if name not in self._multi_class_renderers:
+            self._create_multi_class_renderer(name, dimension_name_list, id_)
+        return self._multi_class_renderers[
+            (
+                name,
+                dimension_name_list,
+                id_,
+            )
+        ]
 
     def _create_group_renderer(self, class_name):
         display_icon = self.display_icons.get(class_name, -1)
