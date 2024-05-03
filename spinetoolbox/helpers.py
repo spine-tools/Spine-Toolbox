@@ -774,24 +774,48 @@ class ChildCyclingKeyPressFilter(QObject):
         return QObject.eventFilter(self, obj, event)  # Pass event further
 
 
+def select_work_directory(parent, line_edit):
+    """Shows file browser and inserts selected directory path to given line_edit.
+
+    Args:
+        parent (QWidget, optional): Parent widget for the file dialog and message boxes
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+    """
+    current_path = get_current_path(line_edit)
+    initial_path = current_path if current_path is not None else home_dir()
+    # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+    answer = QFileDialog.getExistingDirectory(parent, "Select Work Directory", initial_path)
+    if answer == "":  # Cancel button clicked
+        return
+    selected_path = os.path.abspath(answer)
+    line_edit.setText(selected_path)
+
+
 def select_gams_executable(parent, line_edit):
     """Opens file browser where user can select a Gams executable (i.e. gams.exe on Windows).
+    File browser initial dir priority:
+        1. current path in line edit (first text, then placeholder text)
+        2. Gams path from registry
+        3. home_dir()
 
     Args:
         parent (QWidget, optional): Parent widget for the file dialog and message boxes
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     title = "Select GAMS Program"
-    initial_dir = find_gams_directory()
+    gams_path_from_registry = find_gams_directory()
+    current_path = get_current_path(line_edit)
     if sys.platform == "win32":
-        current_path = get_current_path(line_edit)
         answer = get_path_from_native_open_file_dialog(
-            parent, current_path, title + " (e.g. gams.exe on Windows)", initial_dir
+            parent, current_path, title + " (e.g. gams.exe on Windows)", gams_path_from_registry
         )
     else:
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        initial_dir = current_path
         if not initial_dir:
-            initial_dir = home_dir()
+            initial_dir = gams_path_from_registry
+            if not initial_dir:
+                initial_dir = home_dir()
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_dir)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
@@ -813,12 +837,13 @@ def select_julia_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     title = "Select Julia Executable"
+    current_path = get_current_path(line_edit)
     if sys.platform == "win32":
-        current_path = get_current_path(line_edit)
         answer = get_path_from_native_open_file_dialog(parent, current_path, title + " (e.g. julia.exe on Windows)")
     else:
+        initial_path = current_path if current_path is not None else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(parent, title, home_dir())
+        answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return
     # Check that the selected file starts with "julia"
@@ -831,55 +856,6 @@ def select_julia_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def get_current_path(le):
-    """Returns the text in the given line edit. If no text, returns the
-    placeholder text if it is a valid path. If it's not a valid path,
-    Returns None.
-    """
-    current_path = le.text().strip()
-    if not current_path:
-        current_path = le.placeholderText().strip()
-        if not os.path.isfile(current_path):
-            return None
-    return os.path.abspath(current_path)
-
-
-def get_path_from_native_open_file_dialog(parent, current_path, title, initial_path=None):
-    """Opens the native open file dialog on Windows.
-
-    Args:
-        parent (QWidget, optional): Parent widget for the file dialog
-        current_path (str): If not None, the open file dialog initial dir is set according to the 'File' keyword.
-            If None, initial dir set according to the 'InitialDir' keyword.
-        title (str): Dialog title
-        initial_path (str): Initial dir if something else than home_dir()
-
-    Returns:
-        tuple: [0] is the selected path, [1] is the calling function, [2] is the error message
-    """
-    init_path = initial_path if initial_path is not None else home_dir()
-    hwnd = win32gui.FindWindow(None, parent.windowTitle())
-    pyhandle = pywintypes.HANDLE(hwnd)
-    try:
-        # NOTE: Paths must use Windows path separators (\) !
-        r = win32gui.GetOpenFileNameW(
-            hwndOwner=pyhandle,
-            File=current_path,
-            InitialDir=init_path,
-            Flags=win32con.OFN_EXPLORER
-            | win32con.OFN_NOCHANGEDIR
-            | win32con.OFN_PATHMUSTEXIST
-            | win32con.OFN_FILEMUSTEXIST
-            | win32con.OFN_NOVALIDATE
-            | win32con.OFN_DONTADDTORECENT
-            | win32con.OFN_HIDEREADONLY,
-            Title=title,
-        )
-    except BaseException:  # GetOpenFileNameW throws pywinerror.error or similar when the user cancels the operation
-        r = [""]
-    return r
-
-
 def select_julia_project(parent, line_edit):
     """Shows directory browser and inserts selected julia project dir to given line_edit.
 
@@ -887,7 +863,9 @@ def select_julia_project(parent, line_edit):
         parent (QWidget, optional): Parent of QFileDialog
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
-    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", home_dir())
+    current_path = get_current_path(line_edit)
+    initial_path = current_path if current_path is not None else home_dir()
+    answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", initial_path)
     if not answer:  # Canceled (american-english), cancelled (british-english)
         return
     line_edit.setText(answer)
@@ -929,14 +907,15 @@ def select_conda_executable(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     title = "Select Conda Executable"
+    current_path = get_current_path(line_edit)
     if sys.platform == "win32":
-        current_path = get_current_path(line_edit)
         answer = get_path_from_native_open_file_dialog(
             parent, current_path, title + " (e.g. conda.exe or conda.bat on Windows)"
         )
     else:
+        initial_path = current_path if current_path is not None else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(parent, title, home_dir())
+        answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'conda'
@@ -947,6 +926,70 @@ def select_conda_executable(parent, line_edit):
         QMessageBox.warning(parent, "Invalid Conda selected", msg)
         return
     line_edit.setText(answer[0])
+
+
+def select_certificate_directory(parent, line_edit):
+    """Shows file browser and inserts selected certificate directory to given line edit.
+
+    Args:
+        parent (QWidget, optional): Parent of QFileDialog
+        line_edit (QLineEdit): Line edit where the selected dir path will be inserted
+    """
+    current_path = get_current_path(line_edit)
+    initial_path = current_path if current_path is not None else home_dir()
+    answer = QFileDialog.getExistingDirectory(parent, "Select certificates directory", initial_path)
+    if not answer:
+        return
+    line_edit.setText(answer)
+
+
+def get_current_path(le):
+    """Returns the text in the given line edit. If no text, returns the
+    placeholder text if it is a valid path. If it's not a valid path,
+    Returns None.
+    """
+    current_path = le.text().strip()
+    if not current_path:
+        current_path = le.placeholderText().strip()
+        if not os.path.exists(current_path):
+            return None
+    return os.path.abspath(current_path)
+
+
+def get_path_from_native_open_file_dialog(parent, current_path, title, initial_path=None):
+    """Opens the native open file dialog on Windows.
+
+    Args:
+        parent (QWidget, optional): Parent widget for the file dialog
+        current_path (str): If not None, the open file dialog initial dir is set according to the 'File' keyword.
+            If None, initial dir set according to the 'InitialDir' keyword.
+        title (str): Dialog title
+        initial_path (str): Initial dir if something else than home_dir()
+
+    Returns:
+        tuple: [0] is the selected path, [1] is the calling function, [2] is the error message
+    """
+    init_path = initial_path if initial_path is not None else home_dir()
+    hwnd = win32gui.FindWindow(None, parent.windowTitle())
+    pyhandle = pywintypes.HANDLE(hwnd)
+    try:
+        # NOTE: Paths must use Windows path separators (\) !
+        r = win32gui.GetOpenFileNameW(
+            hwndOwner=pyhandle,
+            File=current_path,
+            InitialDir=init_path,
+            Flags=win32con.OFN_EXPLORER
+            | win32con.OFN_NOCHANGEDIR
+            | win32con.OFN_PATHMUSTEXIST
+            | win32con.OFN_FILEMUSTEXIST
+            | win32con.OFN_NOVALIDATE
+            | win32con.OFN_DONTADDTORECENT
+            | win32con.OFN_HIDEREADONLY,
+            Title=title,
+        )
+    except BaseException:  # GetOpenFileNameW throws pywinerror.error or similar when the user cancels the operation
+        r = [""]
+    return r
 
 
 def is_valid_conda_executable(p):
@@ -961,19 +1004,6 @@ def is_valid_conda_executable(p):
     if not filename.lower().startswith("conda"):
         return False
     return True
-
-
-def select_certificate_directory(parent, line_edit):
-    """Shows file browser and inserts selected certificate directory to given line edit.
-
-    Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected dir path will be inserted
-    """
-    answer = QFileDialog.getExistingDirectory(parent, "Select certificates directory", home_dir())
-    if not answer:
-        return
-    line_edit.setText(answer)
 
 
 def file_is_valid(parent, file_path, msgbox_title, extra_check=None):

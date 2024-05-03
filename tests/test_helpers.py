@@ -291,12 +291,12 @@ class TestHelpers(unittest.TestCase):
                     # initial dir should be according to the text in line edit
                     self.assertEqual(mock_native_dialog.call_args[1]["File"], str(executable))
                     self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
-                    with patch("spinetoolbox.helpers.os.path.isfile") as mock_isfile, patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath:
-                        mock_isfile.return_value = True
+                    with patch("spinetoolbox.helpers.os.path.exists") as mock_exists, patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath:
+                        mock_exists.return_value = True
                         mock_abspath.return_value = python_in_path
                         line_edit.clear()
                         select_python_interpreter(parent_widget, line_edit)
-                        mock_isfile.assert_called()
+                        mock_exists.assert_called()
                         mock_abspath.assert_called()
                         # initial dir should be according to the placeholder text in line edit
                         self.assertEqual(mock_native_dialog.call_args[1]["File"], python_in_path)
@@ -313,12 +313,12 @@ class TestHelpers(unittest.TestCase):
                     select_python_interpreter(None, line_edit)
                     # initial dir should be according to the text in line edit
                     mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", str(executable))
-                    with patch("spinetoolbox.helpers.os.path.isfile") as mock_isfile, patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath:
-                        mock_isfile.return_value = True
+                    with patch("spinetoolbox.helpers.os.path.exists") as mock_exists, patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath:
+                        mock_exists.return_value = True
                         mock_abspath.return_value = python_in_path
                         line_edit.clear()
                         select_python_interpreter(None, line_edit)
-                        mock_isfile.assert_called()
+                        mock_exists.assert_called()
                         mock_abspath.assert_called()
                         # initial dir should be according to the placeholder text in line edit
                         mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", python_in_path)

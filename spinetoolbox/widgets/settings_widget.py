@@ -34,6 +34,7 @@ from ..widgets.kernel_editor import (
     MiniJuliaKernelEditor,
 )
 from ..helpers import (
+    select_work_directory,
     select_gams_executable,
     select_python_interpreter,
     select_julia_executable,
@@ -360,7 +361,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.show_julia_kernel_context_menu_on_combobox_list
         )
         self.ui.lineEdit_conda_path.textChanged.connect(self._refresh_python_kernels)
-        self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
+        self.ui.toolButton_browse_work.clicked.connect(self.browse_work_directory_button_clicked)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
         self.ui.radioButton_bg_tree.clicked.connect(self.update_scene_bg)
@@ -466,6 +467,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @property
     def db_mngr(self):
         return self._toolbox.db_mngr
+
+    @Slot(bool)
+    def browse_work_directory_button_clicked(self, _=False):
+        """Calls static method that shows a directory browser for selecting a Work directory."""
+        select_work_directory(self, self.ui.lineEdit_work_dir)
 
     @Slot(bool)
     def browse_gams_button_clicked(self, _=False):
@@ -625,16 +631,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if not res:
             Notification(self, f"Opening resource directory '{resource_dir}' failed").show()
             return
-
-    @Slot(bool)
-    def browse_work_path(self, _=False):
-        """Open file browser where user can select the path to wanted work directory."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, "Select Work Directory", home_dir())
-        if answer == "":  # Cancel button clicked
-            return
-        selected_path = os.path.abspath(answer)
-        self.ui.lineEdit_work_dir.setText(selected_path)
 
     @Slot(bool)
     def show_color_dialog(self, _=False):
