@@ -13,12 +13,13 @@
 """Unit tests for the helpers module."""
 import json
 import re
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QLineEdit
+from PySide6.QtWidgets import QApplication, QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
@@ -50,6 +51,7 @@ from spinetoolbox.helpers import (
     load_local_project_data,
     merge_dicts,
     HTMLTagFilter,
+    home_dir,
 )
 
 
@@ -231,11 +233,19 @@ class TestHelpers(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             executable = Path(temp_dir, "julia.exe")
             executable.touch()
-            with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
-                line_edit = QLineEdit()
-                select_julia_executable(None, line_edit)
-                self.assertEqual(line_edit.text(), str(executable))
-                line_edit.deleteLater()
+            line_edit = QLineEdit()
+            parent_widget = QWidget()
+            if sys.platform == "win32":
+                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                    mock_native_dialog.return_value = [str(executable)]
+                    select_julia_executable(parent_widget, line_edit)
+                    mock_native_dialog.assert_called()
+            else:
+                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                    select_julia_executable(None, line_edit)
+            self.assertEqual(line_edit.text(), str(executable))
+            line_edit.deleteLater()
+            parent_widget.deleteLater()
 
     def test_select_julia_project(self):
         with TemporaryDirectory() as temp_dir:
@@ -251,11 +261,78 @@ class TestHelpers(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             executable = Path(temp_dir, "python.exe")
             executable.touch()
-            with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
-                line_edit = QLineEdit()
-                select_python_interpreter(None, line_edit)
-                self.assertEqual(line_edit.text(), str(executable))
-                line_edit.deleteLater()
+            line_edit = QLineEdit()
+            parent_widget = QWidget()
+            if sys.platform == "win32":
+                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                    mock_native_dialog.return_value = [str(executable)]
+                    select_python_interpreter(parent_widget, line_edit)
+                    mock_native_dialog.assert_called()
+            else:
+                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                    select_python_interpreter(None, line_edit)
+            self.assertEqual(line_edit.text(), str(executable))
+            line_edit.deleteLater()
+            parent_widget.deleteLater()
+
+    def test_initial_dir_for_python_open_dialogs(self):
+        with TemporaryDirectory() as temp_dir:
+            executable = Path(temp_dir, "python.exe")
+            executable.touch()
+            line_edit = QLineEdit()
+            line_edit.setText(str(executable))
+            python_in_path = "some/legit/path/python.exe"
+            line_edit.setPlaceholderText(python_in_path)
+            parent_widget = QWidget()
+            if sys.platform == "win32":
+                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                    mock_native_dialog.return_value = [str(executable)]
+                    select_python_interpreter(parent_widget, line_edit)
+                    # initial dir should be according to the text in line edit
+                    self.assertEqual(mock_native_dialog.call_args[1]["File"], str(executable))
+                    self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
+                    with patch("spinetoolbox.helpers.os.path.exists") as mock_exists, patch(
+                        "spinetoolbox.helpers.os.path.abspath"
+                    ) as mock_abspath:
+                        mock_exists.return_value = True
+                        mock_abspath.return_value = python_in_path
+                        line_edit.clear()
+                        select_python_interpreter(parent_widget, line_edit)
+                        mock_exists.assert_called()
+                        mock_abspath.assert_called()
+                        # initial dir should be according to the placeholder text in line edit
+                        self.assertEqual(mock_native_dialog.call_args[1]["File"], python_in_path)
+                        self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
+                    line_edit.clear()
+                    line_edit.setPlaceholderText("")
+                    select_python_interpreter(parent_widget, line_edit)
+                    # initial dir should be the home dir
+                    self.assertEqual(mock_native_dialog.call_args[1]["File"], None)
+                    self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
+            else:  # Linux et al.
+                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName") as mock_open_file_dialog:
+                    mock_open_file_dialog.return_value = [str(executable)]
+                    select_python_interpreter(None, line_edit)
+                    # initial dir should be according to the text in line edit
+                    mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", str(executable))
+                    with patch("spinetoolbox.helpers.os.path.exists") as mock_exists, patch(
+                        "spinetoolbox.helpers.os.path.abspath"
+                    ) as mock_abspath:
+                        mock_exists.return_value = True
+                        mock_abspath.return_value = python_in_path
+                        line_edit.clear()
+                        select_python_interpreter(None, line_edit)
+                        mock_exists.assert_called()
+                        mock_abspath.assert_called()
+                        # initial dir should be according to the placeholder text in line edit
+                        mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", python_in_path)
+                    line_edit.clear()
+                    line_edit.setPlaceholderText("")
+                    select_python_interpreter(None, line_edit)
+                    # initial dir should be the home dir
+                    mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", home_dir())
+            line_edit.deleteLater()
+            parent_widget.deleteLater()
 
     def test_file_is_valid(self):
         with TemporaryDirectory() as temp_dir:
