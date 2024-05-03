@@ -12,7 +12,7 @@
 
 """Classes for custom QDialogs to add, edit and remove database items."""
 from functools import reduce, cached_property
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout, QMenu, QApplication
 from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QAction
 from ..mvcmodels.entity_tree_item import EntityClassItem
@@ -275,3 +275,19 @@ class ShowIconColorEditorMixin:
         editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
         editor.reset_pressed.connect(self.reset_data)
         editor.show()
+
+    def contextMenuEvent(self, event):
+        """Shows the context menu for the display icon."""
+        pos = self.table_view.viewport().mapFromGlobal(event.globalPos())
+        index = self.table_view.indexAt(pos)
+        if not index.isValid():
+            return
+        if index.column() != 2:
+            super().contextMenuEvent(event)
+            return
+        menu = QMenu(self)
+        menu.addAction("Open display icon editor", lambda: self.show_icon_color_editor(index))
+        data = self.model.data(index)
+        menu.addAction("Copy display icon id", lambda: QApplication.clipboard().setText(str(data)))
+        menu.exec(event.globalPos())
+        super().contextMenuEvent(event)
