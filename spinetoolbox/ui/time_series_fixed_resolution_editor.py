@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'time_series_fixed_resolution_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -117,7 +117,7 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
 
         self.horizontalLayout_2.addWidget(self.repeat_check_box)
 
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_3)
 

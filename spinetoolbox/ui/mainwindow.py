@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -219,7 +219,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.dockWidget_eventlog = QDockWidget(MainWindow)
         self.dockWidget_eventlog.setObjectName(u"dockWidget_eventlog")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
@@ -228,7 +228,7 @@ class Ui_MainWindow(object):
         self.dockWidget_eventlog.setFeatures(QDockWidget.DockWidgetClosable|QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.dockWidgetContents.sizePolicy().hasHeightForWidth())
@@ -263,7 +263,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.addLayout(self.verticalLayout_7)
 
         self.dockWidget_eventlog.setWidget(self.dockWidgetContents)
-        MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_eventlog)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget_eventlog)
         self.dockWidget_item = QDockWidget(MainWindow)
         self.dockWidget_item.setObjectName(u"dockWidget_item")
         self.dockWidget_item.setMinimumSize(QSize(356, 293))
@@ -293,7 +293,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.tabWidget_item_properties)
 
         self.dockWidget_item.setWidget(self.dockWidgetContents_3)
-        MainWindow.addDockWidget(Qt.RightDockWidgetArea, self.dockWidget_item)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_item)
         self.dockWidget_console = QDockWidget(MainWindow)
         self.dockWidget_console.setObjectName(u"dockWidget_console")
         self.dockWidget_console.setFloating(False)
@@ -325,7 +325,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.addWidget(self.splitter_console)
 
         self.dockWidget_console.setWidget(self.dockWidgetContents_console)
-        MainWindow.addDockWidget(Qt.BottomDockWidgetArea, self.dockWidget_console)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget_console)
         self.dockWidget_design_view = QDockWidget(MainWindow)
         self.dockWidget_design_view.setObjectName(u"dockWidget_design_view")
         self.dockWidgetContents_5 = QWidget()
@@ -347,7 +347,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.addWidget(self.graphicsView)
 
         self.dockWidget_design_view.setWidget(self.dockWidgetContents_5)
-        MainWindow.addDockWidget(Qt.TopDockWidgetArea, self.dockWidget_design_view)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget_design_view)
         QWidget.setTabOrder(self.graphicsView, self.textBrowser_eventlog)
         QWidget.setTabOrder(self.textBrowser_eventlog, self.listView_console_executions)
         QWidget.setTabOrder(self.listView_console_executions, self.toolButton_executions)
