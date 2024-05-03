@@ -47,6 +47,10 @@ representation of the class can be modified:
 .. image:: img/entity_icon_editor.png
    :align: center
 
+This editor can also be opened by right clicking on the corresponding cell and selecting *Open display icon editor*.
+From the right click context menu, the display icon id can also be copied. This might be useful if there is a need
+to have multiple classes use the same icon, since the value can just be pasted into the cells.
+
 The boolean value of **active by default** will determine whether the entities created under the created class
 will have the value under entity alternative set as true or false by default. Finally, select the databases where
 you want to add the entity classes under **databases**.
