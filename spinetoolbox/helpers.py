@@ -833,7 +833,8 @@ def select_julia_executable(parent, line_edit):
 
 def get_current_path(le):
     """Returns the text in the given line edit. If no text, returns the
-    placeholder text. If no placeholder text, returns an empty string.
+    placeholder text if it is a valid path. If it's not a valid path,
+    Returns None.
     """
     current_path = le.text().strip()
     if not current_path:
@@ -847,8 +848,9 @@ def get_path_from_native_open_file_dialog(parent, current_path, title, initial_p
     """Opens the native open file dialog on Windows.
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog and message boxes
-        current_path (str): If given, the open file dialog initial dir is this, home_dir() otherwise
+        parent (QWidget, optional): Parent widget for the file dialog
+        current_path (str): If not None, the open file dialog initial dir is set according to the 'File' keyword.
+            If None, initial dir set according to the 'InitialDir' keyword.
         title (str): Dialog title
         initial_path (str): Initial dir if something else than home_dir()
 
@@ -899,12 +901,13 @@ def select_python_interpreter(parent, line_edit):
         line_edit (QLineEdit): Line edit where the selected path will be inserted
     """
     title = "Select Python Interpreter"
+    current_path = get_current_path(line_edit)
     if sys.platform == "win32":
-        current_path = get_current_path(line_edit)
         answer = get_path_from_native_open_file_dialog(parent, current_path, title + " (e.g. python.exe on Windows)")
     else:
+        initial_path = current_path if current_path is not None else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(parent, title, home_dir())
+        answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled
         return
     # Check that selected file at least starts with string 'python'
