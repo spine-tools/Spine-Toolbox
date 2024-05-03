@@ -33,7 +33,7 @@ Unavailable options are still visible but they are greyed out:
 .. image:: img/entity_tree_context_menu.png
    :align: center
 
-- **Copy name(s) as text** copies the data from the selection so that it can be pasted elsewhere.
+- **Copy as text** copies the data from the selection so that it can be pasted elsewhere.
 
 - **Add entity classes** opens up a dialog to add new entity classes.
 - **Add entities** opens up a dialog to add new entities.

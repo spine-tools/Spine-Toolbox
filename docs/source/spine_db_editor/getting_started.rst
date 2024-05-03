@@ -123,7 +123,7 @@ Edit
 ~~~~
 
 In the **Edit** section there lies the **Undo** and **Redo** -buttons. These can be used to undo and redo the
-actions that have been made in the editor (**CTR+Z** and **CTR+Y** also work). The **Copy name(s) as text** allows
+actions that have been made in the editor (**CTR+Z** and **CTR+Y** also work). The **Copy as text** allows
 the user to copy items into the clipboard that can then be pasted elsewhere. The **Paste** option does
 exactly what it says, it pastes the data on the clipboard into the selected field(s). The **Purge...** button is
 quite useful when there is a need to get rid of a lot of data quickly. Clicking it will open a new window where
