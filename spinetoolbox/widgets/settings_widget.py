@@ -415,7 +415,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _update_python_widgets_enabled(self, state):
         """Enables or disables some widgets based on given boolean state."""
         self.ui.comboBox_python_kernel.setEnabled(state)
-        self.ui.pushButton_make_python_kernel.setEnabled(state)
         self.ui.lineEdit_python_path.setEnabled(not state)
         self.ui.toolButton_browse_python.setEnabled(not state)
 
@@ -423,7 +422,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _update_julia_widgets_enabled(self, state):
         """Enables or disables some widgets based on given boolean state."""
         self.ui.comboBox_julia_kernel.setEnabled(state)
-        self.ui.pushButton_make_julia_kernel.setEnabled(state)
         self.ui.lineEdit_julia_path.setEnabled(not state)
         self.ui.lineEdit_julia_project_path.setEnabled(not state)
         self.ui.toolButton_browse_julia.setEnabled(not state)
