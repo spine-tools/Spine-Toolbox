@@ -505,6 +505,10 @@ class IconColorEditor(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.connect_signals()
 
+    def showEvent(self, event):
+        self.button_box.button(QDialogButtonBox.StandardButton.Ok).setFocus()
+        super().showEvent(event)
+
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
         """Filters icons according to search terms.
 
