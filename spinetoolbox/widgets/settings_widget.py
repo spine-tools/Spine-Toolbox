@@ -1171,7 +1171,7 @@ def _get_kernel_name_by_exe(p, kernel_model):
 
     Args:
         p (str): Absolute path to an executable
-        kernel_model (QStandardItemModel): Model containing items, which contain kernel spec details as item data
+        kernel_model (QStandardItemModel): Model with items containing kernel spec details
 
     Returns:
         str: Kernel name or an empty string
@@ -1180,9 +1180,12 @@ def _get_kernel_name_by_exe(p, kernel_model):
         name = kernel_model.item(i).data(Qt.ItemDataRole.DisplayRole)
         deats = kernel_model.item(i).data()
         if not deats:
-            continue  # Conda kernels don't have deats
-        if _samefile(deats["exe"], p):
-            return name
+            continue
+        try:
+            if _samefile(deats["exe"], p):
+                return name
+        except KeyError:
+            pass  # Conda kernel deats don't have the "exe" key
     return ""
 
 
@@ -1200,6 +1203,8 @@ def _selected_project_matches_kernel_project(julia_kernel_name, julia_project, k
     for row in range(1, kernel_model.rowCount()):  # Start from row 1
         if kernel_model.item(row).data(Qt.ItemDataRole.DisplayRole) == julia_kernel_name:
             deats = kernel_model.item(row).data()
+            if not deats or "project" not in deats.keys():
+                continue
             if _samefile(deats["project"], julia_project) or deats["project"] == julia_project:
                 return True
     return False

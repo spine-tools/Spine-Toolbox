@@ -40,7 +40,7 @@ in launching the Console is the same Python that was used in launching Spine Too
 Python by changing the Python interpreter line edit. Remember to save the new Tool Spec when closing the **Tool
 Spec. Editor**. Then drag the Python Tool Spec into the **Design View**, and press |play| to execute it.
 
-.. note:: The Python settings on the *Tools* page in **File -> Settings** are the *default* settings for new Python
+.. note:: The Python settings on the *Tools* page in **File -> Settings** are the *default* settings for Python
    Tool Specs. You can select a different Python executable for each Python Tool Spec separately using the
    **Tool Specification Editor**.
 
@@ -51,9 +51,9 @@ To execute Julia Tools in the Basic Console, first install Julia (v1.6 or later 
 (if not done automatically by the installer). Then go to the *Tools* page in **File -> Settings** and make sure that
 the Basic Console radio button is selected in the Julia group. If Julia is in your PATH, the Julia executable line
 edit should show the path as (grey) placeholder text. If you want to use another Julia on your system, you can change
-the path in the line edit. You can also set a Julia Project below the Julia executable line edit.
+the path in the line edit. You can also set a Julia Project/Environment below the Julia executable line edit.
 
-.. note:: The Julia settings on the *Tools* page in **File -> Settings** are the *default* settings for new Julia
+.. note:: The Julia settings on the *Tools* page in **File -> Settings** are the *default* settings for Julia
    Tool Specs. You can select a different Julia executable & project for each Julia Tool Spec separately using the
    **Tool Specification Editor**.
 
@@ -71,7 +71,7 @@ wish to use from the *Select Python kernel...* combo box. If this list is empty,
 on your system. You can either do this manually or click the **Make Python Kernel** button. Clicking the button opens
 a **Python Kernel Specification Creator** window, that first installs the **ipykernel** package (if missing) for
 the Python that is currently selected in the Python interpreter line edit (the kernel specs will be created
-for `C:/Python39/python.exe` in the picture below). You can make kernel specs for other Pythons and virtual
+for `C:/Python310/python.exe` in the picture below). You can make kernel specs for other Pythons and virtual
 environments (venv) by changing the Python interpreter line edit path to point to another Python. Please see
 specific instructions for creating kernel specs for Conda environments below.
 
@@ -80,7 +80,7 @@ specific instructions for creating kernel specs for Conda environments below.
 
 Once the **ipykernel** package is installed, the wizard runs the **ipykernel install** command, which creates the
 kernel specs directory on your system. Once the process finishes, click *Close*, and the newly created kernel spec
-(*python39* in this case) should be selected automatically. For convenience, there is a context-menu (mouse
+(*python310* in this case) should be selected automatically. For convenience, there is a context-menu (mouse
 right-click menu) in the **Select Python Kernel...** combo box that opens the the kernel spec directory in your
 file browser. Click *Ok* to close the **Settings** widget and to save your selections.
 
@@ -98,9 +98,9 @@ To install **ipykernel** and it's dependencies, run::
 
 And to install the kernel specs run::
 
-      python -m ipykernel install --user --name python39 --display-name python39_spinetoolbox
+      python -m ipykernel install --user --name python310 --display-name python310_spinetoolbox
 
-Make sure to use the ``--user`` argument to in order to make the kernel specs discoverable by Spine Toolbox.
+Make sure to use the ``--user`` argument in order to make the kernel specs discoverable by Spine Toolbox.
 
 .. important:: If you want to have access to `spinedb_api`, you need to install it manually for the Python you
    select here.
