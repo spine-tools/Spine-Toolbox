@@ -18,7 +18,7 @@ How to Set up SpineOpt.jl
 
 #. Select **File -> Settings** from the main menu and open the *Tools* page.
 
-#. Set a path to a Julia executable to the appropriate line edit (e.g. `C:/Julia-1.6.0/bin/julia.exe`).
+#. Set a path to a Julia executable to the appropriate line edit (e.g. `C:/Julia-1.9.0/bin/julia.exe`).
    Your selections should look similar to this now.
 
    .. image:: img/settings_tools_default.png
