@@ -39,6 +39,7 @@ class CommitDialog(QDialog):
         self.commit_msg_edit = QPlainTextEdit(self)
         self.commit_msg_edit.setPlainText(self.commit_msg)
         self.commit_msg_edit.selectAll()
+        self.commit_msg_edit.setFocus()
         self.commit_msg_edit.addAction(self.action_accept)
         button_box = QDialogButtonBox()
         button_box.addButton(QDialogButtonBox.StandardButton.Cancel)
