@@ -31,7 +31,7 @@ from PySide6.QtWidgets import QApplication
 from . import resources_icons_rc  # pylint: disable=unused-import
 from spine_items import resources_icons_rc  # pylint: disable=unused-import
 
-from .ui_main import ToolboxUI
+from .ui_main import ToolboxUI, TopToolboxUI
 from .version import __version__
 from .headless import headless_main, Status
 from .helpers import pyside6_version_check
@@ -62,12 +62,12 @@ def main():
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
-    window = ToolboxUI()
+    window = TopToolboxUI()
     window.show()
 
 
 
-    QTimer.singleShot(0, lambda: window.init_project(args.project))
+    QTimer.singleShot(0, lambda: window.toolbox.init_project(args.project))
     # Enter main event loop and wait until exit() is called
     return_code = app.exec()
     return return_code

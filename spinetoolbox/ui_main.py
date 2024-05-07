@@ -59,6 +59,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QDialog,
+    QTabWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from .project_item_icon import ProjectItemIcon
@@ -66,7 +67,6 @@ from .load_project_items import load_project_items
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .project_settings import ProjectSettings
-from .startup_box_old import StartUpMainWindow
 from .widgets.startup_box_widget import StartupBoxWidget
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
@@ -120,6 +120,31 @@ from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFail
 from .kernel_fetcher import KernelFetcher
 
 
+class TopToolboxUI(QMainWindow):
+    def __init__(self):
+        super().__init__(flags=Qt.Window)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        set_taskbar_icon()
+        self.top_tab_widget = QTabWidget()
+        self.top_tab_widget.setStyleSheet("QTabWidget::pane { border: 0; }")
+        self.top_tab_widget.tabBar().hide()
+        self.setCentralWidget(self.top_tab_widget)
+        self.toolbox = ToolboxUI(self)
+        self.startup_box_widget = StartupBoxWidget(self)
+        self.top_tab_widget.addTab(self.startup_box_widget, "Startup Box")
+        self.top_tab_widget.addTab(self.toolbox, "Toolbox")
+        self._action_goto_startup_page = QAction(self)
+        self._action_goto_toolbox = QAction(self)
+        self._action_goto_startup_page.setShortcut(QKeySequence(Qt.Key.Key_1.value))
+        self._action_goto_toolbox.setShortcut(QKeySequence(Qt.Key.Key_2.value))
+        self.addAction(self._action_goto_toolbox)
+        self.addAction(self._action_goto_startup_page)
+        self._action_goto_startup_page.triggered.connect(lambda: self.top_tab_widget.setCurrentIndex(0))
+        self._action_goto_toolbox.triggered.connect(lambda: self.top_tab_widget.setCurrentIndex(1))
+        self.startup_box_widget.project_load_requested.connect(self.toolbox.restore_project)
+        self.startup_box_widget.project_load_requested.connect(lambda: self.top_tab_widget.setCurrentIndex(1))
+
+
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
@@ -137,11 +162,12 @@ class ToolboxUI(QMainWindow):
     kernel_shutdown = Signal(object, str)
     persistent_console_requested = Signal(object, str, tuple, str)
 
-    def __init__(self):
+    def __init__(self, top_window):
         """Initializes application and main window."""
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
+        self.top_window = top_window
         self.set_error_mode()
         self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
         self._update_qsettings()
@@ -153,8 +179,8 @@ class ToolboxUI(QMainWindow):
         self._properties_title = QWidget()
         self._setup_properties_title()
         self.takeCentralWidget().deleteLater()
-        self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        set_taskbar_icon()  # in helpers.py
+        # self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        # set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
@@ -234,17 +260,6 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
-
-
-        #startbox = StartUpMainWindow(self)
-        #startbox.project_load_requested.connect(self.restore_project)
-        #startbox.show()
-
-        self.startup_box_widget = StartupBoxWidget(self)
-        self.startup_box_widget.project_load_requested.connect(self.restore_project)
-        self.startup_box_widget.show()
-
-
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -2004,6 +2019,7 @@ class ToolboxUI(QMainWindow):
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
         event.accept()
+        self.top_window.close()
 
     def _serialize_selected_items(self):
         """Serializes selected project items into a dictionary.
