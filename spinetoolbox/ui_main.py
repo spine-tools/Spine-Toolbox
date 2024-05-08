@@ -115,6 +115,7 @@ from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
 from .kernel_fetcher import KernelFetcher
+from .widgets.draggable_item_list import GenericItemsModel, make_treeview_ss
 
 
 class ToolboxUI(QMainWindow):
@@ -182,8 +183,8 @@ class ToolboxUI(QMainWindow):
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
-        self.items_toolbar = toolbars.ItemsToolBar(self)
-        self.spec_toolbar = toolbars.SpecToolBar(self)
+        # self.items_toolbar = toolbars.ItemsToolBar(self)
+        # self.spec_toolbar = toolbars.SpecToolBar(self)
         self.execute_toolbar = toolbars.ExecuteToolBar(self)
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
@@ -212,9 +213,16 @@ class ToolboxUI(QMainWindow):
         self.parse_project_item_modules()
         self.init_specification_model()
         self.make_item_properties_uis()
-        self.items_toolbar.setup()
-        self.spec_toolbar.setup()
+        # self.items_toolbar.setup()
+        # self.spec_toolbar.setup()
         self.execute_toolbar.setup()
+        self.generic_items_model = GenericItemsModel(self)
+        self.ui.treeView_items.setModel(self.generic_items_model)
+        self.ui.treeView_items.setHeaderHidden(True)
+        self.ui.treeView_items.expandAll()
+        self.ui.treeView_items.setRootIsDecorated(False)
+        self.ui.treeView_items.setIndentation(0)
+        self.ui.treeView_items.setStyleSheet(make_treeview_ss(QColor("pink")))
         self.link_properties_widgets = {
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
@@ -225,7 +233,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
-        self.refresh_toolbars()
+        # self.refresh_toolbars()
         self.restore_dock_widgets()
         self.restore_ui()
         self.set_work_directory()
@@ -314,6 +322,7 @@ class ToolboxUI(QMainWindow):
         # Views
         self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
         self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
+        self.ui.treeView_items.clicked.connect(self.generic_items_model.collapse_or_expand_children)
         # Execution
         self.ui.actionExecute_project.triggered.connect(self._execute_project)
         self.ui.actionExecute_selection.triggered.connect(self._execute_selection)
@@ -610,22 +619,22 @@ class ToolboxUI(QMainWindow):
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
 
-    def _toolbars(self):
-        """Yields all toolbars in the window."""
-        yield self.items_toolbar
-        yield self.spec_toolbar
-        yield from self._plugin_manager.plugin_toolbars.values()
+    # def _toolbars(self):
+    #     """Yields all toolbars in the window."""
+    #     yield self.items_toolbar
+    #     yield self.spec_toolbar
+    #     yield from self._plugin_manager.plugin_toolbars.values()
 
-    def set_toolbar_colored_icons(self, checked):
-        for toolbar in self._toolbars():
-            toolbar.set_colored_icons(checked)
+    # def set_toolbar_colored_icons(self, checked):
+    #     for toolbar in self._toolbars():
+    #         toolbar.set_colored_icons(checked)
 
     def _disable_project_actions(self):
         """Disables all project-related actions, except
         New project, Open project and Open recent. Called
         in the constructor and when closing a project."""
-        for toolbar in self._toolbars():
-            toolbar.set_project_actions_enabled(False)
+        # for toolbar in self._toolbars():
+        #     toolbar.set_project_actions_enabled(False)
         self.ui.actionOpen_project_directory.setDisabled(True)
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
@@ -638,8 +647,8 @@ class ToolboxUI(QMainWindow):
     def _enable_project_actions(self):
         """Enables all project-related actions. Called when a
         new project is created and when a project is opened."""
-        for toolbar in self._toolbars():
-            toolbar.set_project_actions_enabled(True)
+        # for toolbar in self._toolbars():
+        #     toolbar.set_project_actions_enabled(True)
         self.ui.actionOpen_project_directory.setEnabled(True)
         self.ui.actionSave.setEnabled(True)
         self.ui.actionSave_As.setEnabled(True)
@@ -647,17 +656,17 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSet_description.setEnabled(True)
         self._unset_execution_in_progress()
 
-    def refresh_toolbars(self):
-        """Set toolbars' color using the highest possible contrast."""
-        all_toolbars = list(self._toolbars())
-        for k, toolbar in enumerate(all_toolbars):
-            color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
-            toolbar.set_color(color)
-            if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
-                self.addToolBar(Qt.TopToolBarArea, toolbar)
-        self.execute_toolbar.set_color(QColor("silver"))
-        if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
-            self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+    # def refresh_toolbars(self):
+    #     """Set toolbars' color using the highest possible contrast."""
+    #     all_toolbars = list(self._toolbars())
+    #     for k, toolbar in enumerate(all_toolbars):
+    #         color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
+    #         toolbar.set_color(color)
+    #         if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
+    #             self.addToolBar(Qt.TopToolBarArea, toolbar)
+    #     self.execute_toolbar.set_color(QColor("silver"))
+    #     if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
+    #         self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -1364,8 +1373,8 @@ class ToolboxUI(QMainWindow):
 
     def add_menu_actions(self):
         """Adds extra actions to Edit and View menu."""
-        self.ui.menuToolbars.addAction(self.items_toolbar.toggleViewAction())
-        self.ui.menuToolbars.addAction(self.spec_toolbar.toggleViewAction())
+        # self.ui.menuToolbars.addAction(self.items_toolbar.toggleViewAction())
+        # self.ui.menuToolbars.addAction(self.spec_toolbar.toggleViewAction())
         self.ui.menuToolbars.addAction(self.execute_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -1974,7 +1983,7 @@ class ToolboxUI(QMainWindow):
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
-        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
+        # self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))

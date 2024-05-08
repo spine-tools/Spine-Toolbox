@@ -12,7 +12,7 @@
 
 """Functions to make and handle QToolBars."""
 from PySide6.QtCore import Qt, Slot, QModelIndex, QPoint, QSize
-from PySide6.QtWidgets import QToolBar, QToolButton, QMenu, QWidget
+from PySide6.QtWidgets import QToolBar, QToolButton, QMenu, QWidget, QLineEdit
 from PySide6.QtGui import QIcon, QPainter, QFontMetrics, QPainterPath
 from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
@@ -73,25 +73,25 @@ class ToolBar(QToolBar):
         self._name = name
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
-        self.addWidget(_TitleWidget(self.name(), self))
+        # self.addWidget(_TitleWidget(self.name(), self))
 
     def name(self):
         return self._name
 
-    def paintEvent(self, ev):
-        super().paintEvent(ev)
-        if self.orientation() == Qt.Vertical:
-            return
-        layout = self.layout()
-        title_pos_x = (
-            (w, layout.itemAt(i + 1).widget().pos().x())
-            for i in range(layout.count())
-            if isinstance((w := layout.itemAt(i).widget()), _TitleWidget)
-        )
-        painter = QPainter(self)
-        for w, x in title_pos_x:
-            w.do_paint(painter, x)
-        painter.end()
+    # def paintEvent(self, ev):
+    #     super().paintEvent(ev)
+    #     if self.orientation() == Qt.Vertical:
+    #         return
+    #     layout = self.layout()
+    #     title_pos_x = (
+    #         (w, layout.itemAt(i + 1).widget().pos().x())
+    #         for i in range(layout.count())
+    #         if isinstance((w := layout.itemAt(i).widget()), _TitleWidget)
+    #     )
+    #     painter = QPainter(self)
+    #     for w, x in title_pos_x:
+    #         w.do_paint(painter, x)
+    #     painter.end()
 
     def set_colored_icons(self, colored):
         for w in self.buttons():
@@ -434,17 +434,26 @@ class ExecuteToolBar(ToolBar):
             parent (ToolboxUI): QMainWindow instance
         """
         super().__init__("Execute", parent)  # Inherits stylesheet from ToolboxUI
+        self.setIconSize(QSize(16, 16))
+        self.history_button = QToolButton()
+        self.history_button.setIcon(QIcon(":icons/menu_icons/history.svg"))
+        # self.history_button.setText("History")
+        self.le = QLineEdit()
 
     def setup(self):
         self._add_buttons()
 
     def _add_button_from_action(self, action):
-        button = NiceButton()
+        # button = NiceButton()
+        button = QToolButton()
+        action.setText("")
         button.setDefaultAction(action)
-        self._add_tool_button(button)
+        self.addWidget(button)
 
     def _add_buttons(self):
         """Adds buttons to the toolbar."""
+        self.addWidget(self.history_button)
+        self.addWidget(self.le)
         self._add_button_from_action(self._toolbox.ui.actionExecute_project)
         self._add_button_from_action(self._toolbox.ui.actionExecute_selection)
         self._add_button_from_action(self._toolbox.ui.actionStop_execution)
