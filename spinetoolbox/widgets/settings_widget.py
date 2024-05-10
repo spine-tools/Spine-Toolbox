@@ -169,7 +169,7 @@ class SpineDBEditorSettingsMixin:
         hide_empty_classes = self._qsettings.value("appSettings/hideEmptyClasses", defaultValue="false")
         smooth_zoom = self._qsettings.value("appSettings/smoothEntityGraphZoom", defaultValue="false")
         smooth_rotation = self._qsettings.value("appSettings/smoothEntityGraphRotation", defaultValue="false")
-        auto_expand_entities = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true")
+        auto_expand_entities = self._qsettings.value("appSettings/autoExpandEntities", defaultValue="true")
         snap_entities = self._qsettings.value("appSettings/snapEntities", defaultValue="false")
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
@@ -212,7 +212,7 @@ class SpineDBEditorSettingsMixin:
         smooth_rotation = "true" if self.ui.checkBox_smooth_entity_graph_rotation.checkState().value else "false"
         self._qsettings.setValue("appSettings/smoothEntityGraphRotation", smooth_rotation)
         auto_expand_entities = "true" if self.ui.checkBox_auto_expand_entities.checkState().value else "false"
-        self._qsettings.setValue("appSettings/autoExpandObjects", auto_expand_entities)
+        self._qsettings.setValue("appSettings/autoExpandEntities", auto_expand_entities)
         snap_entities = "true" if self.ui.checkBox_snap_entities.checkState().value else "false"
         self._qsettings.setValue("appSettings/snapEntities", snap_entities)
         merge_dbs = "true" if self.ui.checkBox_merge_dbs.checkState().value else "false"
@@ -232,7 +232,7 @@ class SpineDBEditorSettingsMixin:
     def update_ui(self):
         super().update_ui()
         hide_empty_classes = self._qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
-        auto_expand_entities = self._qsettings.value("appSettings/autoExpandObjects", defaultValue="true") == "true"
+        auto_expand_entities = self._qsettings.value("appSettings/autoExpandEntities", defaultValue="true") == "true"
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true") == "true"
         self.set_hide_empty_classes(hide_empty_classes)
         self.set_auto_expand_entities(auto_expand_entities)
