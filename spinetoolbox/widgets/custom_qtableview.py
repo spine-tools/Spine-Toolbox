@@ -92,6 +92,8 @@ class CopyPasteTableView(QTableView):
     @Slot(bool)
     def delete_content(self, _=False):
         """Deletes content from editable indexes in current selection."""
+        if not hasattr(self.model(), "batch_set_data"):
+            return False
         selection = self.selectionModel().selection()
         if not selection:
             return False
