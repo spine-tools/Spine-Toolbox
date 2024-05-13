@@ -17,6 +17,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Removed
 
+- Scenario active flag mappings have been removed from Importer and Exporter.
+  The flag is not used anywhere and has not been accessible in Database editor
+  for a long time.
+
 ### Fixed
 
 ### Security
