@@ -101,10 +101,10 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(header, ["entity class name", "description", "display icon", "active by default", "databases"])
         active_by_default_column = header.index("active by default")
         index = model.index(0, active_by_default_column)
-        self.assertFalse(index.data())
+        self.assertTrue(index.data())
         dialog.table_view.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        self._paste_to_table_view("true", dialog)
-        self.assertTrue(model.index(0, active_by_default_column).data())
+        self._paste_to_table_view("false", dialog)
+        self.assertFalse(model.index(0, active_by_default_column).data())
         self._paste_to_table_view("GIBBERISH", dialog)
         self.assertFalse(model.index(0, active_by_default_column).data())
 

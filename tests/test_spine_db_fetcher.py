@@ -140,7 +140,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             "display_order": 99,
             "display_icon": None,
             "hidden": 0,
-            "active_by_default": False,
+            "active_by_default": True,
             "dimension_id_list": (),
         }
         fetcher = TestItemTypeFetchParent("entity_class")
