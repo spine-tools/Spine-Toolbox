@@ -11,7 +11,8 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, Qt, QEvent
+from PySide6.QtGui import QMouseEvent
 from .add_items_dialogs import (
     AddEntityClassesDialog,
     AddEntitiesDialog,
@@ -33,7 +34,7 @@ from ...spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:
-    """Provides object and relationship trees for the Spine db editor."""
+    """Provides entity, alternative, scenario and parameter value list -trees for the Spine db editor."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -52,6 +53,71 @@ class TreeViewMixin:
             view.setModel(model)
             view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
+
+    def connect_signals(self):
+        """Connects the signals"""
+        super().connect_signals()
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_graph)
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_stacked)
+        self.ui.alternative_tree_view.alternative_selection_changed.connect(
+            self._handle_alternative_selection_changed_in_graph
+        )
+        self.ui.alternative_tree_view.alternative_selection_changed.connect(
+            self._handle_alternative_selection_changed_in_stacked
+        )
+        self.ui.scenario_tree_view.scenario_selection_changed.connect(
+            self._handle_scenario_alternative_selection_changed_in_graph
+        )
+        self.ui.scenario_tree_view.scenario_selection_changed.connect(
+            self._handle_scenario_alternative_selection_changed_in_stacked
+        )
+
+    def handle_mousepress(self, tree_view, event):
+        """Overrides selection behaviour if the user has selected sticky selection in Settings.
+        If sticky selection is enabled, multiple-selection is enabled when selecting items in the Object tree.
+        Pressing the Ctrl-button down, enables single selection.
+
+        Args:
+            event (QMouseEvent)
+        """
+        if tree_view == self.ui.treeView_parameter_value_list:
+            return event
+        pos = tree_view.viewport().mapFromGlobal(event.globalPos())
+        index = tree_view.indexAt(pos)
+        # if not index or not index.isValid():
+        #     return event
+        sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
+        if sticky_selection == "false":
+            modifiers = event.modifiers()
+            if not modifiers & Qt.ControlModifier:
+                self._clear_all_other_selections(tree_view)
+            return event
+
+        local_pos = event.localPos()
+        window_pos = event.windowPos()
+        screen_pos = event.screenPos()
+        button = event.button()
+        buttons = event.buttons()
+        modifiers = event.modifiers()
+        if modifiers & Qt.ControlModifier:
+            modifiers &= ~Qt.ControlModifier
+        else:
+            modifiers |= Qt.ControlModifier
+        source = event.source()
+        new_event = QMouseEvent(
+            QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
+        )
+        return new_event
+
+    def _clear_all_other_selections(self, current):
+        """Clears all selections from other tree views except from the current one.
+
+        Args:
+            current: the tree where the selection that was made
+        """
+        for tree in [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]:
+            if tree != current:
+                tree.selectionModel().clearSelection()
 
     def init_models(self):
         """Initializes models."""

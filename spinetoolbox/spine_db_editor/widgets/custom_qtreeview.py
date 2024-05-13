@@ -11,11 +11,11 @@
 ######################################################################################################################
 
 """Classes for custom QTreeViews and QTreeWidgets."""
-from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView, QTreeWidget, QTreeWidgetItem
-from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
-from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
+from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView
+from PySide6.QtCore import Signal, Slot, QEvent, QTimer, QModelIndex, QItemSelection
+from PySide6.QtGui import QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
-from spinetoolbox.helpers import busy_effect, CharIconEngine, DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import busy_effect, CharIconEngine
 from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels import mime_types
@@ -188,15 +188,6 @@ class EntityTreeView(CopyPasteTreeView):
             item = model.item_from_index(index)
             self._selected_indexes.setdefault(item.item_type, {})[index] = None
 
-    def clear_any_selections(self):
-        """Clears the selection if any."""
-        selection_model = self.selectionModel()
-        if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
-            return
-        if selection_model.hasSelection():
-            with QSignalBlocker(selection_model) as _:
-                selection_model.clearSelection()
-
     @busy_effect
     def fully_expand(self):
         """Expands selected indexes and all their children."""
@@ -237,31 +228,7 @@ class EntityTreeView(CopyPasteTreeView):
         self._menu.exec(event.globalPos())
 
     def mousePressEvent(self, event):
-        """Overrides selection behaviour if the user has selected sticky selection in Settings.
-        If sticky selection is enabled, multiple-selection is enabled when selecting items in the Object tree.
-        Pressing the Ctrl-button down, enables single selection.
-
-        Args:
-            event (QMouseEvent)
-        """
-        sticky_selection = self._spine_db_editor.qsettings.value("appSettings/stickySelection", defaultValue="false")
-        if sticky_selection == "false":
-            super().mousePressEvent(event)
-            return
-        local_pos = event.localPos()
-        window_pos = event.windowPos()
-        screen_pos = event.screenPos()
-        button = event.button()
-        buttons = event.buttons()
-        modifiers = event.modifiers()
-        if modifiers & Qt.ControlModifier:
-            modifiers &= ~Qt.ControlModifier
-        else:
-            modifiers |= Qt.ControlModifier
-        source = event.source()
-        new_event = QMouseEvent(
-            QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
-        )
+        new_event = self._spine_db_editor.handle_mousepress(self, event) if self._spine_db_editor else event
         super().mousePressEvent(new_event)
 
     def update_actions_availability(self):
@@ -348,6 +315,10 @@ class ItemTreeView(CopyPasteTreeView):
         self._menu = QMenu(self)
         header = self.header()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
+    def mousePressEvent(self, event):
+        new_event = self._spine_db_editor.handle_mousepress(self, event) if self._spine_db_editor else event
+        super().mousePressEvent(new_event)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)

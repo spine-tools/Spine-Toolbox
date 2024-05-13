@@ -11,9 +11,7 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
-from PySide6.QtCore import Qt, Slot, QModelIndex, QSignalBlocker
-from PySide6.QtWidgets import QHeaderView
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import Qt, Slot, QModelIndex
 from .element_name_list_editor import ElementNameListEditor
 from ..mvcmodels.compound_models import (
     CompoundParameterValueModel,
@@ -52,13 +50,6 @@ class StackedViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.alternative_tree_view.alternative_selection_changed.connect(self._handle_alternative_selection_changed)
-        self.ui.scenario_tree_view.scenario_selection_changed.connect(
-            self._handle_scenario_alternative_selection_changed
-        )
-        self.ui.treeView_entity.tree_selection_changed.connect(
-            self._handle_entity_tree_selection_changed_in_parameter_tables
-        )
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
@@ -158,7 +149,7 @@ class StackedViewMixin:
         self._reset_filters()
 
     @Slot(dict)
-    def _handle_entity_tree_selection_changed_in_parameter_tables(self, selected_indexes):
+    def _handle_entity_tree_selection_changed_in_stacked(self, selected_indexes):
         """Resets filter according to entity tree selection."""
         entity_indexes = set(selected_indexes.get("entity", {}).keys())
         entity_indexes |= {
@@ -173,60 +164,33 @@ class StackedViewMixin:
         }
         self._filter_class_ids = self._db_map_ids(entity_class_indexes)
         self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
-        if Qt.KeyboardModifier.ControlModifier not in QGuiApplication.keyboardModifiers():
-            self._filter_alternative_ids.clear()
-            self._clear_all_other_selections(self.ui.treeView_entity)
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
 
     @Slot(dict)
-    def _handle_alternative_selection_changed(self, selected_db_map_alt_ids):
+    def _handle_alternative_selection_changed_in_stacked(self, selected_db_map_alt_ids):
         """Resets filter according to selection in alternative tree view."""
-        self._update_alternative_selection(
-            selected_db_map_alt_ids, self.ui.scenario_tree_view, self.ui.alternative_tree_view
-        )
+        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.scenario_tree_view)
 
     @Slot(dict)
-    def _handle_scenario_alternative_selection_changed(self, selected_db_map_alt_ids):
+    def _handle_scenario_alternative_selection_changed_in_stacked(self, selected_db_map_alt_ids):
         """Resets filter according to selection in scenario tree view."""
-        self._update_alternative_selection(
-            selected_db_map_alt_ids, self.ui.alternative_tree_view, self.ui.scenario_tree_view
-        )
+        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.alternative_tree_view)
 
-    def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view, this_tree_view):
+    def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view):
         """Combines alternative selections from alternative and scenario tree views.
 
         Args:
             selected_db_map_alt_ids (dict): mapping from database map to set of alternative ids
             other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
-            this_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection changed
         """
-        if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
-            alternative_ids = {
-                db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
-            }
-        else:
-            alternative_ids = {}
-            self._clear_all_other_selections(this_tree_view)
-            self._filter_class_ids.clear()
-            self._filter_entity_ids.clear()
+        alternative_ids = {
+            db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
+        }
         for db_map, alt_ids in selected_db_map_alt_ids.items():
             alternative_ids.setdefault(db_map, set()).update(alt_ids)
         self._filter_alternative_ids = alternative_ids
         self._reset_filters()
-
-    def _clear_all_other_selections(self, current, other=None):
-        """Clears all the other selections besides the one that was just made.
-
-        Args:
-            current: the tree where the selection that was just made
-            other (optional): other optional tree
-        """
-        trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
-        for tree in trees:
-            if tree not in (current, other):
-                with QSignalBlocker(tree) as _:
-                    tree.selectionModel().clearSelection()
 
     def tear_down(self):
         if not super().tear_down():

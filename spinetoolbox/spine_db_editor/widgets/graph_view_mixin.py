@@ -137,7 +137,6 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
-        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_graph)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
         self.db_mngr.items_added.connect(self._refresh_icons)
@@ -160,13 +159,23 @@ class GraphViewMixin:
         return {db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids}
 
     def _accepts_entity_item(self, item, db_map):
+        if not self._alternative_accepts(item, db_map):
+            return False
+        if not self._entity_class_and_entity_accept(item, db_map):
+            return False
+        return True
+
+    def _entity_class_and_entity_accept(self, item, db_map):
         if (db_map, item["id"]) in self.expanded_db_map_entity_ids:
             return True
         if (db_map, item["id"]) in self.collapsed_db_map_entity_ids:
             return False
         if (db_map, item["id"]) in self._all_pruned_db_map_entity_ids():
             return False
-        if "root" in self._selected_item_type_db_map_ids:
+        if (
+            "entity_class" not in self._selected_item_type_db_map_ids
+            and "entity" not in self._selected_item_type_db_map_ids
+        ):
             return True
         selected_entity_ids = self._selected_item_type_db_map_ids.get("entity", {}).get(db_map, ())
         if item["id"] in selected_entity_ids:
@@ -180,6 +189,43 @@ class GraphViewMixin:
         if item["dimension_id_list"] and cond(id_ in selected_class_ids for id_ in item["dimension_id_list"]):
             return True
         return False
+
+    def _alternative_accepts(self, item, db_map):
+        selected_alternative_ids = self._selected_item_type_db_map_ids.get("alternative", {}).get(db_map, ())
+        entities_selected = any(i in self._selected_item_type_db_map_ids for i in ["entity", "entity_class"])
+        if not selected_alternative_ids:
+            return True  # No alternatives or scenarios selected
+
+        for alt_id in selected_alternative_ids:
+            entity_alternative = db_map.get_entity_alternative_item(entity_id=item["id"], alternative_id=alt_id)
+            if entity_alternative:
+                if entity_alternative["active"]:
+                    return True  # Entity that is active in selected alternatives, good to go.
+            elif entities_selected:
+                ent_clss = db_map.get_entity_class_item(id=item["class_id"])
+                if ent_clss["active_by_default"]:
+                    return True  # Entity alternative is not set, but the class is set to active by default
+
+        auto_expand = self.ui.graphicsView.get_property("auto_expand_entities")
+        if item["element_id_list"]:  # N-D entities
+            ent_clss = db_map.get_entity_class_item(id=item["class_id"])
+            if not ent_clss["active_by_default"]:
+                return False  # Entity alternative is not set, but the class is set not active by default
+            ent_alts = set()
+            for ent_id in item["element_id_list"]:
+                for alt_id in selected_alternative_ids:
+                    entity_alternative = db_map.get_entity_alternative_item(entity_id=ent_id, alternative_id=alt_id)
+                    if entity_alternative and entity_alternative["active"]:
+                        ent_alts.add(True)
+                        break  # Active in at least one of the selected alternatives
+                else:
+                    if not auto_expand:
+                        return False  # If an element is not active and auto-expand is not enabled
+                    ent_alts.add(False)
+            cond = any if auto_expand else all
+            if cond(ent_alts):
+                return True  # All the elements are active, or auto-expand is on and at least one of them is
+        return False  # All bets are off...
 
     def _graph_handle_entities_added(self, db_map_data):
         """Runs when entities are added to the db.
@@ -325,7 +371,38 @@ class GraphViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
+        if "entity" in self._selected_item_type_db_map_ids:
+            self._selected_item_type_db_map_ids.pop("entity")
+        if "entity_class" in self._selected_item_type_db_map_ids:
+            self._selected_item_type_db_map_ids.pop("entity_class")
         self._update_selected_item_type_db_map_ids(selected)
+        self.build_graph()
+
+    @Slot(dict)
+    def _handle_alternative_selection_changed_in_graph(self, selected_db_map_alt_ids):
+        """Resets filter according to selection in alternative tree view."""
+        self._handle_alternative_selections(selected_db_map_alt_ids, self.ui.scenario_tree_view)
+
+    @Slot(dict)
+    def _handle_scenario_alternative_selection_changed_in_graph(self, selected_db_map_alt_ids):
+        """Resets filter according to selection in scenario tree view."""
+        self._handle_alternative_selections(selected_db_map_alt_ids, self.ui.alternative_tree_view)
+
+    def _handle_alternative_selections(self, selected, other_tree_view):
+        """Stores the given selection of alternative tree indexes and builds graph.
+
+        Args:
+            selected (dict): mapping from database map to set of alternative ids
+            other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
+        """
+        if "alternative" in self._selected_item_type_db_map_ids:
+            self._selected_item_type_db_map_ids.pop("alternative")
+        alternative_ids = {
+            db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
+        }
+        for db_map, alt_ids in selected.items():
+            alternative_ids.setdefault(db_map, set()).update(alt_ids)
+        self._update_scenario_and_alternative_selection_ids(alternative_ids)
         self.build_graph()
 
     def expand_graph(self, db_map_entity_ids):
@@ -523,16 +600,21 @@ class GraphViewMixin:
             self.ui.graphicsView.apply_zoom()
 
     def _update_selected_item_type_db_map_ids(self, selected_tree_inds):
-        """Upsates the dict mapping item type to db_map to selected ids."""
-        if "root" in selected_tree_inds:
-            self._selected_item_type_db_map_ids = {"root": None}
-            return
-        self._selected_item_type_db_map_ids = {}
+        """Updates the dict mapping item type to db_map to selected ids."""
         for item_type, indexes in selected_tree_inds.items():
             for index in indexes:
                 item = index.model().item_from_index(index)
                 for db_map, id_ in item.db_map_ids.items():
-                    self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
+                    if id_:  # Don't add the root item
+                        self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
+
+    def _update_scenario_and_alternative_selection_ids(self, selected_tree_inds):
+        """Updates the dict mapping item type to db_map to selected ids."""
+        if not selected_tree_inds:
+            return
+        for db_map, ids in selected_tree_inds.items():
+            for id_ in ids:
+                self._selected_item_type_db_map_ids.setdefault("alternative", {}).setdefault(db_map, set()).add(id_)
 
     def _get_db_map_entities_for_graph(self):
         return [
