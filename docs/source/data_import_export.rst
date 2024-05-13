@@ -70,11 +70,11 @@ Importer specification editor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the upper part of the specification editor, the name and description for the specification can be set.
-Underneath, the filepath is shown and it is allowed to br modified. Next to the filepath the used connector type
+Underneath, the filepath is shown and it is modifiable. Next to the filepath the used connector type
 is shown. On the left side, the different tables the file has or that user has set up are shown. Next to that
 there are the connector specific options and underneath that a preview of the selected table is shown. The items in
 the table are highlighted according to the selected mapping. The mappings are listed on the right side of the editor.
-underneath, the to be imported item types can be specified and other options set. Below that
+Underneath, the to be imported item types can be specified and other options set. Below that
 you can select the specific places in the source data where the entity names, values etc. will be taken from.
 
 .. image:: img/import_editor_window.png
@@ -86,7 +86,9 @@ in a single table called 'data'.
 The tables can be selected and deselected using the check boxes
 and only the selected ones will be imported.
 The option *Select All* is useful for selecting or deselecting all tables.
-If the Importer is opened in `anonymous mode`_, there is also the option to add tables
+If the Importer is opened in `anonymous mode`_, there is also the option to add tables.
+The tables are imported in the order show on the list.
+The order can be changed by dragging and dropping the table names.
 
 .. tip:: Multiple CSV files can be bundled into a *datapackage* which uses its own connector in Importer.
    Specifically, each CSV file in the datapackage shows up as a separate table in **Source tables**.
@@ -120,7 +122,8 @@ Right clicking the column/row header also gives the opportunity to change the da
 .. image:: img/import_editor_column_data_type_menu.png
    :align: center
 
-Under **Mappings** you can manage mappings by adding new ones and removing or duplicating existing ones.
+Under **Mappings** you can manage mappings by adding new ones, removing or duplicating existing ones
+and reordering by dragging and dropping.
 Each table has it's own mappings and every mapping has its own options. In **Mappings** you can select the mapping
 that you want to start modifying. Having multiple mappings for a single table allows to for example import
 multiple item types at the same time from a single table in a file.

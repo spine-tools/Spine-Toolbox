@@ -6,10 +6,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
+- Importer: it is now possible to reorder source tables by dragging and dropping.
+- Importer: it is now possible to reorder mappings by dragging and dropping.
+- Importer: it is now possible to copy mappings between source tables by dragging selected
+  mappings from Mappings list onto destination source table item.
 
 ### Changed
-
-#### Miscellaneous changes
 
 ### Deprecated
 
