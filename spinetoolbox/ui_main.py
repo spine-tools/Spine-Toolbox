@@ -1063,6 +1063,7 @@ class ToolboxUI(QMainWindow):
             def_file, local_data, self._item_specification_factories, self._qsettings, self
         )
         if not specification:
+            self.msg_error.emit("Failed to load specification.")
             return
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=False))
 
