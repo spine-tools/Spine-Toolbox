@@ -6,10 +6,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
-- Importer: it is now possible to reorder source tables by dragging and dropping.
-- Importer: it is now possible to reorder mappings by dragging and dropping.
-- Importer: it is now possible to copy mappings between source tables by dragging selected
-  mappings from Mappings list onto destination source table item.
 
 ### Changed
 
@@ -17,13 +13,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Removed
 
-- Scenario active flag mappings have been removed from Importer and Exporter.
-  The flag is not used anywhere and has not been accessible in Database editor
-  for a long time.
-
 ### Fixed
 
 ### Security
+
+## 0.8.1
+
+### Added
+- Importer: it is now possible to reorder source tables by dragging and dropping.
+- Importer: it is now possible to reorder mappings by dragging and dropping.
+- Importer: it is now possible to copy mappings between source tables by dragging selected
+  mappings from Mappings list onto destination source table item.
+
+### Removed
+
+- Scenario active flag mappings have been removed from Importer and Exporter.
+  The flag is not used anywhere and has not been accessible in Database editor
+  for a long time.
 
 ## 0.8.0
 
