@@ -75,7 +75,7 @@ class PlotWidget(QWidget):
         indexes = []
         data_dicts = []
         for xy_data in self.original_xy_data:
-            label = " | ".join(["None" if name is None else name for name in xy_data.data_index])
+            label = " | ".join(["None" if name is None else str(name) for name in xy_data.data_index])
             header.append(label)
             indexes.append(xy_data.x)
             data_dict = dict(zip(xy_data.x, xy_data.y))

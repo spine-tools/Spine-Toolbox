@@ -218,7 +218,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             **{
                 "dimension name (1)": dimension_one_name,
                 "display icon": self.default_display_icon,
-                "active by default": self.number_of_dimensions != 0,
+                "active by default": True,
                 "databases": db_names,
             }
         )
@@ -246,13 +246,6 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             self.insert_column()
         elif i < self.number_of_dimensions:
             self.remove_column()
-        default_value = self.number_of_dimensions != 0
-        self.model.default_row["active by default"] = default_value
-        column = self.model.horizontal_header_labels().index("active by default")
-        last_row = self.model.rowCount() - 1
-        index = self.model.index(last_row, column)
-        if index.data() != default_value:
-            self.model.setData(index, default_value)
         self.spin_box.setEnabled(True)
         self.resize_window_to_columns()
 

@@ -30,7 +30,7 @@ class TestEditEntityClassesDialog(TestBase):
         self.assertEqual(len(entity_model.root_item.children), 1)
         dialog = EditEntityClassesDialog(self._db_editor, self._db_mngr, entity_model.root_item.children)
         model = dialog.model
-        self._assert_table_contents(model, [["Object", None, None, False, "TestEditEntityClassesDialog_db"]])
+        self._assert_table_contents(model, [["Object", None, None, True, "TestEditEntityClassesDialog_db"]])
         dialog.table_view.selectionModel().setCurrentIndex(
             model.index(0, 3), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
@@ -57,7 +57,7 @@ class TestEditEntityClassesDialog(TestBase):
         self.assertEqual(len(entity_model.root_item.children), 1)
         dialog = EditEntityClassesDialog(self._db_editor, self._db_mngr, entity_model.root_item.children)
         model = dialog.model
-        self._assert_table_contents(model, [["Object", None, None, False, "TestEditEntityClassesDialog_db"]])
+        self._assert_table_contents(model, [["Object", None, None, True, "TestEditEntityClassesDialog_db"]])
         dialog.table_view.selectionModel().setCurrentIndex(
             model.index(0, 2), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
@@ -66,13 +66,13 @@ class TestEditEntityClassesDialog(TestBase):
         with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
             clipboard.return_value = mock_clipboard
             self.assertTrue(dialog.table_view.paste())
-        self._assert_table_contents(model, [["Object", None, 23, False, "TestEditEntityClassesDialog_db"]])
+        self._assert_table_contents(model, [["Object", None, 23, True, "TestEditEntityClassesDialog_db"]])
         mock_clipboard = mock.MagicMock()
         mock_clipboard.text.return_value = "GIBBERISH"
         with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
             clipboard.return_value = mock_clipboard
             self.assertTrue(dialog.table_view.paste())
-        self._assert_table_contents(model, [["Object", None, None, False, "TestEditEntityClassesDialog_db"]])
+        self._assert_table_contents(model, [["Object", None, None, True, "TestEditEntityClassesDialog_db"]])
 
     def _assert_table_contents(self, model, expected):
         data_table = []
