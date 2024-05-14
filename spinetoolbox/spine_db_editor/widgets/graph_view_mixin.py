@@ -172,11 +172,14 @@ class GraphViewMixin:
             return False
         if (db_map, item["id"]) in self._all_pruned_db_map_entity_ids():
             return False
-        if (
-            "entity_class" not in self._selected_item_type_db_map_ids
-            and "entity" not in self._selected_item_type_db_map_ids
-        ):
+        if "root" in self._selected_item_type_db_map_ids:
             return True
+        if (
+            "entity" not in self._selected_item_type_db_map_ids
+            and "entity_class" not in self._selected_item_type_db_map_ids
+            and "alternative" in self._selected_item_type_db_map_ids
+        ):
+            return True  # Allows entities to show when only alternatives are selected.
         selected_entity_ids = self._selected_item_type_db_map_ids.get("entity", {}).get(db_map, ())
         if item["id"] in selected_entity_ids:
             return True
@@ -371,10 +374,10 @@ class GraphViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed_in_graph(self, selected):
         """Stores the given selection of entity tree indexes and builds graph."""
-        if "entity" in self._selected_item_type_db_map_ids:
-            self._selected_item_type_db_map_ids.pop("entity")
-        if "entity_class" in self._selected_item_type_db_map_ids:
-            self._selected_item_type_db_map_ids.pop("entity_class")
+        alt_selections = self._selected_item_type_db_map_ids.get("alternative")
+        self._selected_item_type_db_map_ids.clear()
+        if alt_selections:
+            self._selected_item_type_db_map_ids.update({"alternative": alt_selections})
         self._update_selected_item_type_db_map_ids(selected)
         self.build_graph()
 
@@ -605,7 +608,7 @@ class GraphViewMixin:
             for index in indexes:
                 item = index.model().item_from_index(index)
                 for db_map, id_ in item.db_map_ids.items():
-                    if id_:  # Don't add the root item
+                    if item_type == "root" or id_:
                         self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
 
     def _update_scenario_and_alternative_selection_ids(self, selected_tree_inds):
