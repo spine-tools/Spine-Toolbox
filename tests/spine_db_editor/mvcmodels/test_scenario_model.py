@@ -36,7 +36,7 @@ class _TestBase(unittest.TestCase):
         for item in model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
-                qApp.processEvents()
+                QApplication.processEvents()
 
 
 class TestScenarioModel(_TestBase):

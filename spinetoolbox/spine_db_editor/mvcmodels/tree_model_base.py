@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Models to represent things in a tree."""
-from PySide6.QtCore import QObject, Qt, QModelIndex, Slot
+from PySide6.QtCore import Qt, QModelIndex
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from .tree_item_utility import StandardTreeItem
 
@@ -30,7 +30,7 @@ class TreeModelBase(MinimalTreeModel):
         self.db_editor = db_editor
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self.destroyed.connect(self._tear_down_tree)
+        self.destroyed.connect(lambda _: self._tear_down_tree)
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 2.
@@ -67,7 +67,6 @@ class TreeModelBase(MinimalTreeModel):
     def db_row(self, item):
         return self.db_item(item).child_number()
 
-    @Slot(QObject)
-    def _tear_down_tree(self, obj=None):
+    def _tear_down_tree(self):
         """Tears down tree items recursively"""
         self._invisible_root_item.tear_down_recursively()

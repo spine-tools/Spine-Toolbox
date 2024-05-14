@@ -241,8 +241,7 @@ class MinimalTreeModel(QAbstractItemModel):
     """Base class for all tree models."""
 
     def __init__(self, parent):
-        """Init class.
-
+        """
         Args:
             parent (SpineDBEditor)
         """
