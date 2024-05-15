@@ -1,0 +1,15 @@
+name: PyInstaller Bundle of Specific Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to bundle"
+        required: true
+        type: string
+
+jobs:
+  call-make-bundle:
+    uses: ./.github/workflows/make_bundle.yml
+    with:
+      git-ref: ${{ inputs.tag }}
