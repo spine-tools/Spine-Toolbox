@@ -1207,7 +1207,10 @@ def load_specification_from_file(spec_path, local_data_dict, spec_factories, app
     if spec_dict is None:
         return None
     spec_dict["definition_file_path"] = spec_path
-    spec = specification_from_dict(spec_dict, local_data_dict, spec_factories, app_settings, logger)
+    try:
+        spec = specification_from_dict(spec_dict, local_data_dict, spec_factories, app_settings, logger)
+    except KeyError:
+        spec = None
     if spec is not None:
         spec.definition_file_path = spec_path
     return spec
