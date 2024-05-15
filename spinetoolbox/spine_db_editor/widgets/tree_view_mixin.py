@@ -80,7 +80,7 @@ class TreeViewMixin:
         Args:
             event (QMouseEvent)
         """
-        if tree_view == self.ui.treeView_parameter_value_list:
+        if event.buttons() & Qt.RightButton or tree_view == self.ui.treeView_parameter_value_list:
             return event
         pos = tree_view.viewport().mapFromGlobal(event.globalPos())
         index = tree_view.indexAt(pos)
@@ -92,10 +92,9 @@ class TreeViewMixin:
             if not modifiers & Qt.ControlModifier:
                 self._clear_all_other_selections(tree_view)
             return event
-
-        local_pos = event.localPos()
-        window_pos = event.windowPos()
-        screen_pos = event.screenPos()
+        local_pos = event.position()
+        window_pos = event.scenePosition()
+        screen_pos = event.globalPosition()
         button = event.button()
         buttons = event.buttons()
         modifiers = event.modifiers()
