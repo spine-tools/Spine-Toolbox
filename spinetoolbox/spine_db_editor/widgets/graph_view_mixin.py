@@ -148,7 +148,7 @@ class GraphViewMixin:
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
-        if item_type not in ("object_class", "relationship_class"):
+        if item_type != "entity_class":
             return
         updated_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
         for item in self.ui.graphicsView.items():
