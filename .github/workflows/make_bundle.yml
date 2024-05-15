@@ -51,7 +51,7 @@ jobs:
       - name: Upload archive
         uses: actions/upload-artifact@v4
         with:
-          name: Spine Toolbox ${{ steps.toolbox-version.outputs.version }}
+          name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: dist
           if-no-files-found: error
           overwrite: true
