@@ -1,12 +1,9 @@
+coverage[toml]
 black == 24.4.2
 pre-commit == 2.0.1
-PyYAML >= 5.4
-pylint >= 2.3.0
-setuptools >=64
-setuptools_scm[toml] >= 6.2
-build
-wheel >=0.36.2
-twine >= 3.4.1
-coverage[toml]
+pylint
 pyperf
--r "docs/requirements.txt"
+sphinx
+sphinx_rtd_theme
+sphinx-autoapi
+recommonmark

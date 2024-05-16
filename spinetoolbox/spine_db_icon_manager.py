@@ -119,6 +119,15 @@ class SpineDBIconManager:
         self._class_renderers[class_name] = self.icon_renderer(chr(icon_code), color_code)
 
     def _create_multi_class_renderer(self, name, dimension_name_list, id_):
+        if not any(dimension_name_list):
+            self._multi_class_renderers[
+                (
+                    name,
+                    dimension_name_list,
+                    id_,
+                )
+            ] = self.icon_renderer("\uf1b3", 0)
+            return
         font = QFont("Font Awesome 5 Free Solid")
         scene = QGraphicsScene()
         display_icon = self.display_icons.get(name, None)

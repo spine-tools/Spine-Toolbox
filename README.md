@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.8%20|%203.9%20|%203.10%20|%203.11-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.8%20|%203.9%20|%203.10%20|%203.11|%203.12-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -17,15 +17,6 @@ You can have your local workflow, but work as a team through version control and
     <img alt="Spine Toolbox" src="./fig/spinetoolbox_on_wht.svg" width="50%">
   </picture>
 </p>
-
-## Programming language
-
-- Python 3.8*
-- Python 3.9
-- Python 3.10
-- Python 3.11
-
-*Python 3.8.0 is not supported (use Python 3.8.1 or later).<br>
 
 ## License
 
@@ -58,8 +49,8 @@ the Pre-installation steps**:
 These steps apply to both [Python/pipx](#installation-with-python-and-pipx) option and to 
 [From source files](#installation-from-sources-using-git) option.
 
-1. If you don't have Python installed, please install e.g. **Python 3.11** from 
-[Python.org](https://www.python.org/downloads/release/python-3117/).
+1. If you don't have Python installed, please install it e.g. from 
+[Python.org](https://www.python.org/downloads/).
 
 2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
 
@@ -249,7 +240,7 @@ run it, and follow the instructions to install Spine Toolbox.
 
 ### About requirements
 
-Python 3.8.1-3.11 is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
+Python 3.8.1 or later is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
 
 See the files `pyproject.toml` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -263,13 +254,13 @@ The requirements include three packages ([`spinedb_api`](https://github.com/spin
 You can find the latest documentation on [readthedocs](https://spine-toolbox.readthedocs.io/en/latest/index.html).
 If you want to build the documentation yourself,
 source files for the User Guide can be found in `docs/source` directory. In order to 
-build the HTML docs, you need to install the *optional requirements* (see section 
-'Installing requirements' above). This installs Sphinx (among other things), which 
+build the HTML docs, you need to install the *development requirements* (see section 
+'About requirements' above). This installs Sphinx (among other things), which 
 is required in building the documentation. When Sphinx is installed, you can build the 
 HTML pages from the user guide source files by using the `bin/build_doc.bat` script on 
-Windows or the `bin/build_doc.sh` script on Linux and Mac. After running the script, the 
+Windows or the `bin/build_doc.py` script on Linux and Mac. After running the script, the 
 index page can be found in `docs/build/html/index.html`. The User Guide can also 
-be opened from Spine Toolbox menu Help->User Guide (F2).
+be opened from Spine Toolbox menu Help->User Guide (F1).
 
 ### Troubleshooting
 
@@ -282,7 +273,7 @@ also [Problems in starting the application](#problems-in-starting-the-applicatio
 
 #### Installation fails
 
-Please make sure you are using Python 3.8, 3.9, 3.10, or 3.11 to install the requirements.
+Please make sure you are using Python 3.8.1 or later to install the requirements.
 
 #### 'No Python' error when installing with pipx
 

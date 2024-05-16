@@ -896,7 +896,9 @@ class CrossHairsEntityItem(EntityItem):
         dimension_name_list = tuple(
             el_item.entity_class_name for el_item in el_items if not isinstance(el_item, CrossHairsItem)
         )
-        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).multi_class_renderer(dimension_name_list)
+        self._renderer = self.db_mngr.get_icon_mngr(self.first_db_map).multi_class_renderer(
+            None, dimension_name_list, None
+        )
         self._install_renderer()
 
     def contextMenuEvent(self, e):
