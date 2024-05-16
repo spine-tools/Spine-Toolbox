@@ -1,5 +1,5 @@
 coverage[toml]
-black == 21.12b0
+black == 24.4.2
 pre-commit == 2.0.1
 pylint
 pyperf
