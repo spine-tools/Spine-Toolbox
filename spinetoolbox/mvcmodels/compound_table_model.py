@@ -19,8 +19,6 @@ from ..mvcmodels.minimal_table_model import MinimalTableModel
 class CompoundTableModel(MinimalTableModel):
     """A model that concatenates several sub table models vertically."""
 
-    refreshed = Signal()
-
     def __init__(self, parent=None, header=None):
         """Initializes model.
 
@@ -119,7 +117,6 @@ class CompoundTableModel(MinimalTableModel):
         for model in self.sub_models:
             row_map = self._row_map_for_model(model)
             self._append_row_map(row_map)
-        self.refreshed.emit()
 
     def _append_row_map(self, row_map):
         """Appends given row map to the tail of the model.
