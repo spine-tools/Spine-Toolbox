@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
-from PySide6.QtCore import Qt, Slot, QModelIndex, QSignalBlocker
+from PySide6.QtCore import QItemSelection, Qt, Slot, QModelIndex, QSignalBlocker
 from PySide6.QtWidgets import QHeaderView
 from PySide6.QtGui import QGuiApplication
 from .element_name_list_editor import ElementNameListEditor
@@ -59,6 +59,7 @@ class StackedViewMixin:
         self.ui.treeView_entity.tree_selection_changed.connect(
             self._handle_entity_tree_selection_changed_in_parameter_tables
         )
+        self.ui.treeView_entity.model().dataChanged.connect(self._update_empty_rows)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
@@ -124,6 +125,23 @@ class StackedViewMixin:
             model.empty_model.db_map = default_db_map
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
+
+    @Slot(QModelIndex, QModelIndex, list)
+    def _update_empty_rows(self, top_left, bottom_right, roles):
+        """Updates empty default data on empty rows if relevant entity (class) name has changed.
+
+        Args:
+            top_left (QModelIndex): top left corner of changed data in Entity tree
+            bottom_right (QModelIndex): bottom right corner of changed data in Entity tree
+            roles (list of Qt.ItemDataRole): affected item data roles
+        """
+        entity_selection_model = self.ui.treeView_entity.selectionModel()
+        current_entity_index = entity_selection_model.currentIndex()
+        if not current_entity_index.isValid() or (roles and Qt.ItemDataRole.DisplayRole not in roles):
+            return
+        selection = QItemSelection(top_left, bottom_right)
+        if selection.contains(current_entity_index):
+            self._set_default_parameter_data(current_entity_index)
 
     def clear_all_filters(self):
         for model in self._all_stacked_models:
