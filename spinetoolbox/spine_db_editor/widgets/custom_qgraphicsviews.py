@@ -453,7 +453,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     @Slot(QAction)
     def _prune_class(self, action):
-        """Prunnes some class."""
+        """Prunes some class."""
         key = action.text()
         self._spine_db_editor.prune_graph(
             key,
@@ -877,6 +877,11 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if event.key() == Qt.Key_Escape and self.cross_hairs_items:
             self._spine_db_editor.msg.emit("Relationship creation aborted.")
             self.clear_cross_hairs_items()
+
+    def focusOutEvent(self, event):
+        if self.cross_hairs_items:
+            self.clear_cross_hairs_items()
+        super().focusOutEvent(event)
 
     def contextMenuEvent(self, e):
         """Shows context menu.
