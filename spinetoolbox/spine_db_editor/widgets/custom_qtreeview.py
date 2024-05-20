@@ -592,14 +592,31 @@ class ScenarioTreeView(ItemTreeView):
 
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
-        """Emits scenario_selection_changed with the current selection."""
-        self._selected_alternative_ids.clear()
-        for index in self.selectionModel().selectedRows(column=0):
-            item = self.model().item_from_index(index)
+        """Emits scenario_selection_changed with the current selection.
+
+        The signal is emitted with format: dict[db_map: dict[scenario_id: set[alt_ids]]].
+        If an scenario alternative is selected, the scenario_id will just be None.
+        """
+        selected_items = [self.model().item_from_index(index) for index in selected.indexes()]
+        deselected_items = [self.model().item_from_index(index) for index in deselected.indexes()]
+        for item in selected_items:
             if isinstance(item, ScenarioItem) and item.id is not None:
-                self._selected_alternative_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
+                self._selected_alternative_ids.setdefault(item.db_map, {}).update(
+                    {item.id: set(item.alternative_id_list)}
+                )
             elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                self._selected_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
+                self._selected_alternative_ids.setdefault(item.db_map, {}).setdefault(None, set()).add(
+                    item.alternative_id
+                )
+        for item in deselected_items:
+            if isinstance(item, ScenarioItem) and item.id is not None:
+                if item.id in self._selected_alternative_ids[item.db_map]:
+                    del self._selected_alternative_ids[item.db_map][item.id]
+            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
+                if None in self._selected_alternative_ids[item.db_map]:
+                    self._selected_alternative_ids[item.db_map][None].difference_update({item.alternative_id})
+                    if not self._selected_alternative_ids[item.db_map][None]:
+                        del self._selected_alternative_ids[item.db_map][None]
         self.scenario_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):

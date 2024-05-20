@@ -14,7 +14,8 @@
 import itertools
 import json
 from time import monotonic
-from PySide6.QtCore import Slot, QTimer, QThreadPool
+from PySide6.QtGui import QColor
+from PySide6.QtCore import Slot, QTimer, QThreadPool, Qt
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
@@ -85,6 +86,7 @@ class GraphViewMixin:
         self.db_map_entity_id_sets = []
         self.entity_inds = []
         self.element_inds = []
+        self.highlight_by_id = {}
         self._entity_offsets = {}
         self._pvs_by_pname = {}
         self._val_ranges_by_pname = {}
@@ -160,6 +162,9 @@ class GraphViewMixin:
 
     def _accepts_entity_item(self, item, db_map):
         if not self._alternative_accepts(item, db_map):
+            if not self._parameter_value_accepts(item, db_map):
+                return False
+        if not self._scenario_accepts(item, db_map):
             return False
         if not self._entity_class_and_entity_accept(item, db_map):
             return False
@@ -172,18 +177,14 @@ class GraphViewMixin:
             return False
         if (db_map, item["id"]) in self._all_pruned_db_map_entity_ids():
             return False
-        if "root" in self._selected_item_type_db_map_ids:
+        if "root" in self._filter_explicit_entity_ids:
             return True
-        if (
-            "entity" not in self._selected_item_type_db_map_ids
-            and "entity_class" not in self._selected_item_type_db_map_ids
-            and "alternative" in self._selected_item_type_db_map_ids
-        ):
-            return True  # Allows entities to show when only alternatives are selected.
-        selected_entity_ids = self._selected_item_type_db_map_ids.get("entity", {}).get(db_map, ())
+        if not self._filter_explicit_entity_ids and (self._filter_alternative_ids or self._filter_scenario_ids):
+            return True  # Allows entities to show when only alternatives or scenarios are selected.
+        selected_entity_ids = self._filter_explicit_entity_ids.get("entity", {}).get(db_map, ())
         if item["id"] in selected_entity_ids:
             return True
-        selected_class_ids = self._selected_item_type_db_map_ids.get("entity_class", {}).get(db_map, ())
+        selected_class_ids = self._filter_explicit_entity_ids.get("entity_class", {}).get(db_map, ())
         if item["class_id"] in selected_class_ids:
             return True
         cond = any if self.ui.graphicsView.get_property("auto_expand_entities") else all
@@ -194,41 +195,54 @@ class GraphViewMixin:
         return False
 
     def _alternative_accepts(self, item, db_map):
-        selected_alternative_ids = self._selected_item_type_db_map_ids.get("alternative", {}).get(db_map, ())
-        entities_selected = any(i in self._selected_item_type_db_map_ids for i in ["entity", "entity_class"])
+        selected_alternative_ids = self._filter_explicit_alternative_ids.get(db_map, set())
         if not selected_alternative_ids:
-            return True  # No alternatives or scenarios selected
-
+            return True  # No alternatives
+        activities = set()
         for alt_id in selected_alternative_ids:
             entity_alternative = db_map.get_entity_alternative_item(entity_id=item["id"], alternative_id=alt_id)
             if entity_alternative:
                 if entity_alternative["active"]:
-                    return True  # Entity that is active in selected alternatives, good to go.
-            elif entities_selected:
-                ent_clss = db_map.get_entity_class_item(id=item["class_id"])
-                if ent_clss["active_by_default"]:
-                    return True  # Entity alternative is not set, but the class is set to active by default
+                    activities.add(True)
+                    continue
+            activities.add(False)
+        if not activities:
+            return False  # No entity alternatives for this guy
+        if all(activities):
+            self.highlight_by_id.update({item["id"]: EntityHighlight.ACTIVE})
+            return True  # Active in all selected alternatives, good to go.
+        if any(activities):
+            self.highlight_by_id.update({item["id"]: EntityHighlight.CONFLICTED})
+            return True  # Active in some selected alternatives, good to go.
+        self.highlight_by_id.update({item["id"]: EntityHighlight.INACTIVE})
+        return False  # Not active in any selected alternatives, no go.
 
-        auto_expand = self.ui.graphicsView.get_property("auto_expand_entities")
-        if item["element_id_list"]:  # N-D entities
-            ent_clss = db_map.get_entity_class_item(id=item["class_id"])
-            if not ent_clss["active_by_default"]:
-                return False  # Entity alternative is not set, but the class is set not active by default
-            ent_alts = set()
-            for ent_id in item["element_id_list"]:
-                for alt_id in selected_alternative_ids:
-                    entity_alternative = db_map.get_entity_alternative_item(entity_id=ent_id, alternative_id=alt_id)
-                    if entity_alternative and entity_alternative["active"]:
-                        ent_alts.add(True)
-                        break  # Active in at least one of the selected alternatives
-                else:
-                    if not auto_expand:
-                        return False  # If an element is not active and auto-expand is not enabled
-                    ent_alts.add(False)
-            cond = any if auto_expand else all
-            if cond(ent_alts):
-                return True  # All the elements are active, or auto-expand is on and at least one of them is
-        return False  # All bets are off...
+    def _scenario_accepts(self, item, db_map):
+        if not self._filter_scenario_ids:
+            return True  # No scenarios selected
+        if item["id"] in self._filter_entity_alternative_ids.get(db_map, {}):
+            self.highlight_by_id.update({item["id"]: EntityHighlight.ACTIVE})
+            return True  # The entity is set as active in one of the scenarios
+        entity_class = self.db_mngr.get_item(db_map, "entity_class", item["class_id"])
+        if entity_class["active_by_default"]:
+            self.highlight_by_id.update({item["id"]: EntityHighlight.INACTIVE})
+            return True  # active_by_default is True
+        self.highlight_by_id.update({item["id"]: EntityHighlight.INACTIVE})
+        return False
+
+    def _parameter_value_accepts(self, item, db_map):
+        """Returns True if the entity has parameter values set with the selected alternatives"""
+        if not self._filter_parameter_value_ids:
+            return False
+        if item["id"] in self._filter_parameter_value_ids.get(db_map):
+            if item["element_id_list"]:
+                for id_ in item["element_id_list"]:
+                    if self.highlight_by_id.get(id_) == EntityHighlight.INACTIVE:
+                        self.highlight_by_id.update({id_: EntityHighlight.PARAMETER_VALUE})
+            if self.highlight_by_id.get(item["id"]) == EntityHighlight.INACTIVE:
+                self.highlight_by_id.update({item["id"]: EntityHighlight.PARAMETER_VALUE})
+            return True  # Entity is present in the parameter_value table with the current selections
+        return False
 
     def _graph_handle_entities_added(self, db_map_data):
         """Runs when entities are added to the db.
@@ -370,43 +384,6 @@ class GraphViewMixin:
             return
         if self._owes_graph:
             QTimer.singleShot(100, self.build_graph)
-
-    @Slot(dict)
-    def _handle_entity_tree_selection_changed_in_graph(self, selected):
-        """Stores the given selection of entity tree indexes and builds graph."""
-        alt_selections = self._selected_item_type_db_map_ids.get("alternative")
-        self._selected_item_type_db_map_ids.clear()
-        if alt_selections:
-            self._selected_item_type_db_map_ids.update({"alternative": alt_selections})
-        self._update_selected_item_type_db_map_ids(selected)
-        self.build_graph()
-
-    @Slot(dict)
-    def _handle_alternative_selection_changed_in_graph(self, selected_db_map_alt_ids):
-        """Resets filter according to selection in alternative tree view."""
-        self._handle_alternative_selections(selected_db_map_alt_ids, self.ui.scenario_tree_view)
-
-    @Slot(dict)
-    def _handle_scenario_alternative_selection_changed_in_graph(self, selected_db_map_alt_ids):
-        """Resets filter according to selection in scenario tree view."""
-        self._handle_alternative_selections(selected_db_map_alt_ids, self.ui.alternative_tree_view)
-
-    def _handle_alternative_selections(self, selected, other_tree_view):
-        """Stores the given selection of alternative tree indexes and builds graph.
-
-        Args:
-            selected (dict): mapping from database map to set of alternative ids
-            other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
-        """
-        if "alternative" in self._selected_item_type_db_map_ids:
-            self._selected_item_type_db_map_ids.pop("alternative")
-        alternative_ids = {
-            db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
-        }
-        for db_map, alt_ids in selected.items():
-            alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        self._update_scenario_and_alternative_selection_ids(alternative_ids)
-        self.build_graph()
 
     def expand_graph(self, db_map_entity_ids):
         self.expanded_db_map_entity_ids.update(db_map_entity_ids)
@@ -597,27 +574,16 @@ class GraphViewMixin:
         self.ui.graphicsView.clear_scene()
         if self._make_new_items(x, y):
             self._add_new_items()
+        for id_, color in self.highlight_by_id.items():
+            for item in self.entity_items:
+                if item.first_id == id_:
+                    item.set_highlight_color(color)
+                    break
+        self.highlight_by_id.clear()
         if not self._persisted_positions:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
-
-    def _update_selected_item_type_db_map_ids(self, selected_tree_inds):
-        """Updates the dict mapping item type to db_map to selected ids."""
-        for item_type, indexes in selected_tree_inds.items():
-            for index in indexes:
-                item = index.model().item_from_index(index)
-                for db_map, id_ in item.db_map_ids.items():
-                    if item_type == "root" or id_:
-                        self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
-
-    def _update_scenario_and_alternative_selection_ids(self, selected_tree_inds):
-        """Updates the dict mapping item type to db_map to selected ids."""
-        if not selected_tree_inds:
-            return
-        for db_map, ids in selected_tree_inds.items():
-            for id_ in ids:
-                self._selected_item_type_db_map_ids.setdefault("alternative", {}).setdefault(db_map, set()).add(id_)
 
     def _get_db_map_entities_for_graph(self):
         return [
@@ -946,7 +912,6 @@ class GraphViewMixin:
         super().closeEvent(event)
         if not event.isAccepted():
             return
-        self.ui.treeView_entity.tree_selection_changed.disconnect(self._handle_entity_tree_selection_changed_in_graph)
         if self.scene is not None:
             self.scene.deleteLater()
         # Make sure the fetch parent isn't used to remove discarded changes after we've deleted the graph scene.
@@ -963,3 +928,13 @@ class _Offset:
         offsets = list(range(len(self._all_offsets)))  # [0, 1, 2, ...]
         center = sum(offsets) / len(offsets)
         return (self._value - center) / len(offsets)
+
+
+class EntityHighlight:
+    """Highlight colors for the EntityItems"""
+
+    ACTIVE = QColor(165, 232, 128, 150)
+    INACTIVE = QColor(245, 184, 184, 150)
+    CONFLICTED = QColor(183, 155, 114, 150)
+    PARAMETER_VALUE = QColor(198, 198, 198, 150)
+    NOT_SET = Qt.transparent

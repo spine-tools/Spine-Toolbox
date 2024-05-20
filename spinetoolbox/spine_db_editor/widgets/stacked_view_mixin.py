@@ -29,9 +29,6 @@ class StackedViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._filter_class_ids = {}
-        self._filter_entity_ids = {}
-        self._filter_alternative_ids = {}
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
         self.entity_alternative_model = CompoundEntityAlternativeModel(self, self.db_mngr)
@@ -146,50 +143,6 @@ class StackedViewMixin:
         for db_map, items in active_items.items():
             self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
         self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
-        self._reset_filters()
-
-    @Slot(dict)
-    def _handle_entity_tree_selection_changed_in_stacked(self, selected_indexes):
-        """Resets filter according to entity tree selection."""
-        entity_indexes = set(selected_indexes.get("entity", {}).keys())
-        entity_indexes |= {
-            parent
-            for parent in (i.parent() for i in entity_indexes)
-            if self.entity_tree_model.item_from_index(parent).item_type == "entity"
-        }
-        entity_class_indexes = set(selected_indexes.get("entity_class", {}).keys()) | {
-            parent_ind
-            for parent_ind in (ind.parent() for ind in entity_indexes)
-            if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
-        }
-        self._filter_class_ids = self._db_map_ids(entity_class_indexes)
-        self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
-        self._reset_filters()
-        self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
-
-    @Slot(dict)
-    def _handle_alternative_selection_changed_in_stacked(self, selected_db_map_alt_ids):
-        """Resets filter according to selection in alternative tree view."""
-        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.scenario_tree_view)
-
-    @Slot(dict)
-    def _handle_scenario_alternative_selection_changed_in_stacked(self, selected_db_map_alt_ids):
-        """Resets filter according to selection in scenario tree view."""
-        self._update_alternative_selection(selected_db_map_alt_ids, self.ui.alternative_tree_view)
-
-    def _update_alternative_selection(self, selected_db_map_alt_ids, other_tree_view):
-        """Combines alternative selections from alternative and scenario tree views.
-
-        Args:
-            selected_db_map_alt_ids (dict): mapping from database map to set of alternative ids
-            other_tree_view (AlternativeTreeView or ScenarioTreeView): tree view whose selection didn't change
-        """
-        alternative_ids = {
-            db_map: alt_ids.copy() for db_map, alt_ids in other_tree_view.selected_alternative_ids.items()
-        }
-        for db_map, alt_ids in selected_db_map_alt_ids.items():
-            alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        self._filter_alternative_ids = alternative_ids
         self._reset_filters()
 
     def tear_down(self):

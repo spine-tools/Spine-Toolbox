@@ -53,24 +53,128 @@ class TreeViewMixin:
             view.setModel(model)
             view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
+        # Filter caches
+        self._filter_class_ids = {}  # Class ids from entity class- and entity selections (cascading)
+        self._filter_entity_ids = {}  # Entity ids from entity selections
+        self._filter_explicit_entity_ids = {}  # Entity ids for entity class- and entity items that have been selected
+        self._filter_alternative_ids = {}  # Alternative ids from alternative- and scenario tree selections
+        self._filter_explicit_alternative_ids = {}  # Alternative ids from alternative trees selections
+        self._filter_scenario_ids = {}  # Scenario ids from selections
+        self._filter_parameter_value_ids = {}  # Entity ids for currently accepted parameter value rows in tables
+        self._filter_entity_alternative_ids = {}  # Entity ids for currently accepted entity alternative rows in tables
 
     def connect_signals(self):
         """Connects the signals"""
         super().connect_signals()
-        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_graph)
-        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_stacked)
-        self.ui.alternative_tree_view.alternative_selection_changed.connect(
-            self._handle_alternative_selection_changed_in_graph
-        )
-        self.ui.alternative_tree_view.alternative_selection_changed.connect(
-            self._handle_alternative_selection_changed_in_stacked
-        )
+        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed)
+        self.ui.alternative_tree_view.alternative_selection_changed.connect(self._handle_alternative_selection_changed)
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
-            self._handle_scenario_alternative_selection_changed_in_graph
+            self._handle_scenario_alternative_selection_changed
         )
-        self.ui.scenario_tree_view.scenario_selection_changed.connect(
-            self._handle_scenario_alternative_selection_changed_in_stacked
-        )
+
+    def _refresh_parameter_value_filter_ids(self, db_map):
+        single_models = self.parameter_value_model._models_with_db_map(db_map)
+        if not single_models:
+            return True
+        parameter_value_ids = set()
+        for model in single_models:
+            for _, row in self.parameter_value_model._row_map_iterator_for_model(model):
+                parameter_value_ids.add(model._db_item(row).get("entity_id"))
+        if not parameter_value_ids and db_map in self._filter_parameter_value_ids:
+            del self._filter_parameter_value_ids[db_map]
+        self._filter_parameter_value_ids[db_map] = parameter_value_ids
+
+    def _refresh_entity_alternative_filter_ids(self, db_map):
+        single_models = self.entity_alternative_model._models_with_db_map(db_map)
+        if not single_models:
+            return True
+        entity_alternative_ids = set()
+        for model in single_models:
+            for _, row in self.entity_alternative_model._row_map_iterator_for_model(model):
+                item = model._db_item(row)
+                if item.get("active"):
+                    entity_alternative_ids.add(item.get("entity_id"))
+        if not entity_alternative_ids and db_map in self._filter_entity_alternative_ids:
+            del self._filter_entity_alternative_ids[db_map]
+        self._filter_entity_alternative_ids[db_map] = entity_alternative_ids
+
+    @Slot(dict)
+    def _handle_entity_tree_selection_changed(self, selected_indexes):
+        entity_indexes = set(selected_indexes.get("entity", {}).keys())
+        entity_indexes |= {
+            parent
+            for parent in (i.parent() for i in entity_indexes)
+            if self.entity_tree_model.item_from_index(parent).item_type == "entity"
+        }
+        entity_class_indexes = set(selected_indexes.get("entity_class", {}).keys()) | {
+            parent_ind
+            for parent_ind in (ind.parent() for ind in entity_indexes)
+            if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
+        }
+        self._filter_class_ids = self._db_map_ids(entity_class_indexes)
+        self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
+        explicit_entity_ids = {}
+        changed_db_maps = set()
+        for item_type, indexes in selected_indexes.items():
+            for index in indexes:
+                item = index.model().item_from_index(index)
+                for db_map, id_ in item.db_map_ids.items():
+                    changed_db_maps.add(db_map)
+                    if item_type == "root" or id_:
+                        explicit_entity_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
+        self._filter_explicit_entity_ids = explicit_entity_ids
+        self._reset_filters()
+        for db_map in changed_db_maps:
+            self._refresh_parameter_value_filter_ids(db_map)
+            self._refresh_entity_alternative_filter_ids(db_map)
+        if not changed_db_maps:  # Deselections
+            for db_map in self._filter_parameter_value_ids:
+                self._refresh_parameter_value_filter_ids(db_map)
+            for db_map in self._filter_entity_alternative_ids:
+                self._refresh_entity_alternative_filter_ids(db_map)
+        self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
+        self.build_graph()
+
+    @Slot(dict)
+    def _handle_alternative_selection_changed(self, selected):
+        changed_db_maps = set()
+        alternative_ids = {}
+        for db_map, alt_ids in selected.items():
+            if alt_ids:
+                alternative_ids.setdefault(db_map, set()).update(alt_ids)
+                changed_db_maps.add(db_map)
+        self._filter_alternative_ids = alternative_ids
+        self._filter_explicit_alternative_ids = alternative_ids
+        self._reset_filters()
+        for db_map in changed_db_maps:
+            self._refresh_parameter_value_filter_ids(db_map)
+            self._refresh_entity_alternative_filter_ids(db_map)
+        self.build_graph()
+
+    @Slot(dict)
+    def _handle_scenario_alternative_selection_changed(self, selected):
+        scen_alt_ids = {}
+        changed_db_maps = set()
+        for db_map, scenarios in selected.items():
+            for scenario_id, alt_ids in scenarios.items():
+                changed_db_maps.add(db_map)
+                scen_alt_ids.setdefault(db_map, {}).update({scenario_id: alt_ids})
+        self._filter_scenario_ids = scen_alt_ids
+        alternative_ids = {
+            db_map: alt_ids.copy()
+            for db_map, alt_ids in self.ui.alternative_tree_view.selected_alternative_ids.items()
+            if alt_ids
+        }
+        for db_map, scenarios in selected.items():
+            for alt_ids in scenarios.values():
+                changed_db_maps.add(db_map)
+                alternative_ids.setdefault(db_map, set()).update(alt_ids)
+        self._filter_alternative_ids = alternative_ids
+        self._reset_filters()
+        for db_map in changed_db_maps:
+            self._refresh_parameter_value_filter_ids(db_map)
+            self._refresh_entity_alternative_filter_ids(db_map)
+        self.build_graph()
 
     def handle_mousepress(self, tree_view, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.
