@@ -82,7 +82,7 @@ class TestPlotPivotTableSelection(TestBase):
         self.assertEqual(object_tree_model.rowCount(root_index), 1)
         class_index = object_tree_model.index(0, 0, root_index)
         refreshing_models = [self._db_editor.parameter_value_model, self._db_editor.parameter_definition_model]
-        with multi_signal_waiter([model.refreshed for model in refreshing_models]) as at_filter_refresh:
+        with multi_signal_waiter([model.layoutChanged for model in refreshing_models]) as at_filter_refresh:
             self._db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
                 class_index, QItemSelectionModel.ClearAndSelect
             )

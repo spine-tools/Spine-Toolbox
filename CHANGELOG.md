@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 
+- Python 3.12 and later is now supported.
+
 ### Deprecated
 
 ### Removed
@@ -20,6 +22,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## 0.8.1
 
 ### Added
+
 - Importer: it is now possible to reorder source tables by dragging and dropping.
 - Importer: it is now possible to reorder mappings by dragging and dropping.
 - Importer: it is now possible to copy mappings between source tables by dragging selected

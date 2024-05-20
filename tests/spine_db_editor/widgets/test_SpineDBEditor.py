@@ -19,6 +19,7 @@ from PySide6.QtCore import QModelIndex, QItemSelectionModel
 
 from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from .spine_db_editor_test_base import DBEditorTestBase
 from tests.mock_helpers import TestSpineDBManager
@@ -43,7 +44,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         row_data = []
         for row in range(model.rowCount()):
             row_data.append(tuple(model.index(row, h(field)).data() for field in ("entity_class_name", "database")))
-        self.assertIn(("fish", "database"), row_data)
+        self.assertIn(("fish", self.db_codename), row_data)
 
     def test_save_window_state(self):
         self.spine_db_editor.db_maps = [self.mock_db_map]
@@ -122,6 +123,132 @@ class TestSpineDBEditor(DBEditorTestBase):
                     alternative_name=alternative_name,
                 )
                 self.assertEqual(value["parsed_value"], expected_value)
+
+    def test_stacked_table_empty_row_defaults_when_entity_class_is_selected(self):
+        self.spine_db_editor.init_models()
+        self.put_mock_object_classes_in_db_mngr()
+        self.fetch_entity_tree_model()
+        entity_model = self.spine_db_editor.entity_tree_model
+        entity_tree_root = entity_model.index(0, 0)
+        class_index = entity_model.index(0, 0, entity_tree_root)
+        self.assertEqual(class_index.data(), "dog")
+        self.spine_db_editor.ui.treeView_entity.setCurrentIndex(class_index)
+        models = [
+            self.spine_db_editor.parameter_definition_model,
+            self.spine_db_editor.parameter_value_model,
+            self.spine_db_editor.entity_alternative_model,
+        ]
+        expected_row_counts = [1, 1, 1]
+        expected_empty_rows = [
+            ["dog", None, None, None, None, self.db_codename],
+            ["dog", None, None, None, None, self.db_codename],
+            ["dog", None, None, None, self.db_codename],
+        ]
+        for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
+            with self.subTest(model=type(model).__name__):
+                row_count = model.rowCount()
+                self.assertEqual(row_count, expected_row_count)
+                empty_row = [model.index(row_count - 1, col).data() for col in range(model.columnCount())]
+                self.assertEqual(empty_row, expected_empty_row)
+
+    def test_stacked_table_empty_row_defaults_are_updated_when_entity_class_is_renamed(self):
+        self.spine_db_editor.init_models()
+        self.put_mock_object_classes_in_db_mngr()
+        self.fetch_entity_tree_model()
+        entity_model = self.spine_db_editor.entity_tree_model
+        entity_tree_root = entity_model.index(0, 0)
+        class_index = entity_model.index(0, 0, entity_tree_root)
+        self.assertEqual(class_index.data(), "dog")
+        self.spine_db_editor.ui.treeView_entity.setCurrentIndex(class_index)
+        with signal_waiter(entity_model.dataChanged, timeout=1.0) as waiter:
+            self.mock_db_map.get_entity_class_item(name="dog").update(name="wolf")
+            waiter.wait()
+        models = [
+            self.spine_db_editor.parameter_definition_model,
+            self.spine_db_editor.parameter_value_model,
+            self.spine_db_editor.entity_alternative_model,
+        ]
+        expected_row_counts = [1, 1, 1]
+        expected_empty_rows = [
+            ["wolf", None, None, None, None, self.db_codename],
+            ["wolf", None, None, None, None, self.db_codename],
+            ["wolf", None, None, None, self.db_codename],
+        ]
+        for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
+            with self.subTest(model=type(model).__name__):
+                row_count = model.rowCount()
+                self.assertEqual(row_count, expected_row_count)
+                empty_row = [model.index(row_count - 1, col).data() for col in range(model.columnCount())]
+                self.assertEqual(empty_row, expected_empty_row)
+
+    def test_stacked_table_empty_row_defaults_when_entity_is_selected(self):
+        self.spine_db_editor.init_models()
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_objects_in_db_mngr()
+        self.fetch_entity_tree_model()
+        entity_model = self.spine_db_editor.entity_tree_model
+        entity_tree_root = entity_model.index(0, 0)
+        class_index = entity_model.index(1, 0, entity_tree_root)
+        self.assertEqual(class_index.data(), "fish")
+        self.assertEqual(entity_model.rowCount(class_index), 1)
+        entity_index = entity_model.index(0, 0, class_index)
+        self.assertEqual(entity_index.data(), "nemo")
+        with signal_waiter(self.spine_db_editor.parameter_value_model.layoutChanged, timeout=1.0) as waiter:
+            self.spine_db_editor.ui.treeView_entity.setCurrentIndex(entity_index)
+            waiter.wait()
+        models = [
+            self.spine_db_editor.parameter_definition_model,
+            self.spine_db_editor.parameter_value_model,
+            self.spine_db_editor.entity_alternative_model,
+        ]
+        expected_row_counts = [1, 1, 1]
+        expected_empty_rows = [
+            ["fish", None, None, None, None, self.db_codename],
+            ["fish", "nemo", None, None, None, self.db_codename],
+            ["fish", "nemo", None, None, self.db_codename],
+        ]
+        for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
+            with self.subTest(model=type(model).__name__):
+                row_count = model.rowCount()
+                self.assertEqual(row_count, expected_row_count)
+                empty_row = [model.index(row_count - 1, col).data() for col in range(model.columnCount())]
+                self.assertEqual(empty_row, expected_empty_row)
+
+    def test_stacked_table_empty_row_defaults_are_updated_on_entity_rename(self):
+        self.spine_db_editor.init_models()
+        self.put_mock_object_classes_in_db_mngr()
+        self.put_mock_objects_in_db_mngr()
+        self.fetch_entity_tree_model()
+        entity_model = self.spine_db_editor.entity_tree_model
+        entity_tree_root = entity_model.index(0, 0)
+        class_index = entity_model.index(1, 0, entity_tree_root)
+        self.assertEqual(class_index.data(), "fish")
+        self.assertEqual(entity_model.rowCount(class_index), 1)
+        entity_index = entity_model.index(0, 0, class_index)
+        self.assertEqual(entity_index.data(), "nemo")
+        with signal_waiter(self.spine_db_editor.parameter_value_model.layoutChanged, timeout=1.0) as waiter:
+            self.spine_db_editor.ui.treeView_entity.setCurrentIndex(entity_index)
+            waiter.wait()
+        with signal_waiter(entity_model.dataChanged, timeout=1.0) as waiter:
+            self.mock_db_map.get_entity_item(name="nemo", entity_class_name="fish").update(name="emon")
+            waiter.wait()
+        models = [
+            self.spine_db_editor.parameter_definition_model,
+            self.spine_db_editor.parameter_value_model,
+            self.spine_db_editor.entity_alternative_model,
+        ]
+        expected_row_counts = [1, 1, 1]
+        expected_empty_rows = [
+            ["fish", None, None, None, None, self.db_codename],
+            ["fish", "emon", None, None, None, self.db_codename],
+            ["fish", "emon", None, None, self.db_codename],
+        ]
+        for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
+            with self.subTest(model=type(model).__name__):
+                row_count = model.rowCount()
+                self.assertEqual(row_count, expected_row_count)
+                empty_row = [model.index(row_count - 1, col).data() for col in range(model.columnCount())]
+                self.assertEqual(empty_row, expected_empty_row)
 
 
 class TestClosingDBEditors(unittest.TestCase):

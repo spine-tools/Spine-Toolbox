@@ -125,6 +125,8 @@ class DBEditorTestBase(unittest.TestCase):
             None,
         )
 
+    db_codename = "database"
+
     def setUp(self):
         """Makes instances of SpineDBEditor classes."""
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
@@ -134,8 +136,8 @@ class DBEditorTestBase(unittest.TestCase):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
-            self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": "database"})
+            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+            self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": self.db_codename})
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
             self.spine_db_editor.entity_tree_model.hide_empty_classes = False
 
