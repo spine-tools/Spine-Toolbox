@@ -3,13 +3,14 @@ name: Scheduled PyInstaller Bundle
 on:
   schedule:
     - cron: "15 9 * * 2"
+  workflow_dispatch:
 
 jobs:
   call-make-bundle:
     uses: ./.github/workflows/make_bundle.yml
   update-downloads-page:
     name: Trigger Downloads page generation
-    needs: bundle
+    needs: call-make-bundle
     runs-on: ubuntu-latest
     steps:
       - name: Trigger workflow
