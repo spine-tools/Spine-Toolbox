@@ -186,6 +186,8 @@ class SpineDBEditorBase(QMainWindow):
         self.update_last_view()
         self.restore_ui(self.last_view, fresh=True)
         self.update_commit_enabled()
+        db_column_visible = True if len(self.db_maps) > 1 else False
+        self.set_db_column_visibility(db_column_visible)
         return True
 
     def init_add_undo_redo_actions(self):
@@ -983,8 +985,19 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.connect_signals()
         self.last_view = None
         self.apply_stacked_style()
+        self.set_db_column_visibility(False)
         if db_url_codenames is not None:
             self.load_db_urls(db_url_codenames)
+
+    def set_db_column_visibility(self, visible):
+        """Set the visibility of the database -column in all the views it is present"""
+        for view in [
+            self.ui.tableView_entity_alternative,
+            self.ui.tableView_parameter_value,
+            self.ui.tableView_parameter_definition,
+            self.ui.treeView_entity,
+        ]:
+            view.set_db_column_visibility(visible)
 
     def emit_pinned_values_updated(self):
         self.pinned_values_updated.emit(self.ui.tableView_parameter_value.pinned_values)

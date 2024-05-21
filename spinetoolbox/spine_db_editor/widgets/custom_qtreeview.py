@@ -61,8 +61,8 @@ class EntityTreeView(CopyPasteTreeView):
         self._find_next_action = None
         self._hide_empty_classes_action = None
         self._entity_index = None
-        header = self.header()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self._header = self.header()
+        self._header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
     def reset(self):
         super().reset()
@@ -77,6 +77,13 @@ class EntityTreeView(CopyPasteTreeView):
         self._spine_db_editor = spine_db_editor
         self._create_context_menu()
         self.connect_signals()
+
+    def set_db_column_visibility(self, visible):
+        """Sets the visibility of the db column"""
+        if visible:
+            self._header.showSection(1)
+        else:
+            self._header.hideSection(1)
 
     def _add_middle_actions(self):
         self._add_entity_classes_action = self._menu.addAction(
