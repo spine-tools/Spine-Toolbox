@@ -55,6 +55,12 @@ class TestParameterDefinitionTableView(TestBase):
         finally:
             plot_widget.deleteLater()
 
+    def test_set_db_column_visible(self):
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        self.assertTrue(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+        self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
+        self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+
 
 class TestParameterValueTableView(TestBase):
     def test_paste_empty_string_to_entity_byname_column(self):
@@ -282,6 +288,12 @@ class TestParameterValueTableView(TestBase):
         finally:
             plot_widget.deleteLater()
 
+    def test_set_db_column_visible(self):
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        self.assertTrue(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+        self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
+        self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+
 
 class TestParameterValueTableWithExistingData(TestBase):
     _CHUNK_SIZE = 100  # This has to be large enough, so the chunk won't 'fit' into the table view.
@@ -422,6 +434,12 @@ class TestEntityAlternativeTableView(TestBase):
             for column in range(model.columnCount()):
                 with self.subTest(row=row, column=column):
                     self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    def test_set_db_column_visible(self):
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        self.assertTrue(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+        self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
+        self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
 
 
 def _set_row_data(view, model, row, data, delegate_mock):
