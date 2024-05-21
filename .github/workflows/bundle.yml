@@ -8,6 +8,8 @@ on:
 jobs:
   call-make-bundle:
     uses: ./.github/workflows/make_bundle.yml
+    with:
+      git-ref: ${{ github.ref_name }}
   update-downloads-page:
     name: Trigger Downloads page generation
     needs: call-make-bundle
