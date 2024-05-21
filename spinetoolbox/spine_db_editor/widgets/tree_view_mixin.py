@@ -128,9 +128,9 @@ class TreeViewMixin:
             self._refresh_parameter_value_filter_ids(db_map)
             self._refresh_entity_alternative_filter_ids(db_map)
         if not changed_db_maps:  # Deselections
-            for db_map in self._filter_parameter_value_ids:
+            for db_map in self._filter_parameter_value_ids.copy():
                 self._refresh_parameter_value_filter_ids(db_map)
-            for db_map in self._filter_entity_alternative_ids:
+            for db_map in self._filter_entity_alternative_ids.copy():
                 self._refresh_entity_alternative_filter_ids(db_map)
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
         self.build_graph()
