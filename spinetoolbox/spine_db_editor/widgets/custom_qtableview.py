@@ -227,6 +227,10 @@ class StackedTableView(AutoFilterCopyPasteTableView):
             width = self._initial_column_size(column)
             self.horizontalHeader().resizeSection(column, width)
 
+    def set_db_column_visibility(self, visible):
+        """Sets the visibility of the db column"""
+        self.setColumnHidden(self._EXPECTED_COLUMN_COUNT - 1, not visible)
+
 
 class ParameterTableView(StackedTableView):
     value_column_header: str = NotImplemented

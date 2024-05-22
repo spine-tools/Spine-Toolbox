@@ -398,6 +398,12 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "entity_2")
 
+    def test_set_db_column_visibility(self):
+        view = self._db_editor.ui.treeView_entity
+        self.assertTrue(view._header.isSectionHidden(1))
+        view.set_db_column_visibility(True)
+        self.assertFalse(view._header.isSectionHidden(1))
+
     def _rename_entity_class(self, class_name):
         view = self._db_editor.ui.treeView_entity
         _edit_entity_tree_item({0: class_name}, view, "Edit...", EditEntityClassesDialog)
