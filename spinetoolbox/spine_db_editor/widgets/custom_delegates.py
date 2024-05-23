@@ -12,7 +12,8 @@
 
 """Custom item delegates."""
 from numbers import Number
-from PySide6.QtCore import QModelIndex, Qt, Signal
+from PySide6.QtCore import QModelIndex, Qt, Signal, QRect, QEvent
+from PySide6.QtGui import QIcon, QFontMetrics
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
@@ -846,3 +847,55 @@ class ItemMetadataDelegate(QStyledItemDelegate):
                 items.add(self._metadata_model.index(i, self._column).data())
         editor.addItems(sorted(items))
         return editor
+
+
+class AddEntityButtonDelegate(QStyledItemDelegate):
+    """A delegate for adding entities from a button in Entity Tree View."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.plus_icon = QIcon(":/icons/menu_icons/cube_plus.svg")
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+        if not self.is_entity_class(index):  # Add the button only for entity classes
+            return
+        text = index.data(Qt.DisplayRole)
+        font_metrics = QFontMetrics(option.font)
+        text_width = font_metrics.width(text)
+        icon_size = option.decorationSize
+        button_rect = self.get_button_rect(option, icon_size.width(), text_width)
+        self.plus_icon.paint(painter, button_rect)
+
+    @staticmethod
+    def is_entity_class(index):
+        """Check if index refers to entity class"""
+        parent_index = index.parent()
+        grand_parent = parent_index.parent()
+        return parent_index.isValid() and not grand_parent.isValid()
+
+    @staticmethod
+    def get_button_rect(option, icon_width, text_width):
+        size = 16
+        margin = 20
+        x = option.rect.left() + icon_width + text_width + margin
+        y = option.rect.center().y() - size // 2
+        return QRect(x, y, size, size)
+
+    def editorEvent(self, event, model, option, index):
+        if event.type() == QEvent.MouseButtonPress and event.buttons() & Qt.LeftButton:
+            text = index.data(Qt.DisplayRole)
+            font_metrics = QFontMetrics(option.font)
+            text_width = font_metrics.width(text)
+            icon_size = option.decorationSize
+            button_rect = self.get_button_rect(option, icon_size.width(), text_width)
+            if button_rect.contains(event.pos()) and self.is_entity_class(index):
+                self.handle_button_click(index)
+                return True
+        return super().editorEvent(event, model, option, index)
+
+    def handle_button_click(self, index):
+        """Opens the Add Entities -dialog for the selected entity class item"""
+        entity_tree_view = self.parent()
+        entity_tree_view._context_item = entity_tree_view.model().item_from_index(index)
+        entity_tree_view.add_entities()
