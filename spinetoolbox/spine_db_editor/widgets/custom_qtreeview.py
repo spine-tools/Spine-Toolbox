@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Classes for custom QTreeViews and QTreeWidgets."""
-from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView, QTreeWidget, QTreeWidgetItem
+from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
 from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
-from spinetoolbox.helpers import busy_effect, CharIconEngine, DB_ITEM_SEPARATOR
-from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate
+from spinetoolbox.helpers import busy_effect, CharIconEngine
+from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate, AddEntityButtonDelegate
 from .scenario_generator import ScenarioGenerator
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
@@ -34,6 +34,7 @@ class EntityTreeView(CopyPasteTreeView):
             parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
+        self.setItemDelegate(AddEntityButtonDelegate(self))
         self._context_item = None
         self._selected_indexes = {}
         self._menu = QMenu(self)
