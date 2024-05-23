@@ -70,10 +70,12 @@ Adding entities
 From **Entity Tree** or **Graph View**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Right-click on the root item in **Entity Tree** and select **Add entities**, or click on an empty space
+There are several different ways to add entities to an existing entity class. The easiest way is to click on the
+(|add|) -button next to an entity class. The other ways are to
+right-click on the class or root item in **Entity Tree** and select **Add entities**, or click on an empty space
 in the **Graph View** and select **Add entities...** from the context menu.
 
-This will open up the **Add entities** dialog:
+All of these methods will open up the **Add entities** dialog:
 
 .. image:: img/add_entities_dialog.png
    :align: center
