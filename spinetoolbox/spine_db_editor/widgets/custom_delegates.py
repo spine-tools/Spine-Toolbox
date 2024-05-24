@@ -710,6 +710,24 @@ class ManageItemsDelegate(QStyledItemDelegate):
         if isinstance(editor, SearchBarEditor):
             editor.data_committed.connect(lambda *_: self.close_editor(editor, index))
 
+    def _create_alternative_editor(self, parent, index):
+        """Creates an editor.
+
+        Args:
+            parent (QWidget): parent widget
+            index (QModelIndex): index being edited
+
+        Returns:
+            QWidget: editor
+        """
+        editor = SearchBarEditor(self.parent(), parent)
+        all_databases = self.parent().keyed_db_maps.values()
+        name_list = [
+            x["name"] for db_map in all_databases for x in self.parent().db_mngr.get_items(db_map, "alternative")
+        ]
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        return editor
+
     def _create_database_editor(self, parent, index):
         """Creates an editor.
 
@@ -786,6 +804,8 @@ class ManageEntitiesDelegate(ManageItemsDelegate):
             editor.set_data(data)
         elif header[index.column()] == "databases":
             editor = self._create_database_editor(parent, index)
+        elif header[index.column()] == "alternative":
+            editor = self._create_alternative_editor(parent, index)
         else:
             editor = SearchBarEditor(parent)
             entity_name_list = self.parent().entity_name_list(index.row(), index.column())
