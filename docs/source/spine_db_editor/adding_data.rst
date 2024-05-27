@@ -85,9 +85,10 @@ To narrow down the list, instead of opening the dialog from the root item, open 
 in the **Entity Tree**. This way the class will be preselected from the list and the list will overall only contain
 other classes that are relevant to the selected class.
 
-Enter the names of the entities under **entity name**. Finally, select the databases where you want to add the
-entities under **databases**. When you're ready, press **Ok**. Rows can once again be deleted with the
-**Remove selected rows** -button.
+Enter the names of the entities under **entity name**. The column **alternative** is optional. Filling it in
+will automatically set the entity active in the selected alternative. Finally, select the databases where you
+want to add the entities under **databases**. When you're ready, press **Ok**. Rows can once again be deleted
+with the **Remove selected rows** -button.
 
 With N-D entity classes, the elements need to be specified. After defining the elements the entity's name can be
 modified:
