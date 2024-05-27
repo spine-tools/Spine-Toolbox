@@ -892,7 +892,7 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
         """Check if index refers to entity class"""
         parent_index = index.parent()
         grand_parent = parent_index.parent()
-        return parent_index.isValid() and not grand_parent.isValid()
+        return index.column() == 0 and (parent_index.isValid() and not grand_parent.isValid())
 
     @staticmethod
     def get_button_rect(option, icon_width, text_width):
