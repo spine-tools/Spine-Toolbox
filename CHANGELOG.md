@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
+- A button next to each entity class in **Entity Tree** that opens the *Add entities* -dialog.
+- Alternative -column in *Add entities* -dialog. If filled, the created entity will be set active in that alternative.
+
 ### Changed
 
 - Python 3.12 and later is now supported.

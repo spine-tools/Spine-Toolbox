@@ -70,10 +70,12 @@ Adding entities
 From **Entity Tree** or **Graph View**
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Right-click on the root item in **Entity Tree** and select **Add entities**, or click on an empty space
+There are several different ways to add entities to an existing entity class. The easiest way is to click on the
+(|add|) -button next to an entity class. The other ways are to
+right-click on the class or root item in **Entity Tree** and select **Add entities**, or click on an empty space
 in the **Graph View** and select **Add entities...** from the context menu.
 
-This will open up the **Add entities** dialog:
+All of these methods will open up the **Add entities** dialog:
 
 .. image:: img/add_entities_dialog.png
    :align: center
@@ -83,9 +85,10 @@ To narrow down the list, instead of opening the dialog from the root item, open 
 in the **Entity Tree**. This way the class will be preselected from the list and the list will overall only contain
 other classes that are relevant to the selected class.
 
-Enter the names of the entities under **entity name**. Finally, select the databases where you want to add the
-entities under **databases**. When you're ready, press **Ok**. Rows can once again be deleted with the
-**Remove selected rows** -button.
+Enter the names of the entities under **entity name**. The column **alternative** is optional. Filling it in
+will automatically set the entity active in the selected alternative. Finally, select the databases where you
+want to add the entities under **databases**. When you're ready, press **Ok**. Rows can once again be deleted
+with the **Remove selected rows** -button.
 
 With N-D entity classes, the elements need to be specified. After defining the elements the entity's name can be
 modified:

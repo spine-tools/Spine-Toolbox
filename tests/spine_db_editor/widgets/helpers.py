@@ -115,3 +115,11 @@ def add_entity(view, name, entity_class_index=0):
     class_index = model.index(entity_class_index, 0, root_index)
     view._context_item = model.item_from_index(class_index)
     add_entity_tree_item({0: name}, view, "Add entities", AddEntitiesDialog)
+
+
+def add_entity_with_alternative(view, name, alternative, entity_class_index=0):
+    model = view.model()
+    root_index = model.index(0, 0)
+    class_index = model.index(entity_class_index, 0, root_index)
+    view._context_item = model.item_from_index(class_index)
+    add_entity_tree_item({0: name, 1: alternative}, view, "Add entities", AddEntitiesDialog)
