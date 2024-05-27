@@ -36,6 +36,7 @@ from tests.spine_db_editor.widgets.helpers import (
     add_entity_tree_item,
     add_zero_dimension_entity_class,
     add_entity,
+    add_entity_with_alternative,
 )
 
 
@@ -173,6 +174,44 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         view = self._db_editor.ui.treeView_entity
         add_zero_dimension_entity_class(view, "an_entity_class")
         add_entity(view, "an_entity")
+        model = view.model()
+        root_index = model.index(0, 0)
+        class_index = model.index(0, 0, root_index)
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 1:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(class_index), 1)
+        self.assertEqual(class_index.data(), "an_entity_class")
+        entity_index = model.index(0, 0, class_index)
+        self.assertEqual(model.rowCount(entity_index), 0)
+        self.assertEqual(entity_index.data(), "an_entity")
+        entity_database_index = model.index(0, 1, class_index)
+        self.assertEqual(entity_database_index.data(), self.db_codename)
+        self._commit_changes_to_database("Add entity.")
+        data = self._db_map.query(self._db_map.entity_class_sq).all()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "an_entity_class")
+        data = self._db_map.query(self._db_map.entity_sq).all()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "an_entity")
+
+    def test_add_entity_with_alternative(self):
+        view = self._db_editor.ui.treeView_entity
+        add_zero_dimension_entity_class(view, "an_entity_class")
+        with mock.patch.object(self._db_mngr, "add_entity_alternatives") as mock_add_entity_alternatives:
+            add_entity_with_alternative(view, "an_entity", "Alt1")
+            mock_add_entity_alternatives.assert_called_once_with(
+                {
+                    self._db_map: [
+                        {
+                            "active": True,
+                            "alternative_name": "Alt1",
+                            "entity_byname": ("an_entity",),
+                            "entity_class_name": "an_entity_class",
+                        }
+                    ]
+                }
+            )
         model = view.model()
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)

@@ -484,11 +484,18 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         return EmptyRowModel(self)
 
     def _do_reset_model(self):
-        header = self.dimension_name_list + ("entity name", "databases")
+        header = self.dimension_name_list + ("entity name", "alternative", "databases")
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        defaults = {"databases": db_names}
+        alt_selection_model = self.parent().ui.alternative_tree_view.selectionModel()
+        alt_selection = alt_selection_model.selection()
+        alternative = None
+        if alt_selection:
+            selected_alternative_index = alt_selection_model.currentIndex()
+            alternative = selected_alternative_index.model().item_from_index(selected_alternative_index)
+        alternative_name = alternative.name if alternative else ""
+        defaults = {"databases": db_names, "alternative": alternative_name}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
@@ -545,7 +552,42 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             self.parent().msg_error.emit("Nothing to add")
             return
         self.db_mngr.add_entities(db_map_data)
+        created_entities = {}
+        for db_map, data in db_map_data.items():
+            for item in data:
+                created_entities.update(
+                    {item["name"]: db_map.get_entity_item(class_id=item["class_id"], name=item["name"])}
+                )
+        entity_alternatives = self.make_entity_alternatives(created_entities)
+        if entity_alternatives:  # If alternatives have been defined
+            self.db_mngr.add_entity_alternatives(entity_alternatives)
         super().accept()
+
+    def make_entity_alternatives(self, entities):
+        """Creates a mapping from db_map to entity alternatives that are to be created"""
+        entity_alternatives = {}
+        name_column = self.model.horizontal_header_labels().index("entity name")
+        alternative_column = self.model.horizontal_header_labels().index("alternative")
+        db_column = self.model.horizontal_header_labels().index("databases")
+        for i in range(self.model.rowCount() - 1):
+            row_data = self.model.row_data(i)
+            alternative = row_data[alternative_column]
+            if not alternative:
+                continue
+            entity_name = row_data[name_column]
+            entity = entities[entity_name]
+            db_names = row_data[db_column]
+            for db_name in db_names.split(","):
+                db_map = self.keyed_db_maps[db_name]
+                entity_alternatives.setdefault(db_map, []).append(
+                    {
+                        "entity_class_name": entity["entity_class_name"],
+                        "alternative_name": alternative,
+                        "entity_byname": entity["entity_byname"],
+                        "active": True,
+                    }
+                )
+        return entity_alternatives
 
 
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
