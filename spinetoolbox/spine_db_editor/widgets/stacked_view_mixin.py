@@ -48,6 +48,7 @@ class StackedViewMixin:
         """Connects signals to slots."""
         super().connect_signals()
         self.ui.treeView_entity.model().dataChanged.connect(self._update_empty_rows)
+        self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
 
     def init_models(self):
         """Initializes models."""
