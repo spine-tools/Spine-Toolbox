@@ -21,7 +21,7 @@ from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from .spine_db_editor_test_base import DBEditorTestBase
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 from tests.mock_helpers import TestSpineDBManager
 
 

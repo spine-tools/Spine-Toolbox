@@ -495,9 +495,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             selected_alternative_index = alt_selection_model.currentIndex()
             alternative = selected_alternative_index.model().item_from_index(selected_alternative_index)
         all_databases = [db_map for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
-        alt_name_list = [
-            x["name"] for db_map in all_databases for x in self.db_mngr.get_items(db_map, "alternative")
-        ]
+        alt_name_list = [x["name"] for db_map in all_databases for x in self.db_mngr.get_items(db_map, "alternative")]
         alt_name_list.append("")
         alternative_name = alternative.name if alternative else alt_name_list[0]
         defaults = {"databases": db_names, "alternative": alternative_name}
