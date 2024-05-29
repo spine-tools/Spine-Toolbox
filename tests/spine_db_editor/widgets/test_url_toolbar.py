@@ -38,13 +38,8 @@ class TestURLToolbar(DBEditorTestBase):
     def test_url_toolbar(self):
         self.db_mngr.setParent(self._toolbox)
         tb = UrlToolBar(self.spine_db_editor)
-        tb.add_urls_to_history(self.db_mngr.db_urls)
-        self.assertEqual({"sqlite://"}, tb.get_previous_urls())
-        self.assertEqual({"sqlite://"}, tb.get_next_urls())
+        self.assertEqual([{'database': 'sqlite://'}], self.spine_db_editor._history)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.url_toolbar._UrlFilterDialog.show") as mock_show_dialog:
             mock_show_dialog.show.return_value = True
             tb._show_filter_menu()
             mock_show_dialog.assert_called()
-        # Add fake data stores to project
-        self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
-        tb._update_open_project_url_menu()

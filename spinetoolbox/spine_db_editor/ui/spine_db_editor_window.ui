@@ -19,8 +19,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>969</width>
-    <height>1167</height>
+    <width>965</width>
+    <height>1159</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -708,6 +708,61 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>965</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="actionUser_guide"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>&amp;Edit</string>
+    </property>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="separator"/>
+    <addaction name="actionVacuum"/>
+   </widget>
+   <widget class="QMenu" name="menuSession">
+    <property name="title">
+     <string>Sess&amp;ion</string>
+    </property>
+    <addaction name="actionCommit"/>
+    <addaction name="actionRollback"/>
+    <addaction name="separator"/>
+    <addaction name="actionView_history"/>
+    <addaction name="separator"/>
+    <addaction name="actionClose"/>
+   </widget>
+   <widget class="QMenu" name="menuFile_2">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionNew_db_file"/>
+    <addaction name="actionOpen_db_file"/>
+    <addaction name="actionOpen_recent"/>
+    <addaction name="actionAdd_db_file"/>
+    <addaction name="separator"/>
+    <addaction name="actionImport"/>
+    <addaction name="actionExport"/>
+    <addaction name="actionExport_session"/>
+    <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+   </widget>
+   <addaction name="menuFile_2"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuSession"/>
+   <addaction name="menuHelp"/>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
@@ -720,7 +775,7 @@
     <string>&amp;Commit...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Commit&lt;/p&gt;&lt;p&gt;Ctrl+Enter&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Commit&lt;/p&gt;&lt;p&gt;Ctrl+Return&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
@@ -834,7 +889,7 @@
     <string>T&amp;able</string>
    </property>
    <property name="toolTip">
-    <string>Table</string>
+    <string>Table view</string>
    </property>
   </action>
   <action name="actionGraph_style">
@@ -849,7 +904,7 @@
     <string>&amp;Graph</string>
    </property>
    <property name="toolTip">
-    <string>Graph</string>
+    <string>Graph view</string>
    </property>
   </action>
   <action name="actionView_history">
@@ -991,6 +1046,75 @@
    </property>
    <property name="text">
     <string>Vacuum</string>
+   </property>
+  </action>
+  <action name="actionValue">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/hashtag.svg</normaloff>:/icons/menu_icons/hashtag.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Value</string>
+   </property>
+   <property name="toolTip">
+    <string>Pivot view: Value</string>
+   </property>
+  </action>
+  <action name="actionIndex">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/index.svg</normaloff>:/icons/menu_icons/index.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Index</string>
+   </property>
+   <property name="toolTip">
+    <string>Pivot view: Index</string>
+   </property>
+  </action>
+  <action name="actionElement">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/element.svg</normaloff>:/icons/menu_icons/element.svg</iconset>
+   </property>
+   <property name="text">
+    <string>E&amp;lement</string>
+   </property>
+   <property name="toolTip">
+    <string>Pivot view: Element</string>
+   </property>
+  </action>
+  <action name="actionScenario">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/scenario.svg</normaloff>:/icons/menu_icons/scenario.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Scenario</string>
+   </property>
+   <property name="toolTip">
+    <string>Pivot view: Scenario</string>
+   </property>
+  </action>
+  <action name="actionOpen_recent">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/history.svg</normaloff>:/icons/menu_icons/history.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Open recent</string>
    </property>
   </action>
  </widget>

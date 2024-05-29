@@ -15,6 +15,7 @@ import os
 from PySide6.QtWidgets import QMenu, QWidgetAction
 from PySide6.QtGui import QIcon, QAction
 from PySide6.QtCore import Slot, QPersistentModelIndex
+from spinetoolbox.helpers import CustomPopupMenu
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
 
@@ -67,36 +68,6 @@ class OpenProjectDialogComboBoxContextMenu(CustomContextMenu):
         """
         super().__init__(parent, position)
         self.add_action("Clear history")
-
-
-class CustomPopupMenu(QMenu):
-    """Popup menu master class for several popup menus."""
-
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): Parent widget of this pop-up menu
-        """
-        super().__init__(parent=parent)
-        self._parent = parent
-
-    def add_action(self, text, slot, enabled=True, tooltip=None, icon=None):
-        """Adds an action to the popup menu.
-
-        Args:
-            text (str): Text description of the action
-            slot (method): Method to connect to action's triggered signal
-            enabled (bool): Is action enabled?
-            tooltip (str): Tool tip for the action
-            icon (QIcon): Action icon
-        """
-        if icon is not None:
-            action = self.addAction(icon, text, slot)
-        else:
-            action = self.addAction(text, slot)
-        action.setEnabled(enabled)
-        if tooltip is not None:
-            action.setToolTip(tooltip)
 
 
 class ItemSpecificationMenu(CustomPopupMenu):
