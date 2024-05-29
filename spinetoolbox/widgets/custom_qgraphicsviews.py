@@ -86,7 +86,7 @@ class CustomQGraphicsView(QGraphicsView):
                 self.viewport().setCursor(Qt.CrossCursor)
             elif button == Qt.MouseButton.MiddleButton:
                 self.reset_zoom()
-            if button == Qt.MouseButton.RightButton:
+            elif button == Qt.MouseButton.RightButton:
                 self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
                 self._last_right_mouse_press = event.timestamp()
                 event = _fake_left_button_event(event)
@@ -112,7 +112,7 @@ class CustomQGraphicsView(QGraphicsView):
             if self._drag_duration_passed(event):
                 context_menu_disabled = True
                 self.disable_context_menu()
-            else:
+            elif event.button() == Qt.MouseButton.RightButton:
                 self.contextMenuEvent(
                     QContextMenuEvent(QContextMenuEvent.Reason.Mouse, event.pos(), event.globalPos(), event.modifiers())
                 )
