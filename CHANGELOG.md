@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Changed
 
 - Python 3.12 and later is now supported.
+- When exporting GAMS `.gdx` files with Exporter, special values 10<sup>-10</sup> and `EPS`
+  now get converted to GAMS Eps (epsilon).
 
 ### Deprecated
 
