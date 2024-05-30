@@ -3,7 +3,7 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
+## [0.8.2]
 
 ### Added
 
@@ -16,15 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - When exporting GAMS `.gdx` files with Exporter, special values 10<sup>-10</sup> and `EPS`
   now get converted to GAMS Eps (epsilon).
 
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
-
-## 0.8.1
+## [0.8.1]
 
 ### Added
 
@@ -39,7 +31,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   The flag is not used anywhere and has not been accessible in Database editor
   for a long time.
 
-## 0.8.0
+## [0.8.0]
 
 ### Added
 
