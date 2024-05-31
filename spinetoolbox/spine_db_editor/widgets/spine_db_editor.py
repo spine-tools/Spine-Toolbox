@@ -50,9 +50,10 @@ from ...helpers import (
     busy_effect,
     preferred_row_height,
     unique_name,
+    open_url,
 )
 from ...spine_db_parcel import SpineDBParcel
-from ...config import APPLICATION_PATH
+from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -930,6 +931,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.pivot_action_group.triggered.connect(self.apply_pivot_style)
         for dock in self._dock_views:
             dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
+        self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
 
     def init_models(self):
         super().init_models()

@@ -722,6 +722,7 @@
      <string>&amp;Help</string>
     </property>
     <addaction name="actionUser_guide"/>
+    <addaction name="actionGitHub"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -1115,6 +1116,18 @@
    </property>
    <property name="text">
     <string>Open recent</string>
+   </property>
+  </action>
+  <action name="actionGitHub">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/github-mark.svg</normaloff>:/icons/menu_icons/github-mark.svg</iconset>
+   </property>
+   <property name="text">
+    <string>GitHub</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Spine-Toolbox repository in GitHub&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>
