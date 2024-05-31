@@ -45,7 +45,7 @@ will be automatically committed or not depending on the selection you made previ
 Rollback
 --------
 
-To undo *all* changes since the last commit, select **Session -> Rollback** from the **Menubar** or press
+To undo *all* changes since the last commit, select **Session -> Rollback** from the **Menu bar** or press
 **Ctrl+Backspace** while the Spine Database Editor -window is active. A dialog confirming the rollback action
 will open. From there, select **Rollback** to proceed.
 
@@ -57,7 +57,7 @@ will open. From there, select **Rollback** to proceed.
 History
 -------
 
-To examine the commit history of the database, select **Session -> History...** from the **Menubar**.
+To examine the commit history of the database, select **Session -> History...** from the **Menu bar**.
 The **commit viewer** will pop up:
 
 .. image:: img/commit_viewer.png

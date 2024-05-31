@@ -13,6 +13,6 @@ a while. More detailed explanation on what vacuuming does to the SQLite database
 `here <https://www.sqlite.org/lang_vacuum.html>`_.
 
 To vacuum a database, either press the |broom| Vacuum -button from the Data Store **Properties** -panel, or
-straight from the Spine Database Editors from **Edit->Vacuum** in the **Menubar**.
+straight from the Spine Database Editors from **Edit->Vacuum** in the **Menu bar**.
 
 After the vacuum is finished, a message informing the amount of bytes freed from the database is shown.

@@ -67,7 +67,7 @@ Unavailable options are still visible but they are greyed out:
 
 .. tip:: **Entity Tree** also supports **Sticky selection**, which allows one to
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select
-   **Settings** from **Menubar -> File**, and check the corresponding box.
+   **Settings** from **Menu bar -> File**, and check the corresponding box.
 
 Using the **Graph View**
 ~~~~~~~~~~~~~~~~~~~~~~~~

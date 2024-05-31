@@ -31,7 +31,7 @@ Using a *Data Store* project item:
 Without a *Data Store*:
 
 1. From the main window select **File -> New DB Editor**.
-2. From the **Menubar** select **File -> Open...** to open an existing database or **New..** to create a new one.
+2. From the **Menu bar** select **File -> Open...** to open an existing database or **New..** to create a new one.
 
 From the command line
 =====================
@@ -53,7 +53,7 @@ the data of the open databases in one editor.
 To open multiple SQLite databases in the same Spine database editor by file browser:
 
 1. Open a database Database editor using any of the ways explained before.
-2. Select **Add...** from the editor's **Menubar**.
+2. Select **Add...** from the editor's **Menu bar**.
 3. Browse to the directory of the SQLite file and open it.
 
 Knowing the UI
@@ -68,7 +68,7 @@ like this:
 The dock widgets can be scaled by dragging them from the sides and moved around by dragging them from their
 darker colored headers. Like with other widgets, Toolbox remembers the customizations and the editor will
 open in the same configuration when it is opened the next time. The dock configurations are URL specific.
-the configurations for the URL can be restored back to default from the **Menubar->View->Docks...->Reset docks**,
+the configurations for the URL can be restored back to default from the **Menu bar->View->Docks...->Reset docks**,
 or from the button in the **Toolbar** with the same name.
 
 Tab bar
@@ -80,10 +80,10 @@ with the instructions given above. Tabs can be deleted from the editor by pressi
 a tab. The tabs can be dragged from the **Tab bar** to create new editor windows. Tabs from different windows
 can also be dragged into others, fusing them into the same editor window.
 
-Menubar
-==============
+Menu bar
+========
 
-Right below the **Tab bar** there is the **Menubar**. The **Menubar** has five different sections: **File**, **Edit**,
+Right below the **Tab bar** there is the **Menu bar**. The **Menu bar** has five different sections: **File**, **Edit**,
 **View**, **Session**, and **Help**.
 
 File
@@ -191,7 +191,7 @@ Spine Database Editor has the following main UI components:
 - *Metadata*: presents metadata defined in the databases.
 - *Item metadata*: shows metadata associated with the currently selected entities or parameter values.
 
-.. tip:: You can customize the UI from the **View** section in the **Menubar** by enabling and disabling
+.. tip:: You can customize the UI from the **View** section in the **Menu bar** by enabling and disabling
          the different UI components listed above.
 
 Items from the trees can be selected by clicking them with the left mouse button and the views will react to
