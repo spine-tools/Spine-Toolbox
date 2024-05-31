@@ -1,4 +1,6 @@
 
+.. _viewing data:
+
 Viewing data
 ------------
 
@@ -65,7 +67,7 @@ Unavailable options are still visible but they are greyed out:
 
 .. tip:: **Entity Tree** also supports **Sticky selection**, which allows one to
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select
-   **Settings** from the hamburger menu, and check the corresponding box.
+   **Settings** from **Menubar -> File**, and check the corresponding box.
 
 Using the **Graph View**
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -247,7 +249,7 @@ Selecting the input type
   in the table body.
 
 
-You can select the input type from the **Pivot** section in the hamburger menu.
+You can select the input type from the **Toolbar**.
 
 .. note:: In **Pivot View**, header blocks in the top-left area indicate what is shown in each horizontal
    and vertical header. For example, in **Value** input type, by default, the horizontal header

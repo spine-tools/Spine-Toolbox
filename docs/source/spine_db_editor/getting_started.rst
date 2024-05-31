@@ -31,9 +31,7 @@ Using a *Data Store* project item:
 Without a *Data Store*:
 
 1. From the main window select **File -> New DB Editor**.
-2. Open the menu by clicking on the hamburger menu icon (☰) or by pressing **ALT+F** or **ALT+E**.
-3. Select **Open...** to open an existing database, **New..** to create a new one or paste a database URL into
-   the URL bar.
+2. From the **Menubar** select **File -> Open...** to open an existing database or **New..** to create a new one.
 
 From the command line
 =====================
@@ -55,14 +53,8 @@ the data of the open databases in one editor.
 To open multiple SQLite databases in the same Spine database editor by file browser:
 
 1. Open a database Database editor using any of the ways explained before.
-2. Select **Add...** from the editor's hamburger menu (☰).
+2. Select **Add...** from the editor's **Menubar**.
 3. Browse to the directory of the SQLite file and open it.
-
-By using the database URL:
-
-1. Open a database Database editor using any of the ways explained before.
-2. In the URL bar, after the already open database's URL add a semicolon ``;``
-   and after that the URL of the other database to be opened in the same editor.
 
 Knowing the UI
 --------------
@@ -76,69 +68,53 @@ like this:
 The dock widgets can be scaled by dragging them from the sides and moved around by dragging them from their
 darker colored headers. Like with other widgets, Toolbox remembers the customizations and the editor will
 open in the same configuration when it is opened the next time. The dock configurations are URL specific.
-the configurations for the URL can be restored back to default from the hamburger menu **View->Docks...->Reset docks**.
+the configurations for the URL can be restored back to default from the **Menubar->View->Docks...->Reset docks**,
+or from the button in the **Toolbar** with the same name.
 
 Tab bar
 =======
 
-The uppermost UI element is the tab bar. One editor window can have multiple tabs. New tabs can be added by
-pressing the plus-sign (**+**) in the tab bar. In the newly created tab, databases can be opened once again
+The uppermost UI element is the **Tab bar**. One editor window can have multiple tabs. New tabs can be added by
+pressing the plus-sign (**+**) in the **Tab bar**. In the newly created tab, databases can be opened once again
 with the instructions given above. Tabs can be deleted from the editor by pressing the cross (**X**) inside
-a tab. The tabs can be dragged from the tab bar to create new editor windows. Tabs from different windows
+a tab. The tabs can be dragged from the **Tab bar** to create new editor windows. Tabs from different windows
 can also be dragged into others, fusing them into the same editor window.
 
-Navigation bar
+Menubar
 ==============
 
-Right below the tab bar there is the navigation bar. With the backwards and forwards arrows it is possible
-to go back to the database that was previously loaded in the specific tab. This is kind of analogous of web
-browsers and going back to the previous page. Next to the arrows there is the **reload** (|reload|) button.
-It can be used to reload the data of the database. Next up is the Data Store icon (|database|) which lists
-the Data Store items in the project and can be used to open any of them in the current tab. The URL bar
-contains the URL of the databases tha are currently open in the tab. As mentioned before, databases can
-be opened by inserting valid database URLs into this field and pressing enter. The URL bar also contains
-the filter (more about this later). After the URL bar there is the Spine-Toolbox logo which when clicked
-brings up the Spine-Toolbox main window. Finally there is the hamburger menu (☰) which holds many of the
-functionalities of the Spine Database Editor.
-
-Hamburger menu
-==============
-
-The hamburger menu (☰) can be located in the upper left corner of the Spine Database Editor. It is the place
-where options and other such things can be found.
+Right below the **Tab bar** there is the **Menubar**. The **Menubar** has five different sections: **File**, **Edit**,
+**View**, **Session**, and **Help**.
 
 File
 ~~~~
 
-The uppermost section in the menu is dedicated to actions related
-to databases. There you can create a new Spine db from **New...**, open an existing one from **Open...** or add
-another database to the current tab form **Add...** as explained before. There are also options **Import...**,
-**Export...** and **Export session...**. The importing works kind of like adding another database to the existing
-tab but instead of just opening the other database it brings all of the data from the other database and merges it
-into the current database. With export it is possible to export the current database into it's own ``.sqlite`` file.
-The export session works just like export but instead of exporting the whole database, it exports just the new
-modifications that have been made since the last commit.
+The leftmost section in the menu is dedicated to actions related
+to databases. There you can create a new Spine db from **New...**, open an existing one from **Open...** or
+**Open recent**, and finally add another database to the current tab with **Add...** as explained before.
+There are also options **Import...**, **Export...** and **Export session...**. The importing works kind of like adding
+another database to the existing tab but instead of just opening the other database it brings all of the data from the
+other database and merges it into the current database. With export it is possible to export the current database into
+it's own ``.sqlite`` file. The export session works just like export but instead of exporting the whole database, it
+exports just the new modifications that have been made since the last commit. The last menu item is **Settings...**,
+which opens up the settings. More information about the settings can be found in :ref:`DB editor settings`
 
 Edit
 ~~~~
 
-In the **Edit** section there lies the **Undo** and **Redo** -buttons. These can be used to undo and redo the
-actions that have been made in the editor (**CTR+Z** and **CTR+Y** also work). The **Copy as text** allows
-the user to copy items into the clipboard that can then be pasted elsewhere. The **Paste** option does
-exactly what it says, it pastes the data on the clipboard into the selected field(s). The **Purge...** button is
-quite useful when there is a need to get rid of a lot of data quickly. Clicking it will open a new window where
-options for the purging are given. Find out more about purging in the section :ref:`Removing data`.
-The **Vacuum** option tries to free up some memory from the claws of the database.
+In the **Edit** section  The **Copy as text** allows the user to copy items into the clipboard that can then be
+pasted elsewhere. The **Paste** option does exactly what it says, it pastes the data on the clipboard into the
+selected field(s). The **Vacuum** option tries to free up some memory from the claws of the database. More information
+about vacuumng here: :ref:`vacuum`.
 
 View
 ~~~~
 
-The different view modes are listed in the **View** -section. Also the **Docks...** button for managing the
-visibility of the UI elements is located here. When switching to the **Value**, **Index** and **Element** views
-something need to selected from the entity tree in order for the view to show anything meaningful. The Graph view
-will show an graphical representation of the entities whereas the table view shows the plain data in table format.
-By pressing the **Docks...** one can customize what UI elements are displayed. This way it is possible to for example
-have the graph and scenario pivot table views open at the same time.
+From **View**, one can toggle what UI elements are displayed. This way it is possible to for example
+have the graph and scenario pivot table views open at the same time. The selections made in the **View** get saved
+to the currently open view type and are also database specific. The **Reset docs** can be used to make a factory reset
+to the layout of the widgets.
+
 
 Session
 ~~~~~~~
@@ -148,33 +124,53 @@ dialog box, where a commit message can be written. The default commit message is
 practise to write descriptive and concise messages. The **Rollback** button reverts the database to the state
 it was in when it was committed the last time. This means that all modifications to the data that haven't been
 committed will be lost. It is also good to note that this action clears the undo/redo stack which means that the
-operation is irreversible. The **History** button allows one to view the commit history of the database.
+operation is irreversible. The **History** button allows one to view the commit history of the database. **Close**
+just shuts down the current session and closes the current tab in the editor.
 
-Other
-~~~~~
+Help
+~~~~
 
-In the bottom part of the hamburger menu there is a button to open the User Guide in a web browser, **Settings**
-button to open the Spine Database Editor settings and a **Close** button for closing the editor. More information
-about the settings can be found in :ref:`DB editor settings`.
+Contains a link to the index page of the Spine Database Editor documentation.
+
+Toolbar
+=======
+
+The **Toolbar** houses many useful features that come in handy when working with a database. Starting from the left, there
+are the **Undo** and **Redo** -buttons. These can be used to undo and redo the actions that have been made in the
+editor (**CTR+Z** and **CTR+Y** also work). **Commit** saves the changes made in the editor into the database. More
+information about committing can be found in here :ref:`committing_and_history`. The **Purge...** button is quite
+useful when there is a need to get rid of a lot of data quickly. Clicking it will open a new window where
+options for the purging are given. Find out more about purging in the section :ref:`Removing data`. **reload**
+(|reload|) button can be used to reload the data of the database.
+
+The following six buttons are used to switch between the different views in the editor. Short introductions to the
+different views can be found on the bottom of this page and more indepth explanations from here: :ref:`viewing data`.
+The last button on the left side is **Reset docs**. When pressed, the dock widgets get reset to their default positions
+in all views and Toolbox will forget the previous modifications. These modifications are database specific, so pressing
+this button will only reset the editor to factory state for the currently open database.
+
+The right side of the **Toolbar** houses three buttons. **Show URLs** opens up a popup window, which houses the names and
+URLs of the currently open databases. From there they can be copied, if one needs the URL for some purpose. Next button
+is the **Filter** (more about this later). After that there is the Spine-Toolbox logo which when clicked brings up the
+Spine-Toolbox main window.
 
 Filter
 ======
 
 The filter can be used to select which items are allowed to be shown in the editor. The filter is based on scenarios.
-By pressing the filter image in the right end of the URL bar, the filter selector widget opens up. There the desired
+By pressing the filter image in the right end of the **Toolbar**, the filter selector widget opens up. There the desired
 scenario can be selected. When a selection is made and the **Update filters** button is pressed, the changes will be
 applied to the editor. Now all entities, parameters etc. will be filtered out if they don't belong to the scenario
 specified in the filter.
 
 .. tip:: Note that after applying the filter, the URL gets updated with some additional information about the filters.
-         It is therefore possible to make changes to the filtering just by modifying the URL from the URL bar.
 
 Undo and redo
 =============
 
 Whenever changes are made to the data in the Spine Database Editor, the changes get stored into memory. This
 allows undoing and redoing the operations made in the editor. Buttons for these operations can be found in the
-hamburger menu and the usual shortcuts **Ctrl+Z** and **Ctrl+Y** work also. However if the changes are committed,
+**Toolbar** and the usual shortcuts **Ctrl+Z** and **Ctrl+Y** work also. However if the changes are committed,
 the memory for the changes gets cleared meaning that the changes before the commit can't be undone anymore.
 
 Views and trees
@@ -195,8 +191,8 @@ Spine Database Editor has the following main UI components:
 - *Metadata*: presents metadata defined in the databases.
 - *Item metadata*: shows metadata associated with the currently selected entities or parameter values.
 
-.. tip:: You can customize the UI from the **View** section in the hamburger ☰ menu. There the **Docks...**
-         menu can be used to enable and disable the different UI components listed above.
+.. tip:: You can customize the UI from the **View** section in the **Menubar** by enabling and disabling
+         the different UI components listed above.
 
 Items from the trees can be selected by clicking them with the left mouse button and the views will react to
 the changes. By default, multiple items can be selected at the same time across the trees by holding down **Ctrl**

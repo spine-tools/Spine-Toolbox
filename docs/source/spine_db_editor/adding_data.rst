@@ -85,10 +85,10 @@ To narrow down the list, instead of opening the dialog from the root item, open 
 in the **Entity Tree**. This way the class will be preselected from the list and the list will overall only contain
 other classes that are relevant to the selected class.
 
-Enter the names of the entities under **entity name**. The column **alternative** is optional. Filling it in
-will automatically set the entity active in the selected alternative. Finally, select the databases where you
-want to add the entities under **databases**. When you're ready, press **Ok**. Rows can once again be deleted
-with the **Remove selected rows** -button.
+Enter the names of the entities under **entity name**. The column **alternative** is optional. It defaults to the
+first alternative in the **Alternative** -dock widget (normally *Base* will automatically set the entity active in the
+selected alternative. Finally, select the databases where you want to add the entities under **databases**. When
+you're ready, press **Ok**. Rows can once again be deleted with the **Remove selected rows** -button.
 
 With N-D entity classes, the elements need to be specified. After defining the elements the entity's name can be
 modified:
@@ -118,7 +118,7 @@ To add an entity to a specific 0-D entity class, bring the class to **Pivot View
 will be added under the class. Note that is only possible to add 0-D entities this way even if you have selected
 an N-D class from the **Entity Tree**.
 
-To enter a new entity to an N-D class, select the **Element** -view from the hamburger menu. This view contains
+To enter a new entity to an N-D class, select the **Element** -view from the **Toolbar**. This view contains
 all of the possible combinations of elements in the selected class. The entities can be added by checking the
 boxes and removed by unchecking them.
 

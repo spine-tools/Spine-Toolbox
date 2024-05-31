@@ -15,7 +15,7 @@ This section describes the available tools to remove data.
 Purging items
 =============
 
-To remove all items of specific types, select **Edit -> Purge...** (|purge|) from the hamburger menu.
+To remove all items of specific types, select **Purge** (|purge|) from the **Toolbar**.
 The *Purge items* dialog will pop up:
 
 .. image:: img/purge_dialog.png
