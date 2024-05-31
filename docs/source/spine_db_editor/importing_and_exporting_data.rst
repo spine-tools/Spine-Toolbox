@@ -17,7 +17,7 @@ described in :ref:`format_specifications`.
 Importing
 =========
 
-To import a file, select **File --> Import** from the hamburger menu.
+To import a file, select **Menubar -> File -> Import**.
 The *Import file* dialog will pop up.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to import, and accept the dialog.
 
@@ -29,7 +29,7 @@ Exporting
 Mass export
 ~~~~~~~~~~~
 
-To export items in mass, select **File --> Export** from the hamburger menu.
+To export items in mass, select **Menubar -> File -> Export**.
 The *Export items* dialog will pop up:
 
 .. image:: img/mass_export_items_dialog.png
@@ -55,7 +55,7 @@ Session export
 ~~~~~~~~~~~~~~
 
 To export only uncommitted changes made in the current session, select **File --> Export session** from
-the hamburger menu.
+the **Menubar**.
 
 The *Export file* dialog will pop up.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.

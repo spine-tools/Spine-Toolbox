@@ -19,19 +19,17 @@ from PySide6.QtWidgets import (
     QErrorMessage,
     QDockWidget,
     QMessageBox,
-    QMenu,
     QAbstractScrollArea,
     QTabBar,
     QCheckBox,
     QDialog,
-    QToolButton,
 )
-from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer
-from PySide6.QtGui import QGuiApplication, QKeySequence, QIcon, QAction
-from spinedb_api import import_data, export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
+from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, QCoreApplication
+from PySide6.QtGui import QGuiApplication, QKeySequence
+from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
-from .custom_menus import MainMenu
+from .custom_menus import RecentDatabasesPopupMenu, DocsMenu
 from .commit_viewer import CommitViewer
 from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
 from .stacked_view_mixin import StackedViewMixin
@@ -43,7 +41,6 @@ from .metadata_editor import MetadataEditor
 from .item_metadata_editor import ItemMetadataEditor
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ...widgets.custom_qwidgets import ToolBarWidgetAction
 from ...widgets.commit_dialog import CommitDialog
 from ...helpers import (
     get_save_file_name_in_last_dir,
@@ -51,12 +48,12 @@ from ...helpers import (
     format_string_list,
     call_on_focused_widget,
     busy_effect,
-    CharIconEngine,
     preferred_row_height,
     unique_name,
+    open_url,
 )
 from ...spine_db_parcel import SpineDBParcel
-from ...config import APPLICATION_PATH
+from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -78,6 +75,8 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr = db_mngr
         self.db_maps = []
         self.db_urls = []
+        self._history = []
+        self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
         self._change_notifiers = []
         self._changelog = []
         # Setup UI from Qt Designer file
@@ -176,13 +175,12 @@ class SpineDBEditorBase(QMainWindow):
             ChangeNotifier(self, self.db_mngr.undo_stack[db_map], self.qsettings, "appSettings/dbEditorShowUndo")
             for db_map in self.db_maps
         ]
-        self.url_toolbar.set_current_urls(self.db_urls)
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()
         self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
         if update_history:
-            self.url_toolbar.add_urls_to_history(self.db_urls)
+            self.add_urls_to_history(self.db_url_codenames)
         self.update_last_view()
         self.restore_ui(self.last_view, fresh=True)
         self.update_commit_enabled()
@@ -190,20 +188,30 @@ class SpineDBEditorBase(QMainWindow):
         self.set_db_column_visibility(db_column_visible)
         return True
 
+    def show_recent_db(self):
+        """Updates and sets up the recent projects menu to File-Open recent menu item."""
+        if not self.recent_dbs_menu.isVisible():
+            self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
+            self.ui.actionOpen_recent.setMenu(self.recent_dbs_menu)
+
+    def add_urls_to_history(self, db_urls):
+        """Adds urls to history.
+
+        Args:
+            db_urls (dict)
+        """
+        opened_names = set()
+        for row in self._history:
+            for name in row:
+                opened_names.add(name)
+        for db_url, name in db_urls.items():
+            if name not in opened_names:
+                self._history.insert(0, {name: db_url})
+
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
-
-    @Slot(bool)
-    def load_previous_urls(self, _=False):
-        urls = self.url_toolbar.get_previous_urls()
-        self.load_db_urls({url: None for url in urls}, update_history=False)
-
-    @Slot(bool)
-    def load_next_urls(self, _=False):
-        urls = self.url_toolbar.get_next_urls()
-        self.load_db_urls({url: None for url in urls}, update_history=False)
 
     @Slot(bool)
     def open_db_file(self, _=False):
@@ -257,106 +265,12 @@ class SpineDBEditorBase(QMainWindow):
         self.last_view = None
         self.apply_stacked_style()
 
-    def _make_docks_menu(self):
-        """Returns a menu with all dock toggle/view actions. Called by ``self.add_main_menu()``.
-
-        Returns:
-            QMenu
-        """
-        menu = QMenu(self)
-        reset_docs_action = QAction("Reset docs", self)
-        reset_docs_action.triggered.connect(self.reset_docs)
-        menu.addAction(reset_docs_action)
-        menu.addAction(self.ui.dockWidget_entity_tree.toggleViewAction())
-        menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_entity_tree.toggleViewAction())
-        menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_parameter_value.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_parameter_definition.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_entity_alternative.toggleViewAction())
-        menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_pivot_table.toggleViewAction())
-        menu.addAction(self.ui.dockWidget_frozen_table.toggleViewAction())
-        menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_entity_graph.toggleViewAction())
-        menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
-        menu.addAction(self.ui.alternative_dock_widget.toggleViewAction())
-        menu.addAction(self.ui.scenario_dock_widget.toggleViewAction())
-        menu.addAction(self.ui.metadata_dock_widget.toggleViewAction())
-        menu.addAction(self.ui.item_metadata_dock_widget.toggleViewAction())
-        menu.addSeparator()
-        menu.addAction(self.ui.dockWidget_exports.toggleViewAction())
-        return menu
-
-    def add_main_menu(self):
-        """Adds a menu with main actions to toolbar."""
-        menu = MainMenu(self)
-        file_action = ToolBarWidgetAction("File", menu)
-        file_action.tool_bar.addActions(
-            [self.ui.actionNew_db_file, self.ui.actionOpen_db_file, self.ui.actionAdd_db_file]
-        )
-        file_action.tool_bar.addSeparator()
-        file_action.tool_bar.addActions([self.ui.actionImport, self.ui.actionExport, self.ui.actionExport_session])
-        edit_action = ToolBarWidgetAction("Edit", menu)
-        edit_action.tool_bar.addActions([self.ui.actionUndo, self.ui.actionRedo])
-        edit_action.tool_bar.addSeparator()
-        edit_action.tool_bar.addActions([self.ui.actionCopy, self.ui.actionPaste])
-        edit_action.tool_bar.addSeparator()
-        edit_action.tool_bar.addActions([self.ui.actionMass_remove_items, self.ui.actionVacuum])
-        view_action = ToolBarWidgetAction("View", menu)
-        view_action.tool_bar.addActions([self.ui.actionStacked_style, self.ui.actionGraph_style])
-        pivot_actions = self.pivot_action_group.actions()
-        view_action.tool_bar.addActions(pivot_actions)
-        view_action.tool_bar.add_frame(pivot_actions[0], pivot_actions[-1], "Pivot table")
-        view_action.tool_bar.addSeparator()
-        docks_menu_action = view_action.tool_bar.addAction(QIcon(CharIconEngine("\uf2d0")), "Doc&ks...")
-        docks_menu = self._make_docks_menu()
-        docks_menu_action.setMenu(docks_menu)
-        docks_menu_button = view_action.tool_bar.widgetForAction(docks_menu_action)
-        docks_menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        session_action = ToolBarWidgetAction("Session", menu)
-        session_action.tool_bar.addActions([self.ui.actionCommit, self.ui.actionRollback])
-        session_action.tool_bar.addSeparator()
-        session_action.tool_bar.addAction(self.ui.actionView_history)
-        menu.addAction(file_action)
-        menu.addSeparator()
-        menu.addAction(edit_action)
-        menu.addSeparator()
-        menu.addAction(view_action)
-        menu.addSeparator()
-        menu.addAction(session_action)
-        menu.addSeparator()
-        menu.addAction(self.ui.actionUser_guide)
-        menu.addAction(self.ui.actionSettings)
-        self.ui.actionClose.setShortcut(QKeySequence.Close)
-        menu.addAction(self.ui.actionClose)
-        menu_action = self.url_toolbar.add_main_menu(menu)
-        actions = [
-            self.ui.actionNew_db_file,
-            self.ui.actionOpen_db_file,
-            self.ui.actionAdd_db_file,
-            self.ui.actionImport,
-            self.ui.actionExport,
-            self.ui.actionExport_session,
-            self.ui.actionUndo,
-            self.ui.actionRedo,
-            self.ui.actionCopy,
-            self.ui.actionPaste,
-            self.ui.actionMass_remove_items,
-            self.ui.actionVacuum,
-            self.ui.actionStacked_style,
-            self.ui.actionGraph_style,
-            *docks_menu.actions(),
-            *self.pivot_action_group.actions(),
-            self.ui.actionCommit,
-            self.ui.actionRollback,
-            self.ui.actionView_history,
-        ]
-        for action in actions:
-            action.triggered.connect(menu.hide)
-        # Add actions to activate shortcuts
-        self.addActions([menu_action, *actions])
+    def _add_docks_menu(self):
+        """Adds the View -section to the ribbon menu"""
+        menu = DocsMenu(self.ui.menuBar, self)
+        menu.setObjectName("View")
+        menu.setTitle(QCoreApplication.translate("MainWindow", "&View", None))
+        self.ui.menuBar.insertMenu(self.ui.menuBar.actions()[2], menu)
 
     def _browse_commits(self):
         browser = CommitViewer(self.qsettings, self.db_mngr, *self.db_maps, parent=self)
@@ -981,7 +895,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
         self._timer_refresh_tab_order.setSingleShot(True)
-        self.add_main_menu()
+        self._add_docks_menu()
         self.connect_signals()
         self.last_view = None
         self.apply_stacked_style()
@@ -1008,9 +922,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._item_metadata_editor.connect_signals(self.ui)
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
+        self.ui.actionValue.triggered.connect(lambda: self._handle_pivot_action_triggered(self.ui.actionValue))
+        self.ui.actionIndex.triggered.connect(lambda: self._handle_pivot_action_triggered(self.ui.actionIndex))
+        self.ui.actionElement.triggered.connect(lambda: self._handle_pivot_action_triggered(self.ui.actionElement))
+        self.ui.actionScenario.triggered.connect(lambda: self._handle_pivot_action_triggered(self.ui.actionScenario))
+        self.ui.actionOpen_recent.setMenu(self.recent_dbs_menu)
+        self.ui.actionOpen_recent.hovered.connect(self.show_recent_db)
         self.pivot_action_group.triggered.connect(self.apply_pivot_style)
         for dock in self._dock_views:
             dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
+        self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
 
     def init_models(self):
         super().init_models()
@@ -1051,8 +972,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             tab_bar = tab_bars.get(dock.windowTitle())
             if tab_bar is not None:
                 sorted_widgets.append(tab_bar)
-        self.setTabOrder(self.url_toolbar.line_edit, sorted_widgets[0])
-        for first, second in zip(sorted_widgets[:-1], sorted_widgets[1:]):
+        for first, second in zip(sorted_widgets[:-1], sorted_widgets):
             self.setTabOrder(first, second)
 
     def tabify_and_raise(self, docks):

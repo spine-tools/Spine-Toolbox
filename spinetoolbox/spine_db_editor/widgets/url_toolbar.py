@@ -13,8 +13,6 @@
 """Contains the UrlToolBar class and helpers."""
 from PySide6.QtWidgets import (
     QToolBar,
-    QLineEdit,
-    QMenu,
     QWidget,
     QDialog,
     QHBoxLayout,
@@ -23,9 +21,11 @@ from PySide6.QtWidgets import (
     QLabel,
     QTreeWidget,
     QTreeWidgetItem,
+    QSizePolicy,
+    QTextEdit,
     QToolButton,
 )
-from PySide6.QtGui import QIcon, QKeySequence, QAction
+from PySide6.QtGui import QIcon, QKeySequence, QTextCursor, QAction
 from PySide6.QtCore import QSize, Qt, Signal, Slot
 from spinedb_api.filters.tools import (
     SCENARIO_FILTER_TYPE,
@@ -43,131 +43,62 @@ class UrlToolBar(QToolBar):
         super().__init__(db_editor)
         self.setObjectName("spine_db_editor_url_toolbar")
         self._db_editor = db_editor
-        self._history = []
-        self._history_index = -1
-        self._project_urls = {}
-        self._go_back_action = self.addAction(QIcon(CharIconEngine("\uf060")), "Go back", db_editor.load_previous_urls)
-        self._go_forward_action = self.addAction(
-            QIcon(CharIconEngine("\uf061")), "Go forward", db_editor.load_next_urls
-        )
-        self.reload_action = self.addAction(QIcon(CharIconEngine("\uf021")), "Reload", db_editor.refresh_session)
+        self.create_button_for_action(self._db_editor.ui.actionUndo)
+        self.create_button_for_action(self._db_editor.ui.actionRedo)
+        self.addSeparator()
+        self.create_button_for_action(self._db_editor.ui.actionCommit)
+        self.create_button_for_action(self._db_editor.ui.actionMass_remove_items)
+        self.reload_action = QAction(QIcon(CharIconEngine("\uf021")), "Reload")
         self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_R.value))
-        self._go_back_action.setEnabled(False)
-        self._go_forward_action.setEnabled(False)
         self.reload_action.setEnabled(False)
-        self._open_project_url_menu = self._add_open_project_url_menu()
-        self._line_edit = QLineEdit(self)
-        self._line_edit.setPlaceholderText("Type the URL of a Spine DB")
-        self._line_edit.returnPressed.connect(self._handle_line_edit_return_pressed)
-        self._filter_action = self._line_edit.addAction(QIcon(CharIconEngine("\uf0b0")), QLineEdit.TrailingPosition)
+        self.reload_action.triggered.connect(db_editor.refresh_session)
+        self.create_button_for_action(self.reload_action)
+        self.addSeparator()
+        self.create_button_for_action(self._db_editor.ui.actionStacked_style)
+        self.create_button_for_action(self._db_editor.ui.actionGraph_style)
+        self.addSeparator()
+        self.create_button_for_action(self._db_editor.ui.actionValue)
+        self.create_button_for_action(self._db_editor.ui.actionIndex)
+        self.create_button_for_action(self._db_editor.ui.actionElement)
+        self.create_button_for_action(self._db_editor.ui.actionScenario)
+        self.addSeparator()
+        self.reset_docs_action = QAction(QIcon(CharIconEngine("\uf2d2")), "Reset docs")
+        self.reset_docs_action.triggered.connect(self._db_editor.reset_docs)
+        self.create_button_for_action(self.reset_docs_action)
+        self.addSeparator()
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.addWidget(spacer)
+        self.addSeparator()
+        self.show_url_action = QAction(QIcon(CharIconEngine("\uf550")), "Show URLs")
+        self.show_url_action.triggered.connect(self._show_url_codename_widget)
+        self.create_button_for_action(self.show_url_action)
+        self._filter_action = QAction(QIcon(CharIconEngine("\uf0b0")), "Filter")
         self._filter_action.triggered.connect(self._show_filter_menu)
-        self.addWidget(self._line_edit)
-        toolbox_icon = QIcon(":/symbols/Spine_symbol.png")
-        self.show_toolbox_action = self.addAction(toolbox_icon, "Show Spine Toolbox (Ctrl+ESC)")
+        self.create_button_for_action(self._filter_action)
+        self.addSeparator()
+        self.show_toolbox_action = QAction(QIcon(":/symbols/Spine_symbol.png"), "Show Toolbox")
         self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Escape.value))
+        self.show_toolbox_action.setToolTip("Show Spine Toolbox (Ctrl+ESC)")
+        self.create_button_for_action(self.show_toolbox_action)
         self.setMovable(False)
         self.setIconSize(QSize(20, 20))
 
-    @property
-    def line_edit(self):
-        return self._line_edit
+    def create_button_for_action(self, action):
+        tool_button = QToolButton()
+        tool_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        tool_button.setPopupMode(QToolButton.InstantPopup)
+        tool_button.setDefaultAction(action)
+        self.addWidget(tool_button)
 
-    def _add_open_project_url_menu(self):
-        toolbox = self._db_editor.toolbox
-        if toolbox is None:
-            return None
-        menu = QMenu(self)
-        menu_action = self.addAction(QIcon(CharIconEngine("\uf1c0")), "")
-        menu_action.setMenu(menu)
-        menu_button = self.widgetForAction(menu_action)
-        menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        menu_button.setToolTip("<p>Open URL from project</p>")
-        menu.aboutToShow.connect(self._update_open_project_url_menu)
-        menu.triggered.connect(self._open_ds_url)
-        return menu
-
-    @Slot()
-    def _update_open_project_url_menu(self):
-        self._open_project_url_menu.clear()
-        ds_items = self._db_editor.toolbox.project().get_items_by_type("Data Store")
-        self._project_urls = {ds.name: ds.sql_alchemy_url() for ds in ds_items}
-        is_url_validated = {ds.name: ds.is_url_validated() for ds in ds_items}
-        for name, url in self._project_urls.items():
-            action = self._open_project_url_menu.addAction(name)
-            action.setEnabled(url is not None and is_url_validated[name])
-
-    @Slot(QAction)
-    def _open_ds_url(self, action):
-        url = self._project_urls[action.text()]
-        self._db_editor.db_mngr.open_db_editor({url: action.text()}, True)
-
-    def add_main_menu(self, menu):
-        menu_action = self.addAction(QIcon(CharIconEngine("\uf0c9")), "")
-        menu_action.setMenu(menu)
-        menu_button = self.widgetForAction(menu_action)
-        menu_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        action = QAction(self)
-        action.triggered.connect(menu_button.showMenu)
-        keys = [
-            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_F.value),
-            QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_E.value),
-        ]
-        action.setShortcuts(keys)
-        keys_str = ", ".join([key.toString() for key in keys])
-        menu_button.setToolTip(f"<p>Customize and control Spine DB Editor ({keys_str})</p>")
-        return action
-
-    def _update_history_actions_availability(self):
-        self._go_back_action.setEnabled(self._history_index > 0)
-        self._go_forward_action.setEnabled(self._history_index < len(self._history) - 1)
-
-    def add_urls_to_history(self, db_urls):
-        """Adds url to history.
-
-        Args:
-            db_urls (list of str)
-        """
-        self._history_index += 1
-        self._update_history_actions_availability()
-        self._history[self._history_index :] = [db_urls]
-
-    def get_previous_urls(self):
-        """Returns previous urls in history.
-
-        Returns:
-            list of str
-        """
-        self._history_index -= 1
-        self._update_history_actions_availability()
-        return self._history[self._history_index]
-
-    def get_next_urls(self):
-        """Returns next urls in history.
-
-        Returns:
-            list of str
-        """
-        self._history_index += 1
-        self._update_history_actions_availability()
-        return self._history[self._history_index]
-
-    def _handle_line_edit_return_pressed(self):
-        urls = [url.strip() for url in self._line_edit.text().split(";")]
-        self._db_editor.load_db_urls({url: None for url in urls}, create=True)
-
-    def set_current_urls(self, urls):
-        filtered = any(filter_configs(url) for url in urls)
-        color = Qt.magenta if filtered else None
-        self._filter_action.setIcon(QIcon(CharIconEngine("\uf0b0", color=color)))
-        self._line_edit.setText("; ".join(urls))
+    def _show_url_codename_widget(self):
+        dialog = _URLDialog(self._db_editor.db_url_codenames, parent=self)
+        dialog.show()
 
     @Slot(bool)
     def _show_filter_menu(self, _checked=False):
-        global_pos = self.mapToGlobal(self.pos())
         dialog = _UrlFilterDialog(self._db_editor.db_mngr, self._db_editor.db_maps, parent=self)
         dialog.show()
-        p = global_pos + self._line_edit.frameGeometry().bottomRight()
-        dialog.move(p.x() - dialog.width(), p.y())
         dialog.filter_accepted.connect(self._db_editor.load_db_urls)
 
 
@@ -301,3 +232,35 @@ class _UrlFilterDialog(QDialog):
     def accept(self):
         super().accept()
         self.filter_accepted.emit(self._db_list.filtered_url_codenames())
+
+
+class _URLDialog(QDialog):
+    """Class for showing URLs and codenames in the database"""
+
+    def __init__(self, url_codenames, parent=None):
+        super().__init__(parent=parent, f=Qt.Popup)
+        self.textEdit = QTextEdit(self)
+        self.textEdit.setObjectName("textEdit")
+        text = "<br>".join([f"<b>{codename}</b>: {url}" for url, codename in url_codenames.items()])
+        self.textEdit.setHtml(text)
+        self.textEdit.setReadOnly(True)
+        self.textEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.textEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.textEdit.setLineWrapMode(QTextEdit.NoWrap)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.textEdit)
+        self.setLayout(layout)
+        self.resize(500, 200)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.textEdit.moveCursor(QTextCursor.Start)
+        self.textEdit.setFocus()
+
+    def keyPressEvent(self, event):
+        if event.key() in (
+            Qt.Key_Return,
+            Qt.Key_Escape,
+            Qt.Key_Enter,
+        ):
+            self.close()
