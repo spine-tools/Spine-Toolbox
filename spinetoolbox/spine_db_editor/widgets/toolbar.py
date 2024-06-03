@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains the UrlToolBar class and helpers."""
+"""Contains the DBEditorToolBar class and helpers."""
 from PySide6.QtWidgets import (
     QToolBar,
     QWidget,
@@ -38,10 +38,10 @@ from spinedb_api.filters.tools import (
 from spinetoolbox.helpers import CharIconEngine
 
 
-class UrlToolBar(QToolBar):
+class DBEditorToolBar(QToolBar):
     def __init__(self, db_editor):
         super().__init__(db_editor)
-        self.setObjectName("spine_db_editor_url_toolbar")
+        self.setObjectName("spine_db_editor_toolbar")
         self._db_editor = db_editor
         self.create_button_for_action(self._db_editor.ui.actionUndo)
         self.create_button_for_action(self._db_editor.ui.actionRedo)

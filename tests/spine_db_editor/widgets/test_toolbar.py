@@ -10,16 +10,16 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for the ``url_toolbar`` module."""
+"""Unit tests for the ``toolbar`` module."""
 from unittest import mock
 from tempfile import TemporaryDirectory
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.widgets.url_toolbar import UrlToolBar
+from spinetoolbox.spine_db_editor.widgets.toolbar import DBEditorToolBar
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, FakeDataStore
+from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
-class TestURLToolbar(DBEditorTestBase):
+class TestDBEditorToolBar(DBEditorTestBase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -35,11 +35,11 @@ class TestURLToolbar(DBEditorTestBase):
         clean_up_toolbox(self._toolbox)
         self._temp_dir.cleanup()
 
-    def test_url_toolbar(self):
+    def test_toolbar(self):
         self.db_mngr.setParent(self._toolbox)
-        tb = UrlToolBar(self.spine_db_editor)
+        tb = DBEditorToolBar(self.spine_db_editor)
         self.assertEqual([{'database': 'sqlite://'}], self.spine_db_editor._history)
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.url_toolbar._UrlFilterDialog.show") as mock_show_dialog:
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.toolbar._UrlFilterDialog.show") as mock_show_dialog:
             mock_show_dialog.show.return_value = True
             tb._show_filter_menu()
             mock_show_dialog.assert_called()
