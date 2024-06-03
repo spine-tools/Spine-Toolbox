@@ -36,7 +36,7 @@ from .stacked_view_mixin import StackedViewMixin
 from .tree_view_mixin import TreeViewMixin
 from .graph_view_mixin import GraphViewMixin
 from .tabular_view_mixin import TabularViewMixin
-from .url_toolbar import UrlToolBar
+from .toolbar import DBEditorToolBar
 from .metadata_editor import MetadataEditor
 from .item_metadata_editor import ItemMetadataEditor
 from ...widgets.notification import ChangeNotifier, Notification
@@ -83,13 +83,13 @@ class SpineDBEditorBase(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.takeCentralWidget().deleteLater()
-        self.url_toolbar = UrlToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.url_toolbar)
+        self.toolbar = DBEditorToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
         toolbox = self.db_mngr.parent()
         if toolbox is not None:
-            self.url_toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
+            self.toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
         else:
-            self.url_toolbar.show_toolbox_action.deleteLater()
+            self.toolbar.show_toolbox_action.deleteLater()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
@@ -149,7 +149,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionExport.setEnabled(False)
         self.ui.actionMass_remove_items.setEnabled(False)
         self.ui.actionVacuum.setEnabled(False)
-        self.url_toolbar.reload_action.setEnabled(False)
+        self.toolbar.reload_action.setEnabled(False)
         if not db_url_codenames:
             return True
         if not self.tear_down():
@@ -170,7 +170,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionExport.setEnabled(True)
         self.ui.actionMass_remove_items.setEnabled(True)
         self.ui.actionVacuum.setEnabled(any(url.startswith("sqlite") for url in self.db_urls))
-        self.url_toolbar.reload_action.setEnabled(True)
+        self.toolbar.reload_action.setEnabled(True)
         self._change_notifiers = [
             ChangeNotifier(self, self.db_mngr.undo_stack[db_map], self.qsettings, "appSettings/dbEditorShowUndo")
             for db_map in self.db_maps
