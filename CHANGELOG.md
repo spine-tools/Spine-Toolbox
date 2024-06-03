@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 - Database editor's hamburger menu has been converted into a menubar beneath the tab bar. The URL toolbar has also
   been replaced with a toolbar that houses different buttons.
+- One dimensional entities can now also be added through *Parameter value* and *Entity alternative* -tables.
 
 ### Deprecated
 
