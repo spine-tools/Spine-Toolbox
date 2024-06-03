@@ -16,6 +16,7 @@ from ...mvcmodels.empty_row_model import EmptyRowModel
 from .single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
 from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
 from ...helpers import rows_to_row_count_tuples, DB_ITEM_SEPARATOR
+from ..widgets.custom_qwidgets import AddedEntitiesPopup
 
 
 class EmptyModelBase(EmptyRowModel):
@@ -30,6 +31,7 @@ class EmptyModelBase(EmptyRowModel):
         self.db_mngr = parent.db_mngr
         self.db_map = None
         self.entity_class_id = None
+        self._db_map_entities_to_add = {}
 
     @property
     def item_type(self):
@@ -56,9 +58,33 @@ class EmptyModelBase(EmptyRowModel):
                 if errors:
                     db_map_error_log.setdefault(db_map, []).extend(errors)
         if any(db_map_items.values()):
+            self._clean_to_be_added_entities(db_map_items)
+            if self._db_map_entities_to_add:
+                self.db_mngr.add_entities(self._db_map_entities_to_add)
+                self._notify_about_added_entities()
             self._do_add_items_to_db(db_map_items)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
+
+    def _notify_about_added_entities(self):
+        editor = self.parent().parent()
+        popup = AddedEntitiesPopup(editor, self._db_map_entities_to_add)
+        popup.show()
+
+    def _clean_to_be_added_entities(self, db_map_items):
+        if not self._db_map_entities_to_add:
+            return
+        entity_names_by_db = {}
+        for db_map, items in db_map_items.items():
+            for item in items:
+                entity_names_by_db.setdefault(db_map, set()).add(item["entity_byname"])
+        new_to_be_added = {}
+        for db_map, items in self._db_map_entities_to_add.items():
+            for item in items:
+                entity_names = entity_names_by_db.get(db_map)
+                if entity_names and item["entity_byname"] in entity_names:
+                    new_to_be_added.setdefault(db_map, []).append(item)
+        self._db_map_entities_to_add = new_to_be_added
 
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by handle_items_added to identify
@@ -193,7 +219,7 @@ class EntityMixin:
                 if errors:
                     db_map_error_log.setdefault(db_map, []).extend(errors)
         if any(db_map_entities.values()):
-            self.db_mngr.add_entities(db_map_entities)
+            self._db_map_entities_to_add = db_map_entities
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
         super().add_items_to_db(db_map_data)

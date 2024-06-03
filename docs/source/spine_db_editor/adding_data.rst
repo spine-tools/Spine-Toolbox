@@ -122,6 +122,16 @@ To enter a new entity to an N-D class, select the **Element** -view from the **T
 all of the possible combinations of elements in the selected class. The entities can be added by checking the
 boxes and removed by unchecking them.
 
+From **Table View**
+~~~~~~~~~~~~~~~~~~~
+
+It is possible to create new entities on the fly while adding new parameter values or entity alternatives. Just fill
+in the empty row of *Parameter value* or *Entity alternative* with the information that you want to add and the new
+entities will automatically be added to the correct class, if one doesn't already exist. Afterwards, a popup window
+will be shown that contains all the newly added entities. The popup can be quickly closed by pressing **Enter**,
+**Esc** or just by clicking **OK**. The automatic adding of entities works with entities of any dimension, but all of
+the elements of the new entity must already be present in the database.
+
 Duplicating entities
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -189,23 +199,23 @@ Enter a name for the new parameter in the last cell of that header.
 Adding parameter values
 =======================
 
-From *Table View*
-~~~~~~~~~~~~~~~~~~~~~
+From **Table View**
+~~~~~~~~~~~~~~~~~~~
 
 To add new parameter values for an entity, just fill the last empty row of the *Parameter value* -table.
 Enter the name of the class under *entity_class_name*, the name of the entity under *entity_byname*,
 the name of the parameter under *parameter_name*, and the name of the alternative under *alternative_name*.
 Optionally, you can also specify the parameter value right away under the *value* column. The database where
-the value will be added to is displayed in the last column of the table. To display a list of available
-entity classes, entities, parameters, or alternatives, just start typing or double click under the appropriate
-column. The parameter value is added when the background of the cells under *entity_class_name* and *database*
-become gray.
+the value will be added to is displayed in the last column of the table (if multiple databases open at once).
+To display a list of available entity classes, entities, parameters, or alternatives, just start typing or
+double click under the appropriate column. The parameter value is added when the background of the cells under
+*entity_class_name* and *database* become gray.
 
-.. note:: To add parameter values for a 0-D entity, the entity has to exist beforehand.
-   However, when adding parameter values for an N-D entity, you can specify any valid combination
-   of elements by double clicking the cell under *entity_byname*, which opens up the *Select elements* -dialog.
-   The specified N-D entity will be created if it doesn't yet exist.
-
+.. note:: To add parameter values for an entity, the entity doesn't have to exist beforehand.
+   If the entity in question is one dimensional, you can just type in a new name into the cell under *entity_byname*.
+   If the entity in question has more dimensions, you can specify any valid combination of elements by double
+   clicking the cell, which opens up the *Select elements* -dialog. In both cases, the specified entity will be
+   created if it doesn't yet exist.
 
 From **Pivot View**
 ~~~~~~~~~~~~~~~~~~~
@@ -229,6 +239,9 @@ the class. Under *entity_byname* select the specific entity from that class and 
 alternative. Then set the value of the *active* -column to either true or false by double clicking it. The background
 of the cells under *entity_class_name* and *database* should become gray, indicating that the entity alternative has
 been added.
+
+.. tip:: Like with the parameter values, new entities can be created on the fly by filling out the cell below
+         *entity_byname* with either text or a valid combination of elements.
 
 Adding alternatives
 ===================

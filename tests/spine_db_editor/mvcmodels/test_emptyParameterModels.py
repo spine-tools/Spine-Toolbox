@@ -201,3 +201,50 @@ class TestEmptyParameterModel(unittest.TestCase):
         ]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["name"], "relative_speed")
+
+    def test_add_entity_parameter_values_adds_entity(self):
+        """Test that adding parameter a value for a nonexistent entity creates the entity."""
+        model = TestEmptyParameterValueModel(self._db_mngr)
+        fetch_model(model)
+        self.assertTrue(
+            model.batch_set_data(
+                _empty_indexes(model),
+                ["dog", "plato", "breed", "Base", join_value_and_type(b'"dog-human"', None), "mock_db"],
+            )
+        )
+        parameter_values = self._db_mngr.get_items(self._db_map, "parameter_value")
+        entities = self._db_mngr.get_items(self._db_map, "entity")
+        self.assertEqual(len(parameter_values), 1)
+        self.assertEqual(parameter_values[0]["entity_class_name"], "dog")
+        self.assertEqual(parameter_values[0]["entity_name"], "plato")
+        self.assertEqual(parameter_values[0]["parameter_name"], "breed")
+        self.assertEqual(parameter_values[0]["value"], b'"dog-human"')
+        self.assertEqual(len(entities), 4)
+        self.assertEqual(entities[0]["name"], "pluto")
+        self.assertEqual(entities[1]["name"], "nemo")
+        self.assertEqual(entities[2]["name"], "pluto__nemo")
+        self.assertEqual(entities[3]["name"], "plato")
+
+    def test_clean_to_be_added_entities(self):
+        """Tests that the model is not too keen on making entities on the fly."""
+        model = TestEmptyParameterValueModel(self._db_mngr)
+        self.assertFalse(model._db_map_entities_to_add)
+        mock_entities = [mock.MagicMock() for _ in range(9)]
+        ent1, ent2, ent3, ent4, ent5, ent6, ent7, ent8, ent9 = mock_entities
+        model._db_map_entities_to_add = {
+            "db1": {ent1, ent2, ent3},
+            "db2": {ent4, ent5, ent6},
+            "db3": {ent7, ent8, ent9},
+        }
+        new_entities = {
+            "db1": {ent1, ent2, ent3},
+            "db2": {ent4, ent5, ent7},
+        }
+        model._clean_to_be_added_entities(new_entities)
+        expected = {
+            "db1": [ent1, ent2, ent3],
+            "db2": [ent4, ent5],
+        }
+        self.assertEqual(expected.keys(), model._db_map_entities_to_add.keys())
+        self.assertEqual(set(expected["db1"]), set(model._db_map_entities_to_add["db1"]))
+        self.assertEqual(set(expected["db2"]), set(model._db_map_entities_to_add["db2"]))
