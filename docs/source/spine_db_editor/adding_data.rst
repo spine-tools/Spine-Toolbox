@@ -87,8 +87,10 @@ other classes that are relevant to the selected class.
 
 Enter the names of the entities under **entity name**. The column **alternative** is optional. It defaults to the
 first alternative in the **Alternative** -dock widget (normally *Base* will automatically set the entity active in the
-selected alternative. Finally, select the databases where you want to add the entities under **databases**. When
-you're ready, press **Ok**. Rows can once again be deleted with the **Remove selected rows** -button.
+selected alternative. The cell under **entity group** is also optional. By filling it, the entity will be automatically
+added to the group that is specified in the cell. If the entity group doesn't exist, it will also be created. Finally,
+select the databases where you want to add the entities under **databases**. When you're ready, press **Ok**. Rows can
+once again be deleted with the **Remove selected rows** -button.
 
 With N-D entity classes, the elements need to be specified. After defining the elements the entity's name can be
 modified:
