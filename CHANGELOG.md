@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
+- Entity group -column in *Add entities* -dialog. If filled, the created entity will be added to the specified group.
+  If the group doesn't yet exist, it will be created.
+
 ### Changed
 
 - Database editor's hamburger menu has been converted into a menubar beneath the tab bar. The URL toolbar has also

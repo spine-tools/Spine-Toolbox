@@ -109,17 +109,14 @@ def add_zero_dimension_entity_class(view, name):
     add_entity_tree_item({0: name}, view, "Add entity classes", AddEntityClassesDialog)
 
 
-def add_entity(view, name, entity_class_index=0):
+def add_entity(view, name, entity_class_index=0, alternative=None, group=None):
     model = view.model()
     root_index = model.index(0, 0)
     class_index = model.index(entity_class_index, 0, root_index)
     view._context_item = model.item_from_index(class_index)
-    add_entity_tree_item({0: name}, view, "Add entities", AddEntitiesDialog)
-
-
-def add_entity_with_alternative(view, name, alternative, entity_class_index=0):
-    model = view.model()
-    root_index = model.index(0, 0)
-    class_index = model.index(entity_class_index, 0, root_index)
-    view._context_item = model.item_from_index(class_index)
-    add_entity_tree_item({0: name, 1: alternative}, view, "Add entities", AddEntitiesDialog)
+    data = {0: name}
+    if alternative:
+        data.update({1: alternative})
+    if group:
+        data.update({2: group})
+    add_entity_tree_item(data, view, "Add entities", AddEntitiesDialog)

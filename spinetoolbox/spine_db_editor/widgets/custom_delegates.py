@@ -722,10 +722,51 @@ class ManageItemsDelegate(QStyledItemDelegate):
             QWidget: editor
         """
         editor = SearchBarEditor(self.parent(), parent)
-        all_databases = self.parent().keyed_db_maps.values()
-        name_list = [
-            x["name"] for db_map in all_databases for x in self.parent().db_mngr.get_items(db_map, "alternative")
-        ]
+        name_list = set()
+        dbs_by_alternative_name = {}
+        database_column = self.parent().model.horizontal_header_labels().index("databases")
+        database_index = index.model().index(index.row(), database_column)
+        databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(",")
+        for db_map_codename in databases:  # Filter possible alternatives based on selected databases
+            db_map = self.parent().keyed_db_maps[db_map_codename]
+            alternatives = self.parent().db_mngr.get_items(db_map, "alternative")
+            for alternative in alternatives:
+                dbs_by_alternative_name.setdefault(alternative["name"], set()).add(db_map)
+        for alternative, db_maps in dbs_by_alternative_name.items():
+            name_list.add(self.parent().append_db_codenames(alternative, db_maps))
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        return editor
+
+    def _create_entity_group_editor(self, parent, index):
+        """Creates an editor.
+
+        Args:
+            parent (QWidget): parent widget
+            index (QModelIndex): index being edited
+
+        Returns:
+            QWidget: editor
+        """
+        database_column = self.parent().model.horizontal_header_labels().index("databases")
+        database_index = index.model().index(index.row(), database_column)
+        databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(",")
+        entity_class = self.parent().class_item
+        dbs_by_entity_group = {}  # A mapping from entity_group to db_map(s)
+        for db_map in entity_class.db_maps:
+            if db_map.codename not in databases:  # Allow groups that are in selected DBs under "databases" -column.
+                continue
+            class_item = self.parent().db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)
+            if not class_item:
+                continue
+            ent_groups = self.parent().db_mngr.get_items_by_field(
+                db_map, "entity_group", "entity_class_id", class_item["id"]
+            )
+            for ent_group in ent_groups:
+                dbs_by_entity_group.setdefault(ent_group["group_name"], set()).add(db_map)
+        name_list = set()
+        for entity_group, db_maps in dbs_by_entity_group.items():
+            name_list.add(self.parent().append_db_codenames(entity_group, db_maps))
+        editor = SearchBarEditorWithCreation(self.parent(), parent)
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         return editor
 
@@ -807,6 +848,8 @@ class ManageEntitiesDelegate(ManageItemsDelegate):
             editor = self._create_database_editor(parent, index)
         elif header[index.column()] == "alternative":
             editor = self._create_alternative_editor(parent, index)
+        elif header[index.column()] == "entity group":
+            editor = self._create_entity_group_editor(parent, index)
         else:
             editor = SearchBarEditor(parent)
             entity_name_list = self.parent().entity_name_list(index.row(), index.column())

@@ -36,7 +36,6 @@ from tests.spine_db_editor.widgets.helpers import (
     add_entity_tree_item,
     add_zero_dimension_entity_class,
     add_entity,
-    add_entity_with_alternative,
 )
 
 
@@ -196,10 +195,12 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(data[0].name, "an_entity")
 
     def test_add_entity_with_alternative(self):
+        """Tests that adding a new entity with the alternative -column filled
+        will actually add the alternative"""
         view = self._db_editor.ui.treeView_entity
         add_zero_dimension_entity_class(view, "an_entity_class")
         with mock.patch.object(self._db_mngr, "add_entity_alternatives") as mock_add_entity_alternatives:
-            add_entity_with_alternative(view, "an_entity", "Alt1")
+            add_entity(view, "an_entity", alternative="Alt1")
             mock_add_entity_alternatives.assert_called_once_with(
                 {
                     self._db_map: [
@@ -232,6 +233,43 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         data = self._db_map.query(self._db_map.entity_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "an_entity")
+
+    def test_add_entity_with_group(self):
+        """Tests that adding a new entity with the group -column filled
+        will actually create the entity group and add the entity to it."""
+        view = self._db_editor.ui.treeView_entity
+        add_zero_dimension_entity_class(view, "classy")
+        with mock.patch.object(self._db_mngr, "import_data") as mock_add_entity_groups:
+            add_entity(view, "wine", group="beverages")
+            mock_add_entity_groups.assert_called_once_with(
+                {
+                    self._db_map: {
+                        "entities": {("classy", "beverages")},
+                        "entity_groups": {("classy", "beverages", "wine")},
+                    }
+                },
+                command_text="Add entity group",
+            )
+        model = view.model()
+        root_index = model.index(0, 0)
+        class_index = model.index(0, 0, root_index)
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 1:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(class_index), 1)
+        self.assertEqual(class_index.data(), "classy")
+        entity_index = model.index(0, 0, class_index)
+        self.assertEqual(model.rowCount(entity_index), 0)
+        self.assertEqual(entity_index.data(), "wine")
+        entity_database_index = model.index(0, 1, class_index)
+        self.assertEqual(entity_database_index.data(), self.db_codename)
+        self._commit_changes_to_database("Add entity.")
+        data = self._db_map.query(self._db_map.entity_class_sq).all()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "classy")
+        data = self._db_map.query(self._db_map.entity_sq).all()
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0].name, "wine")
 
     def test_add_entity_with_single_dimension(self):
         view = self._db_editor.ui.treeView_entity
