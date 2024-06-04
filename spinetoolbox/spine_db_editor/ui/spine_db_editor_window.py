@@ -614,7 +614,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionOpen_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open database file</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.actionAdd_db_file.setText(QCoreApplication.translate("MainWindow", u"Add...", None))
+        self.actionAdd_db_file.setText(QCoreApplication.translate("MainWindow", u"&Add...", None))
 #if QT_CONFIG(tooltip)
         self.actionAdd_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"Add database file to the current view", None))
 #endif // QT_CONFIG(tooltip)

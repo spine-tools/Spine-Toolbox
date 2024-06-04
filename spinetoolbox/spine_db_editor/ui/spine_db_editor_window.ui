@@ -1034,7 +1034,7 @@
      <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>Add...</string>
+    <string>&amp;Add...</string>
    </property>
    <property name="toolTip">
     <string>Add database file to the current view</string>
