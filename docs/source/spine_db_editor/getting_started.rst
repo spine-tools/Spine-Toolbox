@@ -135,13 +135,14 @@ Contains a link to the index page of the Spine Database Editor documentation.
 Toolbar
 =======
 
-The **Toolbar** houses many useful features that come in handy when working with a database. Starting from the left, there
-are the **Undo** and **Redo** -buttons. These can be used to undo and redo the actions that have been made in the
-editor (**CTR+Z** and **CTR+Y** also work). **Commit** saves the changes made in the editor into the database. More
-information about committing can be found in here :ref:`committing_and_history`. The **Purge...** button is quite
-useful when there is a need to get rid of a lot of data quickly. Clicking it will open a new window where
-options for the purging are given. Find out more about purging in the section :ref:`Removing data`. **reload**
-(|reload|) button can be used to reload the data of the database.
+The **Toolbar** houses many useful features that come in handy when working with a database. Starting from the left,
+there **New**, **Add** and **Open** -buttons. With these you can create a new Spine db in sqlite form, add an
+existing one to the tab or open an existing one instead. Next are the **Undo** and **Redo** -buttons. These can be
+used to undo and redo the actions that have been made in the editor (**CTR+Z** and **CTR+Y** also work). **Commit**
+saves the changes made in the editor into the database. More information about committing can be found in here
+:ref:`committing_and_history`. The **Purge...** button is quite useful when there is a need to get rid of a lot of
+data quickly. Clicking it will open a new window where options for the purging are given. Find out more about purging
+in the section :ref:`Removing data`. **reload** (|reload|) button can be used to reload the data of the database.
 
 The following six buttons are used to switch between the different views in the editor. Short introductions to the
 different views can be found on the bottom of this page and more indepth explanations from here: :ref:`viewing data`.
