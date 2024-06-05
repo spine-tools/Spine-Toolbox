@@ -440,8 +440,10 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             self.entity_names_by_class_name = {entity_class_name: entity_name}
             if item.parent_item.item_type == "entity_class":
                 self.class_key = item.parent_item.display_id
+                self.class_item = item.parent_item
         elif item.item_type == "entity_class":
             self.class_key = item.display_id
+            self.class_item = item
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
@@ -484,26 +486,44 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         return EmptyRowModel(self)
 
     def _do_reset_model(self):
-        header = self.dimension_name_list + ("entity name", "alternative", "databases")
+        header = self.dimension_name_list + ("entity name", "alternative", "entity group", "databases")
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
         alt_selection_model = self.parent().ui.alternative_tree_view.selectionModel()
         alt_selection = alt_selection_model.selection()
-        alternative = None
+        selected_alt_name = None
         if alt_selection:
-            selected_alternative_index = alt_selection_model.currentIndex()
-            alternative = selected_alternative_index.model().item_from_index(selected_alternative_index)
+            selected_alt_index = alt_selection_model.currentIndex()
+            selected_alt = selected_alt_index.model().item_from_index(selected_alt_index)
+            selected_alt_name = self.append_db_codenames(selected_alt.name, {selected_alt.db_map})
         all_databases = [db_map for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
-        alt_name_list = [
-            x["name"] for db_map in all_databases for x in self.db_mngr.get_items(db_map, "alternative")
-        ]
-        alt_name_list.append("")
-        alternative_name = alternative.name if alternative else alt_name_list[0]
+        dbs_by_alternative = {}
+        for db_map in all_databases:
+            for alternative in self.db_mngr.get_items(db_map, "alternative"):
+                dbs_by_alternative.setdefault(alternative["name"], set()).add(db_map)
+        alt_names_list = []
+        for alternative, db_maps in dbs_by_alternative.items():
+            alt_names_list.append(self.append_db_codenames(alternative, db_maps))
+        alt_names_list.append("")  # If the db has no alternatives, defaults to nothing
+        alternative_name = selected_alt_name if selected_alt_name else alt_names_list[0]
         defaults = {"databases": db_names, "alternative": alternative_name}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
+
+    def append_db_codenames(self, name, db_maps):
+        """Appends a list of given databases to the given name
+
+        Args:
+            name (str): The name where the database names should be appended
+            db_maps (set): A set containing DatabaseMapping objects
+        Returns:
+            str: The name with the databases appended to the end after an @ sign.
+        """
+        if len(db_maps) == len(self.parent().db_maps):
+            return name
+        return name + "@(" + ", ".join(db_map.codename for db_map in db_maps) + ")"
 
     def get_db_map_data(self):
         db_map_data = {}
@@ -566,6 +586,9 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         entity_alternatives = self.make_entity_alternatives(created_entities)
         if entity_alternatives:  # If alternatives have been defined
             self.db_mngr.add_entity_alternatives(entity_alternatives)
+        entity_groups = self.make_entity_groups(created_entities)
+        if entity_groups:  # If entity groups have been defined
+            self.db_mngr.import_data(entity_groups, command_text="Add entity group")
         super().accept()
 
     def make_entity_alternatives(self, entities):
@@ -579,6 +602,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             alternative = row_data[alternative_column]
             if not alternative:
                 continue
+            alternative = alternative.split("@")[0]
             entity_name = row_data[name_column]
             entity = entities[entity_name]
             db_names = row_data[db_column]
@@ -593,6 +617,30 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                     }
                 )
         return entity_alternatives
+
+    def make_entity_groups(self, entities):
+        """Creates a mapping from db_map to entity alternatives that are to be created"""
+        name_column = self.model.horizontal_header_labels().index("entity name")
+        entity_group_column = self.model.horizontal_header_labels().index("entity group")
+        db_column = self.model.horizontal_header_labels().index("databases")
+        db_map_data = {}
+        for i in range(self.model.rowCount() - 1):
+            row_data = self.model.row_data(i)
+            entity_group = row_data[entity_group_column]
+            if not entity_group:
+                continue
+            entity_group = entity_group.split("@")[0]
+            entity_name = row_data[name_column]
+            entity = entities[entity_name]
+            class_name = entity["entity_class_name"]
+            db_names = row_data[db_column]
+            for db_name in db_names.split(","):
+                db_map = self.keyed_db_maps[db_name]
+                db_map_data.setdefault(db_map, {}).setdefault("entities", set()).add((class_name, entity_group))
+                db_map_data.setdefault(db_map, {}).setdefault("entity_groups", set()).add(
+                    (class_name, entity_group, entity["name"])
+                )
+        return db_map_data
 
 
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):

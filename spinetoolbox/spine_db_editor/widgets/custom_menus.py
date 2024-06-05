@@ -12,14 +12,14 @@
 
 """Classes for custom context menus and pop-up menus."""
 from PySide6.QtWidgets import QMenu, QWidget
-from PySide6.QtCore import Qt, QEvent, QPoint, Signal
-from PySide6.QtGui import QKeyEvent, QKeySequence
+from PySide6.QtCore import Qt, QEvent, QPoint, Signal, Slot
+from PySide6.QtGui import QKeyEvent, QKeySequence, QIcon, QAction
 from spinedb_api import IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
 from ...widgets.custom_menus import FilterMenuBase
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import DB_ITEM_SEPARATOR
+from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu
 
 
 class MainMenu(QMenu):
@@ -257,3 +257,82 @@ class TabularViewCodenameFilterMenu(TabularViewFilterMenuBase):
     def emit_filter_changed(self, valid_values):
         """See base class."""
         self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
+
+
+class RecentDatabasesPopupMenu(CustomPopupMenu):
+    """Recent databases menu embedded to 'File-Open recent' QAction."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (SpineDBEditor): Parent widget of this menu (SpineDBEditor)
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        self.setToolTipsVisible(True)
+        self.add_recent_dbs()
+        self.addSeparator()
+        self.add_action(
+            "Clear",
+            self.clear_recents,
+            enabled=self.has_recents(),
+            icon=QIcon(":icons/trash-alt.svg"),
+        )
+
+    def has_recents(self):
+        """Returns True if there are recent DBs."""
+        return bool(self._parent._history)
+
+    def add_recent_dbs(self):
+        """Adds opened db maps top recently opened. Adds them to the QMenu as QActions."""
+        for row in self._parent._history:
+            for name, url in row.items():
+                self.add_action(
+                    name,
+                    lambda name=name, url=url: self._parent.load_db_urls({url: name}),
+                    tooltip=url,
+                )
+
+    @Slot(bool)
+    def clear_recents(self):
+        """Slot to clear the history of the db editor."""
+        self._parent._history = []
+
+
+class DocsMenu(QMenu):
+    """Menu that houses the toggles for the dock widgets."""
+
+    def __init__(self, parent, db_editor):
+        """
+        Args:
+            parent (SpineDBEditor): Parent widget of this menu (SpineDBEditor)
+        """
+        super().__init__(parent=parent)
+        self.db_editor = db_editor
+        self._add_actions()
+
+    def _add_actions(self):
+        """Adds actions to the menu"""
+        reset_docs_action = QAction("Reset docs", self)
+        reset_docs_action.triggered.connect(self.db_editor.reset_docs)
+        self.addAction(reset_docs_action)
+        self.addAction(self.db_editor.ui.dockWidget_entity_tree.toggleViewAction())
+        self.addSeparator()
+        self.addAction(self.db_editor.ui.dockWidget_entity_tree.toggleViewAction())
+        self.addSeparator()
+        self.addAction(self.db_editor.ui.dockWidget_parameter_value.toggleViewAction())
+        self.addAction(self.db_editor.ui.dockWidget_parameter_definition.toggleViewAction())
+        self.addAction(self.db_editor.ui.dockWidget_entity_alternative.toggleViewAction())
+        self.addSeparator()
+        self.addAction(self.db_editor.ui.dockWidget_pivot_table.toggleViewAction())
+        self.addAction(self.db_editor.ui.dockWidget_frozen_table.toggleViewAction())
+        self.addSeparator()
+        self.addAction(self.db_editor.ui.dockWidget_entity_graph.toggleViewAction())
+        self.addSeparator()
+        self.addAction(self.db_editor.ui.dockWidget_parameter_value_list.toggleViewAction())
+        self.addAction(self.db_editor.ui.alternative_dock_widget.toggleViewAction())
+        self.addAction(self.db_editor.ui.scenario_dock_widget.toggleViewAction())
+        self.addAction(self.db_editor.ui.metadata_dock_widget.toggleViewAction())
+        self.addAction(self.db_editor.ui.item_metadata_dock_widget.toggleViewAction())
+        self.addSeparator()
+        self.addAction(self.db_editor.ui.dockWidget_exports.toggleViewAction())

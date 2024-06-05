@@ -334,6 +334,19 @@ class BooleanSearchBarEditor(SearchBarEditor):
         super().set_data(current, [TRUE_STRING, FALSE_STRING])
 
 
+class SearchBarEditorWithCreation(SearchBarEditor):
+    """Like SearchBarEditor, but also accepts input text that isn't part of the available data"""
+
+    def data(self):
+        """Returns editor's final data.
+
+        Returns:
+            str: editor data
+        """
+        data = super().data()
+        return data if data else self.first_index.data(Qt.ItemDataRole.EditRole)
+
+
 class CheckListEditor(QTableView):
     """A check list editor."""
 

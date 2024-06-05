@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDateTimeEdit,
     QSpinBox,
+    QTextEdit,
 )
 from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
 from PySide6.QtCore import (
@@ -452,3 +453,52 @@ class ExportAsVideoDialog(QDialog):
             self._step_len_spin_box.value(),
             self._fps_spin_box.value(),
         )
+
+
+class AddedEntitiesPopup(QDialog):
+    """Class for showing automatically added entities"""
+
+    def __init__(self, parent, added_entities):
+        super().__init__(parent)
+        self.setWindowTitle("Added Entities")
+        self._textEdit = QTextEdit(self)
+        self._text = None
+        self._entity_names = None
+        self._create_entity_names(added_entities)
+        self._create_text()
+        self._textEdit.setHtml(self._text)
+        self._textEdit.setReadOnly(True)
+        self._textEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._textEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._textEdit.setLineWrapMode(QTextEdit.NoWrap)
+        self._label = QLabel("Added new entities with members:", self)
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.accept)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self._label)
+        layout.addWidget(self._textEdit)
+        layout.addWidget(button_box)
+        self.setLayout(layout)
+        self._textEdit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizeGripEnabled(True)
+        self.resize(400, 400)
+
+    def _create_text(self):
+        lines = []
+        for db_map, classes in self._entity_names.items():
+            lines.append(f"<b>{db_map.codename}</b>:")
+            for cls_name, ent_names in classes.items():
+                lines.append(f"<ul><li><b>{cls_name}</b>:</li>")
+                for ent_name in ent_names:
+                    lines.append(f"<ul><li>{ent_name}</li></ul>")
+                lines.append("</ul>")
+        self._text = "\n".join(lines)
+
+    def _create_entity_names(self, entities):
+        entity_names = {}
+        for db_map, entities in entities.items():
+            for entity in entities:
+                entity_names.setdefault(db_map, {}).setdefault(entity["entity_class_name"], []).append(
+                    str(entity["entity_byname"])
+                )
+        self._entity_names = entity_names

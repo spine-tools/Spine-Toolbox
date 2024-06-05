@@ -72,16 +72,11 @@ class TabularViewMixin:
 
     def populate_pivot_action_group(self):
         self.pivot_actions = {
-            input_type: self.pivot_action_group.addAction(QIcon(CharIconEngine(icon_code)), input_type)
-            for input_type, icon_code in (
-                (self._PARAMETER_VALUE, "\uf292"),
-                (self._INDEX_EXPANSION, "\uf12c"),
-                (self._ELEMENT, "\uf1b3"),
-                (self._SCENARIO_ALTERNATIVE, "\uf008"),
-            )
+            self._PARAMETER_VALUE: self.pivot_action_group.addAction(self.ui.actionValue),
+            self._INDEX_EXPANSION: self.pivot_action_group.addAction(self.ui.actionIndex),
+            self._ELEMENT: self.pivot_action_group.addAction(self.ui.actionElement),
+            self._SCENARIO_ALTERNATIVE: self.pivot_action_group.addAction(self.ui.actionScenario),
         }
-        for action in self.pivot_actions.values():
-            action.setCheckable(True)
 
     def connect_signals(self):
         """Connects signals to slots."""

@@ -34,7 +34,7 @@ When you're happy with the members, press **OK**.
 Managing N-D entities
 =====================
 
-Right click the root item, or an N-D entity item in **Entity Tree** and from the context menu select
+Right click the root item, or an N-D entity class item in **Entity Tree** and from the context menu select
 **Manage elements**. The *Manage elements* dialog will pop up:
 
 .. image:: img/manage_entities_dialog.png

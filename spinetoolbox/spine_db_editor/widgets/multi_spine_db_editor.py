@@ -114,7 +114,7 @@ class MultiSpineDBEditor(MultiTabWindow):
             return None
         tab = self.tab_widget.widget(index)
         menu.addSeparator()
-        menu.addAction(tab.url_toolbar.reload_action)
+        menu.addAction(tab.toolbar.reload_action)
         db_url_codenames = tab.db_url_codenames
         menu.addAction(
             QIcon(CharIconEngine("\uf24d")),

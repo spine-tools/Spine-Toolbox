@@ -81,7 +81,7 @@ from .project import SpineToolboxProject
 from .spine_db_manager import SpineDBManager
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_engine_manager import make_engine_manager
-from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
+from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
@@ -286,6 +286,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionManage_plugins.triggered.connect(self._plugin_manager.show_manage_plugins_dialog)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
+        self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionRetrieve_project.triggered.connect(self.retrieve_project)
         self.ui.menuEdit.aboutToShow.connect(self.refresh_edit_action_states)

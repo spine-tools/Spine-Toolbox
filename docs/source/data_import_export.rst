@@ -443,6 +443,16 @@ The gdx backend turns the output tables to GAMS sets, parameters and scalars fol
   Everything else (except the table name) is ignored.
 * The data in the top left cell is the scalar's value.
 
+The following conversions are done for GAMS special values:
+
+==================  ====================================================
+GAMS special value  Original value
+==================  ====================================================
++Inf                IEEE 754 infinity
+-Inf                Negative IEEE 754 infinity
+Eps                 2.2250738585072014e-308, 1e-10 or the string ``EPS``
+==================  ====================================================
+
 .. _Basic regular expressions for filtering:
 
 Basic regular expressions for filtering

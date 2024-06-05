@@ -7,12 +7,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
-- A button next to each entity class in **Entity Tree** that opens the *Add entities* -dialog.
-- Alternative -column in *Add entities* -dialog. If filled, the created entity will be set active in that alternative.
+- Entity group -column in *Add entities* -dialog. If filled, the created entity will be added to the specified group.
+  If the group doesn't yet exist, it will be created.
 
 ### Changed
 
-- Python 3.12 and later is now supported.
+- Database editor's hamburger menu has been converted into a menubar beneath the tab bar. The URL toolbar has also
+  been replaced with a toolbar that houses different buttons.
+- One dimensional entities can now also be added through *Parameter value* and *Entity alternative* -tables.
 
 ### Deprecated
 
@@ -22,7 +24,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Security
 
-## 0.8.1
+## [0.8.2]
+
+### Added
+
+- A button next to each entity class in **Entity Tree** that opens the *Add entities* -dialog.
+- Alternative -column in *Add entities* -dialog. If filled, the created entity will be set active in that alternative.
+
+### Changed
+
+- Python 3.12 and later is now supported.
+- When exporting GAMS `.gdx` files with Exporter, special values 10<sup>-10</sup> and `EPS`
+  now get converted to GAMS Eps (epsilon).
+
+## [0.8.1]
 
 ### Added
 
@@ -37,7 +52,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   The flag is not used anywhere and has not been accessible in Database editor
   for a long time.
 
-## 0.8.0
+## [0.8.0]
 
 ### Added
 

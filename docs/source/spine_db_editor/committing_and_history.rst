@@ -20,7 +20,7 @@ An asterisk (*) in a tab of Spine Database Editor indicates that the session has
 If the database is opened from a Data Store, the corresponding project item will also have a notification in its
 upper right corner indicating that the database has uncommitted changes.
 
-To commit your changes, select **Session -> Commit** from the hamburger menu or press **Ctrl+Enter** while the
+To commit your changes, select **Session -> Commit** from the **Toolbar** or press **Ctrl+Enter** while the
 Spine Database Editor -window is active to open the commit dialog:
 
 .. image:: img/commit_dialog.png
@@ -45,11 +45,11 @@ will be automatically committed or not depending on the selection you made previ
 Rollback
 --------
 
-To undo *all* changes since the last commit, select **Session -> Rollback** from the hamburger menu or press
+To undo *all* changes since the last commit, select **Session -> Rollback** from the **Menu bar** or press
 **Ctrl+Backspace** while the Spine Database Editor -window is active. A dialog confirming the rollback action
 will open. From there, select **Rollback** to proceed.
 
-.. tip:: To undo/redo individual changes, use the **Edit -> Undo** and **Edit -> Redo** actions from the hamburger menu.
+.. tip:: To undo/redo individual changes, use the **Edit -> Undo** and **Edit -> Redo** actions from the **Toolbar**.
 
 .. note:: After rolling back to the last commit, the changes made in the session will no longer be available
           through undo/redo.
@@ -57,7 +57,7 @@ will open. From there, select **Rollback** to proceed.
 History
 -------
 
-To examine the commit history of the database, select **Session -> History...** from the hamburger menu.
+To examine the commit history of the database, select **Session -> History...** from the **Menu bar**.
 The **commit viewer** will pop up:
 
 .. image:: img/commit_viewer.png
