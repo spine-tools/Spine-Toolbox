@@ -43,15 +43,31 @@ class DBEditorToolBar(QToolBar):
         super().__init__(db_editor)
         self.setObjectName("spine_db_editor_toolbar")
         self._db_editor = db_editor
+        self.reload_action = QAction(QIcon(CharIconEngine("\uf021")), "Reload")
+        self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
+        self.reload_action.setEnabled(False)
+        self.reset_docs_action = QAction(QIcon(CharIconEngine("\uf2d2")), "Reset docs")
+        self.show_toolbox_action = QAction(QIcon(":/symbols/Spine_symbol.png"), "Show Toolbox")
+        self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Escape))
+        self.show_toolbox_action.setToolTip("Show Spine Toolbox (Ctrl+ESC)")
+        self._filter_action = QAction(QIcon(CharIconEngine("\uf0b0")), "Filter")
+        self.show_url_action = QAction(QIcon(CharIconEngine("\uf550")), "Show URLs")
+        self._add_actions()
+        self._connect_signals()
+        self.setMovable(False)
+        self.setIconSize(QSize(20, 20))
+
+    def _add_actions(self):
+        """Creates buttons for the actions and adds them to the toolbar"""
+        self.create_button_for_action(self._db_editor.ui.actionNew_db_file)
+        self.create_button_for_action(self._db_editor.ui.actionAdd_db_file)
+        self.create_button_for_action(self._db_editor.ui.actionOpen_db_file)
+        self.addSeparator()
         self.create_button_for_action(self._db_editor.ui.actionUndo)
         self.create_button_for_action(self._db_editor.ui.actionRedo)
         self.addSeparator()
         self.create_button_for_action(self._db_editor.ui.actionCommit)
         self.create_button_for_action(self._db_editor.ui.actionMass_remove_items)
-        self.reload_action = QAction(QIcon(CharIconEngine("\uf021")), "Reload")
-        self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_R.value))
-        self.reload_action.setEnabled(False)
-        self.reload_action.triggered.connect(db_editor.refresh_session)
         self.create_button_for_action(self.reload_action)
         self.addSeparator()
         self.create_button_for_action(self._db_editor.ui.actionStacked_style)
@@ -62,29 +78,26 @@ class DBEditorToolBar(QToolBar):
         self.create_button_for_action(self._db_editor.ui.actionElement)
         self.create_button_for_action(self._db_editor.ui.actionScenario)
         self.addSeparator()
-        self.reset_docs_action = QAction(QIcon(CharIconEngine("\uf2d2")), "Reset docs")
-        self.reset_docs_action.triggered.connect(self._db_editor.reset_docs)
         self.create_button_for_action(self.reset_docs_action)
         self.addSeparator()
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.addWidget(spacer)
         self.addSeparator()
-        self.show_url_action = QAction(QIcon(CharIconEngine("\uf550")), "Show URLs")
-        self.show_url_action.triggered.connect(self._show_url_codename_widget)
         self.create_button_for_action(self.show_url_action)
-        self._filter_action = QAction(QIcon(CharIconEngine("\uf0b0")), "Filter")
-        self._filter_action.triggered.connect(self._show_filter_menu)
         self.create_button_for_action(self._filter_action)
         self.addSeparator()
-        self.show_toolbox_action = QAction(QIcon(":/symbols/Spine_symbol.png"), "Show Toolbox")
-        self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Escape.value))
-        self.show_toolbox_action.setToolTip("Show Spine Toolbox (Ctrl+ESC)")
         self.create_button_for_action(self.show_toolbox_action)
-        self.setMovable(False)
-        self.setIconSize(QSize(20, 20))
+
+    def _connect_signals(self):
+        """Connects signals"""
+        self.reload_action.triggered.connect(self._db_editor.refresh_session)
+        self.reset_docs_action.triggered.connect(self._db_editor.reset_docs)
+        self.show_url_action.triggered.connect(self._show_url_codename_widget)
+        self._filter_action.triggered.connect(self._show_filter_menu)
 
     def create_button_for_action(self, action):
+        """Creates a button for the given action and adds it to the widget"""
         tool_button = QToolButton()
         tool_button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         tool_button.setPopupMode(QToolButton.InstantPopup)
@@ -92,11 +105,13 @@ class DBEditorToolBar(QToolBar):
         self.addWidget(tool_button)
 
     def _show_url_codename_widget(self):
+        """Shows the url codename widget"""
         dialog = _URLDialog(self._db_editor.db_url_codenames, parent=self)
         dialog.show()
 
     @Slot(bool)
     def _show_filter_menu(self, _checked=False):
+        """Shows the filter menu"""
         dialog = _UrlFilterDialog(self._db_editor.db_mngr, self._db_editor.db_maps, parent=self)
         dialog.show()
         dialog.filter_accepted.connect(self._db_editor.load_db_urls)
