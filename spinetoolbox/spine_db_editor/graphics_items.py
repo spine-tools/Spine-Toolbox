@@ -382,7 +382,15 @@ class EntityItem(QGraphicsRectItem):
         return path
 
     def set_highlight_color(self, color):
+        self._bg_brush = Qt.SolidPattern
         self._highlight_color = color
+
+    def set_highlight_pen(self, style):
+        """Set the pen that highlights the entity."""
+        pen = QPen(style)
+        width = max(1, 3 / self.scale())
+        pen.setWidth(width)
+        self._bg.setPen(pen)
 
     def paint(self, painter, option, widget=None):
         """Shows or hides the selection halo."""
@@ -391,11 +399,10 @@ class EntityItem(QGraphicsRectItem):
             option.state &= ~QStyle.StateFlag.State_Selected
         else:
             self._paint_as_deselected()
-        pen = self._bg.pen()
-        pen.setColor(self._highlight_color)
-        width = max(1, 10 / self.scale())
-        pen.setWidth(width)
-        self._bg.setPen(pen)
+        brush = self._bg.brush()
+        if self._highlight_color != Qt.transparent:  # If a highlight color is specified
+            brush.setColor(self._highlight_color)
+        self._bg.setBrush(brush)
         super().paint(painter, option, widget)
 
     def _paint_as_selected(self):

@@ -14,7 +14,7 @@
 import itertools
 import json
 from time import monotonic
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QPen
 from PySide6.QtCore import Slot, QTimer, QThreadPool, Qt
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
@@ -209,25 +209,34 @@ class GraphViewMixin:
         if not activities:
             return False  # No entity alternatives for this guy
         if all(activities):
-            self.highlight_by_id.update({item["id"]: EntityHighlight.ACTIVE})
             return True  # Active in all selected alternatives, good to go.
         if any(activities):
-            self.highlight_by_id.update({item["id"]: EntityHighlight.CONFLICTED})
+            self.highlight_by_id.update({item["id"]: EntityBorder.CONFLICTED})
             return True  # Active in some selected alternatives, good to go.
-        self.highlight_by_id.update({item["id"]: EntityHighlight.INACTIVE})
+        self.highlight_by_id.update({item["id"]: EntityBorder.INACTIVE})
         return False  # Not active in any selected alternatives, no go.
 
     def _scenario_accepts(self, item, db_map):
         if not self._filter_scenario_ids:
             return True  # No scenarios selected
-        if item["id"] in self._filter_entity_alternative_ids.get(db_map, {}):
-            self.highlight_by_id.update({item["id"]: EntityHighlight.ACTIVE})
-            return True  # The entity is set as active in one of the scenarios
+        scenarios = self._filter_scenario_ids.get(db_map)
+        for scenario_id in scenarios:
+            if not scenario_id:
+                continue  # scenario alternative -item selections
+            state = db_map.item_active_in_scenario(item, scenario_id)
+            if state is not None:
+                return state
+        if item["element_id_list"]:
+            results = set()
+            for id_ in item["element_id_list"]:
+                element = self.db_mngr.get_item(db_map, "entity", id_)
+                results.add(self._scenario_accepts(element, db_map))
+            return all(results)  # Accept only if all elements are accepted also
         entity_class = self.db_mngr.get_item(db_map, "entity_class", item["class_id"])
         if entity_class["active_by_default"]:
-            self.highlight_by_id.update({item["id"]: EntityHighlight.INACTIVE})
+            self.highlight_by_id.update({item["id"]: EntityBorder.INACTIVE})
             return True  # active_by_default is True
-        self.highlight_by_id.update({item["id"]: EntityHighlight.INACTIVE})
+        self.highlight_by_id.update({item["id"]: EntityBorder.INACTIVE})
         return False
 
     def _parameter_value_accepts(self, item, db_map):
@@ -237,10 +246,10 @@ class GraphViewMixin:
         if item["id"] in self._filter_parameter_value_ids.get(db_map):
             if item["element_id_list"]:
                 for id_ in item["element_id_list"]:
-                    if self.highlight_by_id.get(id_) == EntityHighlight.INACTIVE:
-                        self.highlight_by_id.update({id_: EntityHighlight.PARAMETER_VALUE})
-            if self.highlight_by_id.get(item["id"]) == EntityHighlight.INACTIVE:
-                self.highlight_by_id.update({item["id"]: EntityHighlight.PARAMETER_VALUE})
+                    if self.highlight_by_id.get(id_) == EntityBorder.INACTIVE:
+                        self.highlight_by_id.update({id_: EntityBorder.PARAMETER_VALUE})
+            if self.highlight_by_id.get(item["id"]) == EntityBorder.INACTIVE:
+                self.highlight_by_id.update({item["id"]: EntityBorder.PARAMETER_VALUE})
             return True  # Entity is present in the parameter_value table with the current selections
         return False
 
@@ -577,7 +586,7 @@ class GraphViewMixin:
         for id_, color in self.highlight_by_id.items():
             for item in self.entity_items:
                 if item.first_id == id_:
-                    item.set_highlight_color(color)
+                    item.set_highlight_pen(color)
                     break
         self.highlight_by_id.clear()
         if not self._persisted_positions:
@@ -930,11 +939,10 @@ class _Offset:
         return (self._value - center) / len(offsets)
 
 
-class EntityHighlight:
-    """Highlight colors for the EntityItems"""
+class EntityBorder:
+    """Highlight borders for the EntityItems"""
 
-    ACTIVE = QColor(165, 232, 128, 150)
-    INACTIVE = QColor(245, 184, 184, 150)
-    CONFLICTED = QColor(183, 155, 114, 150)
-    PARAMETER_VALUE = QColor(198, 198, 198, 150)
-    NOT_SET = Qt.transparent
+    INACTIVE = QPen(Qt.SolidLine)
+    CONFLICTED = QPen(Qt.DashLine)
+    parameter_value = QPen(Qt.DotLine)
+    PARAMETER_VALUE = parameter_value
