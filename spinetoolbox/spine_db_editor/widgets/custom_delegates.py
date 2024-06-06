@@ -13,8 +13,8 @@
 """Custom item delegates."""
 from numbers import Number
 from PySide6.QtCore import QModelIndex, Qt, Signal, QRect, QEvent, QSize
-from PySide6.QtGui import QIcon, QFontMetrics, QFontMetricsF
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionButton, QStyle, QApplication
+from PySide6.QtGui import QIcon, QFontMetrics
+from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
