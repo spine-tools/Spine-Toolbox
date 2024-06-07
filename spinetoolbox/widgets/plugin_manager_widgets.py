@@ -14,7 +14,7 @@
 from PySide6.QtCore import Qt, Slot, Signal, QSortFilterProxyModel, QTimer, QSize
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QListView, QDialogButtonBox
 from PySide6.QtGui import QStandardItemModel, QStandardItem
-from .custom_qwidgets import ToolBarWidget
+from .custom_qwidgets import MenuItemToolBarWidget
 
 
 class _InstallPluginModel(QStandardItemModel):
@@ -122,7 +122,7 @@ class ManagePluginsDialog(QDialog):
             self._list_view.setIndexWidget(index, widget)
 
     def _create_plugin_widget(self, plugin_name, can_update):
-        widget = ToolBarWidget(plugin_name, self)
+        widget = MenuItemToolBarWidget(plugin_name, self)
         widget.tool_bar.addAction("Remove", lambda _=False, n=plugin_name: self._emit_item_removed(n))
         update = widget.tool_bar.addAction("Update", lambda _=False, n=plugin_name: self._emit_item_updated(n))
         update.setEnabled(can_update)
