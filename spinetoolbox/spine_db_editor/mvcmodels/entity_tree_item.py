@@ -44,6 +44,14 @@ class EntityTreeRootItem(MultiDBTreeItem):
         super().__init__(*args, **kwargs)
         self._has_children_initially = True
 
+    def data(self, column, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.FontRole and column == 0:
+            font = QFont()
+            font.setBold(True)
+            font.setUnderline(True)
+            return font
+        return super().data(column, role)
+
     @property
     def visible_children(self):
         return [x for x in self.children if not x.is_hidden()]

@@ -20,8 +20,6 @@ The **Entity Tree** presents the structure of entity classes and entities in all
 .. image:: img/entity_tree.png
    :align: center
 
-- To view all entity classes from all databases,
-  expand the root item (automatically expanded when loading the form).
 - To view all entities of a class, expand the corresponding entity class item.
 - To view all multidimensional entities where a specific entity is an member, expand that entity.
 
@@ -64,6 +62,9 @@ Unavailable options are still visible but they are greyed out:
    This will only expand the next layer and leave the children expanded or collapsed depending on their previous
    state. Items in gray don't have any children, thus they cannot be expanded. To collapse an expanded item,
    double-click on it again or press the left arrow.
+
+.. tip:: Expand or collapse all items by selecting **Fully collapse**/**Fully expand** from the root item's
+         context menu.
 
 .. tip:: **Entity Tree** also supports **Sticky selection**, which allows one to
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select

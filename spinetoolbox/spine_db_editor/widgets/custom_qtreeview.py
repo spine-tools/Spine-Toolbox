@@ -35,6 +35,7 @@ class EntityTreeView(CopyPasteTreeView):
         """
         super().__init__(parent=parent)
         self.setItemDelegate(AddEntityButtonDelegate(self))
+        self.setRootIsDecorated(False)
         self._context_item = None
         self._selected_indexes = {}
         self._menu = QMenu(self)
@@ -223,6 +224,12 @@ class EntityTreeView(CopyPasteTreeView):
             for item in model.visit_all(index):
                 self.collapse(model.index_from_item(item))
 
+    def collapse(self, index):
+        """Overridden to prevent the collapse of the root item"""
+        if not index.parent().isValid():
+            return
+        super().collapse(index)
+
     def export_selected(self):
         """Exports data from selected indexes using the connected Spine db editor."""
         self._spine_db_editor.export_selected(self._selected_indexes)
@@ -243,6 +250,18 @@ class EntityTreeView(CopyPasteTreeView):
         self._context_item = self.model().item_from_index(index)
         self.update_actions_availability()
         self._menu.exec(event.globalPos())
+
+    def mouseDoubleClickEvent(self, event):
+        """Overridden to not allow collapsing of the root item by double click."""
+        pos = self.viewport().mapFromGlobal(event.globalPos())
+        index = self.indexAt(pos)
+        model = index.model()
+        if model:
+            item = model.item_from_index(index)
+            if item.item_type == "root":
+                event.ignore()
+                return
+        super().mouseDoubleClickEvent(event)
 
     def mousePressEvent(self, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.
