@@ -319,7 +319,18 @@ class TestParameterValueTableWithExistingData(TestBase):
         # 2-D entity class
         self._n_ND_entities = 2
         self._n_ND_parameters = 2
-        import_functions.import_entity_classes(db_map, (('multi_d_class', ('object_class', 'object_class',)),))
+        import_functions.import_entity_classes(
+            db_map,
+            (
+                (
+                    "multi_d_class",
+                    (
+                        "object_class",
+                        "object_class",
+                    ),
+                ),
+            ),
+        )
         nd_entity_names = [
             (f"object_{i}", f"object_{j}") for i, j in itertools.permutations(range(self._n_ND_entities), 2)
         ]
@@ -328,7 +339,12 @@ class TestParameterValueTableWithExistingData(TestBase):
         parameter_definition_data = (("multi_d_class", f"parameter_{n}") for n in range(self._n_ND_parameters))
         import_functions.import_object_parameters(db_map, parameter_definition_data)
         parameter_value_data = [
-            ("multi_d_class", byname, f"parameter_{parameter_n}", "a_value",)
+            (
+                "multi_d_class",
+                byname,
+                f"parameter_{parameter_n}",
+                "a_value",
+            )
             for byname, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
         ]
         import_functions.import_parameter_values(db_map, parameter_value_data)
@@ -394,10 +410,7 @@ class TestParameterValueTableWithExistingData(TestBase):
             ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
-        entity_names = (
-            f"object_{n} ǀ object_{1 - n}"
-            for n in range(self._n_ND_entities)
-        )
+        entity_names = (f"object_{n} ǀ object_{1 - n}" for n in range(self._n_ND_entities))
         expected.extend(
             [
                 ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
@@ -427,14 +440,9 @@ class TestParameterValueTableWithExistingData(TestBase):
             QApplication.processEvents()
         expected = [
             ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
-            for object_n, parameter_n in itertools.product(
-                range(self._n_entities), range(self._n_parameters)
-            )
+            for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
-        entity_names = (
-            f"object_{n} ǀ object_{1-n}"
-            for n in range(self._n_ND_entities)
-        )
+        entity_names = (f"object_{n} ǀ object_{1-n}" for n in range(self._n_ND_entities))
         expected.extend(
             [
                 ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
@@ -458,10 +466,7 @@ class TestParameterValueTableWithExistingData(TestBase):
             ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
-        entity_names = (
-            f"object_{n} ǀ object_{1 - n}"
-            for n in range(self._n_ND_entities)
-        )
+        entity_names = (f"object_{n} ǀ object_{1 - n}" for n in range(self._n_ND_entities))
         expected.extend(
             [
                 ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
