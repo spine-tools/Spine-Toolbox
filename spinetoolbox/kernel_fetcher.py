@@ -51,6 +51,8 @@ class KernelFetcher(QThread):
     def get_all_regular_kernels(self):
         """Finds all kernel specs as quickly as possible."""
         for kernel_name, resource_dir in find_kernel_specs().items():  # Find regular Kernels
+            if not os.path.exists(resource_dir):
+                continue
             icon = self.get_icon(resource_dir)
             self.kernel_found.emit(kernel_name, resource_dir, False, icon, {})
             if not self.keep_going:
