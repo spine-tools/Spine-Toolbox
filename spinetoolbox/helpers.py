@@ -1825,11 +1825,3 @@ class CustomPopupMenu(QMenu):
         action.setEnabled(enabled)
         if tooltip is not None:
             action.setToolTip(tooltip)
-
-
-def order_key(name):
-    """Splits the given string into a list of its substrings and digits
-
-    example: "David_1946_Gilmour" -> ["David_", 1946, "_Gilmour"]
-    """
-    return [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", name) if text]

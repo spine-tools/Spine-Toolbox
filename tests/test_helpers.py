@@ -52,7 +52,6 @@ from spinetoolbox.helpers import (
     merge_dicts,
     HTMLTagFilter,
     home_dir,
-    order_key,
 )
 
 
@@ -419,11 +418,6 @@ class TestHelpers(unittest.TestCase):
         target = {"a": {"b": 1}}
         merge_dicts({"a": {"b": 2}}, target)
         self.assertEqual(target, {"a": {"b": 2}})
-
-    def test_order_key(self):
-        self.assertEqual(["Humphrey_Bogart"], order_key("Humphrey_Bogart"))
-        self.assertEqual(["Wes_", 1969, "_Anderson"], order_key("Wes_1969_Anderson"))
-        self.assertEqual([1899, "_Alfred-", 1980, "Hitchcock"], order_key("1899_Alfred-1980Hitchcock"))
 
 
 class TestHTMLTagFilter(unittest.TestCase):
