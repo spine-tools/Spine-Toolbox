@@ -43,6 +43,32 @@ jobs:
           curl -o python.zip https://www.python.org/ftp/python/3.12.3/python-3.12.3-embed-amd64.zip
           tar xf python.zip
           del python.zip
+      - name: Edit embedded Python search paths
+        run: |
+          $PWD
+          cd embedded-python
+          $PWD
+          Add-Content ./*._pth "Lib"
+          Add-Content ./*._pth "Lib/site-packages"
+      - name: Install pip for embedded Python
+        run: |
+          $PWD
+          cd embedded-python
+          $PWD
+          curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+      - name: Run get-pip.py
+        run : |
+          $PWD
+          cd embedded-python
+          $PWD
+          python get-pip.py
+      - name: Install packages for embedded Python
+        run: |
+          $PWD
+          cd embedded-python/Scripts
+          pip --version
+          $PWD
+          pip install ipykernel jill
       - name: Build bundle
         run: |
           python -m PyInstaller spinetoolbox.spec -- --embedded-python=embedded-python
