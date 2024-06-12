@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest import mock
 from unittest.mock import MagicMock
 from PySide6.QtCore import Qt, QSettings
 from PySide6.QtWidgets import QApplication
@@ -554,6 +555,55 @@ class TestUpdateExpandedParameterValues(unittest.TestCase):
         updated_item = self._db_map.get_parameter_value_item(id=value_item["id"])
         update_value = from_database(updated_item["value"], updated_item["type"])
         self.assertEqual(update_value, Map(["a"], ["c"]))
+
+
+class TestRemoveScenarioAlternative(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        mock_settings = MagicMock()
+        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        self._db_mngr = SpineDBManager(mock_settings, None)
+        self._logger = MagicMock()
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="database", create=True)
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+    def _assert_success(self, result):
+        item, error = result
+        self.assertIsNone(error)
+        return item
+
+    def test_removing_scenario_alternative_and_committing(self):
+        """Test that removing non-rank 1 scenario alternative works."""
+        scenario = self._assert_success(self._db_map.add_scenario_item(name="scenario"))
+        base = self._db_map.get_alternative_item(name="Base")
+        next_level = self._assert_success(self._db_map.add_alternative_item(name="Next level"))
+        scen_alt_1 = self._assert_success(
+            self._db_map.add_scenario_alternative_item(scenario_id=scenario["id"], alternative_id=base["id"], rank=1)
+        )
+        scen_alt_2 = self._assert_success(
+            self._db_map.add_scenario_alternative_item(
+                scenario_id=scenario["id"], alternative_id=next_level["id"], rank=2
+            )
+        )
+        self._db_mngr.commit_session("Added data.", self._db_map)
+        db_map_scen_alt_data = {
+            self._db_map: [{"alternative_id_list": [scen_alt_2["alternative_id"]], "id": scenario["id"]}]
+        }
+        db_map_typed_data_to_rm = {self._db_map: {"scenario": set()}}
+        self._db_mngr.error_msg = MagicMock()
+        self._db_mngr.set_scenario_alternatives(db_map_scen_alt_data)
+        self._db_mngr.remove_items(db_map_typed_data_to_rm)
+        self._db_mngr.commit_session("Remove scenario alternative", self._db_map)
+        self._db_mngr.error_msg.emit.assert_not_called()
 
 
 if __name__ == "__main__":
