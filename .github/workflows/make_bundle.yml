@@ -49,24 +49,23 @@ jobs:
           Add-Content ./*._pth "Lib"
           Add-Content ./*._pth "Lib/site-packages"
           cat ./*._pth
-      - name: Install pip for embedded Python
+      - name: Download get-pip.py
         run: |
           cd embedded-python
           curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-          dir
-      - name: Run get-pip.py
+      - name: Install pip for embedded Python
         run : |
           cd embedded-python
-          $PWD
           ./python.exe get-pip.py
-          dir
       - name: Install packages for embedded Python
         run: |
-          $PWD
           cd embedded-python/Scripts
-          pip --version
-          $PWD
-          pip install ipykernel jill
+          ./pip.exe --version
+          ./pip.exe install ipykernel jill
+      - name: List packages in embedded Python
+        run: |
+          cd embedded-python/Scripts
+          ./pip.exe list
       - name: Build bundle
         run: |
           python -m PyInstaller spinetoolbox.spec -- --embedded-python=embedded-python
