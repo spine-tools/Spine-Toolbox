@@ -75,7 +75,7 @@ jobs:
         run: |
           python -c "from importlib.metadata import version; print('version=' + version('spinetoolbox'))" >> $GITHUB_OUTPUT
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: dist
