@@ -423,7 +423,8 @@ class TestHelpers(unittest.TestCase):
     def test_order_key(self):
         self.assertEqual(["Humphrey_Bogart"], order_key("Humphrey_Bogart"))
         self.assertEqual(["Wes_", 1969, "_Anderson"], order_key("Wes_1969_Anderson"))
-        self.assertEqual(["", 1899, "_Alfred-", 1980, "Hitchcock"], order_key("1899_Alfred-1980Hitchcock"))
+        self.assertEqual(["\U0010ffff", 1899, "_Alfred-", 1980, "Hitchcock"], order_key("1899_Alfred-1980Hitchcock"))
+        self.assertEqual([], order_key(""))
 
 
 class TestHTMLTagFilter(unittest.TestCase):
