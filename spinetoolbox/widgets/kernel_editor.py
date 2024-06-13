@@ -15,8 +15,7 @@ import subprocess
 from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Slot, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
-from jupyter_client.kernelspec import find_kernel_specs
-from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
+from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable, custom_find_kernel_specs
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.helpers import (
     busy_effect,
@@ -56,7 +55,7 @@ class KernelEditorBase(QDialog):
         self._rebuild_ijulia_process = None
         self._install_julia_kernel_process = None
         self._ready_to_install_kernel = False
-        self.kernel_names_before = find_kernel_specs().keys()
+        self.kernel_names_before = custom_find_kernel_specs().keys()
         self._new_kernel_name = ""
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
@@ -93,7 +92,7 @@ class KernelEditorBase(QDialog):
 
     def _solve_new_kernel_name(self):
         """Finds out the new kernel name after a new kernel has been created."""
-        kernel_names_after = find_kernel_specs().keys()
+        kernel_names_after = custom_find_kernel_specs().keys()
         try:
             self._new_kernel_name = list(set(kernel_names_after) - set(self.kernel_names_before))[0]
         except IndexError:
