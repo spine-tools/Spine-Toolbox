@@ -15,7 +15,11 @@ import subprocess
 from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QWidget
 from PySide6.QtCore import Slot, Qt, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
-from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable, custom_find_kernel_specs
+from spine_engine.utils.helpers import (
+    resolve_current_python_interpreter,
+    resolve_default_julia_executable,
+    custom_find_kernel_specs,
+)
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.helpers import (
     busy_effect,
