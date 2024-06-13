@@ -410,11 +410,11 @@ class TestParameterValueTableWithExistingData(TestBase):
             ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
-        entity_names = (f"object_{n} ǀ object_{1 - n}" for n in range(self._n_ND_entities))
+        nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
                 ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
-                for entity_name, parameter_n in itertools.product(entity_names, range(self._n_ND_parameters))
+                for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
         expected.append([None, None, None, None, None, self.db_codename])
@@ -442,11 +442,11 @@ class TestParameterValueTableWithExistingData(TestBase):
             ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
-        entity_names = (f"object_{n} ǀ object_{1-n}" for n in range(self._n_ND_entities))
+        nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
                 ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
-                for entity_name, parameter_n in itertools.product(entity_names, range(self._n_ND_parameters))
+                for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
         QApplication.processEvents()
@@ -456,25 +456,58 @@ class TestParameterValueTableWithExistingData(TestBase):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_sorting(self):
+        """Test that the parameter value table sorts in an expected order."""
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+        db_map = DatabaseMapping(url)
+        parameter_definition_data = (
+            ("object_class", f"0parameter_"),
+            ("object_class", f"1parameter_"),
+        )
+        import_functions.import_object_parameters(db_map, parameter_definition_data)
+        parameter_value_data = (
+            ("object_class", f"object_0", f"0parameter_", "a_value"),
+            ("object_class", f"object_0", f"1parameter_", "a_value"),
+            ("object_class", f"object_1", f"0parameter_", "a_value"),
+            ("object_class", f"object_1", f"1parameter_", "a_value"),
+        )
+        import_functions.import_object_parameter_values(db_map, parameter_value_data)
+        db_map.commit_session("Add test data.")
+        db_map.close()
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        while model.rowCount() != self._whole_model_rowcount():
+        while model.rowCount() != self._whole_model_rowcount() + 4:
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
-        expected = [
-            ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
-            for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
-        ]
-        entity_names = (f"object_{n} ǀ object_{1 - n}" for n in range(self._n_ND_entities))
+        expected = []
+        for object_n in range(self._n_entities):
+            for parameter_n in range(self._n_parameters):
+                expected.append(
+                    [
+                        "object_class",
+                        f"object_{object_n}",
+                        f"parameter_{parameter_n}",
+                        "Base",
+                        "a_value",
+                        self.db_codename,
+                    ]
+                )
+            if object_n < 2:
+                expected.extend(
+                    [
+                        ["object_class", f"object_{object_n}", f"0parameter_", "Base", "a_value", self.db_codename],
+                        ["object_class", f"object_{object_n}", f"1parameter_", "Base", "a_value", self.db_codename],
+                    ]
+                )
+        nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
                 ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
-                for entity_name, parameter_n in itertools.product(entity_names, range(self._n_ND_parameters))
+                for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
         expected.append([None, None, None, None, None, self.db_codename])
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount())
+        self.assertEqual(model.rowCount(), self._whole_model_rowcount() + 4)
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 

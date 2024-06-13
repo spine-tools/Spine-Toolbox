@@ -1829,7 +1829,11 @@ class CustomPopupMenu(QMenu):
 
 def order_key(name):
     """Splits the given string into a list of its substrings and digits
-
     example: "David_1946_Gilmour" -> ["David_", 1946, "_Gilmour"]
+    If given a string that starts with a digit, a 'big' string (in comparisons) will be added to the start
+    of the order key that makes sure that every key starts with a str and alternates with int after that.
     """
-    return [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", name) if text]
+    key_list = [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", name) if text]
+    if len(key_list) and isinstance(key_list[0], int):
+        key_list.insert(0, "\U0010FFFF")
+    return key_list

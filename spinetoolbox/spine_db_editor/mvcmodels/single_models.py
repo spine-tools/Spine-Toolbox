@@ -62,12 +62,15 @@ class SingleModelBase(HalfSortedTableModel):
     def __lt__(self, other):
         if self.entity_class_name == other.entity_class_name:
             return self.db_map.codename < other.db_map.codename
-        keys = []
-        for model in (self, other):
-            dim = model.dimension_id_list
+        keys = {}
+        for side, model in {"left": self, "right": other}.items():
+            dim = len(model.dimension_id_list)
             class_name = model.entity_class_name
-            keys.append((dim, class_name))
-        return keys[0] < keys[1]
+            keys[side] = (
+                dim,
+                class_name,
+            )
+        return keys["left"] < keys["right"]
 
     @property
     def item_type(self):
@@ -392,10 +395,10 @@ class SingleParameterValueModel(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        byname = order_key("".join(item.get("entity_byname", ())))
-        param_name = order_key(item.get("parameter_name", ""))
+        byname = order_key("_".join(item.get("entity_byname", ())))
+        parameter_name = order_key(item.get("parameter_name", ""))
         alt_name = order_key(item.get("alternative_name", ""))
-        return byname, param_name, alt_name
+        return byname, parameter_name, alt_name
 
     def _do_update_items_in_db(self, db_map_data):
         self.db_mngr.update_parameter_values(db_map_data)
@@ -410,8 +413,8 @@ class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterE
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        byname = order_key("".join(item.get("entity_byname", ())))
-        alt_name = order_key("".join(item.get("alternative_name", "")))
+        byname = order_key("_".join(item.get("entity_byname", ())))
+        alt_name = order_key(item.get("alternative_name", ""))
         return byname, alt_name
 
     @property
