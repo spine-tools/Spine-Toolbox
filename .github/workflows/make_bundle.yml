@@ -74,12 +74,9 @@ jobs:
         shell: bash
         run: |
           python -c "from importlib.metadata import version; print('version=' + version('spinetoolbox'))" >> $GITHUB_OUTPUT
-      - name: Make zip
-        run:
-          Compress-Archive -Path "./dist/Spine Toolbox/*" -DestinationPath Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}.zip
-      - name: Upload zip
+      - name: Upload archive
         uses: actions/upload-artifact@v3
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
-          path: ./Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}.zip
+          path: "./dist/Spine Toolbox"
           if-no-files-found: error
