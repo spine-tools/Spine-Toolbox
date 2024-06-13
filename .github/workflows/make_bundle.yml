@@ -80,6 +80,6 @@ jobs:
       - name: Upload zip
         uses: actions/upload-artifact@v3
         with:
-          name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}.zip
-          path: ./dist
+          name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
+          path: ./Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}.zip
           if-no-files-found: error
