@@ -83,4 +83,3 @@ jobs:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: ./Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           if-no-files-found: error
-          compression-level: 0
