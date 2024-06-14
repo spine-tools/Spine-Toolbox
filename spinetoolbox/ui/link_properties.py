@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'link_properties.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.7.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
