@@ -1341,15 +1341,19 @@ class ToolboxUI(QMainWindow):
             dock.setMinimumSize(0, 0)
             dock.setVisible(True)
             dock.setFloating(False)
-        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Orientation.Horizontal)
-        self.ui.dockWidget_eventlog.raise_()
+        self.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.ui.dockWidget_design_view)
+        self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_eventlog)
+        vert_docs = (self.ui.dockWidget_design_view, self.ui.dockWidget_eventlog)
+        height = sum(d.size().height() for d in vert_docs)
+        self.resizeDocks(vert_docs, [0.6 * height, 0.4 * height], Qt.Orientation.Vertical)
         self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Orientation.Horizontal)
+        self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Orientation.Horizontal)
         top_docks = (self.ui.dockWidget_design_view, self.ui.dockWidget_item)
         width = sum(d.size().width() for d in top_docks)
         self.resizeDocks(top_docks, [0.7 * width, 0.3 * width], Qt.Orientation.Horizontal)
         bottom_docks = (self.ui.dockWidget_eventlog, self.ui.dockWidget_console)
-        # bottom_width = sum(d.size().width() for d in bottom_docks)
-        self.resizeDocks(bottom_docks, [0.5 * width, 0.5 * width], Qt.Orientation.Horizontal)
+        bottom_width = sum(d.size().width() for d in bottom_docks)
+        self.resizeDocks(bottom_docks, [0.5 * bottom_width, 0.5 * bottom_width], Qt.Orientation.Horizontal)
 
     def _add_execute_actions(self):
         """Adds execution handler actions to the main window."""
