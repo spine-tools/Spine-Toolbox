@@ -12,7 +12,6 @@
 
 """Models to represent entities in a tree."""
 from .entity_tree_item import EntityTreeRootItem
-from .multi_db_tree_item import MultiDBTreeItem
 from .multi_db_tree_model import MultiDBTreeModel
 
 
@@ -22,6 +21,11 @@ class EntityTreeModel(MultiDBTreeModel):
         self._hide_empty_classes = (
             self.db_editor.qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
         )
+        self._hidden_items = set()
+        self._se = False
+
+    def has_hidden_items(self):
+        return bool(len(self._hidden_items))
 
     @property
     def root_item_type(self):
@@ -69,6 +73,20 @@ class EntityTreeModel(MultiDBTreeModel):
         if self._hide_empty_classes is hide_empty_classes:
             return
         self._hide_empty_classes = hide_empty_classes
+        self.root_item.refresh_child_map()
+
+    def hide_classes(self, classes):
+        """This should make every item from selection have hidden=True and refresh the tree"""
+        for item in classes:
+            item.hidden = True
+            self._hidden_items.add(item)
+        self.root_item.refresh_child_map()
+
+    def show_hidden_classes(self):
+        """This should make every item have hidden=False and refresh the tree"""
+        for item in self._hidden_items:
+            item.hidden = False
+        self._hidden_items.clear()
         self.root_item.refresh_child_map()
 
 

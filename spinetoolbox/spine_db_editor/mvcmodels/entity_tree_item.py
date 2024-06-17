@@ -97,6 +97,18 @@ class EntityClassItem(MultiDBTreeItem):
     item_type = "entity_class"
     _fetch_index = EntityClassIndex()
 
+    def __init__(self, model, db_map_ids=None):
+        super().__init__(model, db_map_ids=db_map_ids)
+        self._hidden = False
+
+    @property
+    def hidden(self):
+        return self._hidden
+
+    @hidden.setter
+    def hidden(self, value):
+        self._hidden = value
+
     @property
     def display_icon(self):
         """Returns class icon."""
@@ -107,7 +119,9 @@ class EntityClassItem(MultiDBTreeItem):
         return EntityItem
 
     def is_hidden(self):
-        return self.model.hide_empty_classes and not self.has_children()
+        hidden = self.model.hide_empty_classes and not self.has_children()
+        hidden |= self._hidden
+        return hidden
 
     @property
     def _children_sort_key(self):

@@ -13,7 +13,7 @@
 """Classes for custom QTreeViews and QTreeWidgets."""
 from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView
 from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
-from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
+from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication, QColor
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate, AddEntityButtonDelegate
@@ -133,6 +133,38 @@ class EntityTreeView(CopyPasteTreeView):
         self._hide_empty_classes_action = self._menu.addAction("Hide empty classes", self.toggle_hide_empty_classes)
         self._hide_empty_classes_action.setCheckable(True)
         self._hide_empty_classes_action.setChecked(self.model().hide_empty_classes)
+        self._menu.addSeparator()
+        self._hide_classes_action = self._menu.addAction("Hide selected classes", self._hide_classes)
+        self._show_hidden_classes_action = self._menu.addAction("Show hidden classes", self._show_hidden_classes)
+
+    def _hide_classes(self):
+        """Hides the selection of classes"""
+        to_hide = set()
+        indexes = self._selected_indexes.get("entity_class")
+        if not indexes:
+            return
+        for index in indexes:
+            item = index.model().item_from_index(index)
+            to_hide.add(item)
+        self.selectionModel().clearSelection()
+        self.model().hide_classes(to_hide)
+        self._show_hidden_classes_action.setEnabled(True)
+        self.color_dock(QColor("lightcyan"))
+
+    def _show_hidden_classes(self):
+        """Shows the user specified hidden classes"""
+        self.model().show_hidden_classes()
+        self._show_hidden_classes_action.setEnabled(False)
+        self.color_dock(None)
+
+    def color_dock(self, color):
+        """Sets the color and name for the tab of the dock widget that houses this view."""
+        if not self._spine_db_editor:
+            return
+        dock = self.parent().parent()
+        self._spine_db_editor.set_dock_tab_color(dock, color)
+        text = "CLASSES HIDDEN" if color else None
+        self._spine_db_editor.rename_dock(dock, text)
 
     def toggle_hide_empty_classes(self):
         self.model().hide_empty_classes = self._hide_empty_classes_action.isChecked()
@@ -318,6 +350,8 @@ class EntityTreeView(CopyPasteTreeView):
         self._find_next_action.setEnabled(
             item.item_type == "entity" and item.parent_item.parent_item.item_type == "entity_class"
         )
+        self._hide_classes_action.setEnabled(item.item_type == "entity_class")
+        self._show_hidden_classes_action.setEnabled(self.model().has_hidden_items())
 
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
