@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QDialog,
 )
 from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, QCoreApplication
-from PySide6.QtGui import QGuiApplication, QKeySequence
+from PySide6.QtGui import QGuiApplication, QKeySequence, QPalette, QColor
 from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinedb_api.helpers import vacuum
@@ -39,6 +39,7 @@ from .tabular_view_mixin import TabularViewMixin
 from .toolbar import DBEditorToolBar
 from .metadata_editor import MetadataEditor
 from .item_metadata_editor import ItemMetadataEditor
+from ..helpers import table_name_from_item_type
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ...widgets.commit_dialog import CommitDialog
@@ -873,6 +874,29 @@ class SpineDBEditorBase(QMainWindow):
     @staticmethod
     def _get_base_dir():
         return APPLICATION_PATH
+
+    @staticmethod
+    def set_dock_tab_color(dock, color):
+        """Colors the header of a dock widget"""
+        palette = QPalette()
+        if color:
+            palette.setColor(QPalette.Window, color)
+        dock.setPalette(palette)
+
+    def handle_column_filters(self, model):
+        if not model.dock:
+            return
+        if not any(model.column_filters.values()):
+            # Back to defaults
+            model.dock.setWindowTitle(table_name_from_item_type(model.item_type))
+            self.set_dock_tab_color(model.dock, None)
+            return
+        self.set_dock_tab_color(model.dock, QColor("paleturquoise"))
+        table_name = table_name_from_item_type(model.item_type)
+        table_name += (
+            f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
+        )
+        model.dock.setWindowTitle(table_name)
 
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):
