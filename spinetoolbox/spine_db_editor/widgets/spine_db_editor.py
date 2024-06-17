@@ -886,21 +886,18 @@ class SpineDBEditorBase(QMainWindow):
     def handle_column_filters(self, model):
         if not model.dock:
             return
+        original_name = table_name_from_item_type(model.item_type)
         if not any(model.column_filters.values()):
             # Back to defaults
-            model.dock.setWindowTitle(table_name_from_item_type(model.item_type))
+            self.rename_dock(model.dock, original_name)
             self.set_dock_tab_color(model.dock, None)
             return
-        self.set_dock_tab_color(model.dock, QColor("paleturquoise"))
-        table_name = table_name_from_item_type(model.item_type)
-        table_name += (
-            f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
-        )
-        model.dock.setWindowTitle(table_name)
+        self.set_dock_tab_color(model.dock, QColor("lightcyan"))
+        text = f"COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}"
+        self.rename_dock(model.dock, original_name, text)
 
     @staticmethod
-    def rename_dock(dock, text=None):
-        name = "Entity tree"
+    def rename_dock(dock, name, text=None):
         if text:
             name += " [" + text + "]"
         dock.setWindowTitle(name)

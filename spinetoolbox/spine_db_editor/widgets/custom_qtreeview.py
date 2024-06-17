@@ -164,7 +164,7 @@ class EntityTreeView(CopyPasteTreeView):
         dock = self.parent().parent()
         self._spine_db_editor.set_dock_tab_color(dock, color)
         text = "CLASSES HIDDEN" if color else None
-        self._spine_db_editor.rename_dock(dock, text)
+        self._spine_db_editor.rename_dock(dock, "Entity tree", text)
 
     def toggle_hide_empty_classes(self):
         self.model().hide_empty_classes = self._hide_empty_classes_action.isChecked()

@@ -22,7 +22,6 @@ class EntityTreeModel(MultiDBTreeModel):
             self.db_editor.qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
         )
         self._hidden_items = set()
-        self._se = False
 
     def has_hidden_items(self):
         return bool(len(self._hidden_items))
@@ -76,14 +75,16 @@ class EntityTreeModel(MultiDBTreeModel):
         self.root_item.refresh_child_map()
 
     def hide_classes(self, classes):
-        """This should make every item from selection have hidden=True and refresh the tree"""
+        """Sets selected classes as hidden and refreshes the tree"""
         for item in classes:
             item.hidden = True
             self._hidden_items.add(item)
         self.root_item.refresh_child_map()
 
     def show_hidden_classes(self):
-        """This should make every item have hidden=False and refresh the tree"""
+        """Sets all classes as not hidden and refreshes the tree
+        (empty classes remain hidden if Hide empty classes is enabled)
+        """
         for item in self._hidden_items:
             item.hidden = False
         self._hidden_items.clear()

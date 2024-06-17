@@ -51,8 +51,16 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             handle_items_updated=self.handle_items_updated,
             owner=self,
         )
-        self.dock = None
+        self._dock = None
         self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
+
+    @property
+    def dock(self):
+        return self._dock
+
+    @dock.setter
+    def dock(self, value):
+        self._dock = value
 
     def _make_header(self):
         raise NotImplementedError()
