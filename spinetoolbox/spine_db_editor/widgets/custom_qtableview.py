@@ -132,12 +132,18 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction("Filter by", self.filter_by_selection)
         self._menu.addAction("Filter excluding", self.filter_excluding_selection)
         self._menu.addSeparator()
-        self._menu.addAction("Clear all filters", self._spine_db_editor.clear_all_filters)
+        self._menu.addAction("Clear all filters", self._clear_filters)
         self._menu.addSeparator()
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Delete.value))
         remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
         self.addAction(remove_rows_action)
+
+    def _clear_filters(self):
+        """Clear all filters"""
+        self._spine_db_editor.clear_all_filters()
+        for i in range(self._EXPECTED_COLUMN_COUNT):
+            self.model().get_auto_filter_menu(i)._clear_filter()
 
     def contextMenuEvent(self, event):
         """Shows context menu.
