@@ -51,9 +51,15 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             handle_items_updated=self.handle_items_updated,
             owner=self,
         )
+        self.dock = None
+        self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
 
     def _make_header(self):
         raise NotImplementedError()
+
+    @property
+    def column_filters(self):
+        return self._column_filters
 
     @property
     def field_map(self):
@@ -233,6 +239,11 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         self._set_compound_auto_filter(field, values)
         for model in self.accepted_single_models():
             self._set_single_auto_filter(model, field)
+        if values is None or any(bool(i) for i in values.values()):
+            self._column_filters[field] = True
+        else:
+            self._column_filters[field] = False
+        self._parent.handle_column_filters(self)
 
     def _set_compound_auto_filter(self, field, values):
         """Sets the auto filter for given column in the compound model.
