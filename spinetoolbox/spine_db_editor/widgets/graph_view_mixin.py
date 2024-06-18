@@ -197,6 +197,8 @@ class GraphViewMixin:
     def _alternative_accepts(self, item, db_map):
         selected_alternative_ids = self._filter_explicit_alternative_ids.get(db_map, set())
         if not selected_alternative_ids:
+            if item["id"] in self.highlight_by_id:
+                self.highlight_by_id.pop(item["id"])
             return True  # No alternatives
         activities = set()
         for alt_id in selected_alternative_ids:
@@ -218,6 +220,8 @@ class GraphViewMixin:
 
     def _scenario_accepts(self, item, db_map):
         if not self._filter_scenario_ids:
+            if item["id"] in self.highlight_by_id:
+                self.highlight_by_id.pop(item["id"])
             return True  # No scenarios selected
         scenarios = self._filter_scenario_ids.get(db_map)
         for scenario_id in scenarios:
