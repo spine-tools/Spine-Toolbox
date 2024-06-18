@@ -508,7 +508,7 @@ def _reconstruct_map(tree):
         values.append(value)
     if len(indexes) > 1:
         first_type = type(indexes[0])
-        if first_type == numpy.float_:
+        if first_type == numpy.float64:
             first_type = float
         if any(not isinstance(i, first_type) for i in indexes[1:]):
             raise ParameterValueFormatError(f"Index type mismatch.")

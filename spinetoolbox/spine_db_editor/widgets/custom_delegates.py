@@ -12,7 +12,7 @@
 
 """Custom item delegates."""
 from numbers import Number
-from PySide6.QtCore import QModelIndex, Qt, Signal, QRect, QEvent
+from PySide6.QtCore import QModelIndex, Qt, Signal, QRect, QEvent, QSize
 from PySide6.QtGui import QIcon, QFontMetrics
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
@@ -924,10 +924,7 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
         super().paint(painter, option, index)
         if not self.is_entity_class(index):  # Add the button only for entity classes
             return
-        text = index.data(Qt.DisplayRole)
-        font_metrics = QFontMetrics(option.font)
-        text_width = font_metrics.width(text)
-        icon_size = option.decorationSize
+        text_width, icon_size = self.get_text_width_and_icon_size(option, index)
         button_rect = self.get_button_rect(option, icon_size.width(), text_width)
         self.plus_icon.paint(painter, button_rect)
 
@@ -941,17 +938,25 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
     @staticmethod
     def get_button_rect(option, icon_width, text_width):
         size = 16
-        margin = 20
+        margin = 18
         x = option.rect.left() + icon_width + text_width + margin
         y = option.rect.center().y() - size // 2
         return QRect(x, y, size, size)
 
+    @staticmethod
+    def get_text_width_and_icon_size(option, index):
+        text = index.data(Qt.DisplayRole)
+        font_metrics = QFontMetrics(option.font)
+        text_width = font_metrics.horizontalAdvance(text)
+        # For some reason the longer the text, the more its length is underestimated. Manual correction
+        # term "needed" to make sure that the icon doesn't end up on top of the class name.
+        text_width += (text_width - 8) * 0.06
+        icon_size = option.decorationSize
+        return text_width, icon_size
+
     def editorEvent(self, event, model, option, index):
         if event.type() == QEvent.MouseButtonPress and event.buttons() & Qt.LeftButton:
-            text = index.data(Qt.DisplayRole)
-            font_metrics = QFontMetrics(option.font)
-            text_width = font_metrics.width(text)
-            icon_size = option.decorationSize
+            text_width, icon_size = self.get_text_width_and_icon_size(option, index)
             button_rect = self.get_button_rect(option, icon_size.width(), text_width)
             if button_rect.contains(event.pos()) and self.is_entity_class(index):
                 self.handle_button_click(index)
@@ -963,3 +968,12 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
         entity_tree_view = self.parent()
         entity_tree_view._context_item = entity_tree_view.model().item_from_index(index)
         entity_tree_view.add_entities()
+
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        if self.is_entity_class(index):
+            # Add the width of the button so that the database -column does not overlap with the button
+            text_width, icon_size = self.get_text_width_and_icon_size(option, index)
+            button_width = self.get_button_rect(option, icon_size.width(), text_width).width() * 2
+            return QSize(size.width() + button_width, size.height())
+        return size

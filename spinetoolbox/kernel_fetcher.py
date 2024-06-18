@@ -15,8 +15,7 @@ import os
 import json
 from PySide6.QtCore import Signal, Slot, QThread
 from PySide6.QtGui import QIcon
-from jupyter_client.kernelspec import find_kernel_specs
-from spine_engine.utils.helpers import resolve_conda_executable
+from spine_engine.utils.helpers import resolve_conda_executable, custom_find_kernel_specs
 from spine_engine.execution_managers.conda_kernel_spec_manager import CondaKernelSpecManager
 
 
@@ -50,7 +49,9 @@ class KernelFetcher(QThread):
 
     def get_all_regular_kernels(self):
         """Finds all kernel specs as quickly as possible."""
-        for kernel_name, resource_dir in find_kernel_specs().items():  # Find regular Kernels
+        for kernel_name, resource_dir in custom_find_kernel_specs().items():  # Find regular Kernels
+            if not os.path.exists(resource_dir):
+                continue
             icon = self.get_icon(resource_dir)
             self.kernel_found.emit(kernel_name, resource_dir, False, icon, {})
             if not self.keep_going:
@@ -77,7 +78,7 @@ class KernelFetcher(QThread):
             self.get_all_conda_kernels()
             return
         # To find just a subset of kernels, we need to open kernel.json file and check the language
-        for kernel_name, resource_dir in find_kernel_specs().items():
+        for kernel_name, resource_dir in custom_find_kernel_specs().items():
             d = self.get_kernel_deats(resource_dir)
             icon = self.get_icon(resource_dir)
             if d["language"].lower().strip() == "python":  # Regular Python kernel found

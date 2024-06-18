@@ -20,10 +20,23 @@ Steps to bundle Spine Toolbox:
 1. Activate Toolbox Python environment.
 2. Install PyInstaller using Pip.
 3. Download one of the 64-bit *embeddable* Python packages from https://www.python.org/downloads/windows/
-4. Unzip the downloaded package somewhere.
-5. Run
-
-python -m PyInstaller spinetoolbox.spec -- --embedded-python=<path to unzipped Python package>
+4. Unzip the downloaded package somewhere, e.g. <path-to-embeddable-python>
+5. cd to <path-to-embeddable-python> and open file pythonXX._pth, where XX is the version, e.g. 312
+6. Add two lines to the end of the file, save & close
+    Lib
+    Lib/site-packages
+7. Run
+    curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+8. Run
+    python get-pip.py
+9. cd to <path-to-embeddable-python>/Scripts and run 'pip --version' to make sure you are running
+    the pip installed for the embeddable python
+10. Run
+    pip install ipykernel
+11. Run
+    pip install jill
+12. Finally, run
+    python -m PyInstaller spinetoolbox.spec -- --embedded-python=<path-to-embeddable-python>
 """
 
 import argparse
@@ -42,12 +55,13 @@ spine_engine_path = Path(spine_engine.__file__).parent.parent
 spine_items_path = Path(spine_items.__file__).parent.parent
 data_file_target = Path()
 data_files = ("CHANGELOG.md", "README.md", "COPYING", "COPYING.LESSER")
-embedded_python_datas = [(str(path), BUNDLE_DIR) for path in embedded_python_path.iterdir()]
+embed_python_files = [(str(path), BUNDLE_DIR) for path in embedded_python_path.iterdir() if path.is_file()]
+embed_python_dirs = [(str(path), os.path.join(BUNDLE_DIR, path.name)) for path in embedded_python_path.iterdir() if path.is_dir()]
 a = Analysis(
     ['spinetoolbox.py'],
     pathex=list(set(map(str, (spinedb_api_path, spine_engine_path, spine_items_path)))),
     binaries=[],
-    datas=[(data_file, str(Path())) for data_file in data_files] + embedded_python_datas,
+    datas=[(data_file, str(Path())) for data_file in data_files] + embed_python_files + embed_python_dirs,
     hiddenimports=[],
     hookspath=["PyInstaller hooks"],
     hooksconfig={},

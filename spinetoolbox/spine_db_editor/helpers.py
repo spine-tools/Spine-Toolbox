@@ -44,3 +44,12 @@ def string_to_bool(x):
         bool: boolean value
     """
     return x.casefold() == GENERIC_TRUE
+
+
+def table_name_from_item_type(item_type):
+    """Returns the dock widgets headers text for the given item type"""
+    return {
+        "parameter_value": "Parameter value",
+        "parameter_definition": "Parameter definition",
+        "entity_alternative": "Entity alternative",
+    }.get(item_type)

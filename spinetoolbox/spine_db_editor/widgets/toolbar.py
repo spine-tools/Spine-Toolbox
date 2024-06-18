@@ -115,6 +115,12 @@ class DBEditorToolBar(QToolBar):
         dialog = _UrlFilterDialog(self._db_editor.db_mngr, self._db_editor.db_maps, parent=self)
         dialog.show()
         dialog.filter_accepted.connect(self._db_editor.load_db_urls)
+        dialog.filter_accepted.connect(self.set_filter_action_icon_color)
+
+    def set_filter_action_icon_color(self, codenames):
+        filtered = any(filter_configs(url) for url in codenames.keys())
+        color = Qt.magenta if filtered else None
+        self._filter_action.setIcon(QIcon(CharIconEngine("\uf0b0", color=color)))
 
 
 class _FilterWidget(QTreeWidget):

@@ -43,6 +43,29 @@ jobs:
           curl -o python.zip https://www.python.org/ftp/python/3.12.3/python-3.12.3-embed-amd64.zip
           tar xf python.zip
           del python.zip
+      - name: Edit embedded Python search paths
+        run: |
+          cd embedded-python
+          Add-Content ./*._pth "Lib"
+          Add-Content ./*._pth "Lib/site-packages"
+          cat ./*._pth
+      - name: Download get-pip.py
+        run: |
+          cd embedded-python
+          curl -sSL https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+      - name: Install pip for embedded Python
+        run : |
+          cd embedded-python
+          ./python.exe get-pip.py
+      - name: Install packages for embedded Python
+        run: |
+          cd embedded-python/Scripts
+          ./pip.exe --version
+          ./pip.exe install ipykernel jill
+      - name: List packages in embedded Python
+        run: |
+          cd embedded-python/Scripts
+          ./pip.exe list
       - name: Build bundle
         run: |
           python -m PyInstaller spinetoolbox.spec -- --embedded-python=embedded-python
@@ -52,9 +75,8 @@ jobs:
         run: |
           python -c "from importlib.metadata import version; print('version=' + version('spinetoolbox'))" >> $GITHUB_OUTPUT
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
-          path: dist
+          path: "./dist/Spine Toolbox"
           if-no-files-found: error
-          overwrite: true
