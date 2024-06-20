@@ -198,6 +198,9 @@ class TreeViewMixin:
             self._clearing_selections = False
         sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
+            modifiers = event.modifiers()
+            if not modifiers & Qt.ControlModifier:
+                self._clear_all_other_selections(tree_view)
             return event
         local_pos = event.position()
         window_pos = event.scenePosition()
