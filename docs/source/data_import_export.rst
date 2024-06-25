@@ -125,8 +125,9 @@ should be point. For datetimes such as time stamps the recommended format is ISO
 If non-ISO8601 format is 
 detected, the importer falls back to the dateutil Python library which supports a lot of different formats.
 However, ambiguous formats can be interpreted wrongly. For example, 01-03-2020 is interpreted as January 3, 2020.
-For time durations you can use units "s", "m", "h" and "D", e.g. "4h". Integer sequence datetimes allow converting integers 
-into datetimes.  In this case the user has to specify the
+If the source file is an Excel file, date cells are interpreted correctly although the way the are shown in
+Excel can be ambiguous. For time durations you can use units "s", "m", "h" and "D", e.g. "4h". 
+Integer sequence datetimes allow converting integers into datetimes.  In this case the user has to specify the
 time step and time of the first integer. 
 
 .. image:: img/import_editor_column_data_type_menu.png
