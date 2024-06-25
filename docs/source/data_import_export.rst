@@ -121,12 +121,16 @@ Clicking the data type indicator button on column or row headers pops up a menu 
 Right clicking the column/row header also gives the opportunity to change the data type of all columns/rows at once.
 
 The input data should conform to the specified data type. For float (number) type the decimal separator 
-should be point. For datetimes such as time stamps the recommended format is ISO8601 (e.g. 2020-03-01T01:00). 
+should be point. For datetimes such as time stamps the recommended format is ISO8601 (e.g. ``2020-03-01T01:00``). 
 If non-ISO8601 format is 
 detected, the importer falls back to the dateutil Python library which supports a lot of different formats.
 However, ambiguous formats can be interpreted wrongly. For example, 01-03-2020 is interpreted as January 3, 2020.
 If the source file is an Excel file, date cells are interpreted correctly although the way the are shown in
-Excel can be ambiguous. For time durations you can use units "s", "m", "h" and "D", e.g. "4h". 
+Excel can be ambiguous. For time durations you can use long units in the format ``x unit``, where x is an integer 
+and unit is either ``year``, ``month``, ``day``, ``hour``, ``minute``, or ``second``. Plural forms of the unit
+names can also be used. Alternative is short units 
+in the format ``xU`` where x is an integer and U is either ``Y`` (for year), ``M`` (for month), ``D`` (for day), 
+``h`` (for hour), ``m`` (for minute), or ``s`` (for second). 
 Integer sequence datetimes allow converting integers into datetimes.  In this case the user has to specify the
 time step and time of the first integer. 
 
