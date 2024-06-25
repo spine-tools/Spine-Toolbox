@@ -113,11 +113,21 @@ Be careful not to press this button unless you want to wipe the whole specificat
 When a table is selected, it's data and a preview of how the selected mapping will
 import the data will be presented under the options dock widget. An important aspect of data import is
 whether each item in the input data should be read as a string, a number,
-a time stamp or something else. By default all input data is read as strings.
+a time stamp or something else. In other words, the importer should know the data types of the input data.
+By default all input data is read as strings.
 However, more often than not things like parameter values are actually numbers. Though types are usually casted automatically,
 it is possible to manually control what type of data each column (and sometimes each row) contains from the preview table.
 Clicking the data type indicator button on column or row headers pops up a menu with a selection of available data types.
 Right clicking the column/row header also gives the opportunity to change the data type of all columns/rows at once.
+
+The input data should conform to the specified data type. For float (number) type the decimal separator 
+should be point. For datetimes such as time stamps the recommended format is ISO8601 (e.g. 2020-03-01T01:00). 
+If non-ISO8601 format is 
+detected, the importer falls back to the dateutil Python library which supports a lot of different formats.
+However, ambiguous formats can be interpreted wrongly. For example, 01-03-2020 is interpreted as January 3, 2020.
+For time durations you can use units "s", "m", "h" and "D", e.g. "4h". Integer sequence datetimes allow converting integers 
+into datetimes.  In this case the user has to specify the
+time step and time of the first integer. 
 
 .. image:: img/import_editor_column_data_type_menu.png
    :align: center
