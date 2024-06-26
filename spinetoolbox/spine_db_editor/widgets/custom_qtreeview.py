@@ -183,6 +183,9 @@ class EntityTreeView(CopyPasteTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
+        if self._spine_db_editor.clear_tree_selections:
+            self._spine_db_editor.clear_tree_selections = False
+            self._spine_db_editor._clear_all_other_selections(self)
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
         self.tree_selection_changed.emit(self._selected_indexes)
@@ -397,6 +400,13 @@ class ItemTreeView(CopyPasteTreeView):
         """Refreshes copy and paste actions enabled state."""
         self._spine_db_editor.refresh_copy_paste_actions()
 
+    def _clear_trees(self):
+        """Clears selections from all other trees if such clearing is set as pending."""
+        if not self._spine_db_editor.clear_tree_selections:
+            return
+        self._spine_db_editor.clear_tree_selections = False
+        self._spine_db_editor._clear_all_other_selections(self)
+
 
 class AlternativeTreeView(ItemTreeView):
     """Custom QTreeView for the alternative tree in SpineDBEditor."""
@@ -459,6 +469,7 @@ class AlternativeTreeView(ItemTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits alternative_selection_changed with the current selection."""
+        self._clear_trees()
         selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
         deselected_db_map_alt_ids = self._db_map_alt_ids_from_selection(deselected)
         for db_map, ids in deselected_db_map_alt_ids.items():
@@ -618,6 +629,7 @@ class ScenarioTreeView(ItemTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits scenario_selection_changed with the current selection."""
+        self._clear_trees()
         self._selected_scenario_ids.clear()
         for index in self.selectionModel().selectedIndexes():
             item = self.model().item_from_index(index)

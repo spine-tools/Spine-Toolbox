@@ -11,8 +11,9 @@
 ######################################################################################################################
 
 """Unit tests for filtering in Database editor."""
+import time
 from unittest import mock
-from PySide6.QtCore import Qt, QItemSelectionModel
+from PySide6.QtCore import Qt, QItemSelectionModel, QTimer
 from PySide6.QtGui import QPen, QColor
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
@@ -188,7 +189,11 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
 
     def _create_indexes(self):
         """Gets the indexes for every item in entity, alternative and scenario trees in the database"""
-        self.indexes = {"empty_space": self.spine_db_editor.entity_tree_model.index(-1, -1)}
+        self.indexes = {
+            "empty_space_entity": self.spine_db_editor.entity_tree_model.createIndex(-1, -1),
+            "empty_space_alternative": self.spine_db_editor.alternative_model.createIndex(-1, -1),
+            "empty_space_scenario": self.spine_db_editor.scenario_model.createIndex(-1, -1),
+        }
         model = self.spine_db_editor.entity_tree_model
         root_item = model.root_item
         self.indexes["entity_root"] = model.index_from_item(root_item)
@@ -428,9 +433,30 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                     "aa__ba": self.PARAMETER,
                 }
             )
+            # This should clear everything
+            select_item_with_index(entity_tree_view, self.indexes["empty_space_entity"])
+            self._refresh_graph()
+            self._assert_visible({})
             # Selecting class B with Alt2 should filter out all the entities in B
             select_item_with_index(entity_tree_view, self.indexes["entity_class_B"])
             select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt2"], extend=True)
+            self._refresh_graph()
+            self._assert_visible({})
+
+    def test_empty_click_clears(self):
+        """Tests that a click on empty space in one of the trees clears all selections"""
+        entity_tree_view = self.spine_db_editor.ui.treeView_entity
+        alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
+        with mock.patch.object(
+            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
+        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+            mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
+            # Select the entity class A
+            select_item_with_index(entity_tree_view, self.indexes["entity_class_A"])
+            self._refresh_graph()
+            self._assert_visible({"ab": self.ACTIVE, "aa": self.ACTIVE, "aa__ab": self.ACTIVE})
+            # This should clear everything
+            select_item_with_index(alternative_tree_view, self.indexes["empty_space_alternative"])
             self._refresh_graph()
             self._assert_visible({})
 
@@ -606,8 +632,6 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                     "aa__ba": self.PARAMETER,
                 }
             )
-            select_item_with_index(alternative_tree_view, self.indexes["empty_space"])
-            self._assert_visible({})
 
     def test_start_connecting_entities(self):
         entity_tree_view = self.spine_db_editor.ui.treeView_entity

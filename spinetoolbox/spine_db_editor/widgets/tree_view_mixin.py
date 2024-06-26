@@ -53,6 +53,7 @@ class TreeViewMixin:
             view.setModel(model)
             view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
+        self.clear_tree_selections = True
         # Filter caches
         self._filter_class_ids = {}  # Class ids from entity class- and entity selections (cascading)
         self._filter_entity_ids = {}  # Entity ids from entity selections
@@ -135,14 +136,16 @@ class TreeViewMixin:
         """
         if event.buttons() & Qt.RightButton or tree_view == self.ui.treeView_parameter_value_list:
             return event
-        pos = tree_view.viewport().mapFromGlobal(event.globalPos())
-        index = tree_view.indexAt(pos)
-        # if not index or (index.column() == -1 and index.row() == -1):
-        #     tree_view.selectionModel().clearSelection()
+        self.clear_tree_selections = True
         sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
+            pos = tree_view.viewport().mapFromGlobal(event.globalPos())
+            index = tree_view.indexAt(pos)
             modifiers = event.modifiers()
-            if not modifiers & Qt.ControlModifier:
+            if modifiers & Qt.ControlModifier:
+                self.clear_tree_selections = False
+            elif not (tree_view.selectionModel().hasSelection() or index.isValid()):
+                # Ensure selection clearing when empty space is clicked on a tree that doesn't have selections.
                 self._clear_all_other_selections(tree_view)
             return event
         local_pos = event.position()
@@ -155,6 +158,7 @@ class TreeViewMixin:
             modifiers &= ~Qt.ControlModifier
         else:
             modifiers |= Qt.ControlModifier
+            self.clear_tree_selections = False
         source = event.source()
         new_event = QMouseEvent(
             QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
