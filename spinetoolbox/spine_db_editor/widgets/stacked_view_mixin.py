@@ -139,6 +139,7 @@ class StackedViewMixin:
         self._filter_class_ids = {}
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
+        self._filter_scenario_ids = {}
         self._reset_filters()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
@@ -150,7 +151,18 @@ class StackedViewMixin:
             model.set_filter_class_ids(self._filter_class_ids)
         for model in (self.parameter_value_model, self.entity_alternative_model):
             model.set_filter_entity_ids(self._filter_entity_ids)
-            model.set_filter_alternative_ids(self._filter_alternative_ids)
+            alternatives = self.get_all_alternatives()
+            model.set_filter_alternative_ids(alternatives)
+
+    def get_all_alternatives(self):
+        """Combines alternative ids from Scenario- and Alternative tree selections."""
+        all_alternatives = self._filter_alternative_ids.copy()
+        for db_map, scenarios in self._filter_scenario_ids.get("scenario", {}).items():
+            for scenario, alternatives in scenarios.items():
+                all_alternatives.setdefault(db_map, set()).update(alternatives)
+        for db_map, alternatives in self._filter_scenario_ids.get("scenario_alternative", {}).items():
+            all_alternatives.setdefault(db_map, set()).update(alternatives)
+        return all_alternatives
 
     @Slot(list)
     def _handle_graph_selection_changed(self, selected_items):

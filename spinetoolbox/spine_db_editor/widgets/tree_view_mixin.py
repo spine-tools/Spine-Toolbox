@@ -38,7 +38,6 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._clearing_selections = False
         self.entity_tree_model = EntityTreeModel(self, self.db_mngr)
         self.alternative_model = AlternativeModel(self, self.db_mngr)
         self.scenario_model = ScenarioModel(self, self.db_mngr)
@@ -57,9 +56,7 @@ class TreeViewMixin:
         # Filter caches
         self._filter_class_ids = {}  # Class ids from entity class- and entity selections (cascading)
         self._filter_entity_ids = {}  # Entity ids from entity selections
-        self._filter_explicit_entity_ids = {}  # Entity ids for entity class- and entity items that have been selected
-        self._filter_alternative_ids = {}  # Alternative ids (including the ones from selected scenarios)
-        self._filter_explicit_alternative_ids = {}  # Alternative ids (excludes scenarios, includes scenario alts)
+        self._filter_alternative_ids = {}  # Alternative ids
         self._filter_scenario_ids = {}  # Scenario ids by db_map. Each scenario id maps to alternatives sorted by rank.
         self._filter_parameter_value_ids = {}  # Entity ids for currently accepted parameter value rows in tables
 
@@ -71,7 +68,6 @@ class TreeViewMixin:
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
-        self.ui.scenario_tree_view.scenario_selection_deletions.connect(self._handle_scenario_alternative_deletions)
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
@@ -88,87 +84,35 @@ class TreeViewMixin:
         }
         self._filter_class_ids = self._db_map_ids(entity_class_indexes)
         self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
-        explicit_entity_ids = {}
-        changed_db_maps = set()
-        for item_type, indexes in selected_indexes.items():
-            for index in indexes:
-                item = index.model().item_from_index(index)
-                for db_map, id_ in item.db_map_ids.items():
-                    changed_db_maps.add(db_map)
-                    if item_type == "root" or id_:
-                        explicit_entity_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
-        self._filter_explicit_entity_ids = explicit_entity_ids
+        # View specific stuff:
+        self._update_selected_item_type_db_map_ids(selected_indexes)
         self._reset_filters()
-        self._update_filter_parameter_value_ids(changed_db_maps)
-        if not changed_db_maps:
-            self._update_filter_parameter_value_ids(self._filter_parameter_value_ids.copy())
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
         self.build_graph()
 
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected):
-        changed_db_maps = set()
         self._filter_alternative_ids.clear()
-        self._filter_explicit_alternative_ids.clear()
         for db_map, alt_ids in selected.items():
-            if alt_ids:
-                self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-                self._filter_explicit_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-            changed_db_maps.add(db_map)
-        for db_map, scen_ids in self._filter_scenario_ids.items():
-            for scen_id, alt_ids in scen_ids.items():
-                self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        if not self._clearing_selections:
-            for db_map, alt_ids in self.ui.scenario_tree_view.selected_scen_alternative_ids.items():
-                if alt_ids:
-                    self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-                    self._filter_explicit_alternative_ids.setdefault(db_map, set()).update(alt_ids)
+            if not alt_ids:
+                continue
+            self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
+        # View specific stuff:
         self._reset_filters()
-        self._update_filter_parameter_value_ids(changed_db_maps)
+        self._update_filter_parameter_value_ids()
         self.build_graph()
 
     @Slot(dict)
-    def _handle_scenario_alternative_selection_changed(self, selected_scen, selected_scen_alt):
-        self._filter_alternative_ids.clear()
-        changed_db_maps = set()
-        if selected_scen:
-            self._filter_scenario_ids.clear()
-            for db_map, scenarios in selected_scen.items():
-                for scenario_id, alt_ids in scenarios.items():
-                    changed_db_maps.add(db_map)
-                    self._filter_scenario_ids.setdefault(db_map, {}).update(
-                        {scenario_id: self.db_mngr.get_scenario_alternative_id_list(db_map, scenario_id)}
-                    )
-                    self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        if selected_scen_alt:
-            self._filter_explicit_alternative_ids.clear()
-            for db_map, alt_ids in selected_scen_alt.items():
-                changed_db_maps.add(db_map)
-                self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-                self._filter_explicit_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        if not self._clearing_selections:
-            for db_map, alt_ids in self.ui.alternative_tree_view.selected_alternative_ids.items():
-                if alt_ids:
-                    self._filter_explicit_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-                    self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
+    def _handle_scenario_alternative_selection_changed(self, selected_ids):
+        self._filter_scenario_ids = selected_ids
+        # View specific stuff:
         self._reset_filters()
-        self._update_filter_parameter_value_ids(changed_db_maps)
+        self._update_filter_parameter_value_ids()
         self.build_graph()
 
-    def _handle_scenario_alternative_deletions(self, scenario_ids, scen_alternative_ids):
-        changed_db_maps = set()
-        for db_map, scen_ids in scenario_ids.items():
-            changed_db_maps.add(db_map)
-            for scen_id in scen_ids:
-                del self._filter_scenario_ids[db_map][scen_id]
-            if not self._filter_scenario_ids[db_map]:
-                del self._filter_scenario_ids[db_map]
-        for db_map in scen_alternative_ids:
-            changed_db_maps.add(db_map)
-        self._update_filter_parameter_value_ids(changed_db_maps)
-
-    def _update_filter_parameter_value_ids(self, changed_db_maps):
-        for db_map in changed_db_maps:
+    def _update_filter_parameter_value_ids(self):
+        """Updates the parameter"""
+        for db_map in self.db_maps:
             single_models = self.parameter_value_model._models_with_db_map(db_map)
             if not single_models:
                 return True
@@ -186,16 +130,15 @@ class TreeViewMixin:
         Pressing the Ctrl-button down, enables single selection.
 
         Args:
-            event (QMouseEvent)
+            tree_view (QTreeView): The treeview where the mouse click was in.
+            event (QMouseEvent): event
         """
         if event.buttons() & Qt.RightButton or tree_view == self.ui.treeView_parameter_value_list:
             return event
         pos = tree_view.viewport().mapFromGlobal(event.globalPos())
         index = tree_view.indexAt(pos)
-        if not index or not index.isValid():
-            self._clearing_selections = True
-        else:
-            self._clearing_selections = False
+        # if not index or (index.column() == -1 and index.row() == -1):
+        #     tree_view.selectionModel().clearSelection()
         sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
             modifiers = event.modifiers()

@@ -15,6 +15,7 @@ from types import MethodType
 from unittest import mock
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, AddEntitiesDialog
 from spinetoolbox.helpers import signal_waiter
@@ -120,3 +121,25 @@ def add_entity(view, name, entity_class_index=0, alternative=None, group=None):
     if group:
         data.update({2: group})
     add_entity_tree_item(data, view, "Add entities", AddEntitiesDialog)
+
+
+def select_item_with_index(view, index, extend=False):
+    """Select an item from a tree view. Possible extended selection with ctrl modifier.
+
+    Args:
+        view (QTreeView): The view where the selection is made.
+        index (QModelIndex): The index of the item.
+        extend (bool): If true, CTRL modifier is used when making the selection.
+    """
+    if extend:
+        modifier = Qt.KeyboardModifier.ControlModifier
+    else:
+        modifier = Qt.KeyboardModifier.NoModifier
+    rect = view.visualRect(index)
+    pos = rect.center()
+    QTest.mouseClick(
+        view.viewport(),
+        Qt.LeftButton,
+        modifier,
+        pos,
+    )

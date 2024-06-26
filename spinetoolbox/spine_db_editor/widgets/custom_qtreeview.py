@@ -563,8 +563,7 @@ class AlternativeTreeView(ItemTreeView):
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
-    scenario_selection_changed = Signal(object, object)
-    scenario_selection_deletions = Signal(object, object)
+    scenario_selection_changed = Signal(object)
 
     def __init__(self, parent):
         """
@@ -572,17 +571,11 @@ class ScenarioTreeView(ItemTreeView):
             parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
-        self._selected_scen_alternative_ids = dict()
         self._selected_scenario_ids = dict()
         self._duplicate_scenario_action = None
 
-    @property
-    def selected_scen_alternative_ids(self):
-        return self._selected_scen_alternative_ids
-
     def reset(self):
         super().reset()
-        self._selected_scen_alternative_ids.clear()
         self._selected_scenario_ids.clear()
 
     def connect_signals(self):
@@ -624,30 +617,15 @@ class ScenarioTreeView(ItemTreeView):
 
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
-        """Emits scenario_selection_changed with the current selection.
-
-        The signal is emitted with format: dict[db_map: dict[scenario_id: set[alt_ids]]].
-        If an scenario alternative is selected, the scenario_id will just be None.
-        """
+        """Emits scenario_selection_changed with the current selection."""
         self._selected_scenario_ids.clear()
-        self._selected_scen_alternative_ids.clear()
-        selected_items = {self.model().item_from_index(index) for index in selected.indexes()}
-        deselected_items = {self.model().item_from_index(index) for index in deselected.indexes()}
-        for item in selected_items:
+        for index in self.selectionModel().selectedIndexes():
+            item = self.model().item_from_index(index)
             if isinstance(item, ScenarioItem) and item.id is not None:
-                self._selected_scenario_ids.setdefault(item.db_map, {}).update({item.id: set(item.alternative_id_list)})
+                self._selected_scenario_ids.setdefault("scenario", {}).setdefault(item.db_map, {}).update({item.id: item.alternative_id_list})
             elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                self._selected_scen_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        scenario_ids = {}
-        scen_alternative_ids = {}
-        for item in deselected_items:
-            if isinstance(item, ScenarioItem) and item.id is not None:
-                scenario_ids.setdefault(item.db_map, {}).update({item.id: set(item.alternative_id_list)})
-            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                scen_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        if deselected_items:
-            self.scenario_selection_deletions.emit(scenario_ids, scen_alternative_ids)
-        self.scenario_selection_changed.emit(self._selected_scenario_ids, self._selected_scen_alternative_ids)
+                self._selected_scenario_ids.setdefault("scenario_alternative", {}).setdefault(item.db_map, set()).add(item.alternative_id)
+        self.scenario_selection_changed.emit(self._selected_scenario_ids)
 
     def remove_selected(self):
         """See base class."""
