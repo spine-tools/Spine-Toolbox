@@ -634,9 +634,13 @@ class ScenarioTreeView(ItemTreeView):
         for index in self.selectionModel().selectedIndexes():
             item = self.model().item_from_index(index)
             if isinstance(item, ScenarioItem) and item.id is not None:
-                self._selected_scenario_ids.setdefault("scenario", {}).setdefault(item.db_map, {}).update({item.id: item.alternative_id_list})
+                self._selected_scenario_ids.setdefault("scenario", {}).setdefault(item.db_map, {}).update(
+                    {item.id: item.alternative_id_list}
+                )
             elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                self._selected_scenario_ids.setdefault("scenario_alternative", {}).setdefault(item.db_map, set()).add(item.alternative_id)
+                self._selected_scenario_ids.setdefault("scenario_alternative", {}).setdefault(item.db_map, set()).add(
+                    item.alternative_id
+                )
         self.scenario_selection_changed.emit(self._selected_scenario_ids)
 
     def remove_selected(self):
