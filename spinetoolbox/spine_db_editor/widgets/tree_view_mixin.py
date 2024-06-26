@@ -134,7 +134,7 @@ class TreeViewMixin:
             tree_view (QTreeView): The treeview where the mouse click was in.
             event (QMouseEvent): event
         """
-        if event.buttons() & Qt.RightButton or tree_view == self.ui.treeView_parameter_value_list:
+        if tree_view == self.ui.treeView_parameter_value_list:
             return event
         self.clear_tree_selections = True
         sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
