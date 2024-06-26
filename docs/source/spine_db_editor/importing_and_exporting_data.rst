@@ -116,7 +116,7 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
 
 - **entity_classes**: the value of this key ``MUST`` be a JSON array,
   representing a list of entity classes.
-  Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have three elements:
+  Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have four elements:
 
   - The first element ``MUST`` be a JSON string, indicating the entity class name.
   - The second element ``MUST`` be a JSON array, indicating the member entity classes. Each element in
@@ -124,7 +124,6 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
     the array is empty.
   - The third element ``MUST`` be either a JSON string, indicating the entity class description, or null.
   - The fourth element ``MUST`` be either a JSON integer, indicating the entity class icon code, or null.
-  - The fourth element ``MUST`` be a JSON boolean, indicating the state of active by default.
 
 - **superclass_subclasses**: the value of this key ``MUST`` be a JSON array,
   representing a list of superclasses.
@@ -152,6 +151,8 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
     the array ``MUST`` itself contain JSON strings representing the element name list of the entity.
     If the entity is 0-D, a JSON string of the name of the entity is enough, but also a JSON array of one element
     is supported.
+  - The third element ``MUST`` be a JSON string, indicating the alternative name.
+  - The fourth element ``MUST`` be a JSON boolean, indicating the state of the activity.
 
 - **entity_groups**: the value of this key ``MUST`` be a JSON array,
   representing a list of entity groups.
@@ -210,15 +211,15 @@ The JSON format consists of a single JSON object with the following ``OPTIONAL``
   Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have two elements:
 
   - The first element ``MUST`` be a JSON string, indicating the scenario name.
-  - The second element ``MUST`` be a JSON boolean, indicating the scenario alternative active state.
-  - The third element ``MUST`` be either a JSON string, indicating the scenario description, or null.
+  - The second element ``MUST`` be either a JSON string, indicating the scenario description, or null.
 
 - **scenario alternatives**: the value of this key ``MUST`` be a JSON array,
   representing a list of alternatives.
   Each element in this array ``MUST`` be itself a JSON array and ``MUST`` have three elements:
 
   - The first element ``MUST`` be a JSON string, indicating the scenario name.
-  - The second element ``MUST`` be a JSON string, indicating the alternative name aowfiuhwaofiajw.
+  - The second element ``MUST`` be a JSON string, indicating the alternative name.
+  - The third element ``MUST`` be a JSON string, indicating the name of the preceeding alternative.
 
 
 
