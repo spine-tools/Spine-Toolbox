@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   If the group doesn't yet exist, it will be created.
 - Native kernel (i.e. python3 for Python) can now be used in the Detached Console or in Tool execution.
 - [Bundled App] **Embedded Python** now includes pip.
+- Graph view in database editor now also supports filtering by alternative- and scenario tree selections.
 - Mapping Name -source type in importer.
 
 ### Changed
