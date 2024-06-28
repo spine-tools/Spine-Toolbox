@@ -34,7 +34,7 @@ from ...spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:
-    """Provides entity, alternative, scenario and parameter value list -trees for the Spine db editor."""
+    """Provides entity, alternative, scenario and parameter value list trees for the Spine db editor."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

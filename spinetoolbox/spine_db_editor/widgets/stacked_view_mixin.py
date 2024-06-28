@@ -155,7 +155,7 @@ class StackedViewMixin:
             model.set_filter_alternative_ids(alternatives)
 
     def get_all_alternatives(self):
-        """Combines alternative ids from Scenario- and Alternative tree selections."""
+        """Combines alternative ids from Scenario and Alternative tree selections."""
         all_alternatives = self._filter_alternative_ids.copy()
         for db_map, scenarios in self._filter_scenario_ids.get("scenario", {}).items():
             for scenario, alternatives in scenarios.items():

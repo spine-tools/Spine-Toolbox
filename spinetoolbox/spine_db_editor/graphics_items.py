@@ -400,7 +400,7 @@ class EntityItem(QGraphicsRectItem):
         else:
             self._paint_as_deselected()
         brush = self._bg.brush()
-        if self._highlight_color != Qt.transparent:  # If a highlight color is specified
+        if self._highlight_color != Qt.GlobalColor.transparent:  # If a highlight color is specified
             brush.setColor(self._highlight_color)
         self._bg.setBrush(brush)
         super().paint(painter, option, widget)

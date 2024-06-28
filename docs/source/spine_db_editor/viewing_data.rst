@@ -132,7 +132,7 @@ Note that the icons of the entities or colors don't change, only the border may 
 
 There are four different borders:
 
-- Invisible
+- No border
 
   - If an entity doesn't have a border, either only **Entity Tree** -selections are present, or the entity is active
     in the selected alternative/scenario.

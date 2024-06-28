@@ -161,12 +161,10 @@ class GraphViewMixin:
         return {db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids}
 
     def _accepts_entity_item(self, item, db_map):
-        if not self._alternative_accepts(item, db_map):
-            if not self._parameter_value_accepts(item, db_map):
-                return False
-        if not self._scenario_accepts(item, db_map):
-            if not self._parameter_value_accepts(item, db_map):
-                return False
+        if not self._alternative_accepts(item, db_map) and not self._parameter_value_accepts(item, db_map):
+            return False
+        if not self._scenario_accepts(item, db_map) and not self._parameter_value_accepts(item, db_map):
+            return False
         if not self._entity_class_and_entity_accept(item, db_map):
             return False
         return True
@@ -216,9 +214,9 @@ class GraphViewMixin:
         if all(activities):
             return True  # Active in all selected alternatives, good to go.
         if any(activities):
-            self.highlight_by_id.update({item["id"]: EntityBorder.CONFLICTED})
+            self.highlight_by_id[item["id"]] = EntityBorder.CONFLICTED
             return True  # Active in some selected alternatives, good to go.
-        self.highlight_by_id.update({item["id"]: EntityBorder.INACTIVE})
+        self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
         return False  # Not active in any selected alternatives, no go.
 
     def _scenario_accepts(self, item, db_map):
@@ -229,21 +227,13 @@ class GraphViewMixin:
             state = db_map.item_active_in_scenario(item, scenario_id)
             if state is not None:
                 return state
-        for scenario_id in scenarios:
-            state = db_map.item_active_in_scenario(item, scenario_id)
-            if state is not None:
-                return state
         if item["element_id_list"]:
-            results = set()
-            for id_ in item["element_id_list"]:
-                element = self.db_mngr.get_item(db_map, "entity", id_)
-                results.add(self._scenario_accepts(element, db_map))
-            return all(results)  # Accept only if all elements are accepted also
+            return all(self._scenario_accepts(self.db_mngr.get_item(db_map, "entity", id_), db_map) for id_ in item["element_id_list"])
         entity_class = self.db_mngr.get_item(db_map, "entity_class", item["class_id"])
         if entity_class["active_by_default"]:
-            self.highlight_by_id.update({item["id"]: EntityBorder.INACTIVE})
+            self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
             return True  # active_by_default is True
-        self.highlight_by_id.update({item["id"]: EntityBorder.INACTIVE})
+        self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
         return False
 
     def _parameter_value_accepts(self, item, db_map):
@@ -254,9 +244,9 @@ class GraphViewMixin:
             if item["element_id_list"]:
                 for id_ in item["element_id_list"]:
                     if self.highlight_by_id.get(id_) == EntityBorder.INACTIVE:
-                        self.highlight_by_id.update({id_: EntityBorder.PARAMETER_VALUE})
+                        self.highlight_by_id[id_] = EntityBorder.PARAMETER_VALUE
             if self.highlight_by_id.get(item["id"]) == EntityBorder.INACTIVE:
-                self.highlight_by_id.update({item["id"]: EntityBorder.PARAMETER_VALUE})
+                self.highlight_by_id[item["id"]] = EntityBorder.PARAMETER_VALUE
             return True  # Entity is present in the parameter_value table with the current selections
         return False
 
