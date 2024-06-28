@@ -228,7 +228,13 @@ class GraphViewMixin:
             if state is not None:
                 return state
         if item["element_id_list"]:
-            return all(self._scenario_accepts(self.db_mngr.get_item(db_map, "entity", id_), db_map) for id_ in item["element_id_list"])
+            if self.highlight_by_id.get(item["id"]) != EntityBorder.PARAMETER_VALUE:
+                self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
+            return all(
+                self._scenario_accepts(self.db_mngr.get_item(db_map, "entity", id_), db_map)
+                for id_ in item["element_id_list"]
+            )
+
         entity_class = self.db_mngr.get_item(db_map, "entity_class", item["class_id"])
         if entity_class["active_by_default"]:
             self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE

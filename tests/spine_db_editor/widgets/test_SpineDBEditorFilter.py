@@ -486,9 +486,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.ACTIVE,
-                    "aa__ba": self.ACTIVE,
-                    "ab__ba": self.ACTIVE,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
             # Select Alt3 under scen2
@@ -511,9 +511,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.ACTIVE,
-                    "aa__ba": self.ACTIVE,
-                    "ab__ba": self.ACTIVE,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
 
@@ -537,9 +537,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.ACTIVE,
-                    "aa__ba": self.ACTIVE,
-                    "ab__ba": self.ACTIVE,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
             # Select Alt3 under scen2
