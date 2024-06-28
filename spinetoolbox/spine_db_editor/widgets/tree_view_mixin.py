@@ -69,6 +69,12 @@ class TreeViewMixin:
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
+        self.entity_alternative_model.dataChanged.connect(self.build_graph)
+        self.parameter_value_model.dataChanged.connect(self._refresh_parameters_and_graph)
+
+    def _refresh_parameters_and_graph(self):
+        self._update_filter_parameter_value_ids()
+        self.build_graph()
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
@@ -89,6 +95,7 @@ class TreeViewMixin:
         self._update_selected_item_type_db_map_ids(selected_indexes)
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
+        self._update_filter_parameter_value_ids()
         self.build_graph()
 
     @Slot(dict)

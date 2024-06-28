@@ -11,9 +11,8 @@
 ######################################################################################################################
 
 """Unit tests for filtering in Database editor."""
-import time
 from unittest import mock
-from PySide6.QtCore import Qt, QItemSelectionModel, QTimer
+from PySide6.QtCore import Qt, QItemSelectionModel
 from PySide6.QtGui import QPen, QColor
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
@@ -263,15 +262,22 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 ["C", ["cb"], "Alt3", True],
                 ["D", ["da"], "Alt2", True],
             ],
-            "alternatives": [["Alt1", ""], ["Alt2", ""], ["Alt3", ""]],
+            "alternatives": [["Alt1", ""], ["Alt2", ""], ["Alt3", ""], ["Alt4", ""]],
             "scenarios": [["scen1", False, ""], ["scen2", False, ""]],
             "scenario_alternatives": [["scen1", "Alt1", "Alt2"], ["scen1", "Alt2", None], ["scen2", "Alt3", None]],
-            "parameter_definitions": [["A__B", "par_A__B", None, None, None], ["D", "par_D", None, None, None]],
+            "parameter_definitions": [
+                ["A__B", "par_A__B", None, None, None],
+                ["D", "par_D", None, None, None],
+                ["A", "par_A", None, None, None],
+                ["B", "par_B", None, None, None],
+            ],
             "parameter_values": [
                 ["A__B", ["aa", "ba"], "par_A__B", "some_value", "Alt1"],
                 ["A__B", ["aa", "ba"], "par_A__B", 3, "Alt2"],
                 ["D", "da", "par_D", 3, "Alt1"],
                 ["D", "db", "par_D", 2, "Alt1"],
+                ["A", "aa", "par_A", 4, "Alt4"],
+                ["B", "ba", "par_B", 5, "Alt4"],
             ],
         }
         cls.data = data
@@ -660,3 +666,26 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 "entity_ids": set(),
             }
             self.spine_db_editor.start_connecting_entities(self.mock_db_map, entity_class, ent_item)
+
+    def test_consistent_across_different_selection_order(self):
+        """Tests that the graph view filter is consistent despite the selection order"""
+        entity_tree_view = self.spine_db_editor.ui.treeView_entity
+        alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
+        entity_tree_view.expandAll()
+        with mock.patch.object(
+            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
+        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+            mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
+            # Select entity classes A then B then Alt1.
+            select_item_with_index(entity_tree_view, self.indexes["entity_class_A"])
+            select_item_with_index(entity_tree_view, self.indexes["entity_class_B"], extend=True)
+            select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt4"], extend=True)
+            self._refresh_graph()
+            visible_first = {item.name: item._bg.pen() for item in self.spine_db_editor.entity_items}
+            # Select entity classes A then Alt1 then class B.
+            select_item_with_index(entity_tree_view, self.indexes["entity_class_A"])
+            select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt4"], extend=True)
+            select_item_with_index(entity_tree_view, self.indexes["entity_class_B"], extend=True)
+            self._refresh_graph()
+            visible_second = {item.name: item._bg.pen() for item in self.spine_db_editor.entity_items}
+            self.assertEqual(visible_first, visible_second)
