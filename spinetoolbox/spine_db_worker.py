@@ -277,7 +277,9 @@ class SpineDBWorker(QObject):
             item_type (str): item type
             ids (set): ids of items to restore
         """
-        items = self._db_map.restore_items(item_type, *ids)
+        items, errors = self._db_map.restore_items(item_type, *ids)
+        if any(errors):
+            self._db_mngr.error_msg.emit({self._db_map: errors})
         if Asterisk in ids:
             items = self._db_map.get_items(item_type)
         self._db_mngr.update_icons(self._db_map, item_type, items)
