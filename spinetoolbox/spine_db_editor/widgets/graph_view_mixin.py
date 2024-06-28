@@ -165,7 +165,8 @@ class GraphViewMixin:
             if not self._parameter_value_accepts(item, db_map):
                 return False
         if not self._scenario_accepts(item, db_map):
-            return False
+            if not self._parameter_value_accepts(item, db_map):
+                return False
         if not self._entity_class_and_entity_accept(item, db_map):
             return False
         return True

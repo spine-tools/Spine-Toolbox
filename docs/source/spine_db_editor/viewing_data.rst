@@ -103,9 +103,10 @@ How the **Scenario** selections affect the graph:
 
 - Selecting an scenario item will include all entities that:
 
-  - Have entity alternative activity set as active (alternative rank taken into consideration)
+  - Have entity alternative activity set as active (alternative rank taken into consideration).
   - Are not specified as inactive with entity alternative in any of the scenarios alternatives,
     but belong to an entity class that are set as active by default.
+  - Have parameter values in any of the alternatives of the selected scenario.
 
 - Selecting an scenario alternative item will act like selecting the corresponding item from **Alternative**.
 
