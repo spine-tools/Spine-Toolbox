@@ -217,7 +217,7 @@ class ProjectUpgrader:
                     new["items"][item_name] = old_item_dict
             if item_type == "Importer":
                 mappings = old_item_dict.get("mappings")
-                # Sanitize old mappings, as we use to do in Importer.from_dict
+                # Sanitize old mappings, as we used to do in Importer.from_dict
                 if mappings is None:
                     mappings = list()
                 # Convert table_types and table_row_types keys to int since json always has strings as keys.

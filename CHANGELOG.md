@@ -7,18 +7,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
-- Entity group -column in *Add entities* -dialog. If filled, the created entity will be added to the specified group.
+- Entity group column in *Add entities* dialog. If filled, the created entity will be added to the specified group.
   If the group doesn't yet exist, it will be created.
 - Native kernel (i.e. python3 for Python) can now be used in the Detached Console or in Tool execution.
 - [Bundled App] **Embedded Python** now includes pip.
-- Graph view in database editor now also supports filtering by alternative- and scenario tree selections.
-- Mapping Name -source type in importer.
+- Graph view in database editor now also supports filtering by alternative and scenario tree selections.
+- Mapping Name source type in importer.
+- Importer has now an option to import entity alternatives.
 
 ### Changed
 
 - Database editor's hamburger menu has been converted into a menubar beneath the tab bar. The URL toolbar has also
   been replaced with a toolbar that houses different buttons.
-- One dimensional entities can now also be added through *Parameter value* and *Entity alternative* -tables.
+- One dimensional entities can now also be added through *Parameter value* and *Entity alternative* tables.
 
 ### Deprecated
 
@@ -37,8 +38,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
-- A button next to each entity class in **Entity Tree** that opens the *Add entities* -dialog.
-- Alternative -column in *Add entities* -dialog. If filled, the created entity will be set active in that alternative.
+- A button next to each entity class in **Entity Tree** that opens the *Add entities* dialog.
+- Alternative -column in *Add entities* dialog. If filled, the created entity will be set active in that alternative.
 
 ### Changed
 
