@@ -11,10 +11,16 @@
 ######################################################################################################################
 
 """Functions for plotting on PlotWidget."""
-from contextlib import contextmanager
-from dataclasses import dataclass, field, replace
 import datetime
-from enum import Enum, auto, unique
+from enum import auto, Enum, unique
+import math
+from bokeh.embed import file_html
+from bokeh.resources import INLINE
+from bokeh.models import ColumnDataSource, HoverTool, Legend
+from bokeh.palettes import Colorblind
+from bokeh.plotting import figure
+from contextlib import contextmanager
+from dataclasses import dataclass, field, replace, asdict
 import functools
 import math
 from operator import itemgetter, methodcaller
@@ -28,6 +34,9 @@ from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
+
+from rich import print as pprint
+
 
 LEGEND_PLACEMENT_THRESHOLD = 8
 
@@ -246,6 +255,19 @@ def _always_single_y_axis(plot_type):
     return plot_type in (PlotType.STACKED_LINE,)
 
 
+def bokeh_plot(data, x_label: str, y_label: str, legend_label: str, title: str):
+    fig = figure(x_axis_label=x_label, y_axis_label=y_label, x_axis_type="datetime", height=400, width=800)
+    legend_items = {}
+    i = fig.line("x", "y", source=data)
+    j = fig.scatter("x", "y", source=data)
+    legend_items[legend_label] = [i, j]
+    legend = Legend(items=list(legend_items.items()))
+    fig.add_layout(legend, "right")
+    fig.legend.click_policy = "hide"
+    fig.title = title
+    return fig
+
+
 def plot_data(data_list, plot_widget=None, plot_type=None):
     """
     Returns a plot widget with plots of the given data.
@@ -259,15 +281,11 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
         a PlotWidget object
     """
     if plot_widget is None:
-        plot_widget = PlotWidget(
-            legend_axes_position=(
-                LegendPosition.BOTTOM if len(data_list) < LEGEND_PLACEMENT_THRESHOLD else LegendPosition.RIGHT
-            )
-        )
+        plot_widget = PlotWidget()
         needs_redraw = False
     else:
         needs_redraw = True
-    all_data = plot_widget.original_xy_data + data_list
+    all_data = data_list
     squeezed_data, common_indexes = reduce_indexes(all_data)
     squeezed_data = combine_data_with_same_indexes(squeezed_data)
     if len(squeezed_data) > 1 and any(not data.data_index for data in squeezed_data):
@@ -278,29 +296,19 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
         return plot_widget
     raise_if_not_common_x_labels(squeezed_data)
     raise_if_incompatible_x(squeezed_data)
-    if needs_redraw:
-        _clear_plot(plot_widget)
-    if plot_type is None:
-        plot_type = PlotType.SCATTER_LINE if not isinstance(squeezed_data[0].x[0], np.datetime64) else PlotType.LINE
-    _limit_string_x_tick_labels(squeezed_data, plot_widget)
-    y_labels = sorted({xy_data.y_label for xy_data in data_list})
-    if len(y_labels) == 1 or _always_single_y_axis(plot_type):
-        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget.canvas.axes, plot_type)
-    elif len(y_labels) == 2:
-        legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget, plot_type)
-    else:
-        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget.canvas.axes, plot_type)
-    plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label.label)
-    plot_title = " | ".join(map(str, common_indexes))
-    plot_widget.canvas.axes.set_title(plot_title)
-    for data in data_list:
-        if type(data.x[0]) not in (float, np.float64, int):
-            plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
-    if len(squeezed_data) > 1:
-        plot_widget.add_legend(legend_handles)
-    if needs_redraw:
-        plot_widget.canvas.draw()
-    plot_widget.original_xy_data = all_data
+    sources = [asdict(dst) for dst in all_data]
+    data = sources[0]
+    pprint(sources)
+    for idx, name in zip(data.pop("index_names"), data.pop("data_index")):
+        if idx["label"] == "entity_byname":
+            label = name
+            break
+    x_label = data.pop("x_label")["label"]
+    y_label = data.pop("y_label")
+    fig = bokeh_plot(data, x_label=x_label, y_label=y_label, legend_label=label, title=label)
+    html = file_html(fig, INLINE, label)
+    plot_widget.canvas.setHtml(html)
+    # plot_widget.original_xy_data = all_data
     return plot_widget
 
 
