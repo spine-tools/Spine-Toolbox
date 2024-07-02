@@ -16,8 +16,9 @@ import io
 import csv
 import numpy
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
-from PySide6.QtCore import QMetaObject, Qt
+from PySide6.QtCore import QMetaObject, Qt, QUrl
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from .plot_canvas import PlotCanvas, LegendPosition
 from .custom_qtableview import CopyPasteTableView
 from ..mvcmodels.minimal_table_model import MinimalTableModel
@@ -44,9 +45,11 @@ class PlotWidget(QWidget):
         """
         super().__init__(parent)
         self._layout = QVBoxLayout(self)
-        self.canvas = PlotCanvas(self, legend_axes_position)
-        self._toolbar = NavigationToolBar(self.canvas, self)
-        self._layout.addWidget(self._toolbar)
+        # self.canvas = PlotCanvas(self, legend_axes_position)
+        self.canvas = QWebEngineView()
+        # self.canvas.setUrl(QUrl("https://duckduckgo.com"))
+        # self._toolbar = NavigationToolBar(self.canvas, self)
+        # self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self.canvas)
         self.original_xy_data = list()
         QMetaObject.connectSlotsByName(self)
