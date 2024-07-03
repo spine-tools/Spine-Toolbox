@@ -134,6 +134,12 @@ class EmptyModelBase(EmptyRowModel):
 
     def _autocomplete_row(self, db_map, item):
         """Fills in entity_class_name whenever other selections make it obvious."""
+        if self._paste and item.get("entity_class_name"):
+            # If the data is pasted and the entity class column is already filled,
+            # trust that the user knows what they are doing. This makes pasting large
+            # amounts of data significantly faster.
+            del item["row"]
+            return
         candidates = self._entity_class_name_candidates(db_map, item)
         row = item.pop("row", None)
         if len(candidates) == 1:
