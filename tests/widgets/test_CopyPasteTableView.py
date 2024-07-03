@@ -69,6 +69,12 @@ class _MockModel(QAbstractTableModel):
     def rowCount(self, parent=QModelIndex()):
         return len(self._data)
 
+    def begin_paste(self):
+        pass
+
+    def end_paste(self):
+        pass
+
 
 def delocalize_comma_decimal_separator(x):
     return x.replace(",", ".")
