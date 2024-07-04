@@ -757,6 +757,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
 
 class TestEntityTreeViewSorting(TestBase):
     """Tests that the entity tree is sorted correctly"""
+
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
@@ -795,10 +796,10 @@ class TestEntityTreeViewSorting(TestBase):
     def test_tree_item_sorting(self):
         result = [tuple((i.name, [x.name for x in i.children])) for i in self.root_item.children]
         expected = [
-            ("entity_class", ['entity_11', 'entity_12']),
-            ("P_entity_class", ['entity_1', 'entity_2']),
-            ("P_entity_class (1)", ['entity_1 (1)', 'entity_2 (1)']),
-            ("entity_class_ND", ['entity_11__entity_2', 'entity_12__entity_1']),
+            ("entity_class", ["entity_11", "entity_12"]),
+            ("P_entity_class", ["entity_1", "entity_2"]),
+            ("P_entity_class (1)", ["entity_1 (1)", "entity_2 (1)"]),
+            ("entity_class_ND", ["entity_11__entity_2", "entity_12__entity_1"]),
         ]
         self.assertEqual(expected, result)
 
