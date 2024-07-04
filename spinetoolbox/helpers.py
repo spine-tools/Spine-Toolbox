@@ -1833,7 +1833,7 @@ def order_key(name):
     If given a string that starts with a digit, a 'big' string (in comparisons) will be added to the start
     of the order key that makes sure that every key starts with a str and alternates with int after that.
     """
-    key_list = [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", name) if text]
+    key_list = [int(text) if text.isdigit() else text for text in re.split(r"(\d+|__)", name) if text]
     if len(key_list) and isinstance(key_list[0], int):
         key_list.insert(0, "\U0010FFFF")
     return key_list

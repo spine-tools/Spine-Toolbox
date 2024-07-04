@@ -62,7 +62,7 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        fish_item = root_item.child(2)
+        fish_item = next(x for x in root_item.children if x.display_data == "fish")
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
         selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
@@ -80,7 +80,7 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        fish_dog_item = root_item.child(3)
+        fish_dog_item = next(x for x in root_item.children if x.display_data == "fish__dog")
         fish_dog_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_dog_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
         selection_model.setCurrentIndex(fish_dog_index, QItemSelectionModel.NoUpdate)
@@ -102,11 +102,11 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        fish_item = root_item.child(2)
+        fish_item = next(x for x in root_item.children if x.display_data == "fish")
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
-        dog_item = root_item.child(0)
-        scooby_item = dog_item.child(1)
+        dog_item = next(x for x in root_item.children if x.display_data == "dog")
+        scooby_item = next(x for x in dog_item.children if x.display_data == "scooby")
         scooby_index = self.spine_db_editor.entity_tree_model.index_from_item(scooby_item)
         selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
         selection_model.select(fish_index, QItemSelectionModel.Select)
@@ -129,8 +129,8 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
         root_item = self.spine_db_editor.entity_tree_model.root_item
-        dog_item = root_item.child(0)
-        pluto_item = dog_item.child(0)
+        dog_item = next(x for x in root_item.children if x.display_data == "dog")
+        pluto_item = next(x for x in dog_item.children if x.display_data == "pluto")
         pluto_index = self.spine_db_editor.entity_tree_model.index_from_item(pluto_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
         selection_model.setCurrentIndex(pluto_index, QItemSelectionModel.NoUpdate)
