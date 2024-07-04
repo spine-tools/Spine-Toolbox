@@ -70,6 +70,7 @@ class TestToolboxUI(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
+
         clean_up_toolbox(self.toolbox)
         if self._temp_dir is not None:
             self._temp_dir.cleanup()
@@ -742,7 +743,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIn("appSettings/toolbarIconOrdering", saved_dict)
 
     def test_enable_execute_all_project_setting_is_respected(self):
-        with TemporaryDirectory() as temp_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), TemporaryDirectory() as temp_dir:
             with mock.patch.object(self.toolbox, "_qsettings"):
                 self.toolbox.create_project(temp_dir)
             self.toolbox.close_project(ask_confirmation=False)
