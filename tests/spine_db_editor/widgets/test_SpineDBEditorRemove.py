@@ -61,7 +61,7 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
-        nemo_item = fish_item.child(0)
+        nemo_item = next(iter(item for item in fish_item.children if item.display_data == "nemo"))
         relationships = [x.display_id for x in nemo_item.children]
         self.assertEqual(nemo_item.child_count(), 3)
         self.assertTrue("dog__fish" in relationships[0] and "pluto" in relationships[0][1])

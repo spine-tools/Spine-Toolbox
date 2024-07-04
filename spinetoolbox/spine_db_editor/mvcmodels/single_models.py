@@ -395,7 +395,7 @@ class SingleParameterValueModel(
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        byname = order_key("_".join(item.get("entity_byname", ())))
+        byname = order_key("__".join(item.get("entity_byname", ())))
         parameter_name = order_key(item.get("parameter_name", ""))
         alt_name = order_key(item.get("alternative_name", ""))
         return byname, parameter_name, alt_name
@@ -413,7 +413,7 @@ class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterE
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
-        byname = order_key("_".join(item.get("entity_byname", ())))
+        byname = order_key("__".join(item.get("entity_byname", ())))
         alt_name = order_key(item.get("alternative_name", ""))
         return byname, alt_name
 

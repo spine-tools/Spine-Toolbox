@@ -13,7 +13,7 @@
 """Classes to represent entities in a tree."""
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QBrush, QIcon
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_tool_tip
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_tool_tip, order_key
 from spinetoolbox.fetch_parent import FlexibleFetchParent, FetchIndex
 from .multi_db_tree_item import MultiDBTreeItem
 
@@ -112,7 +112,7 @@ class EntityClassItem(MultiDBTreeItem):
     @property
     def _children_sort_key(self):
         """Reimplemented so groups are above non-groups."""
-        return lambda item: (not item.is_group, item.display_id)
+        return lambda item: (not item.is_group, order_key("__".join(item.display_id[1]).casefold()))
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
