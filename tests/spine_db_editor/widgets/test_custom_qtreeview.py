@@ -24,6 +24,7 @@ from spinedb_api import (
     import_entities,
     import_parameter_value_lists,
 )
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditEntityClassesDialog,
@@ -480,6 +481,28 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         self.assertTrue(view._header.isSectionHidden(1))
         view.set_db_column_visibility(True)
         self.assertFalse(view._header.isSectionHidden(1))
+
+    def test_reload_database_while_entity_is_selected_does_not_produce_traceback(self):
+        view = self._db_editor.ui.treeView_entity
+        model = view.model()
+        root_index = model.index(0, 0)
+        model.fetchMore(root_index)
+        while model.rowCount(root_index) != 1:
+            QApplication.processEvents()
+        class_index = model.index(0, 0, root_index)
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 2:
+            QApplication.processEvents()
+        entity_index = model.index(0, 0, class_index)
+        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.ClearAndSelect)
+        with DatabaseMapping(self._db_map.db_url) as db_map:
+            db_map.add_entity_item(name="entity_3", entity_class_name="entity_class_1")
+            db_map.commit_session("Add external data.")
+        with mock.patch.object(self._db_editor, "set_default_parameter_data") as expected_callable:
+            with signal_waiter(view.selectionModel().selectionChanged, timeout=1.0) as waiter:
+                self._db_mngr.refresh_session(self._db_map)
+                waiter.wait()
+            self.assertEqual(expected_callable.call_count, 2)
 
     def _rename_entity_class(self, class_name):
         view = self._db_editor.ui.treeView_entity
