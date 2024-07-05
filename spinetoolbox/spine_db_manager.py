@@ -561,9 +561,22 @@ class SpineDBManager(QObject):
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
-        refreshed_db_maps = self.reset_session(*db_maps)
-        if refreshed_db_maps:
-            self.receive_session_refreshed(refreshed_db_maps)
+        reset_db_maps = set()
+        for db_map in db_maps:
+            if not db_map.has_external_commits():
+                continue
+            try:
+                worker = self._get_worker(db_map)
+            except KeyError:
+                continue
+            is_dirty = not self.undo_stack[db_map].isClean()
+            worker.refresh_session()
+            self.undo_stack[db_map].clear()
+            if is_dirty:
+                self.undo_stack[db_map].resetClean()
+            reset_db_maps.add(db_map)
+        if reset_db_maps:
+            self.receive_session_refreshed(reset_db_maps)
 
     def reset_session(self, *db_maps):
         reset_db_maps = set()

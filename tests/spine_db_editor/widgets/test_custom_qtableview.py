@@ -245,8 +245,8 @@ class TestParameterValueTableView(TestBase):
             QApplication.processEvents()
         expected = [
             ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
             ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
+            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
             [None, None, None, None, None, self.db_codename],
         ]
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
