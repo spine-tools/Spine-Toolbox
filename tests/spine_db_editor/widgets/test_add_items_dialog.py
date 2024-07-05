@@ -180,6 +180,16 @@ class TestAddItemsDialog(unittest.TestCase):
         expected = ["Start", "one", None, None, True, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
+        value = ["not valid"]
+        model.batch_set_data([model.index(-1, -1)], value)
+        expected = ["Start", "one", None, None, True, "mock_db"]
+        result = [model.index(0, column).data() for column in range(model.columnCount())]
+        self.assertEqual(expected, result)
+        value = []
+        model.batch_set_data(indexes[1], value)
+        expected = ["Start", "one", None, None, True, "mock_db"]
+        result = [model.index(0, column).data() for column in range(model.columnCount())]
+        self.assertEqual(expected, result)
         value = ""
         model.setData(indexes[1], value)
         expected = ["Start", "Start__", None, None, True, "mock_db"]

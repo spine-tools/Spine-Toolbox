@@ -352,6 +352,8 @@ class EmptyAddEntityOrClassRowModel(EmptyRowModel):
                 self._main_data[row][column] = value
             rows.append(row)
             columns.append(column)
+        if not (rows and columns):
+            return False
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
         bottom = max(rows)
