@@ -330,6 +330,7 @@ class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyMod
 
 class EmptyAddEntityOrClassRowModel(EmptyRowModel):
     """A table model with a last empty row."""
+
     def __init__(self, parent=None, header=None):
         super().__init__(parent, header=header)
         self._entity_name_user_defined = False
