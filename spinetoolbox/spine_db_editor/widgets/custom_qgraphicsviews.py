@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
 )
-from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap, QKeySequence
+from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap, QKeySequence, QShortcut
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
 from .custom_qwidgets import ExportAsVideoDialog
@@ -127,7 +127,11 @@ class GraphOptionsOverlay(QWidget):
         overlay.setFixedSize(100, 100)
         layout = QVBoxLayout()
         self._auto_build_button = QRadioButton("Auto-build")
-        self._auto_build_button.setToolTip("<p>Whether to build the graph when the tree selections change.</p>")
+        self._auto_build_button.setToolTip(
+            "<p>Whether to build the graph when the tree selections change (Ctrl+F5).</p>"
+        )
+        self._auto_rebuild_shortcut = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_F5), self)
+        self._auto_rebuild_shortcut.activated.connect(lambda: self._auto_build_button.toggle())
         self._rebuild_button = QPushButton("Rebuild (F5)")
         layout.addWidget(self._auto_build_button)
         layout.addWidget(self._rebuild_button)
