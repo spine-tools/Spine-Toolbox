@@ -527,25 +527,29 @@ class GraphViewMixin:
         self.db_mngr.remove_items(db_map_typed_ids)
 
     @Slot(bool)
-    def rebuild_graph(self, _checked=False):
+    def rebuild_graph(self, _checked=False, force=False):
         self.db_map_entity_id_sets.clear()
         self.expanded_db_map_entity_ids.clear()
         self.collapsed_db_map_entity_ids.clear()
-        self.build_graph()
+        self.build_graph(force=force)
 
-    def build_graph(self, persistent=False):
+    def build_graph(self, persistent=False, force=False):
         """Builds graph from current selection of items.
 
         Args:
             persistent (bool, optional): If True, elements in the current graph (if any) retain their position
                 in the new one.
+            force (bool, optional): If True, graph will be built no matter what as long as its visible.
         """
         self._persisted_positions.clear()
         if persistent:
             for item in self.entity_items:
                 x, y = self.convert_position(item.pos().x(), item.pos().y())
                 self._persisted_positions[item.first_db_map, item.first_id] = {"x": x, "y": y}
-        if not self.ui.dockWidget_entity_graph.isVisible():
+        if (
+            not (force or self.ui.graphicsView.get_property("auto_build"))
+            or not self.ui.dockWidget_entity_graph.isVisible()
+        ):
             self._owes_graph = True
             return
         self._owes_graph = False

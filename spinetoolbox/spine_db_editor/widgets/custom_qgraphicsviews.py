@@ -17,16 +17,28 @@ import tempfile
 from contextlib import contextmanager
 import numpy as np
 from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QRunnable, QThreadPool
-from PySide6.QtWidgets import QMenu, QInputDialog, QColorDialog, QMessageBox, QLineEdit, QGraphicsScene
-from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap
+from PySide6.QtWidgets import (
+    QMenu,
+    QInputDialog,
+    QColorDialog,
+    QMessageBox,
+    QLineEdit,
+    QGraphicsScene,
+    QWidget,
+    QVBoxLayout,
+    QPushButton,
+    QRadioButton,
+)
+from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap, QKeySequence, QShortcut
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
+from .custom_qwidgets import ExportAsVideoDialog
+from .select_graph_parameters_dialog import SelectGraphParametersDialog
+from ..helpers import GRAPH_OVERLAY_COLOR
+from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem, ArcItem
 from ...helpers import CharIconEngine, remove_first
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
-from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem, ArcItem
-from .custom_qwidgets import ExportAsVideoDialog
-from .select_graph_parameters_dialog import SelectGraphParametersDialog
 
 
 class _GraphProperty:
@@ -59,9 +71,9 @@ class _GraphBoolProperty(_GraphProperty):
             self._spine_db_editor.qsettings.setValue(self._settings_name, "true" if checked else "false")
             self._spine_db_editor.build_graph()
 
-    def set_value(self, checked):
+    def set_value(self, checked, save=False):
         self._action.setChecked(checked)
-        self._set_value(save_setting=False)
+        self._set_value(save_setting=save)
 
     def update(self, menu):
         self._value = self._spine_db_editor.qsettings.value(self._settings_name, defaultValue="true") == "true"
@@ -106,6 +118,50 @@ class _GraphIntProperty(_GraphProperty):
         menu.addAction(action)
 
 
+class GraphOptionsOverlay(QWidget):
+    """Widget that holds buttons for rebuild and toggling auto-build."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        overlay = QWidget(self)
+        overlay.setFixedSize(100, 100)
+        layout = QVBoxLayout()
+        self._auto_build_button = QRadioButton("Auto-build")
+        self._auto_build_button.setToolTip(
+            "<p>Whether to build the graph when the tree selections change (Ctrl+F5).</p>"
+        )
+        self._auto_rebuild_shortcut = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_F5), self)
+        self._auto_rebuild_shortcut.activated.connect(lambda: self._auto_build_button.toggle())
+        self._rebuild_button = QPushButton("Rebuild (F5)")
+        layout.addWidget(self._auto_build_button)
+        layout.addWidget(self._rebuild_button)
+        overlay.setLayout(layout)
+        self._rebuild_action = QAction("Rebuild", self)
+        self._rebuild_action.setShortcut(QKeySequence.Refresh)
+        self._rebuild_action.triggered.connect(lambda: self.parent()._spine_db_editor.rebuild_graph(force=True))
+        self.addAction(self._rebuild_action)
+        self._connect_button_signals()
+
+    def _connect_button_signals(self):
+        """Connects signals. Makes sure that auto-build is synced between context menu and the overlay."""
+        self._auto_build_button.setChecked(self.parent()._properties.get("auto_build").value)
+        self._auto_build_button.toggled.connect(
+            lambda x: self.parent()._properties.get("auto_build").set_value(x, save=True)
+        )
+        self._auto_build_button.toggled.connect(lambda x: self.parent()._spine_db_editor.build_graph() if x else None)
+        self.parent()._properties.get("auto_build")._action.triggered.connect(
+            lambda x: self._auto_build_button.setChecked(x)
+        )
+        self.parent()._properties["auto_build"]._action.triggered.connect(lambda x: print("skaga", x))
+        self._rebuild_button.pressed.connect(lambda: self.parent()._spine_db_editor.rebuild_graph(force=True))
+
+    def paintEvent(self, event):
+        """Gives a colored background"""
+        painter = QPainter(self)
+        painter.setBrush(GRAPH_OVERLAY_COLOR)
+        painter.drawRect(self.rect())
+
+
 class EntityQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Entity Graph View."""
 
@@ -137,6 +193,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._properties = {
             "auto_expand_entities": _GraphBoolProperty("Auto-expand entities", "autoExpandEntities"),
             "merge_dbs": _GraphBoolProperty("Merge databases", "mergeDBs"),
+            "auto_build": _GraphBoolProperty("Auto-build", "autoBuild"),
             "snap_entities": _GraphBoolProperty("Snap entities to grid", "snapEntities"),
             "max_entity_dimension_count": _GraphIntProperty(
                 2, None, 5, "Max. entity dimension count", "maxEntityDimensionCount"
@@ -174,6 +231,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._items_per_class = {}
         self._db_map_graph_data_by_name = {}
         self._thread_pool = QThreadPool()
+        self._options_overlay = None
 
     @property
     def _qsettings(self):
@@ -216,6 +274,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for prop in self._properties.values():
             prop.connect_spine_db_editor(spine_db_editor)
         self.populate_context_menu()
+        self._options_overlay = GraphOptionsOverlay(self)
 
     def populate_context_menu(self):
         self._add_entities_action = self._menu.addAction("Add entities...", self.add_entities_at_position)
@@ -275,13 +334,17 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._export_as_image_action = self._menu.addAction("Export as image...", self.export_as_image)
         self._export_as_video_action = self._menu.addAction("Export as video...", self.export_as_video)
         self._menu.addSeparator()
-        self._rebuild_action = self._menu.addAction("Rebuild", self._spine_db_editor.rebuild_graph)
+        self._rebuild_action = self._menu.addAction("Rebuild", lambda: self._spine_db_editor.rebuild_graph(force=True))
+        self._rebuild_action.setShortcuts(QKeySequence.Refresh)
         self._menu.aboutToShow.connect(self._update_actions_visibility)
 
     @Slot()
     def _update_actions_visibility(self):
         """Enables or disables actions according to current selection in the graph."""
         has_graph = bool(self.items())
+        has_selections = self._spine_db_editor.ui.treeView_entity.selectionModel().hasSelection()
+        has_selections |= self._spine_db_editor.ui.alternative_tree_view.selectionModel().hasSelection()
+        has_selections |= self._spine_db_editor.ui.scenario_tree_view.selectionModel().hasSelection()
         self._items_per_class = {}
         for item in self.entity_items:
             key = f"{item.entity_class_name}"
@@ -289,7 +352,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._db_map_graph_data_by_name = self._spine_db_editor.get_db_map_graph_data_by_name()
         self._show_all_hidden_action.setEnabled(bool(self.hidden_items))
         self._restore_all_pruned_action.setEnabled(any(self._spine_db_editor.pruned_db_map_entity_ids.values()))
-        self._rebuild_action.setEnabled(has_graph)
+        self._rebuild_action.setEnabled(has_selections or has_graph)
         self._zoom_action.setEnabled(has_graph)
         self._rotate_action.setEnabled(has_graph)
         self._find_action.setEnabled(has_graph)
