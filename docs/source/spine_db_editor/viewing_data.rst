@@ -82,11 +82,15 @@ Building the graph
 ******************
 
 The entities included in the graph depend on the selections in **Entity Tree**, **Scenario Tree** and **Alternative**.
-The graph is built every time the selections in any of these trees changes. These selections can also be combined. This
-enables for example the inspection of which entities from a specific entity class are included in a certain scenario.
-This can be done by selecting the scenario and the entity class at once. If selections form **Scenario Tree** or
-**Alternative** are present, entities in the graph may get highlighted in certain ways. This is to provide additional
-information about why the entities are shown in the graph. More on this in the next section.
+These selections can also be combined. This enables for example the inspection of which entities from a specific
+entity class are included in a certain scenario. This can be done by selecting the scenario and the entity class at
+once. If selections form **Scenario Tree** or **Alternative** are present, entities in the graph may get highlighted
+in certain ways. This is to provide additional information about why the entities are shown in the graph. More on this
+in the next section.
+
+If the auto-build is enabled, the graph will be built every time the selections in any of these trees changes.
+Otherwise the graph has to be built manually by clicking the **Rebuild** button or by pressing **F5**. Auto-build
+can be also toggled by pressing **Ctrl+F5**.
 
 How to use the **Entity Tree** selections to build the graph:
 
@@ -184,6 +188,7 @@ The context menu has the following options:
 - **Auto-expand entities** If enabled, the graph will also include entities where the selections are members besides
   just the selections. if disabled, the graph will only show the selected entities.
 - **Merge databases** Whether to merge the databases or not.
+- **Auto-build** Toggles whether the graph is built every time tree selections change.
 - **Snap entities to grid** makes it so that the placement of the entities can't be arbitrary anymore but
   instead they can only lay on a grid.
 - **Max. entity dimension count** defines a cutoff for the number of dimensions an entity can have and still be drawn.
