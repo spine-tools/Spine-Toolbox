@@ -275,9 +275,9 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         top = top_left.row()
         bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            relationship_class_name = self.construct_composite_class_name(row)
+            entity_class_name = self.construct_composite_name(row)
             self.model.setData(
-                self.model.index(row, self.number_of_dimensions), relationship_class_name, role=Qt.ItemDataRole.UserRole
+                self.model.index(row, self.number_of_dimensions), entity_class_name, role=Qt.ItemDataRole.UserRole
             )
 
     @Slot()
@@ -335,7 +335,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.db_mngr.add_entity_classes(db_map_data)
         super().accept()
 
-    def construct_composite_class_name(self, row):
+    def construct_composite_name(self, row):
         """Returns a ND entity class name from all the currently selected dimension names.
 
         Args:
@@ -430,7 +430,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         for row in range(top, bottom + 1):
             el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
             entity_name = name_from_elements(el_names)
-            self.model.setData(self.model.index(row, dimension_count), entity_name)
+            self.model.setData(self.model.index(row, dimension_count), entity_name, role=Qt.ItemDataRole.UserRole)
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
@@ -480,6 +480,22 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             current_index = -1
         self.ent_cls_combo_box.setCurrentIndex(current_index)
         self.connect_signals()
+
+    def construct_composite_name(self, row):
+        """Returns a ND entity name from the currently selected element names.
+
+        Args:
+            row (int): The index of the row.
+
+        Returns:
+            str: The name of the entity
+        """
+        el_names = [
+            n
+            for n in (self.model.index(row, j).data() for j in range(len(self.entity_class["dimension_name_list"])))
+            if n
+        ]
+        return name_from_elements(el_names)
 
     def _class_key_to_str(self, key, *db_maps):
         class_name = self.db_map_ent_cls_lookup[db_maps[0]][key]["name"]

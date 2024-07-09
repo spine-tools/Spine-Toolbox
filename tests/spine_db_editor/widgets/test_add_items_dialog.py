@@ -18,7 +18,11 @@ from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntityClassesDialog, ManageElementsDialog
+from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
+    AddEntityClassesDialog,
+    ManageElementsDialog,
+    AddEntitiesDialog,
+)
 from tests.spine_db_editor.helpers import TestBase
 
 
@@ -193,6 +197,57 @@ class TestAddItemsDialog(unittest.TestCase):
         value = ""
         model.setData(indexes[1], value)
         expected = ["Start", "Start__", None, None, True, "mock_db"]
+        result = [model.index(0, column).data() for column in range(model.columnCount())]
+        self.assertEqual(expected, result)
+
+    def test_add_entities_dialog_autofill(self):
+        """Test that the autofill also works for the add entities dialog."""
+        self._db_mngr.add_entity_classes(
+            {self._db_map: [{"name": "first_class", "id": 1}, {"name": "second_class", "id": 2}]}
+        )
+        self._db_mngr.add_entity_classes(
+            {self._db_map: [{"name": "entity_class", "id": 3, "dimension_id_list": [1, 2]}]}
+        )
+        self._db_mngr.add_entities(
+            {
+                self._db_map: [
+                    {"class_id": 1, "name": "entity_1", "id": 1},
+                    {"class_id": 2, "name": "entity_2", "id": 2},
+                ]
+            }
+        )
+        for item in self._db_editor.entity_tree_model.visit_all():
+            while item.can_fetch_more():
+                item.fetch_more()
+                qApp.processEvents()
+        entity_classes = self._db_editor.entity_tree_model.root_item.children
+        dialog = AddEntitiesDialog(self._db_editor, entity_classes[2], self._db_mngr, self._db_map)
+        model = dialog.model
+        header = model.header
+        model.fetchMore(QModelIndex())
+        self.assertEqual(
+            header,
+            ("first_class", "second_class", "entity name", "alternative", "entity group", "databases"),
+        )
+        indexes = [model.index(0, header.index(field)) for field in ("first_class", "second_class", "entity name")]
+        values = ["entity_1"]
+        model.batch_set_data([indexes[0]], values)
+        expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
+        result = [model.index(0, column).data() for column in range(model.columnCount())]
+        self.assertEqual(expected, result)
+        value = "entity_name"
+        model.setData(indexes[2], value)
+        expected = ["entity_1", None, "entity_name", "Base", None, "mock_db"]
+        result = [model.index(0, column).data() for column in range(model.columnCount())]
+        self.assertEqual(expected, result)
+        value = "End"
+        model.setData(indexes[1], value)
+        expected = ["entity_1", "End", "entity_name", "Base", None, "mock_db"]
+        result = [model.index(0, column).data() for column in range(model.columnCount())]
+        self.assertEqual(expected, result)
+        values = [None, None]
+        model.batch_set_data(indexes[1:3], values)
+        expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
 
