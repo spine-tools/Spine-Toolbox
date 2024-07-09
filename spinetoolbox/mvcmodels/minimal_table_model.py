@@ -146,7 +146,7 @@ class MinimalTableModel(QAbstractTableModel):
         """Set data in model."""
         if not index.isValid():
             return False
-        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole):
             return False
         return self.batch_set_data([index], [value])
 

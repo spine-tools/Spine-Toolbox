@@ -348,7 +348,7 @@ class EmptyAddEntityOrClassRowModel(EmptyRowModel):
             column = index.column()
             if column == self.header.index(self._parent.dialog_item_name()) and not value:
                 self._entity_name_user_defined = False
-                self._main_data[row][column] = self._parent.construct_composite_class_name(index.row())
+                self._main_data[row][column] = self._parent.construct_composite_name(index.row())
             else:
                 self._main_data[row][column] = value
             rows.append(row)
