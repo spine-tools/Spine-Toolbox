@@ -563,7 +563,7 @@ class SpineDBManager(QObject):
     def refresh_session(self, *db_maps):
         reset_db_maps = set()
         for db_map in db_maps:
-            if not db_map.has_external_commits():
+            if not db_map or not db_map.has_external_commits():
                 continue
             try:
                 worker = self._get_worker(db_map)
