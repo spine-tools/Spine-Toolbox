@@ -43,6 +43,8 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "parameter_value_metadata": False,
                     "scenario": False,
                     "scenario_alternative": False,
+                    "entity_class_display_mode": False,
+                    "entity_class_display_mode__entity_class": False,
                 },
             )
 
