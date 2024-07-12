@@ -11,9 +11,8 @@
 ######################################################################################################################
 
 """Base classes to represent items from multiple databases in a tree."""
-from operator import attrgetter
 from PySide6.QtCore import Qt
-from ...helpers import rows_to_row_count_tuples, bisect_chunks
+from ...helpers import rows_to_row_count_tuples, bisect_chunks, order_key
 from ...fetch_parent import FlexibleFetchParent
 from ...mvcmodels.minimal_tree_model import TreeItem
 
@@ -289,7 +288,7 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def _children_sort_key(self):
-        return attrgetter("display_id")
+        return lambda item: (len(item.display_id[1]), order_key(item.display_id[0].casefold()), item.display_id[1:])
 
     @property
     def fetch_item_type(self):

@@ -31,6 +31,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = header
         self._main_data = list()
         self._fetched = not lazy
+        self._paste = False
 
     def clear(self):
         """Clear all data in model."""
@@ -145,7 +146,7 @@ class MinimalTableModel(QAbstractTableModel):
         """Set data in model."""
         if not index.isValid():
             return False
-        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
+        if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole):
             return False
         return self.batch_set_data([index], [value])
 
@@ -277,3 +278,11 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginResetModel()
         self._main_data = main_data
         self.endResetModel()
+
+    def begin_paste(self):
+        """Marks that data pasting has begun."""
+        self._paste = True
+
+    def end_paste(self):
+        """Marks that data pasting has ended."""
+        self._paste = False

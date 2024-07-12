@@ -24,6 +24,7 @@ from spinedb_api import (
     import_entities,
     import_parameter_value_lists,
 )
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditEntityClassesDialog,
@@ -155,7 +156,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_index = model.index(0, 0, root_index)
         view._context_item = model.item_from_index(class_index)
         self._add_multidimensional_class("a_relationship_class", ["an_entity_class"])
-        class_index = model.index(0, 0, root_index)
+        class_index = model.index(1, 0, root_index)
         self.assertEqual(model.rowCount(class_index), 0)
         self.assertEqual(class_index.data(), "a_relationship_class")
         class_database_index = model.index(0, 1, root_index)
@@ -281,7 +282,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         view._context_item = model.item_from_index(class_index)
         self._add_multidimensional_class("a_relationship_class", ["an_entity_class"])
         self.assertEqual(model.rowCount(root_index), 2)
-        class_index = model.index(0, 0, root_index)  # Classes are sorted alphabetically.
+        class_index = model.index(1, 0, root_index)  # N-D classes come after 0-D classes
         self.assertEqual(class_index.data(), "a_relationship_class")
         view._context_item = model.item_from_index(class_index)
         self._add_multidimensional_entity("a_relationship", ["an_entity"])
@@ -480,6 +481,28 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         self.assertTrue(view._header.isSectionHidden(1))
         view.set_db_column_visibility(True)
         self.assertFalse(view._header.isSectionHidden(1))
+
+    def test_reload_database_while_entity_is_selected_does_not_produce_traceback(self):
+        view = self._db_editor.ui.treeView_entity
+        model = view.model()
+        root_index = model.index(0, 0)
+        model.fetchMore(root_index)
+        while model.rowCount(root_index) != 1:
+            QApplication.processEvents()
+        class_index = model.index(0, 0, root_index)
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 2:
+            QApplication.processEvents()
+        entity_index = model.index(0, 0, class_index)
+        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.ClearAndSelect)
+        with DatabaseMapping(self._db_map.db_url) as db_map:
+            db_map.add_entity_item(name="entity_3", entity_class_name="entity_class_1")
+            db_map.commit_session("Add external data.")
+        with mock.patch.object(self._db_editor, "set_default_parameter_data") as expected_callable:
+            with signal_waiter(view.selectionModel().selectionChanged, timeout=1.0) as waiter:
+                self._db_mngr.refresh_session(self._db_map)
+                waiter.wait()
+            self.assertEqual(expected_callable.call_count, 2)
 
     def _rename_entity_class(self, class_name):
         view = self._db_editor.ui.treeView_entity
@@ -753,6 +776,55 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
     def _remove_entity(self):
         view = self._db_editor.ui.treeView_entity
         _remove_entity_tree_item(view, "Remove...", RemoveEntitiesDialog)
+
+
+class TestEntityTreeViewSorting(TestBase):
+    """Tests that the entity tree is sorted correctly"""
+
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+        db_map = DatabaseMapping(url, create=True)
+        import_entity_classes(db_map, (("entity_class",), ("P_entity_class",), ("P_entity_class (1)",)))
+        import_entities(
+            db_map,
+            (
+                ("entity_class", "entity_11"),
+                ("entity_class", "entity_12"),
+                ("P_entity_class", "entity_1"),
+                ("P_entity_class", "entity_2"),
+                ("P_entity_class (1)", "entity_1 (1)"),
+                ("P_entity_class (1)", "entity_2 (1)"),
+            ),
+        )
+        import_entity_classes(db_map, (("entity_class_ND", ("entity_class", "P_entity_class")),))
+        import_entities(
+            db_map,
+            (("entity_class_ND", ("entity_11", "entity_2")), ("entity_class_ND", ("entity_12", "entity_1"))),
+        )
+        db_map.commit_session("Add entities.")
+        db_map.close()
+        self._common_setup(url, create=False)
+        model = self._db_editor.ui.treeView_entity.model()
+        self.root_item = model.root_item
+        for item in model.visit_all():
+            while item.can_fetch_more():
+                item.fetch_more()
+                qApp.processEvents()
+
+    def tearDown(self):
+        self._common_tear_down()
+        self._temp_dir.cleanup()
+
+    def test_tree_item_sorting(self):
+        result = [tuple((i.name, [x.name for x in i.children])) for i in self.root_item.children]
+        expected = [
+            ("entity_class", ["entity_11", "entity_12"]),
+            ("P_entity_class", ["entity_1", "entity_2"]),
+            ("P_entity_class (1)", ["entity_1 (1)", "entity_2 (1)"]),
+            ("entity_class_ND", ["entity_11__entity_2", "entity_12__entity_1"]),
+        ]
+        self.assertEqual(expected, result)
 
 
 class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):

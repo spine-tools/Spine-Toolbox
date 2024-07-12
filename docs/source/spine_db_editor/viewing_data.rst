@@ -81,12 +81,38 @@ Using the **Graph View**
 Building the graph
 ******************
 
-To build the graph, select any number of items in the **Entity Tree**.
-What is included in the graph depends on the specific selection you make in the **Entity Tree**:
+The entities included in the graph depend on the selections in **Entity Tree**, **Scenario Tree** and **Alternative**.
+These selections can also be combined. This enables for example the inspection of which entities from a specific
+entity class are included in a certain scenario. This can be done by selecting the scenario and the entity class at
+once. If selections form **Scenario Tree** or **Alternative** are present, entities in the graph may get highlighted
+in certain ways. This is to provide additional information about why the entities are shown in the graph. More on this
+in the next section.
+
+If the auto-build is enabled, the graph will be built every time the selections in any of these trees changes.
+Otherwise the graph has to be built manually by clicking the **Rebuild** button or by pressing **F5**. Auto-build
+can be also toggled by pressing **Ctrl+F5**.
+
+How to use the **Entity Tree** selections to build the graph:
 
 - To include all entities from the database, select the root item.
 - To include all entities of an entity class, select the corresponding class item.
-- To include specific entities, select them by holding down **Ctrl**.
+- To include specific entities, expand an entity class item and select the corresponding entity items from below.
+
+How the **Alternative** selections affect the graph:
+
+- Selecting an alternative item will include all entities that either have entity alternative activity set as true
+  or have parameters in the corresponding alternative.
+
+How the **Scenario** selections affect the graph:
+
+- Selecting an scenario item will include all entities that:
+
+  - Have entity alternative activity set as active (alternative rank taken into consideration).
+  - Are not specified as inactive with entity alternative in any of the scenarios alternatives,
+    but belong to an entity class that are set as active by default.
+  - Have parameter values in any of the alternatives of the selected scenario.
+
+- Selecting an scenario alternative item will act like selecting the corresponding item from **Alternative**.
 
 .. note:: In **Graph View**, a small unnamed vertex represents a multidimensional entity with multiple elements,
    whereas a bigger named vertex represents a zero dimensional entity. An arc between entities indicates that
@@ -95,7 +121,44 @@ What is included in the graph depends on the specific selection you make in the 
 The graph automatically includes N-D entities whenever *all* the elements of that entity are included
 (even if these entities are not selected in **Entity Tree**). You can change this behavior to automatically
 include N-D entities whenever *any* of the member elements are included. To do this, enable **Auto-expand entities**
-via the **Graph View**'s context menu.
+via the **Graph View**'s context menu, or from the settings **Ctrl+,**.
+
+Entity highlights
+*****************
+
+As mentioned before, **Scenario Tree** and **Alternative** may cause the entity items in the graph to become
+highlighted. The highlighting is done by adding a border around the entity item. This is what it looks like:
+
+.. image:: img/graph_alt_selection.png
+   :align: center
+
+Note that the icons of the entities or colors don't change, only the border may change.
+
+There are four different borders:
+
+- No border
+
+  - If an entity doesn't have a border, either only **Entity Tree** -selections are present, or the entity is active
+    in the selected alternative/scenario.
+
+- Solid
+
+  - Can be found with scenario selections, if the entity belongs to a class that is set as active by default,
+    and the entity is neither set as active or inactive in the selected scenario.
+
+- Dotted
+
+  - The entity item is present on the graph because it has parameter values in the selected alternative.
+
+- Dashed
+
+  - There are alternatives selected where the entity is set as active and inactive. Essentially means conflict.
+
+Below is a reference for what these different borders look like:
+
+.. image:: img/highlight_types.png
+   :align: center
+
 
 Manipulating the graph
 **********************
@@ -125,6 +188,7 @@ The context menu has the following options:
 - **Auto-expand entities** If enabled, the graph will also include entities where the selections are members besides
   just the selections. if disabled, the graph will only show the selected entities.
 - **Merge databases** Whether to merge the databases or not.
+- **Auto-build** Toggles whether the graph is built every time tree selections change.
 - **Snap entities to grid** makes it so that the placement of the entities can't be arbitrary anymore but
   instead they can only lay on a grid.
 - **Max. entity dimension count** defines a cutoff for the number of dimensions an entity can have and still be drawn.

@@ -294,7 +294,11 @@ class CopyPasteTableView(QTableView):
                             values.append(convert(value))
                             continue
                     values.append(value)
+        begin_paste = model.empty_model.begin_paste if hasattr(model, "empty_model") else model.begin_paste
+        end_paste = model.empty_model.end_paste if hasattr(model, "empty_model") else model.end_paste
+        begin_paste()
         model.batch_set_data(indexes, values)
+        end_paste()
         return True
 
     def set_column_converter_for_pasting(self, header, converter):

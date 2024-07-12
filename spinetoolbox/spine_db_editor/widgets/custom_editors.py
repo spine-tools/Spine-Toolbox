@@ -39,7 +39,7 @@ from PySide6.QtWidgets import (
     QComboBox,
 )
 from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
-from spinetoolbox.helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string
+from spinetoolbox.helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string, order_key
 from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 
@@ -200,7 +200,7 @@ class SearchBarEditor(QTableView):
             items (Sequence of str): items to show in the list
         """
         item_list = [QStandardItem(current)]
-        for item in sorted(items, key=lambda x: x.casefold()):
+        for item in sorted(items, key=lambda x: order_key(x.casefold())):
             qitem = QStandardItem(item)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)

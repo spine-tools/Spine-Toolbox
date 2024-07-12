@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Empty models for parameter definitions and values."""
+"""Empty models for dialogs as well as parameter definitions and values."""
 from PySide6.QtCore import Qt
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from .single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
@@ -134,6 +134,12 @@ class EmptyModelBase(EmptyRowModel):
 
     def _autocomplete_row(self, db_map, item):
         """Fills in entity_class_name whenever other selections make it obvious."""
+        if self._paste and item.get("entity_class_name"):
+            # If the data is pasted and the entity class column is already filled,
+            # trust that the user knows what they are doing. This makes pasting large
+            # amounts of data significantly faster.
+            del item["row"]
+            return
         candidates = self._entity_class_name_candidates(db_map, item)
         row = item.pop("row", None)
         if len(candidates) == 1:
@@ -320,3 +326,53 @@ class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyMod
 
     def _entity_class_name_candidates(self, db_map, item):
         return self._entity_class_name_candidates_by_entity(db_map, item)
+
+
+class EmptyAddEntityOrClassRowModel(EmptyRowModel):
+    """A table model with a last empty row."""
+
+    def __init__(self, parent=None, header=None):
+        super().__init__(parent, header=header)
+        self._entity_name_user_defined = False
+
+    def batch_set_data(self, indexes, data):
+        """Reimplemented to fill the entity class name automatically if its data is removed via pressing del."""
+        if not indexes or not data:
+            return False
+        rows = []
+        columns = []
+        for index, value in zip(indexes, data):
+            if not index.isValid():
+                continue
+            row = index.row()
+            column = index.column()
+            if column == self.header.index(self._parent.dialog_item_name()) and not value:
+                self._entity_name_user_defined = False
+                self._main_data[row][column] = self._parent.construct_composite_name(index.row())
+            else:
+                self._main_data[row][column] = value
+            rows.append(row)
+            columns.append(column)
+        if not (rows and columns):
+            return False
+        # Find square envelope of indexes to emit dataChanged
+        top = min(rows)
+        bottom = max(rows)
+        left = min(columns)
+        right = max(columns)
+        self.dataChanged.emit(
+            self.index(top, left), self.index(bottom, right), [Qt.ItemDataRole.EditRole, Qt.ItemDataRole.DisplayRole]
+        )
+        return True
+
+    def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        """Reimplemented to not overwrite user defined entity/class names with automatic composite names."""
+        if index.column() != self.header.index(self._parent.dialog_item_name()):
+            return super().setData(index, value, role)
+        if role == Qt.ItemDataRole.UserRole:
+            if self._entity_name_user_defined:
+                return False
+            role = Qt.ItemDataRole.EditRole
+        else:
+            self._entity_name_user_defined = True if value else False
+        return super().setData(index, value, role)

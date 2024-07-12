@@ -14,7 +14,8 @@
 import itertools
 import json
 from time import monotonic
-from PySide6.QtCore import Slot, QTimer, QThreadPool
+from PySide6.QtGui import QPen
+from PySide6.QtCore import Slot, QTimer, QThreadPool, Qt
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
@@ -85,6 +86,7 @@ class GraphViewMixin:
         self.db_map_entity_id_sets = []
         self.entity_inds = []
         self.element_inds = []
+        self.highlight_by_id = {}
         self._entity_offsets = {}
         self._pvs_by_pname = {}
         self._val_ranges_by_pname = {}
@@ -137,7 +139,6 @@ class GraphViewMixin:
     def connect_signals(self):
         """Connects signals."""
         super().connect_signals()
-        self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed_in_graph)
         self.ui.dockWidget_entity_graph.visibilityChanged.connect(self._handle_entity_graph_visibility_changed)
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
         self.db_mngr.items_added.connect(self._refresh_icons)
@@ -149,7 +150,7 @@ class GraphViewMixin:
         Args:
             db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
         """
-        if item_type not in ("object_class", "relationship_class"):
+        if item_type != "entity_class":
             return
         updated_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
         for item in self.ui.graphicsView.items():
@@ -160,6 +161,15 @@ class GraphViewMixin:
         return {db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids}
 
     def _accepts_entity_item(self, item, db_map):
+        if not self._alternative_accepts(item, db_map) and not self._parameter_value_accepts(item, db_map):
+            return False
+        if not self._scenario_accepts(item, db_map) and not self._parameter_value_accepts(item, db_map):
+            return False
+        if not self._entity_class_and_entity_accept(item, db_map):
+            return False
+        return True
+
+    def _entity_class_and_entity_accept(self, item, db_map):
         if (db_map, item["id"]) in self.expanded_db_map_entity_ids:
             return True
         if (db_map, item["id"]) in self.collapsed_db_map_entity_ids:
@@ -168,6 +178,8 @@ class GraphViewMixin:
             return False
         if "root" in self._selected_item_type_db_map_ids:
             return True
+        if not self._filter_class_ids and (self._filter_alternative_ids or self._filter_scenario_ids):
+            return True  # Allows entities to show when only alternatives or scenarios are selected.
         selected_entity_ids = self._selected_item_type_db_map_ids.get("entity", {}).get(db_map, ())
         if item["id"] in selected_entity_ids:
             return True
@@ -179,6 +191,69 @@ class GraphViewMixin:
             return True
         if item["dimension_id_list"] and cond(id_ in selected_class_ids for id_ in item["dimension_id_list"]):
             return True
+        return False
+
+    def _alternative_accepts(self, item, db_map):
+        selected_alternative_ids = self._filter_alternative_ids.get(db_map, set())
+        selected_scen_alts = self._filter_scenario_ids.get("scenario_alternative", {}).get(db_map, set())
+        if not (selected_alternative_ids or selected_scen_alts):
+            if item["id"] in self.highlight_by_id:
+                self.highlight_by_id.pop(item["id"])
+            return True  # No alternatives
+        activities = set()
+        all_alternatives = selected_alternative_ids | selected_scen_alts
+        for alt_id in all_alternatives:
+            entity_alternative = db_map.get_entity_alternative_item(entity_id=item["id"], alternative_id=alt_id)
+            if entity_alternative:
+                if entity_alternative["active"]:
+                    activities.add(True)
+                    continue
+            activities.add(False)
+        if not activities:
+            return False  # No entity alternatives for this guy
+        if all(activities):
+            return True  # Active in all selected alternatives, good to go.
+        if any(activities):
+            self.highlight_by_id[item["id"]] = EntityBorder.CONFLICTED
+            return True  # Active in some selected alternatives, good to go.
+        self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
+        return False  # Not active in any selected alternatives, no go.
+
+    def _scenario_accepts(self, item, db_map):
+        scenarios = self._filter_scenario_ids.get("scenario", {}).get(db_map, {})
+        if not scenarios:
+            return True  # No scenarios selected
+        for scenario_id in scenarios:
+            state = db_map.item_active_in_scenario(item, scenario_id)
+            if state is not None:
+                return state
+        if item["element_id_list"]:
+            if self.highlight_by_id.get(item["id"]) != EntityBorder.PARAMETER_VALUE:
+                self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
+            return all(
+                self._scenario_accepts(self.db_mngr.get_item(db_map, "entity", id_), db_map)
+                for id_ in item["element_id_list"]
+            )
+
+        entity_class = self.db_mngr.get_item(db_map, "entity_class", item["class_id"])
+        if entity_class["active_by_default"]:
+            self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
+            return True  # active_by_default is True
+        self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
+        return False
+
+    def _parameter_value_accepts(self, item, db_map):
+        """Returns True if the entity has parameter values set with the selected alternatives"""
+        if not self._filter_parameter_value_ids:
+            return False
+        if item["id"] in self._filter_parameter_value_ids.get(db_map):
+            if item["element_id_list"]:
+                for id_ in item["element_id_list"]:
+                    if self.highlight_by_id.get(id_) == EntityBorder.INACTIVE:
+                        self.highlight_by_id[id_] = EntityBorder.PARAMETER_VALUE
+            if self.highlight_by_id.get(item["id"]) == EntityBorder.INACTIVE:
+                self.highlight_by_id[item["id"]] = EntityBorder.PARAMETER_VALUE
+            return True  # Entity is present in the parameter_value table with the current selections
         return False
 
     def _graph_handle_entities_added(self, db_map_data):
@@ -322,12 +397,6 @@ class GraphViewMixin:
         if self._owes_graph:
             QTimer.singleShot(100, self.build_graph)
 
-    @Slot(dict)
-    def _handle_entity_tree_selection_changed_in_graph(self, selected):
-        """Stores the given selection of entity tree indexes and builds graph."""
-        self._update_selected_item_type_db_map_ids(selected)
-        self.build_graph()
-
     def expand_graph(self, db_map_entity_ids):
         self.expanded_db_map_entity_ids.update(db_map_entity_ids)
         self.collapsed_db_map_entity_ids.difference_update(db_map_entity_ids)
@@ -458,25 +527,29 @@ class GraphViewMixin:
         self.db_mngr.remove_items(db_map_typed_ids)
 
     @Slot(bool)
-    def rebuild_graph(self, _checked=False):
+    def rebuild_graph(self, _checked=False, force=False):
         self.db_map_entity_id_sets.clear()
         self.expanded_db_map_entity_ids.clear()
         self.collapsed_db_map_entity_ids.clear()
-        self.build_graph()
+        self.build_graph(force=force)
 
-    def build_graph(self, persistent=False):
+    def build_graph(self, persistent=False, force=False):
         """Builds graph from current selection of items.
 
         Args:
             persistent (bool, optional): If True, elements in the current graph (if any) retain their position
                 in the new one.
+            force (bool, optional): If True, graph will be built no matter what as long as its visible.
         """
         self._persisted_positions.clear()
         if persistent:
             for item in self.entity_items:
                 x, y = self.convert_position(item.pos().x(), item.pos().y())
                 self._persisted_positions[item.first_db_map, item.first_id] = {"x": x, "y": y}
-        if not self.ui.dockWidget_entity_graph.isVisible():
+        if (
+            not (force or self.ui.graphicsView.get_property("auto_build"))
+            or not self.ui.dockWidget_entity_graph.isVisible()
+        ):
             self._owes_graph = True
             return
         self._owes_graph = False
@@ -517,13 +590,19 @@ class GraphViewMixin:
         self.ui.graphicsView.clear_scene()
         if self._make_new_items(x, y):
             self._add_new_items()
+        for id_, color in self.highlight_by_id.items():
+            for item in self.entity_items:
+                if item.first_id == id_:
+                    item.set_highlight_pen(color)
+                    break
+        self.highlight_by_id.clear()
         if not self._persisted_positions:
             self.ui.graphicsView.reset_zoom()
         else:
             self.ui.graphicsView.apply_zoom()
 
     def _update_selected_item_type_db_map_ids(self, selected_tree_inds):
-        """Upsates the dict mapping item type to db_map to selected ids."""
+        """Updates the dict mapping item type to db_map to selected ids."""
         if "root" in selected_tree_inds:
             self._selected_item_type_db_map_ids = {"root": None}
             return
@@ -861,7 +940,6 @@ class GraphViewMixin:
         super().closeEvent(event)
         if not event.isAccepted():
             return
-        self.ui.treeView_entity.tree_selection_changed.disconnect(self._handle_entity_tree_selection_changed_in_graph)
         if self.scene is not None:
             self.scene.deleteLater()
         # Make sure the fetch parent isn't used to remove discarded changes after we've deleted the graph scene.
@@ -878,3 +956,11 @@ class _Offset:
         offsets = list(range(len(self._all_offsets)))  # [0, 1, 2, ...]
         center = sum(offsets) / len(offsets)
         return (self._value - center) / len(offsets)
+
+
+class EntityBorder:
+    """Highlight borders for the EntityItems"""
+
+    INACTIVE = QPen(Qt.SolidLine)
+    CONFLICTED = QPen(Qt.DashLine)
+    PARAMETER_VALUE = QPen(Qt.DotLine)

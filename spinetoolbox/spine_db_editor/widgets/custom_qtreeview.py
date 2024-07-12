@@ -12,8 +12,8 @@
 
 """Classes for custom QTreeViews and QTreeWidgets."""
 from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QAbstractItemView
-from PySide6.QtCore import Signal, Slot, Qt, QEvent, QTimer, QModelIndex, QItemSelection, QSignalBlocker
-from PySide6.QtGui import QMouseEvent, QIcon, QGuiApplication
+from PySide6.QtCore import Signal, Slot, QEvent, QTimer, QModelIndex, QItemSelection
+from PySide6.QtGui import QIcon
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from spinetoolbox.helpers import busy_effect, CharIconEngine
 from .custom_delegates import ScenarioDelegate, AlternativeDelegate, ParameterValueListDelegate, AddEntityButtonDelegate
@@ -183,6 +183,9 @@ class EntityTreeView(CopyPasteTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
+        if self._spine_db_editor.clear_tree_selections:
+            self._spine_db_editor.clear_tree_selections = False
+            self._spine_db_editor._clear_all_other_selections(self)
         self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
         self.tree_selection_changed.emit(self._selected_indexes)
@@ -196,15 +199,6 @@ class EntityTreeView(CopyPasteTreeView):
                 continue
             item = model.item_from_index(index)
             self._selected_indexes.setdefault(item.item_type, {})[index] = None
-
-    def clear_any_selections(self):
-        """Clears the selection if any."""
-        selection_model = self.selectionModel()
-        if Qt.KeyboardModifier.ControlModifier in QGuiApplication.keyboardModifiers():
-            return
-        if selection_model.hasSelection():
-            with QSignalBlocker(selection_model) as _:
-                selection_model.clearSelection()
 
     @busy_effect
     def fully_expand(self):
@@ -264,31 +258,7 @@ class EntityTreeView(CopyPasteTreeView):
         super().mouseDoubleClickEvent(event)
 
     def mousePressEvent(self, event):
-        """Overrides selection behaviour if the user has selected sticky selection in Settings.
-        If sticky selection is enabled, multiple-selection is enabled when selecting items in the Object tree.
-        Pressing the Ctrl-button down, enables single selection.
-
-        Args:
-            event (QMouseEvent)
-        """
-        sticky_selection = self._spine_db_editor.qsettings.value("appSettings/stickySelection", defaultValue="false")
-        if sticky_selection == "false":
-            super().mousePressEvent(event)
-            return
-        local_pos = event.localPos()
-        window_pos = event.windowPos()
-        screen_pos = event.screenPos()
-        button = event.button()
-        buttons = event.buttons()
-        modifiers = event.modifiers()
-        if modifiers & Qt.ControlModifier:
-            modifiers &= ~Qt.ControlModifier
-        else:
-            modifiers |= Qt.ControlModifier
-        source = event.source()
-        new_event = QMouseEvent(
-            QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
-        )
+        new_event = self._spine_db_editor.handle_mousepress(self, event) if self._spine_db_editor else event
         super().mousePressEvent(new_event)
 
     def update_actions_availability(self):
@@ -376,6 +346,10 @@ class ItemTreeView(CopyPasteTreeView):
         header = self.header()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
+    def mousePressEvent(self, event):
+        new_event = self._spine_db_editor.handle_mousepress(self, event) if self._spine_db_editor else event
+        super().mousePressEvent(new_event)
+
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self.resizeColumnToContents(0)
@@ -425,6 +399,13 @@ class ItemTreeView(CopyPasteTreeView):
     def _refresh_copy_paste_actions(self, _, __):
         """Refreshes copy and paste actions enabled state."""
         self._spine_db_editor.refresh_copy_paste_actions()
+
+    def _clear_trees(self):
+        """Clears selections from all other trees if such clearing is set as pending."""
+        if not self._spine_db_editor.clear_tree_selections:
+            return
+        self._spine_db_editor.clear_tree_selections = False
+        self._spine_db_editor._clear_all_other_selections(self)
 
 
 class AlternativeTreeView(ItemTreeView):
@@ -488,12 +469,15 @@ class AlternativeTreeView(ItemTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits alternative_selection_changed with the current selection."""
+        self._clear_trees()
         selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
         deselected_db_map_alt_ids = self._db_map_alt_ids_from_selection(deselected)
         for db_map, ids in deselected_db_map_alt_ids.items():
-            self._selected_alternative_ids[db_map].difference_update(ids)
+            if ids:
+                self._selected_alternative_ids[db_map].difference_update(ids)
         for db_map, ids in selected_db_map_alt_ids.items():
-            self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
+            if ids:
+                self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
         self.alternative_selection_changed.emit(self._selected_alternative_ids)
 
     def remove_selected(self):
@@ -598,16 +582,12 @@ class ScenarioTreeView(ItemTreeView):
             parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
-        self._selected_alternative_ids = dict()
+        self._selected_scenario_ids = dict()
         self._duplicate_scenario_action = None
-
-    @property
-    def selected_alternative_ids(self):
-        return self._selected_alternative_ids
 
     def reset(self):
         super().reset()
-        self._selected_alternative_ids.clear()
+        self._selected_scenario_ids.clear()
 
     def connect_signals(self):
         """Connects signals."""
@@ -649,14 +629,19 @@ class ScenarioTreeView(ItemTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits scenario_selection_changed with the current selection."""
-        self._selected_alternative_ids.clear()
-        for index in self.selectionModel().selectedRows(column=0):
+        self._clear_trees()
+        self._selected_scenario_ids.clear()
+        for index in self.selectionModel().selectedIndexes():
             item = self.model().item_from_index(index)
             if isinstance(item, ScenarioItem) and item.id is not None:
-                self._selected_alternative_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
+                self._selected_scenario_ids.setdefault("scenario", {}).setdefault(item.db_map, {}).update(
+                    {item.id: item.alternative_id_list}
+                )
             elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                self._selected_alternative_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        self.scenario_selection_changed.emit(self._selected_alternative_ids)
+                self._selected_scenario_ids.setdefault("scenario_alternative", {}).setdefault(item.db_map, set()).add(
+                    item.alternative_id
+                )
+        self.scenario_selection_changed.emit(self._selected_scenario_ids)
 
     def remove_selected(self):
         """See base class."""

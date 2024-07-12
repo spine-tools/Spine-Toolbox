@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helpers and utilities for Spine Database editor."""
+from PySide6.QtGui import QColor
 
 
 def string_to_display_icon(x):
@@ -53,3 +54,6 @@ def table_name_from_item_type(item_type):
         "parameter_definition": "Parameter definition",
         "entity_alternative": "Entity alternative",
     }.get(item_type)
+
+
+GRAPH_OVERLAY_COLOR = QColor(210, 210, 210, 211)

@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """ Classes for custom QDialogs to add items to databases. """
-from contextlib import suppress
 from itertools import product
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -36,7 +35,7 @@ from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
 from PySide6.QtGui import QIcon
 from spinedb_api.helpers import name_from_elements, name_from_dimensions
 from ..helpers import string_to_bool, string_to_display_icon
-from ...mvcmodels.empty_row_model import EmptyRowModel
+from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...helpers import DB_ITEM_SEPARATOR
@@ -193,7 +192,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.setWindowTitle("Add entity classes")
         self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
         self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
-        self.model = EmptyRowModel(self)
+        self.model = EmptyAddEntityOrClassRowModel(self)
         self.model.force_default = force_default
         self.table_view.setModel(self.model)
         self.dimension_count_widget = QWidget(self)
@@ -276,11 +275,10 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         top = top_left.row()
         bottom = bottom_right.row()
         for row in range(top, bottom + 1):
-            obj_cls_names = [
-                name for j in range(self.number_of_dimensions) if (name := self.model.index(row, j).data())
-            ]
-            relationship_class_name = name_from_dimensions(obj_cls_names)
-            self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
+            entity_class_name = self.construct_composite_name(row)
+            self.model.setData(
+                self.model.index(row, self.number_of_dimensions), entity_class_name, role=Qt.ItemDataRole.UserRole
+            )
 
     @Slot()
     def accept(self):
@@ -336,6 +334,22 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             return
         self.db_mngr.add_entity_classes(db_map_data)
         super().accept()
+
+    def construct_composite_name(self, row):
+        """Returns a ND entity class name from all the currently selected dimension names.
+
+        Args:
+            row (int): The index of the row.
+
+        Returns:
+            str: The ND entity class name
+        """
+        class_names = [name for j in range(self.number_of_dimensions) if (name := self.model.index(row, j).data())]
+        return name_from_dimensions(class_names)
+
+    @staticmethod
+    def dialog_item_name():
+        return "entity class name"
 
 
 class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin, AddItemsDialog):
@@ -416,7 +430,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         for row in range(top, bottom + 1):
             el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
             entity_name = name_from_elements(el_names)
-            self.model.setData(self.model.index(row, dimension_count), entity_name)
+            self.model.setData(self.model.index(row, dimension_count), entity_name, role=Qt.ItemDataRole.UserRole)
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
@@ -467,6 +481,22 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.ent_cls_combo_box.setCurrentIndex(current_index)
         self.connect_signals()
 
+    def construct_composite_name(self, row):
+        """Returns a ND entity name from the currently selected element names.
+
+        Args:
+            row (int): The index of the row.
+
+        Returns:
+            str: The name of the entity
+        """
+        el_names = [
+            n
+            for n in (self.model.index(row, j).data() for j in range(len(self.entity_class["dimension_name_list"])))
+            if n
+        ]
+        return name_from_elements(el_names)
+
     def _class_key_to_str(self, key, *db_maps):
         class_name = self.db_map_ent_cls_lookup[db_maps[0]][key]["name"]
         if len(db_maps) == len(self.db_maps):
@@ -483,7 +513,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         return self.entity_class["name"] in set(ent_cls["dimension_name_list"]) | {ent_cls["name"]}
 
     def make_model(self):
-        return EmptyRowModel(self)
+        return EmptyAddEntityOrClassRowModel(self)
 
     def _do_reset_model(self):
         header = self.dimension_name_list + ("entity name", "alternative", "entity group", "databases")
@@ -641,6 +671,10 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                     (class_name, entity_group, entity["name"])
                 )
         return db_map_data
+
+    @staticmethod
+    def dialog_item_name():
+        return "entity name"
 
 
 class ManageElementsDialog(AddEntitiesOrManageElementsDialog):

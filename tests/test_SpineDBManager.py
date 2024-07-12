@@ -286,6 +286,45 @@ class TestAddItems(unittest.TestCase):
         )
 
 
+class TestDoRestoreItems(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._temp_dir = TemporaryDirectory()
+        db_path = Path(self._temp_dir.name, "db.sqlite")
+        self._db_url = "sqlite:///" + str(db_path)
+        self._db_mngr = SpineDBManager(None, None)
+        self._logger = MagicMock()
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        self._db_mngr.clean_up()
+        # Database connection may still be open. Retry cleanup until it succeeds.
+        running = True
+        while running:
+            QApplication.processEvents()
+            try:
+                self._temp_dir.cleanup()
+            except NotADirectoryError:
+                pass
+            else:
+                running = False
+
+    def test_restore_entity_class(self):
+        db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
+        entity_class, error = db_map.add_entity_class_item(name="Gadget")
+        self.assertIsNone(error)
+        class_item = self._db_mngr.get_item(db_map, "entity_class", entity_class["id"])
+        self.assertIs(entity_class, class_item)
+        self._db_mngr.remove_items({db_map: {"entity_class": {entity_class["id"]}}})
+        self.assertFalse(class_item.is_valid())
+        self._db_mngr.do_restore_items(db_map, "entity_class", {entity_class["id"]})
+        self.assertTrue(class_item.is_valid())
+
+
 class TestImportExportData(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
