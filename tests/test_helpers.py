@@ -422,8 +422,11 @@ class TestHelpers(unittest.TestCase):
 
     def test_order_key(self):
         self.assertEqual(["Humphrey_Bogart"], order_key("Humphrey_Bogart"))
-        self.assertEqual(["Wes_", 1969, "_Anderson"], order_key("Wes_1969_Anderson"))
-        self.assertEqual(["\U0010ffff", 1899, "_Alfred-", 1980, "Hitchcock"], order_key("1899_Alfred-1980Hitchcock"))
+        self.assertEqual(["Wes_", "000000001969", "_Anderson"], order_key("Wes_1969_Anderson"))
+        self.assertEqual(
+            ["\U0010FFFF", "000000001899", "_Alfred-", "000000001980", "Hitchcock"],
+            order_key("1899_Alfred-1980Hitchcock"),
+        )
         self.assertEqual([], order_key(""))
 
 
