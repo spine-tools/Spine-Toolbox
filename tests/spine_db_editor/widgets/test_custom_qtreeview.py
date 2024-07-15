@@ -890,7 +890,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(from_database(data[i].value), expected_value)
+            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
 class TestParameterValueListTreeViewWithExistingData(TestBase):
@@ -1014,7 +1014,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(from_database(data[i].value), expected_value)
+            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
 if __name__ == "__main__":
