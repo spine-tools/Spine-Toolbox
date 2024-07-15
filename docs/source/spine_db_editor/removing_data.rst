@@ -34,7 +34,7 @@ the mass removal.
 
 .. note:: The purge dialog can also be opened from the **Properties** -dock widget of a Data Store.
 
-.. tip:: Purging can also be an automated part of the workflow. See :ref:`Links` for more information
+.. tip:: Purging can also be an automated part of the workflow. See :ref:`Links and Loops` for more information
          about purging a database automatically.
 
 Removing entities and classes

@@ -8,11 +8,14 @@
 .. |stop| image:: ../../spinetoolbox/ui/resources/menu_icons/stop-circle-regular.svg
             :width: 16
 
-.. _Links:
+.. _Links and Loops:
 
-*****
+***************
+Links and Loops
+***************
+
 Links
-*****
+=====
 
 Links are the things that connect project items to each other. If Tool is the heart of a DAG, then
 links are the veins that connect the heart to other vital organs.
@@ -82,3 +85,60 @@ Checking this options does two things:
 
 See `the datapackage specification <https://specs.frictionlessdata.io/data-package/>`_
 for more information on datapackages.
+
+Loops
+=====
+
+A loop is a special kind of link. They do exactly what their name reveals: they are used to create loops in DAGs.
+If you try to add a normal link in a place where it would form a directed cycle in the DAG, you will be asked if you
+want to create a loop instead. The other way to create a loop is to hold down **Alt** while creating a link like any
+other. Loops can be distinguished from ordinary links by their color, which is turquoise instead of the ordinary yellow.
+
+What sets apart loops from ordinary links, is their ability to control the item execution via loop conditions.
+A loop condition can be an existing Tool specification or a Python script. A loop and its properties are
+showcased in the image below.
+
+.. image:: img/loop_properties.png
+   :align: center
+
+The default loop condition is a Python script that only has the line ``exit(1)`` in it. This causes the loop to act like
+a regular link, since the loop runs only when the exit code of its condition is 0. The execution of the example project
+would then go like this:
+
+1. *Tool* is executed.
+2. *Tool (1)* is executed.
+3. Loop condition runs, exits with exit code 1, *Tool* is not executed again.
+
+Here is a minimal example on how to control a loop:
+
+.. image:: img/loop_example_dag.png
+   :align: center
+
+The Tool in the image is set to execute in the source directory from the
+properties tab and has the following specification:
+
+.. image:: img/loop_tool_spec.png
+   :align: center
+
+The loop has the following condition:
+
+.. code-block:: python
+
+   import sys
+
+   file = sys.argv[1]
+   num = -1
+   for row in open(file):
+      num = int(row.strip())
+      if num == 5:
+         exit(1)
+   print(f"Going for round {num + 1}")
+
+and has the file ``input.txt`` set as a command line argument.
+
+When the Tool is executed, it will run a total of five times. Each time it writes a number, one bigger than the last,
+to the file ``input.txt``. After writing to the file, it passes the file name as a command line argument to the loop.
+The loop then reads all the lines in the text file and exits with code 0 if the number five is not in the file. Because
+the exit code is 0, the Tool fires up again. If the loop runs into the number five when it is reading the text file, it
+exits with code 1, meaning that it will no longer loop the execution. The print statements of the Tool are visible in
+**Python console** and the lines that the loop prints out can be found in the **Event log**.
