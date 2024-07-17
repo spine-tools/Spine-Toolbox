@@ -26,14 +26,14 @@ import sys
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
-from spine_items import resources_icons_rc  # pylint: disable=unused-import
-
-# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
-from . import resources_icons_rc  # pylint: disable=unused-import
 from .headless import Status, headless_main
 from .helpers import pyside6_version_check
 from .ui_main import ToolboxUI
 from .version import __version__
+
+# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
+from . import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
+from spine_items import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
 
 
 def main():
