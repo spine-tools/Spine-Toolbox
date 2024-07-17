@@ -17,8 +17,8 @@ import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
-from spine_engine.project_item.project_item_resource import database_resource
 from spine_engine.project_item.connection import FilterSettings
+from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.project_item.logging_connection import LoggingConnection
@@ -26,7 +26,7 @@ from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.widgets.properties_widget import PropertiesWidgetBase
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
+from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestLoggingConnection(unittest.TestCase):

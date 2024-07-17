@@ -14,8 +14,8 @@
 from tempfile import TemporaryDirectory
 from PySide6.QtCore import QPoint
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from tests.mock_helpers import FakeDataStore, clean_up_toolbox, create_toolboxui_with_project
 from .spine_db_editor_test_base import DBEditorTestBase
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox, FakeDataStore
 
 
 class TestMultiSpineDBEditor(DBEditorTestBase):

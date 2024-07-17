@@ -5,6 +5,7 @@ import sys
 import unittest
 from spinedb_api import DatabaseMapping
 
+
 class ActiveByDefault(unittest.TestCase):
     _root_path = Path(__file__).parent
     _database_path = _root_path / "Test data.sqlite"

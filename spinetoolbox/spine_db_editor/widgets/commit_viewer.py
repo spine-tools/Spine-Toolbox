@@ -11,19 +11,19 @@
 ######################################################################################################################
 
 """Contains Database editor's Commit viewer."""
+from PySide6.QtCore import QEventLoop, QObject, Qt, QThread, Signal, Slot
 from PySide6.QtWidgets import (
+    QGridLayout,
+    QLabel,
     QMainWindow,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QWidget,
-    QGridLayout,
     QTreeWidgetItem,
-    QSplitter,
-    QLabel,
+    QWidget,
 )
-from PySide6.QtCore import QEventLoop, QObject, Qt, QThread, Signal, Slot
-from spinetoolbox.helpers import restore_ui, save_ui, DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, restore_ui, save_ui
 
 
 class _DBCommitViewer(QWidget):

@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``custom_qwidgets`` module."""
-import unittest
 from contextlib import contextmanager
+import unittest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
-from spinetoolbox.widgets.custom_qwidgets import FilterWidget, SelectDatabaseItemsDialog
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import DataToValueFilterCheckboxListModel
+from spinetoolbox.widgets.custom_qwidgets import FilterWidget, SelectDatabaseItemsDialog
 
 
 class TestFilterWidget(unittest.TestCase):

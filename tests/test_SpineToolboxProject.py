@@ -17,31 +17,31 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
+import networkx as nx
 from PySide6.QtCore import QVariantAnimation
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QMessageBox
-import networkx as nx
+from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
-from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.utils.helpers import shorten
+from spinetoolbox.config import LATEST_PROJECT_VERSION, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import SignalWaiter
+from spinetoolbox.project import node_successors
+from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
-from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
-from spinetoolbox.config import LATEST_PROJECT_VERSION, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
-from spinetoolbox.project import node_successors
 from tests.mock_helpers import (
-    clean_up_toolbox,
-    create_toolboxui_with_project,
-    add_ds,
+    add_data_transformer,
     add_dc,
+    add_ds,
+    add_exporter,
+    add_importer,
+    add_merger,
     add_tool,
     add_view,
-    add_importer,
-    add_exporter,
-    add_data_transformer,
-    add_merger,
+    clean_up_toolbox,
+    create_toolboxui_with_project,
     qsettings_value_side_effect,
 )
 

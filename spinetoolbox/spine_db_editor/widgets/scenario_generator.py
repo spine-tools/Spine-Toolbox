@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Contains a dialog for generating scenarios from selected alternatives."""
-from enum import auto, Enum, unique
+from enum import Enum, auto, unique
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QWidget, QMessageBox
+from PySide6.QtWidgets import QMessageBox, QWidget
 from ...helpers import signal_waiter
 from ..scenario_generation import all_combinations, unique_alternatives
 

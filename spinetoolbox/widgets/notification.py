@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Contains a notification widget."""
-from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QGraphicsOpacityEffect, QLayout, QSizePolicy, QPushButton
-from PySide6.QtCore import Qt, Slot, QTimer, QPropertyAnimation, Property, QObject
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtCore import Property, QObject, QPropertyAnimation, Qt, QTimer, Slot
+from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QLayout, QPushButton, QSizePolicy
 from spinetoolbox.helpers import color_from_index
 
 

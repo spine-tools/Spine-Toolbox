@@ -12,7 +12,7 @@
 
 """ Contains ResourceFilterModel. """
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QStandardItemModel, QStandardItem
+from PySide6.QtGui import QStandardItem, QStandardItemModel
 from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from ..project_commands import SetFiltersOnlineCommand

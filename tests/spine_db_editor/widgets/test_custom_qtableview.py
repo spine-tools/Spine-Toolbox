@@ -13,19 +13,15 @@
 """Unit tests for DB editor's custom ``QTableView`` classes."""
 import itertools
 import os
-import unittest
 from tempfile import TemporaryDirectory
+import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions, to_database
 from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.helpers import TestBase
-from tests.spine_db_editor.widgets.helpers import (
-    add_entity,
-    add_zero_dimension_entity_class,
-    EditorDelegateMocking,
-)
+from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
 
 
 class TestParameterDefinitionTableView(TestBase):

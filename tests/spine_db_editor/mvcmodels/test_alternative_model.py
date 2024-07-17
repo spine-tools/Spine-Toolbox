@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_model import AlternativeModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import model_data_to_dict, TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, model_data_to_dict
 
 
 class TestAlternativeModel(unittest.TestCase):

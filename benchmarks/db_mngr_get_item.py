@@ -13,10 +13,10 @@ from typing import Optional, Sequence
 import pyperf
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
+from benchmarks.utils import StdOutLogger
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from spinetoolbox.spine_db_manager import SpineDBManager
-from benchmarks.utils import StdOutLogger
 
 
 def db_mngr_get_value(

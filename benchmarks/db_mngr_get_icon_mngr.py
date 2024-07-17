@@ -9,13 +9,13 @@ if sys.platform == "win32" and "HOMEPATH" not in os.environ:
     os.environ["HOMEPATH"] = str(pathlib.Path(sys.executable).parent)
 
 import time
-from typing import Optional, Iterable
+from typing import Iterable, Optional
 import pyperf
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinedb_api import DatabaseMapping
 from spinetoolbox.spine_db_icon_manager import SpineDBIconManager
+from spinetoolbox.spine_db_manager import SpineDBManager
 
 
 def db_mngr_get_icon_mngr(

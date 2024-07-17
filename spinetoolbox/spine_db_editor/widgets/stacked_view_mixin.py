@@ -11,15 +11,15 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
-from PySide6.QtCore import QItemSelection, Qt, Slot, QModelIndex
-from .element_name_list_editor import ElementNameListEditor
+from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
+from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height
 from ..mvcmodels.compound_models import (
-    CompoundParameterValueModel,
-    CompoundParameterDefinitionModel,
     CompoundEntityAlternativeModel,
+    CompoundParameterDefinitionModel,
+    CompoundParameterValueModel,
 )
 from ..mvcmodels.entity_tree_models import group_items_by_db_map
-from ...helpers import preferred_row_height, DB_ITEM_SEPARATOR
+from .element_name_list_editor import ElementNameListEditor
 
 
 class StackedViewMixin:

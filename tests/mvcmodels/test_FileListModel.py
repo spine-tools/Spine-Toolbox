@@ -11,11 +11,11 @@
 ######################################################################################################################
 
 """Unit tests for FileListModel class."""
+from pathlib import Path
 import unittest
 from PySide6.QtWidgets import QApplication
-from pathlib import Path
-from spinetoolbox.mvcmodels.file_list_models import FileListModel
 from spine_engine.project_item.project_item_resource import file_resource, file_resource_in_pack
+from spinetoolbox.mvcmodels.file_list_models import FileListModel
 
 
 class TestFileListModel(unittest.TestCase):

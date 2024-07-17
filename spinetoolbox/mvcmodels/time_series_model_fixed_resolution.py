@@ -12,7 +12,7 @@
 
 """A model for fixed resolution time series, used by the parameter_value editors."""
 import numpy as np
-from PySide6.QtCore import QModelIndex, Qt, Slot, QLocale
+from PySide6.QtCore import QLocale, QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesFixedResolution
 from .indexed_value_table_model import IndexedValueTableModel
 

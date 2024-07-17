@@ -12,22 +12,16 @@
 
 """Widget for showing the progress of making a Julia or Python kernel."""
 import subprocess
-from PySide6.QtWidgets import QDialog, QMessageBox, QDialogButtonBox, QWidget
-from PySide6.QtCore import Slot, Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
+    custom_find_kernel_specs,
     resolve_current_python_interpreter,
     resolve_default_julia_executable,
-    custom_find_kernel_specs,
 )
 from spinetoolbox.execution_managers import QProcessExecutionManager
-from spinetoolbox.helpers import (
-    busy_effect,
-    file_is_valid,
-    dir_is_valid,
-    ensure_window_is_on_screen,
-    get_datetime,
-)
+from spinetoolbox.helpers import busy_effect, dir_is_valid, ensure_window_is_on_screen, file_is_valid, get_datetime
 from spinetoolbox.logger_interface import LoggerInterface
 
 

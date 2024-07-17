@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """ Contains a minimal table model. """
-from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 
 class MinimalTableModel(QAbstractTableModel):

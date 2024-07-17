@@ -16,9 +16,9 @@ import unittest
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QApplication
 from spine_items.data_connection.data_connection import DataConnection
+from spinetoolbox.link import JumpLink
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.widgets.jump_properties_widget import JumpPropertiesWidget
-from spinetoolbox.link import JumpLink
 from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 

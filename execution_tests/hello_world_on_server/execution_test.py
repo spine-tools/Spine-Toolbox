@@ -1,13 +1,13 @@
 import os
-import sys
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import unittest
 import zmq
-from spinetoolbox.config import PROJECT_ZIP_FILENAME
-from spine_items.tool.utils import find_last_output_files
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
+from spine_items.tool.utils import find_last_output_files
+from spinetoolbox.config import PROJECT_ZIP_FILENAME
 
 
 class RunHelloWorldOnServer(unittest.TestCase):

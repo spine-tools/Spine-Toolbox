@@ -11,14 +11,14 @@
 ######################################################################################################################
 
 """Contains custom QHeaderView for the pivot table."""
-from PySide6.QtCore import Signal, Slot, Qt, QPoint
-from PySide6.QtWidgets import QHeaderView, QMenu, QWidget
+from PySide6.QtCore import QPoint, Qt, Signal, Slot
 from PySide6.QtGui import QAction
-from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...widgets.report_plotting_failure import report_plotting_failure
-from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
+from PySide6.QtWidgets import QHeaderView, QMenu, QWidget
 from ...plotting import PlottingError, plot_pivot_table_selection
+from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
+from ...widgets.report_plotting_failure import report_plotting_failure
 from ..mvcmodels.colors import PIVOT_TABLE_HEADER_COLOR
+from .tabular_view_header_widget import TabularViewHeaderWidget
 
 
 class PivotTableHeaderView(QHeaderView):

@@ -11,8 +11,8 @@
 ######################################################################################################################
 
 """Provides the main() function."""
-import os
 import multiprocessing
+import os
 import PySide6
 
 dirname = os.path.dirname(PySide6.__file__)
@@ -21,20 +21,19 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plugin_path
 
 # pylint: disable=wrong-import-position, wrong-import-order
 from argparse import ArgumentParser
-import sys
 import logging
+import sys
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
+from spine_items import resources_icons_rc  # pylint: disable=unused-import
 
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
 from . import resources_icons_rc  # pylint: disable=unused-import
-from spine_items import resources_icons_rc  # pylint: disable=unused-import
-
+from .headless import Status, headless_main
+from .helpers import pyside6_version_check
 from .ui_main import ToolboxUI
 from .version import __version__
-from .headless import headless_main, Status
-from .helpers import pyside6_version_check
 
 
 def main():

@@ -13,8 +13,8 @@
 """Unit tests for the KernelFetcher class."""
 import unittest
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.kernel_fetcher import KernelFetcher
 from spinetoolbox.helpers import SignalWaiter
+from spinetoolbox.kernel_fetcher import KernelFetcher
 
 
 class TestKernelFetcher(unittest.TestCase):

@@ -11,19 +11,18 @@
 ######################################################################################################################
 
 """Contains tests for the EngineClient class."""
-import unittest
 import os
-from unittest import mock
-from tempfile import TemporaryDirectory
 from pathlib import Path
-import zmq
+from tempfile import TemporaryDirectory
+import unittest
+from unittest import mock
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
-from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
-from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
+import zmq
 from spine_engine.exception import RemoteEngineInitFailed
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
-
+from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
+from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
+from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient
+from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 client_sec_dir = os.path.join(str(Path(__file__).parent), "client_secfolder")
 server_sec_dir = os.path.join(str(Path(__file__).parent), "server_secfolder")

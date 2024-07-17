@@ -12,24 +12,24 @@
 
 """Contains PluginManager class."""
 import itertools
-import os
 import json
-import urllib.request
+import os
+import shutil
 import urllib.error
 from urllib.parse import urljoin
-import shutil
-from PySide6.QtCore import Qt, Signal, Slot, QObject, QThread
-from spine_engine.utils.serialization import serialize_path, deserialize_path, deserialize_remote_path
-from .config import PLUGINS_PATH, PLUGIN_REGISTRY_URL
+import urllib.request
+from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
+from spine_engine.utils.serialization import deserialize_path, deserialize_remote_path, serialize_path
+from .config import PLUGIN_REGISTRY_URL, PLUGINS_PATH
 from .helpers import (
     load_plugin_dict,
     load_plugin_specifications,
-    plugins_dirs,
-    load_specification_local_data,
     load_specification_from_file,
+    load_specification_local_data,
+    plugins_dirs,
 )
-from .widgets.toolbars import PluginToolBar
 from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
+from .widgets.toolbars import PluginToolBar
 
 
 def _download_file(remote, local):

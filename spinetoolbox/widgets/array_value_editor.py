@@ -12,8 +12,8 @@
 
 """An editor dialog for Array elements."""
 from PySide6.QtCore import Qt
-from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor
+from .duration_editor import DurationEditor
 from .parameter_value_editor_base import ParameterValueEditorBase, ValueType
 from .plain_parameter_value_editor import PlainParameterValueEditor
 

@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Contains the GraphLayoutGeneratorRunnable class."""
-from PySide6.QtCore import Signal, Slot, QObject, QRunnable
+from PySide6.QtCore import QObject, QRunnable, Signal, Slot
 from spinedb_api.graph_layout_generator import GraphLayoutGenerator
 
 

@@ -12,22 +12,22 @@
 
 """Unit tests for ``custom_editors`` module."""
 import unittest
-from PySide6.QtWidgets import QApplication, QWidget, QStyleOptionViewItem
-from PySide6.QtGui import QKeyEvent, QFocusEvent, QStandardItemModel, QStandardItem
-from PySide6.QtCore import QEvent, Qt, QPoint
-from spinetoolbox.spine_db_editor.widgets.custom_editors import (
-    CustomLineEditor,
-    CustomComboBoxEditor,
-    ParameterValueLineEditor,
-    PivotHeaderTableLineEditor,
-    CheckListEditor,
-    IconColorEditor,
-    _CustomLineEditDelegate,
-    SearchBarEditor,
-    BooleanSearchBarEditor,
-)
+from PySide6.QtCore import QEvent, QPoint, Qt
+from PySide6.QtGui import QFocusEvent, QKeyEvent, QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import QApplication, QStyleOptionViewItem, QWidget
 from spinetoolbox.helpers import make_icon_id
 from spinetoolbox.resources_icons_rc import qInitResources
+from spinetoolbox.spine_db_editor.widgets.custom_editors import (
+    BooleanSearchBarEditor,
+    CheckListEditor,
+    CustomComboBoxEditor,
+    CustomLineEditor,
+    IconColorEditor,
+    ParameterValueLineEditor,
+    PivotHeaderTableLineEditor,
+    SearchBarEditor,
+    _CustomLineEditDelegate,
+)
 from tests.mock_helpers import q_object
 
 

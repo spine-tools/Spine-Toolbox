@@ -15,10 +15,10 @@ from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QWidget
 from spinedb_api import Map
 from ..helpers import inquire_index_name
-from .map_value_editor import MapValueEditor
-from .indexed_value_table_context_menu import MapTableContextMenu
 from ..mvcmodels.map_model import MapModel
 from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDelegate
+from .indexed_value_table_context_menu import MapTableContextMenu
+from .map_value_editor import MapValueEditor
 
 
 class MapEditor(QWidget):

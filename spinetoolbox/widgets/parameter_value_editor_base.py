@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """A base for editor windows for editing parameter values."""
-from enum import auto, Enum, unique
+from enum import Enum, auto, unique
 from numbers import Number
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QMessageBox, QWidget
@@ -19,12 +19,12 @@ from spinedb_api import (
     Array,
     DateTime,
     Duration,
-    duration_to_relativedelta,
     Map,
     ParameterValueFormatError,
     TimePattern,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
+    duration_to_relativedelta,
 )
 
 

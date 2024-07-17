@@ -16,15 +16,15 @@ from unittest.mock import MagicMock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
-from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
-    SingleParameterDefinitionModel,
-    SingleParameterValueModel,
-)
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
-from tests.mock_helpers import q_object, TestSpineDBManager, fetch_model
+from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
+    SingleParameterDefinitionModel,
+    SingleParameterValueModel,
+)
+from tests.mock_helpers import TestSpineDBManager, fetch_model, q_object
 
 ENTITY_PARAMETER_VALUE_HEADER = [
     "entity_class_name",

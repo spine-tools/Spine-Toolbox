@@ -14,9 +14,9 @@
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QWizard
-from spinetoolbox.widgets.add_up_spine_opt_wizard import AddUpSpineOptWizard, REQUIRED_SPINE_OPT_VERSION
+from spinetoolbox.widgets.add_up_spine_opt_wizard import REQUIRED_SPINE_OPT_VERSION, AddUpSpineOptWizard
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import create_toolboxui, clean_up_toolbox, MockInstantQProcess
+from tests.mock_helpers import MockInstantQProcess, clean_up_toolbox, create_toolboxui
 
 
 class TestAddUpSpineOptWizard(unittest.TestCase):

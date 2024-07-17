@@ -10,9 +10,9 @@
 ######################################################################################################################
 
 """Unit tests for the ``resource_filter_model`` module."""
+from contextlib import contextmanager
 import unittest
 from unittest import mock
-from contextlib import contextmanager
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication

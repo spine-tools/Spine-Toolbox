@@ -11,15 +11,15 @@
 ######################################################################################################################
 
 """Client for exchanging messages between the toolbox and the Spine Engine Server."""
-import os
-import time
-import random
-import json
 from enum import Enum
+import json
+import os
+import random
+import time
 import zmq
 import zmq.auth
-from spine_engine.server.util.server_message import ServerMessage
 from spine_engine.exception import RemoteEngineInitFailed
+from spine_engine.server.util.server_message import ServerMessage
 
 
 class ClientSecurityModel(Enum):

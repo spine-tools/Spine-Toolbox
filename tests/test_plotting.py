@@ -11,37 +11,37 @@
 ######################################################################################################################
 
 """Unit tests for the plotting module."""
-import unittest
 from contextlib import contextmanager
+import unittest
 from unittest.mock import patch
-import numpy
-from PySide6.QtCore import QModelIndex, QItemSelectionModel, QObject
-from PySide6.QtWidgets import QApplication
 from matplotlib.gridspec import GridSpec
+import numpy
+from PySide6.QtCore import QItemSelectionModel, QModelIndex, QObject
+from PySide6.QtWidgets import QApplication
 from spinedb_api import (
+    Array,
     DateTime,
     Map,
+    TimePattern,
+    TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
     to_database,
-    TimeSeriesFixedResolution,
-    TimePattern,
-    Array,
 )
 from spinetoolbox.plotting import (
-    plot_parameter_table_selection,
-    PlottingError,
-    convert_indexed_value_to_tree,
-    TreeNode,
-    turn_node_to_xy_data,
-    XYData,
-    reduce_indexes,
-    combine_data_with_same_indexes,
-    plot_data,
-    raise_if_incompatible_x,
-    plot_pivot_table_selection,
     LEGEND_PLACEMENT_THRESHOLD,
-    add_row_to_exception,
     IndexName,
+    PlottingError,
+    TreeNode,
+    XYData,
+    add_row_to_exception,
+    combine_data_with_same_indexes,
+    convert_indexed_value_to_tree,
+    plot_data,
+    plot_parameter_table_selection,
+    plot_pivot_table_selection,
+    raise_if_incompatible_x,
+    reduce_indexes,
+    turn_node_to_xy_data,
 )
 from tests.spine_db_editor.helpers import TestBase
 

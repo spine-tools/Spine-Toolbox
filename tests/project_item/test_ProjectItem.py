@@ -16,7 +16,7 @@ import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
-from ..mock_helpers import create_toolboxui_with_project, clean_up_toolbox
+from ..mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestProjectItem(unittest.TestCase):

@@ -18,8 +18,8 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
+from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 

@@ -12,23 +12,23 @@
 
 """Contains SpecificationEditorWindowBase and ChangeSpecPropertyCommand"""
 from enum import IntEnum, unique
-from PySide6.QtGui import QKeySequence, QIcon, QUndoStack, QAction, QUndoCommand
-from PySide6.QtCore import Signal, Slot, Qt
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtGui import QAction, QIcon, QKeySequence, QUndoCommand, QUndoStack
 from PySide6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QToolBar,
-    QLabel,
-    QHBoxLayout,
-    QMessageBox,
-    QMenu,
-    QLineEdit,
     QCheckBox,
     QErrorMessage,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QToolBar,
     QToolButton,
+    QWidget,
 )
+from spinetoolbox.helpers import CharIconEngine, SealCommand, restore_ui, save_ui
 from spinetoolbox.widgets.notification import ChangeNotifier, Notification
-from spinetoolbox.helpers import CharIconEngine, restore_ui, save_ui, SealCommand
 
 
 class UniqueCommandId:

@@ -11,34 +11,34 @@
 ######################################################################################################################
 
 """Contains facilities to open and execute projects without GUI."""
-import os
 from copy import deepcopy
 from enum import IntEnum, unique
 import json
+import os
 import pathlib
 import sys
-from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 import networkx as nx
+from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 from spine_engine import SpineEngineState
 from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
-from spine_engine.utils.serialization import deserialize_path
-from spine_engine.utils.helpers import get_file_size, ExecutionDirection
 from spine_engine.server.util.zip_handler import ZipHandler
-from .server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
-from .project_item.logging_connection import HeadlessConnection
+from spine_engine.utils.helpers import ExecutionDirection, get_file_size
+from spine_engine.utils.serialization import deserialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_ZIP_FILENAME
 from .helpers import (
-    make_settings_dict_for_engine,
-    plugins_dirs,
+    HTMLTagFilter,
+    load_local_project_data,
     load_plugin_dict,
     load_plugin_specifications,
     load_project_dict,
-    load_local_project_data,
-    merge_dicts,
-    HTMLTagFilter,
     load_specification_local_data,
+    make_settings_dict_for_engine,
+    merge_dicts,
+    plugins_dirs,
 )
+from .project_item.logging_connection import HeadlessConnection
+from .server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .spine_engine_manager import make_engine_manager
 
 

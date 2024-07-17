@@ -12,13 +12,13 @@
 
 """Classes for custom QGraphicsViews for the Design and Graph views."""
 import math
-from PySide6.QtWidgets import QGraphicsView, QGraphicsItem, QGraphicsRectItem
+from PySide6.QtCore import QRectF, Qt, QTimeLine, QTimer, Slot
 from PySide6.QtGui import QContextMenuEvent, QCursor, QMouseEvent
-from PySide6.QtCore import QTimer, Slot, Qt, QTimeLine, QRectF
-from ..project_item_icon import ProjectItemIcon
-from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
-from ..link import Link, JumpLink
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem, QGraphicsView
 from ..helpers import LinkType
+from ..link import JumpLink, Link
+from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
+from ..project_item_icon import ProjectItemIcon
 from .custom_qgraphicsscene import DesignGraphicsScene
 
 

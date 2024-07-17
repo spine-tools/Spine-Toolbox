@@ -12,41 +12,38 @@
 
 """Widget for controlling user settings."""
 import os
-from PySide6.QtWidgets import QWidget, QFileDialog, QColorDialog, QMenu, QMessageBox
-from PySide6.QtCore import Slot, Qt, QSize, QSettings, QPoint, QEvent
-from PySide6.QtGui import QPixmap, QIcon, QStandardItemModel, QStandardItem
+from PySide6.QtCore import QEvent, QPoint, QSettings, QSize, Qt, Slot
+from PySide6.QtGui import QIcon, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import QColorDialog, QFileDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
+    get_julia_env,
+    resolve_conda_executable,
     resolve_current_python_interpreter,
     resolve_default_julia_executable,
     resolve_gams_executable,
-    resolve_conda_executable,
-    get_julia_env,
 )
-from .notification import Notification
-from .install_julia_wizard import InstallJuliaWizard
-from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
-from ..link import Link, JumpLink
-from ..project_item_icon import ProjectItemIcon
-from ..kernel_fetcher import KernelFetcher
-from ..widgets.kernel_editor import (
-    MiniPythonKernelEditor,
-    MiniJuliaKernelEditor,
-)
 from ..helpers import (
-    select_work_directory,
+    dir_is_valid,
+    file_is_valid,
+    home_dir,
+    is_valid_conda_executable,
+    open_url,
+    select_certificate_directory,
+    select_conda_executable,
     select_gams_executable,
-    select_python_interpreter,
     select_julia_executable,
     select_julia_project,
-    select_conda_executable,
-    select_certificate_directory,
-    file_is_valid,
-    dir_is_valid,
-    home_dir,
-    open_url,
-    is_valid_conda_executable,
+    select_python_interpreter,
+    select_work_directory,
 )
+from ..kernel_fetcher import KernelFetcher
+from ..link import JumpLink, Link
+from ..project_item_icon import ProjectItemIcon
+from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEditor
+from .add_up_spine_opt_wizard import AddUpSpineOptWizard
+from .install_julia_wizard import InstallJuliaWizard
+from .notification import Notification
 
 
 class SettingsWidgetBase(QWidget):

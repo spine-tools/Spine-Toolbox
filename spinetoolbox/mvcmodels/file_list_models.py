@@ -15,10 +15,10 @@ from collections import namedtuple
 from itertools import combinations, takewhile
 import json
 from pathlib import Path
-from PySide6.QtCore import QAbstractItemModel, QFileInfo, QModelIndex, Qt, Signal, QMimeData
+from PySide6.QtCore import QAbstractItemModel, QFileInfo, QMimeData, QModelIndex, Qt, Signal
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QFileIconProvider
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QPixmap, QPainter, QIcon, QColor
-from spine_engine.project_item.project_item_resource import extract_packs, CmdLineArg, LabelArg
+from spine_engine.project_item.project_item_resource import CmdLineArg, LabelArg, extract_packs
 from spinetoolbox.helpers import plain_to_rich
 
 

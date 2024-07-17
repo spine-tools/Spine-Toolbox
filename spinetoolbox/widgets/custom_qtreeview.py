@@ -12,8 +12,8 @@
 
 """Classes for custom QTreeView."""
 import os
-from PySide6.QtWidgets import QTreeView, QApplication
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QApplication, QTreeView
 
 
 class CopyPasteTreeView(QTreeView):

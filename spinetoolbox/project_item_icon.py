@@ -12,32 +12,23 @@
 
 """Classes for drawing graphics items on QGraphicsScene."""
 import math
-from PySide6.QtCore import Qt, QPointF, QRectF, QLineF
-from PySide6.QtWidgets import (
-    QGraphicsItem,
-    QGraphicsTextItem,
-    QGraphicsPathItem,
-    QGraphicsEllipseItem,
-    QGraphicsColorizeEffect,
-    QGraphicsDropShadowEffect,
-    QToolTip,
-    QStyle,
-)
-from PySide6.QtGui import (
-    QColor,
-    QPen,
-    QBrush,
-    QTextCursor,
-    QTextBlockFormat,
-    QFont,
-    QPainterPath,
-    QRadialGradient,
-)
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
+from PySide6.QtGui import QBrush, QColor, QFont, QPainterPath, QPen, QRadialGradient, QTextBlockFormat, QTextCursor
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
+from PySide6.QtWidgets import (
+    QGraphicsColorizeEffect,
+    QGraphicsDropShadowEffect,
+    QGraphicsEllipseItem,
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsTextItem,
+    QStyle,
+    QToolTip,
+)
 from spine_engine.spine_engine import ItemExecutionFinishState
-from .project_commands import MoveIconCommand
 from .helpers import LinkType, fix_lightness_color
+from .project_commands import MoveIconCommand
 
 
 class ProjectItemIcon(QGraphicsPathItem):

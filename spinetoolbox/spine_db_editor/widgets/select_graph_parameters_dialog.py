@@ -15,10 +15,10 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QVBoxLayout,
+    QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
-    QStyledItemDelegate,
+    QVBoxLayout,
 )
 from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 

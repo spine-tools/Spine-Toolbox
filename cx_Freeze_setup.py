@@ -24,13 +24,13 @@ On Windows:
 import argparse
 from pathlib import Path
 import sys
-from cx_Freeze import setup, Executable
+from cx_Freeze import Executable, setup
 from cx_Freeze.cli import prepare_parser
 import ijson
-import spinedb_api
 import spine_engine
 from spine_engine.config import BUNDLE_DIR
 import spine_items
+import spinedb_api
 
 
 def main():

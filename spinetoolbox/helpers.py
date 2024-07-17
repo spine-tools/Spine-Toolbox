@@ -11,61 +11,61 @@
 ######################################################################################################################
 
 """General helper functions and classes."""
-import functools
-import sys
-import time
-from enum import Enum, unique
-import itertools
-import os
-import glob
-from html.parser import HTMLParser
-import json
-import logging
-import datetime
-import shutil
-import re
-import pathlib
 import bisect
 from contextlib import contextmanager
+import datetime
+from enum import Enum, unique
+import functools
+import glob
+from html.parser import HTMLParser
+import itertools
+import json
+import logging
+import os
+import pathlib
+import re
+import shutil
+import sys
 import tempfile
+import time
 from typing import Sequence
 import matplotlib
-from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
-from PySide6.QtWidgets import (
-    QApplication,
-    QMessageBox,
-    QFileIconProvider,
-    QStyle,
-    QFileDialog,
-    QInputDialog,
-    QSplitter,
-    QMenu,
-)
 from PySide6.QtGui import (
-    QGuiApplication,
-    QCursor,
-    QImageReader,
-    QPixmap,
-    QIcon,
-    QIconEngine,
-    QStandardItemModel,
-    QStandardItem,
-    QDesktopServices,
-    QKeySequence,
-    QPalette,
-    QSyntaxHighlighter,
-    QTextCharFormat,
     QBrush,
     QColor,
+    QCursor,
+    QDesktopServices,
     QFont,
+    QGuiApplication,
+    QIcon,
+    QIconEngine,
+    QImageReader,
+    QKeySequence,
     QPainter,
+    QPalette,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+    QSyntaxHighlighter,
+    QTextCharFormat,
     QUndoCommand,
 )
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QFileIconProvider,
+    QInputDialog,
+    QMenu,
+    QMessageBox,
+    QSplitter,
+    QStyle,
+)
 from spine_engine.utils.serialization import deserialize_path
-from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from spinedb_api.helpers import group_consecutive
+from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
     PLUGINS_PATH,
@@ -77,9 +77,9 @@ from .config import (
 
 if sys.platform == "win32":
     import ctypes
-    import win32gui
-    import win32con
     import pywintypes
+    import win32con
+    import win32gui
 
 matplotlib.use("Qt5Agg")
 matplotlib.rcParams.update({"font.size": 8})

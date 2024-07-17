@@ -15,9 +15,9 @@ import locale
 from numbers import Number
 import numpy
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from spinedb_api import Array, from_database, ParameterValueFormatError, SpineDBAPIError
-from .indexed_value_table_model import EXPANSE_COLOR
+from spinedb_api import Array, ParameterValueFormatError, SpineDBAPIError, from_database
 from ..helpers import plain_to_tool_tip
+from .indexed_value_table_model import EXPANSE_COLOR
 
 
 class ArrayModel(QAbstractTableModel):

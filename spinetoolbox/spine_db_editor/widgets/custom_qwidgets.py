@@ -12,40 +12,40 @@
 
 """Custom QWidgets."""
 import os
-from PySide6.QtWidgets import (
-    QWidget,
-    QMenu,
-    QToolButton,
-    QLabel,
-    QGraphicsOpacityEffect,
-    QProgressBar,
-    QDialogButtonBox,
-    QSlider,
-    QVBoxLayout,
-    QHBoxLayout,
-    QFormLayout,
-    QSizePolicy,
-    QDialog,
-    QDateTimeEdit,
-    QSpinBox,
-    QTextEdit,
-)
-from PySide6.QtGui import QPainter, QColor, QIcon, QBrush, QPainterPath, QPalette
+import numpy as np
 from PySide6.QtCore import (
-    Signal,
-    Slot,
-    QVariantAnimation,
+    QDateTime,
+    QEasingCurve,
     QPointF,
+    QRectF,
     Qt,
     QTimeLine,
-    QRectF,
     QTimer,
-    QEasingCurve,
-    QDateTime,
+    QVariantAnimation,
+    Signal,
+    Slot,
+)
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPalette
+from PySide6.QtWidgets import (
+    QDateTimeEdit,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QGraphicsOpacityEffect,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QProgressBar,
+    QSizePolicy,
+    QSlider,
+    QSpinBox,
+    QTextEdit,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
 from sqlalchemy.engine.url import URL
-import numpy as np
-from ...helpers import open_url, CharIconEngine, color_from_index
+from ...helpers import CharIconEngine, color_from_index, open_url
 
 
 class OpenFileButton(QWidget):

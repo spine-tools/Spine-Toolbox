@@ -13,17 +13,17 @@
 """Unit tests for :class:`SpecificationEditorWindowBase` and its supports."""
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import call, MagicMock, patch, PropertyMock
-from PySide6.QtGui import QColor, QUndoStack, QIcon
+from unittest.mock import MagicMock, PropertyMock, call, patch
+from PySide6.QtGui import QColor, QIcon, QUndoStack
 from PySide6.QtWidgets import QApplication
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
-from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.project_item.specification_editor_window import (
     ChangeSpecPropertyCommand,
     SpecificationEditorWindowBase,
 )
+from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.widgets.toolbars import ToolBar
 from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 

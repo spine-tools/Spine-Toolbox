@@ -10,8 +10,8 @@
 ######################################################################################################################
 
 """Unit tests for ``select_database_items`` module."""
-import unittest
 from contextlib import contextmanager
+import unittest
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.select_database_items import SelectDatabaseItems
 

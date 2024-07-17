@@ -16,13 +16,13 @@ import pickle
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QMimeData, Qt, QByteArray
+from PySide6.QtCore import QByteArray, QMimeData, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
+from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import model_data_to_dict, TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, model_data_to_dict
 
 
 class _TestBase(unittest.TestCase):

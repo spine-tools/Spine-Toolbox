@@ -12,9 +12,9 @@
 
 """Contains FrozenTableModel class."""
 from itertools import product
-from PySide6.QtCore import Qt, QModelIndex, QAbstractTableModel, Signal
-from .colors import SELECTED_COLOR
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from ...helpers import plain_to_tool_tip, rows_to_row_count_tuples
+from .colors import SELECTED_COLOR
 
 
 class FrozenTableModel(QAbstractTableModel):

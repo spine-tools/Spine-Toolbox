@@ -16,7 +16,7 @@ from unittest import mock
 from PySide6.QtWidgets import QApplication, QWizard
 from spinetoolbox.widgets.install_julia_wizard import InstallJuliaWizard
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import create_toolboxui, clean_up_toolbox, MockInstantQProcess
+from tests.mock_helpers import MockInstantQProcess, clean_up_toolbox, create_toolboxui
 
 
 class TestInstallJuliaWizard(unittest.TestCase):

@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Contains the ElementNameListEditor class."""
-from PySide6.QtCore import QModelIndex, Qt, Slot, Signal, QEvent, QCoreApplication
+from PySide6.QtCore import QCoreApplication, QEvent, QModelIndex, Qt, Signal, Slot
+from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QItemDelegate
-from PySide6.QtGui import QStandardItemModel, QStandardItem
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
-from .manage_items_dialogs import ManageItemsDialog
 from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
+from .manage_items_dialogs import ManageItemsDialog
 
 
 class SearchBarDelegate(QItemDelegate):
