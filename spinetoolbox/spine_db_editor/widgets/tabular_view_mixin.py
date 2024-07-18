@@ -11,24 +11,24 @@
 ######################################################################################################################
 
 """Contains TabularViewMixin class."""
+from collections import namedtuple
 from contextlib import contextmanager
 from itertools import chain
-from collections import namedtuple
-from PySide6.QtCore import QModelIndex, Qt, Slot, QTimer
-from PySide6.QtGui import QAction, QIcon, QActionGroup
+from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QWidget
 from spinedb_api.helpers import fix_name_ambiguity
-from .custom_menus import TabularViewCodenameFilterMenu, TabularViewDBItemFilterMenu
-from .tabular_view_header_widget import TabularViewHeaderWidget
-from ...helpers import busy_effect, CharIconEngine, preferred_row_height, disconnect
+from ...helpers import busy_effect, disconnect, preferred_row_height
+from ..mvcmodels.frozen_table_model import FrozenTableModel
 from ..mvcmodels.pivot_table_models import (
-    PivotTableSortFilterProxy,
-    ParameterValuePivotTableModel,
     ElementPivotTableModel,
     IndexExpansionPivotTableModel,
+    ParameterValuePivotTableModel,
+    PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
-from ..mvcmodels.frozen_table_model import FrozenTableModel
+from .custom_menus import TabularViewCodenameFilterMenu, TabularViewDBItemFilterMenu
+from .tabular_view_header_widget import TabularViewHeaderWidget
 
 
 class TabularViewMixin:

@@ -11,15 +11,14 @@
 ######################################################################################################################
 
 """Contains base classes for project items and item factories."""
-import os
 import logging
+import os
 from PySide6.QtCore import Slot
 from spine_engine.utils.helpers import shorten
-from ..helpers import create_dir, open_url
+from ..helpers import create_dir, open_url, rename_dir
+from ..log_mixin import LogMixin
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
-from ..helpers import rename_dir
-from ..log_mixin import LogMixin
 
 
 class ProjectItem(LogMixin, MetaObject):

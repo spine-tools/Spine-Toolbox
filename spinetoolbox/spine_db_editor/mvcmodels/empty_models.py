@@ -12,11 +12,11 @@
 
 """Empty models for dialogs as well as parameter definitions and values."""
 from PySide6.QtCore import Qt
+from ...helpers import DB_ITEM_SEPARATOR, rows_to_row_count_tuples
 from ...mvcmodels.empty_row_model import EmptyRowModel
-from .single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
-from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
-from ...helpers import rows_to_row_count_tuples, DB_ITEM_SEPARATOR
+from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
 from ..widgets.custom_qwidgets import AddedEntitiesPopup
+from .single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin
 
 
 class EmptyModelBase(EmptyRowModel):

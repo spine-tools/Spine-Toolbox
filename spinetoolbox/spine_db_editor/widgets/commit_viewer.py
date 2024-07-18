@@ -11,19 +11,19 @@
 ######################################################################################################################
 
 """Contains Database editor's Commit viewer."""
+from PySide6.QtCore import QEventLoop, QObject, Qt, QThread, Signal, Slot
 from PySide6.QtWidgets import (
+    QGridLayout,
+    QLabel,
     QMainWindow,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
-    QWidget,
-    QGridLayout,
     QTreeWidgetItem,
-    QSplitter,
-    QLabel,
+    QWidget,
 )
-from PySide6.QtCore import QEventLoop, QObject, Qt, QThread, Signal, Slot
-from spinetoolbox.helpers import restore_ui, save_ui, DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, restore_ui, save_ui
 
 
 class _DBCommitViewer(QWidget):
@@ -36,7 +36,7 @@ class _DBCommitViewer(QWidget):
             db_map (DatabaseMapping): database mapping
             parent (QWidget, optional): parent widget
         """
-        from ..ui.db_commit_viewer import Ui_DBCommitViewer
+        from ..ui.db_commit_viewer import Ui_DBCommitViewer  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=parent)
         self._ui = Ui_DBCommitViewer()
@@ -213,7 +213,7 @@ class _AffectedItemsWidget(QWidget):
     """A composite widget that contains a table and a label."""
 
     def __init__(self):
-        from ..ui.commit_viewer_affected_item_info import Ui_Form
+        from ..ui.commit_viewer_affected_item_info import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__()
         self._ui = Ui_Form()

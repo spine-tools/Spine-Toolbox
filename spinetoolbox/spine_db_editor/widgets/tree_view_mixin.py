@@ -11,26 +11,26 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
-from PySide6.QtCore import Slot, Qt, QEvent
+from PySide6.QtCore import QEvent, Qt, Slot
 from PySide6.QtGui import QMouseEvent
+from ...spine_db_parcel import SpineDBParcel
+from ..mvcmodels.alternative_model import AlternativeModel
+from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
+from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
+from ..mvcmodels.scenario_model import ScenarioModel
 from .add_items_dialogs import (
-    AddEntityClassesDialog,
     AddEntitiesDialog,
+    AddEntityClassesDialog,
     AddEntityGroupDialog,
     ManageElementsDialog,
     ManageMembersDialog,
 )
 from .edit_or_remove_items_dialogs import (
-    EditEntityClassesDialog,
     EditEntitiesDialog,
+    EditEntityClassesDialog,
     RemoveEntitiesDialog,
     SelectSuperclassDialog,
 )
-from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..mvcmodels.alternative_model import AlternativeModel
-from ..mvcmodels.scenario_model import ScenarioModel
-from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
-from ...spine_db_parcel import SpineDBParcel
 
 
 class TreeViewMixin:

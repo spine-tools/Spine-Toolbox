@@ -22,13 +22,13 @@ from spinedb_api import (
     import_relationship_parameters,
     import_relationships,
 )
-from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyParameterValueModel, EmptyParameterDefinitionModel
-from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
-    CompoundParameterValueModel,
-    CompoundParameterDefinitionModel,
-)
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinedb_api.parameter_value import join_value_and_type
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
+    CompoundParameterDefinitionModel,
+    CompoundParameterValueModel,
+)
+from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyParameterDefinitionModel, EmptyParameterValueModel
 from tests.mock_helpers import TestSpineDBManager, fetch_model
 
 

@@ -12,12 +12,12 @@
 
 """Contains SpineEngineWorker."""
 import copy
-from PySide6.QtCore import Signal, Slot, QObject, QThread
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from spine_engine.utils.helpers import ExecutionDirection
+from .spine_engine_manager import LocalSpineEngineManager, make_engine_manager
 from .widgets.options_dialog import OptionsDialog
-from .spine_engine_manager import make_engine_manager, LocalSpineEngineManager
 
 
 @Slot(list)

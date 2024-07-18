@@ -11,15 +11,15 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
+from PySide6.QtCore import QEvent, QPoint, Qt, Signal, Slot
+from PySide6.QtGui import QAction, QIcon, QKeyEvent, QKeySequence
 from PySide6.QtWidgets import QMenu, QWidget
-from PySide6.QtCore import Qt, QEvent, QPoint, Signal, Slot
-from PySide6.QtGui import QKeyEvent, QKeySequence, QIcon, QAction
 from spinedb_api import IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
-from ...widgets.custom_menus import FilterMenuBase
-from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu
+from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
+from ...widgets.custom_menus import FilterMenuBase
 
 
 class MainMenu(QMenu):

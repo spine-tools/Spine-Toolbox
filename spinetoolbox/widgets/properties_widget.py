@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Contains PropertiesWidgetBase."""
-from PySide6.QtWidgets import QWidget, QAbstractItemView, QLineEdit, QHeaderView
-from PySide6.QtCore import Qt, QRect, QPoint, QEvent
-from PySide6.QtGui import QPainter, QPixmap, QColor
+from PySide6.QtCore import QEvent, QPoint, QRect, Qt
+from PySide6.QtGui import QColor, QPainter, QPixmap
+from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QLineEdit, QWidget
 from ..helpers import fix_lightness_color
 
 

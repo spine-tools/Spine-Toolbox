@@ -11,11 +11,11 @@
 ######################################################################################################################
 
 """Unit tests for the ``open_project_dialog`` module."""
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from tempfile import TemporaryDirectory
-from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtCore import QPoint
+from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.open_project_dialog import OpenProjectDialog
 
 

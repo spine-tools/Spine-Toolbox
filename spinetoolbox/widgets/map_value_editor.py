@@ -13,8 +13,8 @@
 """An editor dialog for map indexes and values."""
 from PySide6.QtCore import Qt
 from .array_editor import ArrayEditor
-from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor
+from .duration_editor import DurationEditor
 from .parameter_value_editor_base import ParameterValueEditorBase, ValueType
 from .plain_parameter_value_editor import PlainParameterValueEditor
 from .time_pattern_editor import TimePatternEditor

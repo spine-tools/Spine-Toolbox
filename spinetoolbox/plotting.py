@@ -11,24 +11,23 @@
 ######################################################################################################################
 
 """Functions for plotting on PlotWidget."""
-import datetime
-from enum import auto, Enum, unique
-import math
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
+import datetime
+from enum import Enum, auto, unique
 import functools
-from operator import methodcaller, itemgetter
+import math
+from operator import itemgetter, methodcaller
 from typing import Dict, List, Optional, Union
 from matplotlib.patches import Patch
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide6.QtCore import Qt
+from spinedb_api import DateTime, IndexedValue
 from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
-from spinedb_api import IndexedValue, DateTime
 from .mvcmodels.shared import PARSED_ROLE
 from .widgets.plot_canvas import LegendPosition
 from .widgets.plot_widget import PlotWidget
-
 
 LEGEND_PLACEMENT_THRESHOLD = 8
 

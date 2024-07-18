@@ -12,25 +12,25 @@
 
 """Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
     QWidget,
     QWizard,
     QWizardPage,
-    QLabel,
-    QPushButton,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLineEdit,
-    QFileDialog,
-    QCheckBox,
-    QRadioButton,
 )
-from PySide6.QtCore import Slot, Qt
-from PySide6.QtGui import QCursor
-from ..execution_managers import QProcessExecutionManager
 from ..config import REQUIRED_SPINE_OPT_VERSION
+from ..execution_managers import QProcessExecutionManager
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
-from .custom_qwidgets import WrapLabel, HyperTextLabel, QWizardProcessPage
+from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, WrapLabel
 
 
 class _PageId(IntEnum):

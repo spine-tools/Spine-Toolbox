@@ -12,20 +12,20 @@
 
 """Classes for drawing graphics items on QGraphicsScene."""
 import functools
-from math import sin, cos, pi, radians
-from PySide6.QtCore import Qt, Slot, QPointF, QLineF, QRectF, QVariantAnimation
+from math import cos, pi, radians, sin
+from PySide6.QtCore import QLineF, QPointF, QRectF, Qt, QVariantAnimation, Slot
+from PySide6.QtGui import QBrush, QColor, QCursor, QFont, QLinearGradient, QPainterPath, QPainterPathStroker, QPen
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
+    QGraphicsColorizeEffect,
+    QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsPathItem,
     QGraphicsTextItem,
-    QGraphicsEllipseItem,
     QStyle,
     QToolTip,
-    QGraphicsColorizeEffect,
 )
-from PySide6.QtGui import QColor, QPen, QBrush, QPainterPath, QLinearGradient, QFont, QCursor, QPainterPathStroker
-from PySide6.QtSvgWidgets import QGraphicsSvgItem
-from PySide6.QtSvg import QSvgRenderer
 from spinetoolbox.helpers import color_from_index
 from .project_item_icon import ConnectorButton
 

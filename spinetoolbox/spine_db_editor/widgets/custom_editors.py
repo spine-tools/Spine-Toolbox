@@ -12,34 +12,34 @@
 
 """Custom editors for model/view programming."""
 from PySide6.QtCore import (
-    Qt,
-    Slot,
-    Signal,
-    QSortFilterProxyModel,
-    QEvent,
     QCoreApplication,
+    QEvent,
     QModelIndex,
+    QObject,
     QPoint,
     QSize,
-    QObject,
+    QSortFilterProxyModel,
+    Qt,
+    Signal,
+    Slot,
 )
+from PySide6.QtGui import QColor, QPalette, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
-    QLineEdit,
-    QTableView,
-    QStyledItemDelegate,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
     QColorDialog,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
     QListView,
     QStyle,
-    QLabel,
-    QComboBox,
+    QStyledItemDelegate,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtGui import QPalette, QStandardItemModel, QStandardItem, QColor
-from spinetoolbox.helpers import IconListManager, interpret_icon_id, make_icon_id, try_number_from_string, order_key
+from spinetoolbox.helpers import IconListManager, interpret_icon_id, make_icon_id, order_key, try_number_from_string
 from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 

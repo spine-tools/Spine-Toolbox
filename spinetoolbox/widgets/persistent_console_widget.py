@@ -13,26 +13,26 @@
 """Contains a widget acting as a console for Julia & Python REPL's."""
 import os
 import uuid
-from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
-from pygments.util import ClassNotFound
+from pygments.styles import get_style_by_name
 from pygments.token import Token
-from PySide6.QtCore import Qt, Slot, QTimer, Signal, QRect
-from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
+from pygments.util import ClassNotFound
+from PySide6.QtCore import QRect, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
-    QFontDatabase,
-    QTextCharFormat,
-    QFont,
-    QTextCursor,
     QColor,
-    QTextBlockFormat,
-    QTextOption,
+    QFont,
+    QFontDatabase,
     QKeySequence,
+    QTextBlockFormat,
+    QTextCharFormat,
+    QTextCursor,
+    QTextOption,
 )
-from spinetoolbox.helpers import CustomSyntaxHighlighter
-from spinetoolbox.spine_engine_manager import make_engine_manager
-from spinetoolbox.qthread_pool_executor import QtBasedThreadPoolExecutor
+from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
 from spine_engine.exception import RemoteEngineInitFailed
+from spinetoolbox.helpers import CustomSyntaxHighlighter
+from spinetoolbox.qthread_pool_executor import QtBasedThreadPoolExecutor
+from spinetoolbox.spine_engine_manager import make_engine_manager
 
 
 class _CustomLineEdit(QPlainTextEdit):

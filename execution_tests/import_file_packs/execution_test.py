@@ -1,9 +1,9 @@
-import sys
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import unittest
-from spinedb_api import create_new_spine_database, DatabaseMapping, from_database
+from spinedb_api import DatabaseMapping, create_new_spine_database, from_database
 
 
 class ModifyConnectionFilterByScript(unittest.TestCase):

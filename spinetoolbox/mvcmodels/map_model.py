@@ -12,25 +12,24 @@
 
 """A model for maps, used by the parameter_value editors."""
 from copy import deepcopy
-from numbers import Number
 from itertools import takewhile
+from numbers import Number
 import numpy
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor, QFont
 from spinedb_api import (
     Array,
-    convert_leaf_maps_to_specialized_containers,
-    convert_map_to_table,
     DateTime,
     Duration,
     Map,
     ParameterValueFormatError,
     TimePattern,
     TimeSeries,
+    convert_leaf_maps_to_specialized_containers,
+    convert_map_to_table,
 )
 from .indexed_value_table_model import EXPANSE_COLOR
 from .shared import PARSED_ROLE
-
 
 empty = object()
 """Sentinel for empty cells."""

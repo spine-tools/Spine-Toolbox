@@ -1,7 +1,7 @@
-import sys
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import unittest
 from spinedb_api import DatabaseMapping, import_alternatives, import_scenario_alternatives, import_scenarios
 

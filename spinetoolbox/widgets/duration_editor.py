@@ -13,7 +13,7 @@
 """An editor widget for editing duration database (relationship) parameter values."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
-from spinedb_api import Duration, duration_to_relativedelta, ParameterValueFormatError
+from spinedb_api import Duration, ParameterValueFormatError, duration_to_relativedelta
 
 
 class DurationEditor(QWidget):

@@ -14,17 +14,17 @@
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QEvent, QPoint, Qt
-from PySide6.QtGui import QColor, QContextMenuEvent
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
-from spinedb_api import DatabaseMapping, import_scenarios
 from spine_engine.project_item.project_item_resource import database_resource
-from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
-from spinetoolbox.project_item.logging_connection import LoggingConnection
+from spinedb_api import DatabaseMapping, import_scenarios
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
-from tests.mock_helpers import add_view, clean_up_toolbox, create_toolboxui_with_project, TestSpineDBManager
+from spinetoolbox.project_item.logging_connection import LoggingConnection
+from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
+from tests.mock_helpers import TestSpineDBManager, add_view, clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestProjectItemIcon(unittest.TestCase):

@@ -14,16 +14,16 @@
 import itertools
 import json
 from time import monotonic
+from PySide6.QtCore import Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QPen
-from PySide6.QtCore import Slot, QTimer, QThreadPool, Qt
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
-from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ...helpers import get_save_file_name_in_last_dir, get_open_file_name_in_last_dir, busy_effect, remove_first
 from ...fetch_parent import FlexibleFetchParent
-from ..graphics_items import EntityItem, ArcItem, CrossHairsItem, CrossHairsEntityItem, CrossHairsArcItem
-from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
+from ...helpers import busy_effect, get_open_file_name_in_last_dir, get_save_file_name_in_last_dir, remove_first
+from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
+from ..graphics_items import ArcItem, CrossHairsArcItem, CrossHairsEntityItem, CrossHairsItem, EntityItem
 from .add_items_dialogs import AddEntitiesDialog, AddReadyEntitiesDialog
+from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
 
 
 def _min_value(pv):

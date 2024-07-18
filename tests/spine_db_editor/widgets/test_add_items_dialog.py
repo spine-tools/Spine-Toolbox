@@ -11,18 +11,18 @@
 ######################################################################################################################
 
 """Unit tests for ``add_items_dialog`` module."""
+from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from tempfile import TemporaryDirectory
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_manager import SpineDBManager
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
+    AddEntitiesDialog,
     AddEntityClassesDialog,
     ManageElementsDialog,
-    AddEntitiesDialog,
 )
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from spinetoolbox.spine_db_manager import SpineDBManager
 from tests.spine_db_editor.helpers import TestBase
 
 

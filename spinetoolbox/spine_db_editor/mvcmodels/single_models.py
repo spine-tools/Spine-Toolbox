@@ -12,10 +12,10 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from PySide6.QtCore import Qt
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_rich, order_key
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin, MakeEntityOnTheFlyMixin
-from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
+from ..mvcmodels.single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
 
 

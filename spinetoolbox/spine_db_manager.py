@@ -11,50 +11,55 @@
 ######################################################################################################################
 
 """The SpineDBManager class."""
-import os
 import json
-from PySide6.QtCore import Qt, QObject, Signal, Slot
-from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+import os
+from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtGui import QWindow
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     Array,
     Asterisk,
-    create_new_spine_database,
     DatabaseMapping,
-    export_data,
-    from_database,
-    get_data_for_import,
     IndexedValue,
-    import_data,
-    is_empty,
     Map,
     ParameterValueFormatError,
-    relativedelta_to_duration,
     SpineDBAPIError,
     TimePattern,
     TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
+    create_new_spine_database,
+    export_data,
+    from_database,
+    get_data_for_import,
+    import_data,
+    is_empty,
+    relativedelta_to_duration,
     to_database,
 )
-from spinedb_api.parameter_value import deep_copy_value, load_db_value, dump_db_value
-from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from spinedb_api.helpers import remove_credentials_from_url
+from spinedb_api.parameter_value import (
+    deep_copy_value,
+    dump_db_value,
+    join_value_and_type,
+    load_db_value,
+    split_value_and_type,
+)
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from .helpers import busy_effect, plain_to_tool_tip
+from .mvcmodels.shared import PARSED_ROLE
+from .spine_db_commands import (
+    AddItemsCommand,
+    AddUpdateItemsCommand,
+    AgedUndoStack,
+    RemoveItemsCommand,
+    UpdateItemsCommand,
+)
+from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
-from .spine_db_commands import (
-    AgedUndoStack,
-    AddItemsCommand,
-    UpdateItemsCommand,
-    AddUpdateItemsCommand,
-    RemoveItemsCommand,
-)
-from .mvcmodels.shared import PARSED_ROLE
 from .widgets.options_dialog import OptionsDialog
-from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .helpers import busy_effect, plain_to_tool_tip
 
 
 @busy_effect

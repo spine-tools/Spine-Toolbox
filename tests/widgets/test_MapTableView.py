@@ -12,8 +12,8 @@
 
 """Unit tests for MapTableView class."""
 import csv
-import locale
 from io import StringIO
+import locale
 import unittest
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication

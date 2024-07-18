@@ -12,9 +12,9 @@
 
 """Classes for custom QListView."""
 from textwrap import fill
-from PySide6.QtCore import Qt, Signal, Slot, QMimeData
-from PySide6.QtGui import QDrag, QIcon, QPainter, QBrush, QColor, QIconEngine, QCursor
-from PySide6.QtWidgets import QToolButton, QApplication, QToolTip
+from PySide6.QtCore import QMimeData, Qt, Signal, Slot
+from PySide6.QtGui import QBrush, QColor, QCursor, QDrag, QIcon, QIconEngine, QPainter
+from PySide6.QtWidgets import QApplication, QToolButton, QToolTip
 
 
 class ProjectItemDragMixin:

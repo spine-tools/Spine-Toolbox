@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for the ``toolbar`` module."""
-from unittest import mock
 from tempfile import TemporaryDirectory
+from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.toolbar import DBEditorToolBar
+from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
 
 
 class TestDBEditorToolBar(DBEditorTestBase):

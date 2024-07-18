@@ -12,7 +12,7 @@
 
 """Classes to manage tool instance execution in various forms."""
 import logging
-from PySide6.QtCore import QObject, QProcess, Slot, Signal
+from PySide6.QtCore import QObject, QProcess, Signal, Slot
 
 
 class ExecutionManager(QObject):

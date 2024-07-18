@@ -11,13 +11,13 @@
 ######################################################################################################################
 
 """Provides simple text editor for programming purposes."""
-from pygments.styles import get_style_by_name
 from pygments.lexers import get_lexer_by_name
-from pygments.util import ClassNotFound
+from pygments.styles import get_style_by_name
 from pygments.token import Token
-from PySide6.QtWidgets import QWidget, QPlainTextEdit, QPlainTextDocumentLayout
-from PySide6.QtGui import QColor, QFontMetrics, QFontDatabase, QPainter
-from PySide6.QtCore import QSize, Slot, QRect, Qt
+from pygments.util import ClassNotFound
+from PySide6.QtCore import QRect, QSize, Qt, Slot
+from PySide6.QtGui import QColor, QFontDatabase, QFontMetrics, QPainter
+from PySide6.QtWidgets import QPlainTextDocumentLayout, QPlainTextEdit, QWidget
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 
 

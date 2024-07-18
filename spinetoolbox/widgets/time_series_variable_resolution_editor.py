@@ -14,9 +14,9 @@
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import TimeSeriesVariableResolution
-from ..plotting import add_time_series_plot
-from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from ..helpers import inquire_index_name
+from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
+from ..plotting import add_time_series_plot
 from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 

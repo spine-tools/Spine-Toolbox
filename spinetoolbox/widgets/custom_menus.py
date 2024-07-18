@@ -12,9 +12,9 @@
 
 """Classes for custom context menus and pop-up menus."""
 import os
+from PySide6.QtCore import QPersistentModelIndex, Slot
+from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QWidgetAction
-from PySide6.QtGui import QIcon, QAction
-from PySide6.QtCore import Slot, QPersistentModelIndex
 from spinetoolbox.helpers import CustomPopupMenu
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 

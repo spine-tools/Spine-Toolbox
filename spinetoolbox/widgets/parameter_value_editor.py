@@ -14,16 +14,16 @@
 from PySide6.QtWidgets import QMessageBox
 from spinedb_api import ParameterValueFormatError, to_database
 from spinedb_api.parameter_value import deep_copy_value
+from ..mvcmodels.shared import PARSED_ROLE
 from .array_editor import ArrayEditor
-from .duration_editor import DurationEditor
 from .datetime_editor import DatetimeEditor
+from .duration_editor import DurationEditor
 from .map_editor import MapEditor
 from .parameter_value_editor_base import ParameterValueEditorBase, ValueType
 from .plain_parameter_value_editor import PlainParameterValueEditor
 from .time_pattern_editor import TimePatternEditor
 from .time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from .time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
-from ..mvcmodels.shared import PARSED_ROLE
 
 
 class ParameterValueEditor(ParameterValueEditorBase):

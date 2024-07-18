@@ -11,21 +11,21 @@
 ######################################################################################################################
 
 """Unit tests for the JupyterConsoleWidget."""
+import queue
+from threading import Event
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
-from threading import Event
-import queue
-from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtCore import QObject
-from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
-from spine_engine.execution_managers.kernel_execution_manager import _kernel_manager_factory
 from jupyter_client.kernelspec import NATIVE_KERNEL_NAME
 from jupyter_client.threaded import ThreadedKernelClient
-from qtconsole.kernel_mixins import QtKernelClientMixin
+from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QApplication, QMessageBox
 from qtconsole.client import QtHBChannel, QtZMQSocketChannel
+from qtconsole.kernel_mixins import QtKernelClientMixin
 from traitlets import Type
-from tests.mock_helpers import create_toolboxui, clean_up_toolbox
+from spine_engine.execution_managers.kernel_execution_manager import _kernel_manager_factory
+from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
+from tests.mock_helpers import clean_up_toolbox, create_toolboxui
 
 
 class CustomQtZMQSocketChannel(QtZMQSocketChannel):

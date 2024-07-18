@@ -12,40 +12,40 @@
 
 """ Classes for custom QDialogs to add items to databases. """
 from itertools import product
+from PySide6.QtCore import QModelIndex, QSize, Qt, Slot
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QVBoxLayout,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QGridLayout,
-    QWidget,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QDialog,
-    QComboBox,
     QSpinBox,
-    QToolButton,
+    QSplitter,
     QTableWidget,
     QTableWidgetItem,
-    QAbstractItemView,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
-    QSplitter,
-    QDialogButtonBox,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Slot, Qt, QSize, QModelIndex
-from PySide6.QtGui import QIcon
-from spinedb_api.helpers import name_from_elements, name_from_dimensions
-from ..helpers import string_to_bool, string_to_display_icon
-from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
+from spinedb_api.helpers import name_from_dimensions, name_from_elements
+from ...helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...helpers import DB_ITEM_SEPARATOR
-from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate
+from ..helpers import string_to_bool, string_to_display_icon
+from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
+from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate
 from .manage_items_dialogs import (
-    ShowIconColorEditorMixin,
-    GetEntityClassesMixin,
-    GetEntitiesMixin,
-    ManageItemsDialog,
     DialogWithTableAndButtons,
+    GetEntitiesMixin,
+    GetEntityClassesMixin,
+    ManageItemsDialog,
+    ShowIconColorEditorMixin,
 )
 
 

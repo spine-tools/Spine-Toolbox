@@ -11,13 +11,13 @@
 ######################################################################################################################
 
 """Contains alternative tree model."""
-import pickle
 from collections import defaultdict
-from PySide6.QtCore import QMimeData, QByteArray
-from .tree_model_base import TreeModelBase
-from .alternative_item import DBItem
-from .utils import two_column_as_csv
+import pickle
+from PySide6.QtCore import QByteArray, QMimeData
 from . import mime_types
+from .alternative_item import DBItem
+from .tree_model_base import TreeModelBase
+from .utils import two_column_as_csv
 
 
 class AlternativeModel(TreeModelBase):

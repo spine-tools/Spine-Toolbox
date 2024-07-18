@@ -11,41 +11,41 @@
 ######################################################################################################################
 
 """Custom QWidgets for Filtering and Zooming."""
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QMenu,
-    QStyle,
-    QToolBar,
-    QStyleOptionMenuItem,
-    QListView,
-    QLineEdit,
-    QDialogButtonBox,
-    QWidgetAction,
-    QLabel,
-    QFrame,
-    QWizardPage,
-    QToolButton,
-    QPushButton,
-    QSpinBox,
-    QDialog,
-)
-from PySide6.QtCore import Qt, QTimer, Signal, Slot, QSize, QEvent, QRect
+from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
-    QPainter,
-    QFontMetrics,
-    QKeyEvent,
-    QFontDatabase,
-    QFont,
-    QIntValidator,
-    QKeySequence,
     QAction,
+    QFont,
+    QFontDatabase,
+    QFontMetrics,
+    QIntValidator,
+    QKeyEvent,
+    QKeySequence,
+    QPainter,
     QUndoStack,
 )
+from PySide6.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QMenu,
+    QPushButton,
+    QSpinBox,
+    QStyle,
+    QStyleOptionMenuItem,
+    QToolBar,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    QWidgetAction,
+    QWizardPage,
+)
+from ..helpers import format_log_message
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
-from ..helpers import format_log_message
 
 
 class ElidedTextMixin:

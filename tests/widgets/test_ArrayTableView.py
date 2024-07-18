@@ -12,8 +12,8 @@
 
 """Unit tests for ArrayTableView class."""
 import csv
-import locale
 from io import StringIO
+import locale
 import unittest
 from PySide6.QtCore import QItemSelectionModel, QObject
 from PySide6.QtWidgets import QApplication

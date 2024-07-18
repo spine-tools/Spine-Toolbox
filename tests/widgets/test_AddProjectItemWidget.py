@@ -14,12 +14,12 @@
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
-from tests.mock_helpers import create_toolboxui_with_project, clean_up_toolbox
+from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestAddProjectItemWidget(unittest.TestCase):

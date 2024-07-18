@@ -13,17 +13,16 @@
 """Contains logic for the fixed step time series editor widget."""
 from datetime import datetime
 from PySide6.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
-from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QCalendarWidget, QHeaderView, QWidget
 from spinedb_api import (
-    duration_to_relativedelta,
     ParameterValueFormatError,
-    relativedelta_to_duration,
     TimeSeriesFixedResolution,
+    duration_to_relativedelta,
+    relativedelta_to_duration,
 )
 from ..helpers import inquire_index_name
-from ..plotting import add_time_series_plot
 from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
+from ..plotting import add_time_series_plot
 from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 

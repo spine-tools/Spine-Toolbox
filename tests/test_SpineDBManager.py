@@ -11,29 +11,27 @@
 ######################################################################################################################
 
 """Unit tests for the spine_db_manager module."""
-import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import time
 import unittest
-from unittest import mock
 from unittest.mock import MagicMock
-from PySide6.QtCore import Qt, QSettings
+from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication
 from spinedb_api import (
-    to_database,
     DateTime,
     Duration,
     TimePattern,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
+    import_functions,
+    to_database,
 )
-from spinedb_api.parameter_value import join_value_and_type, from_database, Map, ParameterValueFormatError
-from spinedb_api import import_functions
+from spinedb_api.parameter_value import Map, ParameterValueFormatError, from_database, join_value_and_type
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-
-from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.spine_db_manager import SpineDBManager
 
 
 class TestParameterValueFormatting(unittest.TestCase):

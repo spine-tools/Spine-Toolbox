@@ -13,10 +13,10 @@
 """Tests for Remote Spine Engine Manager."""
 import unittest
 from unittest import mock
-from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager
 from spine_engine import ItemExecutionFinishState
 from spine_engine.server.util.event_data_converter import EventDataConverter
 from spine_engine.utils.helpers import ExecutionDirection
+from spinetoolbox.spine_engine_manager import RemoteSpineEngineManager
 
 
 class TestRemoteSpineEngineManager(unittest.TestCase):

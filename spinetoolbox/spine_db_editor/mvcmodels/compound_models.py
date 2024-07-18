@@ -11,15 +11,15 @@
 ######################################################################################################################
 
 """ Compound models. These models concatenate several 'single' models and one 'empty' model. """
-from PySide6.QtCore import Qt, Slot, QTimer, QModelIndex
+from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
-from ...helpers import parameter_identifier, rows_to_row_count_tuples
 from ...fetch_parent import FlexibleFetchParent
+from ...helpers import parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from ..widgets.custom_menus import AutoFilterMenu
-from .empty_models import EmptyParameterDefinitionModel, EmptyParameterValueModel, EmptyEntityAlternativeModel
-from .single_models import SingleParameterDefinitionModel, SingleParameterValueModel, SingleEntityAlternativeModel
+from .empty_models import EmptyEntityAlternativeModel, EmptyParameterDefinitionModel, EmptyParameterValueModel
+from .single_models import SingleEntityAlternativeModel, SingleParameterDefinitionModel, SingleParameterValueModel
 
 
 class CompoundModelBase(CompoundWithEmptyTableModel):

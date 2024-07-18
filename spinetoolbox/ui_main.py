@@ -11,110 +11,99 @@
 ######################################################################################################################
 
 """Contains a class for the main window of Spine Toolbox."""
-import os
-import sys
+import json
 import locale
 import logging
-import json
+import os
 import pathlib
+import sys
 from zipfile import ZipFile
 import numpy as np
-from PySide6.QtCore import (
-    QByteArray,
-    QMimeData,
-    QModelIndex,
-    QPoint,
-    Qt,
-    Signal,
-    Slot,
-    QSettings,
-    QUrl,
-    QEvent,
-)
+from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QCursor,
     QDesktopServices,
     QGuiApplication,
-    QKeySequence,
     QIcon,
-    QCursor,
-    QWindow,
-    QAction,
+    QKeySequence,
     QUndoStack,
-    QColor,
+    QWindow,
 )
 from PySide6.QtWidgets import (
-    QMainWindow,
     QApplication,
-    QErrorMessage,
-    QFileDialog,
-    QInputDialog,
-    QMenu,
-    QMessageBox,
     QCheckBox,
     QDockWidget,
-    QWidget,
+    QErrorMessage,
+    QFileDialog,
+    QHBoxLayout,
+    QInputDialog,
     QLabel,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
     QScrollArea,
     QToolButton,
     QVBoxLayout,
-    QHBoxLayout,
+    QWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
-from .project_item_icon import ProjectItemIcon
-from .load_project_items import load_project_items
-from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
-from .mvcmodels.filter_execution_model import FilterExecutionModel
-from .project_settings import ProjectSettings
-from .widgets.set_description_dialog import SetDescriptionDialog
-from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
-from .widgets.about_widget import AboutWidget
-from .widgets.custom_menus import RecentProjectsPopupMenu, KernelsPopupMenu
-from .widgets.settings_widget import SettingsWidget
-from .widgets.custom_qwidgets import ToolBarWidgetAction
-from .widgets.jupyter_console_widget import JupyterConsoleWidget
-from .widgets.persistent_console_widget import PersistentConsoleWidget
-from .widgets import toolbars
-from .widgets.open_project_dialog import OpenProjectDialog
-from .widgets.jump_properties_widget import JumpPropertiesWidget
-from .widgets.link_properties_widget import LinkPropertiesWidget
-from .project import SpineToolboxProject
-from .spine_db_manager import SpineDBManager
-from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
-from .spine_engine_manager import make_engine_manager
-from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
+from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
+    ChildCyclingKeyPressFilter,
+    busy_effect,
+    color_from_index,
     create_dir,
     ensure_window_is_on_screen,
-    set_taskbar_icon,
-    supported_img_formats,
-    recursive_overwrite,
-    ChildCyclingKeyPressFilter,
-    open_url,
-    busy_effect,
     format_log_message,
-    color_from_index,
     load_specification_from_file,
     load_specification_local_data,
+    open_url,
+    recursive_overwrite,
     same_path,
+    set_taskbar_icon,
     solve_connection_file,
+    supported_img_formats,
     unique_name,
 )
+from .kernel_fetcher import KernelFetcher
+from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
+from .load_project_items import load_project_items
+from .mvcmodels.filter_execution_model import FilterExecutionModel
+from .mvcmodels.project_item_specification_models import FilteredSpecificationModel, ProjectItemSpecificationModel
+from .plugin_manager import PluginManager
+from .project import SpineToolboxProject
 from .project_commands import (
-    AddSpecificationCommand,
-    ReplaceSpecificationCommand,
-    RemoveSpecificationCommand,
-    RenameProjectItemCommand,
-    SpineToolboxCommand,
-    SaveSpecificationAsCommand,
     AddProjectItemsCommand,
+    AddSpecificationCommand,
     RemoveAllProjectItemsCommand,
     RemoveProjectItemsCommand,
+    RemoveSpecificationCommand,
+    RenameProjectItemCommand,
+    ReplaceSpecificationCommand,
+    SaveSpecificationAsCommand,
+    SpineToolboxCommand,
 )
-from .plugin_manager import PluginManager
-from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
-from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
-from .kernel_fetcher import KernelFetcher
+from .project_item_icon import ProjectItemIcon
+from .project_settings import ProjectSettings
+from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+from .spine_db_manager import SpineDBManager
+from .spine_engine_manager import make_engine_manager
+from .widgets import toolbars
+from .widgets.about_widget import AboutWidget
+from .widgets.custom_menus import KernelsPopupMenu, RecentProjectsPopupMenu
+from .widgets.custom_qwidgets import ToolBarWidgetAction
+from .widgets.jump_properties_widget import JumpPropertiesWidget
+from .widgets.jupyter_console_widget import JupyterConsoleWidget
+from .widgets.link_properties_widget import LinkPropertiesWidget
+from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
+from .widgets.open_project_dialog import OpenProjectDialog
+from .widgets.persistent_console_widget import PersistentConsoleWidget
+from .widgets.set_description_dialog import SetDescriptionDialog
+from .widgets.settings_widget import SettingsWidget
 
 
 class ToolboxUI(QMainWindow):

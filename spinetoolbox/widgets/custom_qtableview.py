@@ -11,29 +11,28 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
+from contextlib import contextmanager
 import csv
 import ctypes
 import io
 import locale
-from contextlib import contextmanager
 from numbers import Number
-import re
 from operator import methodcaller
-from PySide6.QtWidgets import QTableView, QApplication
-from PySide6.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel, QPoint
-from PySide6.QtGui import QKeySequence, QIcon, QAction
+import re
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QPoint, Qt, Slot
+from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtWidgets import QApplication, QTableView
 from spinedb_api import (
     DateTime,
     Duration,
-    from_database,
     IndexedValue,
     ParameterValueFormatError,
     SpineDBAPIError,
+    from_database,
     to_database,
 )
 from spinedb_api.parameter_value import join_value_and_type, split_value_and_type
 from ..helpers import busy_effect
-
 
 _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 

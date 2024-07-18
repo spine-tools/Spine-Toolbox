@@ -15,10 +15,9 @@ import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from spinedb_api import DatabaseMapping
-from spinedb_api.temp_id import TempId
 from spinedb_api.import_functions import import_data
+from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from tests.mock_helpers import TestSpineDBManager
 
 

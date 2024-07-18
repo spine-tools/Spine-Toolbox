@@ -14,19 +14,19 @@
 import logging
 import multiprocessing
 from queue import Empty
-from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtGui import QAction, QTextCursor
 from PySide6.QtCore import Qt, Signal
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from PySide6.QtGui import QAction, QTextCursor
+from PySide6.QtWidgets import QApplication, QMessageBox
 from qtconsole.client import QtKernelClient
-from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
-from spinetoolbox.widgets.notification import Notification
-from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
-from spinetoolbox.spine_engine_manager import make_engine_manager
-from spinetoolbox.helpers import solve_connection_file
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from spine_engine.execution_managers.kernel_execution_manager import KernelExecutionManager
-from spine_engine.utils.queue_logger import QueueLogger
 from spine_engine.utils.helpers import resolve_conda_executable
+from spine_engine.utils.queue_logger import QueueLogger
+from spinetoolbox.config import JUPYTER_KERNEL_TIME_TO_DEAD
+from spinetoolbox.helpers import solve_connection_file
+from spinetoolbox.spine_engine_manager import make_engine_manager
+from spinetoolbox.widgets.notification import Notification
+from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin
 
 # Set logging level for jupyter loggers
 traitlets_logger = logging.getLogger("traitlets")

@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add edit and remove database items."""
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QPlainTextEdit, QDialogButtonBox, QApplication
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QPlainTextEdit, QVBoxLayout
 
 
 class CommitDialog(QDialog):

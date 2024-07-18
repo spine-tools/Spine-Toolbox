@@ -12,13 +12,13 @@
 
 """Custom QGraphicsScene used in the Design View."""
 import math
-from PySide6.QtCore import Qt, Signal, Slot, QPointF, QEvent
+from PySide6.QtCore import QEvent, QPointF, Qt, Signal, Slot
+from PySide6.QtGui import QBrush, QColor, QPen
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
-from PySide6.QtGui import QColor, QPen, QBrush
+from ..helpers import LinkType
+from ..link import ConnectionLinkDrawer, JumpLink, JumpLinkDrawer, Link
 from ..project_item_icon import ProjectItemIcon
 from ..ui.resources.cat import Cat
-from ..link import JumpLink, JumpLinkDrawer, Link, ConnectionLinkDrawer
-from ..helpers import LinkType
 from .project_item_drag import ProjectItemDragMixin
 
 

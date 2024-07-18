@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Contains FilterExecutionModel."""
-from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel
+from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
 
 
 class FilterExecutionModel(QAbstractListModel):

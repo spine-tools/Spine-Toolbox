@@ -14,17 +14,17 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
+from ...helpers import CharIconEngine
 from .tree_item_utility import (
-    EmptyChildMixin,
-    GrayIfLastMixin,
     BoldTextMixin,
     EditableMixin,
-    StandardDBItem,
+    EmptyChildMixin,
     FetchMoreMixin,
-    SortChildrenMixin,
+    GrayIfLastMixin,
     LeafItem,
+    SortChildrenMixin,
+    StandardDBItem,
 )
-from ...helpers import CharIconEngine
 
 
 class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):

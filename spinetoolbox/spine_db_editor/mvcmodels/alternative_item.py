@@ -12,7 +12,7 @@
 
 """Classes to represent items in an alternative tree."""
 from PySide6.QtCore import Qt
-from .tree_item_utility import EmptyChildMixin, FetchMoreMixin, GrayIfLastMixin, EditableMixin, LeafItem, StandardDBItem
+from .tree_item_utility import EditableMixin, EmptyChildMixin, FetchMoreMixin, GrayIfLastMixin, LeafItem, StandardDBItem
 
 _ALTERNATIVE_ICON = "\uf277"  # map-signs
 

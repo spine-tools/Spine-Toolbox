@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Contains a dialog for generating scenarios from selected alternatives."""
-from enum import auto, Enum, unique
+from enum import Enum, auto, unique
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QWidget, QMessageBox
+from PySide6.QtWidgets import QMessageBox, QWidget
 from ...helpers import signal_waiter
 from ..scenario_generation import all_combinations, unique_alternatives
 
@@ -39,7 +39,7 @@ class ScenarioGenerator(QWidget):
             alternatives (Iterable of CacheItem): alternatives from which the scenarios are generated
             spine_db_editor (SpineDBEditor): database editor instance
         """
-        from ..ui.scenario_generator import Ui_Form
+        from ..ui.scenario_generator import Ui_Form  # pylint: disable=import-outside-toplevel
 
         self._db_map = db_map
         self._alternatives = alternatives

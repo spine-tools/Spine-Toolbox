@@ -11,10 +11,10 @@
 ######################################################################################################################
 
 """Contains the MultiTabWindow and TabBarPlus classes."""
-from PySide6.QtWidgets import QMainWindow, QTabWidget, QWidget, QTabBar, QToolButton, QApplication, QMenu
-from PySide6.QtCore import Qt, Slot, QPoint, Signal, QEvent
-from PySide6.QtGui import QGuiApplication, QCursor, QIcon, QMouseEvent
-from ..helpers import ensure_window_is_on_screen, CharIconEngine
+from PySide6.QtCore import QEvent, QPoint, Qt, Signal, Slot
+from PySide6.QtGui import QCursor, QGuiApplication, QIcon, QMouseEvent
+from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QTabBar, QTabWidget, QToolButton, QWidget
+from ..helpers import CharIconEngine, ensure_window_is_on_screen
 
 
 class MultiTabWindow(QMainWindow):

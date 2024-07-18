@@ -11,13 +11,13 @@
 ######################################################################################################################
 
 """Custom item delegates."""
-from PySide6.QtCore import Qt, Signal, QEvent, QPoint, QRect, QModelIndex
+from PySide6.QtCore import QEvent, QModelIndex, QPoint, QRect, Qt, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionButton,
-    QStyle,
-    QApplication,
     QStyleOptionComboBox,
 )
 

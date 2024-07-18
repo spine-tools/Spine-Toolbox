@@ -12,8 +12,8 @@
 
 """Unit tests for the custom QTextBrowser."""
 import logging
-import unittest
 import sys
+import unittest
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 

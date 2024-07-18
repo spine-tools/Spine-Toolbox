@@ -14,14 +14,14 @@
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMenu
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from .properties_widget import PropertiesWidgetBase
-from .custom_qwidgets import PurgeSettingsDialog
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
 from ..project_commands import (
+    SetConnectionDefaultFilterOnlineStatus,
     SetConnectionFilterTypeEnabled,
     SetConnectionOptionsCommand,
-    SetConnectionDefaultFilterOnlineStatus,
 )
+from .custom_qwidgets import PurgeSettingsDialog
+from .properties_widget import PropertiesWidgetBase
 
 
 class LinkPropertiesWidget(PropertiesWidgetBase):

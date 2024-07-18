@@ -402,7 +402,12 @@ Below are the bare minimum things you need to know.
 
 - [Black](https://github.com/python/black) is used for Python code formatting.
   The project's GitHub page includes instructions on how to integrate Black in IDEs.
+- [isort](https://pycqa.github.io/isort/) is used for formatting the Python import statements.
 - Google style docstrings
+
+Running the following line in the project root will take care of sorting the imports:
+
+    isort .
 
 ### Linting
 

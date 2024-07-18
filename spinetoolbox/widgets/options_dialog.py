@@ -11,8 +11,8 @@
 ######################################################################################################################
 
 """Provides OptionsDialog."""
-from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QButtonGroup, QRadioButton, QFrame, QStyle, QDialogButtonBox
-from PySide6.QtCore import Slot, Qt
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtWidgets import QButtonGroup, QDialog, QDialogButtonBox, QFrame, QLabel, QRadioButton, QStyle, QVBoxLayout
 
 
 class OptionsDialog(QDialog):

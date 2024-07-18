@@ -11,17 +11,17 @@
 ######################################################################################################################
 
 """A Qt widget showing a toolbar and a matplotlib plotting canvas."""
-import itertools
-import io
 import csv
-import numpy
+import io
+import itertools
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
+import numpy
 from PySide6.QtCore import QMetaObject, Qt
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
-from .plot_canvas import PlotCanvas, LegendPosition
-from .custom_qtableview import CopyPasteTableView
-from ..mvcmodels.minimal_table_model import MinimalTableModel
+from PySide6.QtWidgets import QApplication, QMenu, QVBoxLayout, QWidget
 from ..helpers import busy_effect
+from ..mvcmodels.minimal_table_model import MinimalTableModel
+from .custom_qtableview import CopyPasteTableView
+from .plot_canvas import LegendPosition, PlotCanvas
 
 
 class PlotWidget(QWidget):

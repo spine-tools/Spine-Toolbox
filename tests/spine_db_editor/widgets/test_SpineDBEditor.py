@@ -14,15 +14,14 @@
 import pathlib
 import unittest
 from unittest import mock
+from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
-from PySide6.QtCore import QModelIndex, QItemSelectionModel
-
 from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 from tests.mock_helpers import TestSpineDBManager
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
 class TestSpineDBEditor(DBEditorTestBase):
