@@ -36,7 +36,7 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
-        index = model.index(0, 3)
+        index = model.index(0, 4)
         plot_widget = table_view._plot_selection([index])
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "TestParameterDefinitionTableView_db | Object | q")

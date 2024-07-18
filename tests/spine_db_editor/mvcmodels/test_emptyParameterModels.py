@@ -154,13 +154,29 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object parameter definitions are added to the db when editing the table."""
         model = TestEmptyParameterDefinitionModel(self._db_mngr)
         fetch_model(model)
-        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", None, None, None, "mock_db"]))
+        self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", (), None, None, None, "mock_db"]))
         definitions = [
             x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
         ]
         self.assertEqual(len(definitions), 2)
         names = {d["name"] for d in definitions}
         self.assertEqual(names, {"breed", "color"})
+
+    def test_add_parameter_definitions_with_types_to_db(self):
+        """Test that object parameter definitions are added to the db when editing the table."""
+        model = TestEmptyParameterDefinitionModel(self._db_mngr)
+        fetch_model(model)
+        self.assertTrue(
+            model.batch_set_data(
+                _empty_indexes(model), ["dog", "color", ("string", "array"), None, None, None, "mock_db"]
+            )
+        )
+        definitions = [
+            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
+        ]
+        self.assertEqual(len(definitions), 2)
+        type_lists = {d["parameter_type_list"] for d in definitions}
+        self.assertEqual(type_lists, {(), ("array", "string")})
 
     def test_do_not_add_invalid_object_parameter_definitions(self):
         """Test that object parameter definitions aren't added to the db if data is incomplete."""
@@ -178,7 +194,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = TestEmptyParameterDefinitionModel(self._db_mngr)
         fetch_model(model)
         self.assertTrue(
-            model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", None, None, None, "mock_db"])
+            model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", (), None, None, None, "mock_db"])
         )
         definitions = [
             x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["dimension_id_list"]

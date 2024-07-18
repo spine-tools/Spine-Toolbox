@@ -139,7 +139,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["dog", None, None, None, None, self.db_codename],
+            ["dog", None, None, None, None, None, self.db_codename],
             ["dog", None, None, None, None, self.db_codename],
             ["dog", None, None, None, self.db_codename],
         ]
@@ -169,7 +169,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["wolf", None, None, None, None, self.db_codename],
+            ["wolf", None, None, None, None, None, self.db_codename],
             ["wolf", None, None, None, None, self.db_codename],
             ["wolf", None, None, None, self.db_codename],
         ]
@@ -202,7 +202,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["fish", None, None, None, None, self.db_codename],
+            ["fish", None, None, None, None, None, self.db_codename],
             ["fish", "nemo", None, None, None, self.db_codename],
             ["fish", "nemo", None, None, self.db_codename],
         ]
@@ -238,7 +238,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["fish", None, None, None, None, self.db_codename],
+            ["fish", None, None, None, None, None, self.db_codename],
             ["fish", "emon", None, None, None, self.db_codename],
             ["fish", "emon", None, None, self.db_codename],
         ]

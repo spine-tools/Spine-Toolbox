@@ -84,7 +84,7 @@ class SpineDBCommand(AgedUndoCommand):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            db_map (DatabaseMapping): DatabaseMapping instance
         """
         super().__init__(**kwargs)
         self.db_mngr = db_mngr
@@ -96,7 +96,7 @@ class AddItemsCommand(SpineDBCommand):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            db_map (DatabaseMapping): DatabaseMapping instance
             data (list): list of dict-items to add
             item_type (str): the item type
         """
@@ -130,7 +130,7 @@ class UpdateItemsCommand(SpineDBCommand):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            db_map (DatabaseMapping): DatabaseMapping instance
             item_type (str): the item type
             data (list): list of dict-items to update
         """
@@ -166,7 +166,7 @@ class AddUpdateItemsCommand(SpineDBCommand):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            db_map (DatabaseMapping): DatabaseMapping instance
             item_type (str): the item type
             data (list): list of dict-items to add-update
         """
@@ -215,7 +215,7 @@ class RemoveItemsCommand(SpineDBCommand):
         """
         Args:
             db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DiffDatabaseMapping): DiffDatabaseMapping instance
+            db_map (DatabaseMapping): DatabaseMapping instance
             item_type (str): the item type
             ids (set): set of ids to remove
         """

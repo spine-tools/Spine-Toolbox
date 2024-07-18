@@ -552,6 +552,7 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBas
         return [
             "entity_class_name",
             "parameter_name",
+            "valid types",
             "value_list_name",
             "default_value",
             "description",
@@ -560,7 +561,11 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBas
 
     @property
     def field_map(self):
-        return {"parameter_name": "name", "value_list_name": "parameter_value_list_name"}
+        return {
+            "parameter_name": "name",
+            "valid types": "parameter_type_list",
+            "value_list_name": "parameter_value_list_name",
+        }
 
     @property
     def _single_model_type(self):

@@ -977,12 +977,15 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
+            errors = []
             try:
-                data_for_import = get_data_for_import(db_map, **data)
+                data_for_import = get_data_for_import(db_map, errors, **data)
             except (TypeError, ValueError) as err:
+                errors.append(str(err))
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
+            db_map_error_log.setdefault(db_map, []).extend(errors)
             identifier = self.get_command_identifier()
             for item_type, items in data_for_import:
                 if isinstance(items, tuple):

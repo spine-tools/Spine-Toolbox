@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
+from typing import Iterable
 from PySide6.QtCore import Qt
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -43,6 +44,8 @@ class HalfSortedTableModel(MinimalTableModel):
 
 class SingleModelBase(HalfSortedTableModel):
     """Base class for all single models that go in a CompoundModelBase subclass."""
+
+    group_fields: Iterable[str] = ()
 
     def __init__(self, parent, db_map, entity_class_id, committed, lazy=False):
         """
@@ -111,10 +114,6 @@ class SingleModelBase(HalfSortedTableModel):
     @property
     def fixed_fields(self):
         return ["entity_class_name", "database"]
-
-    @property
-    def group_fields(self):
-        return ["entity_byname"]
 
     @property
     def can_be_filtered(self):
@@ -231,7 +230,7 @@ class SingleModelBase(HalfSortedTableModel):
 
         def split_value(value, column):
             if self.header[column] in self.group_fields:
-                return tuple(value.split(DB_ITEM_SEPARATOR))
+                return tuple(value.split(DB_ITEM_SEPARATOR)) if value else ()
             return value
 
         if not indexes or not data:
@@ -342,6 +341,8 @@ class ParameterMixin:
 
 
 class EntityMixin:
+    group_fields = ("entity_byname",)
+
     def update_items_in_db(self, items):
         """Overriden to create entities on the fly first."""
         for item in items:
@@ -366,6 +367,8 @@ class EntityMixin:
 
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
+
+    group_fields = ("valid types",)
 
     @property
     def item_type(self):

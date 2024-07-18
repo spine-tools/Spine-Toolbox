@@ -50,6 +50,7 @@ class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
     HEADER = [
         "entity_class_name",
         "parameter_name",
+        "valid types",
         "list_value_name",
         "default_value",
         "description",

@@ -22,6 +22,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     CheckListEditor,
     CustomComboBoxEditor,
     CustomLineEditor,
+    ParameterTypeEditor,
     ParameterValueLineEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
@@ -972,8 +973,37 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
         if self.is_entity_class(index):
-            # Add the width of the button so that the database -column does not overlap with the button
+            # Add the width of the button so that the database column does not overlap with the button
             text_width, icon_size = self.get_text_width_and_icon_size(option, index)
             button_width = self.get_button_rect(option, icon_size.width(), text_width).width() * 2
             return QSize(size.width() + button_width, size.height())
         return size
+
+
+class ParameterTypeListDelegate(QStyledItemDelegate):
+    data_committed = Signal(QModelIndex, object)
+
+    def __init__(self, db_editor, db_mngr):
+        """
+        Args:
+            db_editor (SpineDBEditor): database editor widget
+            db_mngr (SpineDBManager): database manager
+        """
+        super().__init__(db_editor)
+
+    def setModelData(self, editor, model, index):
+        self.data_committed.emit(index, editor.data())
+
+    def setEditorData(self, editor, index):
+        editor.set_data(index.data())
+
+    def createEditor(self, parent, option, index):
+        return ParameterTypeEditor(parent)
+
+    def updateEditorGeometry(self, editor, option, index):
+        top_left = option.rect.topLeft()
+        popup_position = editor.parent().mapToGlobal(top_left)
+        size_hint = editor.sizeHint()
+        editor.setGeometry(
+            popup_position.x(), popup_position.y(), max(option.rect.width(), size_hint.width()), size_hint.height()
+        )

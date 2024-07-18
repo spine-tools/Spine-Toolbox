@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom editors for model/view programming."""
+from contextlib import suppress
 from PySide6.QtCore import (
     QCoreApplication,
     QEvent,
@@ -39,7 +40,15 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from spinetoolbox.helpers import IconListManager, interpret_icon_id, make_icon_id, order_key, try_number_from_string
+from spinedb_api.parameter_value import Map, fancy_type_to_type_and_rank, type_and_rank_to_fancy_type
+from spinetoolbox.helpers import (
+    DB_ITEM_SEPARATOR,
+    IconListManager,
+    interpret_icon_id,
+    make_icon_id,
+    order_key,
+    try_number_from_string,
+)
 from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
 
 
@@ -568,3 +577,92 @@ class IconColorEditor(QDialog):
         icon_code = self.icon_list.currentIndex().data(Qt.ItemDataRole.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return make_icon_id(icon_code, color_code)
+
+
+class ParameterTypeEditor(QWidget):
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget, optional): parent widget
+        """
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.Popup)
+        from ..ui.parameter_type_editor import Ui_Form
+
+        self._ui = Ui_Form()
+        self._ui.setupUi(self)
+        self._ui.select_all_button.clicked.connect(self._select_all)
+        self._ui.clear_all_button.clicked.connect(self._clear_all)
+        self._ui.map_rank_line_edit.textEdited.connect(self._ensure_map_selected)
+
+    def data(self):
+        """Returns editor's data.
+
+        Return:
+            str: parameter type list separated by DB_ITEM_SEPARATOR
+        """
+        check_boxes = list(self._check_box_iter())
+        first_checked = check_boxes[0].isChecked()
+        if all(box.isChecked() == first_checked for box in check_boxes[1:]):
+            return ""
+        types = []
+        for check_box in check_boxes:
+            if not check_box.isChecked():
+                continue
+            type_ = check_box.objectName()[: -len("_check_box")]
+            if type_ == Map.type_():
+                rank_texts = self._ui.map_rank_line_edit.text().split(",")
+                ranks = []
+                for token in rank_texts:
+                    with suppress(ValueError):
+                        ranks.append(int(token))
+                if not ranks:
+                    continue
+                types += [type_and_rank_to_fancy_type(type_, rank) for rank in ranks]
+            else:
+                types.append(type_)
+        return DB_ITEM_SEPARATOR.join(types)
+
+    def set_data(self, type_list):
+        """Sets editor's data.
+
+        Args:
+            type_list (str): parameter type list separated by DB_ITEM_SEPARATOR
+        """
+        if not type_list:
+            self._select_all()
+        else:
+            self._clear_all()
+            map_ranks = []
+            for fancy_type in type_list.split(DB_ITEM_SEPARATOR):
+                type_, rank = fancy_type_to_type_and_rank(fancy_type)
+                if type_ == Map.type_():
+                    map_ranks.append(str(rank))
+                check_box = getattr(self._ui, f"{type_}_check_box")
+                check_box.setChecked(True)
+            self._ui.map_rank_line_edit.setText(", ".join(map_ranks))
+
+    def _check_box_iter(self):
+        for attribute in dir(self._ui):
+            if attribute.endswith("_check_box"):
+                yield getattr(self._ui, attribute)
+
+    @Slot(bool)
+    def _select_all(self, _=True):
+        for check_box in self._check_box_iter():
+            check_box.setChecked(True)
+        if not self._ui.map_rank_line_edit.text().strip():
+            self._ui.map_rank_line_edit.setText("1")
+
+    @Slot(bool)
+    def _clear_all(self, _=True):
+        for check_box in self._check_box_iter():
+            check_box.setChecked(False)
+
+    @Slot(str)
+    def _ensure_map_selected(self, rank_text):
+        if rank_text:
+            if not self._ui.map_check_box.isChecked():
+                self._ui.map_check_box.setChecked(True)
+        elif self._ui.map_check_box.isChecked():
+            self._ui.map_check_box.setChecked(False)
