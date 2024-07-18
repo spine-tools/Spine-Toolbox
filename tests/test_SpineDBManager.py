@@ -15,7 +15,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
 import unittest
-from unittest import mock
 from unittest.mock import MagicMock
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication

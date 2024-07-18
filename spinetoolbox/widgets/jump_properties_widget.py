@@ -26,7 +26,7 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         Args:
             toolbox (ToolboxUI): The toolbox instance where this widget should be embedded
         """
-        from ..ui.jump_properties import Ui_Form
+        from ..ui.jump_properties import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__(toolbox, base_color=base_color)
         self._track_changes = True

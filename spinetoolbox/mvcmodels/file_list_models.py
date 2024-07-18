@@ -12,7 +12,7 @@
 
 """Contains a generic File list model and an Item for that model."""
 from collections import namedtuple
-from itertools import combinations, takewhile
+from itertools import takewhile
 import json
 from pathlib import Path
 from PySide6.QtCore import QAbstractItemModel, QFileInfo, QMimeData, QModelIndex, Qt, Signal

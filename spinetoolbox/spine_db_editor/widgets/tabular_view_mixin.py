@@ -15,10 +15,10 @@ from collections import namedtuple
 from contextlib import contextmanager
 from itertools import chain
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
-from PySide6.QtGui import QAction, QActionGroup, QIcon
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QWidget
 from spinedb_api.helpers import fix_name_ambiguity
-from ...helpers import CharIconEngine, busy_effect, disconnect, preferred_row_height
+from ...helpers import busy_effect, disconnect, preferred_row_height
 from ..mvcmodels.frozen_table_model import FrozenTableModel
 from ..mvcmodels.pivot_table_models import (
     ElementPivotTableModel,

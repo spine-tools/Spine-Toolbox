@@ -18,7 +18,7 @@ import shutil
 import urllib.error
 from urllib.parse import urljoin
 import urllib.request
-from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 from spine_engine.utils.serialization import deserialize_path, deserialize_remote_path, serialize_path
 from .config import PLUGIN_REGISTRY_URL, PLUGINS_PATH
 from .helpers import (

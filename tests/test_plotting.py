@@ -37,7 +37,6 @@ from spinetoolbox.plotting import (
     combine_data_with_same_indexes,
     convert_indexed_value_to_tree,
     plot_data,
-    plot_parameter_table_selection,
     plot_pivot_table_selection,
     raise_if_incompatible_x,
     reduce_indexes,

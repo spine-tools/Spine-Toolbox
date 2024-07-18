@@ -14,7 +14,7 @@
 import os
 from PySide6.QtCore import QEvent, QPoint, QSettings, QSize, Qt, Slot
 from PySide6.QtGui import QIcon, QPixmap, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QColorDialog, QFileDialog, QMenu, QMessageBox, QWidget
+from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
     get_julia_env,
     resolve_conda_executable,
@@ -26,7 +26,6 @@ from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..helpers import (
     dir_is_valid,
     file_is_valid,
-    home_dir,
     is_valid_conda_executable,
     open_url,
     select_certificate_directory,

@@ -18,7 +18,6 @@ from ..mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
-from ..mvcmodels.entity_tree_models import group_items_by_db_map
 from .element_name_list_editor import ElementNameListEditor
 
 

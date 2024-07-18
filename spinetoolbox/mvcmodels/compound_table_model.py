@@ -12,7 +12,7 @@
 
 """Models that vertically concatenate two or more table models."""
 import bisect
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 

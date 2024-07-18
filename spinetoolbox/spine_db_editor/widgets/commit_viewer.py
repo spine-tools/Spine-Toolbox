@@ -36,7 +36,7 @@ class _DBCommitViewer(QWidget):
             db_map (DatabaseMapping): database mapping
             parent (QWidget, optional): parent widget
         """
-        from ..ui.db_commit_viewer import Ui_DBCommitViewer
+        from ..ui.db_commit_viewer import Ui_DBCommitViewer  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=parent)
         self._ui = Ui_DBCommitViewer()
@@ -213,7 +213,7 @@ class _AffectedItemsWidget(QWidget):
     """A composite widget that contains a table and a label."""
 
     def __init__(self):
-        from ..ui.commit_viewer_affected_item_info import Ui_Form
+        from ..ui.commit_viewer_affected_item_info import Ui_Form  # pylint: disable=import-outside-toplevel
 
         super().__init__()
         self._ui = Ui_Form()

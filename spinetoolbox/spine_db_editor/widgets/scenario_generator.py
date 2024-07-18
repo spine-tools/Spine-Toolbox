@@ -39,7 +39,7 @@ class ScenarioGenerator(QWidget):
             alternatives (Iterable of CacheItem): alternatives from which the scenarios are generated
             spine_db_editor (SpineDBEditor): database editor instance
         """
-        from ..ui.scenario_generator import Ui_Form
+        from ..ui.scenario_generator import Ui_Form  # pylint: disable=import-outside-toplevel
 
         self._db_map = db_map
         self._alternatives = alternatives

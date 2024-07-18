@@ -17,7 +17,6 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from spinedb_api import DatabaseMapping
 from spinedb_api.import_functions import import_data
-from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from tests.mock_helpers import TestSpineDBManager
 

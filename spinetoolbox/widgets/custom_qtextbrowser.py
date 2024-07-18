@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Class for a custom QTextBrowser for showing the logs and tool output."""
-from contextlib import contextmanager
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction, QBrush, QFontDatabase, QPalette, QTextBlockFormat, QTextCursor, QTextFrameFormat
 from PySide6.QtWidgets import QMenu, QTextBrowser

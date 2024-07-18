@@ -16,7 +16,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QEvent, QPoint, Qt
-from PySide6.QtGui import QColor, QContextMenuEvent
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api import DatabaseMapping, import_scenarios

@@ -794,7 +794,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def export_as_video(self):
         try:
-            import cv2
+            import cv2  # pylint: disable=import-outside-toplevel
         except ModuleNotFoundError:
             self._spine_db_editor.msg_error.emit(
                 "Export as video requires <a href='https://pypi.org/project/opencv-python/'>opencv-python</a>"

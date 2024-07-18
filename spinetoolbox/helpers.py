@@ -28,7 +28,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import Sequence
+from typing import Sequence  # pylint: disable=unused-import
 import matplotlib
 from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot
 from PySide6.QtCore import __version__ as qt_version
