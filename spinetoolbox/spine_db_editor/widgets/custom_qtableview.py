@@ -548,8 +548,8 @@ class PivotTableView(CopyPasteTableView):
                 view (PivotTableView): parent view
                 db_editor (SpineDBEditor): database editor
             """
-            self._selected_parameter_indexes = list()
-            self._selected_value_indexes = list()
+            self._selected_parameter_indexes = []
+            self._selected_value_indexes = []
             self._open_in_editor_action = None
             self._remove_values_action = None
             self._remove_parameters_action = None
@@ -710,8 +710,8 @@ class PivotTableView(CopyPasteTableView):
                 view (PivotTableView): parent view
                 db_editor (SpineDBEditor): database editor
             """
-            self._selected_scenario_indexes = list()
-            self._selected_scenario_alternative_indexes = list()
+            self._selected_scenario_indexes = []
+            self._selected_scenario_alternative_indexes = []
             self._generate_scenarios_action = None
             self._toggle_alternatives_checked = QAction("Check/uncheck selected")
             self._toggle_alternatives_checked.triggered.connect(self._toggle_checked_state)
@@ -780,7 +780,7 @@ class PivotTableView(CopyPasteTableView):
             source_model = self._view.source_model
             db_mngr = self._db_editor.db_mngr
             chosen_db_map = None
-            alternatives = list()
+            alternatives = []
             for index in self._selected_alternative_indexes:
                 header_id = source_model._header_id(index)
                 db_map, id_ = header_id

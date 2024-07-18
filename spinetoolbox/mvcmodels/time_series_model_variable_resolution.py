@@ -164,8 +164,8 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             indexes (Sequence): a sequence of model indexes
             values (Sequence): a sequence of datetimes/floats corresponding to the indexes
         """
-        modified_rows = list()
-        modified_columns = list()
+        modified_rows = []
+        modified_columns = []
         for index, value in zip(indexes, values):
             row = index.row()
             modified_rows.append(row)

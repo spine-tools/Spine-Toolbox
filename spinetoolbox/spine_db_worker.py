@@ -151,7 +151,10 @@ class SpineDBWorker(QObject):
             self._parents_fetching[item_type].add(parent)
             return
         self._parents_fetching[item_type] = {parent}
-        callback = lambda future: self._handle_query_advanced(item_type, future.result())
+
+        def callback(future):
+            self._handle_query_advanced(item_type, future.result())
+
         self._executor.submit(self._busy_db_map_fetch_more, item_type).add_done_callback(callback)
 
     @Slot(object)

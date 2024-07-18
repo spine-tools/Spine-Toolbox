@@ -82,7 +82,7 @@ class KernelFetcher(QThread):
             d = self.get_kernel_deats(resource_dir)
             icon = self.get_icon(resource_dir)
             if d["language"].lower().strip() == "python":  # Regular Python kernel found
-                if self.fetch_mode == 2 or self.fetch_mode == 3:
+                if self.fetch_mode in {2, 3}:
                     self.kernel_found.emit(kernel_name, resource_dir, False, icon, d)
             elif d["language"].lower().strip() == "julia":  # Regular Julia kernel found
                 if self.fetch_mode == 4:

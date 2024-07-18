@@ -317,7 +317,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 self.q.put(("server_status_msg", {"msg_type": "success", "text": f"Execution time: {t}"}))
                 self.q.put(event)
                 break
-            elif event[0] == "server_execution_error":
+            if event[0] == "server_execution_error":
                 # spine engine raised an exception during execution
                 self.q.put(("server_status_msg", {"msg_type": "fail", "text": f"{event[0]: {event[1]}}"}))
                 break
@@ -332,11 +332,9 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def restart_kernel(self, connection_file):
         """See base class."""
         # TODO: This does not restart the kernel, only replaces the client. Do kernel_manager.restart_kernel() on server
-        pass
 
     def shutdown_kernel(self, connection_file):
         """See base class."""
-        pass
 
     def is_persistent_command_complete(self, persistent_key, command):
         return self.engine_client.send_is_complete(persistent_key, command)

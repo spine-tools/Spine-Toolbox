@@ -229,7 +229,7 @@ class MapModel(QAbstractTableModel):
                 row_before = len(self._rows[0]) * [empty]
         else:
             row_before = (len(self._index_names) + 1) * [empty]
-        inserted = list()
+        inserted = []
         for _ in range(count):
             inserted.append([deepcopy(x) if x is not empty else x for x in row_before])
         self._rows = self._rows[:row] + inserted + self._rows[row:]
@@ -467,7 +467,7 @@ def _rows_to_dict(rows):
     Returns:
         dict: a nested dictionary
     """
-    tree = dict()
+    tree = {}
     for row in rows:
         current = tree
         for i, column in enumerate(row):
@@ -476,7 +476,7 @@ def _rows_to_dict(rows):
             if i < len(row) - 2 and row[i + 2] is not empty:
                 if not isinstance(column, (str, int, float, DateTime, Duration)):
                     raise ParameterValueFormatError(f"Index on row {rows.index(row) + 1} column {i + 1} is not scalar.")
-                current = current.setdefault(column, dict())
+                current = current.setdefault(column, {})
                 if not isinstance(current, dict):
                     raise ParameterValueFormatError(f"Indexing broken on row {rows.index(row) + 1} column {i + 1}.")
             else:
@@ -498,8 +498,8 @@ def _reconstruct_map(tree):
     Returns:
         Map: reconstructed Map
     """
-    indexes = list()
-    values = list()
+    indexes = []
+    values = []
     for key, value in tree.items():
         if isinstance(value, dict):
             value = _reconstruct_map(value)
@@ -510,7 +510,7 @@ def _reconstruct_map(tree):
         if first_type == numpy.float64:
             first_type = float
         if any(not isinstance(i, first_type) for i in indexes[1:]):
-            raise ParameterValueFormatError(f"Index type mismatch.")
+            raise ParameterValueFormatError("Index type mismatch.")
     map_ = Map(indexes, values)
     return map_
 
@@ -539,7 +539,7 @@ def _gather_index_names(map_value):
     Returns:
         list of str: index names
     """
-    nested_names = list()
+    nested_names = []
     for v in map_value.values:
         if isinstance(v, Map):
             new_nested_names = _gather_index_names(v)

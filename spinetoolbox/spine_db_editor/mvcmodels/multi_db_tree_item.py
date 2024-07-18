@@ -376,7 +376,7 @@ class MultiDBTreeItem(TreeItem):
         """
         # Find rows to update and db_map ids to add
         rows_to_update = set()
-        db_map_ids_to_add = dict()
+        db_map_ids_to_add = {}
         for db_map, ids in db_map_ids.items():
             for id_ in ids:
                 row = self.find_row(db_map, id_)

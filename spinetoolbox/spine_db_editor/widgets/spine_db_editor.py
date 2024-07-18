@@ -185,7 +185,7 @@ class SpineDBEditorBase(QMainWindow):
         self.update_last_view()
         self.restore_ui(self.last_view, fresh=True)
         self.update_commit_enabled()
-        db_column_visible = True if len(self.db_maps) > 1 else False
+        db_column_visible = len(self.db_maps) > 1
         self.set_db_column_visibility(db_column_visible)
         return True
 
@@ -391,7 +391,7 @@ class SpineDBEditorBase(QMainWindow):
 
         It supports SQLite, JSON, and Excel."""
         self.qsettings.beginGroup(self.settings_group)
-        file_path, selected_filter = get_open_file_name_in_last_dir(
+        file_path, _ = get_open_file_name_in_last_dir(
             self.qsettings,
             "importFileIntoDB",
             self,

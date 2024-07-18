@@ -161,7 +161,6 @@ class FetchParent(QObject):
         """
         return None
 
-    # pylint: disable=no-self-use
     def accepts_item(self, item, db_map):
         """Called by the associated SpineDBWorker whenever items are fetched and also added/updated/removed.
         Returns whether this parent accepts that item as a children.
@@ -178,7 +177,6 @@ class FetchParent(QObject):
         """
         return True
 
-    # pylint: disable=no-self-use
     def shows_item(self, item, db_map):
         """Called by the associated SpineDBWorker whenever items are fetched and accepted.
         Returns whether this parent will show this item to the user.

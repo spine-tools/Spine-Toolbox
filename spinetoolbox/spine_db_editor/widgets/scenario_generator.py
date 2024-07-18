@@ -121,7 +121,7 @@ class ScenarioGenerator(QWidget):
                 self._db_editor.db_mngr.add_scenarios({self._db_map: [{"name": name} for name in new_scenarios]})
                 waiter.wait()
         searchable_scenario_names = set(scenarios_to_modify)
-        scenario_definitions_by_id = dict()
+        scenario_definitions_by_id = {}
         alternative_iter = iter(scenario_alternatives)
         scenario_items = self._db_editor.db_mngr.get_items(self._db_map, "scenario")
         for item in scenario_items:
@@ -230,8 +230,7 @@ def _find_base_alternative(names):
         base_index = [n.lower() for n in names].index("base")
     except ValueError:
         return names[0] if names else ""
-    else:
-        return names[base_index]
+    return names[base_index]
 
 
 def _suffix(item_count):

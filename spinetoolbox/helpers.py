@@ -174,7 +174,7 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
         bool: True if operation was successful, False otherwise
     """
     if os.path.exists(new_dir):
-        msg = "Directory <b>{0}</b> already exists.<br/><br/>Would you like to overwrite its contents?".format(new_dir)
+        msg = f"Directory <b>{new_dir}</b> already exists.<br/><br/>Would you like to overwrite its contents?"
         box = QMessageBox(
             QMessageBox.Icon.Question,
             box_title,
@@ -192,32 +192,32 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
     except FileExistsError:
         # This is unlikely because of the above `if`, but still possible since another concurrent process
         # might have done things in between
-        msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
+        msg = f"Directory<br/><b>{new_dir}</b><br/>already exists"
         toolbox.information_box.emit(box_title, msg)
         return False
     except PermissionError as pe_e:
         logging.error(pe_e)
         msg = (
-            "Access to directory <br/><b>{0}</b><br/>denied."
-            "<br/><br/>Possible reasons:"
-            "<br/>1. You don't have a permission to edit the directory"
-            "<br/>2. Windows Explorer is open in the directory"
-            "<br/><br/>Check these and try again.".format(old_dir)
+            f"Access to directory <br/><b>{old_dir}</b><br/>denied."
+            f"<br/><br/>Possible reasons:"
+            f"<br/>1. You don't have a permission to edit the directory"
+            f"<br/>2. Windows Explorer is open in the directory"
+            f"<br/><br/>Check these and try again."
         )
         toolbox.information_box.emit(box_title, msg)
         return False
     except OSError as os_e:
         logging.error(os_e)
         msg = (
-            "Renaming directory "
-            "<br/><b>{0}</b> "
-            "<br/>to "
-            "<br/><b>{1}</b> "
-            "<br/>failed."
-            "<br/><br/>Possibly reasons:"
-            "<br/>1. Windows Explorer is open in the directory."
-            "<br/>2. A file in the directory is open in another program. "
-            "<br/><br/>Check these and try again.".format(old_dir, new_dir)
+            f"Renaming directory "
+            f"<br/><b>{old_dir}</b> "
+            f"<br/>to "
+            f"<br/><b>{new_dir}</b> "
+            f"<br/>failed."
+            f"<br/><br/>Possibly reasons:"
+            f"<br/>1. Windows Explorer is open in the directory."
+            f"<br/>2. A file in the directory is open in another program. "
+            f"<br/><br/>Check these and try again."
         )
         toolbox.information_box.emit(box_title, msg)
         return False
@@ -294,11 +294,11 @@ def get_datetime(show, date=True):
     if not show:
         return ""
     t = datetime.datetime.now()
-    time_str = "{:02d}:{:02d}:{:02d}".format(t.hour, t.minute, t.second)
+    time_str = f"{t.hour:02d}:{t.minute:02d}:{t.second:02d}"
     if not date:
-        return "[{}] ".format(time_str)
-    date_str = "{:02d}-{:02d}-{:02d}".format(t.day, t.month, t.year)
-    return "[{} {}] ".format(date_str, time_str)
+        return f"[{time_str}] "
+    date_str = f"{t.day:02d}-{t.month:02d}-{t.year:02d}"
+    return f"[{date_str} {time_str}] "
 
 
 @busy_effect
@@ -370,7 +370,7 @@ def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
     if os.path.isdir(src):
         if not os.path.isdir(dst):
             if not silent:
-                logger.msg.emit("Creating directory <b>{0}</b>".format(dst))
+                logger.msg.emit(f"Creating directory <b>{dst}</b>")
             os.makedirs(dst)
         files = os.listdir(src)
         for file_name in list(files):
@@ -390,7 +390,7 @@ def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
         if not silent:
             _, src_filename = os.path.split(src)
             dst_dir, _ = os.path.split(dst)
-            logger.msg.emit("Copying <b>{0}</b> -> <b>{1}</b>".format(src_filename, dst_dir))
+            logger.msg.emit(f"Copying <b>{src_filename}</b> -> <b>{dst_dir}</b>")
         shutil.copyfile(src, dst)
 
 
@@ -831,7 +831,7 @@ def select_gams_executable(parent, line_edit):
     # Check that selected file at least starts with string 'gams'
     _, selected_file = os.path.split(answer[0])
     if not selected_file.lower().startswith("gams"):
-        msg = "Selected file <b>{0}</b> may not be a valid GAMS program".format(selected_file)
+        msg = f"Selected file <b>{selected_file}</b> may not be a valid GAMS program"
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, "Invalid GAMS Program", msg)
         return
@@ -858,7 +858,7 @@ def select_julia_executable(parent, line_edit):
     # Check that the selected file starts with "julia"
     _, selected_file = os.path.split(answer[0])
     if not selected_file.lower().startswith("julia"):
-        msg = "Selected file <b>{0}</b> is not a valid Julia Executable".format(selected_file)
+        msg = f"Selected file <b>{selected_file}</b> is not a valid Julia Executable"
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, "Invalid Julia Executable", msg)
         return
@@ -900,7 +900,7 @@ def select_python_interpreter(parent, line_edit):
     # Check that selected file at least starts with string 'python'
     _, selected_file = os.path.split(answer[0])
     if not selected_file.lower().startswith("python"):
-        msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
+        msg = f"Selected file <b>{selected_file}</b> is not a valid Python interpreter"
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, "Invalid Python Interpreter", msg)
         return
@@ -930,7 +930,7 @@ def select_conda_executable(parent, line_edit):
     # Check that selected file at least starts with string 'conda'
     if not is_valid_conda_executable(answer[0]):
         _, selected_file = os.path.split(answer[0])
-        msg = "Selected file <b>{0}</b> is not a valid Conda executable".format(selected_file)
+        msg = f"Selected file <b>{selected_file}</b> is not a valid Conda executable"
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, "Invalid Conda selected", msg)
         return

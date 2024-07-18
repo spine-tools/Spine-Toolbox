@@ -15,7 +15,7 @@ from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
 
 
 class FilterExecutionModel(QAbstractListModel):
-    _filter_consoles = dict()
+    _filter_consoles = {}
 
     def reset_model(self, filter_consoles):
         self.beginResetModel()

@@ -261,7 +261,7 @@ class TestSpineToolboxProject(unittest.TestCase):
             # This mocks the check for engineSettings/remoteEngineEnabled in SpineToolboxProject.execute_dags()
             mock_qsettings_value.side_effect = qsettings_value_side_effect
             # This mocks the call to make_settings_dict_for_engine in SpineToolboxProject._execute_dags()
-            mock_settings_dict.return_value = dict()
+            mock_settings_dict.return_value = {}
             if not names:
                 self.toolbox.project().execute_project()
             else:
