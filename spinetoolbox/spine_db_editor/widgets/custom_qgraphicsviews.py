@@ -152,7 +152,6 @@ class GraphOptionsOverlay(QWidget):
         self.parent()._properties.get("auto_build")._action.triggered.connect(
             lambda x: self._auto_build_button.setChecked(x)
         )
-        self.parent()._properties["auto_build"]._action.triggered.connect(lambda x: print("skaga", x))
         self._rebuild_button.pressed.connect(lambda: self.parent()._spine_db_editor.rebuild_graph(force=True))
 
     def paintEvent(self, event):
