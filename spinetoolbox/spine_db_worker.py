@@ -132,7 +132,7 @@ class SpineDBWorker(QObject):
             parent.set_busy(True)
             self._do_fetch_more(parent)
 
-    def _do_fetch_more(self, parent):
+    def _do_fetch_more(self, parent):  # pylint: disable=method-hidden
         item_type = parent.fetch_item_type
         if parent in self._parents_fetching.get(item_type, set()):
             return

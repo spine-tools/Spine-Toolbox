@@ -337,7 +337,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(data[1].dimension_name_list, "an_entity_class")
 
     def _add_multidimensional_class(self, class_name, dimension_names):
-        item_names = {i: name for i, name in enumerate(dimension_names)}
+        item_names = dict(enumerate(dimension_names))
         item_names[len(dimension_names)] = class_name
         add_entity_tree_item(
             item_names,
@@ -347,7 +347,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         )
 
     def _add_multidimensional_entity(self, element_name, entity_names):
-        item_names = {i: name for i, name in enumerate(entity_names)}
+        item_names = dict(enumerate(entity_names))
         item_names[len(entity_names)] = element_name
         add_entity_tree_item(item_names, self._db_editor.ui.treeView_entity, "Add entities", AddEntitiesDialog)
 
@@ -810,7 +810,7 @@ class TestEntityTreeViewSorting(TestBase):
         for item in model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
-                qApp.processEvents()
+                qApp.processEvents()  # pylint: disable=undefined-variable
 
     def tearDown(self):
         self._common_tear_down()
@@ -940,7 +940,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         value_index = model.index(0, 0, list_name_index)
         view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.ClearAndSelect)
         view.remove_selected()
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 2)
         list_name_index = model.index(0, 0, root_index)

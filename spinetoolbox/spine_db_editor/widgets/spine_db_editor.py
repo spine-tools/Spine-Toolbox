@@ -98,7 +98,7 @@ class SpineDBEditorBase(QMainWindow):
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.silenced = False
-        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        max_screen_height = max(s.availableSize().height() for s in QGuiApplication.screens())
         self.visible_rows = int(max_screen_height / preferred_row_height(self))
         self.settings_group = "spineDBEditor"
         self.undo_action = None
@@ -112,6 +112,7 @@ class SpineDBEditorBase(QMainWindow):
         self._export_items_dialog = None
         self._export_items_dialog_state = None
         self.update_commit_enabled()
+        self.last_view = None
 
     @property
     def toolbox(self):
@@ -921,7 +922,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._timer_refresh_tab_order.setSingleShot(True)
         self._add_docks_menu()
         self.connect_signals()
-        self.last_view = None
         self.apply_stacked_style()
         self.set_db_column_visibility(False)
         if db_url_codenames is not None:

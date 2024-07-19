@@ -11,38 +11,15 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
-from PySide6.QtCore import QEvent, QPoint, Qt, Signal, Slot
-from PySide6.QtGui import QAction, QIcon, QKeyEvent, QKeySequence
-from PySide6.QtWidgets import QMenu, QWidget
+from PySide6.QtCore import QPoint, Qt, Signal, Slot
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QMenu
 from spinedb_api import IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
 from ...widgets.custom_menus import FilterMenuBase
-
-
-class MainMenu(QMenu):
-    def event(self, ev):
-        """Intercepts shortcuts and instead sends an equivalent event with the 'Alt' modifier,
-        so that mnemonics works with just the key.
-        Also sends a key press event with the 'Alt' key when this menu shows,
-        so that mnemonics are underlined on Windows.
-        """
-        if ev.type() == QEvent.KeyPress and ev.key() == Qt.Key_Alt:
-            return True
-        if ev.type() == QEvent.ShortcutOverride and ev.modifiers() == Qt.NoModifier:
-            actions = self.actions() + [a for child in self.findChildren(QWidget) for a in child.actions()]
-            mnemonics = [QKeySequence.mnemonic(a.text()) for a in actions]
-            key_seq = QKeySequence(Qt.Modifier.ALT.value | Qt.Key(ev.key()))
-            if key_seq in mnemonics:
-                ev = QKeyEvent(QEvent.KeyPress, ev.key(), Qt.AltModifier)
-                qApp.postEvent(self, ev)  # pylint: disable=undefined-variable
-                return True
-        if ev.type() == QEvent.Show:
-            pev = QKeyEvent(QEvent.KeyPress, Qt.Key_Alt, Qt.NoModifier)
-            qApp.postEvent(self, pev)  # pylint: disable=undefined-variable
-        return super().event(ev)
 
 
 class AutoFilterMenu(FilterMenuBase):

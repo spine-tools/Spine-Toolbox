@@ -185,7 +185,7 @@ class MultiDBTreeItem(TreeItem):
         id_ = self.take_db_map(db_map)
         if id_ is None:
             return None
-        other = self.parent_item.make_or_restore_child({db_map: id_})
+        other = self.parent_item.make_or_restore_child(db_map, id_)
         other_children = []
         for child in self.children:
             other_child = child.deep_take_db_map(db_map)
@@ -236,7 +236,7 @@ class MultiDBTreeItem(TreeItem):
 
         Args:
             db_map (DatabaseMapping)
-            id (int)
+            id_ (int)
 
         Returns:
             MultiDBTreemItem

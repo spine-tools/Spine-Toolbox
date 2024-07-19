@@ -177,7 +177,7 @@ def raise_if_incompatible_x(data_list):
     if not data.x:
         return
     first_type = type(data.x[0])
-    if any(type(x) is not first_type for data in data_list for x in data.x):
+    if any(not isinstance(x, first_type) for data in data_list for x in data.x):
         raise PlottingError("Incompatible x axes.")
 
 

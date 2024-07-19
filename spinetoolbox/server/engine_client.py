@@ -126,7 +126,6 @@ class EngineClient:
             raise RemoteEngineInitFailed(
                 f"Ping failed. Request Id '{random_id}' does not " f"match reply Id '{response_id}'"
             )
-        stop_time_ms = round(time.time() * 1000.0)  # debugging
 
     def set_start_time(self):
         """Sets a start time for an operation. Call get_elapsed_time() after
@@ -331,7 +330,7 @@ class EngineClient:
                 break
             yield json.loads(rcv[0].decode("utf-8"))
         pull_socket.close()
-        completed_msg = self.dealer_socket.recv_multipart()  # Get the final 'completed' msg
+        _ = self.dealer_socket.recv_multipart()  # Get the final 'completed' msg
 
     def get_elapsed_time(self):
         """Returns the elapsed time between now and when self.start_time was set.

@@ -93,7 +93,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Checks that project dag handler contains only one
         graph, which has one node and its name matches the
         given argument."""
-        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        dags = list(self.toolbox.project()._dag_iterator())
         self.assertTrue(len(dags) == 1)
         g = self.toolbox.project().dag_with_node(name)
         self.assertTrue(len(g.nodes()) == 1)
@@ -178,7 +178,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(p.has_items())
         self.assertEqual(8, len(p.get_items()))
         # DAG handler should now have eight graphs, each with one item
-        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        dags = list(self.toolbox.project()._dag_iterator())
         self.assertEqual(8, len(dags))
         # Check that all created items are in graphs
         ds_graph = self.toolbox.project().dag_with_node(ds_name)
@@ -434,7 +434,7 @@ class TestSpineToolboxProject(unittest.TestCase):
             project.connections,
             [LoggingConnection("renamed source", "left", destination_name, "right", toolbox=self.toolbox)],
         )
-        dags = [dag for dag in project._dag_iterator()]
+        dags = list(project._dag_iterator())
         self.assertEqual(len(dags), 1)
         self.assertEqual(node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]})
         self.assertEqual(source_item.get_icon().name(), "renamed source")

@@ -105,7 +105,6 @@ class SettingsWidgetBase(QWidget):
             moved = self._mouse_release_pos - self._mouse_press_pos
             if moved.manhattanLength() > 3:
                 e.ignore()
-                return
 
     def mouseMoveEvent(self, e):
         """Moves the window when mouse button is pressed and mouse cursor is moved.

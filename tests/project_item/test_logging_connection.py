@@ -181,7 +181,6 @@ class _DataStore(ProjectItem):
     def item_type():
         return "Mock Data Store"
 
-    # pylint: disable=no-self-use
     def resources_for_direct_successors(self):
         return [
             database_resource(

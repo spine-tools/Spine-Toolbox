@@ -49,7 +49,7 @@ class TestMapTableView(unittest.TestCase):
             table_view.selectionModel().select(model.index(0, column), QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        table = [row for row in csv.reader(clip, delimiter="\t")]
+        table = list(csv.reader(clip, delimiter="\t"))
         with system_lc_numeric():
             self.assertEqual(table, [["A", locale.str(2.3)]])
         table_view.deleteLater()
@@ -63,7 +63,7 @@ class TestMapTableView(unittest.TestCase):
                 table_view.selectionModel().select(model.index(row, column), QItemSelectionModel.Select)
         self.assertTrue(table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
-        table = [row for row in csv.reader(clip, delimiter="\t")]
+        table = list(csv.reader(clip, delimiter="\t"))
         with system_lc_numeric():
             self.assertEqual(table, [["A", locale.str(2.3)]])
         table_view.deleteLater()
@@ -109,7 +109,6 @@ class TestMapTableView(unittest.TestCase):
         self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 3)
-        m = model.value()
         self.assertEqual(model.value(), Map(["Q", "V", "C"], [2.3, 3.2, 4.3]))
         table_view.deleteLater()
 

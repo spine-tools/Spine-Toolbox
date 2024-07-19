@@ -85,7 +85,7 @@ def qsettings_value_side_effect(key, defaultValue="0"):
     """
     if key == "appSettings/openPreviousProject":
         return "0"  # Do not open previous project when instantiating ToolboxUI
-    elif key == "engineSettings/remoteExecutionEnabled":
+    if key == "engineSettings/remoteExecutionEnabled":
         return "false"
     return defaultValue
 
@@ -330,7 +330,6 @@ def q_object(o):
 
 
 def model_data_to_dict(model, parent=QModelIndex()):
-    """"""
     rows = []
     for row in range(model.rowCount(parent)):
         row_data = []
@@ -362,7 +361,7 @@ def model_data_to_table(model, parent=QModelIndex(), role=Qt.ItemDataRole.Displa
 def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
 
 
 class FakeDataStore:

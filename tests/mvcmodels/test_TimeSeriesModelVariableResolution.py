@@ -224,6 +224,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         )
         model_index = model.index(0, 0)
         model.setData(model_index, "what happened to Tuesday")
+        # pylint: disable=no-value-for-parameter
         expected = TimeSeriesVariableResolution([numpy.datetime64(), "1992-01-01T13:30"], [2.3, -5.0], True, False)
         self.assertEqual([str(x) for x in model.value.indexes], [str(x) for x in expected.indexes])
         self.assertTrue(numpy.array_equal(model.value.values, expected.values))

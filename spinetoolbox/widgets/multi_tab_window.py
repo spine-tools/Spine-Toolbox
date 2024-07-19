@@ -502,7 +502,7 @@ class TabBarPlus(QTabBar):
 
     def _move_plus_button(self):
         """Places the plus button at the right of the last tab."""
-        left = sum([self.tabRect(i).width() for i in range(self.count())])
+        left = sum(self.tabRect(i).width() for i in range(self.count()))
         top = self.geometry().top() + 1
         self._plus_button.move(left, top)
 

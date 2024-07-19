@@ -23,8 +23,8 @@ class TestPropertyQLineEdit(unittest.TestCase):
             QApplication()
 
     def test_property_qlineedit(self):
-        self.parent = QWidget()
-        le = PropertyQLineEdit(self.parent)
+        parent = QWidget()
+        le = PropertyQLineEdit(parent)
         le.setText("abc")
         self.assertEqual("abc", le.text())
-        self.parent.deleteLater()
+        parent.deleteLater()

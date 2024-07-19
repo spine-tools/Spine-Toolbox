@@ -14,7 +14,6 @@
 import json
 import queue
 import threading
-from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient
 
@@ -236,12 +235,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def make_engine_client(self, host, port, security, sec_folder, ping=True):
         """Creates a client for connecting to Spine Engine Server."""
-        try:
-            self.engine_client = EngineClient(host, port, security, sec_folder, ping)
-        except RemoteEngineInitFailed:
-            raise
-        except Exception:
-            raise
+        self.engine_client = EngineClient(host, port, security, sec_folder, ping)
 
     def run_engine(self, engine_data):
         """Makes an engine client for communicating with the engine server.
@@ -321,8 +315,7 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 # spine engine raised an exception during execution
                 self.q.put(("server_status_msg", {"msg_type": "fail", "text": f"{event[0]: {event[1]}}"}))
                 break
-            else:
-                self.q.put(event)
+            self.q.put(event)
         self.engine_client.close()
 
     def answer_prompt(self, prompter_id, answer):

@@ -979,10 +979,12 @@ def get_path_from_native_open_file_dialog(parent, current_path, title, initial_p
         tuple: [0] is the selected path, [1] is the calling function, [2] is the error message
     """
     init_path = initial_path if initial_path is not None else home_dir()
+    # pylint: disable= possibly-used-before-assignment
     hwnd = win32gui.FindWindow(None, parent.windowTitle())
     pyhandle = pywintypes.HANDLE(hwnd)
     try:
         # NOTE: Paths must use Windows path separators (\) !
+        # pylint: disable= possibly-used-before-assignment
         r = win32gui.GetOpenFileNameW(
             hwndOwner=pyhandle,
             File=current_path,
@@ -1694,6 +1696,9 @@ class HTMLTagFilter(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "br":
             self._text += "\n"
+
+    def error(self, message):
+        """To stop pylint whining"""
 
 
 def same_path(path1, path2):

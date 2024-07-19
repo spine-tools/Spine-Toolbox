@@ -328,7 +328,7 @@ class KernelEditorBase(QDialog):
         return True
 
     @staticmethod
-    def _is_rebuild_ijulia_needed(self):
+    def _is_rebuild_ijulia_needed():
         return True
 
     @busy_effect

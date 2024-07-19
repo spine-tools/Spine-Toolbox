@@ -251,7 +251,7 @@ class SpineToolboxProject(MetaObject):
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
-        saved_dict = dict(project=project_dict, items=items_dict)
+        saved_dict = {"project": project_dict, "items": items_dict}
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
@@ -1473,13 +1473,12 @@ class SpineToolboxProject(MetaObject):
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         if not host:
             self._logger.msg_error.emit(
-                "Spine Engine Server <b>host address</b> missing. "
-                "Please enter host in <b>File->Settings->Engine</b>."
+                "Spine Engine Server <b>host address</b> missing. Please enter host in <b>File->Settings->Engine</b>."
             )
             return ""
         if not port:
             self._logger.msg_error.emit(
-                "Spine Engine Server <b>port</b> missing. " "Please select port in <b>File->Settings->Engine</b>."
+                "Spine Engine Server <b>port</b> missing. Please select port in <b>File->Settings->Engine</b>."
             )
             return ""
         self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
