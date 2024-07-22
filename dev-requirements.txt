@@ -1,6 +1,6 @@
 coverage[toml]
 black == 24.4.2
-pre-commit == 2.0.1
+pre-commit
 pylint
 pyperf
 sphinx
