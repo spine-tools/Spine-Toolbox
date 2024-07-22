@@ -44,7 +44,7 @@ class TestSelectDatabaseItems(unittest.TestCase):
                     "scenario": False,
                     "scenario_alternative": False,
                     "entity_class_display_mode": False,
-                    "entity_class_display_mode__entity_class": False,
+                    "display_mode__entity_class": False,
                 },
             )
 
