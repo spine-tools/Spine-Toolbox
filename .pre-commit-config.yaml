@@ -1,7 +1,9 @@
 repos:
+-   repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+    -   id: isort
 -   repo: https://github.com/python/black
-    rev: stable
+    rev: 24.4.2
     hooks:
     -   id: black
-        files: ^spinetoolbox/
-        exclude: ^spinetoolbox/ui|.*resources_icons_rc.py|.*resources_logos_rc.py
