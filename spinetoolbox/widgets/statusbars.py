@@ -12,8 +12,8 @@
 
 """Functions to make and handle QStatusBars."""
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QStatusBar, QToolButton, QMenu
 from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
 from ..config import STATUSBAR_SS
 
 

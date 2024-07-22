@@ -13,17 +13,17 @@
 """Classes for custom QDialogs to edit items in databases."""
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QComboBox, QTabWidget
-from ..helpers import string_to_bool, string_to_display_icon
+from ...helpers import DB_ITEM_SEPARATOR, default_icon_id
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from .custom_delegates import ManageEntityClassesDelegate, ManageEntitiesDelegate, RemoveEntitiesDelegate
+from ..helpers import string_to_bool, string_to_display_icon
+from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate, RemoveEntitiesDelegate
 from .manage_items_dialogs import (
-    ShowIconColorEditorMixin,
+    DialogWithButtons,
     GetEntitiesMixin,
     GetEntityClassesMixin,
     ManageItemsDialog,
-    DialogWithButtons,
+    ShowIconColorEditorMixin,
 )
-from ...helpers import default_icon_id, DB_ITEM_SEPARATOR
 
 
 class EditOrRemoveItemsDialog(ManageItemsDialog):

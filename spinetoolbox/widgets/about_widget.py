@@ -12,15 +12,15 @@
 
 """A widget for presenting basic information about the application."""
 import os
-import sys
 import platform
-from PySide6.QtWidgets import QWidget, QApplication
-from PySide6.QtCore import Qt, QPoint, Slot
+import sys
+from PySide6.QtCore import QPoint, Qt, Slot
 from PySide6.QtGui import QTextCursor
-import spinetoolbox
-import spinedb_api
+from PySide6.QtWidgets import QApplication, QWidget
 import spine_engine
 import spine_items
+import spinedb_api
+import spinetoolbox
 
 
 class AboutWidget(QWidget):

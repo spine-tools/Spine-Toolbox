@@ -12,9 +12,9 @@
 
 """Unit tests for the helpers module."""
 import json
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
@@ -23,23 +23,29 @@ from PySide6.QtWidgets import QApplication, QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
+    HTMLTagFilter,
     copy_files,
     create_dir,
     dir_is_valid,
     erase_dir,
-    format_log_message,
     file_is_valid,
     first_non_null,
+    format_log_message,
     format_string_list,
     get_datetime,
+    home_dir,
     interpret_icon_id,
     list_to_rich_text,
+    load_local_project_data,
+    load_project_dict,
     load_specification_from_file,
     make_icon_id,
+    merge_dicts,
+    order_key,
+    plain_to_rich,
     plain_to_tool_tip,
     recursive_overwrite,
     rename_dir,
-    plain_to_rich,
     rows_to_row_count_tuples,
     select_julia_executable,
     select_julia_project,
@@ -47,12 +53,6 @@ from spinetoolbox.helpers import (
     try_number_from_string,
     tuple_itemgetter,
     unique_name,
-    load_project_dict,
-    load_local_project_data,
-    merge_dicts,
-    HTMLTagFilter,
-    home_dir,
-    order_key,
 )
 
 
@@ -422,8 +422,11 @@ class TestHelpers(unittest.TestCase):
 
     def test_order_key(self):
         self.assertEqual(["Humphrey_Bogart"], order_key("Humphrey_Bogart"))
-        self.assertEqual(["Wes_", 1969, "_Anderson"], order_key("Wes_1969_Anderson"))
-        self.assertEqual(["\U0010ffff", 1899, "_Alfred-", 1980, "Hitchcock"], order_key("1899_Alfred-1980Hitchcock"))
+        self.assertEqual(["Wes_", "000000001969", "_Anderson"], order_key("Wes_1969_Anderson"))
+        self.assertEqual(
+            ["\U0010FFFF", "000000001899", "_Alfred-", "000000001980", "Hitchcock"],
+            order_key("1899_Alfred-1980Hitchcock"),
+        )
         self.assertEqual([], order_key(""))
 
 

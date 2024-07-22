@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Contains TabularViewHeaderWidget class."""
-from PySide6.QtCore import Qt, QMimeData, Signal
-from PySide6.QtWidgets import QFrame, QToolButton, QApplication, QLabel, QHBoxLayout, QWidget
+from PySide6.QtCore import QMimeData, Qt, Signal
 from PySide6.QtGui import QDrag
+from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QToolButton, QWidget
 from ..mvcmodels.colors import PIVOT_TABLE_HEADER_COLOR
 
 

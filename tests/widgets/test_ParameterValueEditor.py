@@ -19,10 +19,10 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DateTime,
     Duration,
-    duration_to_relativedelta,
     TimePattern,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
+    duration_to_relativedelta,
     to_database,
 )
 from spinetoolbox.widgets.parameter_value_editor import ParameterValueEditor

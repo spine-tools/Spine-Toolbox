@@ -11,11 +11,11 @@
 ######################################################################################################################
 
 """Provides SpineDBIconManager."""
-from PySide6.QtCore import Qt, QPointF, QRectF, QBuffer
-from PySide6.QtWidgets import QGraphicsScene
-from PySide6.QtGui import QIcon, QFont, QTextOption, QPainter
+from PySide6.QtCore import QBuffer, QPointF, QRectF, Qt
+from PySide6.QtGui import QFont, QIcon, QPainter, QTextOption
 from PySide6.QtSvg import QSvgGenerator, QSvgRenderer
-from .helpers import TransparentIconEngine, interpret_icon_id, default_icon_id
+from PySide6.QtWidgets import QGraphicsScene
+from .helpers import TransparentIconEngine, default_icon_id, interpret_icon_id
 
 
 def _align_text_in_item(item):

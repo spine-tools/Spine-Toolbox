@@ -14,7 +14,7 @@
 import numpy as np
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QMessageBox
-from spinedb_api import TimePattern, ParameterValueFormatError
+from spinedb_api import ParameterValueFormatError, TimePattern
 from .indexed_value_table_model import IndexedValueTableModel
 
 

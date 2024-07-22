@@ -13,7 +13,7 @@
 """Unit tests for ``custom_qgraphicsviews`` module."""
 import unittest
 from unittest import mock
-from PySide6.QtWidgets import QWidget, QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
 
 

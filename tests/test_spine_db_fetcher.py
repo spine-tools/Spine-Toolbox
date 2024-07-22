@@ -15,10 +15,9 @@ import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from spinedb_api import DatabaseMapping
-from spinedb_api.temp_id import TempId
 from spinedb_api.import_functions import import_data
+from spinetoolbox.fetch_parent import ItemTypeFetchParent
 from tests.mock_helpers import TestSpineDBManager
 
 
@@ -272,7 +271,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             "parameter_definition_id": self._db_map.get_parameter_definition_item(id=1)["id"],
             "alternative_id": self._db_map.get_alternative_item(id=1)["id"],
             "value": b"2.3",
-            "type": None,
+            "type": "float",
             "commit_id": 2,
             "list_value_id": None,
         }
@@ -288,7 +287,7 @@ class TestSpineDBFetcher(unittest.TestCase):
         fetcher.set_obsolete(True)
 
     def test_fetch_parameter_value_lists(self):
-        self._import_data(parameter_value_lists=(("value_list", [2.3]),))
+        self._import_data(parameter_value_lists=(("value_list", 2.3),))
         item = {"id": self._db_map.get_parameter_value_list_item(id=1)["id"], "name": "value_list", "commit_id": 2}
         fetcher = TestItemTypeFetchParent("parameter_value_list")
         if self._db_mngr.can_fetch_more(self._db_map, fetcher):
@@ -299,8 +298,8 @@ class TestSpineDBFetcher(unittest.TestCase):
             "id": self._db_map.get_list_value_item(id=1)["id"],
             "parameter_value_list_id": self._db_map.get_parameter_value_list_item(id=1)["id"],
             "index": 0,
-            "value": b"[2.3]",
-            "type": None,
+            "value": b"2.3",
+            "type": "float",
             "commit_id": 2,
         }
         fetcher = TestItemTypeFetchParent("list_value")

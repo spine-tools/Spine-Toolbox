@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+import logging
 import os.path
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-import logging
-import sys
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor

@@ -11,34 +11,34 @@
 ######################################################################################################################
 
 """Unit tests for ToolboxUI class."""
+from contextlib import contextmanager
 import json
+import logging
+import os
 import pathlib
 from pathlib import Path
-from contextlib import contextmanager
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-import logging
-import os
-import sys
-import spinetoolbox.ui_main
-from PySide6.QtWidgets import QApplication, QMessageBox, QMenu
-from PySide6.QtCore import QSettings, Qt, QPoint, QPointF, QMimeData
-from PySide6.QtTest import QTest
+from PySide6.QtCore import QMimeData, QPoint, QPointF, QSettings, Qt
 from PySide6.QtGui import QDropEvent
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QMenu, QMessageBox
+from spinetoolbox.link import Link
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.project_item.project_item import ProjectItem
-from spinetoolbox.widgets.project_item_drag import ProjectItemDragMixin, NiceButton
-from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget
-from spinetoolbox.link import Link
 from spinetoolbox.resources_icons_rc import qInitResources
+import spinetoolbox.ui_main
+from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget
+from spinetoolbox.widgets.project_item_drag import NiceButton, ProjectItemDragMixin
 from .mock_helpers import (
-    clean_up_toolbox,
-    create_toolboxui,
-    create_project,
     add_dc,
     add_dc_trough_undo_stack,
     add_tool,
+    clean_up_toolbox,
+    create_project,
+    create_toolboxui,
     qsettings_value_side_effect,
 )
 

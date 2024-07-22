@@ -13,8 +13,8 @@
 """Contains custom combo box classes."""
 import os
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox, QStyle, QStylePainter, QStyleOptionComboBox, QDialog, QAbstractItemView
 from PySide6.QtGui import QValidator
+from PySide6.QtWidgets import QAbstractItemView, QComboBox, QDialog, QStyle, QStyleOptionComboBox, QStylePainter
 from .notification import Notification
 
 

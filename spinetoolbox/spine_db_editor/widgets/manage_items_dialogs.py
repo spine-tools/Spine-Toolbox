@@ -11,14 +11,14 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add, edit and remove database items."""
-from functools import reduce, cached_property
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QHeaderView, QGridLayout, QMenu, QApplication
-from PySide6.QtCore import Slot, Qt, QModelIndex
+from functools import cached_property, reduce
+from PySide6.QtCore import QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction
-from ..mvcmodels.entity_tree_item import EntityClassItem
+from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QGridLayout, QHeaderView, QMenu
 from spinetoolbox.spine_db_editor.widgets.custom_editors import IconColorEditor
+from ...helpers import DB_ITEM_SEPARATOR, busy_effect, preferred_row_height
 from ...widgets.custom_qtableview import CopyPasteTableView
-from ...helpers import busy_effect, preferred_row_height, DB_ITEM_SEPARATOR
+from ..mvcmodels.entity_tree_item import EntityClassItem
 
 
 class DialogWithButtons(QDialog):

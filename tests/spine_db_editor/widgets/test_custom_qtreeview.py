@@ -15,28 +15,28 @@ import os.path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import Qt, QItemSelectionModel
+from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
     from_database,
-    import_entity_classes,
     import_entities,
+    import_entity_classes,
     import_parameter_value_lists,
 )
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
-    EditEntityClassesDialog,
     EditEntitiesDialog,
+    EditEntityClassesDialog,
     RemoveEntitiesDialog,
 )
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import (
     EditorDelegateMocking,
+    add_entity,
     add_entity_tree_item,
     add_zero_dimension_entity_class,
-    add_entity,
 )
 
 
@@ -890,7 +890,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(from_database(data[i].value), expected_value)
+            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
 class TestParameterValueListTreeViewWithExistingData(TestBase):
@@ -1014,7 +1014,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         data = self._db_map.query(self._db_map.list_value_sq).all()
         self.assertEqual(len(data), 2)
         for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(from_database(data[i].value), expected_value)
+            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
 if __name__ == "__main__":

@@ -12,20 +12,20 @@
 
 """Classes for drawing graphics items on graph view's QGraphicsScene."""
 from enum import Enum, auto
-from PySide6.QtCore import Qt, Signal, Slot, QLineF, QRectF, QPointF, QObject, QByteArray
+from PySide6.QtCore import QByteArray, QLineF, QObject, QPointF, QRectF, Qt, Signal, Slot
+from PySide6.QtGui import QAction, QBrush, QColor, QGuiApplication, QPainterPath, QPalette, QPen
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
-    QGraphicsItem,
-    QGraphicsTextItem,
-    QGraphicsRectItem,
-    QGraphicsEllipseItem,
-    QGraphicsPathItem,
-    QStyle,
     QApplication,
+    QGraphicsEllipseItem,
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsRectItem,
+    QGraphicsTextItem,
     QMenu,
+    QStyle,
 )
-from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QPalette, QGuiApplication, QAction, QColor
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, color_from_index
 from spinetoolbox.widgets.custom_qwidgets import TitleWidgetAction
 

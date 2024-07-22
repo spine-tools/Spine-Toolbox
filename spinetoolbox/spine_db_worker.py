@@ -11,12 +11,10 @@
 ######################################################################################################################
 
 """The SpineDBWorker class."""
-from PySide6.QtCore import QObject, Signal, Slot
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from spinedb_api import Asterisk, DatabaseMapping
-from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 from .helpers import busy_effect
-
+from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 
 _CHUNK_SIZE = 10000
 

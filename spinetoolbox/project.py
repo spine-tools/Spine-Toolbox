@@ -11,55 +11,56 @@
 ######################################################################################################################
 
 """Spine Toolbox project class."""
-from enum import auto, Enum, unique
+from enum import Enum, auto, unique
 from itertools import chain
+import json
 import os
 from pathlib import Path
-import json
-from PySide6.QtCore import Signal, QCoreApplication
+import networkx as nx
+from PySide6.QtCore import QCoreApplication, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox
-import networkx as nx
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
-from spine_engine.utils.helpers import create_timestamp, gather_leaf_data
-from .project_item.logging_connection import LoggingConnection, LoggingJump
+from spine_engine.server.util.zip_handler import ZipHandler
 from spine_engine.spine_engine import validate_single_jump
 from spine_engine.utils.helpers import (
     ExecutionDirection,
-    shorten,
+    connections_to_selected_items,
+    create_timestamp,
+    dag_edges,
+    gather_leaf_data,
     get_file_size,
     make_dag,
-    dag_edges,
-    connections_to_selected_items,
+    shorten,
 )
 from spine_engine.utils.serialization import deserialize_path, serialize_path
-from spine_engine.server.util.zip_handler import ZipHandler
-from .project_settings import ProjectSettings
-from .server.engine_client import EngineClient
-from .metaobject import MetaObject
-from .helpers import (
-    create_dir,
-    erase_dir,
-    load_specification_from_file,
-    make_settings_dict_for_engine,
-    load_project_dict,
-    load_local_project_data,
-    merge_dicts,
-    load_specification_local_data,
-    busy_effect,
-)
-from .project_upgrader import ProjectUpgrader
 from .config import (
+    FG_COLOR,
+    INVALID_CHARS,
     LATEST_PROJECT_VERSION,
     PROJECT_FILENAME,
-    INVALID_CHARS,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
-    FG_COLOR,
-    SPECIFICATION_LOCAL_DATA_FILENAME,
     PROJECT_ZIP_FILENAME,
+    SPECIFICATION_LOCAL_DATA_FILENAME,
 )
+from .helpers import (
+    busy_effect,
+    create_dir,
+    erase_dir,
+    load_local_project_data,
+    load_project_dict,
+    load_specification_from_file,
+    load_specification_local_data,
+    make_settings_dict_for_engine,
+    merge_dicts,
+)
+from .metaobject import MetaObject
 from .project_commands import SetProjectDescriptionCommand
+from .project_item.logging_connection import LoggingConnection, LoggingJump
+from .project_settings import ProjectSettings
+from .project_upgrader import ProjectUpgrader
+from .server.engine_client import EngineClient
 from .spine_engine_worker import SpineEngineWorker
 
 

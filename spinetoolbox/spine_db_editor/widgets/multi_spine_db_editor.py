@@ -12,16 +12,15 @@
 
 """Contains the MultiSpineDBEditor class."""
 import os
+from PySide6.QtCore import QPoint, Slot
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
-from PySide6.QtCore import Slot, QPoint
-from PySide6.QtGui import QIcon, QFont
-from .spine_db_editor import SpineDBEditor
-from .custom_qwidgets import ShootingLabel, OpenFileButton, OpenSQLiteFileButton
-from ...widgets.multi_tab_window import MultiTabWindow
+from ...config import MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL
 from ...helpers import CharIconEngine, open_url
-from ...config import ONLINE_DOCUMENTATION_URL
+from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
-from ...config import MAINWINDOW_SS
+from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel
+from .spine_db_editor import SpineDBEditor
 
 
 class MultiSpineDBEditor(MultiTabWindow):

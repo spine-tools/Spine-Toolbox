@@ -396,13 +396,19 @@ Below are the bare minimum things you need to know.
 
         python -m pip install -r dev-requirements.txt
 
-2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
+2. It is also recommended to run `pre-commit install` in the respective root directories of spine-toolbox, spinedb_api,
+   spine-engine and spine-items. This sets up git hooks for auto-formatting the files before committing.
 
 ### Coding style
 
 - [Black](https://github.com/python/black) is used for Python code formatting.
   The project's GitHub page includes instructions on how to integrate Black in IDEs.
+- [isort](https://pycqa.github.io/isort/) is used for formatting the Python import statements.
 - Google style docstrings
+
+Running the following line in the project root will take care of sorting the imports:
+
+    isort .
 
 ### Linting
 

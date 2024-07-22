@@ -16,21 +16,21 @@ from contextlib import suppress
 from functools import partial
 from itertools import product
 from typing import Iterable
-from PySide6.QtCore import Qt, Signal, Slot, QTimer, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import IndexedValue, join_value_and_type, split_value_and_type
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
-from .pivot_model import PivotModel
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
 from ...mvcmodels.shared import PARSED_ROLE
 from ..widgets.custom_delegates import (
-    RelationshipPivotTableDelegate,
     ParameterPivotTableDelegate,
+    RelationshipPivotTableDelegate,
     ScenarioAlternativeTableDelegate,
 )
+from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
+from .pivot_model import PivotModel
 
 
 class TopLeftHeaderItem:

@@ -14,13 +14,13 @@
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
-from .array_value_editor import ArrayValueEditor
-from .indexed_value_table_context_menu import ArrayTableContextMenu
-from .parameter_value_editor_base import ValueType
 from ..helpers import inquire_index_name
 from ..mvcmodels.array_model import ArrayModel
 from ..plotting import add_array_plot
 from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDelegate
+from .array_value_editor import ArrayValueEditor
+from .indexed_value_table_context_menu import ArrayTableContextMenu
+from .parameter_value_editor_base import ValueType
 
 
 class ArrayEditor(QWidget):

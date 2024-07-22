@@ -14,7 +14,7 @@
 import locale
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QAbstractTableModel, QItemSelection, QModelIndex, QItemSelectionModel, Qt
+from PySide6.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
 

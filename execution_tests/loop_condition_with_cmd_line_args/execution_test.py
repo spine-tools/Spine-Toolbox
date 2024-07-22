@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import sys
 import unittest
-from spinedb_api import create_new_spine_database, DatabaseMapping, from_database, Map
+from spinedb_api import DatabaseMapping, Map, create_new_spine_database, from_database
 
 
 class LoopConditionWithCmdLineArgs(unittest.TestCase):

@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Contains :class:`ItemMetadataTableModel` and associated functionality."""
-from enum import auto, Enum, IntEnum, unique
+from enum import Enum, IntEnum, auto, unique
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from .metadata_table_model_base import Column, FLAGS_EDITABLE, FLAGS_FIXED, MetadataTableModelBase
+from .metadata_table_model_base import FLAGS_EDITABLE, FLAGS_FIXED, Column, MetadataTableModelBase
 
 
 @unique

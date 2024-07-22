@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Models to represent things in a tree."""
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import QModelIndex, Qt
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from .tree_item_utility import StandardTreeItem
 

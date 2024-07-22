@@ -12,58 +12,49 @@
 
 """Custom QTableView classes that support copy-paste and the like."""
 from dataclasses import replace
-from PySide6.QtCore import (
-    Qt,
-    Signal,
-    Slot,
-    QTimer,
-    QModelIndex,
-    QPoint,
-    QItemSelection,
-    QItemSelectionModel,
-)
-from PySide6.QtWidgets import QHeaderView, QTableView, QMenu, QWidget
-from PySide6.QtGui import QKeySequence, QAction
-from .scenario_generator import ScenarioGenerator
-from ..helpers import string_to_bool
-from ..mvcmodels.pivot_table_models import (
-    ParameterValuePivotTableModel,
-    ElementPivotTableModel,
-    IndexExpansionPivotTableModel,
-    ScenarioAlternativePivotTableModel,
-)
-from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
-from ...widgets.report_plotting_failure import report_plotting_failure
-from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
-from ...widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
-from ...widgets.custom_qwidgets import TitleWidgetAction
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
+from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
 from ...plotting import (
-    PlottingError,
     ParameterTableHeaderSection,
+    PlottingError,
     plot_parameter_table_selection,
     plot_pivot_table_selection,
 )
-from ...helpers import preferred_row_height, rows_to_row_count_tuples, DB_ITEM_SEPARATOR
+from ...widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPasteTableView
+from ...widgets.custom_qwidgets import TitleWidgetAction
+from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
+from ...widgets.report_plotting_failure import report_plotting_failure
+from ..helpers import string_to_bool
+from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
+from ..mvcmodels.pivot_table_models import (
+    ElementPivotTableModel,
+    IndexExpansionPivotTableModel,
+    ParameterValuePivotTableModel,
+    ScenarioAlternativePivotTableModel,
+)
+from .custom_delegates import (
+    AlternativeNameDelegate,
+    BooleanValueDelegate,
+    DatabaseNameDelegate,
+    EntityBynameDelegate,
+    EntityClassNameDelegate,
+    ItemMetadataDelegate,
+    MetadataDelegate,
+    ParameterDefaultValueDelegate,
+    ParameterDefinitionNameAndDescriptionDelegate,
+    ParameterNameDelegate,
+    ParameterValueDelegate,
+    ValueListDelegate,
+)
 from .pivot_table_header_view import (
-    PivotTableHeaderView,
     ParameterValuePivotHeaderView,
+    PivotTableHeaderView,
     ScenarioAlternativePivotHeaderView,
 )
+from .scenario_generator import ScenarioGenerator
 from .tabular_view_header_widget import TabularViewHeaderWidget
-from .custom_delegates import (
-    DatabaseNameDelegate,
-    ParameterDefaultValueDelegate,
-    ValueListDelegate,
-    ParameterValueDelegate,
-    ParameterNameDelegate,
-    ParameterDefinitionNameAndDescriptionDelegate,
-    EntityClassNameDelegate,
-    EntityBynameDelegate,
-    AlternativeNameDelegate,
-    MetadataDelegate,
-    ItemMetadataDelegate,
-    BooleanValueDelegate,
-)
 
 
 @Slot(QModelIndex, object)

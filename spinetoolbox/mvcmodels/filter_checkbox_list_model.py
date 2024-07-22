@@ -12,8 +12,8 @@
 
 """Provides FilterCheckboxListModel for FilterWidget."""
 import re
-from PySide6.QtCore import Qt, QModelIndex, QAbstractListModel, Slot
-from spinetoolbox.helpers import bisect_chunks
+from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
+from spinetoolbox.helpers import bisect_chunks, order_key
 
 
 class SimpleFilterCheckboxListModel(QAbstractListModel):
@@ -309,7 +309,7 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
 
     def _do_add_items(self, data):
         """Adds items so the list is always sorted, while assuming that both existing and new items are sorted."""
-        for chunk, pos in bisect_chunks(self._data, data):
+        for chunk, pos in bisect_chunks(self._data, data, key=lambda x: order_key(str(x))):
             self.beginInsertRows(self.index(0, 0), pos, pos + len(chunk) - 1)
             self._data[pos:pos] = chunk
             self.endInsertRows()

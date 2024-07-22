@@ -11,61 +11,61 @@
 ######################################################################################################################
 
 """General helper functions and classes."""
-import functools
-import sys
-import time
-from enum import Enum, unique
-import itertools
-import os
-import glob
-from html.parser import HTMLParser
-import json
-import logging
-import datetime
-import shutil
-import re
-import pathlib
 import bisect
 from contextlib import contextmanager
+import datetime
+from enum import Enum, unique
+import functools
+import glob
+from html.parser import HTMLParser
+import itertools
+import json
+import logging
+import os
+import pathlib
+import re
+import shutil
+import sys
 import tempfile
-from typing import Sequence
+import time
+from typing import Sequence  # pylint: disable=unused-import
 import matplotlib
-from PySide6.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint, QUrl, QObject, QEvent
+from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
-from PySide6.QtWidgets import (
-    QApplication,
-    QMessageBox,
-    QFileIconProvider,
-    QStyle,
-    QFileDialog,
-    QInputDialog,
-    QSplitter,
-    QMenu,
-)
 from PySide6.QtGui import (
-    QGuiApplication,
-    QCursor,
-    QImageReader,
-    QPixmap,
-    QIcon,
-    QIconEngine,
-    QStandardItemModel,
-    QStandardItem,
-    QDesktopServices,
-    QKeySequence,
-    QPalette,
-    QSyntaxHighlighter,
-    QTextCharFormat,
     QBrush,
     QColor,
+    QCursor,
+    QDesktopServices,
     QFont,
+    QGuiApplication,
+    QIcon,
+    QIconEngine,
+    QImageReader,
+    QKeySequence,
     QPainter,
+    QPalette,
+    QPixmap,
+    QStandardItem,
+    QStandardItemModel,
+    QSyntaxHighlighter,
+    QTextCharFormat,
     QUndoCommand,
 )
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QFileIconProvider,
+    QInputDialog,
+    QMenu,
+    QMessageBox,
+    QSplitter,
+    QStyle,
+)
 from spine_engine.utils.serialization import deserialize_path
-from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from spinedb_api.helpers import group_consecutive
+from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
     PLUGINS_PATH,
@@ -77,9 +77,9 @@ from .config import (
 
 if sys.platform == "win32":
     import ctypes
-    import win32gui
-    import win32con
     import pywintypes
+    import win32con
+    import win32gui
 
 matplotlib.use("Qt5Agg")
 matplotlib.rcParams.update({"font.size": 8})
@@ -1828,12 +1828,12 @@ class CustomPopupMenu(QMenu):
 
 
 def order_key(name):
-    """Splits the given string into a list of its substrings and digits
-    example: "David_1946_Gilmour" -> ["David_", 1946, "_Gilmour"]
-    If given a string that starts with a digit, a 'big' string (in comparisons) will be added to the start
-    of the order key that makes sure that every key starts with a str and alternates with int after that.
+    """Splits the given string into a list of its substrings and fills digits with '0'
+    to ensure that e.g. 1 and 11 get sorted correctly.
+
+    Example: "David_1946_Gilmour" -> ["David_", "000000001946", "_Gilmour"]
     """
-    key_list = [int(text) if text.isdigit() else text for text in re.split(r"(\d+|__)", name) if text]
-    if len(key_list) and isinstance(key_list[0], int):
+    key_list = [f"{int(text):#012}" if text.isdigit() else text for text in re.split(r"(\d+|__)", name) if text]
+    if key_list and key_list[0].isdigit():
         key_list.insert(0, "\U0010FFFF")
     return key_list

@@ -13,13 +13,12 @@
 """Unit tests for ``commit_viewer`` module."""
 import unittest
 from unittest import mock
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from spinetoolbox.spine_db_manager import SpineDBManager
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_editor.widgets.commit_viewer import CommitViewer, QSplitter
+from spinetoolbox.spine_db_manager import SpineDBManager
 from tests.mock_helpers import q_object
 
 

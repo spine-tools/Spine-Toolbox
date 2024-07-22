@@ -12,12 +12,12 @@
 
 """Contains scenario tree model."""
 import pickle
-from PySide6.QtCore import QMimeData, Qt, QByteArray
+from PySide6.QtCore import QByteArray, QMimeData, Qt
 from spinetoolbox.helpers import unique_name
-from .tree_model_base import TreeModelBase
-from .scenario_item import ScenarioDBItem, ScenarioAlternativeItem, ScenarioItem
-from .utils import two_column_as_csv
 from . import mime_types
+from .scenario_item import ScenarioAlternativeItem, ScenarioDBItem, ScenarioItem
+from .tree_model_base import TreeModelBase
+from .utils import two_column_as_csv
 
 
 class ScenarioModel(TreeModelBase):

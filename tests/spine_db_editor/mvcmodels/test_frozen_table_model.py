@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 from PySide6.QtCore import QModelIndex, QObject, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
-from tests.mock_helpers import model_data_to_table, TestSpineDBManager
+from tests.mock_helpers import TestSpineDBManager, model_data_to_table
 
 
 class TestFrozenTableModel(unittest.TestCase):

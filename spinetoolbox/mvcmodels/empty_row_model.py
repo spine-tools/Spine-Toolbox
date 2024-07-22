@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """ Contains a table model with an empty last row. """
-from PySide6.QtCore import Qt, Slot, QModelIndex
+from PySide6.QtCore import QModelIndex, Qt, Slot
 from .minimal_table_model import MinimalTableModel
 
 

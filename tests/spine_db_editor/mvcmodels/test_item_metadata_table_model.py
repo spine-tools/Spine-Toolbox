@@ -18,13 +18,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
+    import_metadata,
     import_object_classes,
     import_object_metadata,
     import_object_parameter_value_metadata,
     import_object_parameter_values,
     import_object_parameters,
     import_objects,
-    import_metadata,
     import_relationship_classes,
     import_relationship_metadata,
     import_relationship_parameter_value_metadata,

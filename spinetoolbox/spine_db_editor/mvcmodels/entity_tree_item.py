@@ -12,9 +12,9 @@
 
 """Classes to represent entities in a tree."""
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QBrush, QIcon
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, plain_to_tool_tip, order_key
-from spinetoolbox.fetch_parent import FlexibleFetchParent, FetchIndex
+from PySide6.QtGui import QBrush, QFont, QIcon
+from spinetoolbox.fetch_parent import FetchIndex, FlexibleFetchParent
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_tool_tip
 from .multi_db_tree_item import MultiDBTreeItem
 
 

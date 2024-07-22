@@ -1,12 +1,12 @@
 import os
-import sys
 from pathlib import Path
 import subprocess
+import sys
 import unittest
 import zmq
-from spinetoolbox.config import PROJECT_ZIP_FILENAME
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
-from spinedb_api import create_new_spine_database, DatabaseMapping
+from spinedb_api import DatabaseMapping, create_new_spine_database
+from spinetoolbox.config import PROJECT_ZIP_FILENAME
 
 
 class RunSimpleImporterOnServer(unittest.TestCase):

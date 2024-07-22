@@ -11,31 +11,31 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs for julia setup."""
-import os
 from enum import IntEnum, auto
+import os
 
 try:
     import jill.install as jill_install
 except ModuleNotFoundError:
     jill_install = None
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
     QWidget,
     QWizard,
     QWizardPage,
-    QLabel,
-    QPushButton,
-    QVBoxLayout,
-    QHBoxLayout,
-    QLineEdit,
-    QFileDialog,
-    QCheckBox,
 )
-from PySide6.QtCore import Signal, Slot, Qt
-from PySide6.QtGui import QCursor
 from spine_engine.utils.helpers import resolve_current_python_interpreter
-from ..execution_managers import QProcessExecutionManager
 from ..config import APPLICATION_PATH
-from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, LabelWithCopyButton
+from ..execution_managers import QProcessExecutionManager
+from .custom_qwidgets import HyperTextLabel, LabelWithCopyButton, QWizardProcessPage
 
 
 class _PageId(IntEnum):

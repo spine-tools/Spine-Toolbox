@@ -14,9 +14,9 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QAbstractAnimation
-from PySide6.QtWidgets import QApplication, QWidget
 from PySide6.QtGui import QUndoCommand, QUndoStack
-from spinetoolbox.widgets.notification import Notification, ChangeNotifier
+from PySide6.QtWidgets import QApplication, QWidget
+from spinetoolbox.widgets.notification import ChangeNotifier, Notification
 
 
 @unittest.skip("Test hangs on Windows when running all tests.")

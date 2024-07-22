@@ -12,7 +12,7 @@
 
 """A widget for editing project description."""
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import QDialog, QFormLayout, QLabel, QPlainTextEdit, QDialogButtonBox
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLabel, QPlainTextEdit
 
 
 class SetDescriptionDialog(QDialog):

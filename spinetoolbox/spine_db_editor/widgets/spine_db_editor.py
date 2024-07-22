@@ -11,50 +11,50 @@
 ######################################################################################################################
 
 """Contains the SpineDBEditor class."""
-import os
 import json
-from sqlalchemy.engine.url import URL
+import os
+from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
+from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPalette
 from PySide6.QtWidgets import (
-    QMainWindow,
-    QErrorMessage,
-    QDockWidget,
-    QMessageBox,
     QAbstractScrollArea,
-    QTabBar,
     QCheckBox,
     QDialog,
+    QDockWidget,
+    QErrorMessage,
+    QMainWindow,
+    QMessageBox,
+    QTabBar,
 )
-from PySide6.QtCore import QModelIndex, Qt, Signal, Slot, QTimer, QCoreApplication
-from PySide6.QtGui import QGuiApplication, QKeySequence, QPalette, QColor
-from spinedb_api import export_data, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, Asterisk
-from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from sqlalchemy.engine.url import URL
+from spinedb_api import Asterisk, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, export_data
 from spinedb_api.helpers import vacuum
-from .custom_menus import RecentDatabasesPopupMenu, DocsMenu
-from .commit_viewer import CommitViewer
-from .mass_select_items_dialogs import MassRemoveItemsDialog, MassExportItemsDialog
-from .stacked_view_mixin import StackedViewMixin
-from .tree_view_mixin import TreeViewMixin
-from .graph_view_mixin import GraphViewMixin
-from .tabular_view_mixin import TabularViewMixin
-from .toolbar import DBEditorToolBar
-from .metadata_editor import MetadataEditor
-from .item_metadata_editor import ItemMetadataEditor
-from ..helpers import table_name_from_item_type
-from ...widgets.notification import ChangeNotifier, Notification
-from ...widgets.parameter_value_editor import ParameterValueEditor
-from ...widgets.commit_dialog import CommitDialog
+from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 from ...helpers import (
-    get_save_file_name_in_last_dir,
-    get_open_file_name_in_last_dir,
-    format_string_list,
-    call_on_focused_widget,
     busy_effect,
+    call_on_focused_widget,
+    format_string_list,
+    get_open_file_name_in_last_dir,
+    get_save_file_name_in_last_dir,
+    open_url,
     preferred_row_height,
     unique_name,
-    open_url,
 )
 from ...spine_db_parcel import SpineDBParcel
-from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
+from ...widgets.commit_dialog import CommitDialog
+from ...widgets.notification import ChangeNotifier, Notification
+from ...widgets.parameter_value_editor import ParameterValueEditor
+from ..helpers import table_name_from_item_type
+from .commit_viewer import CommitViewer
+from .custom_menus import DocsMenu, RecentDatabasesPopupMenu
+from .graph_view_mixin import GraphViewMixin
+from .item_metadata_editor import ItemMetadataEditor
+from .mass_select_items_dialogs import MassExportItemsDialog, MassRemoveItemsDialog
+from .metadata_editor import MetadataEditor
+from .stacked_view_mixin import StackedViewMixin
+from .tabular_view_mixin import TabularViewMixin
+from .toolbar import DBEditorToolBar
+from .tree_view_mixin import TreeViewMixin
 
 
 class SpineDBEditorBase(QMainWindow):

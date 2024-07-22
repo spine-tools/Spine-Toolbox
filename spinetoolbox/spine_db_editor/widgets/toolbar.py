@@ -11,29 +11,29 @@
 ######################################################################################################################
 
 """Contains the DBEditorToolBar class and helpers."""
+from PySide6.QtCore import QSize, Qt, Signal, Slot
+from PySide6.QtGui import QAction, QIcon, QKeySequence, QTextCursor
 from PySide6.QtWidgets import (
-    QToolBar,
-    QWidget,
     QDialog,
-    QHBoxLayout,
-    QVBoxLayout,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
-    QTreeWidget,
-    QTreeWidgetItem,
     QSizePolicy,
     QTextEdit,
+    QToolBar,
     QToolButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtGui import QIcon, QKeySequence, QTextCursor, QAction
-from PySide6.QtCore import QSize, Qt, Signal, Slot
 from spinedb_api.filters.tools import (
     SCENARIO_FILTER_TYPE,
-    filter_config,
     append_filter_config,
+    clear_filter_configs,
+    filter_config,
     filter_configs,
     name_from_dict,
-    clear_filter_configs,
 )
 from spinetoolbox.helpers import CharIconEngine
 

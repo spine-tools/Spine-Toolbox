@@ -11,10 +11,10 @@
 ######################################################################################################################
 
 """Functions to make and handle QToolBars."""
-from PySide6.QtCore import Qt, Slot, QModelIndex, QPoint, QSize
-from PySide6.QtWidgets import QToolBar, QToolButton, QMenu, QWidget
-from PySide6.QtGui import QIcon, QPainter, QFontMetrics, QPainterPath
-from ..helpers import make_icon_toolbar_ss, ColoredIcon, CharIconEngine
+from PySide6.QtCore import QModelIndex, QPoint, QSize, Qt, Slot
+from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPainterPath
+from PySide6.QtWidgets import QMenu, QToolBar, QToolButton, QWidget
+from ..helpers import CharIconEngine, ColoredIcon, make_icon_toolbar_ss
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
 
 

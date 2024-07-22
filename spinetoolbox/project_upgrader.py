@@ -12,12 +12,12 @@
 
 """Contains ProjectUpgrader class used in upgrading and converting projects
 and project dicts from earlier versions to the latest version."""
-import shutil
-import os
-import json
 import copy
+import json
+import os
+import shutil
 from PySide6.QtWidgets import QFileDialog, QMessageBox
-from spine_engine.utils.serialization import serialize_path, deserialize_path
+from spine_engine.utils.serialization import deserialize_path, serialize_path
 from .config import LATEST_PROJECT_VERSION, PROJECT_FILENAME
 from .helpers import home_dir
 from .project_settings import ProjectSettings

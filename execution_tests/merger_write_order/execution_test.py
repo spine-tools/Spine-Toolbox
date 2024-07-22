@@ -2,8 +2,7 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
-
-from spinedb_api import create_new_spine_database, DatabaseMapping, from_database, import_functions
+from spinedb_api import DatabaseMapping, create_new_spine_database, from_database, import_functions
 
 
 class MergerWriteOrder(unittest.TestCase):

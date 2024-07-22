@@ -11,20 +11,20 @@
 ######################################################################################################################
 
 """Unit tests for ProjectUpgrader class."""
-import unittest
 import json
-from unittest import mock
 import logging
-import sys
 import os
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
+import unittest
+from unittest import mock
 from PySide6.QtWidgets import QApplication, QMessageBox
+from spinetoolbox.config import LATEST_PROJECT_VERSION
 from spinetoolbox.project_settings import ProjectSettings
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
-from spinetoolbox.config import LATEST_PROJECT_VERSION
-from .mock_helpers import create_toolboxui, clean_up_toolbox
+from .mock_helpers import clean_up_toolbox, create_toolboxui
 
 
 class TestProjectUpgrader(unittest.TestCase):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import os.path
 import argparse
+import os.path
 from append_license import append_license
 
 

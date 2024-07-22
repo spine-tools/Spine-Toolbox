@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Contains SpineEngineManagerBase."""
+import json
 import queue
 import threading
-import json
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
-from spinetoolbox.server.engine_client import EngineClient, ClientSecurityModel
+from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient
 
 
 class SpineEngineManagerBase:

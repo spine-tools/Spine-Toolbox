@@ -29,7 +29,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    setting_up
    main_window
    project_items
-   links
+   links_and_loops
    tool_specification_editor
    executing_projects
    settings

@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Models to represent items in a tree."""
-from PySide6.QtCore import Qt, QAbstractItemModel, QModelIndex
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
 
 class TreeItem:

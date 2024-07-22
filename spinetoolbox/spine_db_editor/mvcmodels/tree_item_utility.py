@@ -12,10 +12,10 @@
 
 """A tree model for parameter_value lists."""
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QFont, QIcon, QGuiApplication
-from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
+from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon
 from spinetoolbox.fetch_parent import FlexibleFetchParent
+from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
+from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
 
 
 class StandardTreeItem(TreeItem):

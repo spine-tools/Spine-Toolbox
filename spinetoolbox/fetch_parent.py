@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """The FetchParent and FlexibleFetchParent classes."""
-from PySide6.QtCore import QTimer, Signal, QObject, Qt
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from .helpers import busy_effect
 
 

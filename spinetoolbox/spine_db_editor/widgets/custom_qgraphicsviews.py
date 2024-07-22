@@ -11,34 +11,34 @@
 ######################################################################################################################
 
 """Classes for custom QGraphicsViews for the Entity graph view."""
+from contextlib import contextmanager
 import os
 import sys
 import tempfile
-from contextlib import contextmanager
 import numpy as np
-from PySide6.QtCore import Qt, QTimeLine, Signal, Slot, QRectF, QRunnable, QThreadPool
-from PySide6.QtWidgets import (
-    QMenu,
-    QInputDialog,
-    QColorDialog,
-    QMessageBox,
-    QLineEdit,
-    QGraphicsScene,
-    QWidget,
-    QVBoxLayout,
-    QPushButton,
-    QRadioButton,
-)
-from PySide6.QtGui import QCursor, QPainter, QIcon, QAction, QPageSize, QPixmap, QKeySequence, QShortcut
+from PySide6.QtCore import QRectF, QRunnable, Qt, QThreadPool, QTimeLine, Signal, Slot
+from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QPageSize, QPainter, QPixmap, QShortcut
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
-from .custom_qwidgets import ExportAsVideoDialog
-from .select_graph_parameters_dialog import SelectGraphParametersDialog
-from ..helpers import GRAPH_OVERLAY_COLOR
-from ..graphics_items import EntityItem, CrossHairsArcItem, BgItem, ArcItem
+from PySide6.QtWidgets import (
+    QColorDialog,
+    QGraphicsScene,
+    QInputDialog,
+    QLineEdit,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QRadioButton,
+    QVBoxLayout,
+    QWidget,
+)
 from ...helpers import CharIconEngine, remove_first
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
-from ...widgets.custom_qwidgets import ToolBarWidgetAction, HorizontalSpinBox
+from ...widgets.custom_qwidgets import HorizontalSpinBox, ToolBarWidgetAction
+from ..graphics_items import ArcItem, BgItem, CrossHairsArcItem, EntityItem
+from ..helpers import GRAPH_OVERLAY_COLOR
+from .custom_qwidgets import ExportAsVideoDialog
+from .select_graph_parameters_dialog import SelectGraphParametersDialog
 
 
 class _GraphProperty:
@@ -152,7 +152,6 @@ class GraphOptionsOverlay(QWidget):
         self.parent()._properties.get("auto_build")._action.triggered.connect(
             lambda x: self._auto_build_button.setChecked(x)
         )
-        self.parent()._properties["auto_build"]._action.triggered.connect(lambda x: print("skaga", x))
         self._rebuild_button.pressed.connect(lambda: self.parent()._spine_db_editor.rebuild_graph(force=True))
 
     def paintEvent(self, event):
@@ -794,7 +793,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     @Slot(bool)
     def export_as_video(self):
         try:
-            import cv2
+            import cv2  # pylint: disable=import-outside-toplevel
         except ModuleNotFoundError:
             self._spine_db_editor.msg_error.emit(
                 "Export as video requires <a href='https://pypi.org/project/opencv-python/'>opencv-python</a>"

@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Application constants and style sheets."""
-import sys
 import os
 from pathlib import Path
+import sys
 
 LATEST_PROJECT_VERSION = 13
 

@@ -11,15 +11,14 @@
 ######################################################################################################################
 
 """Contains logging connection and jump classes."""
-from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
-from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
+from spine_engine.project_item.connection import ConnectionBase, FilterSettings, Jump, ResourceConvertingConnection
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from spine_engine.project_item.connection import ResourceConvertingConnection, Jump, ConnectionBase, FilterSettings
+from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
+from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
+from ..fetch_parent import FlexibleFetchParent
+from ..helpers import busy_effect
 from ..log_mixin import LogMixin
 from ..mvcmodels.resource_filter_model import ResourceFilterModel
-from ..helpers import busy_effect
-from ..fetch_parent import FlexibleFetchParent
-
 
 _DATABASE_ITEM_TYPE = {ALTERNATIVE_FILTER_TYPE: "alternative", SCENARIO_FILTER_TYPE: "scenario"}
 

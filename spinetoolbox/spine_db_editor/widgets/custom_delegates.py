@@ -12,24 +12,24 @@
 
 """Custom item delegates."""
 from numbers import Number
-from PySide6.QtCore import QModelIndex, Qt, Signal, QRect, QEvent, QSize
-from PySide6.QtGui import QIcon, QFontMetrics
+from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QFontMetrics, QIcon
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
-    CustomLineEditor,
+    CheckListEditor,
     CustomComboBoxEditor,
+    CustomLineEditor,
+    ParameterValueLineEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
-    CheckListEditor,
-    ParameterValueLineEditor,
     SearchBarEditorWithCreation,
 )
-from ...mvcmodels.shared import PARSED_ROLE, DB_MAP_ROLE
-from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ...helpers import object_icon
+from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
+from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
 

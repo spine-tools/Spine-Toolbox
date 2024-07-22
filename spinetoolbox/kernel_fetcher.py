@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Contains a class for fetching kernel specs in a thread."""
-import os
 import json
-from PySide6.QtCore import Signal, Slot, QThread
+import os
+from PySide6.QtCore import QThread, Signal, Slot
 from PySide6.QtGui import QIcon
-from spine_engine.utils.helpers import resolve_conda_executable, custom_find_kernel_specs
 from spine_engine.execution_managers.conda_kernel_spec_manager import CondaKernelSpecManager
+from spine_engine.utils.helpers import custom_find_kernel_specs, resolve_conda_executable
 
 
 class KernelFetcher(QThread):
