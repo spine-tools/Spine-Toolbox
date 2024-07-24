@@ -94,6 +94,9 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
         self.setMouseTracking(True)
         self.drag_about_to_start.connect(self._handle_drag_about_to_start)
         self.clicked.connect(self._show_tool_tip)
+        self.drag_start_pos = None
+        self.pixmap = None
+        self.mime_data = None
 
     @Slot(bool)
     def _show_tool_tip(self, _=False):

@@ -22,7 +22,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
 
     def __init__(self, icons):
         super().__init__()
-        self._spec_names = list()
+        self._spec_names = []
         self._icons = icons
         self._project = None
 
@@ -76,7 +76,7 @@ class ProjectItemSpecificationModel(QAbstractListModel):
 
     def clear(self):
         self.beginResetModel()
-        self._spec_names = list()
+        self._spec_names = []
         self.endResetModel()
 
     def rowCount(self, parent=None):

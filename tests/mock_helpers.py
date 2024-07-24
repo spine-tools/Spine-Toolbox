@@ -85,7 +85,7 @@ def qsettings_value_side_effect(key, defaultValue="0"):
     """
     if key == "appSettings/openPreviousProject":
         return "0"  # Do not open previous project when instantiating ToolboxUI
-    elif key == "engineSettings/remoteExecutionEnabled":
+    if key == "engineSettings/remoteExecutionEnabled":
         return "false"
     return defaultValue
 
@@ -103,7 +103,7 @@ def add_ds(project, item_factories, name, x=0.0, y=0.0):
     Returns:
         DataStore: added project item
     """
-    item_dict = {name: {"type": "Data Store", "description": "", "url": dict(), "x": x, "y": y}}
+    item_dict = {name: {"type": "Data Store", "description": "", "url": {}, "x": x, "y": y}}
     project.restore_project_items(item_dict, item_factories)
     return project.get_item(name)
 
@@ -121,7 +121,7 @@ def add_dc_trough_undo_stack(toolbox, name, x=0, y=0, file_refs=None):
     Returns:
         DataConnection: added project item
     """
-    frefs = list() if not file_refs else file_refs
+    frefs = [] if not file_refs else file_refs
     item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
     if toolbox:  # This way the changes are pushed to the undo stack of ToolboxUI
         toolbox.add_project_items(item_dict)
@@ -144,7 +144,7 @@ def add_dc(project, item_factories, name, x=0, y=0, file_refs=None):
     Returns:
         DataConnection: added project item
     """
-    frefs = list() if not file_refs else file_refs
+    frefs = [] if not file_refs else file_refs
     item_dict = {name: {"type": "Data Connection", "description": "", "references": frefs, "x": x, "y": y}}
     project.restore_project_items(item_dict, item_factories)
     return project.get_item(name)
@@ -330,8 +330,7 @@ def q_object(o):
 
 
 def model_data_to_dict(model, parent=QModelIndex()):
-    """"""
-    rows = list()
+    rows = []
     for row in range(model.rowCount(parent)):
         row_data = []
         for column in range(model.columnCount()):
@@ -362,7 +361,7 @@ def model_data_to_table(model, parent=QModelIndex(), role=Qt.ItemDataRole.Displa
 def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
-        qApp.processEvents()
+        qApp.processEvents()  # pylint: disable=undefined-variable
 
 
 class FakeDataStore:

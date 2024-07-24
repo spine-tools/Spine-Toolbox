@@ -157,7 +157,7 @@ class _DBCommitViewer(QWidget):
         Args:
             item_type (str): item type
         """
-        label = self._affected_item_widgets[item_type].label.setVisible(False)
+        self._affected_item_widgets[item_type].label.setVisible(False)
 
     @Slot()
     def _finish_work(self):

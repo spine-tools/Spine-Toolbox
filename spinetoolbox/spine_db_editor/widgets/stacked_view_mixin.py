@@ -102,7 +102,7 @@ class StackedViewMixin:
         """
         if index is None or not index.isValid():
             default_db_map = next(iter(self.db_maps))
-            default_data = dict(database=default_db_map.codename)
+            default_data = {"database": default_db_map.codename}
         else:
             item = index.model().item_from_index(index)
             default_db_map = item.first_db_map
@@ -157,7 +157,7 @@ class StackedViewMixin:
         """Combines alternative ids from Scenario and Alternative tree selections."""
         all_alternatives = self._filter_alternative_ids.copy()
         for db_map, scenarios in self._filter_scenario_ids.get("scenario", {}).items():
-            for scenario, alternatives in scenarios.items():
+            for _, alternatives in scenarios.items():
                 all_alternatives.setdefault(db_map, set()).update(alternatives)
         for db_map, alternatives in self._filter_scenario_ids.get("scenario_alternative", {}).items():
             all_alternatives.setdefault(db_map, set()).update(alternatives)

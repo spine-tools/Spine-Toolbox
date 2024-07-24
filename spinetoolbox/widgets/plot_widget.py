@@ -33,7 +33,7 @@ class PlotWidget(QWidget):
         original_xy_data (list of XYData): unmodified data on which the plots are based
     """
 
-    plot_windows = dict()
+    plot_windows = {}
     """A global list of plot windows."""
 
     def __init__(self, parent=None, legend_axes_position=LegendPosition.BOTTOM):
@@ -48,7 +48,7 @@ class PlotWidget(QWidget):
         self._toolbar = NavigationToolBar(self.canvas, self)
         self._layout.addWidget(self._toolbar)
         self._layout.addWidget(self.canvas)
-        self.original_xy_data = list()
+        self.original_xy_data = []
         QMetaObject.connectSlotsByName(self)
 
     def closeEvent(self, event):

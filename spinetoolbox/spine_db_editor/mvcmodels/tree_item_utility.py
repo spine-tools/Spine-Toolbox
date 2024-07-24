@@ -317,7 +317,7 @@ class LeafItem(StandardTreeItem):
         return True
 
     def _make_item_to_add(self, value):
-        return dict(name=value, description=self.item_data["description"])
+        return {"name": value, "description": self.item_data["description"]}
 
     def _make_item_to_update(self, column, value):
         field = self.header_data(column)

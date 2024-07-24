@@ -105,8 +105,8 @@ def convert_indexed_value_to_tree(value):
         else:
             try:
                 x = float(x)
-            except TypeError:
-                raise ValueError("cannot plot null values")
+            except TypeError as error:
+                raise ValueError("cannot plot null values") from error
         d.content[index] = x
     return d
 
@@ -177,7 +177,7 @@ def raise_if_incompatible_x(data_list):
     if not data.x:
         return
     first_type = type(data.x[0])
-    if any(type(x) is not first_type for data in data_list for x in data.x):
+    if any(not isinstance(x, first_type) for data in data_list for x in data.x):
         raise PlottingError("Incompatible x axes.")
 
 
@@ -226,7 +226,7 @@ def combine_data_with_same_indexes(data_list):
             continue
         combined_xy = []
         for i in list_is:
-            combined_xy += [(x, y) for x, y in zip(data_list[i].x, data_list[i].y)]
+            combined_xy += list(zip(data_list[i].x, data_list[i].y))
         combined_xy.sort(key=itemgetter(0))
         x, y = zip(*combined_xy)
         model_data = data_list[list_is[0]]
@@ -318,7 +318,7 @@ def _plot_single_y_axis(data_list, y_label, axes, plot_type):
     """
     if plot_type == PlotType.STACKED_LINE:
         return _plot_stacked_line(data_list, y_label, axes)
-    elif plot_type == PlotType.BAR:
+    if plot_type == PlotType.BAR:
         return _plot_bar(data_list, y_label, axes)
     legend_handles = []
     plot = _make_plot_function(plot_type, type(data_list[0].x[0]), axes)
@@ -364,7 +364,7 @@ def _plot_bar(data_list, y_label, axes):
         list: legend handles
     """
     legend_handles = []
-    plot_kwargs = dict(axes=axes, **_BASE_SETTINGS)
+    plot_kwargs = {"axes": axes, **_BASE_SETTINGS}
     data_list, bar_width, x_ticks = _group_bars(data_list)
     if bar_width is not None:
         plot_kwargs["width"] = bar_width
@@ -712,7 +712,7 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
         try:
             leaf_content = _convert_to_leaf(value)
         except PlottingError as error:
-            raise PlottingError(f"Failed to plot value in {db_map.codename}: {error}")
+            raise PlottingError(f"Failed to plot value in {db_map.codename}: {error}") from error
         db_name = db_map.codename
         parameter_name = item["parameter_definition_name"]
         entity_byname = item["entity_byname"]
@@ -826,15 +826,13 @@ def _convert_to_leaf(y):
     try:
         if isinstance(y, IndexedValue):
             return convert_indexed_value_to_tree(y)
-        else:
-            return float(y)
+        return float(y)
     except ValueError as error:
-        raise PlottingError(str(error))
-    except TypeError:
+        raise PlottingError(str(error)) from error
+    except TypeError as error:
         if isinstance(y, DateTime):
             return y.value
-        else:
-            raise PlottingError(f"couldn't convert {type(y).__name__} to float.")
+        raise PlottingError(f"couldn't convert {type(y).__name__} to float.") from error
 
 
 @contextmanager

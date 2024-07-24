@@ -150,9 +150,9 @@ class ToolboxUI(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self._item_properties_uis = dict()
-        self.item_factories = dict()  # maps item types to `ProjectItemFactory` objects
-        self._item_specification_factories = dict()  # maps item types to `ProjectItemSpecificationFactory` objects
+        self._item_properties_uis = {}
+        self.item_factories = {}  # maps item types to `ProjectItemFactory` objects
+        self._item_specification_factories = {}  # maps item types to `ProjectItemSpecificationFactory` objects
         self._project = None
         self.specification_model = None
         self.filtered_spec_factory_models = {}
@@ -417,7 +417,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.setWindowTitle("Spine Toolbox")
             return
-        self.setWindowTitle("{0} [{1}][*] - Spine Toolbox".format(self._project.name, self._project.project_dir))
+        self.setWindowTitle(f"{self._project.name} [{self._project.project_dir}][*] - Spine Toolbox")
 
     @Slot()
     def init_project(self, project_dir):
@@ -435,9 +435,7 @@ class ToolboxUI(QMainWindow):
             + p
             + f"' href='{ONLINE_DOCUMENTATION_URL}/getting_started.html'>Getting Started</a>"
         )
-        welcome_msg = "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(
-            getting_started_anchor
-        )
+        welcome_msg = f"Welcome to Spine Toolbox! If you need help, please read the {getting_started_anchor} guide."
         if not project_dir:
             open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
             if (
@@ -454,9 +452,7 @@ class ToolboxUI(QMainWindow):
             self.msg.emit(welcome_msg)
             return
         if not os.path.isdir(project_dir):
-            self.msg_error.emit(
-                "Cannot open previous project. Directory <b>{0}</b> may have been moved.".format(project_dir)
-            )
+            self.msg_error.emit(f"Cannot open previous project. Directory <b>{project_dir}</b> may have been moved.")
             self.remove_path_from_recent_projects(project_dir)
             return
         self.open_project(project_dir)
@@ -548,7 +544,7 @@ class ToolboxUI(QMainWindow):
                 if not recents:
                     start_dir = os.path.abspath(os.path.join(str(pathlib.Path.home())))
                 else:
-                    start_dir = str(recents).split("\n")[0]
+                    start_dir = str(recents).split("\n", maxsplit=1)[0]
                 load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
                 if not load_dir:
                     return False  # Cancelled
@@ -741,7 +737,7 @@ class ToolboxUI(QMainWindow):
             save_at_exit = self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
             if save_at_exit == "prompt" and not self._confirm_project_close():
                 return False
-            elif save_at_exit == "automatic" and not self.save_project():
+            if save_at_exit == "automatic" and not self.save_project():
                 return False
         if not self.undo_critical_commands():
             return False
@@ -892,8 +888,8 @@ class ToolboxUI(QMainWindow):
         if not empty:
             if is_project_dir:
                 msg1 = (
-                    "Directory <b>{0}</b> already contains a Spine Toolbox project.<br/><br/>"
-                    "Would you like to overwrite the existing project?".format(project_dir)
+                    f"Directory <b>{project_dir}</b> already contains a Spine Toolbox project.<br/><br/>"
+                    f"Would you like to overwrite the existing project?"
                 )
                 box1 = QMessageBox(
                     QMessageBox.Icon.Question,
@@ -908,8 +904,8 @@ class ToolboxUI(QMainWindow):
                     return False
             else:
                 msg2 = (
-                    "Directory <b>{0}</b> is not empty.<br/><br/>"
-                    "Would you like to make this directory into a Spine Toolbox project?".format(project_dir)
+                    f"Directory <b>{project_dir}</b> is not empty.<br/><br/>"
+                    f"Would you like to make this directory into a Spine Toolbox project?"
                 )
                 box2 = QMessageBox(
                     QMessageBox.Icon.Question,
@@ -954,9 +950,7 @@ class ToolboxUI(QMainWindow):
         if self.active_project_item:
             # Deactivate old active project item
             if not self.active_project_item.deactivate():
-                self.msg_error.emit(
-                    "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
-                )
+                self.msg_error.emit(f"Something went wrong in disconnecting {self.active_project_item.name} signals")
             self._item_properties_uis[self.active_project_item.item_type()].unset_item()
         self.active_project_item = active_project_item
         if self.active_project_item:
@@ -1281,7 +1275,7 @@ class ToolboxUI(QMainWindow):
         # Check if file exists first. openUrl may return True if file doesn't exist
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for %s", file_path)
-            self.msg_error.emit("Specification file <b>{0}</b> not found.".format(file_path))
+            self.msg_error.emit(f"Specification file <b>{file_path}</b> not found.")
             return
         tool_specification_url = "file:///" + file_path
         # Open Tool specification file in editor
@@ -1289,9 +1283,9 @@ class ToolboxUI(QMainWindow):
         res = open_url(tool_specification_url)
         if not res:
             self.msg_error.emit(
-                "Unable to open specification file {0}. Make sure that <b>.json</b> "
-                "files are associated with a text editor. For example on Windows "
-                "10, go to Control Panel -> Default Programs to do this.".format(file_path)
+                f"Unable to open specification file {file_path}. Make sure that <b>.json</b> "
+                f"files are associated with a text editor. For example on Windows "
+                f"10, go to Control Panel -> Default Programs to do this."
             )
 
     @Slot(bool)
@@ -1607,7 +1601,6 @@ class ToolboxUI(QMainWindow):
         form = AboutWidget(self)
         form.show()
 
-    # pylint: disable=no-self-use
     @Slot()
     def show_user_guide(self):
         """Opens Spine Toolbox documentation index page in browser."""
@@ -1615,7 +1608,6 @@ class ToolboxUI(QMainWindow):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 
-    # pylint: disable=no-self-use
     @Slot()
     def show_getting_started_guide(self):
         """Opens Spine Toolbox Getting Started HTML page in browser."""
@@ -1644,9 +1636,10 @@ class ToolboxUI(QMainWindow):
                 "Please enter host in <b>File->Settings->Engine</b>."
             )
             return
-        elif not port:
+        if not port:
             self.msg_error.emit(
-                "Spine Engine Server <b>port</b> missing. " "Please select port in <b>File->Settings->Engine</b>."
+                "Spine Engine Server <b>port</b> missing. "
+                "Please select port in <b>File->Settings->Engine</b>."
             )
             return
         self.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
@@ -1995,7 +1988,7 @@ class ToolboxUI(QMainWindow):
              dict: a dict containing serialized version of selected project items
         """
         selected_project_items = self.ui.graphicsView.scene().selectedItems()
-        items_dict = dict()
+        items_dict = {}
         for item_icon in selected_project_items:
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
@@ -2056,7 +2049,7 @@ class ToolboxUI(QMainWindow):
         scene.clearSelection()
         shift_x, shift_y = self._deserialized_item_position_shifts(items_dict)
         scene_rect = scene.sceneRect()
-        final_items_dict = dict()
+        final_items_dict = {}
         for name, item_dict in items_dict.items():
             item_dict["duplicate_files"] = duplicate_files
             if name in self.project().all_item_names:
@@ -2356,7 +2349,7 @@ class ToolboxUI(QMainWindow):
         if not filter_id:
             self._item_consoles[item] = self._make_jupyter_console(item, kernel_name, connection_file)
         else:
-            d = self._filter_item_consoles.setdefault(item, dict())
+            d = self._filter_item_consoles.setdefault(item, {})
             d[filter_id] = self._make_jupyter_console(item, kernel_name, connection_file)
         self.override_console_and_execution_list()
 
@@ -2388,7 +2381,7 @@ class ToolboxUI(QMainWindow):
         if not filter_id:
             self._item_consoles[item] = self._make_persistent_console(item, key, language)
         else:
-            d = self._filter_item_consoles.setdefault(item, dict())
+            d = self._filter_item_consoles.setdefault(item, {})
             d[filter_id] = self._make_persistent_console(item, key, language)
         self.override_console_and_execution_list()
 
@@ -2461,7 +2454,7 @@ class ToolboxUI(QMainWindow):
         """Shuts down all persistent and Jupyter kernels managed by Spine Engine."""
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
-        for key in self._persistent_consoles.keys():
+        for key in self._persistent_consoles:
             engine_mngr.kill_persistent(key)
         for connection_file in self._jupyter_consoles:
             engine_mngr.shutdown_kernel(connection_file)

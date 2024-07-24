@@ -55,7 +55,6 @@ class EngineClient:
             # prepare folders
             base_dir = sec_folder
             secret_keys_dir = os.path.join(base_dir, "private_keys")
-            keys_dir = os.path.join(base_dir, "certificates")
             public_keys_dir = os.path.join(base_dir, "public_keys")
             # We need two certificates, one for the client and one for
             # the server. The client must know the server's public key
@@ -120,16 +119,13 @@ class EngineClient:
         event = self.dealer_socket.poll(timeout=timeout)
         if event == 0:
             raise RemoteEngineInitFailed("Timeout expired. Pinging the server failed.")
-        else:
-            msg = self.dealer_socket.recv_multipart()
-            response = ServerMessage.parse(msg[1])
-            response_id = int(response.getId())  # Check that request ID matches the response ID
-            if not response_id == random_id:
-                raise RemoteEngineInitFailed(
-                    f"Ping failed. Request Id '{random_id}' does not " f"match reply Id '{response_id}'"
-                )
-            stop_time_ms = round(time.time() * 1000.0)  # debugging
-        return
+        msg = self.dealer_socket.recv_multipart()
+        response = ServerMessage.parse(msg[1])
+        response_id = int(response.getId())  # Check that request ID matches the response ID
+        if not response_id == random_id:
+            raise RemoteEngineInitFailed(
+                f"Ping failed. Request Id '{random_id}' does not " f"match reply Id '{response_id}'"
+            )
 
     def set_start_time(self):
         """Sets a start time for an operation. Call get_elapsed_time() after
@@ -208,7 +204,7 @@ class EngineClient:
                 if i > 0:
                     q.put(("server_status_msg", {"msg_type": "neutral", "text": f"Downloaded {i} files"}))
                 break
-            elif rcv[0] == b"incoming_file":
+            if rcv[0] == b"incoming_file":
                 q.put(
                     ("server_status_msg", {"msg_type": "warning", "text": "Downloading file " + rcv[1].decode("utf-8")})
                 )
@@ -334,7 +330,7 @@ class EngineClient:
                 break
             yield json.loads(rcv[0].decode("utf-8"))
         pull_socket.close()
-        completed_msg = self.dealer_socket.recv_multipart()  # Get the final 'completed' msg
+        _ = self.dealer_socket.recv_multipart()  # Get the final 'completed' msg
 
     def get_elapsed_time(self):
         """Returns the elapsed time between now and when self.start_time was set.
@@ -345,12 +341,11 @@ class EngineClient:
         t = round(time.time() * 1000.0) - self.start_time  # ms
         if t <= 1000:
             return str(t) + " ms"
-        elif 1000 < t < 60000:  # 1 < t < 60 s
+        if 1000 < t < 60000:  # 1 < t < 60 s
             return str(t / 1000) + " s"
-        else:
-            m = (t / 1000) / 60
-            s = (t / 1000) % 60
-            return str(m) + " min " + str(s) + " s"
+        m = (t / 1000) / 60
+        s = (t / 1000) % 60
+        return str(m) + " min " + str(s) + " s"
 
     def close(self):
         """Closes client sockets, context and thread."""

@@ -27,7 +27,7 @@ class TestCustomGraphicsScene(unittest.TestCase):
     def test_center_items(self):
         scene = CustomGraphicsScene()
         rect = scene.addRect(-120.0, 66.0, 1.0, 1.0)
-        child_rect = QGraphicsRectItem(23.3, -5.5, 0.3, 0.3, rect)
+        child_rect = QGraphicsRectItem(23.3, -5.5, 0.3, 0.3, rect)  # pylint: disable=unused-variable
         scene.center_items()
         self.assertEqual(scene.itemsBoundingRect(), scene.sceneRect())
         scene.deleteLater()

@@ -137,9 +137,9 @@ class QProcessExecutionManager(ExecutionManager):
             new_state (int): Process state number (``QProcess::ProcessState``)
         """
         if new_state == QProcess.Starting:
-            self._logger.msg.emit("\tStarting program <b>{0}</b>".format(self._program))
+            self._logger.msg.emit(f"\tStarting program <b>{self._program}</b>")
             arg_str = " ".join(self._args)
-            self._logger.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
+            self._logger.msg.emit(f"\tArguments: <b>{arg_str}</b>")
         elif new_state == QProcess.Running:
             self._logger.msg_warning.emit("\tExecution in progress...")
         elif new_state == QProcess.NotRunning:
@@ -174,7 +174,7 @@ class QProcessExecutionManager(ExecutionManager):
         elif process_error == QProcess.UnknownError:
             self._logger.msg_error.emit("Unknown error in process")
         else:
-            self._logger.msg_error.emit("Unspecified error in process: {0}".format(process_error))
+            self._logger.msg_error.emit(f"Unspecified error in process: {process_error}")
         self.teardown_process()
 
     def teardown_process(self):
@@ -205,7 +205,7 @@ class QProcessExecutionManager(ExecutionManager):
                 self._process.finished.emit(-1, -1)
                 self._process.deleteLater()
         except Exception as ex:  # pylint: disable=broad-except
-            self._logger.msg_error.emit("[{0}] exception when terminating process".format(ex))
+            self._logger.msg_error.emit(f"[{ex}] exception when terminating process")
             logging.exception("Exception in closing QProcess: %s", ex)
         finally:
             self._process = None
@@ -228,7 +228,7 @@ class QProcessExecutionManager(ExecutionManager):
             pass
         else:
             if not self._silent:
-                self._logger.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
+                self._logger.msg_error.emit(f"Unknown QProcess exit status [{exit_status}]")
             exit_code = -1
         if exit_code != 0:
             self.process_failed = True

@@ -28,7 +28,7 @@ class CommitDialog(QDialog):
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.setWindowModality(Qt.ApplicationModal)
-        self.setWindowTitle("Commit changes to {}".format(",".join(db_names)))
+        self.setWindowTitle(f"Commit changes to {','.join(db_names)}")
         form = QVBoxLayout(self)
         form.setContentsMargins(4, 4, 4, 4)
         self.action_accept = QAction(self)

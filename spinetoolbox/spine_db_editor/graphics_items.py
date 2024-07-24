@@ -186,7 +186,7 @@ class EntityItem(QGraphicsRectItem):
     def db_items(self, db_map):
         for db_map_, id_ in self.db_map_ids:
             if db_map_ == db_map:
-                yield dict(class_id=self.entity_class_id(db_map), id=id_)
+                yield {"class_id": self.entity_class_id(db_map), "id": id_}
 
     def boundingRect(self):
         return super().boundingRect() | self.childrenBoundingRect()
@@ -367,11 +367,11 @@ class EntityItem(QGraphicsRectItem):
         """Return data to put as default in a parameter table when this item is selected."""
         if not self.db_map_ids:
             return {}
-        return dict(
-            entity_class_name=self.entity_class_name,
-            entity_byname=DB_ITEM_SEPARATOR.join(self.byname),
-            database=self.first_db_map.codename,
-        )
+        return {
+            "entity_class_name": self.entity_class_name,
+            "entity_byname": DB_ITEM_SEPARATOR.join(self.byname),
+            "database": self.first_db_map.codename,
+        }
 
     def shape(self):
         """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
