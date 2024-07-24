@@ -396,7 +396,8 @@ Below are the bare minimum things you need to know.
 
         python -m pip install -r dev-requirements.txt
 
-2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
+2. It is also recommended to run `pre-commit install` in the respective root directories of spine-toolbox, spinedb_api,
+   spine-engine and spine-items. This sets up git hooks for auto-formatting the files before committing.
 
 ### Coding style
 
