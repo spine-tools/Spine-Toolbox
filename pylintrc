@@ -428,7 +428,6 @@ confidence=
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=abstract-method,
-        unnecessary-lambda-assignment,
         raw-checker-failed,
         bad-inline-option,
         locally-disabled,

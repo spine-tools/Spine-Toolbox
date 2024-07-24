@@ -1030,7 +1030,10 @@ class SpineToolboxProject(MetaObject):
             return
         settings = make_settings_dict_for_engine(self._app_settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
-        darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
+
+        def darker(x):
+            return f'<span style="color: {darker_fg_color}">{x}</span>'
+
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings, job_id)

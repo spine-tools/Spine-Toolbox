@@ -230,6 +230,10 @@ class CopyPasteTableView(QTableView):
 
     def paste_normal(self):
         """Pastes clipboard data, overwriting cells if needed."""
+
+        def is_visual_column_hidden(x):
+            return h.isSectionHidden(h.logicalIndex(x))
+
         text = QApplication.clipboard().text().strip()
         if not text:
             return False
@@ -255,7 +259,6 @@ class CopyPasteTableView(QTableView):
         columns = []
         columns_append = columns.append
         h = self.horizontalHeader()
-        is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
         for _ in range(len(data[0])):
             while is_visual_column_hidden(visual_column):
                 visual_column += 1

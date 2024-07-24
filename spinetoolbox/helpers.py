@@ -1570,7 +1570,11 @@ def bisect_chunks(current_data, new_data, key=None):
     if key is not None:
         current_data = [key(x) for x in current_data]
     else:
-        key = lambda x: x
+
+        def key(x):
+            # pylint: disable=function-redefined
+            return x
+
     new_data = sorted(new_data, key=key)
     if not new_data:
         return ()

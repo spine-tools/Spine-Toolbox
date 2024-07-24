@@ -202,7 +202,10 @@ class MultiTabWindow(QMainWindow):
         """
         if tab in self._tab_slots:
             return False
-        slot = lambda title, tab_=tab: self._handle_tab_window_title_changed(tab_, title)
+
+        def slot(title, tab_=tab):
+            self._handle_tab_window_title_changed(tab_, title)
+
         self._tab_slots[tab] = slot
         tab.windowTitleChanged.connect(slot)
         self._handle_tab_window_title_changed(tab, tab.windowTitle())
