@@ -124,7 +124,7 @@ class EngineClient:
         response_id = int(response.getId())  # Check that request ID matches the response ID
         if not response_id == random_id:
             raise RemoteEngineInitFailed(
-                f"Ping failed. Request Id '{random_id}' does not " f"match reply Id '{response_id}'"
+                f"Ping failed. Request Id '{random_id}' does not match reply Id '{response_id}'"
             )
 
     def set_start_time(self):
