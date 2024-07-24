@@ -34,7 +34,7 @@ class ArrayModel(QAbstractTableModel):
             parent (QObject): parent object
         """
         super().__init__(parent)
-        self._data = list()
+        self._data = []
         self._data_type = float
         self._index_name = Array.DEFAULT_INDEX_NAME
 
@@ -86,8 +86,8 @@ class ArrayModel(QAbstractTableModel):
         Returns:
             tuple: indexes and converted values
         """
-        filtered = list()
-        converted = list()
+        filtered = []
+        converted = []
         if self._data_type == float:
             for index, value in zip(indexes, values):
                 if value is None:
@@ -131,8 +131,7 @@ class ArrayModel(QAbstractTableModel):
         if column == 0:
             if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
                 return row
-            else:
-                return None
+            return None
         if role == Qt.ItemDataRole.DisplayRole:
             if row == len(self._data):
                 return None

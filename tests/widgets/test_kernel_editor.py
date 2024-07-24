@@ -72,7 +72,9 @@ class TestKernelEditorBase(unittest.TestCase):
                     QApplication.processEvents()
                 editor.close()
             completion = subprocess.run(
-                [str(python_path), "-m", "jupyter", "kernelspec", "remove", "-f", kernel_name], capture_output=True
+                [str(python_path), "-m", "jupyter", "kernelspec", "remove", "-f", kernel_name],
+                capture_output=True,
+                check=False,
             )
             self.assertEqual(completion.returncode, 0)
 
@@ -104,7 +106,9 @@ class TestKernelEditorBase(unittest.TestCase):
                 QApplication.processEvents()
             editor.close()
         completion = subprocess.run(
-            [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json", kernel_name], capture_output=True
+            [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json", kernel_name],
+            capture_output=True,
+            check=False,
         )
         real_kernel_name = None
         kernel_info = json.loads(completion.stdout)
@@ -118,8 +122,10 @@ class TestKernelEditorBase(unittest.TestCase):
             # on Windows platforms preventing removal.
             # This removes the read only flag.
             kernelspec_dir = kernel_info["kernelspecs"][real_kernel_name]["resource_dir"]
-            subprocess.run(["attrib", "-r", str(pathlib.Path(kernelspec_dir, "*.*"))])
+            subprocess.run(["attrib", "-r", str(pathlib.Path(kernelspec_dir, "*.*"))], check=False)
         completion = subprocess.run(
-            [sys.executable, "-m", "jupyter", "kernelspec", "remove", "-f", real_kernel_name], capture_output=True
+            [sys.executable, "-m", "jupyter", "kernelspec", "remove", "-f", real_kernel_name],
+            capture_output=True,
+            check=False,
         )
         self.assertEqual(completion.returncode, 0)

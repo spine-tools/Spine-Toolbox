@@ -62,7 +62,7 @@ class EmptyRowModel(MinimalTableModel):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
         if roles is None:
-            roles = list()
+            roles = []
         if roles and Qt.ItemDataRole.EditRole not in roles:
             return
         last_row = self.rowCount() - 1

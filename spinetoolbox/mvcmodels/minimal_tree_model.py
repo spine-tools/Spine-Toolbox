@@ -196,12 +196,10 @@ class TreeItem:
         self._has_children_initially = False
         return True
 
-    # pylint: disable=no-self-use
     def flags(self, column):
         """Enables the item and makes it selectable."""
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
-    # pylint: disable=no-self-use
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""
         return None

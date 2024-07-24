@@ -131,7 +131,7 @@ class GraphOptionsOverlay(QWidget):
             "<p>Whether to build the graph when the tree selections change (Ctrl+F5).</p>"
         )
         self._auto_rebuild_shortcut = QShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_F5), self)
-        self._auto_rebuild_shortcut.activated.connect(lambda: self._auto_build_button.toggle())
+        self._auto_rebuild_shortcut.activated.connect(self._auto_build_button.toggle)
         self._rebuild_button = QPushButton("Rebuild (F5)")
         layout.addWidget(self._auto_build_button)
         layout.addWidget(self._rebuild_button)
@@ -149,6 +149,7 @@ class GraphOptionsOverlay(QWidget):
             lambda x: self.parent()._properties.get("auto_build").set_value(x, save=True)
         )
         self._auto_build_button.toggled.connect(lambda x: self.parent()._spine_db_editor.build_graph() if x else None)
+        # pylint: disable=unnecessary-lambda
         self.parent()._properties.get("auto_build")._action.triggered.connect(
             lambda x: self._auto_build_button.setChecked(x)
         )

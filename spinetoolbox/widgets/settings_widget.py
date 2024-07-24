@@ -105,7 +105,6 @@ class SettingsWidgetBase(QWidget):
             moved = self._mouse_release_pos - self._mouse_press_pos
             if moved.manhattanLength() > 3:
                 e.ignore()
-                return
 
     def mouseMoveEvent(self, e):
         """Moves the window when mouse button is pressed and mouse cursor is moved.
@@ -127,7 +126,6 @@ class SettingsWidgetBase(QWidget):
         """Updates UI to reflect current settings. Called when the user choses to cancel their changes.
         Undoes all temporary UI changes that resulted from the user playing with certain settings."""
 
-    # pylint: disable=no-self-use
     def save_settings(self):
         """Gets selections and saves them to persistent memory."""
         return True
@@ -520,7 +518,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Makes a Julia kernel for Jupyter Console based on selected Julia executable and Julia project.
         If a kernel using the selected Julia executable and project already exists, sets that kernel
         selected in the comboBox."""
-        use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
+        _, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
         if not julia_exe:
             julia_exe = resolve_default_julia_executable()
         julia_kernel = _get_kernel_name_by_exe(julia_exe, self._julia_kernel_model)
@@ -880,11 +878,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
         if use_julia_jupyter_console == "2" and not julia_kernel:
             msg = (
-                f"You have selected <b>Jupyter Console</b> for Julia Tools "
-                f"but you did not select a kernel, please"
-                f"<br><br>1. Select one from the dropdown menu"
-                f"<br>2. Click <b>Make Julia Kernel</b> button to create one, or"
-                f"<br>3. Select <b>Basic Console</b>"
+                "You have selected <b>Jupyter Console</b> for Julia Tools "
+                "but you did not select a kernel, please"
+                "<br><br>1. Select one from the dropdown menu"
+                "<br>2. Click <b>Make Julia Kernel</b> button to create one, or"
+                "<br>3. Select <b>Basic Console</b>"
             )
             box = QMessageBox(QMessageBox.Icon.Warning, "No Julia kernel selected", msg, parent=self)
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
@@ -909,11 +907,11 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             python_kernel = self.ui.comboBox_python_kernel.currentText()
         if use_python_jupyter_console == "2" and not python_kernel:
             msg = (
-                f"You have selected <b>Jupyter Console</b> for Python Tools "
-                f"but you did not select a kernel, please"
-                f"<br><br>1. Select one from the dropdown menu"
-                f"<br>2. Click <b>Make Python Kernel</b> button to create one, or"
-                f"<br>3. Select <b>Basic Console</b>"
+                "You have selected <b>Jupyter Console</b> for Python Tools "
+                "but you did not select a kernel, please"
+                "<br><br>1. Select one from the dropdown menu"
+                "<br>2. Click <b>Make Python Kernel</b> button to create one, or"
+                "<br>3. Select <b>Basic Console</b>"
             )
             box = QMessageBox(QMessageBox.Icon.Warning, "No Python kernel selected", msg, parent=self)
             box.setWindowIcon(QIcon(":/symbols/app.ico"))

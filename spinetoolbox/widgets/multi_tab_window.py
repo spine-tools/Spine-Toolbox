@@ -202,7 +202,10 @@ class MultiTabWindow(QMainWindow):
         """
         if tab in self._tab_slots:
             return False
-        slot = lambda title, tab=tab: self._handle_tab_window_title_changed(tab, title)
+
+        def slot(title, tab_=tab):
+            self._handle_tab_window_title_changed(tab_, title)
+
         self._tab_slots[tab] = slot
         tab.windowTitleChanged.connect(slot)
         self._handle_tab_window_title_changed(tab, tab.windowTitle())
@@ -502,7 +505,7 @@ class TabBarPlus(QTabBar):
 
     def _move_plus_button(self):
         """Places the plus button at the right of the last tab."""
-        left = sum([self.tabRect(i).width() for i in range(self.count())])
+        left = sum(self.tabRect(i).width() for i in range(self.count()))
         top = self.geometry().top() + 1
         self._plus_button.move(left, top)
 

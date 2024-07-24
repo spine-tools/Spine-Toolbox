@@ -55,10 +55,7 @@ class TestPlotPivotTableSelection(TestBase):
         self._db_mngr.add_entities(
             {self._db_map: [{"class_id": 1, "name": f"o{i + 1}", "id": i + 1} for i in range(object_count)]}
         )
-        db_values = {
-            name: [(value, type_) for value, type_ in map(to_database, value_list)]
-            for name, value_list in values.items()
-        }
+        db_values = {name: list(map(to_database, value_list)) for name, value_list in values.items()}
         value_items = [
             {
                 "entity_class_id": 1,
@@ -257,14 +254,14 @@ class TestPlotPivotTableSelection(TestBase):
             )
             lines = plot_widget.canvas.axes.get_lines()
             self.assertEqual(len(lines), 3)
-            for i in range(3):
+            for _ in range(3):
                 self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.2])
             self.assertEqual(list(lines[2].get_ydata(orig=True)), [1.3])
             lines = twinned[0].get_lines()
             self.assertEqual(len(lines), 3)
-            for i in range(3):
+            for _ in range(3):
                 self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
             self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
             self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])

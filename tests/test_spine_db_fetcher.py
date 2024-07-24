@@ -48,7 +48,7 @@ class TestSpineDBFetcher(unittest.TestCase):
             fetcher = TestItemTypeFetchParent(item_type)
             while self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
-                qApp.processEvents()
+                qApp.processEvents()  # pylint: disable=undefined-variable
             if item_type in ("alternative", "commit"):
                 fetcher.handle_items_added.assert_called_once()
             else:

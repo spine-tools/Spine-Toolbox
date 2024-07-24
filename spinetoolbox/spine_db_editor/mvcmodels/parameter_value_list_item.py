@@ -66,7 +66,6 @@ class ListItem(
             return
         super()._do_set_up()
 
-    # pylint: disable=no-self-use
     def empty_child(self):
         return ValueItem(self._model)
 
@@ -86,7 +85,7 @@ class ListItem(
         return super().data(column, role)
 
     def _make_item_to_add(self, value):
-        return dict(name=value)
+        return {"name": value}
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_parameter_value_lists({self.db_map: [db_item]})
@@ -114,11 +113,11 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
     def _make_item_to_add(self, value):
         db_value, db_type = value
         index = 0 if self.child_number() == 0 else self.parent_item.child(self.child_number() - 1).list_index() + 1
-        return dict(value=db_value, type=db_type, parameter_value_list_id=self.parent_item.id, index=index)
+        return {"value": db_value, "type": db_type, "parameter_value_list_id": self.parent_item.id, "index": index}
 
     def _make_item_to_update(self, _column, value):
         db_value, db_type = value
-        return dict(id=self.id, value=db_value, type=db_type)
+        return {"id": self.id, "value": db_value, "type": db_type}
 
     def add_item_to_db(self, db_item):
         self.db_mngr.add_list_values({self.db_map: [db_item]})

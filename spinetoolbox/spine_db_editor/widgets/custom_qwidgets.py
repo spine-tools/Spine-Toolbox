@@ -357,6 +357,7 @@ class LegendWidget(QWidget):
         path.moveTo(cell.bottomLeft())
         path.lineTo(cell.topRight())
         path.lineTo(cell.bottomRight())
+        # pylint: disable=undefined-variable
         painter.fillPath(path, qApp.palette().color(QPalette.Normal, QPalette.WindowText))
 
     def paintEvent(self, ev):
@@ -496,8 +497,8 @@ class AddedEntitiesPopup(QDialog):
 
     def _create_entity_names(self, entities):
         entity_names = {}
-        for db_map, entities in entities.items():
-            for entity in entities:
+        for db_map, entities_ in entities.items():
+            for entity in entities_:
                 entity_names.setdefault(db_map, {}).setdefault(entity["entity_class_name"], []).append(
                     str(entity["entity_byname"])
                 )

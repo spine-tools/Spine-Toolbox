@@ -55,7 +55,7 @@ class TestBase(unittest.TestCase):
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
-        self._db_editor = None
+        self._db_editor = None  # pylint: disable=attribute-defined-outside-init
 
     def _commit_changes_to_database(self, commit_message):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
