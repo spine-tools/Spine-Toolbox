@@ -12,6 +12,7 @@
 
 """Unit tests for ``add_items_dialog`` module."""
 from tempfile import TemporaryDirectory
+import time
 import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
@@ -250,6 +251,36 @@ class TestAddItemsDialog(unittest.TestCase):
         expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
+
+    def test_paste_big_data(self):
+        """Test for seeing roughly how long it takes to add entities through the add entities dialog.
+
+        Just a reference on how a benchmark could be built.
+
+        This is not working correctly at the moment, it seems way too fast.
+        """
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Class", "id": 1}]})
+        for item in self._db_editor.entity_tree_model.visit_all():
+            while item.can_fetch_more():
+                item.fetch_more()
+                qApp.processEvents()  # pylint: disable=undefined-variable
+        entity_classes = self._db_editor.entity_tree_model.root_item.children
+        dialog = AddEntitiesDialog(self._db_editor, entity_classes[0], self._db_mngr, self._db_map)
+        table_view = self._db_editor.ui.tableView_entity_alternative
+        model = table_view.model()
+        table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        start = time.perf_counter()
+        self._paste_to_table_view(self.load_and_format_file(r"..\..\test_resources\data.txt"), dialog)
+        dialog.accept()
+        QApplication.processEvents()
+        print(time.perf_counter() - start)
+
+    @staticmethod
+    def load_and_format_file(filename):
+        with open(filename, "r") as file:
+            lines = file.readlines()
+        formatted_string = "".join(lines).strip()
+        return formatted_string
 
     @staticmethod
     def _paste_to_table_view(text, dialog):

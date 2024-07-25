@@ -14,11 +14,14 @@
 import itertools
 import os
 from tempfile import TemporaryDirectory
+import time
 import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions, to_database
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from spinetoolbox.spine_db_manager import SpineDBManager
 from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
@@ -540,6 +543,62 @@ def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
+
+
+class TemporaryTestForTryingToWriteBenchmark(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        ):
+            mock_settings = mock.MagicMock()
+            mock_settings.value.side_effect = lambda *args, **kwargs: 0
+            self._db_mngr = SpineDBManager(mock_settings, None)
+            logger = mock.MagicMock()
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="something", create=True)
+            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "something"})
+
+    def tearDown(self):
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
+            self._db_editor.close()
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+        self._db_editor.deleteLater()
+        self._db_editor = None
+
+    @staticmethod
+    def load_and_format_file(filename):
+        with open(filename, "r") as file:
+            lines = file.readlines()
+        formatted_string = "".join(lines).strip()
+        return formatted_string
+
+    def test_pasting_to_table_view(self):
+        """Test for seeing roughly how long it takes to add entities by pasting entity alternatives to the table.
+
+        Just a reference on how a benchmark could be built.
+
+        Sometimes fails because some table is not found in the database."""
+        self._db_map.add_entity_class_item(name="Object")
+        table_view = self._db_editor.ui.tableView_entity_alternative
+        model = table_view.model()
+        table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        mock_clipboard = mock.MagicMock()
+        mock_clipboard.text.return_value = self.load_and_format_file(r"..\..\test_resources\data.txt")
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            clipboard.return_value = mock_clipboard
+            start = time.perf_counter()
+            self.assertTrue(table_view.paste())
+            print(time.perf_counter() - start)
 
 
 if __name__ == "__main__":
