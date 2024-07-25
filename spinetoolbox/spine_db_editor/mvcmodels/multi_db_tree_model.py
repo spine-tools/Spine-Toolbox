@@ -81,3 +81,18 @@ class MultiDBTreeModel(MinimalTreeModel):
                 for parent_item in parent_items:
                     parent_item.fetch_more_if_possible()
         return parent_items
+
+    def do_something(self, db_map, cls_id):
+        parent_items = [self.root_item]
+        so = []
+        for parent_item in parent_items:
+            for child in parent_item.children:
+                if cls_id == child._key_for_index(db_map):
+                    so.append(child)
+        return so
+
+    @staticmethod
+    def get_entities(db_map, parent, id_):
+        for child in parent.visible_children:
+            if child._key_for_index(db_map) == id_:
+                return child

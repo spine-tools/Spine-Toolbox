@@ -14,7 +14,7 @@
 import itertools
 import json
 from time import monotonic
-from PySide6.QtCore import Qt, QThreadPool, QTimer, Slot
+from PySide6.QtCore import QItemSelectionModel, Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QPen
 from spinedb_api import from_database
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
@@ -181,7 +181,10 @@ class GraphViewMixin:
         if not self._filter_class_ids and (self._filter_alternative_ids or self._filter_scenario_ids):
             return True  # Allows entities to show when only alternatives or scenarios are selected.
         selected_entity_ids = self._selected_item_type_db_map_ids.get("entity", {}).get(db_map, ())
-        if item["id"] in selected_entity_ids:
+        if (
+            item["class_id"],
+            item["id"],
+        ) in selected_entity_ids:
             return True
         selected_class_ids = self._selected_item_type_db_map_ids.get("entity_class", {}).get(db_map, ())
         if item["class_id"] in selected_class_ids:
@@ -505,6 +508,9 @@ class GraphViewMixin:
         self.collapsed_db_map_entity_ids = {
             (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["collapsed_entity_ids"]
         }
+        # Select the items that were selected when the graph data was saved
+        self.select_saved_items(db_map_graph_data)
+        # Load the graphics
         graph_data = db_map_graph_data[self.first_db_map]
         self.ui.graphicsView.pos_x_parameter = graph_data["pos_x_parameter"]
         self.ui.graphicsView.pos_y_parameter = graph_data["pos_y_parameter"]
@@ -516,6 +522,50 @@ class GraphViewMixin:
         self.ui.graphicsView.set_bg_rect(graph_data["bg_rect"])
         self.ui.graphicsView.set_many_properties(graph_data["properties"])
         self.build_graph()
+
+    def select_saved_items(self, db_map_graph_data):
+        view = self.ui.treeView_entity
+        model = view.model()
+        for item in model.visit_all():
+            pass
+        selection_model = view.selectionModel()
+        indexes = []
+        view.selectionModel().reset()
+        for db_map in db_map_graph_data:
+
+            # Entity classes
+            ent_cls_ids_by_db_map = self._selected_item_type_db_map_ids.get("entity_class")
+            ids = ent_cls_ids_by_db_map.get(db_map)
+            if not ids:
+                continue
+            for id_ in ids:
+                # print(model.find_items(db_map, [id_]))
+                indexes.append(model.index_from_item(model.find_items(db_map, [id_])[0]))
+
+            # Entities
+            ent_ids_by_db_map = self._selected_item_type_db_map_ids.get("entity", {})
+            ids = ent_ids_by_db_map.get(db_map)
+            if not ids:
+                continue
+            for cls_id, id_ in ids:
+                parents = model.do_something(db_map, cls_id)
+                for parent in parents:
+                    view.expand(model.index_from_item(parent))
+                    view._fetch_more_visible()
+                    # parent.deep_refresh_children()
+                    # parent.refresh_child_map()
+                    entity_item = model.get_entities(db_map, parent, id_)
+                    if not entity_item:
+                        continue
+                    indexes.append(model.index_from_item(entity_item))
+                    # if id_ == parent._key_for_index(db_map):
+                    #     indexes.append(i)
+
+        for index in indexes:
+            if not index.isValid():
+                continue
+            selection_model.select(index, QItemSelectionModel.Select)
+        # self.init_models()
 
     def remove_graph_data(self, name):
         db_map_typed_ids = {}
@@ -610,8 +660,20 @@ class GraphViewMixin:
         for item_type, indexes in selected_tree_inds.items():
             for index in indexes:
                 item = index.model().item_from_index(index)
-                for db_map, id_ in item.db_map_ids.items():
-                    self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
+                if item_type == "entity":
+                    parent = index.model().item_from_index(index.parent())
+                    for db_map, id_ in item.db_map_ids.items():
+                        parent_id = parent.db_map_ids.get(db_map)
+                        self._selected_item_type_db_map_ids.setdefault("entity", {}).setdefault(db_map, set()).add(
+                            (
+                                parent_id,
+                                id_,
+                            )
+                        )
+                else:
+                    for db_map, id_ in item.db_map_ids.items():
+                        self._selected_item_type_db_map_ids.setdefault(item_type, {}).setdefault(db_map, set()).add(id_)
+        # print(self._selected_item_type_db_map_ids)
 
     def _get_db_map_entities_for_graph(self):
         return [
