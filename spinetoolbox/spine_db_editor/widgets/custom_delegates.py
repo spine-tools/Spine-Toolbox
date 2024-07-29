@@ -13,7 +13,7 @@
 """Custom item delegates."""
 from numbers import Number
 from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QFontMetrics, QIcon
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
@@ -29,7 +29,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditorWithCreation,
 )
 from ...helpers import object_icon
-from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 
@@ -280,19 +280,50 @@ class DatabaseNameDelegate(TableDelegate):
         return editor
 
 
+def _make_exclamation_font():
+    """Creates font for invalid parameter type notification.
+
+    Returns:
+        QFont: font
+    """
+    font = QFont("Font Awesome 5 Free Solid")
+    font.setPixelSize(12)
+    return font
+
+
 class ParameterValueOrDefaultValueDelegate(TableDelegate):
     """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
+    EXCLAMATION_FONT = _make_exclamation_font()
+    EXCLAMATION_COLOR = QColor("red")
+    INDICATOR_WIDTH = 18
 
     def __init__(self, parent, db_mngr):
         """
         Args:
             parent (QWidget): parent widget
-            db_mngr (SpineDatabaseManager): database manager
+            db_mngr (SpineDBManager): database manager
         """
         super().__init__(parent, db_mngr)
         self._db_value_list_lookup = {}
+
+    def paint(self, painter, option, index):
+        validation_state = index.data(PARAMETER_TYPE_VALIDATION_ROLE)
+        if validation_state == INVALID_TYPE:
+            left = option.rect.x()
+            width = option.rect.width()
+            height = option.rect.height()
+            indicator_left = left + width - self.INDICATOR_WIDTH
+            indicator_rect = QRect(indicator_left, option.rect.y(), self.INDICATOR_WIDTH, height)
+            option.rect.setRight(indicator_left)
+            text_position = indicator_rect.center()
+            text_position.setY(text_position.y() + 5)
+            text_position.setX(text_position.x() - 5)
+            painter.setFont(self.EXCLAMATION_FONT)
+            painter.setPen(self.EXCLAMATION_COLOR)
+            painter.drawText(text_position, "\uf06a")
+        super().paint(painter, option, index)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -325,7 +356,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
 
         Args:
             index (QModelIndex): value list's index
-            db_map (DiffDatabaseMapping): database mapping
+            db_map (DatabaseMapping): database mapping
 
         Returns:
             int: value list id
@@ -981,6 +1012,8 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
 
 
 class ParameterTypeListDelegate(QStyledItemDelegate):
+    """Delegate for the 'valid types' column in Parameter definition table."""
+
     data_committed = Signal(QModelIndex, object)
 
     def __init__(self, db_editor, db_mngr):

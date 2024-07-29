@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """ Compound models. These models concatenate several 'single' models and one 'empty' model. """
+from typing import ClassVar
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
@@ -24,6 +25,8 @@ from .single_models import SingleEntityAlternativeModel, SingleParameterDefiniti
 
 class CompoundModelBase(CompoundWithEmptyTableModel):
     """A base model for all models that show data in stacked format."""
+
+    item_type: ClassVar[str] = NotImplemented
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
@@ -64,15 +67,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
     @property
     def field_map(self):
         return {}
-
-    @property
-    def item_type(self):
-        """Returns the DB item type, e.g., 'parameter_value'.
-
-        Returns:
-            str
-        """
-        raise NotImplementedError()
 
     @property
     def _single_model_type(self):
@@ -318,7 +312,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
     def handle_items_added(self, db_map_data):
         """Runs when either parameter definitions or values are added to the dbs.
         Adds necessary sub-models and initializes them with data.
-        Also notifies the empty model so it can remove rows that are already in.
+        Also notifies the empty model, so it can remove rows that are already in.
 
         Args:
             db_map_data (dict): list of added dict-items keyed by DatabaseMapping
@@ -493,6 +487,19 @@ class FilterEntityAlternativeMixin:
 class EditParameterValueMixin:
     """Provides the interface to edit values via ParameterValueEditor."""
 
+    def handle_items_updated(self, db_map_data):
+        super().handle_items_updated(db_map_data)
+        for db_map, items in db_map_data.items():
+            if db_map not in self.db_maps:
+                continue
+            items_by_class = self._items_per_class(items)
+            for entity_class_id, class_items in items_by_class.items():
+                single_model = next(
+                    (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+                )
+                if single_model is not None:
+                    single_model.revalidate_item_types(class_items)
+
     def index_name(self, index):
         """Generates a name for data at given index.
 
@@ -544,9 +551,7 @@ class EditParameterValueMixin:
 class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBase):
     """A model that concatenates several single parameter_definition models and one empty parameter_definition model."""
 
-    @property
-    def item_type(self):
-        return "parameter_definition"
+    item_type = "parameter_definition"
 
     def _make_header(self):
         return [
@@ -579,9 +584,16 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBas
 class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundModelBase):
     """A model that concatenates several single parameter_value models and one empty parameter_value model."""
 
-    @property
-    def item_type(self):
-        return "parameter_value"
+    item_type = "parameter_value"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._definition_fetch_parent = FlexibleFetchParent(
+            "parameter_definition",
+            shows_item=lambda item, db_map: True,
+            handle_items_updated=self._handle_parameter_definitions_updated,
+            owner=self,
+        )
 
     def _make_header(self):
         return [
@@ -605,11 +617,27 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
     def _empty_model_type(self):
         return EmptyParameterValueModel
 
+    def reset_db_map(self, db_maps):
+        super().reset_db_maps(db_maps)
+        self._definition_fetch_parent.set_obsolete(False)
+        self._definition_fetch_parent.reset()
+
+    def _handle_parameter_definitions_updated(self, db_map_data):
+        for db_map, items in db_map_data.items():
+            if db_map not in self.db_maps:
+                continue
+            items_by_class = self._items_per_class(items)
+            for entity_class_id, class_items in items_by_class.items():
+                single_model = next(
+                    (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+                )
+                if single_model is not None:
+                    single_model.revalidate_item_typs(class_items)
+
 
 class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundModelBase):
-    @property
-    def item_type(self):
-        return "entity_alternative"
+
+    item_type = "entity_alternative"
 
     def _make_header(self):
         return [

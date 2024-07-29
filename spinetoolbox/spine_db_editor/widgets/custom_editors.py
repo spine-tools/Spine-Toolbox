@@ -580,6 +580,8 @@ class IconColorEditor(QDialog):
 
 
 class ParameterTypeEditor(QWidget):
+    """Editor to select valid parameter types."""
+
     def __init__(self, parent):
         """
         Args:
@@ -594,6 +596,7 @@ class ParameterTypeEditor(QWidget):
         self._ui.select_all_button.clicked.connect(self._select_all)
         self._ui.clear_all_button.clicked.connect(self._clear_all)
         self._ui.map_rank_line_edit.textEdited.connect(self._ensure_map_selected)
+        self._ui.map_check_box.clicked.connect(self._edit_rank)
 
     def data(self):
         """Returns editor's data.
@@ -630,7 +633,7 @@ class ParameterTypeEditor(QWidget):
             type_list (str): parameter type list separated by DB_ITEM_SEPARATOR
         """
         if not type_list:
-            self._select_all()
+            self._clear_all()
         else:
             self._clear_all()
             map_ranks = []
@@ -643,12 +646,18 @@ class ParameterTypeEditor(QWidget):
             self._ui.map_rank_line_edit.setText(", ".join(map_ranks))
 
     def _check_box_iter(self):
+        """Yields type check boxes.
+
+        Yields:
+            QCheckBox: type check box
+        """
         for attribute in dir(self._ui):
             if attribute.endswith("_check_box"):
                 yield getattr(self._ui, attribute)
 
     @Slot(bool)
     def _select_all(self, _=True):
+        """Selects all check boxes."""
         for check_box in self._check_box_iter():
             check_box.setChecked(True)
         if not self._ui.map_rank_line_edit.text().strip():
@@ -656,13 +665,33 @@ class ParameterTypeEditor(QWidget):
 
     @Slot(bool)
     def _clear_all(self, _=True):
+        """Clears all check boxes."""
         for check_box in self._check_box_iter():
             check_box.setChecked(False)
 
     @Slot(str)
     def _ensure_map_selected(self, rank_text):
+        """Makes sure the map check box is checked.
+
+        Args:
+            rank_text (str): text in the rank line edit
+        """
         if rank_text:
             if not self._ui.map_check_box.isChecked():
                 self._ui.map_check_box.setChecked(True)
         elif self._ui.map_check_box.isChecked():
             self._ui.map_check_box.setChecked(False)
+
+    @Slot(bool)
+    def _edit_rank(self, map_checked):
+        """Focuses on the rank line edit and select all its contents if map has been checked.
+
+        Args:
+            map_checked (bool): map checkbox state
+        """
+        if not map_checked:
+            return
+        if not self._ui.map_rank_line_edit.text():
+            self._ui.map_rank_line_edit.setText("1")
+        self._ui.map_rank_line_edit.selectAll()
+        self._ui.map_rank_line_edit.setFocus(Qt.FocusReason.OtherFocusReason)

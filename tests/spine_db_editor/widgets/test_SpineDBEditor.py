@@ -70,6 +70,8 @@ class TestSpineDBEditor(DBEditorTestBase):
             QApplication.processEvents()
         model = self.spine_db_editor.parameter_value_model
         index = model.index(0, 1)
+        self.assertEqual(index.data(), "nemo ǀ pluto")
+        self.assertEqual(model.index(1, 1).data(), "nemo ǀ scooby")
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.stacked_view_mixin.ElementNameListEditor"
         ) as editor_constructor:

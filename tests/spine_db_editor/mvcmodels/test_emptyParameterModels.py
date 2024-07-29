@@ -22,7 +22,7 @@ from spinedb_api import (
     import_relationship_parameters,
     import_relationships,
 )
-from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.parameter_value import join_value_and_type, to_database
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
@@ -75,10 +75,11 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that object parameter values are added to the db when editing the table."""
         model = TestEmptyParameterValueModel(self._db_mngr)
         fetch_model(model)
+        value, value_type = to_database("bloodhound")
         self.assertTrue(
             model.batch_set_data(
                 _empty_indexes(model),
-                ["dog", "pluto", "breed", "Base", join_value_and_type(b'"bloodhound"', None), "mock_db"],
+                ["dog", "pluto", "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
             )
         )
         values = self._db_mngr.get_items(self._db_map, "parameter_value")
@@ -86,7 +87,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertEqual(values[0]["entity_class_name"], "dog")
         self.assertEqual(values[0]["entity_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
-        self.assertEqual(values[0]["value"], b'"bloodhound"')
+        self.assertEqual(values[0]["value"], value)
 
     def test_do_not_add_invalid_object_parameter_values(self):
         """Test that object parameter values aren't added to the db if data is incomplete."""
@@ -103,9 +104,10 @@ class TestEmptyParameterModel(unittest.TestCase):
         model = TestEmptyParameterValueModel(self._db_mngr)
         fetch_model(model)
         indexes = _empty_indexes(model)
+        value, value_type = to_database("bloodhound")
         self.assertTrue(
             model.batch_set_data(
-                indexes, ["cat", "pluto", "breed", "Base", join_value_and_type(b'"bloodhound"', None), "mock_db"]
+                indexes, ["cat", "pluto", "breed", "Base", join_value_and_type(value, value_type), "mock_db"]
             )
         )
         self.assertEqual(indexes[0].data(), "dog")
@@ -114,12 +116,13 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertEqual(values[0]["entity_class_name"], "dog")
         self.assertEqual(values[0]["entity_name"], "pluto")
         self.assertEqual(values[0]["parameter_name"], "breed")
-        self.assertEqual(values[0]["value"], b'"bloodhound"')
+        self.assertEqual(values[0]["value"], value)
 
     def test_add_relationship_parameter_values_to_db(self):
         """Test that relationship parameter values are added to the db when editing the table."""
         model = TestEmptyParameterValueModel(self._db_mngr)
         fetch_model(model)
+        value, value_type = to_database(-1)
         self.assertTrue(
             model.batch_set_data(
                 _empty_indexes(model),
@@ -128,7 +131,7 @@ class TestEmptyParameterModel(unittest.TestCase):
                     DB_ITEM_SEPARATOR.join(["pluto", "nemo"]),
                     "relative_speed",
                     "Base",
-                    join_value_and_type(b"-1", None),
+                    join_value_and_type(value, value_type),
                     "mock_db",
                 ],
             )
@@ -138,7 +141,7 @@ class TestEmptyParameterModel(unittest.TestCase):
         self.assertEqual(values[0]["entity_class_name"], "dog__fish")
         self.assertEqual(values[0]["element_name_list"], ("pluto", "nemo"))
         self.assertEqual(values[0]["parameter_name"], "relative_speed")
-        self.assertEqual(values[0]["value"], b"-1")
+        self.assertEqual(values[0]["value"], value)
 
     def test_do_not_add_invalid_relationship_parameter_values(self):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""
@@ -222,19 +225,24 @@ class TestEmptyParameterModel(unittest.TestCase):
         """Test that adding parameter a value for a nonexistent entity creates the entity."""
         model = TestEmptyParameterValueModel(self._db_mngr)
         fetch_model(model)
-        self.assertTrue(
-            model.batch_set_data(
-                _empty_indexes(model),
-                ["dog", "plato", "breed", "Base", join_value_and_type(b'"dog-human"', None), "mock_db"],
+        value, value_type = to_database("dog-human")
+        with mock.patch("spinetoolbox.spine_db_editor.mvcmodels.empty_models.AddedEntitiesPopup") as add_entities_popup:
+            show_method = mock.MagicMock()
+            add_entities_popup.return_value = show_method
+            self.assertTrue(
+                model.batch_set_data(
+                    _empty_indexes(model),
+                    ["dog", "plato", "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
+                )
             )
-        )
+            show_method.show.assert_called_once()
         parameter_values = self._db_mngr.get_items(self._db_map, "parameter_value")
         entities = self._db_mngr.get_items(self._db_map, "entity")
         self.assertEqual(len(parameter_values), 1)
         self.assertEqual(parameter_values[0]["entity_class_name"], "dog")
         self.assertEqual(parameter_values[0]["entity_name"], "plato")
         self.assertEqual(parameter_values[0]["parameter_name"], "breed")
-        self.assertEqual(parameter_values[0]["value"], b'"dog-human"')
+        self.assertEqual(parameter_values[0]["value"], value)
         self.assertEqual(len(entities), 4)
         self.assertEqual(entities[0]["name"], "pluto")
         self.assertEqual(entities[1]["name"], "nemo")
