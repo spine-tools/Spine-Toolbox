@@ -63,7 +63,7 @@ class TestHelpers(unittest.TestCase):
             QApplication()
 
     def test_format_log_message(self):
-        stamp_pattern = re.compile(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
+        stamp_pattern = re.compile("\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
         message = "test msg"
 
         def test_correctness(message_type, expected_color):
@@ -134,8 +134,8 @@ class TestHelpers(unittest.TestCase):
 
     def test_get_datetime(self):
         self.assertEqual(get_datetime(False), "")
-        self.assertIsNotNone(re.match(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]", get_datetime(True)))
-        self.assertIsNotNone(re.match(r"\[\d\d:\d\d:\d\d]", get_datetime(True, False)))
+        self.assertIsNotNone(re.match("\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]", get_datetime(True)))
+        self.assertIsNotNone(re.match("\[\d\d:\d\d:\d\d]", get_datetime(True, False)))
 
     def test_copy_files(self):
         with TemporaryDirectory() as temp_dir:
@@ -206,8 +206,8 @@ class TestHelpers(unittest.TestCase):
             overwritten_file.touch()
             logger = MagicMock()
             recursive_overwrite(logger, str(source_dir), str(destination_dir))
-            with open(overwritten_file) as input_:
-                self.assertEqual(input_.readline(), "source")
+            with open(overwritten_file) as input:
+                self.assertEqual(input.readline(), "source")
 
     def test_tuple_itemgetter(self):
         def first(t):
@@ -339,12 +339,12 @@ class TestHelpers(unittest.TestCase):
         with TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir, "file")
             file_path.touch()
-            with patch("spinetoolbox.helpers.QMessageBox"):
+            with patch("spinetoolbox.helpers.QMessageBox") as message_box:
                 self.assertTrue(file_is_valid(None, str(file_path), "Message title"))
 
     def test_dir_is_valid(self):
         with TemporaryDirectory() as temp_dir:
-            with patch("spinetoolbox.helpers.QMessageBox"):
+            with patch("spinetoolbox.helpers.QMessageBox") as message_box:
                 self.assertTrue(dir_is_valid(None, temp_dir, "Message title"))
 
     def test_unique_name(self):

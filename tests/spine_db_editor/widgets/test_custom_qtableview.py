@@ -455,15 +455,15 @@ class TestParameterValueTableWithExistingData(TestBase):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
         with DatabaseMapping(url) as db_map:
             parameter_definition_data = (
-                ("object_class", "0parameter_"),
-                ("object_class", "1parameter_"),
+                ("object_class", f"0parameter_"),
+                ("object_class", f"1parameter_"),
             )
             import_functions.import_object_parameters(db_map, parameter_definition_data)
             parameter_value_data = (
-                ("object_class", "object_0", "0parameter_", "a_value"),
-                ("object_class", "object_0", "1parameter_", "a_value"),
-                ("object_class", "object_1", "0parameter_", "a_value"),
-                ("object_class", "object_1", "1parameter_", "a_value"),
+                ("object_class", f"object_0", f"0parameter_", "a_value"),
+                ("object_class", f"object_0", f"1parameter_", "a_value"),
+                ("object_class", f"object_1", f"0parameter_", "a_value"),
+                ("object_class", f"object_1", f"1parameter_", "a_value"),
             )
             import_functions.import_object_parameter_values(db_map, parameter_value_data)
             db_map.commit_session("Add test data.")
@@ -489,8 +489,8 @@ class TestParameterValueTableWithExistingData(TestBase):
             if object_n < 2:
                 expected.extend(
                     [
-                        ["object_class", f"object_{object_n}", "0parameter_", "Base", "a_value", self.db_codename],
-                        ["object_class", f"object_{object_n}", "1parameter_", "Base", "a_value", self.db_codename],
+                        ["object_class", f"object_{object_n}", f"0parameter_", "Base", "a_value", self.db_codename],
+                        ["object_class", f"object_{object_n}", f"1parameter_", "Base", "a_value", self.db_codename],
                     ]
                 )
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]

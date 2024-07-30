@@ -27,7 +27,7 @@ class ArrayValueEditor(ParameterValueEditorBase):
             index (QModelIndex): an index to a parameter_value in parent_model
             parent (QWidget, optional): a parent widget
         """
-        editors = {}
+        editors = dict()
         if value_type == ValueType.PLAIN_VALUE:
             editors[ValueType.PLAIN_VALUE] = PlainParameterValueEditor()
         elif value_type == ValueType.DATETIME:

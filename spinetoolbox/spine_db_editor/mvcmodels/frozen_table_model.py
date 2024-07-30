@@ -233,7 +233,6 @@ class FrozenTableModel(QAbstractTableModel):
         if len(self._data) < 3:
             return
         frozen_value = self.get_frozen_value() if self._selected_row is not None else None
-        # pylint: disable=unsubscriptable-object
         self.layoutAboutToBeChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
             [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
         )
@@ -254,7 +253,6 @@ class FrozenTableModel(QAbstractTableModel):
             elif frozen_value != self.get_frozen_value():
                 # The row did not change but the frozen value did.
                 selected_row_changed = True
-        # pylint: disable=unsubscriptable-object
         self.layoutChanged["QList<QPersistentModelIndex>", "QAbstractItemModel::LayoutChangeHint"].emit(
             [], QAbstractTableModel.LayoutChangeHint.VerticalSortHint
         )

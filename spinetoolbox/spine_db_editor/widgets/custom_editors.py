@@ -384,6 +384,7 @@ class CheckListEditor(QTableView):
         item = self._model.itemFromIndex(index).text()
         qitem = self._items[item]
         if item not in self._selected:
+            rank = len(self._selected)
             qitem.setCheckState(Qt.CheckState.Checked)
             self._selected.append(item)
         else:

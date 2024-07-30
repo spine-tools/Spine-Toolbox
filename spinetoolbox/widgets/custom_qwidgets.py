@@ -280,8 +280,9 @@ class ToolBarWidgetBase(QWidget):
         self.tool_bar = _MenuToolBar(self)
         layout.addStretch()
         layout.addWidget(self.tool_bar)
-        # pylint: disable=undefined-variable
-        icon_extent = qApp.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
+        icon_extent = qApp.style().pixelMetric(
+            QStyle.PixelMetric.PM_SmallIconSize
+        )  # pylint: disable=undefined-variable
         self.tool_bar.setIconSize(QSize(icon_extent, icon_extent))
         self.tool_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
@@ -311,8 +312,9 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
         if compact:
             self.tool_bar.setFixedHeight(self.option.rect.height())
         text_width = self.option.fontMetrics.horizontalAdvance(self._text)
-        # pylint: disable=undefined-variable
-        icon_width = qApp.style().pixelMetric(QStyle.PixelMetric.PM_ToolBarIconSize)
+        icon_width = qApp.style().pixelMetric(
+            QStyle.PixelMetric.PM_ToolBarIconSize
+        )  # pylint: disable=undefined-variable
         spacing = text_width + 3 * icon_width
         self.option.rect.setWidth(spacing)
         self.layout().insertSpacing(0, spacing)
@@ -505,7 +507,7 @@ class TitleWidgetAction(CustomWidgetAction):
         line.setFrameShadow(QFrame.Sunken)
         layout.addWidget(line)
 
-    def isSeparator(self):
+    def isSeparator(self):  # pylint: disable=no-self-use
         return True
 
 

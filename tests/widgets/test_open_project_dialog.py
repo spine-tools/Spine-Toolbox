@@ -26,8 +26,8 @@ class TestOpenProjectDialog(unittest.TestCase):
             QApplication()
 
     def test_open_project_dialog(self):
-        widget = QWidget()
-        opw = OpenProjectDialog(DummyToolbox(widget))
+        self._widget = QWidget()
+        opw = OpenProjectDialog(DummyToolbox(self._widget))
         opw.go_root_action.trigger()
         opw.go_home_action.trigger()
         opw.go_documents_action.trigger()
@@ -41,10 +41,10 @@ class TestOpenProjectDialog(unittest.TestCase):
         opw.close()
 
     def test_update_recents_remove_recents(self):
-        widget = QWidget()
+        self._widget = QWidget()
         with TemporaryDirectory() as temp_dir1:
             with TemporaryDirectory() as temp_dir2:
-                opw = OpenProjectDialog(DummyToolbox(widget))
+                opw = OpenProjectDialog(DummyToolbox(self._widget))
                 opw.expand_and_resize(temp_dir1)
                 # Add path
                 opw.update_recents(temp_dir1, opw._qsettings)
@@ -92,7 +92,7 @@ class MockQSettings:
         """Returns without modifying anything."""
         if key == "appSettings/recentProjectStorages":
             self.recent_storages = value
+        return
 
-    @staticmethod
-    def sync():
+    def sync(self):
         return True

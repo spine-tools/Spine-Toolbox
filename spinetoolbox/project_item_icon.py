@@ -73,11 +73,11 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.spec_item = None  # For displaying Tool Spec icon
         self.spec_item_renderer = None
         # Make connector buttons
-        self.connectors = {
-            "bottom": ConnectorButton(toolbox, self, position="bottom"),
-            "left": ConnectorButton(toolbox, self, position="left"),
-            "right": ConnectorButton(toolbox, self, position="right"),
-        }
+        self.connectors = dict(
+            bottom=ConnectorButton(toolbox, self, position="bottom"),
+            left=ConnectorButton(toolbox, self, position="left"),
+            right=ConnectorButton(toolbox, self, position="right"),
+        )
         self._setup()
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
@@ -166,7 +166,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         # Load SVG
         loading_ok = self.renderer.load(self.icon_file)
         if not loading_ok:
-            self._toolbox.msg_error.emit(f"Loading SVG icon from resource:{self.icon_file} failed")
+            self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(self.icon_file))
             return
         size = self.renderer.defaultSize()
         self.svg_item.setSharedRenderer(self.renderer)
@@ -459,7 +459,7 @@ class ConnectorButton(QGraphicsPathItem):
         self._parent = parent
         self._toolbox = toolbox
         self.position = position
-        self.links = []
+        self.links = list()
         self.setBrush(self.brush)
         parent_rect = parent.rect()
         extent = 0.2 * parent_rect.width()
@@ -658,7 +658,7 @@ class ExclamationIcon(QGraphicsTextItem):
         """
         super().__init__(parent)
         self._parent = parent
-        self._notifications = []
+        self._notifications = list()
         font = QFont("Font Awesome 5 Free Solid")
         font.setPixelSize(self.FONT_SIZE_PIXELS)
         self.setFont(font)

@@ -194,7 +194,7 @@ class CompoundTableModel(MinimalTableModel):
             columns.append(index.column())
             sub_model, _ = self._row_map[index.row()]
             sub_index = self.map_to_sub(index)
-            d.setdefault(sub_model, []).append((sub_index, value))
+            d.setdefault(sub_model, list()).append((sub_index, value))
         for model, index_value_tuples in d.items():
             indexes, values = zip(*index_value_tuples)
             if not model.batch_set_data(list(indexes), list(values)):
@@ -249,7 +249,6 @@ class CompoundTableModel(MinimalTableModel):
                 sub_count = min(sub_model.rowCount(), count)
                 break
             finally:
-                # pylint: disable=used-before-assignment
                 sub_model.removeRows(sub_row, sub_count, self.map_to_sub(parent))
         self.endRemoveRows()
         self.refresh()

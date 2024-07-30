@@ -60,7 +60,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         self._engine_manager = make_engine_manager(exec_remotely)
         self._q = multiprocessing.Queue()
-        self._logger = QueueLogger(self._q, "DetachedPythonConsole", None, {})
+        self._logger = QueueLogger(self._q, "DetachedPythonConsole", None, dict())
         self.normal_cursor = self._control.viewport().cursor()
         self._copy_input_action = QAction("Copy (Only Input)", self)
         self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
@@ -124,9 +124,11 @@ class JupyterConsoleWidget(RichJupyterWidget):
             manager successfully, None otherwise.
         """
         if msg["type"] == "kernel_started":
-            self._connection_file = solve_connection_file(msg["connection_file"], msg.get("connection_file_dict", {}))
+            self._connection_file = solve_connection_file(
+                msg["connection_file"], msg.get("connection_file_dict", dict())
+            )
             return self._connection_file
-        if msg["type"] == "kernel_spec_not_found":
+        elif msg["type"] == "kernel_spec_not_found":
             self._toolbox.msg_error.emit(
                 f"Kernel failed to start:<br/>"
                 f"Unable to find kernel spec <b>{msg['kernel_name']}</b>.<br/>"

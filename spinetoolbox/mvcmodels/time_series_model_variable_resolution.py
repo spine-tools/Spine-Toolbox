@@ -147,7 +147,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             try:
                 self._value.indexes[row] = value
             except ValueError:
-                self._value.indexes[row] = np.datetime64()  # pylint: disable=no-value-for-parameter
+                self._value.indexes[row] = np.datetime64()
         else:
             try:
                 self._value.values[row] = value
@@ -164,8 +164,8 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             indexes (Sequence): a sequence of model indexes
             values (Sequence): a sequence of datetimes/floats corresponding to the indexes
         """
-        modified_rows = []
-        modified_columns = []
+        modified_rows = list()
+        modified_columns = list()
         for index, value in zip(indexes, values):
             row = index.row()
             modified_rows.append(row)

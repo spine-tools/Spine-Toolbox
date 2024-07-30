@@ -132,7 +132,7 @@ class SpineDBWorker(QObject):
             parent.set_busy(True)
             self._do_fetch_more(parent)
 
-    def _do_fetch_more(self, parent):  # pylint: disable=method-hidden
+    def _do_fetch_more(self, parent):
         item_type = parent.fetch_item_type
         if parent in self._parents_fetching.get(item_type, set()):
             return
@@ -151,10 +151,7 @@ class SpineDBWorker(QObject):
             self._parents_fetching[item_type].add(parent)
             return
         self._parents_fetching[item_type] = {parent}
-
-        def callback(future):
-            self._handle_query_advanced(item_type, future.result())
-
+        callback = lambda future: self._handle_query_advanced(item_type, future.result())
         self._executor.submit(self._busy_db_map_fetch_more, item_type).add_done_callback(callback)
 
     @Slot(object)

@@ -46,9 +46,9 @@ class ProjectItem(LogMixin, MetaObject):
         self._logger = project.toolbox()
         self._properties_ui = None
         self._icon = None
-        self._sigs = {}
+        self._sigs = dict()
         self._active = False
-        self._actions = []
+        self._actions = list()
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.items_dir, self.short_name)
         self._specification = None
@@ -83,12 +83,13 @@ class ProjectItem(LogMixin, MetaObject):
     def logger(self):
         return self._logger
 
+    # pylint: disable=no-self-use
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting.
         Must be implemented in subclasses.
         """
-        return {}
+        return dict()
 
     def activate(self):
         """Restore selections and connect signals."""
@@ -223,6 +224,7 @@ class ProjectItem(LogMixin, MetaObject):
             engine_state: engine state after item's execution
         """
 
+    # pylint: disable=no-self-use
     def resources_for_direct_successors(self):
         """
         Returns resources for direct successors.
@@ -233,7 +235,7 @@ class ProjectItem(LogMixin, MetaObject):
         Returns:
             list: a list of ProjectItemResources
         """
-        return []
+        return list()
 
     def resources_for_direct_predecessors(self):
         """
@@ -245,7 +247,7 @@ class ProjectItem(LogMixin, MetaObject):
         Returns:
             list: a list of ProjectItemResources
         """
-        return []
+        return list()
 
     def _resources_to_predecessors_changed(self):
         """Notifies direct predecessors that item's resources have changed."""

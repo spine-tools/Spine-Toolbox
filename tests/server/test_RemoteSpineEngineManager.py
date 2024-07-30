@@ -49,7 +49,7 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
 
     def _run_engine(self, attribs):
         remote_engine_mngr = RemoteSpineEngineManager()
-        engine_data = {"settings": {}, "project_dir": ""}
+        engine_data = {"settings": dict(), "project_dir": ""}
         # NOTE: This patch does not work without spec=True
         with mock.patch("spinetoolbox.spine_engine_manager.EngineClient", **attribs, spec=True) as mock_client:
             remote_engine_mngr.run_engine(engine_data)
@@ -94,11 +94,12 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
             ),
             ("dag_exec_finished", "COMPLETED"),
         ]
-        rcv_events_list = []
+        rcv_events_list = list()
         for event_type, data in engine_events:
             json_event = EventDataConverter.convert(event_type, data)
             rcv_events_list.append([json_event.encode("utf-8")])
-        yield from rcv_events_list
+        for event in rcv_events_list:
+            yield event
 
     @staticmethod
     def yield_events_dag_fails():
@@ -135,11 +136,12 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
             ),
             ("dag_exec_finished", "FAILED"),
         ]
-        rcv_events_list = []
+        rcv_events_list = list()
         for event_type, data in engine_events:
             json_event = EventDataConverter.convert(event_type, data)
             rcv_events_list.append([json_event.encode("utf-8")])
-        yield from rcv_events_list
+        for event in rcv_events_list:
+            yield event
 
 
 if __name__ == "__main__":

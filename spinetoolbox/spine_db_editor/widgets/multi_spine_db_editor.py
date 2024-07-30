@@ -169,7 +169,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         """Opens Spine db editor documentation page in browser."""
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
         if not open_url(doc_url):
-            self.msg_error.emit(f"Unable to open url <b>{doc_url}</b>")
+            self.msg_error.emit("Unable to open url <b>{0}</b>".format(doc_url))
 
 
 class _CustomStatusBar(QStatusBar):

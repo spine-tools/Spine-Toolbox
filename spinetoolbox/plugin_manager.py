@@ -37,7 +37,7 @@ def _download_file(remote, local):
     try:
         urllib.request.urlretrieve(remote, local)
     except urllib.error.HTTPError as e:
-        raise PluginWorkFailed(f"Failed to download {remote}: {str(e)}") from e
+        raise PluginWorkFailed(f"Failed to download {remote}: {str(e)}")
 
 
 def _download_plugin(plugin, plugin_local_dir):
@@ -166,8 +166,8 @@ class PluginManager:
         try:
             with urllib.request.urlopen(PLUGIN_REGISTRY_URL) as url:
                 registry = json.loads(url.read().decode())
-        except urllib.error.URLError as error:
-            raise PluginWorkFailed("Failed to load plugin registry. Are you connected to a network?") from error
+        except urllib.error.URLError:
+            raise PluginWorkFailed("Failed to load plugin registry. Are you connected to a network?")
         self._registry_plugins = {plugin_dict["name"]: plugin_dict for plugin_dict in registry["plugins"]}
 
     @Slot(bool)

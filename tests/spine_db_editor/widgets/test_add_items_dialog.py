@@ -219,7 +219,7 @@ class TestAddItemsDialog(unittest.TestCase):
         for item in self._db_editor.entity_tree_model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
-                qApp.processEvents()  # pylint: disable=undefined-variable
+                qApp.processEvents()
         entity_classes = self._db_editor.entity_tree_model.root_item.children
         dialog = AddEntitiesDialog(self._db_editor, entity_classes[2], self._db_mngr, self._db_map)
         model = dialog.model

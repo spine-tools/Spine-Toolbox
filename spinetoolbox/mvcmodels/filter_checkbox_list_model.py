@@ -90,7 +90,6 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             return None
         row = index.row()
         action_state = [self._all_selected]
-        data_row = None
         if self._show_empty:
             action_state.append(self._empty_selected)
         if self._show_add_to_selection:

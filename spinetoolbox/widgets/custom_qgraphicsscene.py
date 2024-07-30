@@ -284,7 +284,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         y_start = round(top_left.y() / radius)
         x_stop = x_start + round(rect.width() / dx) + 1
         y_stop = y_start + round(rect.height() / radius) + 1
-        centers = []
+        centers = list()
         centers_append = centers.append
         for i in range(x_start, x_stop):
             ref = QPointF(i * dx, (i & 1) * dy)

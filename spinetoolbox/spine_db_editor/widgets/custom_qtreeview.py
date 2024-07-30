@@ -419,7 +419,7 @@ class AlternativeTreeView(ItemTreeView):
             parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
-        self._selected_alternative_ids = {}
+        self._selected_alternative_ids = dict()
         self._generate_scenarios_action = None
 
     @property
@@ -506,7 +506,7 @@ class AlternativeTreeView(ItemTreeView):
         if not isinstance(item, AlternativeItem):
             return
         included_ids = set()
-        alternatives = []
+        alternatives = list()
         db_map = item.db_map
         for id_ in self._selected_alternative_ids.get(db_map, ()):
             if id_ not in included_ids:
@@ -582,7 +582,7 @@ class ScenarioTreeView(ItemTreeView):
             parent (QWidget): parent widget
         """
         super().__init__(parent=parent)
-        self._selected_scenario_ids = {}
+        self._selected_scenario_ids = dict()
         self._duplicate_scenario_action = None
 
     def reset(self):

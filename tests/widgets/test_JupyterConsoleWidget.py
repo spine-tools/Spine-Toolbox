@@ -100,7 +100,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
         # Replace QtKernelClient class with a custom one
         # Inspired by jupyter_client/tests/test_client.py
-        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient):
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)  # Wait until we get a kernel_info_reply
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
@@ -137,7 +137,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
         # Replace QtKernelClient class with a custom one
         # Inspired by jupyter_client/tests/test_client.py
-        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient):
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)  # Wait until we get a kernel_info_reply
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
@@ -153,7 +153,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         )
         # Restart kernel manager
         jcw.kernel_client.shell_channel.kernel_info_event.clear()
-        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient):
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.request_restart_kernel_manager()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
@@ -175,7 +175,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
         # Replace QtKernelClient class with a custom one
         # Inspired by jupyter_client/tests/test_client.py
-        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient):
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)  # Wait until we get a kernel_info_reply
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
@@ -198,7 +198,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         self.assertIsNone(jcw.kernel_client)
         # Restart kernel manager
         # jcw.kernel_client.shell_channel.kernel_info_event.clear()
-        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient):
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.request_restart_kernel_manager()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
@@ -220,7 +220,7 @@ class TestJupyterConsoleWidget(unittest.TestCase):
         self.assertEqual(1, _kernel_manager_factory.n_kernel_managers())
         # Replace QtKernelClient class with a custom one
         # Inspired by jupyter_client/tests/test_client.py
-        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient):
+        with mock.patch("spinetoolbox.widgets.jupyter_console_widget.QtKernelClient", new=CustomQtKernelClient) as mtkc:
             jcw.connect_to_kernel()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)  # Wait until we get a kernel_info_reply
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg

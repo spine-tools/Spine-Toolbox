@@ -82,16 +82,11 @@ class MultiTabSpecEditor(MultiTabWindow):
             other_index = other_index_by_spec.get(spec)
             if other_index is None:
                 # Spec is not open on another multi tab editor, so open it here
-                def slot(spec_=spec):
-                    return self.add_new_tab(spec_)
-
+                slot = lambda spec=spec: self.add_new_tab(spec)
             else:
                 # Spec is open on another multi tab editor, so bring it here
                 other, index = other_index
-
-                def slot(other_=other, index_=index):
-                    other_.move_tab(index_, self)
-
+                slot = lambda other=other, index=index: other.move_tab(index, self)
             menu.addAction(spec.name, slot)
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)

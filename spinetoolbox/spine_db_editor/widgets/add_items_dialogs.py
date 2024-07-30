@@ -67,7 +67,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
         self.entities = entities
         self.db_maps = db_maps
         self.table_view.horizontalHeader().setMinimumSectionSize(0)
-        self.setWindowTitle(f"Add '{self.entity_class['name']}' entities")
+        self.setWindowTitle("Add '{0}' entities".format(self.entity_class["name"]))
         self.populate_table_view()
         self.connect_signals()
 
@@ -251,7 +251,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        column_name = f"dimension name ({self.number_of_dimensions})"
+        column_name = "dimension name ({0})".format(self.number_of_dimensions)
         self.model.insertColumns(column, 1)
         self.model.insert_horizontal_header_labels(column, [column_name])
         self.table_view.resizeColumnToContents(column)
@@ -283,7 +283,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        db_map_data = {}
+        db_map_data = dict()
         header_labels = self.model.horizontal_header_labels()
         name_column = header_labels.index("entity class name")
         description_column = header_labels.index("description")
@@ -294,7 +294,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             row_data = self.model.row_data(i)
             entity_class_name = row_data[name_column]
             if not entity_class_name:
-                self.parent().msg_error.emit(f"Entity class missing at row {i + 1}")
+                self.parent().msg_error.emit("Entity class missing at row {}".format(i + 1))
                 return
             description = row_data[description_column]
             display_icon = row_data[display_icon_column]
@@ -312,16 +312,16 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
                 db_names = ""
             for db_name in db_names.split(","):
                 if db_name not in self.keyed_db_maps:
-                    self.parent().msg_error.emit(f"Invalid database {db_name} at row {i + 1}")
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
                 db_map = self.keyed_db_maps[db_name]
                 entity_classes = self.db_map_ent_cls_lookup_by_name[db_map]
-                dimension_id_list = []
+                dimension_id_list = list()
                 for column in range(name_column):  # Leave 'name' column outside
                     dimension_name = row_data[column]
                     if dimension_name not in entity_classes:
                         self.parent().msg_error.emit(
-                            f"Invalid dimension '{dimension_name}' for db '{db_name}' at row {i + 1}"
+                            "Invalid dimension '{}' for db '{}' at row {}".format(dimension_name, db_name, i + 1)
                         )
                         return
                     dimension_id = entity_classes[dimension_name]["id"]

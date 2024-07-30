@@ -29,7 +29,7 @@ class MinimalTableModel(QAbstractTableModel):
             header = []
         self._parent = parent
         self.header = header
-        self._main_data = []
+        self._main_data = list()
         self._fetched = not lazy
         self._paste = False
 
@@ -274,7 +274,7 @@ class MinimalTableModel(QAbstractTableModel):
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
-            main_data = []
+            main_data = list()
         self.beginResetModel()
         self._main_data = main_data
         self.endResetModel()

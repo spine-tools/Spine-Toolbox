@@ -98,10 +98,10 @@ class EmptyModelBase(EmptyRowModel):
     def accepted_rows(self):
         return range(self.rowCount())
 
-    def db_item(self, _index):
+    def db_item(self, _index):  # pylint: disable=no-self-use
         return None
 
-    def item_id(self, _row):
+    def item_id(self, _row):  # pylint: disable=no-self-use
         return None
 
     def handle_items_added(self, db_map_data):
@@ -374,5 +374,5 @@ class EmptyAddEntityOrClassRowModel(EmptyRowModel):
                 return False
             role = Qt.ItemDataRole.EditRole
         else:
-            self._entity_name_user_defined = bool(value)
+            self._entity_name_user_defined = True if value else False
         return super().setData(index, value, role)

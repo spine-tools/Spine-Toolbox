@@ -29,7 +29,7 @@ from .manage_items_dialogs import (
 class EditOrRemoveItemsDialog(ManageItemsDialog):
     def __init__(self, parent, db_mngr):
         super().__init__(parent, db_mngr)
-        self.items = []
+        self.items = list()
 
     def all_databases(self, row):
         """Returns a list of db names available for a given row.
@@ -60,9 +60,9 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         self.model.set_horizontal_header_labels(
             ["entity class name", "description", "display icon", "active by default", "databases"]
         )
-        self.orig_data = []
+        self.orig_data = list()
         self.default_display_icon = default_icon_id()
-        model_data = []
+        model_data = list()
         for item in selected:
             data = item.db_map_data(item.first_db_map)
             row_data = [item.name, data["description"], data["display_icon"], data["active_by_default"]]
@@ -82,7 +82,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
     @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
-        db_map_data = {}
+        db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, description, display_icon, active_by_default, db_names = self.model.row_data(i)
             if db_names is None:
@@ -92,11 +92,11 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             for database in db_names.split(","):
                 db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
                 if db_map is None:
-                    self.parent().msg_error.emit(f"Invalid database {database} at row {i + 1}")
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
                 db_maps.append(db_map)
             if not name:
-                self.parent().msg_error.emit(f"Entity class name missing at row {i + 1}")
+                self.parent().msg_error.emit("Entity class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [name, description] == orig_row:
@@ -156,7 +156,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
     @Slot()
     def accept(self):
         """Collect info from dialog and try to update items."""
-        db_map_data = {}
+        db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("entity name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount()):
@@ -165,7 +165,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             element_name_list = [row_data[column] for column in range(name_column)]
             name = row_data[name_column]
             if not name:
-                self.parent().msg_error.emit(f"Entity name missing at row {i + 1}")
+                self.parent().msg_error.emit("Entity name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [*element_name_list, name] == orig_row:
@@ -177,7 +177,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             for database in db_names.split(","):
                 db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
                 if db_map is None:
-                    self.parent().msg_error.emit(f"Invalid database {database} at row {i + 1}")
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
                 db_maps.append(db_map)
             pre_db_item = {"name": name}
@@ -194,7 +194,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                 dimension_id_list = ent_cls["dimension_id_list"]
                 entities = self.db_map_ent_lookup[db_map]
                 # Find element_id_list
-                element_id_list = []
+                element_id_list = list()
                 for dimension_id, element_name in zip(dimension_id_list, element_name_list):
                     if (dimension_id, element_name) not in entities:
                         self.parent().msg_error.emit(
@@ -230,7 +230,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
         self.table_view.setItemDelegate(RemoveEntitiesDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(["type", "name", "databases"])
-        model_data = []
+        model_data = list()
         for item_type, items in selected.items():
             for item in items:
                 row_data = [item_type, item.name, item.display_database]
@@ -241,7 +241,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to remove items."""
-        db_map_typed_data = {}
+        db_map_typed_data = dict()
         for i in range(self.model.rowCount()):
             item_type, _, db_names = self.model.row_data(i)
             if db_names is None:
@@ -251,7 +251,7 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
             for database in db_names.split(","):
                 db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
                 if db_map is None:
-                    self.parent().msg_error.emit(f"Invalid database {database} at row {i + 1}")
+                    self.parent().msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
                     return
                 db_maps.append(db_map)
             for db_map in db_maps:

@@ -18,6 +18,7 @@ from spinedb_api.parameter_value import split_value_and_type
 class ConvertToDBMixin:
     """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
 
+    # pylint: disable=no-self-use
     def _convert_to_db(self, item):
         """Returns a db item (id-based) from the given model item (name-based).
 

@@ -43,6 +43,17 @@ class AboutWidget(QWidget):
         self.setWindowFlags(Qt.WindowType.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        full_version = (
+            str(spinetoolbox.__version_info__.major)
+            + "."
+            + str(spinetoolbox.__version_info__.minor)
+            + "."
+            + str(spinetoolbox.__version_info__.micro)
+            + "-"
+            + spinetoolbox.__version_info__.releaselevel
+            + "."
+            + str(spinetoolbox.__version_info__.serial)
+        )
         self.v_spinetoolbox = spinetoolbox.__version__
         self.v_spinedb_api = spinedb_api.__version__
         self.v_spine_engine = spine_engine.__version__
@@ -150,6 +161,7 @@ class AboutWidget(QWidget):
             moved = self._mouseReleasePos - self._mousePressPos
             if moved.manhattanLength() > 3:
                 e.ignore()
+                return
 
     def mouseMoveEvent(self, e):
         """Moves the window when mouse button is pressed and mouse cursor is moved.

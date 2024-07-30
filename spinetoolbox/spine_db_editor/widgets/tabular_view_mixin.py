@@ -412,7 +412,11 @@ class TabularViewMixin:
                 else:
                     item_type = header.header_type
                 if header.header_type == "entity":
-                    accepts_item = self.accepts_item(header)
+                    accepts_item = lambda item, db_map: (
+                        self.accepts_ith_element_item(header.rank, item, db_map)
+                        if self.first_current_entity_class["dimension_id_list"]
+                        else self.accepts_entity_item
+                    )
                 elif header.header_type == "parameter":
                     accepts_item = self.accepts_parameter_item
                 else:
@@ -613,13 +617,6 @@ class TabularViewMixin:
 
     def accepts_ith_element_item(self, i, item, db_map):
         return item["class_id"] == self.current_dimension_id_list[i][db_map]
-
-    def accepts_item(self, header):
-        return lambda item, db_map: (
-            self.accepts_ith_element_item(header.rank, item, db_map)
-            if self.first_current_entity_class["dimension_id_list"]
-            else self.accepts_entity_item
-        )
 
     @contextmanager
     def _frozen_table_reload_disabled(self):

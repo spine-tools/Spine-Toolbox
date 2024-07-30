@@ -37,8 +37,8 @@ class FileListModel(QAbstractItemModel):
         super().__init__()
         self._header_label = header_label
         self._draggable = draggable
-        self._single_resources = []
-        self._pack_resources = []
+        self._single_resources = list()
+        self._pack_resources = list()
 
     def rowCount(self, parent=QModelIndex()):
         if not parent.isValid():
@@ -313,10 +313,7 @@ class JumpCommandLineArgsModel(CommandLineArgsModel):
     def reset_model(self, args):
         self._args = args
         self._reset_root(
-            self.invisibleRootItem(),
-            args,
-            {"editable": True, "selectable": True, "drag_enabled": True},
-            has_empty_row=True,
+            self.invisibleRootItem(), args, dict(editable=True, selectable=True, drag_enabled=True), has_empty_row=True
         )
 
     def canDropMimeData(self, data, drop_action, row, column, parent):

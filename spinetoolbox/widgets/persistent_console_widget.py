@@ -576,8 +576,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
                 self._toolbox.msg_error.emit(f"Connecting to Spine Engine Server failed. {e}")
                 return None
             return self.engine_mngr
-        engine_mngr = make_engine_manager(exec_remotely)
-        return engine_mngr
+        else:
+            engine_mngr = make_engine_manager(exec_remotely)
+            return engine_mngr
 
     def _issue_command(self, text):
         """Issues command.

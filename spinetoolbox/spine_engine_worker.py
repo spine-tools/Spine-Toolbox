@@ -336,7 +336,7 @@ class SpineEngineWorker(QObject):
                 msg["filter_id"],
                 msg["kernel_name"],
                 msg["connection_file"],
-                msg.get("connection_file_dict", {}),
+                msg.get("connection_file_dict", dict()),
             )
         elif msg["type"] == "kernel_spec_not_found":
             msg_text = (

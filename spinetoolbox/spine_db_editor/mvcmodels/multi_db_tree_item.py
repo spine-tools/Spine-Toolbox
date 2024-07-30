@@ -185,7 +185,7 @@ class MultiDBTreeItem(TreeItem):
         id_ = self.take_db_map(db_map)
         if id_ is None:
             return None
-        other = self.parent_item.make_or_restore_child(db_map, id_)
+        other = self.parent_item.make_or_restore_child({db_map: id_})
         other_children = []
         for child in self.children:
             other_child = child.deep_take_db_map(db_map)
@@ -236,7 +236,7 @@ class MultiDBTreeItem(TreeItem):
 
         Args:
             db_map (DatabaseMapping)
-            id_ (int)
+            id (int)
 
         Returns:
             MultiDBTreemItem
@@ -376,7 +376,7 @@ class MultiDBTreeItem(TreeItem):
         """
         # Find rows to update and db_map ids to add
         rows_to_update = set()
-        db_map_ids_to_add = {}
+        db_map_ids_to_add = dict()
         for db_map, ids in db_map_ids.items():
             for id_ in ids:
                 row = self.find_row(db_map, id_)

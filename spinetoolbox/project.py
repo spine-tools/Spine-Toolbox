@@ -123,10 +123,10 @@ class SpineToolboxProject(MetaObject):
         _, name = os.path.split(p_dir)
         super().__init__(name, "")
         self._toolbox = toolbox
-        self._project_items = {}
+        self._project_items = dict()
         self._specifications = dict(enumerate(plugin_specs))
-        self._connections = []
-        self._jumps = []
+        self._connections = list()
+        self._jumps = list()
         self._logger = logger
         self._app_settings = app_settings
         self._settings = settings
@@ -251,11 +251,11 @@ class SpineToolboxProject(MetaObject):
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
-        saved_dict = {"project": project_dict, "items": items_dict}
+        saved_dict = dict(project=project_dict, items=items_dict)
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
-            self._dump({"items": local_items_data}, fp)
+            self._dump(dict(items=local_items_data), fp)
 
     def _save_all_specifications(self, local_path):
         """Writes all specifications except plugins to disk.
@@ -268,7 +268,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             dict: specification local data that is supposed to be stored in a project specific place
         """
-        serialized_spec_paths = {}
+        serialized_spec_paths = dict()
         specifications_local_data = {}
         for spec in self._specifications.values():
             if spec.plugin is not None:
@@ -297,7 +297,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             dict: local project item data
         """
-        local_data_dict = {}
+        local_data_dict = dict()
         for name, item_dict in items_dict.items():
             local_entries = self._project_items[name].item_dict_local_entries()
             if not local_entries:
@@ -761,7 +761,7 @@ class SpineToolboxProject(MetaObject):
         if not self._is_dag_valid(dag):
             self.remove_connection(connection)
             msg = "This connection creates a cycle into the DAG.\n\nWould you like to add a Loop connection?"
-            title = "Add Loop?"
+            title = f"Add Loop?"
             message_box = QMessageBox(
                 QMessageBox.Icon.Question,
                 title,
@@ -910,7 +910,7 @@ class SpineToolboxProject(MetaObject):
         Returns:
             list of str: list of issues, if any
         """
-        issues = []
+        issues = list()
         dag = self.dag_with_node(jump.source)
         if not dag.has_node(jump.destination):
             issues.append("Loop cannot span over separate DAGs.")
@@ -1030,16 +1030,13 @@ class SpineToolboxProject(MetaObject):
             return
         settings = make_settings_dict_for_engine(self._app_settings)
         darker_fg_color = QColor(FG_COLOR).darker().name()
-
-        def darker(x):
-            return f'<span style="color: {darker_fg_color}">{x}</span>'
-
+        darker = lambda x: f'<span style="color: {darker_fg_color}">{x}</span>'
         for k, (dag, execution_permits) in enumerate(zip(dags, execution_permits_list)):
             dag_identifier = f"{k + 1}/{len(dags)}"
             worker = self.create_engine_worker(dag, execution_permits, dag_identifier, settings, job_id)
             if worker is None:
                 continue
-            self._logger.msg.emit(f"<b>Starting DAG {dag_identifier}</b>")
+            self._logger.msg.emit("<b>Starting DAG {0}</b>".format(dag_identifier))
             item_names = (darker(name) if not execution_permits[name] else name for name in nx.topological_sort(dag))
             self._logger.msg.emit(darker(" -> ").join(item_names))
             worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
@@ -1076,11 +1073,11 @@ class SpineToolboxProject(MetaObject):
         for project_item in items.values():
             spec = project_item.specification()
             if spec is not None:
-                specs_by_type.setdefault(project_item.item_type(), []).append(spec)
+                specs_by_type.setdefault(project_item.item_type(), list()).append(spec)
         for jump in jumps.values():
             if jump.condition["type"] == "tool-specification":
                 spec = self.get_specification(jump.condition["specification"])
-                specs_by_type.setdefault("Tool", []).append(spec)
+                specs_by_type.setdefault("Tool", list()).append(spec)
         specification_dicts = {
             type_: [{**spec.to_dict(), "definition_file_path": spec.definition_file_path} for spec in specs]
             for type_, specs in specs_by_type.items()
@@ -1134,12 +1131,12 @@ class SpineToolboxProject(MetaObject):
         if not names:
             self._logger.msg_warning.emit("Please select a project item and try again.")
             return
-        dags = []
+        dags = list()
         for dag in [dag for dag in self._dag_iterator() if set(names) & dag.nodes]:
             more_dags = self._split_to_subdags(dag, names)
             dags += more_dags
         valid_dags = self._validate_dags(dags)
-        execution_permit_list = []
+        execution_permit_list = list()
         for dag in valid_dags:
             execution_permits = {name: name in names for name in dag.nodes}
             execution_permit_list.append(execution_permits)
@@ -1160,7 +1157,7 @@ class SpineToolboxProject(MetaObject):
         if len(dag.nodes) == 1:
             return [dag]
         # Get selected items that are in current dag
-        selected_items_in_this_dag = []
+        selected_items_in_this_dag = list()
         for selected_item in list(selected_items):
             if selected_item in list(dag.nodes()):
                 selected_items_in_this_dag.append(selected_item)
@@ -1178,7 +1175,7 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg_warning.emit("Project has no items to execute")
             return
         dags = self._validate_dags(self._dag_iterator())
-        execution_permit_list = []
+        execution_permit_list = list()
         for dag in dags:
             execution_permit_list.append({item_name: True for item_name in dag.nodes})
         self.execute_dags(dags, execution_permit_list, "Executing All Directed Acyclic Graphs")
@@ -1423,7 +1420,7 @@ class SpineToolboxProject(MetaObject):
         return self.incoming_connections(name) + self._incoming_jumps(name)
 
     def _update_successor(self, successor, incoming_connections, resource_cache):
-        combined_resources = []
+        combined_resources = list()
         for conn in incoming_connections:
             item_name = conn.source
             predecessor = self._project_items[item_name]
@@ -1436,7 +1433,7 @@ class SpineToolboxProject(MetaObject):
         successor.upstream_resources_updated(combined_resources)
 
     def _update_predecessor(self, predecessor, outgoing_connections, resource_cache):
-        combined_resources = []
+        combined_resources = list()
         for conn in outgoing_connections:
             item_name = conn.destination
             successor = self._project_items[item_name]
@@ -1476,12 +1473,13 @@ class SpineToolboxProject(MetaObject):
         host, port, sec_model, sec_folder = self._toolbox.engine_server_settings()
         if not host:
             self._logger.msg_error.emit(
-                "Spine Engine Server <b>host address</b> missing. Please enter host in <b>File->Settings->Engine</b>."
+                "Spine Engine Server <b>host address</b> missing. "
+                "Please enter host in <b>File->Settings->Engine</b>."
             )
             return ""
-        if not port:
+        elif not port:
             self._logger.msg_error.emit(
-                "Spine Engine Server <b>port</b> missing. Please select port in <b>File->Settings->Engine</b>."
+                "Spine Engine Server <b>port</b> missing. " "Please select port in <b>File->Settings->Engine</b>."
             )
             return ""
         self._logger.msg.emit(f"Connecting to Spine Engine Server at <b>{host}:{port}</b>")
@@ -1571,20 +1569,20 @@ def node_successors(g):
     return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
 
-def _ranks(node_successors_):
+def _ranks(node_successors):
     """Calculates node ranks.
 
     Args:
-        node_successors_ (dict): a mapping from successor name to a list of predecessor names
+        node_successors (dict): a mapping from successor name to a list of predecessor names
 
     Returns:
         dict: a mapping from node name to rank
     """
-    node_predecessors = {}
-    for predecessor, successors in node_successors_.items():
-        node_predecessors.setdefault(predecessor, [])
+    node_predecessors = dict()
+    for predecessor, successors in node_successors.items():
+        node_predecessors.setdefault(predecessor, list())
         for successor in successors:
-            node_predecessors.setdefault(successor, []).append(predecessor)
+            node_predecessors.setdefault(successor, list()).append(predecessor)
     ranking = []
     while node_predecessors:
         same_ranks = [node for node, predecessor in node_predecessors.items() if not predecessor]

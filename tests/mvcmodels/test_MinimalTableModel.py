@@ -141,7 +141,7 @@ class TestMinimalTableModel(unittest.TestCase):
         n_columns = 3
         model.insertColumns(0, n_columns)
         background = n_rows * n_columns * ["0xdeadbeef"]
-        indices = []
+        indices = list()
         for row in range(n_rows):
             for column in range(n_columns):
                 indices.append(model.index(row, column))

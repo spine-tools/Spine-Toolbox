@@ -119,8 +119,8 @@ class TimePatternModel(IndexedValueTableModel):
             indexes (Sequence): a sequence of model indexes
             values (Sequence): a sequence of time periods/floats corresponding to the indexes
         """
-        modified_rows = []
-        modified_columns = []
+        modified_rows = list()
+        modified_columns = list()
         for index, value in zip(indexes, values):
             row = index.row()
             modified_rows.append(row)

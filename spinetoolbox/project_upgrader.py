@@ -141,16 +141,16 @@ class ProjectUpgrader:
         Returns:
             dict: Version 2 project dictionary
         """
-        new = {}
+        new = dict()
         new["version"] = 2
         new["name"] = old["project"]["name"]
         new["description"] = old["project"]["description"]
-        new["specifications"] = {}
+        new["specifications"] = dict()
         new["specifications"]["Tool"] = old["project"]["tool_specifications"]
         new["connections"] = old["project"]["connections"]
         # Change 'objects' to 'items' and remove all 'short name' entries
         # Also stores item_dict under their name and not under category
-        items = {}
+        items = dict()
         for category in old["objects"].keys():
             for item_name in old["objects"][category].keys():
                 old["objects"][category][item_name].pop("short name", "")  # Remove 'short name'
@@ -165,7 +165,7 @@ class ProjectUpgrader:
                     item_type = "GdxExporter"
                 v2_item_dict = factories[item_type].item_class().upgrade_v1_to_v2(item_name, v1_item_dict)
                 items[item_name] = v2_item_dict  # Store items using their name as key
-        return {"project": new, "items": items}
+        return dict(project=new, items=items)
 
     def upgrade_v2_to_v3(self, old, project_dir, factories):
         """Upgrades version 2 project dictionary to version 3.
@@ -219,7 +219,7 @@ class ProjectUpgrader:
                 mappings = old_item_dict.get("mappings")
                 # Sanitize old mappings, as we used to do in Importer.from_dict
                 if mappings is None:
-                    mappings = []
+                    mappings = list()
                 # Convert table_types and table_row_types keys to int since json always has strings as keys.
                 for _, mapping in mappings:
                     table_types = mapping.get("table_types", {})
@@ -237,7 +237,7 @@ class ProjectUpgrader:
                 # Make item specs from sanitized mappings
                 for k, (label, mapping) in enumerate(mappings):
                     spec_name = self.make_unique_importer_specification_name(item_name, label, k)
-                    spec = {"name": spec_name, "item_type": "Importer", "mapping": mapping}
+                    spec = dict(name=spec_name, item_type="Importer", mapping=mapping)
                     spec_path = os.path.join(project_dir, spec_name + ".json")
                     # FIXME: Let's try and handle write errors here...
                     with open(spec_path, "w") as fp:
@@ -349,8 +349,8 @@ class ProjectUpgrader:
         """
 
         def fix_file_selection(item_dict):
-            old_selection = item_dict.get("file_selection", [])
-            new_selection = []
+            old_selection = item_dict.get("file_selection", list())
+            new_selection = list()
             for path, selected in old_selection:
                 deserialized = deserialize_path(path, project_dir)
                 if deserialized.startswith("{") and deserialized.endswith("}"):
@@ -360,8 +360,8 @@ class ProjectUpgrader:
             item_dict["file_selection"] = new_selection
 
         def fix_cmd_line_args(item_dict):
-            old_args = item_dict.get("cmd_line_args", [])
-            new_args = []
+            old_args = item_dict.get("cmd_line_args", list())
+            new_args = list()
             for arg in old_args:
                 deserialized = deserialize_path(arg, project_dir)
                 if deserialized.startswith("{") and deserialized.endswith("}"):
@@ -379,7 +379,7 @@ class ProjectUpgrader:
             fix_file_selection(import_dict)
         gimlet_dicts = [item_dict for item_dict in new["items"].values() if item_dict["type"] == "Gimlet"]
         for gimlet_dict in gimlet_dicts:
-            gimlet_dict["file_selection"] = gimlet_dict.pop("selections", [])
+            gimlet_dict["file_selection"] = gimlet_dict.pop("selections", list())
             fix_file_selection(gimlet_dict)
             fix_cmd_line_args(gimlet_dict)
         tool_dicts = [item_dict for item_dict in new["items"].values() if item_dict["type"] == "Tool"]
@@ -503,13 +503,13 @@ class ProjectUpgrader:
         """
         new = copy.deepcopy(old)
         new["project"]["version"] = 10
-        names_to_remove = []  # Gimlet and GdxExporter item names
+        names_to_remove = list()  # Gimlet and GdxExporter item names
         # Get Gimlet and GdxExporter names and remove connections
         for name, item_dict in new["items"].items():
             if item_dict["type"] in ["Gimlet", "GdxExporter"]:
                 names_to_remove.append(name)
         # Get list of connections to remove
-        connections_to_remove = []
+        connections_to_remove = list()
         for conn in new["project"]["connections"]:
             for name_to_remove in names_to_remove:
                 if name_to_remove in conn["from"] or name_to_remove in conn["to"]:
@@ -601,8 +601,8 @@ class ProjectUpgrader:
         # Check if the selected directory is already a project directory and ask if overwrite is ok
         if os.path.isdir(os.path.join(answer, ".spinetoolbox")):
             msg = (
-                f"Directory \n\n{answer}\n\nalready contains a Spine Toolbox project."
-                f"\n\nWould you like to overwrite it?"
+                "Directory \n\n{0}\n\nalready contains a Spine Toolbox project."
+                "\n\nWould you like to overwrite it?".format(answer)
             )
             message_box = QMessageBox(
                 QMessageBox.Icon.Question,
@@ -666,7 +666,7 @@ class ProjectUpgrader:
             return False
         for req_key in required_project_keys:
             if req_key not in project:
-                self._toolbox.msg_error.emit(f"Invalid project.json file. Key {req_key} not found.")
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
                 return False
         # Check types in project dict
         if not project["version"] == 1:
@@ -713,11 +713,11 @@ class ProjectUpgrader:
             return False
         for req_key in required_project_keys:
             if req_key not in project:
-                self._toolbox.msg_error.emit(f"Invalid project.json file. Key {req_key} not found.")
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
                 return False
         # Check types in project dict
         if not project["version"] == v:
-            self._toolbox.msg_error.emit(f"Invalid project version:'{project['version']}'")
+            self._toolbox.msg_error.emit("Invalid project version:'{0}'".format(project["version"]))
             return False
         if not isinstance(project["name"], str) or not isinstance(project["description"], str):
             self._toolbox.msg_error.emit("Invalid project.json file. 'name' and 'description' must be strings.")
@@ -759,7 +759,7 @@ class ProjectUpgrader:
             return False
         for req_key in required_project_keys:
             if req_key not in project:
-                self._toolbox.msg_error.emit(f"Invalid project.json file. Key {req_key} not found.")
+                self._toolbox.msg_error.emit("Invalid project.json file. Key {0} not found.".format(req_key))
                 return False
         return True
 

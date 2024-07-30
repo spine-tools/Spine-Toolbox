@@ -239,7 +239,7 @@ class SingleModelBase(HalfSortedTableModel):
         row_data = {}
         for index, value in zip(indexes, data):
             row_data.setdefault(index.row(), {})[self.header[index.column()]] = split_value(value, index.column())
-        items = [{"id": self._main_data[row], **data} for row, data in row_data.items()]
+        items = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
         self.update_items_in_db(items)
         return True
 

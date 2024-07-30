@@ -14,6 +14,7 @@
 import json
 import queue
 import threading
+from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.server.util.event_data_converter import EventDataConverter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient
 
@@ -235,7 +236,12 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def make_engine_client(self, host, port, security, sec_folder, ping=True):
         """Creates a client for connecting to Spine Engine Server."""
-        self.engine_client = EngineClient(host, port, security, sec_folder, ping)
+        try:
+            self.engine_client = EngineClient(host, port, security, sec_folder, ping)
+        except RemoteEngineInitFailed:
+            raise
+        except Exception:
+            raise
 
     def run_engine(self, engine_data):
         """Makes an engine client for communicating with the engine server.
@@ -311,11 +317,12 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 self.q.put(("server_status_msg", {"msg_type": "success", "text": f"Execution time: {t}"}))
                 self.q.put(event)
                 break
-            if event[0] == "server_execution_error":
+            elif event[0] == "server_execution_error":
                 # spine engine raised an exception during execution
                 self.q.put(("server_status_msg", {"msg_type": "fail", "text": f"{event[0]: {event[1]}}"}))
                 break
-            self.q.put(event)
+            else:
+                self.q.put(event)
         self.engine_client.close()
 
     def answer_prompt(self, prompter_id, answer):
@@ -325,9 +332,11 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     def restart_kernel(self, connection_file):
         """See base class."""
         # TODO: This does not restart the kernel, only replaces the client. Do kernel_manager.restart_kernel() on server
+        pass
 
     def shutdown_kernel(self, connection_file):
         """See base class."""
+        pass
 
     def is_persistent_command_complete(self, persistent_key, command):
         return self.engine_client.send_is_complete(persistent_key, command)

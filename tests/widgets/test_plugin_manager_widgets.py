@@ -23,16 +23,16 @@ class TestPluginManagerWidgets(unittest.TestCase):
             QApplication()
 
     def test_install_plugins_dialog(self):
-        parent = QWidget()
-        d = InstallPluginDialog(parent)
+        self._parent = QWidget()
+        d = InstallPluginDialog(self._parent)
         d.populate_list(["Plugin1", "Plugin2"])
         d.close()
-        parent.deleteLater()
+        self._parent.deleteLater()
 
     def test_manage_plugins_dialog(self):
-        parent = QWidget()
-        d = ManagePluginsDialog(parent)
+        self._parent = QWidget()
+        d = ManagePluginsDialog(self._parent)
         d.populate_list([("Plugin", True)])
         d._emit_item_removed("Plugin")
         d.close()
-        parent.deleteLater()
+        self._parent.deleteLater()

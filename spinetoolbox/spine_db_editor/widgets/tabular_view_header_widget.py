@@ -50,7 +50,6 @@ class TabularViewHeaderWidget(QFrame):
         layout.addWidget(label)
         layout.addWidget(button)
         layout.setContentsMargins(self._H_MARGIN, 0, self._H_MARGIN, 0)
-        h_alignment = None
         if area == "rows":
             h_alignment = Qt.AlignLeft
             layout.insertSpacing(1, self._SPACING)

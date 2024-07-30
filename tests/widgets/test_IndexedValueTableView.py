@@ -102,7 +102,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
         selection_model.select(model.index(3, 1), QItemSelectionModel.Select)
-        copied_data = f"2019-08-08T17:00\t{-4.4}\n2019-08-08T18:00\t{-5.5}"
+        copied_data = "2019-08-08T17:00\t{:n}\n2019-08-08T18:00\t{:n}".format(-4.4, -5.5)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         series = TimeSeriesVariableResolution(
@@ -135,7 +135,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model.select(model.index(1, 1), QItemSelectionModel.Select)
         selection_model.select(model.index(2, 0), QItemSelectionModel.Select)
         selection_model.select(model.index(2, 1), QItemSelectionModel.Select)
-        copied_data = f"2019-08-08T12:30\t{-2.2}\n2019-08-08T13:30\t{-3.3}\n2019-08-08T14:30\t{-4.4}"
+        copied_data = "2019-08-08T12:30\t{:n}\n2019-08-08T13:30\t{:n}\n2019-08-08T14:30\t{:n}".format(-2.2, -3.3, -4.4)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         series = TimeSeriesVariableResolution(
@@ -155,7 +155,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model.select(model.index(1, 1), QItemSelectionModel.Select)
         selection_model.select(model.index(2, 0), QItemSelectionModel.Select)
         selection_model.select(model.index(2, 1), QItemSelectionModel.Select)
-        copied_data = f"2019-08-08T12:30\t{-1.1}\n2019-08-08T13:30\t{-2.2}"
+        copied_data = "2019-08-08T12:30\t{:n}\n2019-08-08T13:30\t{:n}".format(-1.1, -2.2)
         QApplication.clipboard().setText(copied_data)
         self._table_view.paste()
         series = TimeSeriesVariableResolution(

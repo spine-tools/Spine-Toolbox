@@ -203,8 +203,8 @@ class CopyPasteTableView(QTableView):
         selection = self.selectionModel().selection()
         if selection.isEmpty():
             return False
-        indexes = []
-        values = []
+        indexes = list()
+        values = list()
         is_row_hidden = self.verticalHeader().isSectionHidden
         rows = [x for r in selection for x in range(r.top(), r.bottom() + 1) if not is_row_hidden(x)]
         is_column_hidden = self.horizontalHeader().isSectionHidden
@@ -230,10 +230,6 @@ class CopyPasteTableView(QTableView):
 
     def paste_normal(self):
         """Pastes clipboard data, overwriting cells if needed."""
-
-        def is_visual_column_hidden(x):
-            return h.isSectionHidden(h.logicalIndex(x))
-
         text = QApplication.clipboard().text().strip()
         if not text:
             return False
@@ -243,8 +239,8 @@ class CopyPasteTableView(QTableView):
         current = self.currentIndex()
         if not current.isValid():
             return False
-        indexes = []
-        values = []
+        indexes = list()
+        values = list()
         row = current.row()
         rows = []
         rows_append = rows.append
@@ -259,6 +255,7 @@ class CopyPasteTableView(QTableView):
         columns = []
         columns_append = columns.append
         h = self.horizontalHeader()
+        is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
         for _ in range(len(data[0])):
             while is_visual_column_hidden(visual_column):
                 visual_column += 1
@@ -490,8 +487,8 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         Returns:
             tuple: A tuple (list(pasted indexes), list(pasted values))
         """
-        values_to_set = []
-        indexes_to_set = []
+        values_to_set = list()
+        indexes_to_set = list()
         create_model_index = self.model().index
         # Always paste to the Values column.
         for row in range(first_row, first_row + paste_length):
@@ -566,8 +563,8 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         Returns:
             tuple: a tuple (modified model indexes, modified model values)
         """
-        values_to_set = []
-        indexes_to_set = []
+        values_to_set = list()
+        indexes_to_set = list()
         create_model_index = self.model().index
         for row in range(first_row, first_row + paste_length):
             i = row - first_row
@@ -588,8 +585,8 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         Returns:
             tuple: a tuple (modified model indexes, modified model values)
         """
-        values_to_set = []
-        indexes_to_set = []
+        values_to_set = list()
+        indexes_to_set = list()
         create_model_index = self.model().index
         # Always paste numbers to the Values column.
         target_column = first_column if not isinstance(values[0], float) else 1
@@ -610,9 +607,9 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         """
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter="\t")
-            single_column = []
-            data_indexes = []
-            data_values = []
+            single_column = list()
+            data_indexes = list()
+            data_values = list()
             with system_lc_numeric():
                 for row in reader:
                     column_count = len(row)
@@ -706,8 +703,8 @@ class ArrayTableView(IndexedParameterValueTableViewBase):
             # If multiple row are selected, we paste what fits the selection.
             paste_length = selection_length
             pasted_table = pasted_table[0:selection_length]
-        values_to_set = []
-        indexes_to_set = []
+        values_to_set = list()
+        indexes_to_set = list()
         create_model_index = self.model().index
         for row in range(first_row, first_row + paste_length):
             values_to_set.append(pasted_table[row - first_row])
@@ -756,7 +753,7 @@ class MapTableView(CopyPasteTableView):
         if left > right or top > bottom:
             QApplication.clipboard().setText("")
             return True
-        out_table = []
+        out_table = list()
         with system_lc_numeric():
             for y in range(top, bottom + 1):
                 row = (right - left + 1) * [None]
@@ -847,12 +844,12 @@ class MapTableView(CopyPasteTableView):
         Returns:
             list of list: a list of table rows
         """
-        data = []
+        data = list()
         with io.StringIO(text) as input_stream:
             reader = csv.reader(input_stream, delimiter="\t")
             with system_lc_numeric():
                 for row in reader:
-                    data_row = []
+                    data_row = list()
                     for cell in row:
                         try:
                             number = locale.atof(cell)

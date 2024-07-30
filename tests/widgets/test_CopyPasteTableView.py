@@ -44,8 +44,8 @@ class _MockModel(QAbstractTableModel):
         if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return None
         if orientation == Qt.Orientation.Horizontal:
-            return f"Column {section}"
-        return f"Row {section}"
+            return "Column {}".format(section)
+        return "Row {}".format(section)
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         self.beginInsertColumns(parent, column, column + count)
@@ -137,7 +137,7 @@ class TestCopyPasteTableView(unittest.TestCase):
         view.setModel(model)
         selection_model = view.selectionModel()
         selection_model.select(model.index(0, 0), QItemSelectionModel.Rows | QItemSelectionModel.Select)
-        QApplication.clipboard().setText(f"A\tB\t{locale.str(-1.1)}")
+        QApplication.clipboard().setText("A\tB\t{}".format(locale.str(-1.1)))
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 0).data(), "A")
         self.assertEqual(model.index(0, 1).data(), "B")
