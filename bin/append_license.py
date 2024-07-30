@@ -45,7 +45,7 @@ def _append_license_py(path):
 
 def _append_license_xml(path):
     """Appends a license header to given .py, .ui or .xml file."""
-    xml_license = list()
+    xml_license = []
     xml_license.append("<!--\n")
     for line in license_text:
         xml_license.append(line.replace("/", "\\/"))

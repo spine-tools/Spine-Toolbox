@@ -50,7 +50,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(model.flags(model_index), Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
         model.deleteLater()
 
-    def test_indexes(self):  # pylint: disable=no-self-use
+    def test_indexes(self):
         model = TimeSeriesModelFixedResolution(
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False), None
         )

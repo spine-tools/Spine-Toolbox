@@ -623,7 +623,7 @@ class TestRemoveScenarioAlternative(unittest.TestCase):
         scenario = self._assert_success(self._db_map.add_scenario_item(name="scenario"))
         base = self._db_map.get_alternative_item(name="Base")
         next_level = self._assert_success(self._db_map.add_alternative_item(name="Next level"))
-        scen_alt_1 = self._assert_success(
+        _ = self._assert_success(
             self._db_map.add_scenario_alternative_item(scenario_id=scenario["id"], alternative_id=base["id"], rank=1)
         )
         scen_alt_2 = self._assert_success(

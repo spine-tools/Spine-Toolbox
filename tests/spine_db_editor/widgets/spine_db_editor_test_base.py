@@ -217,4 +217,4 @@ class DBEditorTestBase(unittest.TestCase):
         for item in self.spine_db_editor.entity_tree_model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
-                qApp.processEvents()
+                qApp.processEvents()  # pylint: disable=undefined-variable

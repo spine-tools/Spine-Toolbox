@@ -57,9 +57,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(1, p))
         # Test that an invalid v1 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["objects"] = dict()
+        p = {}
+        p["project"] = {}
+        p["objects"] = {}
         self.assertFalse(project_upgrader.is_valid(1, p))
 
     def test_is_valid_v2(self):
@@ -68,9 +68,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(2, p))
         # Test that an invalid v2 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["items"] = dict()
+        p = {}
+        p["project"] = {}
+        p["items"] = {}
         self.assertFalse(project_upgrader.is_valid(2, p))
 
     def test_is_valid_v3(self):
@@ -79,9 +79,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(3, p))
         # Test that an invalid v3 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["items"] = dict()
+        p = {}
+        p["project"] = {}
+        p["items"] = {}
         self.assertFalse(project_upgrader.is_valid(3, p))
 
     def test_is_valid_v4(self):
@@ -90,9 +90,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(4, p))
         # Test that an invalid v4 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["items"] = dict()
+        p = {}
+        p["project"] = {}
+        p["items"] = {}
         self.assertFalse(project_upgrader.is_valid(4, p))
 
     def test_is_valid_v5(self):
@@ -101,9 +101,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(5, p))
         # Test that an invalid v5 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["items"] = dict()
+        p = {}
+        p["project"] = {}
+        p["items"] = {}
         self.assertFalse(project_upgrader.is_valid(5, p))
 
     def test_is_valid_v9(self):
@@ -111,9 +111,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(9, p))
         # Test that an invalid v9 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["items"] = dict()
+        p = {}
+        p["project"] = {}
+        p["items"] = {}
         self.assertFalse(project_upgrader.is_valid(9, p))
 
     def test_is_valid_v10(self):
@@ -121,9 +121,9 @@ class TestProjectUpgrader(unittest.TestCase):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(10, p))
         # Test that an invalid v10 project dict is not valid
-        p = dict()
-        p["project"] = dict()
-        p["items"] = dict()
+        p = {}
+        p["project"] = {}
+        p["items"] = {}
         self.assertFalse(project_upgrader.is_valid(10, p))
 
     def test_upgrade_v1_to_v2(self):
@@ -255,7 +255,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 # 'items' dict and that they contain a dict. Combiners should be gone in v5
                 v4_items = proj_v4["items"]
                 # Make a list of Combiner names
-                combiners = list()
+                combiners = []
                 for name, d in v4_items.items():
                     if d["type"] == "Combiner":
                         combiners.append(name)
@@ -296,7 +296,7 @@ class TestProjectUpgrader(unittest.TestCase):
                 self.assertTrue(pu.is_valid(10, proj_v10))
                 v10_items = proj_v10["items"]
                 # Make a list of Gimlet and GdxExporter names in v9
-                names = list()
+                names = []
                 for name, d in proj_v9["items"].items():
                     if d["type"] in ["Gimlet", "GdxExporter"]:
                         names.append(name)

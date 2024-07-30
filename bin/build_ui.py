@@ -8,7 +8,7 @@ from append_license import append_license
 def find_ui_dirs(path, found_dirs=None):
     """Recursively searches for 'ui' directories and returns their paths as a list."""
     if found_dirs is None:
-        found_dirs = list()
+        found_dirs = []
     for entry in os.scandir(path):
         if entry.is_dir():
             if entry.name == 'ui':
@@ -20,7 +20,7 @@ def find_ui_dirs(path, found_dirs=None):
 
 def fix_resources_imports(path):
     """Fixes resources imports in a given automatically generated Python ui file."""
-    lines = list()
+    lines = []
     with open(path, 'r') as in_file:
         for line in in_file:
             if line == "from . import resources_icons_rc\n":
@@ -71,8 +71,8 @@ project_source_dir = os.path.join(script_dir, os.path.pardir, "spinetoolbox")
 ui_dirs = find_ui_dirs(project_source_dir)
 for ui_dir in ui_dirs:
     print(f"--- Entering {os.path.abspath(ui_dir)} ---")
-    ui_entries = list()
-    py_entries = dict()
+    ui_entries = []
+    py_entries = {}
     for entry in os.scandir(ui_dir):
         if entry.is_file():
             base, extension = os.path.splitext(entry.name)
@@ -93,8 +93,8 @@ for ui_dir in ui_dirs:
         if ui_modification_time > py_modification_time:
             build_ui(ui_entry.path, py_entry.path, args.force)
 resources_dir = os.path.join(project_source_dir, "ui", "resources")
-qrc_entries = list()
-py_paths = dict()
+qrc_entries = []
+py_paths = {}
 for entry in os.scandir(resources_dir):
     if entry.is_file():
         base, extension = os.path.splitext(entry.name)

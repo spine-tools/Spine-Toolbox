@@ -187,7 +187,7 @@ class ActionsWithProject(QObject):
         self._logger = HeadlessLogger()
         self._startup_event_type = startup_event_type
         self._start.connect(self._execute)
-        self._node_messages = dict()
+        self._node_messages = {}
         self._project_dir = None
         self._app_settings = None
         self._item_dicts = None
@@ -250,7 +250,7 @@ class ActionsWithProject(QObject):
         """
         self._app_settings = QSettings("SpineProject", "Spine Toolbox", self)
         spec_factories = load_item_specification_factories("spine_items")
-        self._plugin_specifications = dict()
+        self._plugin_specifications = {}
         self._project_dir = pathlib.Path(self._args.project).resolve()
         config_dir = self._project_dir / ".spinetoolbox"
         specification_local_data = load_specification_local_data(config_dir)
@@ -370,7 +370,7 @@ class ActionsWithProject(QObject):
                 "settings": settings,
                 "project_dir": solve_project_dir(self._project_dir),
             }
-            exec_remotely = True if self._server_config else False
+            exec_remotely = bool(self._server_config)
             engine_manager = make_engine_manager(exec_remotely, job_id=job_id)
             try:
                 engine_manager.run_engine(engine_data)
@@ -427,7 +427,7 @@ class ActionsWithProject(QObject):
         if data["direction"] == ExecutionDirection.BACKWARD:
             # Currently there are no interesting messages when executing backwards.
             return
-        self._node_messages[data["item_name"]] = dict()
+        self._node_messages[data["item_name"]] = {}
 
     def _handle_node_execution_finished(self, data):
         """Prints messages for finished nodes.
@@ -532,9 +532,8 @@ class ActionsWithProject(QObject):
                 sec_folder = ""
             cfg_dict = {"host": host, "port": port, "security_model": sec_model, "security_folder": sec_folder}
             return cfg_dict
-        else:
-            self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")
-            return None
+        self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")
+        return None
 
     def _insert_remote_engine_settings(self, settings):
         """Inserts remote engine client settings into the settings dictionary that is delivered to the engine.
@@ -564,7 +563,7 @@ class ActionsWithProject(QObject):
         if not self._server_config:
             return "1"
         host, port = self._server_config["host"], self._server_config["port"]
-        security_on = False if self._server_config["security_model"].lower() == "" else True
+        security_on = self._server_config["security_model"].lower() != ""
         sec_model = ClientSecurityModel.STONEHOUSE if security_on else ClientSecurityModel.NONE
         try:
             engine_client = EngineClient(host, port, sec_model, self._server_config["security_folder"])
@@ -643,8 +642,8 @@ def _specification_dicts(project_dict, project_dir, logger):
     Returns:
         dict: a mapping from item type to a list of specification dicts
     """
-    specification_dicts = dict()
-    specification_file_paths = dict()
+    specification_dicts = {}
+    specification_file_paths = {}
     for item_type, serialized_paths in project_dict["project"].get("specifications", {}).items():
         specification_file_paths[item_type] = [deserialize_path(path, project_dir) for path in serialized_paths]
     for item_type, paths in specification_file_paths.items():
@@ -660,7 +659,7 @@ def _specification_dicts(project_dict, project_dir, logger):
                 logger.msg_error.emit(f"Specification file <b>{path}</b> does not exist")
                 continue
             specification_dict["definition_file_path"] = path
-            specification_dicts.setdefault(item_type, list()).append(specification_dict)
+            specification_dicts.setdefault(item_type, []).append(specification_dict)
     return specification_dicts
 
 

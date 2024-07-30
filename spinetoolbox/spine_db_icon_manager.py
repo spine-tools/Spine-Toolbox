@@ -171,7 +171,7 @@ class SpineDBIconManager:
             if dimension_name_list in {x[1] for x in self._multi_class_renderers} and id_ in {
                 x[2] for x in self._multi_class_renderers
             }:  # In this case the class has been renamed and the renderer will be updated accordingly.
-                new_key = None
+                key, value, new_key = None, None, None
                 for key, value in self._multi_class_renderers.items():
                     if key[1] == dimension_name_list:
                         new_key = (

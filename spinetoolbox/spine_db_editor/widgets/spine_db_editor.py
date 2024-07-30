@@ -98,7 +98,7 @@ class SpineDBEditorBase(QMainWindow):
         self.err_msg.setWindowTitle("Error")
         self.err_msg.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.silenced = False
-        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        max_screen_height = max(s.availableSize().height() for s in QGuiApplication.screens())
         self.visible_rows = int(max_screen_height / preferred_row_height(self))
         self.settings_group = "spineDBEditor"
         self.undo_action = None
@@ -112,6 +112,7 @@ class SpineDBEditorBase(QMainWindow):
         self._export_items_dialog = None
         self._export_items_dialog_state = None
         self.update_commit_enabled()
+        self.last_view = None
 
     @property
     def toolbox(self):
@@ -185,7 +186,7 @@ class SpineDBEditorBase(QMainWindow):
         self.update_last_view()
         self.restore_ui(self.last_view, fresh=True)
         self.update_commit_enabled()
-        db_column_visible = True if len(self.db_maps) > 1 else False
+        db_column_visible = len(self.db_maps) > 1
         self.set_db_column_visibility(db_column_visible)
         return True
 
@@ -391,7 +392,7 @@ class SpineDBEditorBase(QMainWindow):
 
         It supports SQLite, JSON, and Excel."""
         self.qsettings.beginGroup(self.settings_group)
-        file_path, selected_filter = get_open_file_name_in_last_dir(
+        file_path, _ = get_open_file_name_in_last_dir(
             self.qsettings,
             "importFileIntoDB",
             self,
@@ -921,7 +922,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._timer_refresh_tab_order.setSingleShot(True)
         self._add_docks_menu()
         self.connect_signals()
-        self.last_view = None
         self.apply_stacked_style()
         self.set_db_column_visibility(False)
         if db_url_codenames is not None:

@@ -25,14 +25,14 @@ class TestCustomComboBoxes(unittest.TestCase):
             QApplication()
 
     def test_custom_combobox(self):
-        self.parent = QWidget()
-        cb = CustomQComboBox(self.parent)
+        parent = QWidget()
+        cb = CustomQComboBox(parent)
         cb.addItems(["a", "b", "c"])
         self.assertEqual("a", cb.itemText(0))
-        self.parent.deleteLater()
+        parent.deleteLater()
 
     def test_elided_combobox(self):
-        self.parent = QWidget()
-        cb = ElidedCombobox(self.parent)
+        parent = QWidget()
+        cb = ElidedCombobox(parent)
         cb.paintEvent(QPaintEvent(cb.rect()))
-        self.parent.deleteLater()
+        parent.deleteLater()

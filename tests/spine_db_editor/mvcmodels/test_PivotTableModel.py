@@ -54,72 +54,73 @@ class TestParameterValuePivotTableModel(TestBase):
         with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
             self._db_editor.do_reload_pivot_table()
-        self._model = self._db_editor.pivot_table_model
+        model = self._db_editor.pivot_table_model
         with patch.object(self._db_mngr, "get_item") as get_item:
             get_item.side_effect = guarded_get_item
-            self._model.beginResetModel()
-            self._model.endResetModel()
-            qApp.processEvents()
+            model.beginResetModel()
+            model.endResetModel()
+            qApp.processEvents()  # pylint: disable=undefined-variable
             self.assertEqual(get_item_exceptions, [])
+        return model
 
-    def _model_data(self):
+    def _model_data(self, model):
         data = []
-        for row in range(self._model.rowCount()):
+        for row in range(model.rowCount()):
             row_data = []
-            for column in range(self._model.columnCount()):
-                row_data.append(self._model.index(row, column).data())
+            for column in range(model.columnCount()):
+                row_data.append(model.index(row, column).data())
             data.append(row_data)
         return data
 
     def test_x_flag(self):
         self._fill_model_with_data()
-        self._start()
-        self.assertIsNone(self._model.plot_x_column)
-        self._model.set_plot_x_column(1, True)
-        self.assertEqual(self._model.plot_x_column, 1)
-        self._model.set_plot_x_column(1, False)
-        self.assertIsNone(self._model.plot_x_column)
+        model = self._start()
+        self.assertIsNone(model.plot_x_column)
+        model.set_plot_x_column(1, True)
+        self.assertEqual(model.plot_x_column, 1)
+        model.set_plot_x_column(1, False)
+        self.assertIsNone(model.plot_x_column)
 
     def test_header_name(self):
         self._fill_model_with_data()
-        self._start()
-        self.assertEqual(self._model.rowCount(), 5)
-        self.assertEqual(self._model.columnCount(), 4)
-        self.assertEqual(self._model.header_name(self._model.index(2, 0)), "object1")
-        self.assertEqual(self._model.header_name(self._model.index(0, 1)), "parameter1")
-        self.assertEqual(self._model.header_name(self._model.index(3, 0)), "object2")
-        self.assertEqual(self._model.header_name(self._model.index(0, 2)), "parameter2")
+        model = self._start()
+        self.assertEqual(model.rowCount(), 5)
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.header_name(model.index(2, 0)), "object1")
+        self.assertEqual(model.header_name(model.index(0, 1)), "parameter1")
+        self.assertEqual(model.header_name(model.index(3, 0)), "object2")
+        self.assertEqual(model.header_name(model.index(0, 2)), "parameter2")
 
     def test_data(self):
         self._fill_model_with_data()
-        self._start()
-        self.assertEqual(self._model.rowCount(), 5)
-        self.assertEqual(self._model.columnCount(), 4)
-        self.assertEqual(self._model.index(0, 0).data(), "parameter")
-        self.assertEqual(self._model.index(1, 0).data(), "class1")
-        self.assertEqual(self._model.index(2, 0).data(), "object1")
-        self.assertEqual(self._model.index(3, 0).data(), "object2")
-        self.assertIsNone(self._model.index(4, 0).data())
-        self.assertEqual(self._model.index(0, 1).data(), "parameter1")
-        self.assertIsNone(self._model.index(1, 1).data())
-        self.assertEqual(self._model.index(2, 1).data(), str(1.0))
-        self.assertEqual(self._model.index(3, 1).data(), str(3.0))
-        self.assertIsNone(self._model.index(4, 1).data())
-        self.assertEqual(self._model.index(0, 2).data(), "parameter2")
-        self.assertIsNone(self._model.index(1, 2).data())
-        self.assertEqual(self._model.index(2, 2).data(), str(5.0))
-        self.assertEqual(self._model.index(3, 2).data(), str(7.0))
-        self.assertIsNone(self._model.index(4, 2).data())
-        self.assertIsNone(self._model.index(0, 3).data())
-        self.assertIsNone(self._model.index(1, 3).data())
-        self.assertIsNone(self._model.index(2, 3).data())
-        self.assertIsNone(self._model.index(3, 3).data())
-        self.assertIsNone(self._model.index(4, 3).data())
+        model = self._start()
+        self.assertEqual(model.rowCount(), 5)
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.index(0, 0).data(), "parameter")
+        self.assertEqual(model.index(1, 0).data(), "class1")
+        self.assertEqual(model.index(2, 0).data(), "object1")
+        self.assertEqual(model.index(3, 0).data(), "object2")
+        self.assertIsNone(model.index(4, 0).data())
+        self.assertEqual(model.index(0, 1).data(), "parameter1")
+        self.assertIsNone(model.index(1, 1).data())
+        self.assertEqual(model.index(2, 1).data(), str(1.0))
+        self.assertEqual(model.index(3, 1).data(), str(3.0))
+        self.assertIsNone(model.index(4, 1).data())
+        self.assertEqual(model.index(0, 2).data(), "parameter2")
+        self.assertIsNone(model.index(1, 2).data())
+        self.assertEqual(model.index(2, 2).data(), str(5.0))
+        self.assertEqual(model.index(3, 2).data(), str(7.0))
+        self.assertIsNone(model.index(4, 2).data())
+        self.assertIsNone(model.index(0, 3).data())
+        self.assertIsNone(model.index(1, 3).data())
+        self.assertIsNone(model.index(2, 3).data())
+        self.assertIsNone(model.index(3, 3).data())
+        self.assertIsNone(model.index(4, 3).data())
 
     def test_header_row_count(self):
         self._fill_model_with_data()
-        self._start()
-        self.assertEqual(self._model.headerRowCount(), 2)
+        model = self._start()
+        self.assertEqual(model.headerRowCount(), 2)
 
     def test_model_works_even_without_entities(self):
         data = {
@@ -128,15 +129,15 @@ class TestParameterValuePivotTableModel(TestBase):
         self._db_mngr.import_data({self._db_map: data})
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        self._start()
-        self.assertEqual(self._model.rowCount(), 3)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.index(0, 0).data(), "parameter")
-        self.assertEqual(self._model.index(1, 0).data(), "class1")
-        self.assertIsNone(self._model.index(2, 0).data())
-        self.assertIsNone(self._model.index(0, 1).data())
-        self.assertIsNone(self._model.index(1, 1).data())
-        self.assertIsNone(self._model.index(2, 1).data())
+        model = self._start()
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.columnCount(), 2)
+        self.assertEqual(model.index(0, 0).data(), "parameter")
+        self.assertEqual(model.index(1, 0).data(), "class1")
+        self.assertIsNone(model.index(2, 0).data())
+        self.assertIsNone(model.index(0, 1).data())
+        self.assertIsNone(model.index(1, 1).data())
+        self.assertIsNone(model.index(2, 1).data())
 
     def test_single_entity_creates_half_finished_pivot(self):
         initial_data = {
@@ -146,9 +147,9 @@ class TestParameterValuePivotTableModel(TestBase):
         self._db_mngr.import_data({self._db_map: initial_data})
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        self._start()
+        model = self._start()
         expected = [["parameter", None], ["Object", None], ["spatula", None], [None, None]]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
 
     def test_single_entity_and_parameter_definition_create_empty_value_cell(self):
@@ -160,9 +161,9 @@ class TestParameterValuePivotTableModel(TestBase):
         self._db_mngr.import_data({self._db_map: initial_data})
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        self._start()
+        model = self._start()
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", None, None], [None, None, None]]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
 
     def test_removing_value_from_model_sets_value_cell_to_none(self):
@@ -175,9 +176,9 @@ class TestParameterValuePivotTableModel(TestBase):
         self._db_mngr.import_data({self._db_map: initial_data})
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        self._start()
+        model = self._start()
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", str(2.3), None], [None, None, None]]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
         value_item = self._db_map.get_parameter_value_item(
             entity_class_name="Object",
@@ -187,12 +188,12 @@ class TestParameterValuePivotTableModel(TestBase):
         )
         value_item.remove()
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", None, None], [None, None, None]]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
 
     def test_drag_and_drop_database_from_frozen_table(self):
         self._fill_model_with_data()
-        self._start()
+        model = self._start()
         for frozen_column in range(self._db_editor.frozen_table_model.columnCount()):
             frozen_index = self._db_editor.frozen_table_model.index(0, frozen_column)
             if frozen_index.data() == "database":
@@ -212,8 +213,8 @@ class TestParameterValuePivotTableModel(TestBase):
             raise RuntimeError("No 'parameter' header found")
         self._db_editor.handle_header_dropped(frozen_table_header_widget, index_widget)
         QApplication.processEvents()
-        self.assertEqual(self._model.rowCount(), 6)
-        self.assertEqual(self._model.columnCount(), 4)
+        self.assertEqual(model.rowCount(), 6)
+        self.assertEqual(model.columnCount(), 4)
         expected = [
             ["database", self.db_codename, self.db_codename, self.db_codename, None],
             ["parameter", "parameter1", "parameter2", None],
@@ -222,9 +223,9 @@ class TestParameterValuePivotTableModel(TestBase):
             ["object2", "3.0", "7.0", None],
             [None, None, None, None],
         ]
-        for row, column in itertools.product(range(self._model.rowCount()), range(self._model.columnCount())):
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
-                self.assertEqual(self._model.index(row, column).data(), expected[row][column])
+                self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
 class TestIndexExpansionPivotTableModel(TestBase):
@@ -241,17 +242,19 @@ class TestIndexExpansionPivotTableModel(TestBase):
         with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
             self._db_editor.do_reload_pivot_table()
-        self._model = self._db_editor.pivot_table_model
-        self._model.beginResetModel()
-        self._model.endResetModel()
-        qApp.processEvents()
+        model = self._db_editor.pivot_table_model
+        model.beginResetModel()
+        model.endResetModel()
+        qApp.processEvents()  # pylint: disable=undefined-variable
+        return model
 
-    def _model_data(self):
+    @staticmethod
+    def _model_data(model):
         data = []
-        for row in range(self._model.rowCount()):
+        for row in range(model.rowCount()):
             row_data = []
-            for column in range(self._model.columnCount()):
-                row_data.append(self._model.index(row, column).data())
+            for column in range(model.columnCount()):
+                row_data.append(model.index(row, column).data())
             data.append(row_data)
         return data
 
@@ -267,10 +270,10 @@ class TestIndexExpansionPivotTableModel(TestBase):
                 ("class1", "object2", "parameter2", Map(["A", "B"], [-1.2, -2.2])),
             ),
         }
-        self._start(initial_data)
-        self.assertEqual(self._model.rowCount(), 10)
-        self.assertEqual(self._model.columnCount(), 4)
-        model_data = self._model_data()
+        model = self._start(initial_data)
+        self.assertEqual(model.rowCount(), 10)
+        self.assertEqual(model.columnCount(), 4)
+        model_data = self._model_data(model)
         expected = [
             [None, "parameter", "parameter1", "parameter2"],
             ["class1", "index", None, None],
@@ -291,12 +294,12 @@ class TestIndexExpansionPivotTableModel(TestBase):
             "parameter_definitions": (("Object", "x"),),
             "entities": (("Object", "spatula"),),
         }
-        self._start(initial_data)
+        model = self._start(initial_data)
         expected = [
             [None, "parameter"],
             ["Object", "index"],
         ]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
 
     def test_removing_value_from_model_removes_it_from_model(self):
@@ -306,13 +309,13 @@ class TestIndexExpansionPivotTableModel(TestBase):
             "parameter_definitions": (("Object", "x"),),
             "parameter_values": (("Object", "spatula", "x", 2.3),),
         }
-        self._start(initial_data)
+        model = self._start(initial_data)
         expected = [
             [None, "parameter", "x"],
             ["Object", "index", None],
             ["spatula", "", str(2.3)],
         ]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
         value_item = self._db_map.get_parameter_value_item(
             entity_class_name="Object",
@@ -322,7 +325,7 @@ class TestIndexExpansionPivotTableModel(TestBase):
         )
         value_item.remove()
         expected = [[None, "parameter"], ["Object", "index"]]
-        data = self._model_data()
+        data = self._model_data(model)
         self.assertEqual(data, expected)
 
 

@@ -195,18 +195,18 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "index"
 
-    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
         _, index = header_id
         if role == PARSED_ROLE:
             return index
         return str(index)
 
-    def update_data(self, db_map_data):  # pylint: disable=no-self-use
+    def update_data(self, db_map_data):
         """See base class."""
         return False
 
-    def add_data(self, names, db_map):  # pylint: disable=no-self-use
+    def add_data(self, names, db_map):
         """See base class."""
         return False
 
@@ -222,7 +222,7 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "alternative"
 
-    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
         return self._get_header_data_from_db("alternative", header_id, "name", role)
 
@@ -253,7 +253,7 @@ class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "scenario"
 
-    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
         return self._get_header_data_from_db("scenario", header_id, "name", role)
 
@@ -288,7 +288,7 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
     def name(self):
         return "database"
 
-    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):  # pylint: disable=no-self-use
+    def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
         return header_id.codename
 
@@ -703,7 +703,7 @@ class PivotTableModelBase(QAbstractTableModel):
             and self.headerColumnCount() <= index.column() < self.columnCount() - self.emptyColumnCount()
         )
 
-    def column_is_index_column(self, column):  # pylint: disable=no-self-use
+    def column_is_index_column(self, column):
         """Returns True if column is the column containing expanded parameter_value indexes."""
         return False
 
@@ -797,7 +797,7 @@ class PivotTableModelBase(QAbstractTableModel):
                 return FIXED_FIELD_COLOR
         return None
 
-    def _text_alignment_data(self, index):  # pylint: disable=no-self-use
+    def _text_alignment_data(self, index):
         return None
 
     def _header_data(self, index):
@@ -917,7 +917,7 @@ class PivotTableModelBase(QAbstractTableModel):
             header_id = self._header_id(index)
             if isinstance(header_id, tuple):
                 top_left_id = self.top_left_id(index)
-                item = dict(id=header_id[1], name=value)
+                item = {"id": header_id[1], "name": value}
                 data_by_top_left_id[top_left_id][header_id[0]].append(item)
         success = False
         for id_, data in data_by_top_left_id.items():
@@ -1281,14 +1281,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             header_ids[0] if ent_id_lookup is None else ent_id_lookup[db_map, tuple(id_ for id_ in header_ids[:-2])]
         )
         value, value_type = split_value_and_type(value_and_type)
-        return dict(
-            entity_class_id=self._parent.current_class_id[db_map],
-            entity_id=entity_id,
-            parameter_definition_id=header_ids[-2],
-            value=value,
-            type=value_type,
-            alternative_id=header_ids[-1],
-        )
+        return {
+            "entity_class_id": self._parent.current_class_id[db_map],
+            "entity_id": entity_id,
+            "parameter_definition_id": header_ids[-2],
+            "value": value,
+            "type": value_type,
+            "alternative_id": header_ids[-1],
+        }
 
     def _make_parameter_value_to_add(self):
         if not self._parent.first_current_entity_class["dimension_id_list"]:
@@ -1693,7 +1693,11 @@ class ElementPivotTableModel(PivotTableModelBase):
         def entity_to_add(db_map, header_ids):
             element_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in header_ids]
             name = name_from_elements(element_names)
-            return dict(element_id_list=list(header_ids), class_id=self._parent.current_class_id.get(db_map), name=name)
+            return {
+                "element_id_list": list(header_ids),
+                "class_id": self._parent.current_class_id.get(db_map),
+                "name": name,
+            }
 
         to_add = {}
         to_remove = {}

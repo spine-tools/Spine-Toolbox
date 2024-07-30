@@ -327,8 +327,8 @@ class KernelEditorBase(QDialog):
             self.start_ijulia_install_process(julia, project)
         return True
 
-    # pylint: disable=no-self-use
-    def _is_rebuild_ijulia_needed(self):
+    @staticmethod
+    def _is_rebuild_ijulia_needed():
         return True
 
     @busy_effect
@@ -354,8 +354,8 @@ class KernelEditorBase(QDialog):
         exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=8000):
             self._logger.msg_error.emit(
-                "Couldn't start Julia to check IJulia status. "
-                "Please make sure that Julia {0} is correctly installed and try again.".format(program)
+                f"Couldn't start Julia to check IJulia status. "
+                f"Please make sure that Julia {program} is correctly installed and try again."
             )
             self._logger.msg_error.emit("Failed")
             return 0

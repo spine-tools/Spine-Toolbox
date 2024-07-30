@@ -111,7 +111,7 @@ class TestPivotModel(unittest.TestCase):
         row_headers = [("aa",), ("bb",)]
         data = [["value_a_aa_1", None], [None, "value_a_bb_2"]]
         column_headers = [(1,), (2,)]
-        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(2), range(2))]
+        data_model = [list(inner) for inner in model.get_pivoted_data(range(2), range(2))]
         self.assertEqual(model._row_data_header, row_headers)
         self.assertEqual(model._column_data_header, column_headers)
         self.assertEqual(data_model, data)
@@ -122,7 +122,7 @@ class TestPivotModel(unittest.TestCase):
         model.reset_model(DATA, INDEX_IDS)
         model.set_pivot(["test2"], ["test3"], ["test1"], ("a",))
         data = [["value_a_aa_1", None], [None, "value_a_bb_2"]]
-        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(2), range(2))]
+        data_model = [list(inner) for inner in model.get_pivoted_data(range(2), range(2))]
         self.assertEqual(data_model, data)
 
     def test_get_pivoted_data2(self):
@@ -138,7 +138,7 @@ class TestPivotModel(unittest.TestCase):
             [None, None, None, None, "value_d_dd_5"],
             [None, None, None, None, "value_e_ee_5"],
         ]
-        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(6), range(5))]
+        data_model = [list(inner) for inner in model.get_pivoted_data(range(6), range(5))]
         self.assertEqual(data_model, data)
 
     def test_get_pivoted_data3(self):
@@ -154,7 +154,7 @@ class TestPivotModel(unittest.TestCase):
             [None, None, None, None, "value_d_dd_5"],
             [None, None, None, None, "value_e_ee_5"],
         ]
-        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(6), range(5))]
+        data_model = [list(inner) for inner in model.get_pivoted_data(range(6), range(5))]
         self.assertEqual(data_model, data)
 
     def test_get_unique_index_values1(self):
@@ -226,7 +226,7 @@ class TestPivotModel(unittest.TestCase):
         expected_model_data = [
             [23.0],
         ]
-        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(1), range(1))]
+        data_model = [list(inner) for inner in model.get_pivoted_data(range(1), range(1))]
         self.assertEqual(data_model, expected_model_data)
         model.remove_from_model({("a", "aa", 1): None})
         self.assertEqual(model._data, {})
@@ -261,7 +261,7 @@ class TestPivotModel(unittest.TestCase):
             [None, 2.3, None],
             [None, None, None],
         ]
-        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(3), range(3))]
+        data_model = [list(inner) for inner in model.get_pivoted_data(range(3), range(3))]
         self.assertEqual(data_model, expected_model_data)
         column_header.data["bb"] = None
         model.remove_from_model({("a", "bb", 1): None})

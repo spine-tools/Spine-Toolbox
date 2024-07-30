@@ -142,7 +142,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(len(links_d), 1)
         self.assertEqual(links_c[0], links_d[0])
         # Check that DAG graph is correct
-        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        dags = list(self.toolbox.project()._dag_iterator())
         self.assertTrue(len(dags) == 1)  # Only one graph
         g = dags[0]
         self.assertTrue(len(g.nodes()) == 4)  # graph has four nodes
@@ -526,7 +526,7 @@ class TestToolboxUI(unittest.TestCase):
         n_items = self.toolbox.project().n_items
         self.assertEqual(n_items, 1)
         # Check DAG handler
-        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        dags = list(self.toolbox.project()._dag_iterator())
         self.assertEqual(1, len(dags))  # Number of DAGs (DiGraph objects) in project
         self.assertEqual(1, len(dags[0].nodes()))  # Number of nodes in the DiGraph
         # Check number of items in Design View
@@ -538,7 +538,7 @@ class TestToolboxUI(unittest.TestCase):
             mock_message_box_exec.return_value = QMessageBox.StandardButton.Ok
             self.toolbox.ui.actionRemove.trigger()
         self.assertEqual(self.toolbox.project().n_items, 0)  # Check the number of project items
-        dags = [dag for dag in self.toolbox.project()._dag_iterator()]
+        dags = list(self.toolbox.project()._dag_iterator())
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
         item_icons = self.toolbox.ui.graphicsView.scene().project_item_icons()
         self.assertEqual(len(item_icons), 0)
@@ -832,8 +832,7 @@ class TestToolboxUI(unittest.TestCase):
 
 
 class MockDraggableButton(ProjectItemDragMixin, NiceButton):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    """Mocked draggable button"""
 
 
 class TestToolboxUIWithTestSettings(unittest.TestCase):

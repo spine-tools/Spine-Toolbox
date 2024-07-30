@@ -62,7 +62,7 @@ class TestEditors(unittest.TestCase):
 
     def test_custom_combobox_editor(self):
         with q_object(QWidget()) as parent:
-            editor = CustomComboBoxEditor(parent)
+            CustomComboBoxEditor(parent)
 
     def test_parameter_value_line_editor(self):
         with q_object(QWidget()) as parent:
