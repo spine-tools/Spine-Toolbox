@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
+    QStyleFactory,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
@@ -128,6 +129,7 @@ class ToolboxUI(QMainWindow):
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
+        self.set_app_style()
         self.set_error_mode()
         self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
         self._update_qsettings()
@@ -314,6 +316,14 @@ class ToolboxUI(QMainWindow):
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
         self.kernel_shutdown.connect(self._handle_kernel_shutdown)
         self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
+
+    @staticmethod
+    def set_app_style():
+        """Sets app style on Windows to 'windowsvista' or to a default if not available."""
+        if sys.platform == "win32":
+            if "windowsvista" not in QStyleFactory.keys():
+                return
+            QApplication.setStyle("windowsvista")
 
     @staticmethod
     def set_error_mode():
