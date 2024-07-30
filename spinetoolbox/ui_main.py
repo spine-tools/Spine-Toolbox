@@ -44,10 +44,10 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QScrollArea,
+    QStyleFactory,
     QToolButton,
     QVBoxLayout,
     QWidget,
-    QStyleFactory,
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
