@@ -62,7 +62,7 @@ def main():
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
     window = ToolboxUI()
     window.show()
-    QTimer.singleShot(0, lambda: window.init_project(args.project))
+    QTimer.singleShot(0, lambda: window.init_tasks(args.project))
     # Enter main event loop and wait until exit() is called
     return_code = app.exec()
     return return_code
