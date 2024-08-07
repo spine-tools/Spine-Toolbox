@@ -171,7 +171,13 @@ Only two of the fields are required when creating a new parameter definition: *e
 *parameter_name*. Enter the name of the class under *entity_class_name*. To display a list of available
 entity classes, start typing in the empty cell or double click it. For the name of the parameter choose
 something that isn't already defined for the specified entity class. Optionally, you can also
-specify a parameter value list, a default value and a description.
+specify valid value types, a parameter value list, a default value and a description.
+
+The *valid types* column defines value types that are valid for the parameter.
+An empty field means that all types are valid.
+All values are validated against this column and non-valid types are marked invalid
+in the *default_value* and *value* (in Parameter value table) columns.
+Valid types are not enforced, however, so it is still possible to commit values of invalid type to the database.
 
 In the column *value_list_name* a name for a parameter value list can be selected. Leaving this field empty
 means that later on when creating parameter values with this definition, the values are arbitrary. Meaning that
@@ -182,7 +188,9 @@ see :ref:`parameter_value_list`.
 In the *default_value* field, the default value can be set. The default value can be used in cases where the value
 is not specified. The usage of *default_value* is really tool dependent, meaning that the Spine Database Editor
 doesn't use the information of the default value anywhere, but it is instead left to the tool creators on how to
-utilize the default value. A short description for the parameter can be written in the *description* column.
+utilize the default value.
+
+A short description for the parameter can be written in the *description* column.
 
 The parameter is added when the background of the cells under *entity_class_name* and *database* become gray.
 

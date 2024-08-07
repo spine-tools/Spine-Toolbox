@@ -54,10 +54,10 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
     def test_add_relationship_classes_to_object_tree_model(self):
         """Test that entity classes are added to the object tree model."""
         self.spine_db_editor.init_models()
-        self.fetch_entity_tree_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_relationship_classes_in_db_mngr()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         dog_fish_item = next(x for x in root_item.children if x.display_data == "dog__fish")
         fish_dog_item = next(x for x in root_item.children if x.display_data == "fish__dog")
@@ -111,14 +111,15 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_object_parameter_definitions_in_db_mngr()
+        self.fetch_entity_tree_model()
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
                 (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
             )
-        self.assertTrue(("fish", "water") in parameters)
-        self.assertTrue(("dog", "breed") in parameters)
+        self.assertIn(("fish", "water"), parameters)
+        self.assertIn(("dog", "breed"), parameters)
 
     def test_add_relationship_parameter_definitions_to_model(self):
         """Test that entity parameter definitions are added to the model."""
@@ -130,14 +131,15 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_relationship_parameter_definitions_in_db_mngr()
+        self.fetch_entity_tree_model()
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
                 (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
             )
-        self.assertTrue(("fish__dog", "relative_speed") in parameters)
-        self.assertTrue(("dog__fish", "combined_mojo") in parameters)
+        self.assertIn(("fish__dog", "relative_speed"), parameters)
+        self.assertIn(("dog__fish", "combined_mojo"), parameters)
 
     def test_add_object_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
@@ -150,6 +152,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_object_parameter_values_in_db_mngr()
+        self.fetch_entity_tree_model()
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -160,9 +163,9 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue(("nemo", "water", "salt") in parameters)
-        self.assertTrue(("pluto", "breed", "bloodhound") in parameters)
-        self.assertTrue(("scooby", "breed", "great dane") in parameters)
+        self.assertIn(("nemo", "water", "salt"), parameters)
+        self.assertIn(("pluto", "breed", "bloodhound"), parameters)
+        self.assertIn(("scooby", "breed", "great dane"), parameters)
 
     def test_add_relationship_parameter_values_to_model(self):
         """Test that object parameter values are added to the model."""
@@ -178,6 +181,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         with mock.patch.object(SingleParameterDefinitionModel, "__lt__") as lt_mocked:
             lt_mocked.return_value = False
             self.put_mock_relationship_parameter_values_in_db_mngr()
+        self.fetch_entity_tree_model()
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
@@ -188,6 +192,6 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
                     model.index(row, h("value")).data(),
                 )
             )
-        self.assertTrue((("nemo", "pluto"), "relative_speed", "-1.0") in parameters)
-        self.assertTrue((("nemo", "scooby"), "relative_speed", "5.0") in parameters)
-        self.assertTrue((("pluto", "nemo"), "combined_mojo", "100.0") in parameters)
+        self.assertIn((("nemo", "pluto"), "relative_speed", "-1.0"), parameters)
+        self.assertIn((("nemo", "scooby"), "relative_speed", "5.0"), parameters)
+        self.assertIn((("pluto", "nemo"), "combined_mojo", "100.0"), parameters)

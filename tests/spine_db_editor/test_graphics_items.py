@@ -25,7 +25,6 @@ class TestEntityItem(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # SpineDBEditor takes long to construct hence we make only one of them for the entire suite.
         if not QApplication.instance():
             QApplication()
 

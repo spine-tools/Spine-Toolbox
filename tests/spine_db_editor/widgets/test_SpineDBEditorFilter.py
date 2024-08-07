@@ -61,6 +61,7 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             if model.canFetchMore(None):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
@@ -79,6 +80,7 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             if model.canFetchMore(None):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_dog_item = next(x for x in root_item.children if x.display_data == "fish__dog")
         fish_dog_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_dog_item)
@@ -101,6 +103,7 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             if model.canFetchMore(None):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
@@ -128,6 +131,7 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             if model.canFetchMore(None):
                 model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
+        self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         dog_item = next(x for x in root_item.children if x.display_data == "dog")
         pluto_item = next(x for x in dog_item.children if x.display_data == "pluto")

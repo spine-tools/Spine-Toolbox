@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Entity group column in *Add entities* dialog. If filled, the created entity will be added to the specified group.
   If the group doesn't yet exist, it will be created.
 - Native kernel (i.e. python3 for Python) can now be used in the Detached Console or in Tool execution.
+- It is now possible to specify valid value types for parameters in the Parameter definition table in Database editor.
 - [Bundled App] **Embedded Python** now includes pip.
 - Graph view in database editor now also supports filtering by alternative and scenario tree selections.
 - Option to disable auto-build in entity graph.
