@@ -15,3 +15,8 @@ from PySide6.QtCore import Qt
 
 PARSED_ROLE = Qt.ItemDataRole.UserRole
 DB_MAP_ROLE = Qt.ItemDataRole.UserRole + 1
+PARAMETER_TYPE_VALIDATION_ROLE = Qt.ItemDataRole.UserRole + 2
+
+INVALID_TYPE = 0
+TYPE_NOT_VALIDATED = 1
+VALID_TYPE = 2

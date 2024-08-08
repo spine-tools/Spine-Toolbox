@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The SpineDBManager class."""
+from contextlib import suppress
 import json
 import os
 from PySide6.QtCore import QObject, Qt, Signal, Slot
@@ -48,7 +49,8 @@ from spinedb_api.parameter_value import (
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from .helpers import busy_effect, plain_to_tool_tip
-from .mvcmodels.shared import PARSED_ROLE
+from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
+from .parameter_type_validation import ParameterTypeValidator, ValidationKey
 from .spine_db_commands import (
     AddItemsCommand,
     AddUpdateItemsCommand,
@@ -115,10 +117,17 @@ class SpineDBManager(QObject):
         self._cmd_id = 0
         self._synchronous = synchronous
         self.data_stores = {}
+        self._validated_values = {"parameter_definition": {}, "parameter_value": {}}
+        self._parameter_type_validator = ParameterTypeValidator(self)
+        self._parameter_type_validator.validated.connect(self._parameter_value_validated)
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
         qApp.aboutToQuit.connect(self.clean_up)  # pylint: disable=undefined-variable
+
+    @property
+    def parameter_type_validator(self) -> ParameterTypeValidator:
+        return self._parameter_type_validator
 
     @Slot(object)
     def receive_error_msg(self, db_map_error_log):
@@ -314,6 +323,8 @@ class SpineDBManager(QObject):
         if worker is not None:
             worker.close_db_map()  # NOTE: This calls ThreadPoolExecutor.shutdown() which waits for Futures to finish
             worker.clean_up()
+        del self._validated_values["parameter_definition"][id(db_map)]
+        del self._validated_values["parameter_value"][id(db_map)]
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
         del self.redo_action[db_map]
@@ -389,6 +400,8 @@ class SpineDBManager(QObject):
             raise error
         self._workers[db_map] = worker
         self._db_maps[url] = db_map
+        self._validated_values["parameter_definition"][id(db_map)] = {}
+        self._validated_values["parameter_value"][id(db_map)] = {}
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
         self.undo_action[db_map] = stack.createUndoAction(self)
         self.redo_action[db_map] = stack.createRedoAction(self)
@@ -563,6 +576,7 @@ class SpineDBManager(QObject):
         while self._workers:
             _, worker = self._workers.popitem()
             worker.clean_up()
+        self._parameter_type_validator.tear_down()
         self.deleteLater()
 
     def refresh_session(self, *db_maps):
@@ -677,10 +691,13 @@ class SpineDBManager(QObject):
         """
         try:
             db_map.rollback_session()
-            self.undo_stack[db_map].clear()
-            self.receive_session_rolled_back({db_map})
         except SpineDBAPIError as err:
             self.error_msg.emit({db_map: [err.msg]})
+            return
+        self._validated_values["parameter_definition"][id(db_map)].clear()
+        self._validated_values["parameter_value"][id(db_map)].clear()
+        self.undo_stack[db_map].clear()
+        self.receive_session_rolled_back({db_map})
 
     def entity_class_renderer(self, db_map, entity_class_id, for_group=False, color=None):
         """Returns an icon renderer for a given entity class.
@@ -816,6 +833,24 @@ class SpineDBManager(QObject):
             tool_tip_data = None
         return plain_to_tool_tip(tool_tip_data)
 
+    def _tool_tip_for_invalid_parameter_type(self, item):
+        """Returns tool tip for parameter (default) values that have an invalid type.
+
+        Args:
+            item (PublicItem):
+
+        Returns:
+            str: tool tip
+        """
+        if item.item_type == "parameter_value":
+            definition = self.get_item(item.db_map, "parameter_definition", item["parameter_definition_id"])
+        else:
+            definition = item
+        type_list = definition["parameter_type_list"]
+        if len(type_list) == 1:
+            return plain_to_tool_tip(f"Expected value's type to be <b>{type_list[0]}</b>.")
+        return plain_to_tool_tip(f"Expected value's type to be one of <b>{', '.join(type_list)}</b>.")
+
     def _format_list_value(self, db_map, item_type, value, list_value_id):
         list_value = self.get_item(db_map, "list_value", list_value_id)
         if not list_value:
@@ -838,18 +873,32 @@ class SpineDBManager(QObject):
             role (Qt.ItemDataRole): data role
 
         Returns:
-            any
+            Any:
         """
         if not item:
             return None
+        if role == PARAMETER_TYPE_VALIDATION_ROLE:
+            try:
+                is_valid = self._validated_values[item.item_type][id(db_map)][item["id"].private_id]
+            except KeyError:
+                return TYPE_NOT_VALIDATED
+            return VALID_TYPE if is_valid else INVALID_TYPE
+        if role == Qt.ItemDataRole.ToolTipRole:
+            try:
+                is_valid = self._validated_values[item.item_type][id(db_map)][item["id"].private_id]
+            except KeyError:
+                pass
+            else:
+                if not is_valid:
+                    return self._tool_tip_for_invalid_parameter_type(item)
         value_field, type_field = {
             "parameter_value": ("value", "type"),
             "list_value": ("value", "type"),
             "parameter_definition": ("default_value", "default_type"),
         }[item.item_type]
-        list_value_id = item["id"] if item.item_type == "list_value" else item["list_value_id"]
         complex_types = {"array": "Array", "time_series": "Time series", "time_pattern": "Time pattern", "map": "Map"}
         if role == Qt.ItemDataRole.DisplayRole and item[type_field] in complex_types:
+            list_value_id = item["id"] if item.item_type == "list_value" else item["list_value_id"]
             return self._format_list_value(db_map, item.item_type, complex_types[item[type_field]], list_value_id)
         if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
@@ -977,12 +1026,15 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
+            errors = []
             try:
-                data_for_import = get_data_for_import(db_map, **data)
+                data_for_import = get_data_for_import(db_map, errors, **data)
             except (TypeError, ValueError) as err:
+                errors.append(str(err))
                 msg = f"Failed to import data: {err}. Please check that your data source has the right format."
                 db_map_error_log.setdefault(db_map, []).append(msg)
                 continue
+            db_map_error_log.setdefault(db_map, []).extend(errors)
             identifier = self.get_command_identifier()
             for item_type, items in data_for_import:
                 if isinstance(items, tuple):
@@ -1359,6 +1411,8 @@ class SpineDBManager(QObject):
         """Pushes commands to update items to undo stack."""
         if identifier is None:
             identifier = self.get_command_identifier()
+        if item_type in ("parameter_definition", "parameter_value"):
+            self._clear_validated_value_ids(item_type, db_map_data)
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(
                 UpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
@@ -1368,6 +1422,8 @@ class SpineDBManager(QObject):
         """Pushes commands to add_update items to undo stack."""
         if identifier is None:
             identifier = self.get_command_identifier()
+        if item_type in ("parameter_definition", "parameter_value"):
+            self._clear_validated_value_ids(item_type, db_map_data)
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(
                 AddUpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
@@ -1379,6 +1435,14 @@ class SpineDBManager(QObject):
             identifier = self.get_command_identifier()
         for db_map, ids_per_type in db_map_typed_ids.items():
             for item_type, ids in ids_per_type.items():
+                if item_type in ("parameter_definition", "parameter_value"):
+                    if Asterisk in ids:
+                        self._validated_values[item_type][id(db_map)].clear()
+                    else:
+                        validated_values = self._validated_values[item_type][id(db_map)]
+                        for id_ in ids:
+                            with suppress(KeyError):
+                                del validated_values[id_.private_id]
                 self.undo_stack[db_map].push(
                     RemoveItemsCommand(self, db_map, item_type, ids, identifier=identifier, **kwargs)
                 )
@@ -1725,3 +1789,16 @@ class SpineDBManager(QObject):
         if multi_db_editor.isMinimized():
             multi_db_editor.showNormal()
         multi_db_editor.activateWindow()
+
+    @Slot(ValidationKey, bool)
+    def _parameter_value_validated(self, key, is_valid):
+        with suppress(KeyError):
+            self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
+
+    def _clear_validated_value_ids(self, item_type, db_map_data):
+        db_map_validated_values = self._validated_values[item_type]
+        for db_map, data in db_map_data.items():
+            validated_values = db_map_validated_values[id(db_map)]
+            for item in data:
+                with suppress(KeyError):
+                    del validated_values[item["id"].private_id]

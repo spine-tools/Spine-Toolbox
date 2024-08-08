@@ -199,7 +199,7 @@ class TestParameterValueFormatting(unittest.TestCase):
             parameter_definition_name="x",
             alternative_name="Base",
             value=value,
-            type=None,
+            type="float",
         )
         self.assertIsNone(error)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.DisplayRole)
@@ -213,7 +213,7 @@ class TestParameterValueFormatting(unittest.TestCase):
             parameter_definition_name="x",
             alternative_name="Base",
             value=value,
-            type=None,
+            type="str",
         )
         self.assertIsNone(error)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
@@ -227,7 +227,7 @@ class TestParameterValueFormatting(unittest.TestCase):
             parameter_definition_name="x",
             alternative_name="Base",
             value=value,
-            type=None,
+            type="duration",
         )
         self.assertIsNone(error)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.ToolTipRole)

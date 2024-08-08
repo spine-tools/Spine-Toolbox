@@ -45,6 +45,7 @@ from .custom_delegates import (
     ParameterDefaultValueDelegate,
     ParameterDefinitionNameAndDescriptionDelegate,
     ParameterNameDelegate,
+    ParameterTypeListDelegate,
     ParameterValueDelegate,
     ValueListDelegate,
 )
@@ -59,7 +60,7 @@ from .tabular_view_header_widget import TabularViewHeaderWidget
 
 @Slot(QModelIndex, object)
 def _set_data(index, new_value):
-    """Updates (object or relationship) parameter_definition or value with newly edited data."""
+    """Updates model value with newly edited data."""
     index.model().setData(index, new_value)
 
 
@@ -319,11 +320,12 @@ class ParameterTableView(StackedTableView):
 class ParameterDefinitionTableView(ParameterTableView):
     value_column_header = "default_value"
 
-    _EXPECTED_COLUMN_COUNT = 6
+    _EXPECTED_COLUMN_COUNT = 7
     _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "parameter_name": 125, "list_value_name": 125, "description": 250}
 
     def create_delegates(self):
         super().create_delegates()
+        self._make_delegate("valid types", ParameterTypeListDelegate)
         self._make_delegate("value_list_name", ValueListDelegate)
         self._make_delegate("parameter_name", ParameterDefinitionNameAndDescriptionDelegate)
         self._make_delegate("description", ParameterDefinitionNameAndDescriptionDelegate)

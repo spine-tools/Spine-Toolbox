@@ -14,116 +14,16 @@
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication
+from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestSpineDBManager
 
 
 class DBEditorTestBase(unittest.TestCase):
-    @staticmethod
-    def _entity_class(*args):
-        return dict(zip(["id", "name", "dimension_id_list"], args))
-
-    @staticmethod
-    def _entity(*args):
-        return dict(zip(["id", "class_id", "name", "element_id_list"], args))
-
-    @staticmethod
-    def _parameter_definition(*args):
-        d = dict(zip(["id", "entity_class_id", "name"], args))
-        d.update({"default_value": None, "default_type": None})
-        return d
-
-    @staticmethod
-    def _parameter_value(*args):
-        return dict(
-            zip(
-                ["id", "entity_class_id", "entity_id", "parameter_definition_id", "alternative_id", "value", "type"],
-                args,
-            )
-        )
-
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
-        cls.create_mock_dataset()
-
-    @classmethod
-    def create_mock_dataset(cls):
-        cls.fish_class = cls._entity_class(1, "fish")
-        cls.dog_class = cls._entity_class(2, "dog")
-        cls.fish_dog_class = cls._entity_class(3, "fish__dog", [cls.fish_class["id"], cls.dog_class["id"]])
-        cls.dog_fish_class = cls._entity_class(4, "dog__fish", [cls.dog_class["id"], cls.fish_class["id"]])
-        cls.nemo_object = cls._entity(1, cls.fish_class["id"], "nemo")
-        cls.pluto_object = cls._entity(2, cls.dog_class["id"], "pluto")
-        cls.scooby_object = cls._entity(3, cls.dog_class["id"], "scooby")
-        cls.pluto_nemo_rel = cls._entity(
-            4, cls.dog_fish_class["id"], "dog__fish_pluto__nemo", [cls.pluto_object["id"], cls.nemo_object["id"]]
-        )
-        cls.nemo_pluto_rel = cls._entity(
-            5, cls.fish_dog_class["id"], "fish__dog_nemo__pluto", [cls.nemo_object["id"], cls.pluto_object["id"]]
-        )
-        cls.nemo_scooby_rel = cls._entity(
-            6, cls.fish_dog_class["id"], "fish__dog_nemo__scooby", [cls.nemo_object["id"], cls.scooby_object["id"]]
-        )
-        cls.water_parameter = cls._parameter_definition(1, cls.fish_class["id"], "water")
-        cls.breed_parameter = cls._parameter_definition(2, cls.dog_class["id"], "breed")
-        cls.relative_speed_parameter = cls._parameter_definition(3, cls.fish_dog_class["id"], "relative_speed")
-        cls.combined_mojo_parameter = cls._parameter_definition(4, cls.dog_fish_class["id"], "combined_mojo")
-        cls.nemo_water = cls._parameter_value(
-            1,
-            cls.water_parameter["entity_class_id"],
-            cls.nemo_object["id"],
-            cls.water_parameter["id"],
-            1,
-            b'"salt"',
-            None,
-        )
-        cls.pluto_breed = cls._parameter_value(
-            2,
-            cls.breed_parameter["entity_class_id"],
-            cls.pluto_object["id"],
-            cls.breed_parameter["id"],
-            1,
-            b'"bloodhound"',
-            None,
-        )
-        cls.scooby_breed = cls._parameter_value(
-            3,
-            cls.breed_parameter["entity_class_id"],
-            cls.scooby_object["id"],
-            cls.breed_parameter["id"],
-            1,
-            b'"great dane"',
-            None,
-        )
-        cls.nemo_pluto_relative_speed = cls._parameter_value(
-            4,
-            cls.relative_speed_parameter["entity_class_id"],
-            cls.nemo_pluto_rel["id"],
-            cls.relative_speed_parameter["id"],
-            1,
-            b"-1",
-            None,
-        )
-        cls.nemo_scooby_relative_speed = cls._parameter_value(
-            5,
-            cls.relative_speed_parameter["entity_class_id"],
-            cls.nemo_scooby_rel["id"],
-            cls.relative_speed_parameter["id"],
-            1,
-            b"5",
-            None,
-        )
-        cls.pluto_nemo_combined_mojo = cls._parameter_value(
-            6,
-            cls.combined_mojo_parameter["entity_class_id"],
-            cls.pluto_nemo_rel["id"],
-            cls.combined_mojo_parameter["id"],
-            1,
-            b"100",
-            None,
-        )
 
     db_codename = "database"
 
@@ -154,53 +54,155 @@ class DBEditorTestBase(unittest.TestCase):
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None
 
+    def _assert_success(self, result):
+        item, error = result
+        self.assertIsNone(error)
+        return item
+
     def put_mock_object_classes_in_db_mngr(self):
         """Puts fish and dog object classes in the db mngr."""
-        object_classes = [self.fish_class, self.dog_class]
-        self.db_mngr.add_entity_classes({self.mock_db_map: object_classes})
-        self.fetch_entity_tree_model()
+        self.fish_class = self._assert_success(self.mock_db_map.add_entity_class_item(name="fish"))
+        self.dog_class = self._assert_success(self.mock_db_map.add_entity_class_item(name="dog"))
 
     def put_mock_objects_in_db_mngr(self):
         """Puts nemo, pluto and scooby objects in the db mngr."""
-        objects = [self.nemo_object, self.pluto_object, self.scooby_object]
-        self.db_mngr.add_entities({self.mock_db_map: objects})
-        self.fetch_entity_tree_model()
+        self.nemo_object = self._assert_success(
+            self.mock_db_map.add_entity_item(entity_class_name=self.fish_class["name"], name="nemo")
+        )
+        self.pluto_object = self._assert_success(
+            self.mock_db_map.add_entity_item(entity_class_name=self.dog_class["name"], name="pluto")
+        )
+        self.scooby_object = self._assert_success(
+            self.mock_db_map.add_entity_item(entity_class_name=self.dog_class["name"], name="scooby")
+        )
 
     def put_mock_relationship_classes_in_db_mngr(self):
         """Puts dog__fish and fish__dog relationship classes in the db mngr."""
-        relationship_classes = [self.fish_dog_class, self.dog_fish_class]
-        self.db_mngr.add_entity_classes({self.mock_db_map: relationship_classes})
-        self.fetch_entity_tree_model()
+        self.fish_dog_class = self._assert_success(
+            self.mock_db_map.add_entity_class_item(
+                dimension_name_list=(self.fish_class["name"], self.dog_class["name"])
+            )
+        )
+        self.dog_fish_class = self._assert_success(
+            self.mock_db_map.add_entity_class_item(
+                dimension_name_list=(self.dog_class["name"], self.fish_class["name"])
+            )
+        )
 
     def put_mock_relationships_in_db_mngr(self):
         """Puts pluto_nemo, nemo_pluto and nemo_scooby relationships in the db mngr."""
-        relationships = [self.pluto_nemo_rel, self.nemo_pluto_rel, self.nemo_scooby_rel]
-        self.db_mngr.add_entities({self.mock_db_map: relationships})
-        self.fetch_entity_tree_model()
+        self.pluto_nemo_rel = self._assert_success(
+            self.mock_db_map.add_entity_item(
+                entity_class_name=self.dog_fish_class["name"],
+                entity_byname=(self.pluto_object["name"], self.nemo_object["name"]),
+            )
+        )
+        self.nemo_pluto_rel = self._assert_success(
+            self.mock_db_map.add_entity_item(
+                entity_class_name=self.fish_dog_class["name"],
+                entity_byname=(self.nemo_object["name"], self.pluto_object["name"]),
+            )
+        )
+        self.nemo_scooby_rel = self._assert_success(
+            self.mock_db_map.add_entity_item(
+                entity_class_name=self.fish_dog_class["name"],
+                entity_byname=(self.nemo_object["name"], self.scooby_object["name"]),
+            )
+        )
 
     def put_mock_object_parameter_definitions_in_db_mngr(self):
         """Puts water and breed object parameter definitions in the db mngr."""
-        parameter_definitions = [self.water_parameter, self.breed_parameter]
-        self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
+        self.water_parameter = self._assert_success(
+            self.mock_db_map.add_parameter_definition_item(entity_class_name=self.fish_class["name"], name="water")
+        )
+        self.breed_parameter = self._assert_success(
+            self.mock_db_map.add_parameter_definition_item(entity_class_name=self.dog_class["name"], name="breed")
+        )
 
     def put_mock_relationship_parameter_definitions_in_db_mngr(self):
         """Puts relative speed and combined mojo relationship parameter definitions in the db mngr."""
-        parameter_definitions = [self.relative_speed_parameter, self.combined_mojo_parameter]
-        self.db_mngr.add_parameter_definitions({self.mock_db_map: parameter_definitions})
+        self.relative_speed_parameter = self._assert_success(
+            self.mock_db_map.add_parameter_definition_item(
+                entity_class_name=self.fish_dog_class["name"], name="relative_speed"
+            )
+        )
+        self.combined_mojo_parameter = self._assert_success(
+            self.mock_db_map.add_parameter_definition_item(
+                entity_class_name=self.dog_fish_class["name"], name="combined_mojo"
+            )
+        )
 
     def put_mock_object_parameter_values_in_db_mngr(self):
         """Puts some object parameter values in the db mngr."""
-        parameter_values = [self.nemo_water, self.pluto_breed, self.scooby_breed]
-        self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
+        value, type_ = to_database("salt")
+        self.nemo_water = self._assert_success(
+            self.mock_db_map.add_parameter_value_item(
+                entity_class_name=self.fish_class["name"],
+                entity_byname=(self.nemo_object["name"],),
+                parameter_definition_name=self.water_parameter["name"],
+                alternative_name="Base",
+                value=value,
+                type=type_,
+            )
+        )
+        value, type_ = to_database("bloodhound")
+        self.pluto_breed = self._assert_success(
+            self.mock_db_map.add_parameter_value_item(
+                entity_class_name=self.dog_class["name"],
+                entity_byname=(self.pluto_object["name"],),
+                parameter_definition_name=self.breed_parameter["name"],
+                alternative_name="Base",
+                value=value,
+                type=type_,
+            )
+        )
+        value, type_ = to_database("great dane")
+        self.scooby_breed = self._assert_success(
+            self.mock_db_map.add_parameter_value_item(
+                entity_class_name=self.dog_class["name"],
+                entity_byname=(self.scooby_object["name"],),
+                parameter_definition_name=self.breed_parameter["name"],
+                alternative_name="Base",
+                value=value,
+                type=type_,
+            )
+        )
 
     def put_mock_relationship_parameter_values_in_db_mngr(self):
         """Puts some relationship parameter values in the db mngr."""
-        parameter_values = [
-            self.nemo_pluto_relative_speed,
-            self.nemo_scooby_relative_speed,
-            self.pluto_nemo_combined_mojo,
-        ]
-        self.db_mngr.add_parameter_values({self.mock_db_map: parameter_values})
+        value, type_ = to_database(-1)
+        self.nemo_pluto_relative_speed = self._assert_success(
+            self.mock_db_map.add_parameter_value_item(
+                entity_class_name=self.fish_dog_class["name"],
+                entity_byname=(self.nemo_object["name"], self.pluto_object["name"]),
+                parameter_definition_name=self.relative_speed_parameter["name"],
+                alternative_name="Base",
+                value=value,
+                type=type_,
+            )
+        )
+        value, type_ = to_database(5)
+        self.nemo_scooby_relative_speed = self._assert_success(
+            self.mock_db_map.add_parameter_value_item(
+                entity_class_name=self.fish_dog_class["name"],
+                entity_byname=(self.nemo_object["name"], self.scooby_object["name"]),
+                parameter_definition_name=self.relative_speed_parameter["name"],
+                alternative_name="Base",
+                value=value,
+                type=type_,
+            )
+        )
+        value, type_ = to_database(100)
+        self.pluto_nemo_combined_mojo = self._assert_success(
+            self.mock_db_map.add_parameter_value_item(
+                entity_class_name=self.dog_fish_class["name"],
+                entity_byname=(self.pluto_object["name"], self.nemo_object["name"]),
+                parameter_definition_name=self.combined_mojo_parameter["name"],
+                alternative_name="Base",
+                value=value,
+                type=type_,
+            )
+        )
 
     def put_mock_dataset_in_db_mngr(self):
         """Puts mock dataset in the db mngr."""

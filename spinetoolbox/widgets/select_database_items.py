@@ -76,7 +76,9 @@ class SelectDatabaseItems(QWidget):
         self._ui.setupUi(self)
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
         self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
-        checkable_item_types = tuple(type_ for type_ in DatabaseMapping.item_types() if type_ != "commit")
+        checkable_item_types = tuple(
+            type_ for type_ in DatabaseMapping.item_types() if type_ not in ("commit", "parameter_type")
+        )
         checked_states = (
             checked_states if checked_states is not None else {item: False for item in checkable_item_types}
         )

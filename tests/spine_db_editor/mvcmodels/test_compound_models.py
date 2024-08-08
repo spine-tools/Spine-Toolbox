@@ -28,6 +28,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         expected_header = [
             "entity_class_name",
             "parameter_name",
+            "valid types",
             "value_list_name",
             "default_value",
             "description",
@@ -43,9 +44,9 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.columnCount(), 6)
+        self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["oc", "p", None, "None", None, self.db_codename]
+        expected = ["oc", "p", (), None, "None", None, self.db_codename]
         self.assertEqual(row, expected)
 
     def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
@@ -57,9 +58,9 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
         self._db_map.fetch_all()
         self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.columnCount(), 6)
+        self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["rc", "p", None, "None", None, self.db_codename]
+        expected = ["rc", "p", (), None, "None", None, self.db_codename]
         self.assertEqual(row, expected)
 
     def test_model_updates_when_entity_class_is_removed(self):

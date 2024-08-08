@@ -36,7 +36,7 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
-        index = model.index(0, 3)
+        index = model.index(0, 4)
         plot_widget = table_view._plot_selection([index])
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "TestParameterDefinitionTableView_db | Object | q")
@@ -382,12 +382,12 @@ class TestParameterValueTableWithExistingData(TestBase):
         for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
             self.assertEqual(model.index(row, column).data(), expected[row][column])
 
-    def test_removing_fetched_rows_allows_still_fetching_more(self):
+    def test_remove_fetched_rows(self):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE + 1)
-        n_values = self._whole_model_rowcount() - 1
-        self._db_mngr.remove_items({self._db_map: {"parameter_value": set(range(1, n_values, 2))}})
+        ids = [model.item_at_row(row) for row in range(0, model.rowCount() - 1, 2)]
+        self._db_mngr.remove_items({self._db_map: {"parameter_value": set(ids)}})
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE / 2 + 1)
 
     def test_undoing_purge(self):

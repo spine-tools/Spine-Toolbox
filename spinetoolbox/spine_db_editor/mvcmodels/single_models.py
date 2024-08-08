@@ -11,10 +11,12 @@
 ######################################################################################################################
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
-from PySide6.QtCore import Qt
+from typing import ClassVar, Iterable
+from PySide6.QtCore import Qt, Slot
+from PySide6.QtGui import QColor
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ..mvcmodels.single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
 
@@ -44,6 +46,9 @@ class HalfSortedTableModel(MinimalTableModel):
 class SingleModelBase(HalfSortedTableModel):
     """Base class for all single models that go in a CompoundModelBase subclass."""
 
+    item_type: ClassVar[str] = NotImplemented
+    group_fields: ClassVar[Iterable[str]] = ()
+
     def __init__(self, parent, db_map, entity_class_id, committed, lazy=False):
         """
         Args:
@@ -51,6 +56,7 @@ class SingleModelBase(HalfSortedTableModel):
             db_map (DatabaseMapping)
             entity_class_id (int)
             committed (bool)
+            lazy (bool)
         """
         super().__init__(parent=parent, header=parent.header, lazy=lazy)
         self.db_mngr = parent.db_mngr
@@ -71,11 +77,6 @@ class SingleModelBase(HalfSortedTableModel):
                 class_name,
             )
         return keys["left"] < keys["right"]
-
-    @property
-    def item_type(self):
-        """The DB item type, required by the data method."""
-        raise NotImplementedError()
 
     @property
     def field_map(self):
@@ -111,10 +112,6 @@ class SingleModelBase(HalfSortedTableModel):
     @property
     def fixed_fields(self):
         return ["entity_class_name", "database"]
-
-    @property
-    def group_fields(self):
-        return ["entity_byname"]
 
     @property
     def can_be_filtered(self):
@@ -231,7 +228,7 @@ class SingleModelBase(HalfSortedTableModel):
 
         def split_value(value, column):
             if self.header[column] in self.group_fields:
-                return tuple(value.split(DB_ITEM_SEPARATOR))
+                return tuple(value.split(DB_ITEM_SEPARATOR)) if value else ()
             return value
 
         if not indexes or not data:
@@ -299,13 +296,13 @@ class FilterEntityAlternativeMixin:
 class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
-    @property
-    def value_field(self):
-        return {"parameter_definition": "default_value", "parameter_value": "value"}[self.item_type]
+    value_field: ClassVar[str] = NotImplemented
+    parameter_definition_id_key: ClassVar[str] = NotImplemented
 
-    @property
-    def parameter_definition_id_key(self):
-        return {"parameter_definition": "id", "parameter_value": "parameter_id"}[self.item_type]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._ids_pending_type_validation = set()
+        self.destroyed.connect(self._stop_waiting_validation)
 
     @property
     def _references(self):
@@ -321,6 +318,15 @@ class ParameterMixin:
             "alternative_name": ("alternative_id", "alternative"),
         }
 
+    def reset_model(self, main_data=None):
+        """Resets the model."""
+        super().reset_model(main_data)
+        if self._ids_pending_type_validation:
+            self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
+        self._ids_pending_type_validation.clear()
+        if main_data:
+            self._start_validating_types(main_data)
+
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Gets the id and database for the row, and reads data from the db manager
         using the item_type property.
@@ -328,20 +334,70 @@ class ParameterMixin:
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
         field = self.header[index.column()]
         # Display, edit, tool tip, alignment role of 'value fields'
-        if field == self.value_field and role in (
+        if field == self.value_field and role in {
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.EditRole,
             Qt.ItemDataRole.ToolTipRole,
-            Qt.TextAlignmentRole,
+            Qt.ItemDataRole.TextAlignmentRole,
             PARSED_ROLE,
-        ):
+            PARAMETER_TYPE_VALIDATION_ROLE,
+        }:
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             return self.db_mngr.get_value(self.db_map, item, role)
         return super().data(index, role)
 
+    def add_rows(self, ids):
+        super().add_rows(ids)
+        self._start_validating_types(ids)
+
+    def revalidate_item_types(self, items):
+        ids = tuple(item["id"] for item in items)
+        self._start_validating_types(ids)
+
+    def _start_validating_types(self, ids):
+        """"""
+        private_ids = set(temp_id.private_id for temp_id in ids)
+        new_ids = private_ids - self._ids_pending_type_validation
+        if not new_ids:
+            return
+        self._ids_pending_type_validation |= new_ids
+        self.db_mngr.parameter_type_validator.validated.connect(
+            self._parameter_type_validated, Qt.ConnectionType.UniqueConnection
+        )
+        self.db_mngr.parameter_type_validator.start_validating(
+            self.db_mngr, self.db_map, (id_ for id_ in ids if id_.private_id in new_ids)
+        )
+
+    def _parameter_type_validated(self, key, is_valid):
+        """Notifies the model that values have been validated.
+
+        Args:
+            key (ValidationKey): validation key
+            is_valid (bool): True if value type is valid, False otherwise
+        """
+        if key.item_type != self.item_type or key.db_map_id != id(self.db_map):
+            return
+        self._ids_pending_type_validation.discard(key.item_private_id)
+        if not self._ids_pending_type_validation:
+            self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
+        value_column = self.header.index(self.value_field)
+        for row, id_ in enumerate(self._main_data):
+            if id_.private_id == key.item_private_id:
+                self.dataChanged.emit(self.index(row, value_column), [PARAMETER_TYPE_VALIDATION_ROLE])
+                break
+
+    @Slot(object)
+    def _stop_waiting_validation(self):
+        """Stops the model from waiting for type validation notifications."""
+        if self._ids_pending_type_validation:
+            self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
+            self._ids_pending_type_validation.clear()
+
 
 class EntityMixin:
+    group_fields = ("entity_byname",)
+
     def update_items_in_db(self, items):
         """Overriden to create entities on the fly first."""
         for item in items:
@@ -367,9 +423,10 @@ class EntityMixin:
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
 
-    @property
-    def item_type(self):
-        return "parameter_definition"
+    item_type = "parameter_definition"
+    value_field = "default_value"
+    parameter_definition_id_key = "id"
+    group_fields = ("valid types",)
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
@@ -389,9 +446,9 @@ class SingleParameterValueModel(
 ):
     """A parameter_value model for a single entity_class."""
 
-    @property
-    def item_type(self):
-        return "parameter_value"
+    item_type = "parameter_value"
+    value_field = "value"
+    parameter_definition_id_key = "parameter_id"
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)
@@ -407,9 +464,7 @@ class SingleParameterValueModel(
 class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
-    @property
-    def item_type(self):
-        return "entity_alternative"
+    item_type = "entity_alternative"
 
     def _sort_key(self, element):
         item = self.db_item_from_id(element)

@@ -15,7 +15,7 @@ import unittest
 from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QFocusEvent, QKeyEvent, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QApplication, QStyleOptionViewItem, QWidget
-from spinetoolbox.helpers import make_icon_id
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, make_icon_id
 from spinetoolbox.resources_icons_rc import qInitResources
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
@@ -23,6 +23,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     CustomComboBoxEditor,
     CustomLineEditor,
     IconColorEditor,
+    ParameterTypeEditor,
     ParameterValueLineEditor,
     PivotHeaderTableLineEditor,
     SearchBarEditor,
@@ -138,6 +139,48 @@ class TestEditors(unittest.TestCase):
             editor.set_data(True, None)
             retval = editor.data()
             self.assertEqual(True, retval)
+
+
+class TestParameterTypeEditor(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        qInitResources()
+        if not QApplication.instance():
+            QApplication()
+
+    def setUp(self):
+        self._editor = ParameterTypeEditor(None)
+
+    def tearDown(self):
+        self._editor.deleteLater()
+
+    def test_select_all(self):
+        self._editor.set_data("")
+        self._editor._ui.select_all_button.click()
+        for check_box in self._editor._check_box_iter():
+            with self.subTest(check_box_text=check_box.text()):
+                self.assertTrue(check_box.isChecked())
+        self.assertEqual(self._editor._ui.map_rank_line_edit.text(), "1")
+        self.assertEqual(self._editor.data(), "")
+
+    def test_select_single_type(self):
+        expected_data = {
+            "a&rray": "array",
+            "&bool": "bool",
+            "&date_time": "date_time",
+            "d&uration": "duration",
+            "&float": "float",
+            "&map": DB_ITEM_SEPARATOR.join(("2d_map", "3d_map")),
+            "&str": "str",
+            "time_&pattern": "time_pattern",
+            "&time_series": "time_series",
+        }
+        for check_box in self._editor._check_box_iter():
+            self._editor._clear_all()
+            check_box.setChecked(True)
+            self._editor._ui.map_rank_line_edit.setText("2,3")
+            with self.subTest(check_box_text=check_box.text()):
+                self.assertEqual(self._editor.data(), expected_data[check_box.text()])
 
 
 if __name__ == "__main__":
