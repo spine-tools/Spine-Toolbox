@@ -46,7 +46,7 @@ class DBEditorToolBar(QToolBar):
         self.reload_action = QAction(QIcon(CharIconEngine("\uf021")), "Reload")
         self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
         self.reload_action.setEnabled(False)
-        self.reset_docs_action = QAction(QIcon(CharIconEngine("\uf2d2")), "Reset docs")
+        self.reset_docks_action = QAction(QIcon(CharIconEngine("\uf2d2")), "Reset docks")
         self.show_toolbox_action = QAction(QIcon(":/symbols/Spine_symbol.png"), "Show Toolbox")
         self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Escape))
         self.show_toolbox_action.setToolTip("Show Spine Toolbox (Ctrl+ESC)")
@@ -78,7 +78,7 @@ class DBEditorToolBar(QToolBar):
         self.create_button_for_action(self._db_editor.ui.actionElement)
         self.create_button_for_action(self._db_editor.ui.actionScenario)
         self.addSeparator()
-        self.create_button_for_action(self.reset_docs_action)
+        self.create_button_for_action(self.reset_docks_action)
         self.addSeparator()
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -92,7 +92,7 @@ class DBEditorToolBar(QToolBar):
     def _connect_signals(self):
         """Connects signals"""
         self.reload_action.triggered.connect(self._db_editor.refresh_session)
-        self.reset_docs_action.triggered.connect(self._db_editor.reset_docs)
+        self.reset_docks_action.triggered.connect(self._db_editor.reset_docks)
         self.show_url_action.triggered.connect(self._show_url_codename_widget)
         self._filter_action.triggered.connect(self._show_filter_menu)
 
