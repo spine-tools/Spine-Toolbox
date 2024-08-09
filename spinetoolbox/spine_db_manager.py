@@ -120,6 +120,7 @@ class SpineDBManager(QObject):
         self._validated_values = {"parameter_definition": {}, "parameter_value": {}}
         self._parameter_type_validator = ParameterTypeValidator(self)
         self._parameter_type_validator.validated.connect(self._parameter_value_validated)
+        self._no_prompt_urls = set()
 
     def _connect_signals(self):
         self.error_msg.connect(self.receive_error_msg)
@@ -316,6 +317,7 @@ class SpineDBManager(QObject):
         Args:
             url (str)
         """
+        self._no_prompt_urls.discard(url)
         db_map = self._db_maps.pop(url, None)
         if db_map is None:
             return
@@ -334,17 +336,17 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(self, url, logger, ignore_version_error=False, window=False, codename=None, create=False):
+    def get_db_map(self, url, logger, window=False, codename=None, create=False, force_upgrade_prompt=False):
         """Returns a DatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
             url (str, URL)
             logger (LoggerInterface)
-            ignore_version_error (bool, optional)
-            window (bool, optional)
-            codename (str, NoneType, optional)
-            create (bool, optional)
+            window (bool)
+            codename (str, optional)
+            create (bool)
+            force_upgrade_prompt (bool)
 
         Returns:
             DatabaseMapping, NoneType
@@ -361,8 +363,9 @@ class SpineDBManager(QObject):
             logger.msg_error.emit(err.msg)
             return None
         if prompt_data is not None:
-            if ignore_version_error:
+            if not force_upgrade_prompt and url in self._no_prompt_urls:
                 return None
+            self._no_prompt_urls.add(url)
             title, text, option_to_kwargs, notes, preferred = prompt_data
             kwargs = OptionsDialog.get_answer(
                 self.parent(), title, text, option_to_kwargs, notes=notes, preferred=preferred
