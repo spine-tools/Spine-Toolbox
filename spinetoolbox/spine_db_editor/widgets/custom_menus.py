@@ -276,7 +276,7 @@ class RecentDatabasesPopupMenu(CustomPopupMenu):
         self._parent._history = []
 
 
-class DocsMenu(QMenu):
+class DocksMenu(QMenu):
     """Menu that houses the toggles for the dock widgets."""
 
     def __init__(self, parent, db_editor):
@@ -290,9 +290,9 @@ class DocsMenu(QMenu):
 
     def _add_actions(self):
         """Adds actions to the menu"""
-        reset_docs_action = QAction("Reset docs", self)
-        reset_docs_action.triggered.connect(self.db_editor.reset_docs)
-        self.addAction(reset_docs_action)
+        reset_docks_action = QAction("Reset docks", self)
+        reset_docks_action.triggered.connect(self.db_editor.reset_docks)
+        self.addAction(reset_docks_action)
         self.addAction(self.db_editor.ui.dockWidget_entity_tree.toggleViewAction())
         self.addSeparator()
         self.addAction(self.db_editor.ui.dockWidget_entity_tree.toggleViewAction())

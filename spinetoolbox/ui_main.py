@@ -14,6 +14,7 @@
 import json
 import logging
 import os
+import sys
 import pathlib
 from zipfile import ZipFile
 import numpy as np
@@ -371,16 +372,20 @@ class ToolboxUI(QMainWindow):
         """
         return self._item_specification_factories
 
-    @Slot()
-    def init_project(self, project_dir):
-        """Initializes project at application start-up.
-
-        Opens the last project that was open when app was closed
-        (if enabled in Settings) or starts the app without a project.
+    @Slot(str)
+    def init_tasks(self, project_dir_from_args):
+        """Performs tasks right after the main window is shown.
 
         Args:
-            project_dir (str): project directory
+            project_dir_from_args (str, optional): initial project directory from command line arguments
         """
+        self._display_welcome_message()
+        if sys.version_info < (3, 9):
+            self._display_python_38_deprecation_message()
+        self.init_project(project_dir_from_args)
+
+    def _display_welcome_message(self):
+        """Shows a welcome message in the Event log."""
         p = os.path.join(f"{ONLINE_DOCUMENTATION_URL}", "getting_started.html")
         getting_started_anchor = (
             "<a style='color:#99CCFF;' title='"
@@ -388,26 +393,44 @@ class ToolboxUI(QMainWindow):
             + f"' href='{ONLINE_DOCUMENTATION_URL}/getting_started.html'>Getting Started</a>"
         )
         welcome_msg = f"Welcome to Spine Toolbox! If you need help, please read the {getting_started_anchor} guide."
+        self.msg.emit(welcome_msg)
+
+    def _display_python_38_deprecation_message(self):
+        """Shows Python 3.8 deprecation message in the event log."""
+        self.msg_warning.emit("Please upgrade your Python.")
+        self.msg_warning.emit(
+            f"Looks like you are running Python {sys.version_info[0]}.{sys.version_info[1]}. "
+            f"Support for <b>Python older than 3.9 </b> will be dropped in September 2024."
+        )
+
+    def init_project(self, project_dir):
+        """Initializes project at application start-up.
+
+        Opens the project given on command line
+        or, if missing,
+        the last project that was open when app was closed (if enabled in Settings).
+
+        Args:
+            project_dir (str): project directory
+        """
         if not project_dir:
             open_previous_project = int(self.qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
-            if (
-                open_previous_project != Qt.CheckState.Checked.value
-            ):  # 2: Qt.CheckState.Checked, ie. open_previous_project==True
-                self.msg.emit(welcome_msg)
+            # 2: Qt.CheckState.Checked, ie. open_previous_project==True
+            if open_previous_project != Qt.CheckState.Checked.value:
                 return
             # Get previous project (directory)
             project_dir = self.qsettings.value("appSettings/previousProject", defaultValue="")
             if not project_dir:
                 return
         if os.path.isfile(project_dir) and project_dir.endswith(".proj"):
-            # Previous project was a .proj file -> Show welcome message instead
-            self.msg.emit(welcome_msg)
+            # Before we had project dirs, we opened .proj files.
+            # Now we just give up.
             return
         if not os.path.isdir(project_dir):
             self.msg_error.emit(f"Cannot open previous project. Directory <b>{project_dir}</b> may have been moved.")
             self.remove_path_from_recent_projects(project_dir)
             return
-        self.open_project(project_dir)
+        self.open_project(project_dir, clear_event_log=False)
 
     @Slot()
     def new_project(self):
@@ -473,13 +496,14 @@ class ToolboxUI(QMainWindow):
         self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
 
     @Slot()
-    def open_project(self, load_dir=None):
+    def open_project(self, load_dir=None, clear_event_log=True):
         """Opens project from a selected or given directory.
 
         Args:
             load_dir (str, optional): Path to project base directory. If default value is used,
                 a file explorer dialog is opened where the user can select the
                 project to open.
+            clear_event_log (bool): True clears the Event log before opening the project
 
         Returns:
             bool: True when opening the project succeeded, False otherwise
@@ -500,7 +524,7 @@ class ToolboxUI(QMainWindow):
                 load_dir = QFileDialog.getExistingDirectory(self, caption="Open Spine Toolbox Project", dir=start_dir)
                 if not load_dir:
                     return False  # Cancelled
-        if not self.restore_project(load_dir):
+        if not self.restore_project(load_dir, clear_event_log=clear_event_log):
             if not self.undo_stack.isClean():  # If current project not saved, don't exit it
                 self.msg_warning.emit(f"Cancelled opening project {load_dir}. Current project has unsaved changes.")
                 return False
@@ -509,12 +533,13 @@ class ToolboxUI(QMainWindow):
             return False
         return True
 
-    def restore_project(self, project_dir, ask_confirmation=True):
+    def restore_project(self, project_dir, ask_confirmation=True, clear_event_log=True):
         """Initializes UI, Creates project, models, connections, etc., when opening a project.
 
         Args:
             project_dir (str): Project directory
             ask_confirmation (bool): True closes the previous project with a confirmation box if user has enabled this
+            clear_event_log (bool): True clears the Event log before loading the project
 
         Returns:
             bool: True when restoring project succeeded, False otherwise
@@ -536,6 +561,8 @@ class ToolboxUI(QMainWindow):
         self.toolboxuibase.connect_project_signals()
         self.toolboxuibase.update_window_title()
         # Populate project model with project items
+        if clear_event_log:
+            self.ui.textBrowser_eventlog.clear()
         success = self._project.load(self._item_specification_factories, self.item_factories)
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
@@ -1232,9 +1259,9 @@ class ToolboxUI(QMainWindow):
             dock.setFloating(False)
         self.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.ui.dockWidget_design_view)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_eventlog)
-        vert_docs = (self.ui.dockWidget_design_view, self.ui.dockWidget_eventlog)
-        height = sum(d.size().height() for d in vert_docs)
-        self.resizeDocks(vert_docs, [0.6 * height, 0.4 * height], Qt.Orientation.Vertical)
+        vert_docks = (self.ui.dockWidget_design_view, self.ui.dockWidget_eventlog)
+        height = sum(d.size().height() for d in vert_docks)
+        self.resizeDocks(vert_docks, [0.6 * height, 0.4 * height], Qt.Orientation.Vertical)
         self.splitDockWidget(self.ui.dockWidget_design_view, self.ui.dockWidget_item, Qt.Orientation.Horizontal)
         self.splitDockWidget(self.ui.dockWidget_eventlog, self.ui.dockWidget_console, Qt.Orientation.Horizontal)
         top_docks = (self.ui.dockWidget_design_view, self.ui.dockWidget_item)

@@ -45,7 +45,7 @@ class EmptyModelBase(EmptyRowModel):
         """Add items to db.
 
         Args:
-            db_map_data (dict): mapping DiffDatabaseMapping instance to list of items
+            db_map_data (dict): mapping DatabaseMapping instance to list of items
         """
         db_map_items = {}
         db_map_error_log = {}
@@ -161,7 +161,7 @@ class EmptyModelBase(EmptyRowModel):
             rows (set): group data from these rows
 
         Returns:
-            dict: mapping DiffDatabaseMapping instance to list of items
+            dict: mapping DatabaseMapping instance to list of items
         """
         items = [self._make_item(row) for row in rows]
         db_map_data = {}
@@ -187,12 +187,12 @@ class ParameterMixin:
         return {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if self.header[index.column()] == self.value_field and role in (
+        if self.header[index.column()] == self.value_field and role in {
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.ToolTipRole,
             Qt.ItemDataRole.TextAlignmentRole,
             PARSED_ROLE,
-        ):
+        }:
             data = super().data(index, role=Qt.ItemDataRole.EditRole)
             return self.db_mngr.get_value_from_data(data, role)
         return super().data(index, role)

@@ -57,12 +57,15 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
                 "entity_alternative": False,
                 "entity_class": True,
                 "parameter_definition": False,
+                "parameter_type": False,
                 "parameter_value": False,
                 "parameter_value_list": False,
                 "parameter_value_metadata": False,
                 "scenario": False,
                 "scenario_alternative": False,
                 "superclass_subclass": False,
+                "entity_class_display_mode": False,
+                "display_mode__entity_class": False,
             },
         )
         self.assertTrue(dialog._database_check_boxes_widget._check_boxes[self._db_map].isChecked())

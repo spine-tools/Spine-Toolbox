@@ -14,6 +14,7 @@
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QWidget
 from spinedb_api.db_mapping import DatabaseMapping
+from spinedb_api.mapped_items import item_factory
 
 
 def add_check_boxes(check_boxes, checked_states, select_all_button, deselect_all_button, state_changed_slot, layout):
@@ -60,8 +61,19 @@ class SelectDatabaseItems(QWidget):
         "parameter_value",
         "entity_metadata",
         "parameter_value_metadata",
+        "metadata",
     )
-    _SCENARIO_ITEMS = ("alternative", "scenario", "scenario_alternative")
+    _SCENARIO_ITEMS = ("alternative", "scenario", "scenario_alternative", "entity_alternative")
+    _STRUCTURAL_ITEMS = (
+        "entity_class",
+        "entity_class_display_mode",
+        "display_mode__entity_class",
+        "superclass_subclass",
+        "parameter_value_list",
+        "list_value",
+        "parameter_definition",
+        "parameter_type",
+    )
 
     def __init__(self, checked_states=None, parent=None):
         """
@@ -76,7 +88,10 @@ class SelectDatabaseItems(QWidget):
         self._ui.setupUi(self)
         self._ui.select_data_items_button.clicked.connect(self._select_data_items)
         self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
-        checkable_item_types = tuple(type_ for type_ in DatabaseMapping.item_types() if type_ != "commit")
+        self._ui.select_structural_items_button.clicked.connect(self._select_structural_items)
+        checkable_item_types = tuple(
+            type_ for type_ in DatabaseMapping.item_types() if not item_factory(type_).is_protected
+        )
         checked_states = (
             checked_states if checked_states is not None else {item: False for item in checkable_item_types}
         )
@@ -126,4 +141,10 @@ class SelectDatabaseItems(QWidget):
     def _select_scenario_items(self, _=False):
         """Checks all scenario items."""
         for item_name in self._SCENARIO_ITEMS:
+            self._item_check_boxes[item_name].setChecked(True)
+
+    @Slot(bool)
+    def _select_structural_items(self, _=False):
+        """Checks all structural items."""
+        for item_name in self._STRUCTURAL_ITEMS:
             self._item_check_boxes[item_name].setChecked(True)

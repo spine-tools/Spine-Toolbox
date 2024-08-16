@@ -13,6 +13,8 @@
 from contextlib import contextmanager
 import unittest
 from PySide6.QtWidgets import QApplication
+from spinedb_api import DatabaseMapping
+from spinedb_api.mapped_items import item_factory
 from spinetoolbox.widgets.select_database_items import SelectDatabaseItems
 
 
@@ -22,29 +24,13 @@ class TestSelectDatabaseItems(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
+    ITEMS = tuple(type_ for type_ in DatabaseMapping.item_types() if not item_factory(type_).is_protected)
+
     def test_restore_previously_checked_states(self):
-        stored_states = {"feature": True, "entity": True}
+        stored_states = {"alternative": True, "entity": True}
         with _select_database_items(stored_states) as widget:
-            self.assertEqual(
-                widget.checked_states(),
-                {
-                    "alternative": False,
-                    "entity_group": False,
-                    "entity_metadata": False,
-                    "list_value": False,
-                    "metadata": False,
-                    "entity": True,
-                    "entity_class": False,
-                    "superclass_subclass": False,
-                    "entity_alternative": False,
-                    "parameter_definition": False,
-                    "parameter_value": False,
-                    "parameter_value_list": False,
-                    "parameter_value_metadata": False,
-                    "scenario": False,
-                    "scenario_alternative": False,
-                },
-            )
+            expected = {**{item: False for item in self.ITEMS}, **stored_states}
+            self.assertEqual(widget.checked_states(), expected)
 
     def test_any_checked(self):
         with _select_database_items(None) as widget:
@@ -53,21 +39,43 @@ class TestSelectDatabaseItems(unittest.TestCase):
             self.assertTrue(widget.any_checked())
 
     def test_any_structural_item_checked(self):
-        stored_states = {
-            "object": True,
-            "relationship": True,
-            "entity_group": True,
-            "parameter_value": True,
-            "entity_metadata": True,
-            "parameter_value_metadata": True,
-            "scenario": True,
-            "alternative": True,
-            "scenario_alternative": True,
-        }
+        stored_states = {item: True for item in SelectDatabaseItems._DATA_ITEMS + SelectDatabaseItems._SCENARIO_ITEMS}
         with _select_database_items(stored_states) as widget:
             self.assertFalse(widget.any_structural_item_checked())
             widget._item_check_boxes["list_value"].click()
             self.assertTrue(widget.any_structural_item_checked())
+
+    def test_select_data_items(self):
+        with _select_database_items({}) as widget:
+            widget._ui.select_data_items_button.click()
+            expected = {item: item in SelectDatabaseItems._DATA_ITEMS for item in self.ITEMS}
+            self.assertEqual(widget.checked_states(), expected)
+
+    def test_select_scenario_items(self):
+        with _select_database_items({}) as widget:
+            widget._ui.select_scenario_items_button.click()
+            expected = {item: item in SelectDatabaseItems._SCENARIO_ITEMS for item in self.ITEMS}
+            self.assertEqual(widget.checked_states(), expected)
+
+    def test_select_structural_items(self):
+        with _select_database_items({}) as widget:
+            widget._ui.select_structural_items_button.click()
+            expected = {item: item in SelectDatabaseItems._STRUCTURAL_ITEMS for item in self.ITEMS}
+            self.assertEqual(widget.checked_states(), expected)
+
+    def test_items_in_some_category(self):
+        self.assertEqual(
+            set(self.ITEMS)
+            - set(SelectDatabaseItems._DATA_ITEMS)
+            - set(SelectDatabaseItems._SCENARIO_ITEMS)
+            - set(SelectDatabaseItems._STRUCTURAL_ITEMS),
+            set(),
+        )
+
+    def test_no_categories_overlap(self):
+        self.assertEqual(set(SelectDatabaseItems._DATA_ITEMS) & set(SelectDatabaseItems._SCENARIO_ITEMS), set())
+        self.assertEqual(set(SelectDatabaseItems._DATA_ITEMS) & set(SelectDatabaseItems._STRUCTURAL_ITEMS), set())
+        self.assertEqual(set(SelectDatabaseItems._SCENARIO_ITEMS) & set(SelectDatabaseItems._STRUCTURAL_ITEMS), set())
 
 
 @contextmanager

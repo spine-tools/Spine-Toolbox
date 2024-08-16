@@ -50,6 +50,7 @@ class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
     HEADER = [
         "entity_class_name",
         "parameter_name",
+        "valid types",
         "list_value_name",
         "default_value",
         "description",
@@ -96,30 +97,39 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
         self._db_mngr.deleteLater()
 
     def test_data_db_map_role(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class", "id": 1}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
+        entity_class = self._db_map.get_entity_class_item(name="my_class")
         self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_id": 1, "name": "my_parameter", "id": 1}]}
+            {self._db_map: [{"entity_class_id": entity_class["id"], "name": "my_parameter"}]}
         )
-        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "my_object", "id": 1}]})
+        definition = self._db_map.get_parameter_definition_item(entity_class_id=entity_class["id"], name="my_parameter")
+        self._db_mngr.add_entities({self._db_map: [{"class_id": entity_class["id"], "name": "my_object"}]})
+        entity = self._db_map.get_entity_item(class_id=entity_class["id"], name="my_object")
+        alternative = self._db_map.get_alternative_item(name="Base")
         value, type_ = to_database(2.3)
         self._db_mngr.add_parameter_values(
             {
                 self._db_map: [
                     {
-                        "entity_class_id": 1,
-                        "entity_id": 1,
-                        "parameter_definition_id": 1,
+                        "entity_class_id": entity_class["id"],
+                        "entity_id": entity["id"],
+                        "parameter_definition_id": definition["id"],
                         "value": value,
                         "type": type_,
-                        "alternative_id": 1,
-                        "id": 1,
+                        "alternative_id": alternative["id"],
                     }
                 ]
             }
         )
-        with q_object(TestSingleParameterValueModel(self._db_mngr, self._db_map, 1, True)) as model:
+        parameter_value = self._db_map.get_parameter_value_item(
+            entity_class_id=entity_class["id"],
+            entity_id=entity["id"],
+            parameter_definition_id=definition["id"],
+            alternative_id=alternative["id"],
+        )
+        with q_object(TestSingleParameterValueModel(self._db_mngr, self._db_map, parameter_value["id"], True)) as model:
             fetch_model(model)
-            model.add_rows([1])
+            model.add_rows([parameter_value["id"]])
             self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)
 
 

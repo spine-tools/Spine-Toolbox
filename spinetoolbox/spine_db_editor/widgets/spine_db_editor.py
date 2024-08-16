@@ -46,7 +46,7 @@ from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ..helpers import table_name_from_item_type
 from .commit_viewer import CommitViewer
-from .custom_menus import DocsMenu, RecentDatabasesPopupMenu
+from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
 from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassExportItemsDialog, MassRemoveItemsDialog
@@ -162,7 +162,9 @@ class SpineDBEditorBase(QMainWindow):
         self._changelog.clear()
         self._purge_change_notifiers()
         for url, codename in db_url_codenames.items():
-            db_map = self.db_mngr.get_db_map(url, self, codename=codename, create=create, window=window)
+            db_map = self.db_mngr.get_db_map(
+                url, self, codename=codename, create=create, window=window, force_upgrade_prompt=True
+            )
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:
@@ -257,7 +259,7 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + file_path
         self.load_db_urls({url: None}, create=True)
 
-    def reset_docs(self):
+    def reset_docks(self):
         """Resets the layout of the dock widgets for this URL"""
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
@@ -269,7 +271,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def _add_docks_menu(self):
         """Adds the View -section to the ribbon menu"""
-        menu = DocsMenu(self.ui.menuBar, self)
+        menu = DocksMenu(self.ui.menuBar, self)
         menu.setObjectName("View")
         menu.setTitle(QCoreApplication.translate("MainWindow", "&View", None))
         self.ui.menuBar.insertMenu(self.ui.menuBar.actions()[2], menu)
