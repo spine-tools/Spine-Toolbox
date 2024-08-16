@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'jump_properties.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,8 +28,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QComboBox, QGridLayout,
     QGroupBox, QHBoxLayout, QHeaderView, QPushButton,
-    QRadioButton, QSizePolicy, QSpacerItem, QToolButton,
-    QTreeView, QVBoxLayout, QWidget)
+    QRadioButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QToolButton, QTreeView, QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.code_text_edit import CodeTextEdit
 from spinetoolbox import resources_icons_rc
@@ -38,10 +38,22 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(520, 628)
-        self.verticalLayout = QVBoxLayout(Form)
+        Form.resize(307, 400)
+        self.verticalLayout_3 = QVBoxLayout(Form)
+        self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea = QScrollArea(Form)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 305, 398))
+        self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.groupBox_condition = QGroupBox(Form)
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.groupBox_condition = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_condition.setObjectName(u"groupBox_condition")
         self.verticalLayout_2 = QVBoxLayout(self.groupBox_condition)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -54,7 +66,7 @@ class Ui_Form(object):
 
         self.comboBox_tool_spec = QComboBox(self.groupBox_condition)
         self.comboBox_tool_spec.setObjectName(u"comboBox_tool_spec")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.comboBox_tool_spec.sizePolicy().hasHeightForWidth())
@@ -65,7 +77,7 @@ class Ui_Form(object):
         self.toolButton_edit_tool_spec = QToolButton(self.groupBox_condition)
         self.toolButton_edit_tool_spec.setObjectName(u"toolButton_edit_tool_spec")
         icon = QIcon()
-        icon.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/icons/wrench.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_edit_tool_spec.setIcon(icon)
 
         self.horizontalLayout_2.addWidget(self.toolButton_edit_tool_spec)
@@ -85,7 +97,7 @@ class Ui_Form(object):
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
 
@@ -104,22 +116,22 @@ class Ui_Form(object):
         self.gridLayout.setObjectName(u"gridLayout")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.toolButton_add_arg = QToolButton(Form)
+        self.toolButton_add_arg = QToolButton(self.scrollAreaWidgetContents)
         self.toolButton_add_arg.setObjectName(u"toolButton_add_arg")
         icon1 = QIcon()
-        icon1.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_add_arg.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.toolButton_add_arg)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
 
-        self.toolButton_remove_arg = QToolButton(Form)
+        self.toolButton_remove_arg = QToolButton(self.scrollAreaWidgetContents)
         self.toolButton_remove_arg.setObjectName(u"toolButton_remove_arg")
         icon2 = QIcon()
-        icon2.addFile(u":/icons/minus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/icons/minus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_remove_arg.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.toolButton_remove_arg)
@@ -127,21 +139,25 @@ class Ui_Form(object):
 
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
-        self.treeView_input_files = QTreeView(Form)
+        self.treeView_input_files = QTreeView(self.scrollAreaWidgetContents)
         self.treeView_input_files.setObjectName(u"treeView_input_files")
-        self.treeView_input_files.setDragDropMode(QAbstractItemView.DragDrop)
-        self.treeView_input_files.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.treeView_input_files.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.treeView_input_files.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
         self.gridLayout.addWidget(self.treeView_input_files, 2, 0, 1, 1)
 
-        self.treeView_cmd_line_args = QTreeView(Form)
+        self.treeView_cmd_line_args = QTreeView(self.scrollAreaWidgetContents)
         self.treeView_cmd_line_args.setObjectName(u"treeView_cmd_line_args")
-        self.treeView_cmd_line_args.setDragDropMode(QAbstractItemView.DragDrop)
+        self.treeView_cmd_line_args.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
 
         self.gridLayout.addWidget(self.treeView_cmd_line_args, 0, 0, 1, 1)
 
 
         self.verticalLayout.addLayout(self.gridLayout)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.verticalLayout_3.addWidget(self.scrollArea)
 
 
         self.retranslateUi(Form)

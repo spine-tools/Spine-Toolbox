@@ -112,7 +112,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._original_spec_name = None if specification is None else specification.name
         self.specification = specification
         self.item = item
-        self._app_settings = toolbox.qsettings()
+        self._app_settings = toolbox.qsettings
         # Setup UI from Qt Designer file
         self._ui = self._make_ui()
         self._ui.setupUi(self)
@@ -218,7 +218,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         Returns:
             bool: True if operation was successful, False otherwise
         """
-        if not self._toolbox.project():
+        if not self._toolbox.project:
             self.show_error("Please open or create a project first")
             return False
         name = self._spec_toolbar.name()
@@ -231,21 +231,21 @@ class SpecificationEditorWindowBase(QMainWindow):
         if spec is None:
             return self.prompt_exit_without_saving() if exiting else False
         if not self._original_spec_name:
-            if self._toolbox.project().is_specification_name_reserved(name):
+            if self._toolbox.project.is_specification_name_reserved(name):
                 self.show_error("Specification name already in use. Please enter a new name.")
                 return False
             self._toolbox.add_specification(spec)
-            if not self._toolbox.project().is_specification_name_reserved(name):
+            if not self._toolbox.project.is_specification_name_reserved(name):
                 return False
             if self.item is not None:
                 self.item.set_specification(spec)
         else:
-            if name != self._original_spec_name and self._toolbox.project().is_specification_name_reserved(name):
+            if name != self._original_spec_name and self._toolbox.project.is_specification_name_reserved(name):
                 self.show_error("Specification name already in use. Please enter a new name.")
                 return False
             spec.definition_file_path = self.specification.definition_file_path
             self._toolbox.replace_specification(self._original_spec_name, spec)
-            if not self._toolbox.project().is_specification_name_reserved(name):
+            if not self._toolbox.project.is_specification_name_reserved(name):
                 return False
         self._original_spec_name = name
         self._undo_stack.setClean()
@@ -277,7 +277,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         return {}
 
     def _duplicate(self):
-        if not self._toolbox.project():
+        if not self._toolbox.project:
             self.show_error("Please open or create a project first")
             return
         new_spec = self._make_new_specification("")
@@ -287,7 +287,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         if self.focusWidget():
             self.focusWidget().clearFocus()
         if not self._undo_stack.isClean() and not prompt_to_save_changes(
-            self, self._toolbox.qsettings(), self._save, True
+            self, self._toolbox.qsettings, self._save, True
         ):
             return False
         self._change_notifier.tear_down()

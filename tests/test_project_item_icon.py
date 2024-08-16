@@ -68,7 +68,7 @@ class TestProjectItemIcon(unittest.TestCase):
     def test_outgoing_and_incoming_links(self):
         source_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         target_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
-        self._toolbox.project().get_item = MagicMock()
+        self._toolbox.project.get_item = MagicMock()
         connection = LoggingConnection("source item", "bottom", "destination item", "bottom", toolbox=self._toolbox)
         link = Link(self._toolbox, source_icon.conn_button("bottom"), target_icon.conn_button("bottom"), connection)
         link.src_connector.links.append(link)
@@ -77,7 +77,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertEqual(target_icon.incoming_links(), [link])
 
     def test_drag_icon(self):
-        item = add_view(self._toolbox.project(), self._toolbox.item_factories, "View")
+        item = add_view(self._toolbox.project, self._toolbox.item_factories, "View")
         icon = item.get_icon()
         self.assertEqual(icon.x(), 0.0)
         self.assertEqual(icon.y(), 0.0)
@@ -92,7 +92,7 @@ class TestProjectItemIcon(unittest.TestCase):
         self.assertIsInstance(move_command, MoveIconCommand)
 
     def test_context_menu_event(self):
-        item = add_view(self._toolbox.project(), self._toolbox.item_factories, "View")
+        item = add_view(self._toolbox.project, self._toolbox.item_factories, "View")
         icon = item.get_icon()
         with patch("spinetoolbox.ui_main.ToolboxUI.show_project_or_item_context_menu") as mock_show_menu:
             mock_show_menu.return_value = True
@@ -164,7 +164,7 @@ class TestLink(unittest.TestCase):
         source_item_icon.update_name_item("source icon")
         destination_item_icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         destination_item_icon.update_name_item("destination icon")
-        project = self._toolbox.project()
+        project = self._toolbox.project
         project.get_item = MagicMock()
         connection = LoggingConnection("source icon", "right", "destination icon", "left", toolbox=self._toolbox)
         connection.link = self._link = Link(

@@ -387,7 +387,7 @@ class ProjectItem(LogMixin, MetaObject):
         Returns:
             bool: True if item was renamed successfully, False otherwise
         """
-        new_data_dir = os.path.join(self._toolbox.project().items_dir, shorten(new_name))
+        new_data_dir = os.path.join(self._toolbox.project.items_dir, shorten(new_name))
         if not rename_dir(self.data_dir, new_data_dir, self._toolbox, rename_data_dir_message):
             return False
         self.set_name(new_name)

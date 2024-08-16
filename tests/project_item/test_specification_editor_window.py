@@ -147,9 +147,9 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             mock_icon_color.return_value = QColor("white")
             self._toolbox.item_factories = {"Mock": ProjectItemFactory()}
             self._toolbox._item_properties_uis = {"Mock": MagicMock()}
-            project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project())
+            project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project)
             project_item._toolbox = self._toolbox
-            self._toolbox.project().add_item(project_item)
+            self._toolbox.project.add_item(project_item)
             window = SpecificationEditorWindowBase(self._toolbox, item=project_item)
             self.assertIs(window.item, project_item)
             name_edit = window._spec_toolbar._line_edit_name
@@ -187,9 +187,9 @@ class TestSpecificationEditorWindowBase(unittest.TestCase):
             self._toolbox.item_factories = {"Mock": ProjectItemFactory()}
             self._toolbox._item_properties_uis = {"Mock": MagicMock()}
             specification = ProjectItemSpecification("spec name", "spec description", "Mock")
-            project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project())
+            project_item = _MockProjectItem("item name", "item description", 0.0, 0.0, self._toolbox.project)
             project_item._toolbox = self._toolbox
-            self._toolbox.project().add_item(project_item)
+            self._toolbox.project.add_item(project_item)
             project_item.set_specification(specification)
             window = SpecificationEditorWindowBase(self._toolbox, item=project_item)
             mock_make_specification.side_effect = lambda name: ProjectItemSpecification(

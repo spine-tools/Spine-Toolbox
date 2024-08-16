@@ -62,7 +62,7 @@ class OpenProjectDialogComboBox(QComboBox):
                 # Remove path from qsettings
                 # This is done because pressing enter adds an entry to combobox drop-down list automatically
                 # and we don't want to clog it with irrelevant paths
-                parent.remove_directory_from_recents(os.path.abspath(parent.selection()), parent._toolbox.qsettings())
+                parent.remove_directory_from_recents(os.path.abspath(parent.selection()), parent._toolbox.qsettings)
                 # Remove path from combobox as well
                 cb_index = self.findText(os.path.abspath(parent.selection()))
                 if cb_index == -1:

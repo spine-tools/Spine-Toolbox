@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'link_properties.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.1
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,8 +28,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
     QFormLayout, QFrame, QHBoxLayout, QHeaderView,
-    QLabel, QPushButton, QSizePolicy, QSpacerItem,
-    QTreeView, QVBoxLayout, QWidget)
+    QLabel, QPushButton, QScrollArea, QSizePolicy,
+    QSpacerItem, QTreeView, QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qwidgets import PropertyQSpinBox
 from spinetoolbox import resources_icons_rc
@@ -38,17 +38,29 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(372, 355)
-        self.verticalLayout = QVBoxLayout(Form)
+        Form.resize(362, 404)
+        self.verticalLayout_3 = QVBoxLayout(Form)
+        self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea = QScrollArea(Form)
+        self.scrollArea.setObjectName(u"scrollArea")
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 360, 402))
+        self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
-        self.filter_type_label = QLabel(Form)
+        self.filter_type_label = QLabel(self.scrollAreaWidgetContents)
         self.filter_type_label.setObjectName(u"filter_type_label")
 
         self.formLayout.setWidget(0, QFormLayout.LabelRole, self.filter_type_label)
 
-        self.filter_type_combo_box = QComboBox(Form)
+        self.filter_type_combo_box = QComboBox(self.scrollAreaWidgetContents)
         self.filter_type_combo_box.setObjectName(u"filter_type_combo_box")
 
         self.formLayout.setWidget(0, QFormLayout.FieldRole, self.filter_type_combo_box)
@@ -56,18 +68,18 @@ class Ui_Form(object):
 
         self.verticalLayout.addLayout(self.formLayout)
 
-        self.treeView_filters = QTreeView(Form)
+        self.treeView_filters = QTreeView(self.scrollAreaWidgetContents)
         self.treeView_filters.setObjectName(u"treeView_filters")
         self.treeView_filters.setAcceptDrops(True)
-        self.treeView_filters.setDragDropMode(QAbstractItemView.DragDrop)
+        self.treeView_filters.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
         self.treeView_filters.header().setVisible(True)
 
         self.verticalLayout.addWidget(self.treeView_filters)
 
-        self.frame = QFrame(Form)
+        self.frame = QFrame(self.scrollAreaWidgetContents)
         self.frame.setObjectName(u"frame")
-        self.frame.setFrameShape(QFrame.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Raised)
+        self.frame.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame.setFrameShadow(QFrame.Shadow.Raised)
         self.verticalLayout_2 = QVBoxLayout(self.frame)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.horizontalLayout_3 = QHBoxLayout()
@@ -142,6 +154,10 @@ class Ui_Form(object):
 
 
         self.verticalLayout.addWidget(self.frame)
+
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+
+        self.verticalLayout_3.addWidget(self.scrollArea)
 
 
         self.retranslateUi(Form)

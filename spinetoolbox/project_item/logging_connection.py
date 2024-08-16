@@ -143,10 +143,10 @@ class LoggingConnection(LogMixin, HeadlessConnection):
     def __init__(self, *args, toolbox, **kwargs):
         super().__init__(*args, **kwargs)
         self._toolbox = toolbox
-        self.resource_filter_model = ResourceFilterModel(self, toolbox.project(), toolbox.undo_stack, toolbox)
+        self.resource_filter_model = ResourceFilterModel(self, toolbox.project, toolbox.undo_stack, toolbox)
         self.link = None
-        self._source_item_type = self._toolbox.project().get_item(self.source).item_type()
-        self._destination_item_type = self._toolbox.project().get_item(self.destination).item_type()
+        self._source_item_type = self._toolbox.project.get_item(self.source).item_type()
+        self._destination_item_type = self._toolbox.project.get_item(self.destination).item_type()
         self._db_maps = {}
         self._fetch_parents = {}
 
@@ -370,7 +370,7 @@ class LoggingConnection(LogMixin, HeadlessConnection):
         if options == self.options:
             return
         self.options = options
-        project = self._toolbox.project()
+        project = self._toolbox.project
         sibling_conns = project.incoming_connections(self.destination)
         for conn in sibling_conns:
             conn.link.update_icons()

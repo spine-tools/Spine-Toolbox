@@ -33,7 +33,7 @@ class OpenProjectDialog(QDialog):
         from ..ui import open_project_dialog  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=toolbox, f=Qt.Dialog)  # Setting the parent inherits the stylesheet
-        self._qsettings = toolbox.qsettings()
+        self._qsettings = toolbox.qsettings
         # Set up the user interface from Designer file
         self.ui = open_project_dialog.Ui_Dialog()
         self.ui.setupUi(self)

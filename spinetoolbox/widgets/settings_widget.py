@@ -298,7 +298,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         Args:
             toolbox (ToolboxUI): Parent widget.
         """
-        super().__init__(toolbox.qsettings())
+        super().__init__(toolbox.qsettings)
         self.ui.stackedWidget.setCurrentIndex(0)
         self.ui.listWidget.setFocus()
         self.ui.listWidget.setCurrentRow(0)
@@ -1043,7 +1043,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return
         self._julia_kernel_model.clear()
         self.ui.comboBox_julia_kernel.addItem("Select Julia kernel...")
-        conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        conda_path = self._toolbox.qsettings.value("appSettings/condaPath", defaultValue="")
         self.julia_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=4)
         self.julia_kernel_fetcher.kernel_found.connect(self.add_julia_kernel)
         self.julia_kernel_fetcher.finished.connect(self.restore_saved_julia_kernel)
@@ -1094,7 +1094,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._python_kernel_model.clear()
         self.ui.comboBox_python_kernel.addItem("Select Python kernel...")
         if not conda_path_updated:
-            conda_path = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+            conda_path = self._toolbox.qsettings.value("appSettings/condaPath", defaultValue="")
         else:
             conda_path = self.ui.lineEdit_conda_path.text().strip()
         self.python_kernel_fetcher = KernelFetcher(conda_path, fetch_mode=2)

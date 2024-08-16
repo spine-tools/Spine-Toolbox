@@ -80,9 +80,9 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_data_store(self):
         name = "DS"
-        add_ds(self.toolbox.project(), self.toolbox.item_factories, name)
+        add_ds(self.toolbox.project, self.toolbox.item_factories, name)
         # Check that an item with the created name is in project
-        item = self.toolbox.project().get_item(name)
+        item = self.toolbox.project.get_item(name)
         self.assertEqual(item.name, name)
         # Check that the created item is a Data Store
         self.assertEqual(item.item_type(), "Data Store")
@@ -93,35 +93,35 @@ class TestSpineToolboxProject(unittest.TestCase):
         """Checks that project dag handler contains only one
         graph, which has one node and its name matches the
         given argument."""
-        dags = list(self.toolbox.project()._dag_iterator())
+        dags = list(self.toolbox.project._dag_iterator())
         self.assertTrue(len(dags) == 1)
-        g = self.toolbox.project().dag_with_node(name)
+        g = self.toolbox.project.dag_with_node(name)
         self.assertTrue(len(g.nodes()) == 1)
         for node_name in g.nodes():
             self.assertTrue(node_name == name)
 
     def test_add_data_connection(self):
         name = "DC"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, name)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, name)
         # Check that an item with the created name is in project
-        item = self.toolbox.project().get_item(name)
+        item = self.toolbox.project.get_item(name)
         self.assertEqual(item.name, name)
         # Check that the created item is a Data Connection
         self.assertEqual(item.item_type(), "Data Connection")
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
         # test get_items_by_type()
-        data_connections = self.toolbox.project().get_items_by_type("Data Connection")
+        data_connections = self.toolbox.project.get_items_by_type("Data Connection")
         self.assertEqual(1, len(data_connections))
         self.assertIsInstance(data_connections[0], ProjectItem)
-        tools = self.toolbox.project().get_items_by_type("Tool")
+        tools = self.toolbox.project.get_items_by_type("Tool")
         self.assertEqual(0, len(tools))
 
     def test_add_tool(self):
         name = "Tool"
-        add_tool(self.toolbox.project(), self.toolbox.item_factories, name)
+        add_tool(self.toolbox.project, self.toolbox.item_factories, name)
         # Check that an item with the created name is in project
-        item = self.toolbox.project().get_item(name)
+        item = self.toolbox.project.get_item(name)
         self.assertEqual(item.name, name)
         # Check that the created item is a Tool
         self.assertEqual(item.item_type(), "Tool")
@@ -130,9 +130,9 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def test_add_view(self):
         name = "View"
-        add_view(self.toolbox.project(), self.toolbox.item_factories, name)
+        add_view(self.toolbox.project, self.toolbox.item_factories, name)
         # Check that an item with the created name is in project
-        item = self.toolbox.project().get_item(name)
+        item = self.toolbox.project.get_item(name)
         self.assertEqual(item.name, name)
         # Check that the created item is a View
         self.assertEqual(item.item_type(), "View")
@@ -140,7 +140,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.check_dag_handler(name)
 
     def test_add_all_available_items(self):
-        p = self.toolbox.project()
+        p = self.toolbox.project
         ds_name = "DS"
         dc_name = "DC"
         dt_name = "DT"
@@ -178,71 +178,71 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(p.has_items())
         self.assertEqual(8, len(p.get_items()))
         # DAG handler should now have eight graphs, each with one item
-        dags = list(self.toolbox.project()._dag_iterator())
+        dags = list(self.toolbox.project._dag_iterator())
         self.assertEqual(8, len(dags))
         # Check that all created items are in graphs
-        ds_graph = self.toolbox.project().dag_with_node(ds_name)
+        ds_graph = self.toolbox.project.dag_with_node(ds_name)
         self.assertIsNotNone(ds_graph)
-        dc_graph = self.toolbox.project().dag_with_node(dc_name)
+        dc_graph = self.toolbox.project.dag_with_node(dc_name)
         self.assertIsNotNone(dc_graph)
-        dt_graph = self.toolbox.project().dag_with_node(dt_name)
+        dt_graph = self.toolbox.project.dag_with_node(dt_name)
         self.assertIsNotNone(dt_graph)
-        tool_graph = self.toolbox.project().dag_with_node(tool_name)
+        tool_graph = self.toolbox.project.dag_with_node(tool_name)
         self.assertIsNotNone(tool_graph)
-        view_graph = self.toolbox.project().dag_with_node(view_name)
+        view_graph = self.toolbox.project.dag_with_node(view_name)
         self.assertIsNotNone(view_graph)
-        importer_graph = self.toolbox.project().dag_with_node(imp_name)
+        importer_graph = self.toolbox.project.dag_with_node(imp_name)
         self.assertIsNotNone(importer_graph)
-        exporter_graph = self.toolbox.project().dag_with_node(exporter_name)
+        exporter_graph = self.toolbox.project.dag_with_node(exporter_name)
         self.assertIsNotNone(exporter_graph)
-        merger_graph = self.toolbox.project().dag_with_node(merger_name)
+        merger_graph = self.toolbox.project.dag_with_node(merger_name)
         self.assertIsNotNone(merger_graph)
 
     def test_remove_item_by_name(self):
         view_name = "View"
-        add_view(self.toolbox.project(), self.toolbox.item_factories, view_name)
-        view = self.toolbox.project().get_item(view_name)
+        add_view(self.toolbox.project, self.toolbox.item_factories, view_name)
+        view = self.toolbox.project.get_item(view_name)
         self.assertEqual(view_name, view.name)
-        self.toolbox.project().remove_item_by_name(view_name)
-        self.assertEqual(self.toolbox.project().n_items, 0)
+        self.toolbox.project.remove_item_by_name(view_name)
+        self.assertEqual(self.toolbox.project.n_items, 0)
 
     def test_remove_item_by_name_removes_outgoing_connections(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         view1_name = "View 1"
         add_view(project, self.toolbox.item_factories, view1_name)
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
         project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
-        view = self.toolbox.project().get_item(view1_name)
+        view = self.toolbox.project.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        view = self.toolbox.project().get_item(view2_name)
+        view = self.toolbox.project.get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertEqual(self.toolbox.project().n_items, 2)
+        self.assertEqual(self.toolbox.project.n_items, 2)
         self.assertEqual(len(project.connections), 1)
         project.remove_item_by_name(view1_name)
-        self.assertEqual(self.toolbox.project().n_items, 1)
+        self.assertEqual(self.toolbox.project.n_items, 1)
         self.assertEqual(len(project.connections), 0)
-        view = self.toolbox.project().get_item(view2_name)
+        view = self.toolbox.project.get_item(view2_name)
         self.assertEqual(view2_name, view.name)
         self.assertTrue(self.node_is_isolated(project, view2_name))
 
     def test_remove_item_by_name_removes_incoming_connections(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         view1_name = "View 1"
         add_view(project, self.toolbox.item_factories, view1_name)
         view2_name = "View 2"
         add_view(project, self.toolbox.item_factories, view2_name)
         project.add_connection(LoggingConnection(view1_name, "top", view2_name, "bottom", toolbox=self.toolbox))
-        view = self.toolbox.project().get_item(view1_name)
+        view = self.toolbox.project.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
-        view = self.toolbox.project().get_item(view2_name)
+        view = self.toolbox.project.get_item(view2_name)
         self.assertEqual(view2_name, view.name)
-        self.assertEqual(self.toolbox.project().n_items, 2)
+        self.assertEqual(self.toolbox.project.n_items, 2)
         self.assertEqual(len(project.connections), 1)
         project.remove_item_by_name(view2_name)
-        self.assertEqual(self.toolbox.project().n_items, 1)
+        self.assertEqual(self.toolbox.project.n_items, 1)
         self.assertEqual(len(project.connections), 0)
-        view = self.toolbox.project().get_item(view1_name)
+        view = self.toolbox.project.get_item(view1_name)
         self.assertEqual(view1_name, view.name)
         self.assertTrue(self.node_is_isolated(project, view1_name))
 
@@ -253,7 +253,7 @@ class TestSpineToolboxProject(unittest.TestCase):
             names (list): List of selected item names to execute, or None to execute the whole project.
         """
         waiter = SignalWaiter()
-        self.toolbox.project().project_execution_finished.connect(waiter.trigger)
+        self.toolbox.project.project_execution_finished.connect(waiter.trigger)
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
             "spinetoolbox.project.make_settings_dict_for_engine"
         ) as mock_settings_dict:
@@ -263,16 +263,16 @@ class TestSpineToolboxProject(unittest.TestCase):
             # This mocks the call to make_settings_dict_for_engine in SpineToolboxProject._execute_dags()
             mock_settings_dict.return_value = {}
             if not names:
-                self.toolbox.project().execute_project()
+                self.toolbox.project.execute_project()
             else:
-                self.toolbox.project().execute_selected(names)
+                self.toolbox.project.execute_selected(names)
             mock_qsettings_value.assert_called()
             mock_settings_dict.assert_called()
         waiter.wait()
-        self.toolbox.project().project_execution_finished.disconnect(waiter.trigger)
+        self.toolbox.project.project_execution_finished.disconnect(waiter.trigger)
 
     def test_execute_project_with_single_item(self):
-        view = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        view = add_view(self.toolbox.project, self.toolbox.item_factories, "View")
         view_executable = self._make_mock_executable(view)
         with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
             mock_make_item.return_value = view_executable
@@ -280,9 +280,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(view_executable.execute_called)
 
     def test_execute_project_with_two_dags(self):
-        item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        item1 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC")
         item1_executable = self._make_mock_executable(item1)
-        item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        item2 = add_view(self.toolbox.project, self.toolbox.item_factories, "View")
         item2_executable = self._make_mock_executable(item2)
         with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args, **kwargs: {
@@ -294,9 +294,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(item2_executable.execute_called)
 
     def test_execute_selected_dag(self):
-        item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        item1 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC")
         item1_executable = self._make_mock_executable(item1)
-        item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        item2 = add_view(self.toolbox.project, self.toolbox.item_factories, "View")
         item2_executable = self._make_mock_executable(item2)
         with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
             mock_make_item.side_effect = lambda name, *args, **kwargs: {
@@ -308,16 +308,16 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertTrue(item2_executable.execute_called)
 
     def test_execute_selected_item_within_single_dag(self):
-        data_store = add_ds(self.toolbox.project(), self.toolbox.item_factories, "DS")
+        data_store = add_ds(self.toolbox.project, self.toolbox.item_factories, "DS")
         data_store_executable = self._make_mock_executable(data_store)
-        data_connection = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        data_connection = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC")
         data_connection_executable = self._make_mock_executable(data_connection)
-        view = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
+        view = add_view(self.toolbox.project, self.toolbox.item_factories, "View")
         view_executable = self._make_mock_executable(view)
-        self.toolbox.project().add_connection(
+        self.toolbox.project.add_connection(
             LoggingConnection(data_store.name, "right", data_connection.name, "left", toolbox=self.toolbox)
         )
-        self.toolbox.project().add_connection(
+        self.toolbox.project.add_connection(
             LoggingConnection(data_connection.name, "bottom", view.name, "top", toolbox=self.toolbox)
         )
         with mock.patch("spine_engine.spine_engine.SpineEngine.make_item") as mock_make_item:
@@ -332,26 +332,26 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertFalse(view_executable.execute_called)
 
     def test_execute_selected_items_within_single_dag(self):
-        dc1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC1")
+        dc1 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC1")
         dc1_executable = self._make_mock_executable(dc1)
-        dc2 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC2")
+        dc2 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC2")
         dc2_executable = self._make_mock_executable(dc2)
-        dc3 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC3")
+        dc3 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC3")
         dc3_executable = self._make_mock_executable(dc3)
-        dc4 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC4")
+        dc4 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC4")
         dc4_executable = self._make_mock_executable(dc4)
-        dc5 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC5")
+        dc5 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC5")
         dc5_executable = self._make_mock_executable(dc5)
-        self.toolbox.project().add_connection(
+        self.toolbox.project.add_connection(
             LoggingConnection(dc1.name, "right", dc2.name, "left", toolbox=self.toolbox)
         )
-        self.toolbox.project().add_connection(
+        self.toolbox.project.add_connection(
             LoggingConnection(dc2.name, "bottom", dc3.name, "top", toolbox=self.toolbox)
         )
-        self.toolbox.project().add_connection(
+        self.toolbox.project.add_connection(
             LoggingConnection(dc1.name, "right", dc4.name, "left", toolbox=self.toolbox)
         )
-        self.toolbox.project().add_connection(
+        self.toolbox.project.add_connection(
             LoggingConnection(dc4.name, "right", dc5.name, "left", toolbox=self.toolbox)
         )
         # DAG contains 5 items and 4 connections. dc1->dc2->dc3 and dc1->dc4->dc5.
@@ -370,57 +370,57 @@ class TestSpineToolboxProject(unittest.TestCase):
             self.assertTrue(dc5_executable.execute_called)
 
     def test_making_a_yellow_feedback_loop_makes_a_jump_instead(self):
-        item1 = add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
-        item2 = add_view(self.toolbox.project(), self.toolbox.item_factories, "View")
-        self.toolbox.project().add_connection(
+        item1 = add_dc(self.toolbox.project, self.toolbox.item_factories, "DC")
+        item2 = add_view(self.toolbox.project, self.toolbox.item_factories, "View")
+        self.toolbox.project.add_connection(
             LoggingConnection(item1.name, "right", item2.name, "left", toolbox=self.toolbox)
         )
         # There should be one connection and no jumps in the project
-        self.assertEqual(1, len(self.toolbox.project().connections))
-        self.assertEqual("DC", self.toolbox.project().connections[0].source)
-        self.assertEqual("View", self.toolbox.project().connections[0].destination)
-        self.assertEqual(0, len(self.toolbox.project()._jumps))
+        self.assertEqual(1, len(self.toolbox.project.connections))
+        self.assertEqual("DC", self.toolbox.project.connections[0].source)
+        self.assertEqual("View", self.toolbox.project.connections[0].destination)
+        self.assertEqual(0, len(self.toolbox.project._jumps))
         with mock.patch("PySide6.QtWidgets.QMessageBox.exec") as mock_msgbox_exec:
             mock_msgbox_exec.return_value = QMessageBox.StandardButton.Cancel
-            self.toolbox.project().add_connection(
+            self.toolbox.project.add_connection(
                 LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
             )
             # Operation was cancelled
-            self.assertEqual(1, len(self.toolbox.project().connections))
-            self.assertEqual(0, len(self.toolbox.project()._jumps))
+            self.assertEqual(1, len(self.toolbox.project.connections))
+            self.assertEqual(0, len(self.toolbox.project._jumps))
             # Do again but click Ok (Add Loop)
             mock_msgbox_exec.assert_called()
             self.assertEqual(1, mock_msgbox_exec.call_count)
             mock_msgbox_exec.return_value = QMessageBox.StandardButton.Ok
-            self.toolbox.project().add_connection(
+            self.toolbox.project.add_connection(
                 LoggingConnection(item2.name, "bottom", item1.name, "top", toolbox=self.toolbox)
             )
             self.assertEqual(2, mock_msgbox_exec.call_count)
             # There should be one connection and one jump in the project
-            self.assertEqual(1, len(self.toolbox.project().connections))
-            self.assertIsInstance(self.toolbox.project().connections[0], LoggingConnection)
-            self.assertEqual("DC", self.toolbox.project().connections[0].source)
-            self.assertEqual("View", self.toolbox.project().connections[0].destination)
-            self.assertEqual(1, len(self.toolbox.project()._jumps))
-            self.assertIsInstance(self.toolbox.project()._jumps[0], LoggingJump)
-            self.assertEqual("View", self.toolbox.project()._jumps[0].source)
-            self.assertEqual("DC", self.toolbox.project()._jumps[0].destination)
+            self.assertEqual(1, len(self.toolbox.project.connections))
+            self.assertIsInstance(self.toolbox.project.connections[0], LoggingConnection)
+            self.assertEqual("DC", self.toolbox.project.connections[0].source)
+            self.assertEqual("View", self.toolbox.project.connections[0].destination)
+            self.assertEqual(1, len(self.toolbox.project._jumps))
+            self.assertIsInstance(self.toolbox.project._jumps[0], LoggingJump)
+            self.assertEqual("View", self.toolbox.project._jumps[0].source)
+            self.assertEqual("DC", self.toolbox.project._jumps[0].destination)
 
     def test_rename_project(self):
         new_name = "New Project Name"
         new_short_name = "new_project_name"
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"):
-            self.toolbox.project().set_name(new_name)
-        self.assertEqual(self.toolbox.project().name, new_name)
-        self.assertEqual(self.toolbox.project().short_name, new_short_name)
+            self.toolbox.project.set_name(new_name)
+        self.assertEqual(self.toolbox.project.name, new_name)
+        self.assertEqual(self.toolbox.project.short_name, new_short_name)
 
     def test_set_project_description(self):
         desc = "Project Description"
-        self.toolbox.project().set_description(desc)
-        self.assertEqual(self.toolbox.project().description, desc)
+        self.toolbox.project.set_description(desc)
+        self.assertEqual(self.toolbox.project.description, desc)
 
     def test_rename_item(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         source_name = "source"
         destination_name = "destination"
         add_view(project, self.toolbox.item_factories, source_name)
@@ -441,13 +441,13 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
 
     def test_connections_for_item_no_connections(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         dc_name = "DC"
         add_dc(project, self.toolbox.item_factories, dc_name)
         self.assertEqual(project.connections_for_item(dc_name), [])
 
     def test_connections_for_item(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         dc1_name = "My first DC"
         add_dc(project, self.toolbox.item_factories, dc1_name)
         dc2_name = "My second DC"
@@ -473,7 +473,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         )
 
     def test_add_connection_updates_dag_handler(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         dc_name = "DC"
         add_dc(project, self.toolbox.item_factories, dc_name)
         importer_name = "Importer"
@@ -484,7 +484,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(node_successors(dag), {dc_name: [importer_name], importer_name: []})
 
     def test_add_connection_updates_resources(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         dc_name = "DC"
         add_dc(project, self.toolbox.item_factories, dc_name)
         tool_name = "Tool"
@@ -499,7 +499,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(tool._input_file_model.rowCount(), 1)
 
     def test_modifying_connected_item_updates_resources(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         dc_name = "DC"
         add_dc(project, self.toolbox.item_factories, dc_name)
         tool_name = "Tool"
@@ -519,7 +519,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         # Tests issue #1310.
         # Make two DC's connected to a tool and provide a resource from both to Tool.
         # Remove one connection, and test that the other one still provides the resource to Tool
-        project = self.toolbox.project()
+        project = self.toolbox.project
         add_dc(project, self.toolbox.item_factories, "dc1")
         add_dc(project, self.toolbox.item_factories, "dc2")
         add_tool(project, self.toolbox.item_factories, "t")
@@ -540,7 +540,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(t._input_file_model.rowCount(), 1)  # There should be 1 resource left
 
     def test_update_connection(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         dc1_name = "DC 1"
         add_dc(project, self.toolbox.item_factories, dc1_name)
         dc2_name = "DC 2"
@@ -560,7 +560,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(node_successors(dag), {dc1_name: [dc2_name], dc2_name: []})
 
     def test_save_when_storing_item_local_data(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         item = _MockItemWithLocalData(project)
         with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
             self.toolbox, "project_item_icon"
@@ -588,7 +588,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(local_data_dict, {"items": {"test item": {"a": {"b": 1, "d": 3}}}})
 
     def test_load_when_storing_item_local_data(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         item = _MockItemWithLocalData(project)
         with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
             self.toolbox, "project_item_icon"
@@ -601,11 +601,11 @@ class TestSpineToolboxProject(unittest.TestCase):
             self.toolbox, "project_item_properties_ui"
         ), mock.patch.object(self.toolbox, "project_item_icon"):
             self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
-        item = self.toolbox.project().get_item("test item")
+        item = self.toolbox.project.get_item("test item")
         self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
 
     def test_add_and_save_specification(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         self.toolbox.item_factories = {"Tester": ProjectItemFactory()}
         specification = _MockSpecification("a specification", "Specification for testing.", "Tester")
         with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
@@ -629,7 +629,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertFalse(local_data_dir.exists())
 
     def test_add_and_save_specification_with_local_data(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         specification = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
@@ -662,7 +662,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(local_data, {"Tester": {"a specification": {"data": "my precious data"}}})
 
     def test_renaming_specification_with_local_data_updates_local_data_file(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         original_specification = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
@@ -697,7 +697,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(local_data, {"Tester": {"another specification": {"data": "my precious data"}}})
 
     def test_replace_specification_with_local_data_by_one_without_removes_local_data_from_the_file(self):
-        project = self.toolbox.project()
+        project = self.toolbox.project
         self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests}
         specification_with_local_data = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
@@ -728,8 +728,8 @@ class TestSpineToolboxProject(unittest.TestCase):
 
     def _make_mock_executable(self, item):
         item_name = item.name
-        item = self.toolbox.project().get_item(item_name)
-        item_executable = _MockExecutableItem(item_name, self.toolbox.project().project_dir, self.toolbox)
+        item = self.toolbox.project.get_item(item_name)
+        item_executable = _MockExecutableItem(item_name, self.toolbox.project.project_dir, self.toolbox)
         animation = QVariantAnimation()
         animation.setDuration(0)
         item.make_execution_leave_animation = mock.MagicMock(return_value=animation)

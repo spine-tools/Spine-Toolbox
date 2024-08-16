@@ -564,7 +564,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """Returns a new local or remote spine engine manager or
         an existing remote spine engine manager.
         Returns None if connecting to Spine Engine Server fails."""
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        exec_remotely = self._toolbox.qsettings.value("engineSettings/remoteExecutionEnabled", "false") == "true"
         if exec_remotely:
             if self.engine_mngr:
                 return self.engine_mngr

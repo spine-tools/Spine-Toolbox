@@ -19,12 +19,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1006</width>
-    <height>672</height>
+    <width>823</width>
+    <height>615</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Spine Toolbox</string>
+   <string>Spine Toolbox [dev mode]</string>
   </property>
   <property name="dockNestingEnabled">
    <bool>true</bool>
@@ -35,7 +35,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1006</width>
+     <width>823</width>
      <height>33</height>
     </rect>
    </property>
@@ -59,6 +59,7 @@
     <addaction name="separator"/>
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
+    <addaction name="actionSwitch_to_user_mode"/>
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -145,8 +146,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>174</width>
-     <height>184</height>
+     <width>82</width>
+     <height>104</height>
     </size>
    </property>
    <property name="features">
@@ -220,81 +221,6 @@
         </widget>
        </item>
       </layout>
-     </item>
-    </layout>
-   </widget>
-  </widget>
-  <widget class="QDockWidget" name="dockWidget_item">
-   <property name="minimumSize">
-    <size>
-     <width>356</width>
-     <height>293</height>
-    </size>
-   </property>
-   <property name="windowTitle">
-    <string>Properties</string>
-   </property>
-   <attribute name="dockWidgetArea">
-    <number>4</number>
-   </attribute>
-   <widget class="QWidget" name="dockWidgetContents_3">
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="spacing">
-      <number>6</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QTabWidget" name="tabWidget_item_properties">
-       <property name="styleSheet">
-        <string notr="true"/>
-       </property>
-       <property name="currentIndex">
-        <number>0</number>
-       </property>
-       <widget class="QWidget" name="tab_no_selection">
-        <attribute name="title">
-         <string>No Selection</string>
-        </attribute>
-        <layout class="QVBoxLayout" name="verticalLayout_14">
-         <property name="leftMargin">
-          <number>6</number>
-         </property>
-         <property name="topMargin">
-          <number>6</number>
-         </property>
-         <property name="rightMargin">
-          <number>6</number>
-         </property>
-         <property name="bottomMargin">
-          <number>6</number>
-         </property>
-         <item>
-          <widget class="QLabel" name="label_no_selection">
-           <property name="text">
-            <string>Select an item to view its properties</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignmentFlag::AlignCenter</set>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </widget>
      </item>
     </layout>
    </widget>
@@ -413,6 +339,81 @@
        <property name="rubberBandSelectionMode">
         <enum>Qt::ItemSelectionMode::ContainsItemBoundingRect</enum>
        </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_item">
+   <property name="minimumSize">
+    <size>
+     <width>127</width>
+     <height>101</height>
+    </size>
+   </property>
+   <property name="windowTitle">
+    <string>Properties</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>4</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>6</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QTabWidget" name="tabWidget_item_properties">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="tab_no_selection">
+        <attribute name="title">
+         <string>No Selection</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="verticalLayout_14">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_no_selection">
+           <property name="text">
+            <string>Select an item to view its properties</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignCenter</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -880,6 +881,18 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Spine-Toolbox repository in GitHub&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionSwitch_to_user_mode">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/retweet.svg</normaloff>:/icons/menu_icons/retweet.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Switch to user mode</string>
+   </property>
+   <property name="shortcut">
+    <string>§</string>
    </property>
   </action>
  </widget>

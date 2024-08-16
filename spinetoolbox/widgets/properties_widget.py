@@ -67,7 +67,7 @@ class PropertiesWidgetBase(QWidget):
 
     def paintEvent(self, ev):
         """Paints background"""
-        settings = self._toolbox.qsettings()
+        settings = self._toolbox.qsettings
         if settings.value("appSettings/colorPropertiesWidgets", defaultValue="false") == "false":
             super().paintEvent(ev)
             return

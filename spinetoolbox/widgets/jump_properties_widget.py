@@ -33,49 +33,49 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         self._cmd_line_args_model = JumpCommandLineArgsModel(self)
         self._input_file_model = FileListModel(header_label="Available resources", draggable=True)
         self._jump = None
-        self._ui = Ui_Form()
-        self._ui.setupUi(self)
-        self._ui.treeView_cmd_line_args.setModel(self._cmd_line_args_model)
-        self._ui.treeView_input_files.setModel(self._input_file_model)
-        self._ui.condition_script_edit.set_lexer_name("python")
-        self._ui.comboBox_tool_spec.setModel(self._toolbox.filtered_spec_factory_models["Tool"])
-        self._ui.radioButton_tool_spec.clicked.connect(self._change_condition)
-        self._ui.radioButton_py_script.clicked.connect(self._change_condition)
-        self._ui.comboBox_tool_spec.activated.connect(self._change_condition)
-        self._ui.toolButton_edit_tool_spec.clicked.connect(self._show_tool_spec_form)
-        self._ui.condition_script_edit.textChanged.connect(self._set_save_script_button_enabled)
-        self._ui.pushButton_save_script.clicked.connect(self._change_condition)
-        self._ui.toolButton_remove_arg.clicked.connect(self._remove_arg)
-        self._ui.toolButton_add_arg.clicked.connect(self._add_args)
+        self.ui = Ui_Form()
+        self.ui.setupUi(self)
+        self.ui.treeView_cmd_line_args.setModel(self._cmd_line_args_model)
+        self.ui.treeView_input_files.setModel(self._input_file_model)
+        self.ui.condition_script_edit.set_lexer_name("python")
+        self.ui.comboBox_tool_spec.setModel(self._toolbox.filtered_spec_factory_models["Tool"])
+        self.ui.radioButton_tool_spec.clicked.connect(self._change_condition)
+        self.ui.radioButton_py_script.clicked.connect(self._change_condition)
+        self.ui.comboBox_tool_spec.activated.connect(self._change_condition)
+        self.ui.toolButton_edit_tool_spec.clicked.connect(self._show_tool_spec_form)
+        self.ui.condition_script_edit.textChanged.connect(self._set_save_script_button_enabled)
+        self.ui.pushButton_save_script.clicked.connect(self._change_condition)
+        self.ui.toolButton_remove_arg.clicked.connect(self._remove_arg)
+        self.ui.toolButton_add_arg.clicked.connect(self._add_args)
         self._cmd_line_args_model.args_updated.connect(self._push_update_cmd_line_args_command)
-        self._ui.treeView_cmd_line_args.selectionModel().selectionChanged.connect(
+        self.ui.treeView_cmd_line_args.selectionModel().selectionChanged.connect(
             self._update_remove_args_button_enabled
         )
-        self._ui.treeView_input_files.selectionModel().selectionChanged.connect(self._update_add_args_button_enabled)
+        self.ui.treeView_input_files.selectionModel().selectionChanged.connect(self._update_add_args_button_enabled)
 
     def _load_condition_into_ui(self, condition):
         self._track_changes = False
-        self._ui.pushButton_save_script.setEnabled(False)
-        self._ui.condition_script_edit.set_enabled_with_greyed(condition["type"] == "python-script")
-        self._ui.comboBox_tool_spec.setEnabled(condition["type"] == "tool-specification")
-        self._ui.toolButton_edit_tool_spec.setEnabled(condition["type"] == "tool-specification")
+        self.ui.pushButton_save_script.setEnabled(False)
+        self.ui.condition_script_edit.set_enabled_with_greyed(condition["type"] == "python-script")
+        self.ui.comboBox_tool_spec.setEnabled(condition["type"] == "tool-specification")
+        self.ui.toolButton_edit_tool_spec.setEnabled(condition["type"] == "tool-specification")
         if condition["type"] == "python-script":
-            self._ui.radioButton_py_script.setChecked(True)
-            self._ui.condition_script_edit.setPlainText(condition["script"])
+            self.ui.radioButton_py_script.setChecked(True)
+            self.ui.condition_script_edit.setPlainText(condition["script"])
         elif condition["type"] == "tool-specification":
-            self._ui.radioButton_tool_spec.setChecked(True)
-            self._ui.comboBox_tool_spec.setCurrentText(condition["specification"])
+            self.ui.radioButton_tool_spec.setChecked(True)
+            self.ui.comboBox_tool_spec.setCurrentText(condition["specification"])
         self._track_changes = True
 
     def _make_condition_from_ui(self):
         condition = {
-            "script": self._ui.condition_script_edit.toPlainText(),
-            "specification": self._ui.comboBox_tool_spec.currentText(),
+            "script": self.ui.condition_script_edit.toPlainText(),
+            "specification": self.ui.comboBox_tool_spec.currentText(),
         }
-        if self._ui.radioButton_py_script.isChecked():
+        if self.ui.radioButton_py_script.isChecked():
             condition["type"] = "python-script"
             return condition
-        if self._ui.radioButton_tool_spec.isChecked():
+        if self.ui.radioButton_tool_spec.isChecked():
             condition["type"] = "tool-specification"
             return condition
         return {}
@@ -86,19 +86,19 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
             return
         condition = self._make_condition_from_ui()
         if self._jump.condition != condition:
-            self._toolbox.undo_stack.push(SetJumpConditionCommand(self._toolbox.project(), self._jump, self, condition))
+            self._toolbox.undo_stack.push(SetJumpConditionCommand(self._toolbox.project, self._jump, self, condition))
 
     @Slot(bool)
     def _show_tool_spec_form(self, _checked=False):
         name = self._jump.condition["specification"]
-        specification = self._toolbox.project().get_specification(name)
+        specification = self._toolbox.project.get_specification(name)
         self._toolbox.show_specification_form("Tool", specification)
 
     @Slot()
     def _set_save_script_button_enabled(self):
         condition = self._jump.condition
-        self._ui.pushButton_save_script.setEnabled(
-            condition["type"] == "python-script" and condition["script"] != self._ui.condition_script_edit.toPlainText()
+        self.ui.pushButton_save_script.setEnabled(
+            condition["type"] == "python-script" and condition["script"] != self.ui.condition_script_edit.toPlainText()
         )
 
     @Slot(QItemSelection, QItemSelection)
@@ -106,16 +106,16 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
         self._do_update_add_args_button_enabled()
 
     def _do_update_add_args_button_enabled(self):
-        enabled = self._ui.treeView_input_files.selectionModel().hasSelection()
-        self._ui.toolButton_add_arg.setEnabled(enabled)
+        enabled = self.ui.treeView_input_files.selectionModel().hasSelection()
+        self.ui.toolButton_add_arg.setEnabled(enabled)
 
     @Slot(QItemSelection, QItemSelection)
     def _update_remove_args_button_enabled(self, _selected, _deselected):
         self._do_update_remove_args_button_enabled()
 
     def _do_update_remove_args_button_enabled(self):
-        enabled = self._ui.treeView_cmd_line_args.selectionModel().hasSelection()
-        self._ui.toolButton_remove_arg.setEnabled(enabled)
+        enabled = self.ui.treeView_cmd_line_args.selectionModel().hasSelection()
+        self.ui.toolButton_remove_arg.setEnabled(enabled)
 
     def _populate_cmd_line_args_model(self):
         self._cmd_line_args_model.reset_model(self._jump.cmd_line_args)
@@ -124,18 +124,18 @@ class JumpPropertiesWidget(PropertiesWidgetBase):
     def _push_update_cmd_line_args_command(self, cmd_line_args):
         if self._jump.cmd_line_args != cmd_line_args:
             self._toolbox.undo_stack.push(
-                UpdateJumpCmdLineArgsCommand(self._toolbox.project(), self._jump, self, cmd_line_args)
+                UpdateJumpCmdLineArgsCommand(self._toolbox.project, self._jump, self, cmd_line_args)
             )
 
     @Slot(bool)
     def _remove_arg(self, _=False):
-        removed_rows = [index.row() for index in self._ui.treeView_cmd_line_args.selectedIndexes()]
+        removed_rows = [index.row() for index in self.ui.treeView_cmd_line_args.selectedIndexes()]
         cmd_line_args = [arg for row, arg in enumerate(self._jump.cmd_line_args) if row not in removed_rows]
         self._push_update_cmd_line_args_command(cmd_line_args)
 
     @Slot(bool)
     def _add_args(self, _=False):
-        new_args = [LabelArg(index.data()) for index in self._ui.treeView_input_files.selectedIndexes()]
+        new_args = [LabelArg(index.data()) for index in self.ui.treeView_input_files.selectedIndexes()]
         self._push_update_cmd_line_args_command(self._jump.cmd_line_args + new_args)
 
     def set_link(self, jump):

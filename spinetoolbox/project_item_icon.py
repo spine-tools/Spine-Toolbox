@@ -36,6 +36,7 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     ITEM_EXTENT = 64
     FONT_SIZE_PIXELS = 12  # pixel size to prevent font scaling by system
+    DEFAULT_SELECTION_PEN_WIDTH = 1
 
     def __init__(self, toolbox, icon_file, icon_color):
         """
@@ -79,11 +80,14 @@ class ProjectItemIcon(QGraphicsPathItem):
             "right": ConnectorButton(toolbox, self, position="right"),
         }
         self._setup()
+        self.set_graphics_effects()
+        self._update_path()
+
+    def set_graphics_effects(self):
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setOffset(1)
         shadow_effect.setEnabled(False)
         self.setGraphicsEffect(shadow_effect)
-        self._update_path()
 
     def add_specification_icon(self, spec_icon_path):
         """Adds an SVG icon to bottom left corner of the item icon based on Tool Specification type.
@@ -114,7 +118,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         return self._rect
 
     def _update_path(self):
-        rounded = self._toolbox.qsettings().value("appSettings/roundedItems", defaultValue="false") == "true"
+        rounded = self._toolbox.qsettings.value("appSettings/roundedItems", defaultValue="false") == "true"
         self._do_update_path(rounded)
 
     def update_path(self, rounded):
@@ -129,12 +133,15 @@ class ProjectItemIcon(QGraphicsPathItem):
         for conn in self.connectors.values():
             conn.update_path(radius)
         # Selection halo
-        pen_width = 1
         margin = 1
         path = QPainterPath()
         path.addRoundedRect(self._rect.adjusted(-margin, -margin, margin, margin), radius + margin, radius + margin)
         self._selection_halo.setPath(path)
-        selection_pen = QPen(Qt.DashLine)
+        self.set_selection_halo_pen(self.DEFAULT_SELECTION_PEN_WIDTH)
+
+    def set_selection_halo_pen(self, pen_width):
+        """Sets the selected items dash line width."""
+        selection_pen = QPen(Qt.PenStyle.DashLine)
         selection_pen.setWidthF(pen_width)
         self._selection_halo.setPen(selection_pen)
 
@@ -157,7 +164,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         gradient.setColorAt(0, background_color.lighter(105))
         gradient.setColorAt(1, background_color.darker(105))
         brush = QBrush(gradient)
-        pen = QPen(QBrush(background_color.darker()), 1, Qt.SolidLine)
+        pen = QPen(QBrush(background_color.darker()), 1, Qt.PenStyle.SolidLine)
         self.setPen(pen)
         for conn in self.connectors.values():
             conn.setPen(pen)
@@ -177,12 +184,12 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.svg_item.setScale((rect_w - margin) / dim_max)
         self.svg_item.setPos(self.rect().center() - self.svg_item.sceneBoundingRect().center())
         self.svg_item.setGraphicsEffect(self.colorizer)
-        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
-        self.setCursor(Qt.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         # Set exclamation, execution_log, and rank icons position
         self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
         self.execution_icon.setPos(
@@ -317,7 +324,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         dirty_links = set(link for icon in icon_group for conn in icon.connectors.values() for link in conn.links)
         if not dirty_links:
             return
-        qsettings = self._toolbox.qsettings()
+        qsettings = self._toolbox.qsettings
         curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
         for link in dirty_links:
             link.update_geometry(curved_links)
@@ -328,7 +335,7 @@ class ProjectItemIcon(QGraphicsPathItem):
             icon.bumped_rects.clear()
         # pylint: disable=undefined-variable
         if (self.scenePos() - self.previous_pos).manhattanLength() > qApp.startDragDistance():
-            self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project()))
+            self._toolbox.undo_stack.push(MoveIconCommand(self, self._toolbox.project))
             event.ignore()
         super().mouseReleaseEvent(event)
 
@@ -347,7 +354,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         event.accept()
         self.scene().clearSelection()
         self.setSelected(True)
-        item = self._toolbox.project().get_item(self.name())
+        item = self._toolbox.project.get_item(self.name())
         self._toolbox.show_project_or_item_context_menu(event.screenPos(), item)
 
     def itemChange(self, change, value):
@@ -364,7 +371,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         Returns:
              Whatever super() does with the value parameter
         """
-        if change == QGraphicsItem.ItemScenePositionHasChanged:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
             self._moved_on_scene = True
             self._reposition_name_item()
             self.update_links_geometry()
@@ -394,7 +401,7 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def _handle_collisions(self):
         """Handles collisions with other items."""
-        prevent_overlapping = self._toolbox.qsettings().value("appSettings/preventOverlapping", defaultValue="false")
+        prevent_overlapping = self._toolbox.qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         if not self.scene() or not self._bumping or prevent_overlapping != "true":
             return
         restablished = self._restablish_bumped_items()
@@ -504,7 +511,7 @@ class ConnectorButton(QGraphicsPathItem):
         Returns:
             ProjectItem: project item
         """
-        return self._toolbox.project().get_item(self._parent.name())
+        return self._toolbox.project.get_item(self._parent.name())
 
     def mousePressEvent(self, event):
         """Connector button mouse press event.

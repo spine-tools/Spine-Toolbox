@@ -161,6 +161,18 @@ class SpineToolboxProject(MetaObject):
     def settings(self):
         return self._settings
 
+    @property
+    def connections(self):
+        return self._connections
+
+    @property
+    def jumps(self):
+        return self._jumps
+
+    @property
+    def app_settings(self):
+        return self._app_settings
+
     def has_items(self):
         """Returns True if project has project items.
 
@@ -702,10 +714,6 @@ class SpineToolboxProject(MetaObject):
         if any(i.short_name == short_name for i in self._project_items.values()):
             return ItemNameStatus.SHORT_NAME_EXISTS
         return ItemNameStatus.OK
-
-    @property
-    def connections(self):
-        return self._connections
 
     def find_connection(self, source_name, destination_name):
         """Searches for a connection between given items.
@@ -1458,10 +1466,6 @@ class SpineToolboxProject(MetaObject):
         for item_name in node_successors_:
             item = self._project_items[item_name]
             item.set_rank(ranks[item_name])
-
-    @property
-    def app_settings(self):
-        return self._app_settings
 
     @busy_effect
     def prepare_remote_execution(self):

@@ -67,7 +67,7 @@ class TestJumpPropertiesWidget(unittest.TestCase):
         self.assertEqual(properties_widget._ui.condition_script_edit.toPlainText(), "exit(5)")
 
     def _set_link(self, properties_widget):
-        project = self._toolbox.project()
+        project = self._toolbox.project
         item1 = DataConnection("dc 1", "", 0.0, 0.0, self._toolbox, project)
         item2 = DataConnection("dc 2", "", 50.0, 0.0, self._toolbox, project)
         project.add_item(item1)

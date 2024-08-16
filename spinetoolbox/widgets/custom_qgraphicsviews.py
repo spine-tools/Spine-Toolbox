@@ -19,6 +19,7 @@ from ..helpers import LinkType
 from ..link import JumpLink, Link
 from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
 from ..project_item_icon import ProjectItemIcon
+from ..ui_main_lite import ToolboxUILite
 from .custom_qgraphicsscene import DesignGraphicsScene
 
 
@@ -364,7 +365,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     @property
     def _qsettings(self):
-        return self._toolbox.qsettings()
+        return self._toolbox.qsettings
 
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
@@ -399,8 +400,15 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             item_name (str): project item's name
         """
-        project_item = self._toolbox.project().get_item(item_name)
+        project_item = self._toolbox.project.get_item(item_name)
         icon = project_item.get_icon()
+        if isinstance(self._toolbox, ToolboxUILite):
+            icon.set_selection_halo_pen(5)
+        else:
+            icon.set_selection_halo_pen(1)
+        if not icon.graphicsEffect():
+            # Restore effects when an icon is removed and added to another scene
+            icon.set_graphics_effects()
         self.scene().addItem(icon)
 
     @Slot(str)
@@ -410,7 +418,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             item_name (str): name of the icon to remove
         """
-        icon = self._toolbox.project().get_item(item_name).get_icon()
+        icon = self._toolbox.project.get_item(item_name).get_icon()
         scene = self.scene()
         scene.removeItem(icon)
         self._set_preferred_scene_rect()
@@ -425,7 +433,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         self._toolbox.undo_stack.push(
             AddConnectionCommand(
-                self._toolbox.project(),
+                self._toolbox.project,
                 src_connector.parent_name(),
                 src_connector.position,
                 dst_connector.parent_name(),
@@ -440,7 +448,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             connection (Connection): the connection to add
         """
-        project = self._toolbox.project()
+        project = self._toolbox.project
         source_connector = project.get_item(connection.source).get_icon().conn_button(connection.source_position)
         destination_connector = (
             project.get_item(connection.destination).get_icon().conn_button(connection.destination_position)
@@ -470,9 +478,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         jumps = [l.jump for l in links if isinstance(l, JumpLink)]
         self._toolbox.undo_stack.beginMacro("remove links")
         if connections:
-            self._toolbox.undo_stack.push(RemoveConnectionsCommand(self._toolbox.project(), connections))
+            self._toolbox.undo_stack.push(RemoveConnectionsCommand(self._toolbox.project, connections))
         if jumps:
-            self._toolbox.undo_stack.push(RemoveJumpsCommand(self._toolbox.project(), jumps))
+            self._toolbox.undo_stack.push(RemoveJumpsCommand(self._toolbox.project, jumps))
         self._toolbox.undo_stack.endMacro()
 
     @Slot(object)
@@ -519,7 +527,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         self._toolbox.undo_stack.push(
             AddJumpCommand(
-                self._toolbox.project(),
+                self._toolbox.project,
                 src_connector.parent_name(),
                 src_connector.position,
                 dst_connector.parent_name(),
@@ -534,7 +542,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             jump (Jump): jump to add
         """
-        project = self._toolbox.project()
+        project = self._toolbox.project
         source_connector = project.get_item(jump.source).get_icon().conn_button(jump.source_position)
         destination_connector = project.get_item(jump.destination).get_icon().conn_button(jump.destination_position)
         jump.jump_link = jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
@@ -572,7 +580,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             event (QContextMenuEvent): Event
         """
-        if not self._toolbox.project():
+        if not self._toolbox.project:
             return
         QGraphicsView.contextMenuEvent(self, event)  # Pass the event first to see if any item accepts it
         if not event.isAccepted():

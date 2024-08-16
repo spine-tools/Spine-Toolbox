@@ -43,7 +43,7 @@ class TestEngineClient(unittest.TestCase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self.toolbox = create_toolboxui_with_project(self._temp_dir.name)
-        self.project = self.toolbox.project()
+        self.project = self.toolbox.project
         self.service = EngineServer("tcp", 5601, ServerSecurityModel.NONE, "")
         self.context = zmq.Context()
 

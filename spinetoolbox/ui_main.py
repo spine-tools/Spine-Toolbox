@@ -12,28 +12,23 @@
 
 """Contains a class for the main window of Spine Toolbox."""
 import json
-import locale
 import logging
 import os
 import pathlib
-import sys
 from zipfile import ZipFile
 import numpy as np
-from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import (
     QAction,
     QColor,
     QCursor,
     QDesktopServices,
-    QGuiApplication,
     QIcon,
     QKeySequence,
-    QUndoStack,
     QWindow,
 )
 from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
     QDockWidget,
     QErrorMessage,
     QFileDialog,
@@ -43,10 +38,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
-    QScrollArea,
-    QStyleFactory,
     QToolButton,
-    QVBoxLayout,
     QWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
@@ -57,14 +49,12 @@ from .helpers import (
     busy_effect,
     color_from_index,
     create_dir,
-    ensure_window_is_on_screen,
     format_log_message,
     load_specification_from_file,
     load_specification_local_data,
     open_url,
     recursive_overwrite,
     same_path,
-    set_taskbar_icon,
     solve_connection_file,
     supported_img_formats,
     unique_name,
@@ -124,25 +114,19 @@ class ToolboxUI(QMainWindow):
     kernel_shutdown = Signal(object, str)
     persistent_console_requested = Signal(object, str, tuple, str)
 
-    def __init__(self):
+    def __init__(self, toolboxuibase):
         """Initializes application and main window."""
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
-        super().__init__(flags=Qt.Window)
-        self.set_app_style()
-        self.set_error_mode()
-        self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
-        self._update_qsettings()
-        locale.setlocale(locale.LC_NUMERIC, 'C')
+        super().__init__(flags=Qt.WindowType.Window)
+        self.toolboxuibase = toolboxuibase
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)  # Set up gui widgets from Qt Designer files
+        self.takeCentralWidget().deleteLater()
         self.label_item_name = QLabel()
         self._button_item_dir = QToolButton()
         self._properties_title = QWidget()
         self._setup_properties_title()
-        self.takeCentralWidget().deleteLater()
-        self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
@@ -151,7 +135,6 @@ class ToolboxUI(QMainWindow):
         # Set style sheets
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
-        self.undo_stack = QUndoStack(self)
         self._item_properties_uis = {}
         self.item_factories = {}  # maps item types to `ProjectItemFactory` objects
         self._item_specification_factories = {}  # maps item types to `ProjectItemSpecificationFactory` objects
@@ -166,7 +149,7 @@ class ToolboxUI(QMainWindow):
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         # DB manager
-        self.db_mngr = SpineDBManager(self._qsettings, self)
+        self.db_mngr = SpineDBManager(self.qsettings, self)
         # Widget and form references
         self.settings_form = None
         self.add_project_item_form = None
@@ -210,37 +193,51 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
-        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
-        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
-        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
-        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
+        self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingConnection], "Link properties")
+        self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingJump], "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
         self.refresh_toolbars()
         self.restore_dock_widgets()
-        self.restore_ui()
+        # self.restore_ui()
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
 
+    @property
+    def toolboxui_lite(self):
+        return self.toolboxuibase.toolboxui_lite
+
+    @property
+    def qsettings(self):
+        return self.toolboxuibase.qsettings
+
+    @property
+    def project(self):
+        return self._project
+
+    @property
+    def undo_stack(self):
+        return self.toolboxuibase.undo_stack
+
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
         if obj == self.ui.listView_console_executions:
-            if ev.type() == QEvent.Hide:
-                self._qsettings.setValue("mainWindow/consoleSplitterPosition", self.ui.splitter_console.saveState())
-            elif ev.type() == QEvent.Show:
-                splitter_state = self._qsettings.value("mainWindow/consoleSplitterPosition", defaultValue="false")
+            if ev.type() == QEvent.Type.Hide:
+                self.qsettings.setValue("mainWindow/consoleSplitterPosition", self.ui.splitter_console.saveState())
+            elif ev.type() == QEvent.Type.Show:
+                splitter_state = self.qsettings.value("mainWindow/consoleSplitterPosition", defaultValue="false")
                 if splitter_state != "false":
                     self.ui.splitter_console.restoreState(splitter_state)
         return super().eventFilter(obj, ev)
 
     def _setup_properties_title(self):
-        self.label_item_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.label_item_name.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         self.label_item_name.setMinimumHeight(28)
         self._button_item_dir.setIcon(QIcon(":icons/folder-open-regular.svg"))
         layout = QHBoxLayout(self._properties_title)
-        layout.addWidget(self.label_item_name)
         layout.addWidget(self._button_item_dir)
+        layout.addWidget(self.label_item_name)
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -282,6 +279,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRetrieve_project.triggered.connect(self.retrieve_project)
         self.ui.menuEdit.aboutToShow.connect(self.refresh_edit_action_states)
         self.ui.menuEdit.aboutToHide.connect(self.enable_edit_actions)
+        self.ui.actionSwitch_to_user_mode.triggered.connect(self.switch_to_user_mode)
         # noinspection PyArgumentList
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
@@ -301,8 +299,6 @@ class ToolboxUI(QMainWindow):
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)
-        # Undo stack
-        self.undo_stack.cleanChanged.connect(self.update_window_modified)
         # Views
         self.ui.listView_console_executions.selectionModel().currentChanged.connect(self._select_console_execution)
         self.ui.listView_console_executions.model().layoutChanged.connect(self._refresh_console_execution_list)
@@ -315,47 +311,18 @@ class ToolboxUI(QMainWindow):
         # Consoles
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
         self.kernel_shutdown.connect(self._handle_kernel_shutdown)
-        self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
+        self.persistent_console_requested.connect(
+            self._setup_persistent_console, Qt.ConnectionType.BlockingQueuedConnection
+        )
 
-    @staticmethod
-    def set_app_style():
-        """Sets app style on Windows to 'windowsvista' or to a default if not available."""
-        if sys.platform == "win32":
-            if "windowsvista" not in QStyleFactory.keys():
-                return
-            QApplication.setStyle("windowsvista")
-
-    @staticmethod
-    def set_error_mode():
-        """Sets Windows error mode to show all error dialog boxes from subprocesses.
-
-        See https://docs.microsoft.com/en-us/windows/win32/api/errhandlingapi/nf-errhandlingapi-seterrormode
-        for documentation.
-        """
-        if sys.platform == "win32":
-            import ctypes  # pylint: disable=import-outside-toplevel
-
-            ctypes.windll.kernel32.SetErrorMode(0)
-
-    def _update_qsettings(self):
-        """Updates obsolete settings."""
-        old_new = {
-            "appSettings/useEmbeddedJulia": "appSettings/useJuliaKernel",
-            "appSettings/useEmbeddedPython": "appSettings/usePythonKernel",
-        }
-        for old, new in old_new.items():
-            if not self._qsettings.contains(new) and self._qsettings.contains(old):
-                self._qsettings.setValue(new, self._qsettings.value(old))
-                self._qsettings.remove(old)
-        if self._qsettings.contains("appSettings/saveAtExit"):
-            try:
-                old_value = int(self._qsettings.value("appSettings/saveAtExit"))
-            except ValueError:
-                # Old value is already of correct form
-                pass
-            else:
-                new_value = {0: "prompt", 1: "prompt", 2: "automatic"}[old_value]
-                self._qsettings.setValue("appSettings/saveAtExit", new_value)
+    def switch_to_user_mode(self):
+        """Switches the main window into user mode."""
+        self.disconnect_project_signals()
+        self.ui.graphicsView.scene().clear_icons_and_links()
+        self.toolboxuibase.ui.stackedWidget.setCurrentWidget(self.toolboxui_lite)
+        self.toolboxuibase.reload_icons_and_links()
+        self.toolboxui_lite.connect_project_signals()
+        self.toolboxui_lite.ui.graphicsView.reset_zoom()
 
     def _update_execute_enabled(self):
         enabled_by_project = self._project.settings.enable_execute_all if self._project is not None else False
@@ -369,12 +336,6 @@ class ToolboxUI(QMainWindow):
         """Enables or disables execute selected action based on the number of selected items."""
         has_selection = bool(self._selected_item_names)
         self.ui.actionExecute_selection.setEnabled(has_selection and not self.execution_in_progress)
-
-    @Slot(bool)
-    def update_window_modified(self, clean):
-        """Updates window modified status and save actions depending on the state of the undo stack."""
-        self.setWindowModified(not clean)
-        self.ui.actionSave.setDisabled(clean)
 
     def parse_project_item_modules(self):
         """Collects data from project item factories."""
@@ -390,29 +351,17 @@ class ToolboxUI(QMainWindow):
         """
         verbose = new_work_dir is not None
         if not new_work_dir:
-            new_work_dir = self._qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
+            new_work_dir = self.qsettings.value("appSettings/workDir", defaultValue=DEFAULT_WORK_DIR)
             if not new_work_dir:
                 # It is possible "appSettings/workDir" is an empty string???
                 new_work_dir = DEFAULT_WORK_DIR
         try:
             create_dir(new_work_dir)
-            self._qsettings.setValue("appSettings/workDir", new_work_dir)
+            self.qsettings.setValue("appSettings/workDir", new_work_dir)
             if verbose:
                 self.msg.emit(f"Work directory is now <b>{new_work_dir}</b>")
         except OSError:
             self.msg_error.emit(f"[OSError] Creating work directory {new_work_dir} failed. Check permissions.")
-
-    def project(self):
-        """Returns current project or None if no project open.
-
-        Returns:
-            SpineToolboxProject: current project or None
-        """
-        return self._project
-
-    def qsettings(self):
-        """Returns application preferences object."""
-        return self._qsettings
 
     def item_specification_factories(self):
         """Returns project item specification factories.
@@ -421,13 +370,6 @@ class ToolboxUI(QMainWindow):
             list of ProjectItemSpecificationFactory: specification factories
         """
         return self._item_specification_factories
-
-    def update_window_title(self):
-        """Updates main window title."""
-        if not self._project:
-            self.setWindowTitle("Spine Toolbox")
-            return
-        self.setWindowTitle(f"{self._project.name} [{self._project.project_dir}][*] - Spine Toolbox")
 
     @Slot()
     def init_project(self, project_dir):
@@ -447,14 +389,14 @@ class ToolboxUI(QMainWindow):
         )
         welcome_msg = f"Welcome to Spine Toolbox! If you need help, please read the {getting_started_anchor} guide."
         if not project_dir:
-            open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
+            open_previous_project = int(self.qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
             if (
                 open_previous_project != Qt.CheckState.Checked.value
             ):  # 2: Qt.CheckState.Checked, ie. open_previous_project==True
                 self.msg.emit(welcome_msg)
                 return
             # Get previous project (directory)
-            project_dir = self._qsettings.value("appSettings/previousProject", defaultValue="")
+            project_dir = self.qsettings.value("appSettings/previousProject", defaultValue="")
             if not project_dir:
                 return
         if os.path.isfile(project_dir) and project_dir.endswith(".proj"):
@@ -473,7 +415,7 @@ class ToolboxUI(QMainWindow):
         Pops up a question box if selected directory is not empty or if it already contains
         a Spine Toolbox project. Initial project name is the directory name.
         """
-        recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+        recents = self.qsettings.value("appSettings/recentProjectStorages", defaultValue=None)
         home_dir = os.path.abspath(os.path.join(str(pathlib.Path.home())))
         if not recents:
             initial_path = home_dir
@@ -481,7 +423,7 @@ class ToolboxUI(QMainWindow):
             recents_lst = str(recents).split("\n")
             if not os.path.isdir(recents_lst[0]):
                 # Remove obsolete entry from recentProjectStorages
-                OpenProjectDialog.remove_directory_from_recents(recents_lst[0], self.qsettings())
+                OpenProjectDialog.remove_directory_from_recents(recents_lst[0], self.qsettings)
                 initial_path = home_dir
             else:
                 initial_path = recents_lst[0]
@@ -512,20 +454,20 @@ class ToolboxUI(QMainWindow):
             self,
             proj_dir,
             self._plugin_manager.plugin_specs,
-            app_settings=self._qsettings,
+            app_settings=self.qsettings,
             settings=ProjectSettings(),
             logger=self,
         )
         self.specification_model.connect_to_project(self._project)
         self._enable_project_actions()
         self.ui.actionSave.setDisabled(True)  # Disable in a clean project
-        self._connect_project_signals()
-        self.update_window_title()
-        self.ui.graphicsView.reset_zoom()
+        self.toolboxuibase.connect_project_signals()
+        self.toolboxuibase.update_window_title()
+        self.toolboxuibase.current_page.ui.graphicsView.reset_zoom()
         # Update recentProjects
         self.update_recent_projects()
         # Update recentProjectStorages
-        OpenProjectDialog.update_recents(os.path.abspath(os.path.join(proj_dir, os.path.pardir)), self.qsettings())
+        OpenProjectDialog.update_recents(os.path.abspath(os.path.join(proj_dir, os.path.pardir)), self.qsettings)
         self.save_project()
         self._plugin_manager.reload_plugins_with_local_data()
         self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
@@ -543,14 +485,14 @@ class ToolboxUI(QMainWindow):
             bool: True when opening the project succeeded, False otherwise
         """
         if not load_dir:
-            custom_open_dialog = self.qsettings().value("appSettings/customOpenProjectDialog", defaultValue="true")
+            custom_open_dialog = self.qsettings.value("appSettings/customOpenProjectDialog", defaultValue="true")
             if custom_open_dialog == "true":
                 dialog = OpenProjectDialog(self)
                 if not dialog.exec():
                     return False
                 load_dir = dialog.selection()
             else:
-                recents = self.qsettings().value("appSettings/recentProjectStorages", defaultValue=None)
+                recents = self.qsettings.value("appSettings/recentProjectStorages", defaultValue=None)
                 if not recents:
                     start_dir = os.path.abspath(os.path.join(str(pathlib.Path.home())))
                 else:
@@ -585,23 +527,24 @@ class ToolboxUI(QMainWindow):
             self,
             project_dir,
             self._plugin_manager.plugin_specs,
-            app_settings=self._qsettings,
+            app_settings=self.qsettings,
             settings=ProjectSettings(),
             logger=self,
         )
         self.specification_model.connect_to_project(self._project)
-        self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
-        self._connect_project_signals()
-        self.update_window_title()
+
+        self.toolboxuibase.connect_project_signals()
+        self.toolboxuibase.update_window_title()
         # Populate project model with project items
         success = self._project.load(self._item_specification_factories, self.item_factories)
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
         self._enable_project_actions()
+        self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
         self._plugin_manager.reload_plugins_with_local_data()
         # Reset zoom on Design View
-        self.ui.graphicsView.reset_zoom()
+        self.toolboxuibase.current_page.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
@@ -649,11 +592,11 @@ class ToolboxUI(QMainWindow):
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
-            if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
-                self.addToolBar(Qt.TopToolBarArea, toolbar)
+            if self.toolBarArea(toolbar) == Qt.ToolBarArea.NoToolBarArea:
+                self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
         self.execute_toolbar.set_color(QColor("silver"))
-        if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
-            self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+        if self.toolBarArea(self.execute_toolbar) == Qt.ToolBarArea.NoToolBarArea:
+            self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.execute_toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -669,7 +612,7 @@ class ToolboxUI(QMainWindow):
             return
         QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
         self.kernels_menu.clear()
-        conda_path = self.qsettings().value("appSettings/condaPath", defaultValue="")
+        conda_path = self.qsettings.value("appSettings/condaPath", defaultValue="")
         self.kernel_fetcher = KernelFetcher(conda_path)
         self.kernel_fetcher.kernel_found.connect(self.kernels_menu.add_kernel)
         self.kernel_fetcher.finished.connect(self.restore_override_cursor)
@@ -744,19 +687,19 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             return True
         if ask_confirmation and not self.undo_stack.isClean():
-            save_at_exit = self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
-            if save_at_exit == "prompt" and not self._confirm_project_close():
+            save_at_exit = self.qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
+            if save_at_exit == "prompt" and not self.toolboxuibase._confirm_project_close():
                 return False
             if save_at_exit == "automatic" and not self.save_project():
                 return False
         if not self.undo_critical_commands():
             return False
-        self.clear_ui()
+        self.toolboxuibase.clear_ui()
         self._project.tear_down()
         self._project = None
         self._disable_project_actions()
         self.undo_stack.clear()
-        self.update_window_title()
+        self.toolboxuibase.update_window_title()
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
         return True
@@ -780,22 +723,8 @@ class ToolboxUI(QMainWindow):
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
-            color = factory.icon_color()
-            icon = factory.icon()
-            properties_ui.set_color_and_icon(color, icon)
-            scroll_area = QScrollArea(self)
-            scroll_area.setWidget(properties_ui)
-            scroll_area.setWidgetResizable(True)
-            tab = self._make_properties_tab(scroll_area)
-            self.ui.tabWidget_item_properties.addTab(tab, item_type)
-
-    def _make_properties_tab(self, properties_ui):
-        tab = QWidget(self)
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(properties_ui)
-        return tab
+            properties_ui.set_color_and_icon(factory.icon_color(), factory.icon())
+            self.ui.tabWidget_item_properties.addTab(properties_ui, item_type)
 
     def add_project_items(self, items_dict):
         """Pushes an AddProjectItemsCommand to the undo stack.
@@ -814,41 +743,6 @@ class ToolboxUI(QMainWindow):
             bool: True if item supports specifications, False otherwise
         """
         return item_type in self._item_specification_factories
-
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        window_size = self._qsettings.value("mainWindow/windowSize", defaultValue="false")
-        window_pos = self._qsettings.value("mainWindow/windowPosition", defaultValue="false")
-        window_state = self._qsettings.value("mainWindow/windowState", defaultValue="false")
-        window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue="false")  # returns str
-        n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
-        # noinspection PyArgumentList
-        n_screens_now = len(QGuiApplication.screens())  # Number of screens now
-        original_size = self.size()
-        # Note: cannot use booleans since Windows saves them as strings to registry
-        if window_size != "false":
-            self.resize(window_size)  # Expects QSize
-        else:
-            self.resize(1024, 800)
-        if window_pos != "false":
-            self.move(window_pos)  # Expects QPoint
-        if window_state != "false":
-            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
-        if n_screens_now < int(n_screens):
-            # There are less screens available now than on previous application startup
-            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
-            self.move(0, 0)
-        ensure_window_is_on_screen(self, original_size)
-        if window_maximized == "true":
-            self.setWindowState(Qt.WindowMaximized)
-
-    def clear_ui(self):
-        """Clean UI to make room for a new or opened project."""
-        self.activate_no_selection_tab()  # Clear properties widget
-        self._restore_original_console()
-        self.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
-        self._shutdown_engine_kernels()
-        self._close_consoles()
 
     def undo_critical_commands(self):
         """Undoes critical commands in the undo stack.
@@ -996,7 +890,8 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == self.active_project_item.item_type():
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
+        # Insert properties title widget inside scrollArea
+        self.ui.tabWidget_item_properties.currentWidget().ui.scrollArea.widget().layout().insertWidget(0, self._properties_title)
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
         color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
@@ -1012,7 +907,8 @@ class ToolboxUI(QMainWindow):
             if self.ui.tabWidget_item_properties.tabText(i) == tab_text:
                 self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
+        # Insert properties title widget inside scrollArea
+        self.ui.tabWidget_item_properties.currentWidget().ui.scrollArea.widget().layout().insertWidget(0, self._properties_title)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
         color = self.link_properties_widgets[type(self.active_link_item)].fg_color
         ss = f"QWidget{{background: {color.name()};}}"
@@ -1054,7 +950,7 @@ class ToolboxUI(QMainWindow):
         # Load specification
         local_data = load_specification_local_data(self._project.config_dir)
         specification = load_specification_from_file(
-            def_file, local_data, self._item_specification_factories, self._qsettings, self
+            def_file, local_data, self._item_specification_factories, self.qsettings, self
         )
         if not specification:
             self.msg_error.emit("Failed to load specification.")
@@ -1119,7 +1015,7 @@ class ToolboxUI(QMainWindow):
         if self._project is None or not self._project.has_items():
             self.msg.emit("No project items to remove.")
             return
-        delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
+        delete_data = int(self.qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
         msg = "Remove all items from project? "
         if not delete_data:
             msg += "Item data directory will still be available in the project directory after this operation."
@@ -1218,7 +1114,7 @@ class ToolboxUI(QMainWindow):
             ind (QModelIndex): In the ProjectItemSpecificationModel
             global_pos (QPoint): Mouse position
         """
-        if not self.project():
+        if not self.project:
             return
         spec = self.specification_model.specification(ind.row())
         if not self.supports_specification(spec.item_type):
@@ -1372,8 +1268,8 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
         redo_action = self.undo_stack.createRedoAction(self)
-        undo_action.setShortcuts(QKeySequence.Undo)
-        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setShortcuts(QKeySequence.StandardKey.Undo)
+        redo_action.setShortcuts(QKeySequence.StandardKey.Redo)
         undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
         redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
         before = self.ui.menuEdit.actions()[0]
@@ -1391,7 +1287,7 @@ class ToolboxUI(QMainWindow):
     def update_datetime(self):
         """Returns a boolean, which determines whether
         date and time is prepended to every Event Log message."""
-        d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
+        d = int(self.qsettings.value("appSettings/dateTime", defaultValue="2"))
         return d != 0
 
     @Slot(str)
@@ -1630,7 +1526,9 @@ class ToolboxUI(QMainWindow):
         """Retrieves project from server."""
         msg = "Retrieve project by Job Id"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, msg, "Job Id?:", flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, msg, "Job Id?:", flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
+        )
         job_id = answer[0]
         if not job_id:  # Cancel button clicked
             return
@@ -1689,14 +1587,14 @@ class ToolboxUI(QMainWindow):
 
     def engine_server_settings(self):
         """Returns the user given Spine Engine Server settings in a tuple."""
-        host = self._qsettings.value("engineSettings/remoteHost", defaultValue="")  # Host name
-        port = self._qsettings.value("engineSettings/remotePort", defaultValue="49152")  # Host port
-        sec_model = self._qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")  # ZQM security model
+        host = self.qsettings.value("engineSettings/remoteHost", defaultValue="")  # Host name
+        port = self.qsettings.value("engineSettings/remotePort", defaultValue="49152")  # Host port
+        sec_model = self.qsettings.value("engineSettings/remoteSecurityModel", defaultValue="")  # ZQM security model
         security = ClientSecurityModel.NONE if not sec_model else ClientSecurityModel.STONEHOUSE
         sec_folder = (
             ""
             if security == ClientSecurityModel.NONE
-            else self._qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
+            else self.qsettings.value("engineSettings/remoteSecurityFolder", defaultValue="")
         )
         return host, port, sec_model, sec_folder
 
@@ -1745,7 +1643,7 @@ class ToolboxUI(QMainWindow):
         remove and rename actions in File-Edit menu, project tree view
         context menu, and in Design View context menus just before the
         menus are shown to user."""
-        if not self.project():
+        if not self.project:
             self.disable_edit_actions()
             return
         clipboard = QApplication.clipboard()
@@ -1753,12 +1651,12 @@ class ToolboxUI(QMainWindow):
         can_paste = not byte_data.isNull()
         selected_items = self.ui.graphicsView.scene().selectedItems()
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
-        has_items = self.project().n_items > 0
+        has_items = self.project.n_items > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
-        _methods = [getattr(self.project().get_item(x.name()), "copy_local_data") for x in selected_project_items]
+        _methods = [getattr(self.project.get_item(x.name()), "copy_local_data") for x in selected_project_items]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
-        for item in (self.project().get_item(x.name()) for x in selected_project_items):
+        for item in (self.project.get_item(x.name()) for x in selected_project_items):
             if item.item_type() == "Data Store" and item.has_listeners():
                 self.ui.actionRename_item.setEnabled(False)
                 self.ui.actionRename_item.setToolTip(
@@ -1797,104 +1695,13 @@ class ToolboxUI(QMainWindow):
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(True)
         self.ui.actionRemove.setEnabled(True)
 
-    def _tasks_before_exit(self):
-        """Returns a list of tasks to perform before exiting the application.
-
-        Possible tasks are:
-
-        - `"prompt exit"`: prompt user if quitting is really desired
-        - `"prompt save"`: prompt user if project should be saved before quitting
-        - `"save"`: save project before quitting
-
-        Returns:
-            list: Zero or more tasks in a list
-        """
-        save_at_exit = (
-            self._qsettings.value("appSettings/saveAtExit", defaultValue="prompt")
-            if self._project is not None and not self.undo_stack.isClean()
-            else None
-        )
-        if save_at_exit == "prompt":
-            return ["prompt save"]
-        show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
-        tasks = []
-        if show_confirm_exit == 2:
-            tasks.append("prompt exit")
-        if save_at_exit == "automatic":
-            tasks.append("save")
-        return tasks
-
-    def _perform_pre_exit_tasks(self):
-        """Prompts user to confirm quitting and saves the project if necessary.
-
-        Returns:
-            bool: True if exit should proceed, False if the process was cancelled
-        """
-        tasks = self._tasks_before_exit()
-        for task in tasks:
-            if task == "prompt exit":
-                if not self._confirm_exit():
-                    return False
-            elif task == "prompt save":
-                if not self._confirm_project_close():
-                    return False
-            elif task == "save":
-                self.save_project()
-        return True
-
-    def _confirm_exit(self):
-        """Confirms exiting from user.
-
-        Returns:
-            bool: True if exit should proceed, False if user cancelled
-        """
-        msg = QMessageBox(parent=self)
-        msg.setIcon(QMessageBox.Icon.Question)
-        msg.setWindowTitle("Confirm exit")
-        msg.setText("Are you sure you want to exit Spine Toolbox?")
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel)
-        msg.button(QMessageBox.StandardButton.Ok).setText("Exit")
-        chkbox = QCheckBox()
-        chkbox.setText("Do not ask me again")
-        msg.setCheckBox(chkbox)
-        answer = msg.exec()  # Show message box
-        if answer == QMessageBox.StandardButton.Ok:
-            # Update conf file according to checkbox status
-            if not chkbox.isChecked():
-                show_prompt = "2"  # 2 as in True
-            else:
-                show_prompt = "0"  # 0 as in False
-            self._qsettings.setValue("appSettings/showExitPrompt", show_prompt)
-            return True
-        return False
-
-    def _confirm_project_close(self):
-        """Confirms exit from user and saves the project if requested.
-
-        Returns:
-            bool: True if exiting should proceed, False if user cancelled
-        """
-        msg = QMessageBox(parent=self)
-        msg.setIcon(QMessageBox.Icon.Question)
-        msg.setWindowTitle("Confirm project close")
-        msg.setText("Current project has unsaved changes.")
-        msg.setStandardButtons(
-            QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel
-        )
-        answer = msg.exec()
-        if answer == QMessageBox.StandardButton.Cancel:
-            return False
-        if answer == QMessageBox.StandardButton.Save:
-            self.save_project()
-        return True
-
     def remove_path_from_recent_projects(self, p):
         """Removes entry that contains given path from the recent project files list in QSettings.
 
         Args:
             p (str): Full path to a project directory
         """
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
+        recents = self.qsettings.value("appSettings/recentProjects", defaultValue=None)
         if not recents:
             return
         recents = str(recents)
@@ -1906,8 +1713,8 @@ class ToolboxUI(QMainWindow):
                 break
         updated_recents = "\n".join(recents_list)
         # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
+        self.qsettings.setValue("appSettings/recentProjects", updated_recents)
+        self.qsettings.sync()  # Commit change immediately
 
     def clear_recent_projects(self):
         """Clears recent projects list in File->Open recent menu."""
@@ -1923,14 +1730,14 @@ class ToolboxUI(QMainWindow):
         answer = message_box.exec()
         if answer == QMessageBox.StandardButton.No:
             return
-        self._qsettings.remove("appSettings/recentProjects")
-        self._qsettings.remove("appSettings/recentProjectStorages")
-        self._qsettings.sync()
+        self.qsettings.remove("appSettings/recentProjects")
+        self.qsettings.remove("appSettings/recentProjectStorages")
+        self.qsettings.sync()
 
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers twenty most recent project paths."""
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + "<>" + self.project().project_dir
+        recents = self.qsettings.value("appSettings/recentProjects", defaultValue=None)
+        entry = self.project.name + "<>" + self.project.project_dir
         if not recents:
             updated_recents = entry
         else:
@@ -1949,45 +1756,8 @@ class ToolboxUI(QMainWindow):
                 recents_list.insert(0, recents_list.pop(index))
             updated_recents = "\n".join(recents_list)
         # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
-    def closeEvent(self, event):
-        """Method for handling application exit.
-
-        Args:
-             event (QCloseEvent): PySide6 event
-        """
-        # Show confirm exit message box
-        exit_confirmed = self._perform_pre_exit_tasks()
-        if not exit_confirmed:
-            event.ignore()
-            return
-        if not self.undo_critical_commands():
-            event.ignore()
-            return
-        # Save settings
-        if self._project is None:
-            self._qsettings.setValue("appSettings/previousProject", "")
-        else:
-            self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
-            self.update_recent_projects()
-        self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
-        self._qsettings.setValue("mainWindow/windowSize", self.size())
-        self._qsettings.setValue("mainWindow/windowPosition", self.pos())
-        self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
-        self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
-        # Save number of screens
-        # noinspection PyArgumentList
-        self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
-        self._shutdown_engine_kernels()
-        self._close_consoles()
-        if self._project is not None:
-            self._project.tear_down()
-        for item_type in self.item_factories:
-            for editor in self.get_all_multi_tab_spec_editors(item_type):
-                editor.close()
-        event.accept()
+        self.qsettings.setValue("appSettings/recentProjects", updated_recents)
+        self.qsettings.sync()  # Commit change immediately
 
     def _serialize_selected_items(self):
         """Serializes selected project items into a dictionary.
@@ -2003,7 +1773,7 @@ class ToolboxUI(QMainWindow):
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
             name = item_icon.name()
-            project_item = self.project().get_item(name)
+            project_item = self.project.get_item(name)
             item_dict = dict(project_item.item_dict())
             item_dict["original_data_dir"] = project_item.data_dir
             item_dict["original_db_url"] = item_dict.get("url")
@@ -2062,8 +1832,8 @@ class ToolboxUI(QMainWindow):
         final_items_dict = {}
         for name, item_dict in items_dict.items():
             item_dict["duplicate_files"] = duplicate_files
-            if name in self.project().all_item_names:
-                new_name = unique_name(name, self.project().all_item_names)
+            if name in self.project.all_item_names:
+                new_name = unique_name(name, self.project.all_item_names)
                 final_items_dict[new_name] = item_dict
             else:
                 final_items_dict[name] = item_dict
@@ -2117,7 +1887,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionRemove,
         ]
         for action in actions:
-            action.setShortcutContext(Qt.WidgetShortcut)
+            action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
             self.ui.graphicsView.addAction(action)
 
     @Slot(str, str)
@@ -2130,24 +1900,43 @@ class ToolboxUI(QMainWindow):
         """Shows an error message with the given title and message."""
         box = QErrorMessage(self)
         box.setWindowTitle(title)
-        box.setWindowModality(Qt.ApplicationModal)
+        box.setWindowModality(Qt.WindowModality.ApplicationModal)
         box.showMessage(message)
 
-    def _connect_project_signals(self):
+    def connect_project_signals(self):
         """Connects signals emitted by project."""
-        self._project.project_execution_about_to_start.connect(self._set_execution_in_progress)
-        self._project.project_execution_finished.connect(self._unset_execution_in_progress)
-        self._project.item_added.connect(self.set_icon_and_properties_ui)
-        self._project.item_added.connect(self.ui.graphicsView.add_icon)
-        self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
-        self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
-        self._project.connection_updated.connect(self.ui.graphicsView.do_update_link)
-        self._project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
-        self._project.jump_added.connect(self.ui.graphicsView.do_add_jump)
-        self._project.jump_about_to_be_removed.connect(self.ui.graphicsView.do_remove_jump)
-        self._project.jump_updated.connect(self.ui.graphicsView.do_update_jump)
-        self._project.specification_added.connect(self.repair_specification)
-        self._project.specification_saved.connect(self._log_specification_saved)
+        if not self.project:
+            return
+        self.project.project_execution_about_to_start.connect(self._set_execution_in_progress)
+        self.project.project_execution_finished.connect(self._unset_execution_in_progress)
+        self.project.item_added.connect(self.set_icon_and_properties_ui)
+        self.project.item_added.connect(self.ui.graphicsView.add_icon)
+        self.project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
+        self.project.connection_established.connect(self.ui.graphicsView.do_add_link)
+        self.project.connection_updated.connect(self.ui.graphicsView.do_update_link)
+        self.project.connection_about_to_be_removed.connect(self.ui.graphicsView.do_remove_link)
+        self.project.jump_added.connect(self.ui.graphicsView.do_add_jump)
+        self.project.jump_about_to_be_removed.connect(self.ui.graphicsView.do_remove_jump)
+        self.project.jump_updated.connect(self.ui.graphicsView.do_update_jump)
+        self.project.specification_added.connect(self.repair_specification)
+        self.project.specification_saved.connect(self._log_specification_saved)
+
+    def disconnect_project_signals(self):
+        """Disconnects signals emitted by project."""
+        if not self.project:
+            return
+        self.project.project_execution_about_to_start.disconnect()
+        self.project.project_execution_finished.disconnect()
+        self.project.item_added.disconnect()
+        self.project.item_about_to_be_removed.disconnect()
+        self.project.connection_established.disconnect()
+        self.project.connection_updated.disconnect()
+        self.project.connection_about_to_be_removed.disconnect()
+        self.project.jump_added.disconnect()
+        self.project.jump_about_to_be_removed.disconnect()
+        self.project.jump_updated.disconnect()
+        self.project.specification_added.disconnect()
+        self.project.specification_saved.disconnect()
 
     @Slot(bool)
     def _execute_project(self, _=False):
@@ -2245,7 +2034,7 @@ class ToolboxUI(QMainWindow):
                 has_connections = True
         if not project_item_names and not has_connections:
             return
-        delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
+        delete_data = int(self.qsettings.value("appSettings/deleteData", defaultValue="0")) != 0
         if project_item_names:
             msg = f"Remove item(s) <b>{', '.join(project_item_names)}</b> from project? "
             if not delete_data:
@@ -2277,7 +2066,11 @@ class ToolboxUI(QMainWindow):
         """Renames active project item."""
         item = self.active_project_item
         answer = QInputDialog.getText(
-            self, "Rename Item", "New name:", text=item.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            self,
+            "Rename Item",
+            "New name:",
+            text=item.name,
+            flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
         )
         if not answer[1]:
             return
@@ -2456,13 +2249,13 @@ class ToolboxUI(QMainWindow):
         c = self._jupyter_consoles.pop(conn_file, None)
         if not c:
             return
-        exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        exec_remotely = self.qsettings.value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
         engine_mngr.shutdown_kernel(conn_file)
 
     def _shutdown_engine_kernels(self):
         """Shuts down all persistent and Jupyter kernels managed by Spine Engine."""
-        exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        exec_remotely = self.qsettings.value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
         for key in self._persistent_consoles:
             engine_mngr.kill_persistent(key)
@@ -2510,3 +2303,14 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
+
+    def closeEvent(self, event):
+        """Method for handling application exit.
+
+        Args:
+             event (QCloseEvent): PySide6 event
+        """
+        if not self.toolboxuibase.close():
+            event.ignore()
+            return
+        event.accept()

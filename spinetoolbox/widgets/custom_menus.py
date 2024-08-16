@@ -110,11 +110,11 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
     def has_recents(self):
         """Returns True if recent projects available, False otherwise."""
-        return bool(self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None))
+        return bool(self._parent.qsettings.value("appSettings/recentProjects", defaultValue=None))
 
     def add_recent_projects(self):
         """Reads the previous project names and paths from QSettings. Adds them to the QMenu as QActions."""
-        recents = self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None)
+        recents = self._parent.qsettings.value("appSettings/recentProjects", defaultValue=None)
         if recents:
             recents = str(recents)
             recents_list = recents.split("\n")
@@ -152,8 +152,8 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             )
             return
         # Check if the same project is already open
-        if self._parent.project():
-            if p == self._parent.project().project_dir:
+        if self._parent.project:
+            if p == self._parent.project.project_dir:
                 self._parent.msg.emit("Project already open")
                 return
         if not self._parent.open_project(p):

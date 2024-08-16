@@ -28,7 +28,7 @@ from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
 from .headless import Status, headless_main
 from .helpers import pyside6_version_check
-from .ui_main import ToolboxUI
+from .ui_main_base import ToolboxUIBase
 from .version import __version__
 
 # Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
@@ -60,9 +60,9 @@ def main():
     status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     if status < 0:
         logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
-    window = ToolboxUI()
+    window = ToolboxUIBase()
     window.show()
-    QTimer.singleShot(0, lambda: window.init_project(args.project))
+    QTimer.singleShot(0, lambda: window.toolboxui.init_project(args.project))
     # Enter main event loop and wait until exit() is called
     return_code = app.exec()
     return return_code

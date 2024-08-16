@@ -58,7 +58,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.item_shadow = None
         self._last_selected_items = set()
         # Set background attributes
-        settings = toolbox.qsettings()
+        settings = toolbox.qsettings
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = settings.value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
@@ -90,7 +90,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
             if event.button() == Qt.MouseButton.RightButton:
                 return
             if (
-                self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
+                self._toolbox.qsettings.value("appSettings/dragToDrawLinks", defaultValue="false") == "false"
                 and event.button() == Qt.MouseButton.LeftButton
                 and self._finish_link()
             ):
@@ -106,7 +106,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 event.accept()
                 return
             if (
-                self._toolbox.qsettings().value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
+                self._toolbox.qsettings.value("appSettings/dragToDrawLinks", defaultValue="false") == "true"
                 and event.button() == Qt.MouseButton.LeftButton
                 and self._finish_link()
             ):
@@ -137,7 +137,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
     def keyPressEvent(self, event):
         """Puts link drawer to sleep if user presses ESC."""
         super().keyPressEvent(event)
-        if self.link_drawer is not None and event.key() == Qt.Key_Escape:
+        if self.link_drawer is not None and event.key() == Qt.Key.Key_Escape:
             self.link_drawer.sleep()
 
     def connect_signals(self):
@@ -163,7 +163,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 links.append(item)
         # Set active project item and active link in toolbox
         active_project_item = (
-            self._toolbox.project().get_item(project_item_icons[0].name()) if len(project_item_icons) == 1 else None
+            self._toolbox.project.get_item(project_item_icons[0].name()) if len(project_item_icons) == 1 else None
         )
         active_link_item = links[0].item if len(links) == 1 else None
         selected_item_names = {icon.name() for icon in project_item_icons}
@@ -211,7 +211,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         source = event.source()
         if not isinstance(source, ProjectItemDragMixin):
             return
-        if not self._toolbox.project():
+        if not self._toolbox.project:
             self._toolbox.msg.emit("Please open or create a project first")
             event.ignore()
             return

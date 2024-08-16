@@ -79,7 +79,7 @@ class TestToolboxUI(unittest.TestCase):
         """Check that specification model has no items after init and that
         signals are connected just once.
         """
-        self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
+        self.assertIsNone(self.toolbox.project)  # Make sure that there is no project open
         self.toolbox.init_specification_model()
         self.assertEqual(self.toolbox.specification_model.rowCount(), 0)
 
@@ -89,7 +89,7 @@ class TestToolboxUI(unittest.TestCase):
         """
         with TemporaryDirectory() as project_dir:
             create_project(self.toolbox, project_dir)
-            self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
+            self.assertIsInstance(self.toolbox.project, SpineToolboxProject)  # Check that a project is open
 
     def test_open_project(self):
         """Test that opening a project directory works.
@@ -100,30 +100,30 @@ class TestToolboxUI(unittest.TestCase):
         """
         project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
         self.assertTrue(os.path.exists(project_dir))
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
         ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ):
             self.toolbox.open_project(project_dir)
-        self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
+        self.assertIsInstance(self.toolbox.project, SpineToolboxProject)
         # Check that project contains four items
-        self.assertEqual(self.toolbox.project().n_items, 4)
+        self.assertEqual(self.toolbox.project.n_items, 4)
         # Check that design view has three links
         links = [item for item in self.toolbox.ui.graphicsView.scene().items() if isinstance(item, Link)]
         self.assertEqual(len(links), 3)
         # Check project items have the right links
-        item_a = self.toolbox.project().get_item("a")
+        item_a = self.toolbox.project.get_item("a")
         icon_a = item_a.get_icon()
         links_a = [link for conn in icon_a.connectors.values() for link in conn.links]
-        item_b = self.toolbox.project().get_item("b")
+        item_b = self.toolbox.project.get_item("b")
         icon_b = item_b.get_icon()
         links_b = [link for conn in icon_b.connectors.values() for link in conn.links]
-        item_c = self.toolbox.project().get_item("c")
+        item_c = self.toolbox.project.get_item("c")
         icon_c = item_c.get_icon()
         links_c = [link for conn in icon_c.connectors.values() for link in conn.links]
-        item_d = self.toolbox.project().get_item("d")
+        item_d = self.toolbox.project.get_item("d")
         icon_d = item_d.get_icon()
         links_d = [link for conn in icon_d.connectors.values() for link in conn.links]
         self.assertEqual(len(links_a), 1)
@@ -142,7 +142,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(len(links_d), 1)
         self.assertEqual(links_c[0], links_d[0])
         # Check that DAG graph is correct
-        dags = list(self.toolbox.project()._dag_iterator())
+        dags = list(self.toolbox.project._dag_iterator())
         self.assertTrue(len(dags) == 1)  # Only one graph
         g = dags[0]
         self.assertTrue(len(g.nodes()) == 4)  # graph has four nodes
@@ -158,15 +158,15 @@ class TestToolboxUI(unittest.TestCase):
     def test_init_project(self):
         project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
         self.assertTrue(os.path.exists(project_dir))
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.project.create_dir"
         ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ):
             self.toolbox.init_project(project_dir)
-        self.assertIsNotNone(self.toolbox.project())
-        self.assertEqual(self.toolbox.project().name, "Project Directory")
+        self.assertIsNotNone(self.toolbox.project)
+        self.assertEqual(self.toolbox.project.name, "Project Directory")
 
     def test_new_project(self):
         self._temp_dir = TemporaryDirectory()
@@ -175,8 +175,8 @@ class TestToolboxUI(unittest.TestCase):
         ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
-        self.assertIsNotNone(self.toolbox.project())
-        self.assertEqual(self.toolbox.project().name, os.path.basename(self._temp_dir.name))
+        self.assertIsNotNone(self.toolbox.project)
+        self.assertEqual(self.toolbox.project.name, os.path.basename(self._temp_dir.name))
 
     def test_save_project(self):
         self._temp_dir = TemporaryDirectory()
@@ -200,8 +200,8 @@ class TestToolboxUI(unittest.TestCase):
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ):
             self.toolbox.open_project(self._temp_dir.name)
-        self.assertIsNotNone(self.toolbox.project())
-        self.assertEqual(self.toolbox.project().get_item("DC").name, "DC")
+        self.assertIsNotNone(self.toolbox.project)
+        self.assertEqual(self.toolbox.project.get_item("DC").name, "DC")
 
     def test_prevent_project_closing_with_unsaved_changes(self):
         self._temp_dir = TemporaryDirectory()
@@ -213,7 +213,7 @@ class TestToolboxUI(unittest.TestCase):
         add_dc_trough_undo_stack(self.toolbox, "DC1")
         self.toolbox.save_project()
         self.assertTrue(self.toolbox.undo_stack.isClean())
-        self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
+        self.assertEqual(self.toolbox.project.get_item("DC1").name, "DC1")
         add_dc_trough_undo_stack(self.toolbox, "DC2")
         self.assertFalse(self.toolbox.undo_stack.isClean())
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
@@ -237,23 +237,23 @@ class TestToolboxUI(unittest.TestCase):
                 warning_msg.assert_called_with(
                     f"Cancelled opening project {self._temp_dir.name}. Current project has unsaved changes."
                 )
-        self.assertIsNotNone(self.toolbox.project())
-        self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
-        self.assertEqual(self.toolbox.project().get_item("DC2").name, "DC2")
+        self.assertIsNotNone(self.toolbox.project)
+        self.assertEqual(self.toolbox.project.get_item("DC1").name, "DC1")
+        self.assertEqual(self.toolbox.project.get_item("DC2").name, "DC2")
 
     def test_close_project(self):
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
         self.assertTrue(self.toolbox.close_project())
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
         with TemporaryDirectory() as project_dir:
             create_project(self.toolbox, project_dir)
-            self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
+            self.assertIsInstance(self.toolbox.project, SpineToolboxProject)
             with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
                 # Make sure that the test uses LocalSpineEngineManager
                 mock_qsettings_value.side_effect = qsettings_value_side_effect
                 self.assertTrue(self.toolbox.close_project())
                 mock_qsettings_value.assert_called()
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
 
     def test_show_project_or_item_context_menu(self):
         self._temp_dir = TemporaryDirectory()
@@ -265,14 +265,14 @@ class TestToolboxUI(unittest.TestCase):
             mock_set_value.assert_called()
             mock_sync.assert_called()
             mock_dir_getter.assert_called()
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
+        add_dc(self.toolbox.project, self.toolbox.item_factories, "DC")
         # mocking "PySide6.QtWidgets.QMenu.exec directly doesn't work because QMenu.exec is overloaded!
         with mock.patch("spinetoolbox.ui_main.QMenu") as mock_qmenu:
             mock_qmenu.side_effect = MockQMenu
             self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), None)
         with mock.patch("spinetoolbox.ui_main.QMenu") as mock_qmenu:
             mock_qmenu.side_effect = MockQMenu
-            dc = self.toolbox.project().get_item("DC")
+            dc = self.toolbox.project.get_item("DC")
             self.toolbox.show_project_or_item_context_menu(QPoint(0, 0), dc)
 
     def test_refresh_edit_action_states(self):
@@ -295,8 +295,8 @@ class TestToolboxUI(unittest.TestCase):
             mock_set_value.assert_called()
             mock_sync.assert_called()
             mock_dir_getter.assert_called()
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
-        dc = self.toolbox.project().get_item("DC")
+        add_dc(self.toolbox.project, self.toolbox.item_factories, "DC")
+        dc = self.toolbox.project.get_item("DC")
         icon = dc.get_icon()
         icon.setSelected(True)
         with mock.patch("spinetoolbox.ui_main.QApplication.clipboard") as mock_clipboard:
@@ -326,17 +326,17 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
-        n_items = self.toolbox.project().n_items
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1, x=0, y=0)
+        n_items = self.toolbox.project.n_items
         self.assertEqual(n_items, 1)  # Check that the project contains one item
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project().get_item(dc1)
+        dc1_item = self.toolbox.project.get_item(dc1)
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coords.
         # Simulate mouse click on Data Connection in Design View
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC1
-        self.assertEqual(self.toolbox.project().get_item(dc1), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project.get_item(dc1), self.toolbox.active_project_item)
 
     def test_selection_in_design_view_2(self):
         """Test item selection in Design View.
@@ -346,13 +346,13 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
-        n_items = self.toolbox.project().n_items
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc2, x=100, y=100)
+        n_items = self.toolbox.project.n_items
         self.assertEqual(n_items, 2)  # Check the number of project items
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project().get_item(dc1)
-        dc2_item = self.toolbox.project().get_item(dc2)
+        dc1_item = self.toolbox.project.get_item(dc1)
+        dc2_item = self.toolbox.project.get_item(dc2)
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
@@ -361,7 +361,7 @@ class TestToolboxUI(unittest.TestCase):
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc2_center_point)
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC2
-        self.assertEqual(self.toolbox.project().get_item(dc2), self.toolbox.active_project_item)
+        self.assertEqual(self.toolbox.project.get_item(dc2), self.toolbox.active_project_item)
 
     def test_selection_in_design_view_3(self):
         """Test item selection in Design View.
@@ -370,9 +370,9 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1, x=0, y=0)
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project().get_item(dc1)
+        dc1_item = self.toolbox.project.get_item(dc1)
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         # Mouse click on dc1
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
@@ -390,13 +390,13 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
-        n_items = self.toolbox.project().n_items
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc2, x=100, y=100)
+        n_items = self.toolbox.project.n_items
         self.assertEqual(n_items, 2)  # Check the number of project items
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project().get_item(dc1)
-        dc2_item = self.toolbox.project().get_item(dc2)
+        dc1_item = self.toolbox.project.get_item(dc1)
+        dc2_item = self.toolbox.project.get_item(dc2)
         # Add link between dc1 and dc2
         gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
@@ -424,13 +424,13 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
-        n_items = self.toolbox.project().n_items
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc2, x=100, y=100)
+        n_items = self.toolbox.project.n_items
         self.assertEqual(n_items, 2)  # Check the number of project items
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project().get_item(dc1)
-        dc2_item = self.toolbox.project().get_item(dc2)
+        dc1_item = self.toolbox.project.get_item(dc1)
+        dc2_item = self.toolbox.project.get_item(dc2)
         # Add link between dc1 and dc2
         gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
@@ -462,13 +462,13 @@ class TestToolboxUI(unittest.TestCase):
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
         dc2 = "DC2"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1, x=0, y=0)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc2, x=100, y=100)
-        n_items = self.toolbox.project().n_items
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1, x=0, y=0)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc2, x=100, y=100)
+        n_items = self.toolbox.project.n_items
         self.assertEqual(n_items, 2)  # Check the number of project items
         gv = self.toolbox.ui.graphicsView
-        dc1_item = self.toolbox.project().get_item(dc1)
-        dc2_item = self.toolbox.project().get_item(dc2)
+        dc1_item = self.toolbox.project.get_item(dc1)
+        dc2_item = self.toolbox.project.get_item(dc2)
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
@@ -521,12 +521,12 @@ class TestToolboxUI(unittest.TestCase):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
         dc1 = "DC1"
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, dc1)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, dc1)
         # Check the size of project item model
-        n_items = self.toolbox.project().n_items
+        n_items = self.toolbox.project.n_items
         self.assertEqual(n_items, 1)
         # Check DAG handler
-        dags = list(self.toolbox.project()._dag_iterator())
+        dags = list(self.toolbox.project._dag_iterator())
         self.assertEqual(1, len(dags))  # Number of DAGs (DiGraph objects) in project
         self.assertEqual(1, len(dags[0].nodes()))  # Number of nodes in the DiGraph
         # Check number of items in Design View
@@ -537,8 +537,8 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch.object(spinetoolbox.ui_main.QMessageBox, "exec") as mock_message_box_exec:
             mock_message_box_exec.return_value = QMessageBox.StandardButton.Ok
             self.toolbox.ui.actionRemove.trigger()
-        self.assertEqual(self.toolbox.project().n_items, 0)  # Check the number of project items
-        dags = list(self.toolbox.project()._dag_iterator())
+        self.assertEqual(self.toolbox.project.n_items, 0)  # Check the number of project items
+        dags = list(self.toolbox.project._dag_iterator())
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
         item_icons = self.toolbox.ui.graphicsView.scene().project_item_icons()
         self.assertEqual(len(item_icons), 0)
@@ -553,7 +553,7 @@ class TestToolboxUI(unittest.TestCase):
         specifications when this test starts and ends."""
         project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
         self.assertTrue(os.path.exists(project_dir))
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
         with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
             "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
         ):
@@ -588,7 +588,7 @@ class TestToolboxUI(unittest.TestCase):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
         This test is done without a project so MUT only calls QSettings.value() once.
         This can probably be simplified but at least it does not edit user's Settings, while doing the test."""
-        self.assertIsNone(self.toolbox.project())
+        self.assertIsNone(self.toolbox.project)
         with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
             tasks = self.toolbox._tasks_before_exit()
@@ -645,7 +645,7 @@ class TestToolboxUI(unittest.TestCase):
     def test_copy_project_item_to_clipboard(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "data_connection")
+        add_dc(self.toolbox.project, self.toolbox.item_factories, "data_connection")
         items_on_design_view = self.toolbox.ui.graphicsView.scene().project_item_icons()
         self.assertEqual(len(items_on_design_view), 1)
         items_on_design_view[0].setSelected(True)
@@ -662,36 +662,36 @@ class TestToolboxUI(unittest.TestCase):
     def test_paste_project_item_from_clipboard(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "data_connection")
-        self.assertEqual(self.toolbox.project().n_items, 1)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, "data_connection")
+        self.assertEqual(self.toolbox.project.n_items, 1)
         items_on_design_view = self.toolbox.ui.graphicsView.scene().project_item_icons()
         self.assertEqual(len(items_on_design_view), 1)
         items_on_design_view[0].setSelected(True)
         self.toolbox.ui.actionCopy.triggered.emit()
         self.toolbox.ui.actionPaste.triggered.emit()
-        self.assertEqual(self.toolbox.project().n_items, 2)
-        new_item = self.toolbox.project().get_item("data_connection (1)")
+        self.assertEqual(self.toolbox.project.n_items, 2)
+        new_item = self.toolbox.project.get_item("data_connection (1)")
         self.assertIsInstance(new_item, ProjectItem)
 
     def test_duplicate_project_item(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_dc(self.toolbox.project(), self.toolbox.item_factories, "data_connection")
-        self.assertEqual(self.toolbox.project().n_items, 1)
+        add_dc(self.toolbox.project, self.toolbox.item_factories, "data_connection")
+        self.assertEqual(self.toolbox.project.n_items, 1)
         items_on_design_view = self.toolbox.ui.graphicsView.scene().project_item_icons()
         self.assertEqual(len(items_on_design_view), 1)
         items_on_design_view[0].setSelected(True)
         with mock.patch("spinetoolbox.project_item.project_item.create_dir"):
             self.toolbox.ui.actionDuplicate.triggered.emit()
-        self.assertEqual(self.toolbox.project().n_items, 2)
-        new_item = self.toolbox.project().get_item("data_connection (1)")
+        self.assertEqual(self.toolbox.project.n_items, 2)
+        new_item = self.toolbox.project.get_item("data_connection (1)")
         self.assertIsInstance(new_item, ProjectItem)
 
     def test_persistent_console_requested(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_tool(self.toolbox.project(), self.toolbox.item_factories, "tool")
-        item = self.toolbox.project().get_item("tool")
+        add_tool(self.toolbox.project, self.toolbox.item_factories, "tool")
+        item = self.toolbox.project.get_item("tool")
         filter_id = ""
         key = ("too", "")
         language = "julia"
@@ -706,8 +706,8 @@ class TestToolboxUI(unittest.TestCase):
     def test_filtered_persistent_consoles_requested(self):
         self._temp_dir = TemporaryDirectory()
         create_project(self.toolbox, self._temp_dir.name)
-        add_tool(self.toolbox.project(), self.toolbox.item_factories, "tool")
-        item = self.toolbox.project().get_item("tool")
+        add_tool(self.toolbox.project, self.toolbox.item_factories, "tool")
+        item = self.toolbox.project.get_item("tool")
         language = "julia"
         self.toolbox.refresh_active_elements(item, None, {"tool"})
         self.toolbox._setup_persistent_console(item, "filter1", ("tool", "filter1"), language)
@@ -844,7 +844,7 @@ class TestToolboxUIWithTestSettings(unittest.TestCase):
     def test_legacy_settings_keys_get_renamed(self):
         settings_dict = {"appSettings/useEmbeddedJulia": "julia value", "appSettings/useEmbeddedPython": "python value"}
         with toolbox_with_settings(settings_dict) as toolbox:
-            settings = toolbox.qsettings()
+            settings = toolbox.qsettings
             self.assertTrue(settings.contains("appSettings/useJuliaKernel"))
             self.assertTrue(settings.contains("appSettings/usePythonKernel"))
             self.assertEqual(settings.value("appSettings/useJuliaKernel"), "julia value")
@@ -853,19 +853,19 @@ class TestToolboxUIWithTestSettings(unittest.TestCase):
     def test_legacy_saveAtExit_value_0_is_updated_to_prompt(self):
         settings_dict = {"appSettings/saveAtExit": "0"}
         with toolbox_with_settings(settings_dict) as toolbox:
-            settings = toolbox.qsettings()
+            settings = toolbox.qsettings
             self.assertEqual(settings.value("appSettings/saveAtExit"), "prompt")
 
     def test_legacy_saveAtExit_value_1_is_updated_to_prompt(self):
         settings_dict = {"appSettings/saveAtExit": "1"}
         with toolbox_with_settings(settings_dict) as toolbox:
-            settings = toolbox.qsettings()
+            settings = toolbox.qsettings
             self.assertEqual(settings.value("appSettings/saveAtExit"), "prompt")
 
     def test_legacy_saveAtExit_value_2_is_updated_to_automatic(self):
         settings_dict = {"appSettings/saveAtExit": "2"}
         with toolbox_with_settings(settings_dict) as toolbox:
-            settings = toolbox.qsettings()
+            settings = toolbox.qsettings
             self.assertEqual(settings.value("appSettings/saveAtExit"), "automatic")
 
 

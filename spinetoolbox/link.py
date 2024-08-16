@@ -107,7 +107,7 @@ class LinkBase(QGraphicsPathItem):
         """Updates geometry."""
         self.prepareGeometryChange()
         if curved_links is None:
-            qsettings = self._toolbox.qsettings()
+            qsettings = self._toolbox.qsettings
             curved_links = qsettings.value("appSettings/curvedLinks", defaultValue="false") == "true"
         self._guide_path = self._make_guide_path(curved_links)
         self._do_update_geometry()
@@ -436,7 +436,7 @@ class JumpOrLink(LinkBase):
 
     def run_execution_animation(self):
         """Runs execution animation."""
-        qsettings = self._toolbox.qsettings()
+        qsettings = self._toolbox.qsettings
         duration = int(qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         self._anim.setDuration(duration)
         self._anim.start()
@@ -494,7 +494,7 @@ class Link(JumpOrLink):
             active = self._connection.purge_before_writing
             self._icons.append(_TextIcon(self, self._icon_extent, self._PURGE, active=active))
         if self._connection.may_have_write_index():
-            sibling_conns = self._toolbox.project().incoming_connections(self.connection.destination)
+            sibling_conns = self._toolbox.project.incoming_connections(self.connection.destination)
             active = any(l.write_index > 1 for l in sibling_conns)
             self._icons.append(_TextIcon(self, self._icon_extent, str(self._connection.write_index), active=active))
         notifications = self._connection.notifications()
@@ -562,7 +562,7 @@ class JumpLink(JumpOrLink):
         Returns:
             list of str: issues regarding the jump
         """
-        return self._toolbox.project().jump_issues(self.jump)
+        return self._toolbox.project.jump_issues(self.jump)
 
     def update_icons(self):
         while self._icons:

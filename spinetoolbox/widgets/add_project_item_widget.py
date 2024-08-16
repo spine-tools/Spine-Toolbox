@@ -57,7 +57,7 @@ class AddProjectItemWidget(QWidget):
         else:
             prefix = class_.item_type()
             self.ui.comboBox_specification.hide()
-        existing_item_names = toolbox.project().all_item_names
+        existing_item_names = toolbox.project.all_item_names
         self.name = unique_name(prefix, existing_item_names) if prefix in existing_item_names else prefix
         self.description = ""
         self.connect_signals()
@@ -94,7 +94,7 @@ class AddProjectItemWidget(QWidget):
         if not self.name:
             self.statusbar.showMessage("Name missing", 3000)
             return
-        name_status = self._toolbox.project().validate_project_item_name(self.name)
+        name_status = self._toolbox.project.validate_project_item_name(self.name)
         if name_status == ItemNameStatus.INVALID:
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return

@@ -101,7 +101,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if checked == self._connection.is_filter_online_by_default:
             return
         self._toolbox.undo_stack.push(
-            SetConnectionDefaultFilterOnlineStatus(self._toolbox.project(), self._connection, checked)
+            SetConnectionDefaultFilterOnlineStatus(self._toolbox.project, self._connection, checked)
         )
 
     def set_auto_check_filters_state(self, checked):
@@ -134,7 +134,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
             if self._connection.require_filter_online(filter_type) != action.isChecked():
                 options = {"require_" + filter_type: checked}
                 self._toolbox.undo_stack.push(
-                    SetConnectionOptionsCommand(self._toolbox.project(), self._connection, options)
+                    SetConnectionOptionsCommand(self._toolbox.project, self._connection, options)
                 )
                 return
 
@@ -143,7 +143,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if self._connection.write_index == value:
             return
         options = {"write_index": value}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project(), self._connection, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project, self._connection, options))
 
     @Slot(int)
     def _handle_use_datapackage_state_changed(self, _state):
@@ -151,7 +151,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if self._connection.use_datapackage == checked:
             return
         options = {"use_datapackage": checked}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project(), self._connection, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project, self._connection, options))
 
     @Slot(int)
     def _handle_use_memory_db_state_changed(self, _state):
@@ -159,7 +159,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if self._connection.use_memory_db == checked:
             return
         options = {"use_memory_db": checked}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project(), self._connection, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project, self._connection, options))
 
     @Slot(int)
     def _handle_purge_before_writing_state_changed(self, _state):
@@ -167,7 +167,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if self._connection.purge_before_writing == checked:
             return
         options = {"purge_before_writing": checked}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project(), self._connection, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project, self._connection, options))
 
     @Slot(bool)
     def _open_purge_settings_dialog(self, _=False):
@@ -188,7 +188,7 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         if self._connection.purge_settings == purge_settings:
             return
         options = {"purge_settings": purge_settings}
-        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project(), self._connection, options))
+        self._toolbox.undo_stack.push(SetConnectionOptionsCommand(self._toolbox.project, self._connection, options))
 
     @Slot()
     def _clean_up_purge_settings_dialog(self):
@@ -213,10 +213,10 @@ class LinkPropertiesWidget(PropertiesWidgetBase):
         self._toolbox.undo_stack.beginMacro(f"enable {label}s on connection {self._connection.link.name}")
         for disabled_type in disabled_filter_types:
             self._toolbox.undo_stack.push(
-                SetConnectionFilterTypeEnabled(self._toolbox.project(), self._connection, disabled_type, False)
+                SetConnectionFilterTypeEnabled(self._toolbox.project, self._connection, disabled_type, False)
             )
         self._toolbox.undo_stack.push(
-            SetConnectionFilterTypeEnabled(self._toolbox.project(), self._connection, enabled_filter_type, True)
+            SetConnectionFilterTypeEnabled(self._toolbox.project, self._connection, enabled_filter_type, True)
         )
         self._toolbox.undo_stack.endMacro()
 

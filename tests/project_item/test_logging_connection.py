@@ -79,7 +79,7 @@ class TestLoggingConnectionWithToolbox(unittest.TestCase):
         self._temp_dir.cleanup()
 
     def test_removing_connection_that_has_None_db_map_does_not_raise(self):
-        project = self._toolbox.project()
+        project = self._toolbox.project
         self._toolbox.item_factories[_DataStore.item_type()] = _DataStoreFactory
         self._toolbox._item_properties_uis[_DataStore.item_type()] = _DataStoreFactory.make_properties_widget(self)
         store_1 = _DataStore("Store 1", project)
@@ -107,7 +107,7 @@ class TestLoggingConnectionWithDatabaseManager(unittest.TestCase):
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
         self._toolbox.item_factories[_DataStore.item_type()] = _DataStoreFactory
         self._toolbox._item_properties_uis[_DataStore.item_type()] = _DataStoreFactory.make_properties_widget(self)
-        project = self._toolbox.project()
+        project = self._toolbox.project
         store_1 = _DataStore("Store 1", project)
         project.add_item(store_1)
         store_2 = _DataStore("Store 2", project)

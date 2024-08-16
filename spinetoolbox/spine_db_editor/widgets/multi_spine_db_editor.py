@@ -95,7 +95,7 @@ class MultiSpineDBEditor(MultiTabWindow):
         toolbox = self.db_mngr.parent()
         if toolbox is None:
             return
-        data_stores = toolbox.project().get_items_by_type("Data Store")
+        data_stores = toolbox.project.get_items_by_type("Data Store")
         ds_urls = {ds.name: ds.sql_alchemy_url() for ds in data_stores}
         is_url_validated = {ds.name: ds.is_url_validated() for ds in data_stores}
         if not ds_urls:

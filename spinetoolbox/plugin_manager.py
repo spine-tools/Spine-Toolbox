@@ -100,17 +100,17 @@ class PluginManager:
 
     def load_installed_plugins(self):
         """Loads installed plugins and adds their specifications to toolbars."""
-        project = self._toolbox.project()
+        project = self._toolbox.project
         local_data = load_specification_local_data(project.config_dir) if project else {}
-        for plugin_dir in plugins_dirs(self._toolbox.qsettings()):
+        for plugin_dir in plugins_dirs(self._toolbox.qsettings):
             self.load_individual_plugin(plugin_dir, local_data)
 
     def reload_plugins_with_local_data(self):
         """Reloads plugins that have project specific local data."""
-        project = self._toolbox.project()
+        project = self._toolbox.project
         local_data = load_specification_local_data(project.config_dir) if project else {}
         specification_factories = self._toolbox.item_specification_factories()
-        app_settings = self._toolbox.qsettings()
+        app_settings = self._toolbox.qsettings
         for plugin_name, specifications in self._plugin_specs.items():
             for specification in specifications:
                 if not specification.may_have_local_data():
@@ -135,7 +135,7 @@ class PluginManager:
             plugin_dict,
             specification_local_data,
             self._toolbox.item_specification_factories(),
-            self._toolbox.qsettings(),
+            self._toolbox.qsettings,
             self._toolbox,
         )
         if plugin_specs is None:
@@ -143,9 +143,9 @@ class PluginManager:
         name = plugin_dict["name"]
         self._installed_plugins[name] = plugin_dict
         disabled_plugins = set()
-        if self._toolbox.project() is not None:
+        if self._toolbox.project is not None:
             for spec in itertools.chain(*plugin_specs.values()):
-                spec_id = self._toolbox.project().add_specification(spec, save_to_disk=False)
+                spec_id = self._toolbox.project.add_specification(spec, save_to_disk=False)
                 if spec_id is None:
                     disabled_plugins.add(spec.name)
         self._plugin_specs.update(plugin_specs)
@@ -205,7 +205,7 @@ class PluginManager:
         worker.start(_download_plugin, plugin, plugin_local_dir)
 
     def _load_installed_plugin(self, plugin_local_dir):
-        project = self._toolbox.project()
+        project = self._toolbox.project
         local_data = load_specification_local_data(project.config_dir) if project is not None else {}
         self.load_individual_plugin(plugin_local_dir, local_data)
         self._toolbox.refresh_toolbars()
@@ -242,10 +242,10 @@ class PluginManager:
         plugin_dict = self._installed_plugins.pop(plugin_name)
         plugin_dir = plugin_dict["plugin_dir"]
         self._plugin_specs.pop(plugin_name, None)
-        if self._toolbox.project() is not None:
-            for spec in list(self._toolbox.project().specifications()):
+        if self._toolbox.project is not None:
+            for spec in list(self._toolbox.project.specifications()):
                 if spec.plugin == plugin_name:
-                    self._toolbox.project().remove_specification(spec.name)
+                    self._toolbox.project.remove_specification(spec.name)
         # Remove plugin dir
         shutil.rmtree(plugin_dir)
         self._plugin_toolbars.pop(plugin_name).deleteLater()

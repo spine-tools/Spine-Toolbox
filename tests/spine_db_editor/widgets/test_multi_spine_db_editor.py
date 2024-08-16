@@ -37,6 +37,6 @@ class TestMultiSpineDBEditor(DBEditorTestBase):
         multieditor.make_context_menu(0)
         multieditor.show_plus_button_context_menu(QPoint(0, 0))
         # Add fake data stores to project
-        self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
+        self._toolbox.project._project_items = {"a": FakeDataStore("a")}
         multieditor.show_plus_button_context_menu(QPoint(0, 0))
         multieditor._take_tab(0)

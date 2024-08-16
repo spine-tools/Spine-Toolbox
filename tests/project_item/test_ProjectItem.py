@@ -29,7 +29,7 @@ class TestProjectItem(unittest.TestCase):
         """Set up."""
         self._temp_dir = TemporaryDirectory()
         self.toolbox = create_toolboxui_with_project(self._temp_dir.name)
-        self.project = self.toolbox.project()
+        self.project = self.toolbox.project
 
     def tearDown(self):
         """Clean up."""

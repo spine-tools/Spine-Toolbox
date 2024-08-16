@@ -57,7 +57,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_client = None
         self._connection_file = None
         self._execution_manager = None
-        exec_remotely = self._toolbox.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        exec_remotely = self._toolbox.qsettings.value("engineSettings/remoteExecutionEnabled", "false") == "true"
         self._engine_manager = make_engine_manager(exec_remotely)
         self._q = multiprocessing.Queue()
         self._logger = QueueLogger(self._q, "DetachedPythonConsole", None, {})
@@ -81,7 +81,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         environment = ""
         if conda:
             environment = "conda"
-        conda_exe = self._toolbox.qsettings().value("appSettings/condaPath", defaultValue="")
+        conda_exe = self._toolbox.qsettings.value("appSettings/condaPath", defaultValue="")
         conda_exe = resolve_conda_executable(conda_exe)
         self._execution_manager = KernelExecutionManager(
             self._logger,

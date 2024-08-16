@@ -166,7 +166,7 @@ class ToolBar(QToolBar):
         return button
 
     def _icon_from_factory(self, factory):
-        colored = self._toolbox.qsettings().value("appSettings/colorToolbarIcons", defaultValue="false") == "true"
+        colored = self._toolbox.qsettings.value("appSettings/colorToolbarIcons", defaultValue="false") == "true"
         icon_file_name = factory.icon()
         icon_color = factory.icon_color().darker(120)
         return ColoredIcon(icon_file_name, icon_color, self.iconSize(), colored=colored)
@@ -318,7 +318,7 @@ class ItemsToolBar(ToolBar):
         self.add_project_item_buttons()
 
     def add_project_item_buttons(self):
-        icon_ordering = self._toolbox.qsettings().value("appSettings/toolbarIconOrdering", defaultValue="")
+        icon_ordering = self._toolbox.qsettings.value("appSettings/toolbarIconOrdering", defaultValue="")
         ordered_item_types = icon_ordering.split(self._SEPARATOR)
         for item_type in ordered_item_types:
             factory = self._toolbox.item_factories.get(item_type)
