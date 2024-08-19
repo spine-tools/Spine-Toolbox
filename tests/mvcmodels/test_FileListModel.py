@@ -12,18 +12,12 @@
 
 """Unit tests for FileListModel class."""
 from pathlib import Path
-import unittest
-from PySide6.QtWidgets import QApplication
 from spine_engine.project_item.project_item_resource import file_resource, file_resource_in_pack
 from spinetoolbox.mvcmodels.file_list_models import FileListModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestFileListModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestFileListModel(TestCaseWithQApplication):
     def setUp(self):
         self._model = FileListModel()
 

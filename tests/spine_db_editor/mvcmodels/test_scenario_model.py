@@ -22,14 +22,10 @@ from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager, model_data_to_dict
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, model_data_to_dict
 
 
-class _TestBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+class _TestBase(TestCaseWithQApplication):
 
     @staticmethod
     def _fetch_recursively(model):

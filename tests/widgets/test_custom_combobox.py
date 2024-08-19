@@ -14,16 +14,12 @@
 OpenProjectDialogComboBox is tested in test_open_project_dialog module."""
 import unittest
 from PySide6.QtGui import QPaintEvent
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.custom_combobox import CustomQComboBox, ElidedCombobox
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestCustomComboBoxes(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestCustomComboBoxes(TestCaseWithQApplication):
     def test_custom_combobox(self):
         parent = QWidget()
         cb = CustomQComboBox(parent)

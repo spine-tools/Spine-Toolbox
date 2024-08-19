@@ -11,33 +11,17 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
-import logging
 import os.path
-import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
-class TestSpineDBEditorWithDBMapping(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """Overridden method. Runs once before all tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format="%(asctime)s %(levelname)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-
+class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
         self._temp_dir = TemporaryDirectory()

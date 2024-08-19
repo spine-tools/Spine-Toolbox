@@ -11,20 +11,14 @@
 ######################################################################################################################
 
 """Base classes and helpers for database editor tests."""
-import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
-class DBEditorTestBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class DBEditorTestBase(TestCaseWithQApplication):
     db_codename = "database"
 
     def setUp(self):

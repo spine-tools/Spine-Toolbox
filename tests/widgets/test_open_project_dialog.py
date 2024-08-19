@@ -12,19 +12,14 @@
 
 """Unit tests for the ``open_project_dialog`` module."""
 from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
 from PySide6.QtCore import QPoint
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.open_project_dialog import OpenProjectDialog
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestOpenProjectDialog(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestOpenProjectDialog(TestCaseWithQApplication):
     def test_open_project_dialog(self):
         widget = QWidget()
         opw = OpenProjectDialog(DummyToolbox(widget))

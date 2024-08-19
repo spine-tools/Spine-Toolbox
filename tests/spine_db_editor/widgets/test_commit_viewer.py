@@ -19,15 +19,10 @@ from spinetoolbox.fetch_parent import FlexibleFetchParent
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_editor.widgets.commit_viewer import CommitViewer, QSplitter
 from spinetoolbox.spine_db_manager import SpineDBManager
-from tests.mock_helpers import q_object
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
-class TestCommitViewer(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestCommitViewer(TestCaseWithQApplication):
     def setUp(self):
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
             mock_settings = mock.Mock()

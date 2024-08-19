@@ -19,16 +19,10 @@ from spine_items.data_connection.data_connection import DataConnection
 from spinetoolbox.link import JumpLink
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.widgets.jump_properties_widget import JumpPropertiesWidget
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 
-class TestJumpPropertiesWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """Runs once before any tests in this class."""
-        if not QApplication.instance():
-            QApplication()
-
+class TestJumpPropertiesWidget(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)

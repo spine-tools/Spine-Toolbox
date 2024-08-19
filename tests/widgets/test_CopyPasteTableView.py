@@ -13,11 +13,11 @@
 """Unit tests for CopyPasteTableView class."""
 import locale
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from PySide6.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
-from tests.mock_helpers import mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
 class _MockModel(QAbstractTableModel):
@@ -86,12 +86,7 @@ def str_with_comma_decimal_separator(x):
     return string.replace(".", ",")
 
 
-class TestCopyPasteTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestCopyPasteTableView(TestCaseWithQApplication):
     @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
     def test_copy_single_number(self):
         view = CopyPasteTableView()

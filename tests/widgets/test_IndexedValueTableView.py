@@ -18,15 +18,10 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView, system_lc_numeric
-from tests.mock_helpers import mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
-class TestIndexedValueTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestIndexedValueTableView(TestCaseWithQApplication):
     def setUp(self):
         self._table_view = IndexedValueTableView(parent=None)
         series = TimeSeriesVariableResolution(

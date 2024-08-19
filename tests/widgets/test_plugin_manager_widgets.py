@@ -11,17 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for the classes in ``plugin_manager_widgets`` module."""
-import unittest
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestPluginManagerWidgets(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestPluginManagerWidgets(TestCaseWithQApplication):
     def test_install_plugins_dialog(self):
         parent = QWidget()
         d = InstallPluginDialog(parent)

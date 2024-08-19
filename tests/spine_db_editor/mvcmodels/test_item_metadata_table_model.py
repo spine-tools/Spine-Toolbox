@@ -34,15 +34,10 @@ from spinedb_api import (
 )
 from spinetoolbox.spine_db_editor.mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
-from tests.mock_helpers import TestSpineDBManager, fetch_model
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model
 
 
-class TestItemMetadataTableModelWithExistingData(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestItemMetadataTableModelWithExistingData(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"

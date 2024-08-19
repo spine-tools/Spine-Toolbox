@@ -42,6 +42,7 @@ from spinetoolbox.plotting import (
     reduce_indexes,
     turn_node_to_xy_data,
 )
+from tests.mock_helpers import TestCaseWithQApplication
 from tests.spine_db_editor.helpers import TestBase
 
 
@@ -762,12 +763,7 @@ class TestCombineDataWithSameIndexes(unittest.TestCase):
         self.assertEqual(combined, expected)
 
 
-class TestPlotData(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestPlotData(TestCaseWithQApplication):
     def test_nothing_to_plot(self):
         plot_widget = plot_data([])
         self.assertEqual(len(plot_widget.canvas.axes.lines), 0)

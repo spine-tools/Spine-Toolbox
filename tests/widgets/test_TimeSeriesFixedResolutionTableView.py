@@ -16,19 +16,13 @@ import os
 import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
-from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
 from spinetoolbox.mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from spinetoolbox.widgets.custom_qtableview import TimeSeriesFixedResolutionTableView
-from tests.mock_helpers import mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
-class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def setUp(self):
         self._table_view = TimeSeriesFixedResolutionTableView(parent=None)
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [1.1, 2.2, 3.3, 4.4], False, False)

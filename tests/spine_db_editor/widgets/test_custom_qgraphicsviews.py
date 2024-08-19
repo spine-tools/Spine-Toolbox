@@ -13,17 +13,13 @@
 """Unit tests for ``custom_qgraphicsviews`` module."""
 import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestGraphOptionsOverlay(unittest.TestCase):
+class TestGraphOptionsOverlay(TestCaseWithQApplication):
     """Tests for the class GraphOptionsOverlay"""
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         self._parent = QWidget()

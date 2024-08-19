@@ -12,12 +12,26 @@
 
 """Classes and functions that can be shared among unit test modules."""
 from contextlib import contextmanager
+import unittest
 from unittest import mock
-from PySide6.QtCore import QMimeData, QModelIndex, Qt
+from PySide6.QtCore import QMimeData, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.ui_main import ToolboxUI
+
+
+class TestCaseWithQApplication(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+        cls._q_app = QApplication.instance()
+
+    @classmethod
+    def tearDownClass(cls):
+        QTimer.singleShot(0, lambda: cls._q_app.quit())
+        cls._q_app.exec()
 
 
 def create_toolboxui():

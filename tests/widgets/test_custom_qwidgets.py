@@ -14,17 +14,13 @@
 from contextlib import contextmanager
 import unittest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QDialogButtonBox
+from PySide6.QtWidgets import QDialogButtonBox
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import DataToValueFilterCheckboxListModel
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget, SelectDatabaseItemsDialog
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestFilterWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestFilterWidget(TestCaseWithQApplication):
     def setUp(self):
         self._widget = FilterWidget(None, DataToValueFilterCheckboxListModel, None, str)
         self._widget.set_filter_list(["ei", "bii", "cii"])
@@ -93,12 +89,7 @@ class TestFilterWidget(unittest.TestCase):
         self.assertTrue(self._widget._filter_empty_state)
 
 
-class TestSelectDatabaseItemsDialog(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSelectDatabaseItemsDialog(TestCaseWithQApplication):
     def test_ok_button_text(self):
         text = "Do it!"
         with _select_database_items_dialog(None, text) as dialog:

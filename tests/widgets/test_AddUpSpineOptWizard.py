@@ -11,20 +11,14 @@
 ######################################################################################################################
 
 """Unit tests for the Add/Update SpineOpt Wizard."""
-import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication, QWizard
+from PySide6.QtWidgets import QWizard
 from spinetoolbox.widgets.add_up_spine_opt_wizard import REQUIRED_SPINE_OPT_VERSION, AddUpSpineOptWizard
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import MockInstantQProcess, clean_up_toolbox, create_toolboxui
+from tests.mock_helpers import MockInstantQProcess, TestCaseWithQApplication, clean_up_toolbox, create_toolboxui
 
 
-class TestAddUpSpineOptWizard(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestAddUpSpineOptWizard(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()

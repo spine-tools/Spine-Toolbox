@@ -14,16 +14,11 @@
 import unittest
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.utils import two_column_as_csv
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTwoColumnAsCsv(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTwoColumnAsCsv(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QObject()
 

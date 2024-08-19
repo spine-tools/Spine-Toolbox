@@ -20,15 +20,10 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.mvcmodels.map_model import MapModel
 from spinetoolbox.widgets.custom_qtableview import MapTableView, system_lc_numeric
-from tests.mock_helpers import mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
-class TestMapTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestMapTableView(TestCaseWithQApplication):
     def test_copy_without_selection_returns_false(self):
         table_view = MapTableView()
         model = MapModel(Map([], [], float), table_view)

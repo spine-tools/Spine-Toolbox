@@ -15,17 +15,12 @@ import unittest
 import numpy as np
 import numpy.testing
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
 from spinedb_api import TimePattern
 from spinetoolbox.mvcmodels.time_pattern_model import TimePatternModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimePatternModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimePatternModel(TestCaseWithQApplication):
     def test_flags(self):
         model = TimePatternModel(TimePattern(["", ""], [0.0, 0.0]), None)
         for row in range(len(model.value)):

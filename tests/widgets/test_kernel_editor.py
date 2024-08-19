@@ -16,12 +16,12 @@ import pathlib
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
-import unittest
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from spine_engine.utils.helpers import resolve_default_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelEditorBase
+from tests.mock_helpers import TestCaseWithQApplication
 
 
 class MockSettingsWidget(QWidget):
@@ -30,12 +30,7 @@ class MockSettingsWidget(QWidget):
         self.qsettings = MagicMock()
 
 
-class TestKernelEditorBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestKernelEditorBase(TestCaseWithQApplication):
     def setUp(self):
         self._settings_widget = MockSettingsWidget()
 

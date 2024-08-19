@@ -20,15 +20,10 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
 from spinetoolbox.widgets.custom_qtableview import ArrayTableView, system_lc_numeric
-from tests.mock_helpers import mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
-class TestArrayTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestArrayTableView(TestCaseWithQApplication):
     def setUp(self):
         self._table_view = ArrayTableView()
         self._model = ArrayModel(self._table_view)

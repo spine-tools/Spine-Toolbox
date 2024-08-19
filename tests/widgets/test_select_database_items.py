@@ -12,18 +12,13 @@
 """Unit tests for ``select_database_items`` module."""
 from contextlib import contextmanager
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinedb_api import DatabaseMapping
 from spinedb_api.mapped_items import item_factory
 from spinetoolbox.widgets.select_database_items import SelectDatabaseItems
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestSelectDatabaseItems(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSelectDatabaseItems(TestCaseWithQApplication):
     ITEMS = tuple(type_ for type_ in DatabaseMapping.item_types() if not item_factory(type_).is_protected)
 
     def test_restore_previously_checked_states(self):

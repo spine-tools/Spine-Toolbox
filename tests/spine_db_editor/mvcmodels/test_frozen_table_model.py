@@ -16,16 +16,11 @@ from unittest.mock import MagicMock
 from PySide6.QtCore import QModelIndex, QObject, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
-from tests.mock_helpers import TestSpineDBManager, model_data_to_table
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, model_data_to_table
 
 
-class TestFrozenTableModel(unittest.TestCase):
+class TestFrozenTableModel(TestCaseWithQApplication):
     db_codename = "frozen_table_model_test_db"
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         app_settings = MagicMock()

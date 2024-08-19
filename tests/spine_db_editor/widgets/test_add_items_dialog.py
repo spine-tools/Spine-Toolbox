@@ -14,7 +14,7 @@
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QMimeData, QModelIndex
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
     AddEntitiesDialog,
@@ -23,16 +23,11 @@ from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_manager import SpineDBManager
-from tests.mock_helpers import mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 
 
-class TestAddItemsDialog(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestAddItemsDialog(TestCaseWithQApplication):
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of SpineDBEditor class."""
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
