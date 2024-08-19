@@ -12,36 +12,24 @@
 
 """Unit tests for ProjectUpgrader class."""
 import json
-import logging
 import os
 from pathlib import Path
-import sys
 from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 from spinetoolbox.config import LATEST_PROJECT_VERSION
 from spinetoolbox.project_settings import ProjectSettings
 from spinetoolbox.project_upgrader import ProjectUpgrader
 from spinetoolbox.resources_icons_rc import qInitResources
-from .mock_helpers import clean_up_toolbox, create_toolboxui
+from .mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui
 
 
-class TestProjectUpgrader(unittest.TestCase):
+class TestProjectUpgrader(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        super().setUpClass()
         qInitResources()
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format="%(asctime)s %(levelname)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
 
     def setUp(self):
         """Makes an instance of ToolboxUI class without a project."""

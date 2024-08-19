@@ -17,15 +17,11 @@ from PySide6.QtCore import QAbstractAnimation
 from PySide6.QtGui import QUndoCommand, QUndoStack
 from PySide6.QtWidgets import QApplication, QWidget
 from spinetoolbox.widgets.notification import ChangeNotifier, Notification
+from tests.mock_helpers import TestCaseWithQApplication
 
 
 @unittest.skip("Test hangs on Windows when running all tests.")
-class TestChangeNotifier(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestChangeNotifier(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QWidget()
         self._undo_stack = QUndoStack(self._parent)

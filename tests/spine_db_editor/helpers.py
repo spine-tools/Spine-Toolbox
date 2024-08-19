@@ -11,21 +11,19 @@
 ######################################################################################################################
 
 """Helper utilities for Database editor's tests."""
-import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
-class TestBase(unittest.TestCase):
+class TestBase(TestCaseWithQApplication):
     """Base class for Database editor's table and tree view tests."""
 
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.db_codename = cls.__name__ + "_db"
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         self._common_setup("sqlite://", create=True)

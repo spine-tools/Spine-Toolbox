@@ -12,33 +12,32 @@
 
 """Unit tests for the AboutWidget class."""
 import unittest
-from PySide6.QtWidgets import QApplication, QWidget
+from unittest import mock
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.about_widget import AboutWidget
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestAboutWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestAboutWidget(TestCaseWithQApplication):
     def setUp(self):
-        self._original_clip = QApplication.clipboard().text()
+        self._parent_widget = QWidget()
 
     def tearDown(self):
-        QApplication.clipboard().setText(self._original_clip)
+        self._parent_widget.deleteLater()
 
     def test_constructor(self):
-        w = AboutWidget(QWidget())
+        w = AboutWidget(self._parent_widget)
         self.assertIsInstance(w, AboutWidget)
         w.close()
 
     def test_copy_to_clipboard(self):
-        w = AboutWidget(QWidget())
-        w.copy_to_clipboard(True)
-        cb_contents = QApplication.clipboard().text()
-        # Note: clipboard tests may break if other apps (eg. VMs in Virtual Box) reserve the system clipboard
-        self.assertTrue("Python" in cb_contents)
+        w = AboutWidget(self._parent_widget)
+        with mock.patch("spinetoolbox.widgets.about_widget.QApplication.clipboard") as clipboard_getter:
+            mock_clipboard = mock.MagicMock()
+            clipboard_getter.return_value = mock_clipboard
+            w.copy_to_clipboard(True)
+            clipboard_getter.assert_called_once_with()
+            mock_clipboard.setText.assert_called_once()
         w.close()
 
 

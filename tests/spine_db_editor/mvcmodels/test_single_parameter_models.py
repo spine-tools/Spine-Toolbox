@@ -13,7 +13,6 @@
 """Unit tests for the ``single_parameter_model`` module."""
 import unittest
 from unittest.mock import MagicMock
-from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
@@ -24,7 +23,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
     SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
-from tests.mock_helpers import TestSpineDBManager, fetch_model, q_object
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model, q_object
 
 ENTITY_PARAMETER_VALUE_HEADER = [
     "entity_class_name",
@@ -46,7 +45,7 @@ class TestSingleParameterValueModel(SingleParameterValueModel):
         super().__init__(CompoundParameterValueModel(None, db_mngr), db_map, entity_class_id, committed)
 
 
-class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
+class TestEmptySingleParameterDefinitionModel(TestCaseWithQApplication):
     HEADER = [
         "entity_class_name",
         "parameter_name",
@@ -57,11 +56,6 @@ class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
         "database",
     ]
 
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
     def test_rowCount_is_zero(self):
         with q_object(TestSingleParameterDefinitionModel(None, None, 1, False)) as model:
             self.assertEqual(model.rowCount(), 0)
@@ -71,7 +65,7 @@ class TestEmptySingleParameterDefinitionModel(unittest.TestCase):
             self.assertEqual(model.columnCount(), len(self.HEADER))
 
 
-class TestSingleObjectParameterValueModel(unittest.TestCase):
+class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
     OBJECT_PARAMETER_VALUE_HEADER = [
         "entity_class_name",
         "object_name",
@@ -80,11 +74,6 @@ class TestSingleObjectParameterValueModel(unittest.TestCase):
         "value",
         "database",
     ]
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         self._db_mngr = TestSpineDBManager(None, None)

@@ -20,16 +20,11 @@ from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_model import AlternativeModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager, model_data_to_dict
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, model_data_to_dict
 
 
-class TestAlternativeModel(unittest.TestCase):
+class TestAlternativeModel(TestCaseWithQApplication):
     db_codename = "alternative_model_test_db"
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         app_settings = MagicMock()
@@ -125,13 +120,8 @@ class TestAlternativeModel(unittest.TestCase):
         self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): ["Base"]})
 
 
-class TestAlternativeModelWithTwoDatabases(unittest.TestCase):
+class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
     db_codename = "alternative_model_with_two_databases_test_db"
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         self._temp_dir = TemporaryDirectory()

@@ -13,7 +13,6 @@
 """Unit tests for the JupyterConsoleWidget."""
 import queue
 from threading import Event
-import unittest
 from unittest import mock
 from unittest.mock import MagicMock
 from jupyter_client.kernelspec import NATIVE_KERNEL_NAME
@@ -25,7 +24,7 @@ from qtconsole.kernel_mixins import QtKernelClientMixin
 from traitlets import Type
 from spine_engine.execution_managers.kernel_execution_manager import _kernel_manager_factory
 from spinetoolbox.widgets.jupyter_console_widget import JupyterConsoleWidget
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui
 
 
 class CustomQtZMQSocketChannel(QtZMQSocketChannel):
@@ -68,12 +67,7 @@ class CustomQtKernelClient(QtKernelClientMixin, CustomThreadedKernelClient):
     hb_channel_class = Type(QtHBChannel)
 
 
-class TestJupyterConsoleWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestJupyterConsoleWidget(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()

@@ -13,10 +13,11 @@
 """Unit tests for CopyPasteTableView class."""
 import locale
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from PySide6.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
 class _MockModel(QAbstractTableModel):
@@ -85,12 +86,7 @@ def str_with_comma_decimal_separator(x):
     return string.replace(".", ",")
 
 
-class TestCopyPasteTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestCopyPasteTableView(TestCaseWithQApplication):
     @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
     def test_copy_single_number(self):
         view = CopyPasteTableView()
@@ -162,10 +158,7 @@ class TestCopyPasteTableView(unittest.TestCase):
         view.setModel(model)
         selection_model = view.selectionModel()
         selection_model.setCurrentIndex(model.index(0, 2), QItemSelectionModel.ClearAndSelect)
-        mock_clipboard = MagicMock()
-        mock_clipboard.text.return_value = "3.14"
-        with patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("3.14", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(view.paste())
         data = model.index(0, 2).data()
         self.assertIsInstance(data, float)
@@ -179,10 +172,7 @@ class TestCopyPasteTableView(unittest.TestCase):
         selection = QItemSelection(model.index(1, 0), model.index(1, 2))
         selection_model = view.selectionModel()
         selection_model.select(selection, QItemSelectionModel.ClearAndSelect)
-        mock_clipboard = MagicMock()
-        mock_clipboard.text.return_value = "G\tH\t3.14"
-        with patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("G\tH\t3.14", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(view.paste())
         data = [model.index(1, column).data() for column in range(3)]
         self.assertEqual(data, ["G", "H", 3.14])

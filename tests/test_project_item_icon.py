@@ -17,22 +17,23 @@ import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QEvent, QPoint, Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QGraphicsSceneMouseEvent
+from PySide6.QtWidgets import QGraphicsSceneMouseEvent
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api import DatabaseMapping, import_scenarios
 from spinetoolbox.link import Link
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
-from tests.mock_helpers import TestSpineDBManager, add_view, clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import (
+    TestCaseWithQApplication,
+    TestSpineDBManager,
+    add_view,
+    clean_up_toolbox,
+    create_toolboxui_with_project,
+)
 
 
-class TestProjectItemIcon(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestProjectItemIcon(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
@@ -100,12 +101,7 @@ class TestProjectItemIcon(unittest.TestCase):
             mock_show_menu.assert_called()
 
 
-class TestExclamationIcon(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestExclamationIcon(TestCaseWithQApplication):
     def test_no_notifications(self):
         with patch("PySide6.QtWidgets.QToolTip.showText") as show_text:
             icon = ExclamationIcon(None)
@@ -128,12 +124,7 @@ class TestExclamationIcon(unittest.TestCase):
             show_text.assert_not_called()
 
 
-class TestRankIcon(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestRankIcon(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
@@ -150,12 +141,7 @@ class TestRankIcon(unittest.TestCase):
         self.assertEqual(icon.toPlainText(), "23")
 
 
-class TestLink(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestLink(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)

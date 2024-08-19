@@ -13,17 +13,11 @@
 """Contains unit tests for the SpineDBEditorBase class."""
 import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditorBase
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
-class TestSpineDBEditorBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSpineDBEditorBase(TestCaseWithQApplication):
     def setUp(self):
         """Builds a SpineDBEditorBase object."""
         with mock.patch("spinetoolbox.spine_db_worker.DatabaseMapping") as mock_DiffDBMapping, mock.patch(

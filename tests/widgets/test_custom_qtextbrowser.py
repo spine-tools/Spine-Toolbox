@@ -11,29 +11,13 @@
 ######################################################################################################################
 
 """Unit tests for the custom QTextBrowser."""
-import logging
-import sys
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestCustomQTextBrowser(unittest.TestCase):
+class TestCustomQTextBrowser(TestCaseWithQApplication):
     """Tests the CustomQTextBrowser class."""
-
-    @classmethod
-    def setUpClass(cls):
-        """Overridden method. Runs once before all tests in this class."""
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format="%(asctime)s %(levelname)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
 
     def test_default_max_blocks(self):
         browser = CustomQTextBrowser(None)

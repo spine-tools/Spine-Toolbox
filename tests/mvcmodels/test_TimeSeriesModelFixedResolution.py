@@ -17,17 +17,12 @@ from dateutil.relativedelta import relativedelta
 import numpy as np
 import numpy.testing
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
 from spinetoolbox.mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimeSeriesModelFixedStep(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
     def test_data(self):
         model = TimeSeriesModelFixedResolution(
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False), None

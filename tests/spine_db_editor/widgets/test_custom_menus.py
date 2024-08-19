@@ -13,17 +13,13 @@
 """Unit tests for ``custom_menus`` module."""
 import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.custom_menus import TabularViewCodenameFilterMenu
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTabularViewCodenameFilterMenu(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QWidget()
 

@@ -11,17 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for the classes in ``custom_qlineedits`` module."""
-import unittest
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.custom_qlineedits import PropertyQLineEdit
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestPropertyQLineEdit(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestPropertyQLineEdit(TestCaseWithQApplication):
     def test_property_qlineedit(self):
         parent = QWidget()
         le = PropertyQLineEdit(parent)

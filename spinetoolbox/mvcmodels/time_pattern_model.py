@@ -21,6 +21,14 @@ from .indexed_value_table_model import IndexedValueTableModel
 class TimePatternModel(IndexedValueTableModel):
     """A model for time pattern type parameter values."""
 
+    def column_type(self, column):
+        """Returns column's type."""
+        if column == 0:
+            return str
+        if column == 1:
+            return float
+        raise RuntimeError("Logic error: column out of bounds")
+
     def flags(self, index):
         """Returns flags at index."""
         if not index.isValid():

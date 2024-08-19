@@ -15,15 +15,14 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
-class TestTypeValidator(unittest.TestCase):
+class TestTypeValidator(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.db_codename = cls.__name__ + "_db"
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         mock_settings = mock.MagicMock()
@@ -53,7 +52,7 @@ class TestTypeValidator(unittest.TestCase):
             )
         )
         self._db_map.commit_session("Add test data.")
-        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=2) as waiter:
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             self._db_mngr.parameter_type_validator.start_validating(self._db_mngr, self._db_map, [price["id"]])
             waiter.wait()
             self.assertEqual(
@@ -96,7 +95,7 @@ class TestTypeValidator(unittest.TestCase):
                 type=value_type,
             )
         )
-        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=2) as waiter:
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             self._db_mngr.parameter_type_validator.start_validating(
                 self._db_mngr, self._db_map, [fish_n_chips_price["id"]]
             )

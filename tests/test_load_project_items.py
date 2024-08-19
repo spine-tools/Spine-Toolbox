@@ -12,17 +12,12 @@
 
 """Unit tests for the :module:`spinetoolbox.load_project_items` module."""
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.load_project_items import load_project_items
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestLoadProjectItems(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestLoadProjectItems(TestCaseWithQApplication):
     def test_load_project_items_finds_all_default_items(self):
         factories = load_project_items("spine_items")
         for factory in factories.values():

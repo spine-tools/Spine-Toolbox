@@ -33,6 +33,10 @@ class IndexedValueTableModel(QAbstractTableModel):
         """Returns the number of columns which is two."""
         return 2
 
+    def column_type(self, column):
+        """Returns column's type."""
+        raise NotImplementedError()
+
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         """Returns the data at index for given role."""
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):

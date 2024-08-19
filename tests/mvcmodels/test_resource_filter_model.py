@@ -15,19 +15,14 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QUndoStack
-from PySide6.QtWidgets import QApplication
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
 from spinetoolbox.mvcmodels.resource_filter_model import ResourceFilterModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestResourceFilterModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestResourceFilterModel(TestCaseWithQApplication):
     def setUp(self):
         self._logger = mock.MagicMock()
         self._parent = QObject()

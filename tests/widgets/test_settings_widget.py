@@ -13,17 +13,11 @@
 import os
 import unittest
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import create_toolboxui
+from tests.mock_helpers import TestCaseWithQApplication, create_toolboxui
 
 
-class TestSettingsWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSettingsWidget(TestCaseWithQApplication):
     def setUp(self):
         self._settings = QSettings("SpineProject", "Spine Toolbox tests")
         self._toolbox = create_toolboxui()

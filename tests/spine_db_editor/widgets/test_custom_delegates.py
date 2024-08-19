@@ -14,17 +14,12 @@
 import unittest
 from unittest import mock
 from PySide6.QtGui import QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.custom_delegates import BooleanValueDelegate
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestBooleanValueDelegate(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestBooleanValueDelegate(TestCaseWithQApplication):
     def setUp(self):
         self._model = QStandardItemModel()
         row = [QStandardItem()]

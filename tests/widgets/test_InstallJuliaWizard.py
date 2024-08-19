@@ -11,20 +11,14 @@
 ######################################################################################################################
 
 """Unit tests for the KernelEditor widget."""
-import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication, QWizard
+from PySide6.QtWidgets import QWizard
 from spinetoolbox.widgets.install_julia_wizard import InstallJuliaWizard
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import MockInstantQProcess, clean_up_toolbox, create_toolboxui
+from tests.mock_helpers import MockInstantQProcess, TestCaseWithQApplication, clean_up_toolbox, create_toolboxui
 
 
-class TestInstallJuliaWizard(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestInstallJuliaWizard(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()

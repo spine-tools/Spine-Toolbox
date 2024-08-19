@@ -11,19 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for the KernelFetcher class."""
-import unittest
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.kernel_fetcher import KernelFetcher
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestKernelFetcher(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """Runs once before any tests in this class."""
-        if not QApplication.instance():
-            QApplication()
-
+class TestKernelFetcher(TestCaseWithQApplication):
     def test_fetch_all_kernels(self):
         waiter = SignalWaiter()
         kf = KernelFetcher(conda_path="")  # 1: All kernels

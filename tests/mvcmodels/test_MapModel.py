@@ -16,9 +16,10 @@ from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QColor
 from spinedb_api import Array, DateTime, Duration, Map, ParameterValueFormatError
 from spinetoolbox.mvcmodels.map_model import MapModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestMapModel(unittest.TestCase):
+class TestMapModel(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QObject()
 
