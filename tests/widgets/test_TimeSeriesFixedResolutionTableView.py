@@ -40,7 +40,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
             mock_clipboard = mock.MagicMock()
             clipboard_getter.return_value = mock_clipboard
             self._table_view.copy()
-            mock_clipboard.setText.assert_called_once_with("2019-08-08T15:00:00" + os.linesep)
+            mock_clipboard.setText.assert_called_once_with("2019-08-08T15:00:00\r\n")
 
     def test_paste_single_value(self):
         selection_model = self._table_view.selectionModel()
