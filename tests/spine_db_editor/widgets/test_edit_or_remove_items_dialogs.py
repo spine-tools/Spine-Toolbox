@@ -16,6 +16,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import EditEntityClassesDialog
+from tests.mock_helpers import mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 
 
@@ -34,16 +35,10 @@ class TestEditEntityClassesDialog(TestBase):
         dialog.table_view.selectionModel().setCurrentIndex(
             model.index(0, 3), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = "true"
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("true", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(dialog.table_view.paste())
         self._assert_table_contents(model, [["Object", None, None, True, "TestEditEntityClassesDialog_db"]])
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = "GIBBERISH"
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("GIBBERISH", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(dialog.table_view.paste())
         self._assert_table_contents(model, [["Object", None, None, False, "TestEditEntityClassesDialog_db"]])
 
@@ -61,16 +56,10 @@ class TestEditEntityClassesDialog(TestBase):
         dialog.table_view.selectionModel().setCurrentIndex(
             model.index(0, 2), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = "23"
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("23", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(dialog.table_view.paste())
         self._assert_table_contents(model, [["Object", None, 23, True, "TestEditEntityClassesDialog_db"]])
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = "GIBBERISH"
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("GIBBERISH", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(dialog.table_view.paste())
         self._assert_table_contents(model, [["Object", None, None, True, "TestEditEntityClassesDialog_db"]])
 

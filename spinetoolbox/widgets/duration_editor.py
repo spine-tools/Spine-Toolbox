@@ -28,7 +28,7 @@ class DurationEditor(QWidget):
         from ..ui.duration_editor import Ui_DurationEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self._value = Duration(duration_to_relativedelta("1 hour"))
+        self._value = Duration()
         self._ui = Ui_DurationEditor()
         self._ui.setupUi(self)
         self._ui.duration_edit.editingFinished.connect(self._change_duration)

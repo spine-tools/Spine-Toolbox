@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from spinetoolbox.widgets.custom_qtableview import IndexedValueTableView, system_lc_numeric
+from tests.mock_helpers import mock_clipboard_patch
 
 
 class TestIndexedValueTableView(unittest.TestCase):
@@ -27,7 +28,6 @@ class TestIndexedValueTableView(unittest.TestCase):
             QApplication()
 
     def setUp(self):
-        QApplication.clipboard().clear()
         self._table_view = IndexedValueTableView(parent=None)
         series = TimeSeriesVariableResolution(
             ["2019-08-08T12:00", "2019-08-08T13:00", "2019-08-08T14:00", "2019-08-08T15:00"],
@@ -73,8 +73,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         model = self._table_view.model()
         selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
         copied_data = locale.str(-1.1)
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         series = TimeSeriesVariableResolution(
             ["2019-08-08T12:00", "2019-08-08T13:00", "2019-08-08T14:00", "2019-08-08T15:00"],
             [-1.1, 2.2, 3.3, 4.4],
@@ -88,8 +88,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         model = self._table_view.model()
         selection_model.select(model.index(0, 0), QItemSelectionModel.Select)
         copied_data = "2019-08-08T00:00"
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         series = TimeSeriesVariableResolution(
             ["2019-08-08T00:00", "2019-08-08T13:00", "2019-08-08T14:00", "2019-08-08T15:00"],
             [1.1, 2.2, 3.3, 4.4],
@@ -103,8 +103,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         model = self._table_view.model()
         selection_model.select(model.index(3, 1), QItemSelectionModel.Select)
         copied_data = f"2019-08-08T17:00\t{-4.4}\n2019-08-08T18:00\t{-5.5}"
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         series = TimeSeriesVariableResolution(
             ["2019-08-08T12:00", "2019-08-08T13:00", "2019-08-08T14:00", "2019-08-08T17:00", "2019-08-08T18:00"],
             [1.1, 2.2, 3.3, -4.4, -5.5],
@@ -118,8 +118,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         model = self._table_view.model()
         selection_model.select(model.index(3, 0), QItemSelectionModel.Select)
         copied_data = "2019-08-08T17:00\n2019-08-08T18:00"
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         series = TimeSeriesVariableResolution(
             ["2019-08-08T12:00", "2019-08-08T13:00", "2019-08-08T14:00", "2019-08-08T17:00", "2019-08-08T18:00"],
             [1.1, 2.2, 3.3, 4.4, 0.0],
@@ -136,8 +136,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model.select(model.index(2, 0), QItemSelectionModel.Select)
         selection_model.select(model.index(2, 1), QItemSelectionModel.Select)
         copied_data = f"2019-08-08T12:30\t{-2.2}\n2019-08-08T13:30\t{-3.3}\n2019-08-08T14:30\t{-4.4}"
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         series = TimeSeriesVariableResolution(
             ["2019-08-08T12:00", "2019-08-08T12:30", "2019-08-08T13:30", "2019-08-08T15:00"],
             [1.1, -2.2, -3.3, 4.4],
@@ -146,7 +146,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
-    def test_paste_to_larger_selection_overrides_first_rows_only(self):
+    def test_paste_to_larger_selection_cycles_data(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
         selection_model.select(model.index(0, 0), QItemSelectionModel.Select)
@@ -156,11 +156,11 @@ class TestIndexedValueTableView(unittest.TestCase):
         selection_model.select(model.index(2, 0), QItemSelectionModel.Select)
         selection_model.select(model.index(2, 1), QItemSelectionModel.Select)
         copied_data = f"2019-08-08T12:30\t{-1.1}\n2019-08-08T13:30\t{-2.2}"
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         series = TimeSeriesVariableResolution(
-            ["2019-08-08T12:30", "2019-08-08T13:30", "2019-08-08T14:00", "2019-08-08T15:00"],
-            [-1.1, -2.2, 3.3, 4.4],
+            ["2019-08-08T12:30", "2019-08-08T13:30", "2019-08-08T12:30", "2019-08-08T15:00"],
+            [-1.1, -2.2, -1.1, 4.4],
             False,
             False,
         )
@@ -171,8 +171,8 @@ class TestIndexedValueTableView(unittest.TestCase):
         model = self._table_view.model()
         selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
         copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2)
-        QApplication.clipboard().setText(copied_data)
-        self._table_view.paste()
+        with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
         selected_indexes = selection_model.selectedIndexes()
         self.assertEqual(len(selected_indexes), 2)
         self.assertTrue(model.index(0, 1) in selected_indexes)

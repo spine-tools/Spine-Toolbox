@@ -14,7 +14,7 @@
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QMimeData, QModelIndex
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
     AddEntitiesDialog,
@@ -23,6 +23,7 @@ from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_manager import SpineDBManager
+from tests.mock_helpers import mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 
 
@@ -251,13 +252,9 @@ class TestAddItemsDialog(unittest.TestCase):
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
 
-    @staticmethod
-    def _paste_to_table_view(text, dialog):
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = text
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
-            dialog.table_view.paste()
+    def _paste_to_table_view(self, text, dialog):
+        with mock_clipboard_patch(text, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(dialog.table_view.paste())
 
     def _commit_changes_to_database(self, commit_message):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:

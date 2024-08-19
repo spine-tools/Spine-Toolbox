@@ -48,12 +48,12 @@ class PlainParameterValueEditor(QWidget):
 
     def set_value(self, value):
         """Sets the value to be edited in this widget."""
+        self._ui.string_value_edit.clear()
+        self._ui.value_edit.clear()
         if value is None:
             self._ui.radioButton_null.setChecked(True)
-        elif value is True:
+        elif isinstance(value, bool):
             self._ui.radioButton_true.setChecked(True)
-        elif value is False:
-            self._ui.radioButton_false.setChecked(True)
         elif isinstance(value, str) and value:
             self._ui.string_value_edit.setText(str(value))
             self._ui.radioButton_string.setChecked(True)

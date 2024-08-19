@@ -13,6 +13,7 @@
 """Contains model for the Array editor widget."""
 import locale
 from numbers import Number
+from typing import Type
 import numpy
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from spinedb_api import Array, ParameterValueFormatError, SpineDBAPIError, from_database
@@ -38,6 +39,10 @@ class ArrayModel(QAbstractTableModel):
         self._data_type = float
         self._index_name = Array.DEFAULT_INDEX_NAME
 
+    @property
+    def data_type(self) -> Type:
+        return self._data_type
+
     def array(self):
         """Returns the array modeled by this model."""
         return Array(self._data, self._data_type, self._index_name)
@@ -53,7 +58,7 @@ class ArrayModel(QAbstractTableModel):
             return
         top_row = indexes[0].row()
         bottom_row = top_row
-        indexes, values = self._convert_to_data_type(indexes, values)
+        # indexes, values = self._convert_to_data_type(indexes, values)
         if not indexes:
             return
         for index, value in zip(indexes, values):
@@ -63,8 +68,8 @@ class ArrayModel(QAbstractTableModel):
             if row == len(self._data):
                 self.insertRow(len(self._data))
             self._data[row] = value
-        top_left = self.index(top_row, 0)
-        bottom_right = self.index(bottom_row, 0)
+        top_left = self.index(top_row, 1)
+        bottom_right = self.index(bottom_row, 1)
         self.dataChanged.emit(
             top_left,
             bottom_right,
@@ -86,6 +91,8 @@ class ArrayModel(QAbstractTableModel):
         Returns:
             tuple: indexes and converted values
         """
+        if all(isinstance(v, self._data_type) for v in values):
+            return indexes, values
         filtered = []
         converted = []
         if self._data_type == float:
@@ -113,6 +120,8 @@ class ArrayModel(QAbstractTableModel):
                     continue
                 except SpineDBAPIError:
                     pass
+                if not isinstance(value, str):
+                    continue
                 try:
                     data = from_database(value, self._data_type.type_())
                     if isinstance(data, self._data_type):

@@ -39,18 +39,18 @@ def _datetime_to_QDateTime(dt):
 
 
 class DatetimeEditor(QWidget):
-    """
-    An editor widget for DateTime type parameter values.
-
-    Attributes:
-        parent (QWidget): a parent widget
-    """
+    """An editor widget for DateTime type parameter values."""
 
     def __init__(self, parent=None):
+        """
+        Args:
+
+        parent (QWidget, optional): a parent widget
+        """
         from ..ui.datetime_editor import Ui_DatetimeEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
-        self._value = DateTime("2000-01-01")
+        self._value = DateTime()
         self._ui = Ui_DatetimeEditor()
         self._ui.setupUi(self)
         self._ui.datetime_edit.setMinimumDate(QDate(1, 1, 1))

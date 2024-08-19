@@ -20,6 +20,7 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.mvcmodels.map_model import MapModel
 from spinetoolbox.widgets.custom_qtableview import MapTableView, system_lc_numeric
+from tests.mock_helpers import mock_clipboard_patch
 
 
 class TestMapTableView(unittest.TestCase):
@@ -27,12 +28,6 @@ class TestMapTableView(unittest.TestCase):
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
-
-    def setUp(self):
-        self._original_clip = QApplication.clipboard().text()
-
-    def tearDown(self):
-        QApplication.clipboard().setText(self._original_clip)
 
     def test_copy_without_selection_returns_false(self):
         table_view = MapTableView()
@@ -72,7 +67,8 @@ class TestMapTableView(unittest.TestCase):
         table_view = MapTableView()
         model = MapModel(Map(["A"], [2.3]), table_view)
         table_view.setModel(model)
-        self.assertFalse(table_view.paste())
+        with mock_clipboard_patch("won't be pasted", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertFalse(table_view.paste())
         table_view.deleteLater()
 
     def test_paste_to_empty_table(self):
@@ -80,8 +76,7 @@ class TestMapTableView(unittest.TestCase):
         model = MapModel(Map([], [], str), table_view)
         table_view.setModel(model)
         table_view.selectionModel().select(model.index(0, 0), QItemSelectionModel.Select)
-        self._write_to_clipboard([["A", 2.3]])
-        self.assertTrue(table_view.paste())
+        self._paste_from_clipboard([["A", 2.3]], table_view)
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.value(), Map(["A"], [2.3]))
@@ -92,8 +87,7 @@ class TestMapTableView(unittest.TestCase):
         model = MapModel(Map(["A"], [2.3]), table_view)
         table_view.setModel(model)
         table_view.selectionModel().select(model.index(0, 0), QItemSelectionModel.Select)
-        self._write_to_clipboard([["V", -5.5], ["W", -6.6]])
-        self.assertTrue(table_view.paste())
+        self._paste_from_clipboard([["V", -5.5], ["W", -6.6]], table_view)
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.value(), Map(["V", "W"], [-5.5, -6.6]))
@@ -105,20 +99,19 @@ class TestMapTableView(unittest.TestCase):
         table_view.setModel(model)
         for row in (0, 1):
             table_view.selectionModel().select(model.index(row, 0), QItemSelectionModel.Select)
-        self._write_to_clipboard([["Q", -4.4], ["V", -5.5], ["W", -6.6]])
-        self.assertTrue(table_view.paste())
+        self._paste_from_clipboard([["Q", -4.4], ["V", -5.5], ["W", -6.6]], table_view)
         self.assertEqual(model.rowCount(), 4)
         self.assertEqual(model.columnCount(), 3)
         self.assertEqual(model.value(), Map(["Q", "V", "C"], [2.3, 3.2, 4.3]))
         table_view.deleteLater()
 
-    @staticmethod
-    def _write_to_clipboard(data):
+    def _paste_from_clipboard(self, data, table_view):
         with StringIO() as out_string:
             writer = csv.writer(out_string, delimiter="\t")
             writer.writerows(data)
             clip = out_string.getvalue()
-        QApplication.clipboard().setText(clip)
+        with mock_clipboard_patch(clip, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(table_view.paste())
 
 
 if __name__ == "__main__":

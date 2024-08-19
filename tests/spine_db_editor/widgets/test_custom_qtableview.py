@@ -19,7 +19,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions, to_database
-from tests.mock_helpers import fetch_model
+from tests.mock_helpers import fetch_model, mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
 
@@ -66,10 +66,7 @@ class TestParameterValueTableView(TestBase):
         table_view.selectionModel().setCurrentIndex(
             model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = "''"
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch("''", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 6)
@@ -513,10 +510,9 @@ class TestEntityAlternativeTableView(TestBase):
         table_view = self._db_editor.ui.tableView_entity_alternative
         model = table_view.model()
         table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        mock_clipboard = mock.MagicMock()
-        mock_clipboard.text.return_value = "Object\tspoon\tBase\tGIBBERISH"
-        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
-            clipboard.return_value = mock_clipboard
+        with mock_clipboard_patch(
+            "Object\tspoon\tBase\tGIBBERISH", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
+        ):
             self.assertTrue(table_view.paste())
         self.assertEqual(model.rowCount(), 2)
         self.assertEqual(model.columnCount(), 5)
