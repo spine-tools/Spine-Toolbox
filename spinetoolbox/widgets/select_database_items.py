@@ -66,8 +66,8 @@ class SelectDatabaseItems(QWidget):
     _SCENARIO_ITEMS = ("alternative", "scenario", "scenario_alternative", "entity_alternative")
     _STRUCTURAL_ITEMS = (
         "entity_class",
+        "display_mode",
         "entity_class_display_mode",
-        "display_mode__entity_class",
         "superclass_subclass",
         "parameter_value_list",
         "list_value",
