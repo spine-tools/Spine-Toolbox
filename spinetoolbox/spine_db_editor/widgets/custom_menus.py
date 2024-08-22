@@ -253,7 +253,7 @@ class RecentDatabasesPopupMenu(CustomPopupMenu):
             "Clear",
             self.clear_recents,
             enabled=self.has_recents(),
-            icon=QIcon(":icons/trash-alt.svg"),
+            icon=QIcon(":icons/menu_icons/trash-alt.svg"),
         )
 
     def has_recents(self):
