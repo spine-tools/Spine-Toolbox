@@ -32,9 +32,10 @@ from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xls
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_manager import SpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestParameterValueFormatting(unittest.TestCase):
+class TestParameterValueFormatting(TestCaseWithQApplication):
     """Tests for parameter_value formatting in SpineDBManager."""
 
     @staticmethod
@@ -49,11 +50,6 @@ class TestParameterValueFormatting(unittest.TestCase):
             return {"parsed_value": parsed_value, "value": value, "type": type_, "list_value_id": None}
 
         return _get_item
-
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         app_settings = MagicMock()
@@ -234,12 +230,7 @@ class TestParameterValueFormatting(unittest.TestCase):
         self.assertTrue(formatted.startswith("<qt>Could not decode the value"))
 
 
-class TestAddItems(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestAddItems(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         db_path = Path(self._temp_dir.name, "db.sqlite")
@@ -284,12 +275,7 @@ class TestAddItems(unittest.TestCase):
         )
 
 
-class TestDoRestoreItems(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestDoRestoreItems(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         db_path = Path(self._temp_dir.name, "db.sqlite")
@@ -323,12 +309,7 @@ class TestDoRestoreItems(unittest.TestCase):
         self.assertTrue(class_item.is_valid())
 
 
-class TestImportExportData(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestImportExportData(TestCaseWithQApplication):
     def setUp(self):
         mock_settings = MagicMock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
@@ -421,12 +402,7 @@ class TestImportExportData(unittest.TestCase):
         )
 
 
-class TestOpenDBEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestOpenDBEditor(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         db_path = Path(self._temp_dir.name, "db.sqlite")
@@ -471,12 +447,11 @@ class TestOpenDBEditor(unittest.TestCase):
                 running = False
 
 
-class TestDuplicateEntity(unittest.TestCase):
+class TestDuplicateEntity(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         cls.db_codename = cls.__name__ + "_db"
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         self._db_mngr = SpineDBManager(QSettings(), None)
@@ -544,12 +519,7 @@ class TestDuplicateEntity(unittest.TestCase):
         self.assertEqual({v["alternative_name"] for v in values}, {"low highs"})
 
 
-class TestUpdateExpandedParameterValues(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestUpdateExpandedParameterValues(TestCaseWithQApplication):
     def setUp(self):
         mock_settings = MagicMock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
@@ -594,12 +564,7 @@ class TestUpdateExpandedParameterValues(unittest.TestCase):
         self.assertEqual(update_value, Map(["a"], ["c"]))
 
 
-class TestRemoveScenarioAlternative(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestRemoveScenarioAlternative(TestCaseWithQApplication):
     def setUp(self):
         mock_settings = MagicMock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0

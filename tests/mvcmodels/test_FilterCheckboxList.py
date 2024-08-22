@@ -14,16 +14,11 @@
 import unittest
 from unittest import mock
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestFilterCheckboxListModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestFilterCheckboxListModel(TestCaseWithQApplication):
     def setUp(self):
         self.model = SimpleFilterCheckboxListModel(None)
         self.data = ["a", "aa", "aaa", "b", "bb", "bbb"]

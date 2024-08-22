@@ -47,8 +47,7 @@ class QProcessExecutionManager(ExecutionManager):
     """Class to manage tool instance execution using a PySide6 QProcess."""
 
     def __init__(self, logger, program="", args=None, silent=False, semisilent=False):
-        """Class constructor.
-
+        """
         Args:
             logger (LoggerInterface): a logger instance
             program (str): Path to program to run in the subprocess (e.g. julia.exe)
@@ -180,9 +179,7 @@ class QProcessExecutionManager(ExecutionManager):
     def teardown_process(self):
         """Tears down the QProcess in case a QProcess.ProcessError occurred.
         Emits execution_finished signal."""
-        if not self._process:
-            pass
-        else:
+        if self._process:
             out = str(self._process.readAllStandardOutput().data(), "utf-8", errors="replace")
             errout = str(self._process.readAllStandardError().data(), "utf-8", errors="replace")
             if out is not None:

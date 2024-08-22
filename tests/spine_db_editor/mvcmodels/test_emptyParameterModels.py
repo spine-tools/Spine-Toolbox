@@ -11,9 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the EmptyParameterModel subclasses."""
-import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     import_object_classes,
     import_object_parameters,
@@ -29,7 +27,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterValueModel,
 )
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyParameterDefinitionModel, EmptyParameterValueModel
-from tests.mock_helpers import TestSpineDBManager, fetch_model
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model
 
 
 class TestEmptyParameterDefinitionModel(EmptyParameterDefinitionModel):
@@ -46,12 +44,7 @@ def _empty_indexes(model):
     return [model.index(0, model.header.index(field)) for field in model.header]
 
 
-class TestEmptyParameterModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestEmptyParameterModel(TestCaseWithQApplication):
     def setUp(self):
         """Overridden method. Runs before each test."""
         app_settings = mock.MagicMock()

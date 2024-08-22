@@ -12,17 +12,12 @@
 
 """Unit tests for the MapEditor widget."""
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
 from spinetoolbox.widgets.map_editor import MapEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestDictionaryEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestDictionaryEditor(TestCaseWithQApplication):
     def test_initial_value(self):
         editor = MapEditor()
         value = editor.value()

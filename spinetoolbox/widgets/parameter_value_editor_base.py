@@ -109,8 +109,9 @@ class ParameterValueEditorBase(QWidget):
         """
         Handles switching between value types.
 
-        Does a rude conversion between fixed and variable resolution time series.
-        In other cases, a default 'empty' value is used.
+        Does some rude conversions between previous and new values
+        if it makes sense.
+        Otherwise, the new value is set to a default 'empty' value.
 
         Args:
             selector_index (int): an index to the selector combo box
@@ -144,9 +145,44 @@ class ParameterValueEditorBase(QWidget):
                 variable_resolution_value.repeat,
             )
             self._editors[ValueType.TIME_SERIES_FIXED_RESOLUTION].set_value(fixed_resolution_value)
+        elif selector_index == self._editor_indexes[ValueType.PLAIN_VALUE]:
+            value = self._editors[ValueType.PLAIN_VALUE].value()
+            if value == "":  # Try to override empty string only, not False, 0 or None.
+                if old_index == self._editor_indexes[ValueType.DATETIME]:
+                    date_time_value = self._editors[ValueType.DATETIME].value()
+                    if date_time_value != DateTime():
+                        value = str(date_time_value)
+                elif old_index == self._editor_indexes[ValueType.DURATION]:
+                    duration_value = self._editors[ValueType.DURATION].value()
+                    if duration_value != Duration():
+                        value = str(duration_value)
+            self._editors[ValueType.PLAIN_VALUE].set_value(value)
+        elif old_index == self._editor_indexes[ValueType.PLAIN_VALUE]:
+            if (
+                selector_index == self._editor_indexes[ValueType.DATETIME]
+                and self._editors[ValueType.DATETIME].value() == DateTime()
+            ):
+                plain_value = self._editors[ValueType.PLAIN_VALUE]
+                if isinstance(plain_value, str):
+                    try:
+                        date_time_value = DateTime(plain_value)
+                    except ParameterValueFormatError:
+                        pass
+                    else:
+                        self._editors[ValueType.DATETIME].set_value(date_time_value)
+            if (
+                selector_index == self._editor_indexes[ValueType.DURATION]
+                and self._editors[ValueType.DURATION].value() == Duration()
+            ):
+                plain_value = self._editors[ValueType.PLAIN_VALUE].value()
+                if isinstance(plain_value, str):
+                    try:
+                        duration_value = Duration(plain_value)
+                    except ParameterValueFormatError:
+                        pass
+                    else:
+                        self._editors[ValueType.DURATION].set_value(duration_value)
         self._ui.editor_stack.setCurrentIndex(selector_index)
-        if selector_index == self._editor_indexes[ValueType.PLAIN_VALUE]:
-            self._editors[ValueType.PLAIN_VALUE].set_value("")
 
     def _select_editor(self, value):
         """Shows the editor widget corresponding to the given value type on the editor stack."""

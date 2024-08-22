@@ -155,8 +155,7 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
 
     @classmethod
     def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+        super().setUpClass()
         cls.data = {}
         cls._add_test_data()
         cls._create_highlights()

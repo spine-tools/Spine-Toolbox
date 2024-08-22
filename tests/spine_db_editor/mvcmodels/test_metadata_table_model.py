@@ -20,15 +20,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
-from tests.mock_helpers import TestSpineDBManager, fetch_model
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model
 
 
-class TestMetadataTableModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestMetadataTableModel(TestCaseWithQApplication):
     def setUp(self):
         mock_settings = mock.Mock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0

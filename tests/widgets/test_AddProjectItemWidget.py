@@ -15,19 +15,14 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 
-class TestAddProjectItemWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestAddProjectItemWidget(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()
@@ -52,12 +47,7 @@ class TestAddProjectItemWidget(unittest.TestCase):
         self.assertEqual(widget.ui.lineEdit_name.text(), "TestItemType")
 
 
-class TestAddProjectItemWidgetWithSpecifications(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestAddProjectItemWidgetWithSpecifications(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()

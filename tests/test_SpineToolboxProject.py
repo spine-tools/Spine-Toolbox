@@ -32,6 +32,7 @@ from spinetoolbox.project_item.logging_connection import LoggingConnection, Logg
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from tests.mock_helpers import (
+    TestCaseWithQApplication,
     add_data_transformer,
     add_dc,
     add_ds,
@@ -47,13 +48,7 @@ from tests.mock_helpers import (
 
 
 # noinspection PyUnusedLocal
-class TestSpineToolboxProject(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """Runs once before any tests in this class."""
-        if not QApplication.instance():
-            QApplication()
-
+class TestSpineToolboxProject(TestCaseWithQApplication):
     def setUp(self):
         """Makes a ToolboxUI instance and opens a project before each test."""
         self._temp_dir = TemporaryDirectory()

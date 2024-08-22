@@ -29,15 +29,14 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditor,
     _CustomLineEditDelegate,
 )
-from tests.mock_helpers import q_object
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
-class TestEditors(unittest.TestCase):
+class TestEditors(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         qInitResources()
-        if not QApplication.instance():
-            QApplication()
 
     def test_searchbar_editor_set_data_sorts_items_case_insensitively(self):
         with q_object(QWidget()) as parent:
@@ -141,12 +140,11 @@ class TestEditors(unittest.TestCase):
             self.assertEqual(True, retval)
 
 
-class TestParameterTypeEditor(unittest.TestCase):
+class TestParameterTypeEditor(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
+        super().setUpClass()
         qInitResources()
-        if not QApplication.instance():
-            QApplication()
 
     def setUp(self):
         self._editor = ParameterTypeEditor(None)

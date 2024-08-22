@@ -13,16 +13,11 @@
 """Unit tests for the MinimalTableModel class."""
 import unittest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestMinimalTableModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestMinimalTableModel(TestCaseWithQApplication):
     def test_clear(self):
         """Test the clear() method of MinimalTableModel."""
         model = MinimalTableModel()

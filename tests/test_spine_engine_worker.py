@@ -17,14 +17,10 @@ from unittest.mock import MagicMock
 from PySide6.QtCore import QObject, Slot
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_engine_worker import SpineEngineWorker
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestSpineEngineWorker(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSpineEngineWorker(TestCaseWithQApplication):
     def test_empty_project_executes(self):
         logger = MagicMock()
         worker = SpineEngineWorker(

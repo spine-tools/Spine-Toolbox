@@ -12,17 +12,12 @@
 
 """Unit tests for the TimePatternEditor widget."""
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinedb_api import TimePattern
 from spinetoolbox.widgets.time_pattern_editor import TimePatternEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimePatternEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimePatternEditor(TestCaseWithQApplication):
     def test_initial_value(self):
         editor = TimePatternEditor()
         value = editor.value()

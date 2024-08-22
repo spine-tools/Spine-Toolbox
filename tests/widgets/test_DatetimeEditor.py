@@ -12,17 +12,12 @@
 
 """Unit tests for the DatetimeEditor widget."""
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinedb_api import DateTime
 from spinetoolbox.widgets.datetime_editor import DatetimeEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestDatetimeEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestDatetimeEditor(TestCaseWithQApplication):
     def test_initial_value(self):
         editor = DatetimeEditor()
         value = editor.value()

@@ -19,7 +19,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QLineEdit, QWidget
+from PySide6.QtWidgets import QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
@@ -54,13 +54,10 @@ from spinetoolbox.helpers import (
     tuple_itemgetter,
     unique_name,
 )
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestHelpers(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
+class TestHelpers(TestCaseWithQApplication):
 
     def test_format_log_message(self):
         stamp_pattern = re.compile(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")

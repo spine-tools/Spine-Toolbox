@@ -20,6 +20,14 @@ from .indexed_value_table_model import IndexedValueTableModel
 class TimeSeriesModelVariableResolution(IndexedValueTableModel):
     """A model for variable resolution time series type parameter values."""
 
+    def column_type(self, column):
+        """Returns column's type."""
+        if column == 0:
+            return np.datetime64
+        if column == 1:
+            return float
+        raise RuntimeError("Logic error: column out of bounds")
+
     def flags(self, index):
         """Returns the flags for given model index."""
         if not index.isValid():
@@ -164,20 +172,20 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             indexes (Sequence): a sequence of model indexes
             values (Sequence): a sequence of datetimes/floats corresponding to the indexes
         """
-        modified_rows = []
-        modified_columns = []
+        modified_rows = set()
+        modified_columns = set()
         for index, value in zip(indexes, values):
             row = index.row()
-            modified_rows.append(row)
+            modified_rows.add(row)
             column = index.column()
-            modified_columns.append(column)
+            modified_columns.add(column)
             if column == 0:
                 self._value.indexes[row] = value
             else:
                 self._value.values[row] = value
         left_top = self.index(min(modified_rows), min(modified_columns))
         right_bottom = self.index(max(modified_rows), max(modified_columns))
-        self.dataChanged.emit(left_top, right_bottom, [Qt.ItemDataRole.EditRole])
+        self.dataChanged.emit(left_top, right_bottom, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole])
 
     @Slot(bool, name="set_ignore_year")
     def set_ignore_year(self, ignore_year):

@@ -41,7 +41,7 @@ We provide three options for installing Spine Toolbox. The first two options als
 the Pre-installation steps**: 
 - [Python/pipx](#installation-with-python-and-pipx) (we intend to make stable releases every month or so)
 - [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
-- [Windows executable as .zip bundle](https://spine-tools.github.io/Downloads/) (requires only unzipping the downloaded .zip file)
+- [Windows executable as .zip bundle](https://spine-tools.github.io/Downloads/) (requires only unzipping the downloaded .zip file - however, the embedded Python is likely not usable for the Python tools you might want to run)
 - [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
 
 ### Pre-installation
@@ -107,6 +107,8 @@ That’s it! To launch Spine Toolbox, open a terminal and run
 
 If for some reason the command is not found, the executable can be found under `~/.local/bin` 
 (`%USERPROFILE%\.local\bin` on Windows).
+
+### Upgrade when using pipx
 
 To upgrade Spine Toolbox to the latest *release*, open a terminal and run
 
@@ -177,6 +179,8 @@ contains `requirements.txt`) if needed.
 8. Once the installation has finished, you can now launch Spine Toolbox using
 
        spinetoolbox
+
+### Upgrade when using git
 
 **To upgrade**, pull the latest changes from the Spine Toolbox repository (while in `Spine-Toolbox` directory)
 

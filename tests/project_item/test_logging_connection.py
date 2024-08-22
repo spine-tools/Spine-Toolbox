@@ -16,7 +16,6 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication
 from spine_engine.project_item.connection import FilterSettings
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
@@ -26,7 +25,7 @@ from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.widgets.properties_widget import PropertiesWidgetBase
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 
 class TestLoggingConnection(unittest.TestCase):
@@ -64,12 +63,7 @@ class TestLoggingConnection(unittest.TestCase):
         connection.tear_down()
 
 
-class TestLoggingConnectionWithToolbox(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestLoggingConnectionWithToolbox(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
@@ -96,12 +90,7 @@ class TestLoggingConnectionWithToolbox(unittest.TestCase):
         connection.tear_down()
 
 
-class TestLoggingConnectionWithDatabaseManager(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestLoggingConnectionWithDatabaseManager(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)

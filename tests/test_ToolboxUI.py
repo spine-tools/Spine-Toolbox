@@ -13,11 +13,9 @@
 """Unit tests for ToolboxUI class."""
 from contextlib import contextmanager
 import json
-import logging
 import os
 import pathlib
 from pathlib import Path
-import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
@@ -33,6 +31,7 @@ import spinetoolbox.ui_main
 from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget
 from spinetoolbox.widgets.project_item_drag import NiceButton, ProjectItemDragMixin
 from .mock_helpers import (
+    TestCaseWithQApplication,
     add_dc,
     add_dc_trough_undo_stack,
     add_tool,
@@ -44,21 +43,12 @@ from .mock_helpers import (
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
-class TestToolboxUI(unittest.TestCase):
+class TestToolboxUI(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        super().setUpClass()
         qInitResources()
-        try:
-            cls.app = QApplication().processEvents()
-        except RuntimeError:
-            pass
-        logging.basicConfig(
-            stream=sys.stderr,
-            level=logging.DEBUG,
-            format="%(asctime)s %(levelname)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes an instance of ToolboxUI class
@@ -835,12 +825,7 @@ class MockDraggableButton(ProjectItemDragMixin, NiceButton):
     """Mocked draggable button"""
 
 
-class TestToolboxUIWithTestSettings(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestToolboxUIWithTestSettings(TestCaseWithQApplication):
     def test_legacy_settings_keys_get_renamed(self):
         settings_dict = {"appSettings/useEmbeddedJulia": "julia value", "appSettings/useEmbeddedPython": "python value"}
         with toolbox_with_settings(settings_dict) as toolbox:

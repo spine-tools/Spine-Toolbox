@@ -14,17 +14,12 @@
 import unittest
 import numpy
 from PySide6.QtCore import QObject, Qt
-from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimeSeriesModelFixedStep(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QObject()
 

@@ -15,7 +15,6 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 from PySide6.QtGui import QColor, QUndoStack
-from PySide6.QtWidgets import QApplication
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
@@ -24,15 +23,10 @@ from spinetoolbox.project_item.specification_editor_window import (
     SpecificationEditorWindowBase,
 )
 from spinetoolbox.project_item_icon import ProjectItemIcon
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 
-class TestChangeSpecPropertyCommand(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestChangeSpecPropertyCommand(TestCaseWithQApplication):
     def test_init(self):
         undo_stack = QUndoStack()
         callback = MagicMock()
@@ -52,12 +46,7 @@ class TestChangeSpecPropertyCommand(unittest.TestCase):
         undo_stack.deleteLater()
 
 
-class TestSpecificationEditorWindowBase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSpecificationEditorWindowBase(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self._toolbox = create_toolboxui_with_project(self._temp_dir.name)

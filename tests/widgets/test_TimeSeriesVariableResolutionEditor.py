@@ -15,14 +15,10 @@ import unittest
 from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimeSeriesVariableResolutionEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimeSeriesVariableResolutionEditor(TestCaseWithQApplication):
     def test_initial_value(self):
         editor = TimeSeriesVariableResolutionEditor()
         value = editor.value()

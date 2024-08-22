@@ -12,12 +12,26 @@
 
 """Classes and functions that can be shared among unit test modules."""
 from contextlib import contextmanager
+import unittest
 from unittest import mock
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QMimeData, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.ui_main import ToolboxUI
+
+
+class TestCaseWithQApplication(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+        cls._q_app = QApplication.instance()
+
+    @classmethod
+    def tearDownClass(cls):
+        QTimer.singleShot(0, lambda: cls._q_app.quit())
+        cls._q_app.exec()
 
 
 def create_toolboxui():
@@ -385,3 +399,18 @@ class FakeDataStore:
 
     def tear_down(self):
         return True
+
+
+@contextmanager
+def mock_clipboard_patch(text, clipboard_module):
+    with mock.patch(clipboard_module) as clipboard_getter:
+        clipboard = mock.MagicMock()
+        mime_data = QMimeData()
+        mime_data.setText(text)
+        clipboard.mimeData.return_value = mime_data
+        clipboard.text.return_value = text
+        clipboard_getter.return_value = clipboard
+        try:
+            yield clipboard
+        finally:
+            mime_data.deleteLater()

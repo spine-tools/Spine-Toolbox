@@ -15,134 +15,120 @@ import csv
 from io import StringIO
 import locale
 import unittest
-from PySide6.QtCore import QItemSelectionModel, QObject
+from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
 from spinetoolbox.widgets.custom_qtableview import ArrayTableView, system_lc_numeric
+from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
 
 
-class TestArrayTableView(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestArrayTableView(TestCaseWithQApplication):
     def setUp(self):
-        self._parent = QObject()
-        self._original_clip = QApplication.clipboard().text()
+        self._table_view = ArrayTableView()
+        self._model = ArrayModel(self._table_view)
+        self._table_view.setModel(self._model)
 
     def tearDown(self):
-        self._parent.deleteLater()
-        QApplication.clipboard().setText(self._original_clip)
+        self._table_view.deleteLater()
 
     def test_copy_without_selection_returns_false(self):
-        model = ArrayModel(self._parent)
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        self.assertFalse(table_view.copy())
-        table_view.deleteLater()
+        self.assertFalse(self._table_view.copy())
 
     def test_copy_single_non_numeric_cell(self):
-        model = ArrayModel(self._parent)
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        model.reset(Array(["a"]))
-        index = model.index(0, 1)
-        table_view.selectionModel().select(index, QItemSelectionModel.Select)
-        self.assertTrue(table_view.copy())
+        self._model.reset(Array(["a"]))
+        index = self._model.index(0, 1)
+        self._table_view.selectionModel().select(index, QItemSelectionModel.Select)
+        self.assertTrue(self._table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
         array = list(csv.reader(clip))
         self.assertEqual(array, [["a"]])
-        table_view.deleteLater()
 
     def test_copy_single_numeric_cell(self):
-        model = ArrayModel(self._parent)
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        model.reset(Array([5.5]))
-        index = model.index(0, 1)
-        table_view.selectionModel().select(index, QItemSelectionModel.Select)
-        self.assertTrue(table_view.copy())
+        self._model.reset(Array([5.5]))
+        index = self._model.index(0, 1)
+        self._table_view.selectionModel().select(index, QItemSelectionModel.Select)
+        self.assertTrue(self._table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
         array = list(csv.reader(clip, delimiter="\t"))
         with system_lc_numeric():
             self.assertEqual(array, [[locale.str(5.5)]])
-        table_view.deleteLater()
 
     def test_copy_does_not_copy_expansion_row(self):
-        model = ArrayModel(self._parent)
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        model.reset(Array([5.5]))
-        for column in range(model.columnCount()):
-            for row in range(model.rowCount()):
-                table_view.selectionModel().select(model.index(row, column), QItemSelectionModel.Select)
-        self.assertTrue(table_view.copy())
+        self._model.reset(Array([5.5]))
+        for column in range(self._model.columnCount()):
+            for row in range(self._model.rowCount()):
+                self._table_view.selectionModel().select(self._model.index(row, column), QItemSelectionModel.Select)
+        self.assertTrue(self._table_view.copy())
         clip = StringIO(QApplication.clipboard().text())
         array = list(csv.reader(clip, delimiter="\t"))
         with system_lc_numeric():
             self.assertEqual(array, [["0", locale.str(5.5)]])
-        table_view.deleteLater()
 
     def test_paste_non_numeric_to_empty_table(self):
-        model = ArrayModel(self._parent)
-        model.set_array_type(str)
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        index = model.index(0, 0)
-        table_view.selectionModel().select(index, QItemSelectionModel.Select)
-        self._write_to_clipboard([["a"]])
-        self.assertTrue(table_view.paste())
-        self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.array(), Array(["a"]))
-        table_view.deleteLater()
+        self._model.set_array_type(str)
+        index = self._model.index(0, 0)
+        self._table_view.selectionModel().select(index, QItemSelectionModel.Select)
+        data = self._write_clipboard([["a"]])
+        with mock_clipboard_patch(data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
+        self.assertEqual(self._model.rowCount(), 2)
+        self.assertEqual(self._model.array(), Array(["a"]))
 
     def test_paste_numeric_to_empty_table(self):
-        model = ArrayModel(self._parent)
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        index = model.index(0, 0)
-        table_view.selectionModel().select(index, QItemSelectionModel.Select)
-        self._write_to_clipboard([[2.3]])
-        self.assertTrue(table_view.paste())
-        self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.array(), Array([2.3]))
-        table_view.deleteLater()
+        index = self._model.index(0, 0)
+        self._table_view.selectionModel().select(index, QItemSelectionModel.Select)
+        data = self._write_clipboard([[2.3]])
+        with mock_clipboard_patch(data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
+        self.assertEqual(self._model.rowCount(), 2)
+        self.assertEqual(self._model.array(), Array([2.3]))
 
     def test_paste_multiple_rows_to_single_row_selection(self):
-        model = ArrayModel(self._parent)
-        model.reset(Array([5.5]))
-        table_view = ArrayTableView()
-        table_view.setModel(model)
-        index = model.index(0, 0)
-        table_view.selectionModel().select(index, QItemSelectionModel.Select)
-        self._write_to_clipboard([[2.3], [-2.3]])
-        self.assertTrue(table_view.paste())
-        self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.array(), Array([2.3, -2.3]))
-        table_view.deleteLater()
+        self._model.reset(Array([5.5]))
+        index = self._model.index(0, 0)
+        self._table_view.selectionModel().select(index, QItemSelectionModel.Select)
+        data = self._write_clipboard([[2.3], [-2.3]])
+        with mock_clipboard_patch(data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
+        self.assertEqual(self._model.rowCount(), 3)
+        self.assertEqual(self._model.array(), Array([2.3, -2.3]))
 
     def test_paste_only_what_fits_selection(self):
-        model = ArrayModel(self._parent)
-        model.reset(Array([5.5, -5.5]))
-        table_view = ArrayTableView()
-        table_view.setModel(model)
+        self._model.reset(Array([5.5, -5.5]))
         for row in (0, 1):
-            table_view.selectionModel().select(model.index(row, 0), QItemSelectionModel.Select)
-        self._write_to_clipboard([[2.3], [-2.3], [23.0]])
-        self.assertTrue(table_view.paste())
-        self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.array(), Array([2.3, -2.3]))
-        table_view.deleteLater()
+            self._table_view.selectionModel().select(self._model.index(row, 0), QItemSelectionModel.Select)
+        data = self._write_clipboard([[2.3], [-2.3], [23.0]])
+        with mock_clipboard_patch(data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
+        self.assertEqual(self._model.rowCount(), 3)
+        self.assertEqual(self._model.array(), Array([2.3, -2.3]))
+
+    def test_pasting_incompatible_data_type_does_not_expand_model(self):
+        self._model.reset(Array([5.5]))
+        for row in (0, 1):
+            self._table_view.selectionModel().select(self._model.index(row, 0), QItemSelectionModel.Select)
+        data = self._write_clipboard([["Ilmarinen"], ["Väinämöinen"], ["Joukahainen"]])
+        with mock_clipboard_patch(data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertFalse(self._table_view.paste())
+        self.assertEqual(self._model.rowCount(), 2)
+        self.assertEqual(self._model.array(), Array([5.5]))
+
+    def test_pasting_incompatible_data_type_in_the_middle_expands_model_properly(self):
+        self._model.reset(Array([5.5]))
+        self._table_view.selectionModel().select(self._model.index(0, 0), QItemSelectionModel.Select)
+        data = self._write_clipboard([[-2.3], ["Väinämöinen"], [-23.0]])
+        with mock_clipboard_patch(data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(self._table_view.paste())
+        self.assertEqual(self._model.rowCount(), 3)
+        self.assertEqual(self._model.array(), Array([-2.3, -23.0]))
 
     @staticmethod
-    def _write_to_clipboard(data):
+    def _write_clipboard(data):
         with StringIO() as out_string:
             writer = csv.writer(out_string)
             writer.writerows(data)
-            clip = out_string.getvalue()
-        QApplication.clipboard().setText(clip)
+            return out_string.getvalue()
 
 
 if __name__ == "__main__":

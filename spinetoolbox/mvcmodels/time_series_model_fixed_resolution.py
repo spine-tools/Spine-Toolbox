@@ -29,6 +29,12 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         super().__init__(series, parent)
         self.locale = QLocale()
 
+    def column_type(self, column):
+        """Returns column's type."""
+        if column == 1:
+            return float
+        raise RuntimeError("Logic error: column out of bounds")
+
     def flags(self, index):
         """Returns flags at index."""
         if not index.isValid():

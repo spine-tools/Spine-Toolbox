@@ -12,16 +12,11 @@
 
 """Unit tests for the PlainParameterValueEditor widget."""
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.plain_parameter_value_editor import PlainParameterValueEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestPlainParameterValueEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestPlainParameterValueEditor(TestCaseWithQApplication):
     def test_initial_value(self):
         editor = PlainParameterValueEditor()
         value = editor.value()

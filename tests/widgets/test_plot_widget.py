@@ -15,19 +15,14 @@ from itertools import product
 import unittest
 from unittest import mock
 from matplotlib.gridspec import GridSpec
-from PySide6.QtWidgets import QApplication
 from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.plotting import TreeNode, convert_indexed_value_to_tree, plot_data, turn_node_to_xy_data
 from spinetoolbox.widgets.plot_canvas import LegendPosition
 from spinetoolbox.widgets.plot_widget import PlotWidget, _PlotDataWidget
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestPlotWidget(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestPlotWidget(TestCaseWithQApplication):
     def setUp(self):
         self._plot_widget = PlotWidget()
 

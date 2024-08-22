@@ -14,11 +14,10 @@
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
 from spinedb_api import DatabaseMapping
 from spinedb_api.import_functions import import_data
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
 class TestItemTypeFetchParent(ItemTypeFetchParent):
@@ -27,12 +26,7 @@ class TestItemTypeFetchParent(ItemTypeFetchParent):
         self.handle_items_added = MagicMock()
 
 
-class TestSpineDBFetcher(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestSpineDBFetcher(TestCaseWithQApplication):
     def setUp(self):
         app_settings = MagicMock()
         self._logger = MagicMock()  # Collects error messages therefore handy for debugging.

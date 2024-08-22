@@ -25,14 +25,10 @@ from spinetoolbox.widgets.map_editor import MapEditor
 from spinetoolbox.widgets.time_pattern_editor import TimePatternEditor
 from spinetoolbox.widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from spinetoolbox.widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestArrayTableContextMenu(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestArrayTableContextMenu(TestCaseWithQApplication):
     def test_insert_row_after(self):
         editor = ArrayEditor()
         editor.set_value(Array([-1.0]))
@@ -95,12 +91,7 @@ class TestArrayTableContextMenu(unittest.TestCase):
         editor.deleteLater()
 
 
-class TestIndexedValueTableContextMenu(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestIndexedValueTableContextMenu(TestCaseWithQApplication):
     def test_insert_row_after_with_time_pattern_editor(self):
         editor = TimePatternEditor()
         editor.set_value(TimePattern(["D1-2"], [-1.1]))
@@ -260,12 +251,7 @@ class TestIndexedValueTableContextMenu(unittest.TestCase):
         editor.deleteLater()
 
 
-class TestMapTableContextMenu(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestMapTableContextMenu(TestCaseWithQApplication):
     def test_insert_column_after(self):
         editor = MapEditor()
         editor.set_value(Map(["a"], [-1.0]))

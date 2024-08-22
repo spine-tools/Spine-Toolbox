@@ -16,13 +16,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtWidgets import QApplication
 import zmq
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 client_sec_dir = os.path.join(str(Path(__file__).parent), "client_secfolder")
 server_sec_dir = os.path.join(str(Path(__file__).parent), "server_secfolder")
@@ -33,13 +32,7 @@ def _security_folder_exists():
     return os.path.exists(client_sec_dir) and os.path.exists(server_sec_dir)
 
 
-class TestEngineClient(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """Runs once before any tests in this class."""
-        if not QApplication.instance():
-            QApplication()
-
+class TestEngineClient(TestCaseWithQApplication):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         self.toolbox = create_toolboxui_with_project(self._temp_dir.name)

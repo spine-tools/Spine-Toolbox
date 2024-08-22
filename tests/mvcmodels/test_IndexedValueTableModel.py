@@ -13,8 +13,8 @@
 """Unit tests for the IndexedValueTableModel class."""
 import unittest
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.mvcmodels.indexed_value_table_model import IndexedValueTableModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
 class MockValue:
@@ -32,12 +32,7 @@ class MockValue:
         return len(self.indexes)
 
 
-class TestIndexedValueTableModel(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestIndexedValueTableModel(TestCaseWithQApplication):
     def setUp(self):
         self._value = MockValue(["a", "b", "c"], [7, 5, 3])
         self._model = IndexedValueTableModel(self._value, None)

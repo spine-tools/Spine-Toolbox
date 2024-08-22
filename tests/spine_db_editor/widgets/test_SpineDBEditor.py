@@ -20,7 +20,7 @@ from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
@@ -252,12 +252,7 @@ class TestSpineDBEditor(DBEditorTestBase):
                 self.assertEqual(empty_row, expected_empty_row)
 
 
-class TestClosingDBEditors(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestClosingDBEditors(TestCaseWithQApplication):
     def setUp(self):
         self._editors = []
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(

@@ -16,14 +16,10 @@ from unittest import mock
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
 from spinetoolbox.spine_db_editor.widgets.mass_select_items_dialogs import MassRemoveItemsDialog
 from spinetoolbox.spine_db_manager import SpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestMassRemoveItemsDialog(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestMassRemoveItemsDialog(TestCaseWithQApplication):
     def setUp(self):
         url = "sqlite:///"
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
@@ -64,8 +60,8 @@ class TestMassRemoveItemsDialog(unittest.TestCase):
                 "scenario": False,
                 "scenario_alternative": False,
                 "superclass_subclass": False,
+                "display_mode": False,
                 "entity_class_display_mode": False,
-                "display_mode__entity_class": False,
             },
         )
         self.assertTrue(dialog._database_check_boxes_widget._check_boxes[self._db_map].isChecked())

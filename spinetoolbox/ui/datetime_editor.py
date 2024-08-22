@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'datetime_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.6.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -72,6 +72,6 @@ class Ui_DatetimeEditor(object):
         DatetimeEditor.setWindowTitle(QCoreApplication.translate("DatetimeEditor", u"Form", None))
         self.datetime_edit_label.setText(QCoreApplication.translate("DatetimeEditor", u"Datetime", None))
         self.datetime_edit.setDisplayFormat(QCoreApplication.translate("DatetimeEditor", u"yyyy-MM-ddTHH:mm:ss", None))
-        self.format_label.setText(QCoreApplication.translate("DatetimeEditor", u"Format: YYYY--MM-DDThh:mm:ss", None))
+        self.format_label.setText(QCoreApplication.translate("DatetimeEditor", u"Format: YYYY-MM-DDThh:mm:ss", None))
     # retranslateUi
 

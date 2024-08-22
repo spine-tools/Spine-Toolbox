@@ -15,9 +15,10 @@ import unittest
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestArrayModel(unittest.TestCase):
+class TestArrayModel(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QObject()
 

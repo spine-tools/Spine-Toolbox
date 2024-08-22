@@ -14,17 +14,11 @@
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
-from PySide6.QtWidgets import QApplication
 from spinetoolbox.project_item.project_item import ProjectItem
-from ..mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from ..mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 
-class TestProjectItem(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestProjectItem(TestCaseWithQApplication):
     def setUp(self):
         """Set up."""
         self._temp_dir = TemporaryDirectory()

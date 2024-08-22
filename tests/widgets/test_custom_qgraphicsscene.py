@@ -13,17 +13,12 @@
 """Unit tests for custom graphics scenes."""
 from tempfile import TemporaryDirectory
 import unittest
-from PySide6.QtWidgets import QApplication, QGraphicsRectItem
+from PySide6.QtWidgets import QGraphicsRectItem
 from spinetoolbox.widgets.custom_qgraphicsscene import CustomGraphicsScene
-from tests.mock_helpers import clean_up_toolbox, create_toolboxui_with_project
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestCustomGraphicsScene(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestCustomGraphicsScene(TestCaseWithQApplication):
     def test_center_items(self):
         scene = CustomGraphicsScene()
         rect = scene.addRect(-120.0, 66.0, 1.0, 1.0)
@@ -31,21 +26,6 @@ class TestCustomGraphicsScene(unittest.TestCase):
         scene.center_items()
         self.assertEqual(scene.itemsBoundingRect(), scene.sceneRect())
         scene.deleteLater()
-
-
-class TestDesignGraphicsScene(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-
-    def tearDown(self):
-        clean_up_toolbox(self._toolbox)
-        self._temp_dir.cleanup()
 
 
 if __name__ == "__main__":

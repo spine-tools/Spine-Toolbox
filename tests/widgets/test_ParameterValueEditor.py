@@ -15,7 +15,6 @@ import unittest
 import dateutil.parser
 import numpy as np
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DateTime,
     Duration,
@@ -26,6 +25,7 @@ from spinedb_api import (
     to_database,
 )
 from spinetoolbox.widgets.parameter_value_editor import ParameterValueEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
 class _MockParentModel(QAbstractTableModel):
@@ -60,12 +60,7 @@ class _MockParentModel(QAbstractTableModel):
         return "index_name"
 
 
-class TestParameterValueEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestParameterValueEditor(TestCaseWithQApplication):
     def _check_parent_model_updated_when_closed(self, value):
         model = _MockParentModel()
         model_index = model.index(1, 1)

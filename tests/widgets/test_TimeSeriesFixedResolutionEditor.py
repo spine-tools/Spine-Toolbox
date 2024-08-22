@@ -12,17 +12,12 @@
 
 """Unit tests for the TimeSeriesFixedResolutionEditor widget."""
 import unittest
-from PySide6.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
 from spinetoolbox.widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
+from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimeSeriesFixedResolutionEditor(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        if not QApplication.instance():
-            QApplication()
-
+class TestTimeSeriesFixedResolutionEditor(TestCaseWithQApplication):
     def test_initial_value(self):
         editor = TimeSeriesFixedResolutionEditor()
         value = editor.value()
