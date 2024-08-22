@@ -60,8 +60,8 @@ class TestMassRemoveItemsDialog(TestCaseWithQApplication):
                 "scenario": False,
                 "scenario_alternative": False,
                 "superclass_subclass": False,
+                "display_mode": False,
                 "entity_class_display_mode": False,
-                "display_mode__entity_class": False,
             },
         )
         self.assertTrue(dialog._database_check_boxes_widget._check_boxes[self._db_map].isChecked())
