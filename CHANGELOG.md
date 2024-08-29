@@ -21,6 +21,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## 0.8.0
 
+
+### Added
+
+testing changelog feature
+
 ### Added
 
 - New context menu action (Select superclass) for entity class items in the entity tree.

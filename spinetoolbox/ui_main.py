@@ -117,6 +117,7 @@ from .link import JumpLink, Link, LINK_COLOR, JUMP_COLOR
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.server.engine_client import EngineClient, RemoteEngineInitFailed, ClientSecurityModel
 from .kernel_fetcher import KernelFetcher
+from .changelog_diff import save_changelog_to_settings, get_changelog_diff
 
 
 class ToolboxUI(QMainWindow):
@@ -135,6 +136,8 @@ class ToolboxUI(QMainWindow):
     jupyter_console_requested = Signal(object, str, str, str, dict)
     kernel_shutdown = Signal(object, str)
     persistent_console_requested = Signal(object, str, tuple, str)
+
+
 
     def __init__(self):
         """Initializes application and main window."""
@@ -243,7 +246,10 @@ class ToolboxUI(QMainWindow):
         self.startup_box_widget.project_load_requested.connect(self.restore_project)
         self.startup_box_widget.show()
 
-
+        diff = get_changelog_diff(self._qsettings)
+        print(diff)
+        # Assuming you create StartupBoxWidget somewhere in ui_main.py
+        self.startup_box_widget.set_changelog_diff(diff)
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -2002,6 +2008,7 @@ class ToolboxUI(QMainWindow):
         for item_type in self.item_factories:
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
+        save_changelog_to_settings(self._qsettings)
         event.accept()
 
     def _serialize_selected_items(self):
