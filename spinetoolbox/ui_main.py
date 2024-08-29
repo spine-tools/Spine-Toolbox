@@ -66,7 +66,6 @@ from .load_project_items import load_project_items
 from .mvcmodels.project_item_specification_models import ProjectItemSpecificationModel, FilteredSpecificationModel
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .project_settings import ProjectSettings
-from .startup_box_old import StartUpMainWindow
 from .widgets.startup_box_widget import StartupBoxWidget
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
