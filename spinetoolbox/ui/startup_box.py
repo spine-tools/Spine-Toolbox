@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'startup_box.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.5.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -26,47 +26,15 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QCommandLinkButton, QFrame, QGroupBox,
-    QLabel, QPushButton, QScrollArea, QSizePolicy,
-    QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QFrame, QGroupBox, QLabel,
+    QListWidget, QListWidgetItem, QPushButton, QSizePolicy,
+    QTabWidget, QWidget)
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
         Form.resize(1481, 928)
-        self.verticalLayoutWidget = QWidget(Form)
-        self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
-        self.verticalLayoutWidget.setGeometry(QRect(10, 30, 191, 791))
-        self.verticalLayout = QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.scrollArea = QScrollArea(self.verticalLayoutWidget)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 187, 787))
-        self.label_2 = QLabel(self.scrollAreaWidgetContents)
-        self.label_2.setObjectName(u"label_2")
-        self.label_2.setGeometry(QRect(10, 70, 141, 20))
-        font = QFont()
-        font.setPointSize(11)
-        font.setBold(True)
-        self.label_2.setFont(font)
-        self.label_2.setLineWidth(1)
-        self.commandLinkButton = QCommandLinkButton(self.scrollAreaWidgetContents)
-        self.commandLinkButton.setObjectName(u"commandLinkButton")
-        self.commandLinkButton.setGeometry(QRect(10, 20, 161, 31))
-        self.commandLinkButton.setStyleSheet(u"background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 255, 255, 255));\n"
-"border-color: qradialgradient(spread:pad, cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5, stop:0 rgba(0, 0, 0, 0), stop:1 rgba(255, 255, 255, 255));")
-        icon = QIcon()
-        icon.addFile(u"resources/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
-        self.commandLinkButton.setIcon(icon)
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.verticalLayout.addWidget(self.scrollArea)
-
         self.tabWidget = QTabWidget(Form)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tabWidget.setGeometry(QRect(210, 30, 601, 791))
@@ -75,11 +43,11 @@ class Ui_Form(object):
         self.label_13 = QLabel(self.tab)
         self.label_13.setObjectName(u"label_13")
         self.label_13.setGeometry(QRect(20, 460, 530, 21))
-        font1 = QFont()
-        font1.setPointSize(12)
-        font1.setBold(True)
-        font1.setUnderline(False)
-        self.label_13.setFont(font1)
+        font = QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setUnderline(False)
+        self.label_13.setFont(font)
         self.label_13.setLayoutDirection(Qt.LeftToRight)
         self.label_13.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.line = QFrame(self.tab)
@@ -95,7 +63,7 @@ class Ui_Form(object):
         self.label = QLabel(self.tab)
         self.label.setObjectName(u"label")
         self.label.setGeometry(QRect(10, 0, 561, 21))
-        self.label.setFont(font1)
+        self.label.setFont(font)
         self.label.setLayoutDirection(Qt.LeftToRight)
         self.label.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.groupBox = QGroupBox(self.tab)
@@ -196,6 +164,19 @@ class Ui_Form(object):
         self.groupBox_6.setObjectName(u"groupBox_6")
         self.groupBox_6.setGeometry(QRect(820, 50, 151, 761))
         self.groupBox_6.setMinimumSize(QSize(0, 16))
+        self.groupBox_7 = QGroupBox(Form)
+        self.groupBox_7.setObjectName(u"groupBox_7")
+        self.groupBox_7.setGeometry(QRect(40, 50, 151, 761))
+        self.groupBox_7.setMinimumSize(QSize(0, 16))
+        self.pushButton_8 = QPushButton(self.groupBox_7)
+        self.pushButton_8.setObjectName(u"pushButton_8")
+        self.pushButton_8.setGeometry(QRect(10, 40, 131, 24))
+        self.label_2 = QLabel(self.groupBox_7)
+        self.label_2.setObjectName(u"label_2")
+        self.label_2.setGeometry(QRect(10, 80, 49, 16))
+        self.listWidget = QListWidget(self.groupBox_7)
+        self.listWidget.setObjectName(u"listWidget")
+        self.listWidget.setGeometry(QRect(20, 110, 121, 192))
 
         self.retranslateUi(Form)
 
@@ -207,8 +188,6 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.label_2.setText(QCoreApplication.translate("Form", u"Recent", None))
-        self.commandLinkButton.setText(QCoreApplication.translate("Form", u"Open...", None))
         self.label_13.setText(QCoreApplication.translate("Form", u"Advanced Templates", None))
         self.label.setText(QCoreApplication.translate("Form", u"Beginner Templates", None))
         self.groupBox.setTitle(QCoreApplication.translate("Form", u"Simple Energy System", None))
@@ -234,5 +213,8 @@ class Ui_Form(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("Form", u"Templates", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("Form", u"Tutorials", None))
         self.groupBox_6.setTitle(QCoreApplication.translate("Form", u"Software Info", None))
+        self.groupBox_7.setTitle(QCoreApplication.translate("Form", u"Main", None))
+        self.pushButton_8.setText(QCoreApplication.translate("Form", u"Open Project", None))
+        self.label_2.setText(QCoreApplication.translate("Form", u"Recent", None))
     # retranslateUi
 

@@ -15,14 +15,23 @@ from PySide6.QtWidgets import QWidget, QPushButton
 from PySide6.QtCore import Qt, Slot, Signal
 from spinetoolbox.ui.startup_box import Ui_Form
 
+from PySide6.QtWidgets import QListWidgetItem
 
 class StartupBoxWidget(QWidget):
     project_load_requested = Signal(str)
+    project_opener = Signal(str)
+    recent_projects = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent, f=Qt.WindowType.Window)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
+
+        # Connect the clicked signal of open project button
+        self._ui.pushButton_8.clicked.connect(self.open_project_startbox)
+
+        # Connect the signal of recent projects
+        self.open_recent()
 
         # Connect the clicked signal of each button to a specific slot
         self._ui.pushButton_3.clicked.connect(self.open_tutorial1)
@@ -32,6 +41,36 @@ class StartupBoxWidget(QWidget):
         self._ui.pushButton_7.clicked.connect(self.open_tutorial5)
 
     @Slot()
+    def open_project_startbox(self):
+        # Execute the open_project function in the ui_main.py
+        self.project_opener.emit(self)
+
+    def open_recent(self):
+        # Access qsettings from the parent object
+        recents = self.parent().qsettings().value("appSettings/recentProjects", defaultValue=None)
+        if recents:
+            recents = str(recents)
+            recents_list = recents.split("\n")
+            for entry in recents_list:
+                name, filepath = entry.split("<>")
+                # Add only the name to the list widget
+                item = QListWidgetItem(name)
+                self._ui.listWidget.addItem(item)
+
+                # Storing filepath as an attribute of the item
+                item.filepath = filepath
+                # Storing filepath as data
+                item.setData(Qt.UserRole, filepath)
+
+        # Connect the itemClicked signal to the open_selected_tutorial function
+        self._ui.listWidget.itemClicked.connect(self.open_selected_tutorial)
+
+    @Slot()
+    def open_selected_tutorial(self):
+        item = self._ui.listWidget.currentItem()
+        path = item.data(Qt.UserRole)
+        self.project_load_requested.emit(path)
+
     def open_tutorial1(self):
         print("Open 1st tutorial")
         path_to_project = "C:\\Users\ErmannoLoCascio\Desktop\eScience - Mopo\spine_projects\Simple Tutorial 4"
