@@ -40,6 +40,13 @@ class StartupBoxWidget(QWidget):
         self._ui.pushButton_6.clicked.connect(self.open_tutorial4)
         self._ui.pushButton_7.clicked.connect(self.open_tutorial5)
 
+    def set_changelog_diff(self, diff_list):
+        # Add diff_list items to listWidget_2
+        for item in diff_list:
+            self._ui.listWidget_2.addItem(item)
+
+
+
     @Slot()
     def open_project_startbox(self):
         # Execute the open_project function in the ui_main.py

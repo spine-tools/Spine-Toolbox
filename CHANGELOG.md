@@ -121,6 +121,11 @@ This version of Spine Toolbox requires Python version from 3.9 to 3.12.
 
 ## [0.8.0]
 
+
+### Added
+
+testing changelog feature
+
 ### Added
 
 - New context menu action (Select superclass) for entity class items in the entity tree.
