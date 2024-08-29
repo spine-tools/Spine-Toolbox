@@ -26,464 +26,13 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QTabWidget" name="tabWidget">
-   <property name="geometry">
-    <rect>
-     <x>210</x>
-     <y>30</y>
-     <width>601</width>
-     <height>791</height>
-    </rect>
-   </property>
-   <property name="currentIndex">
-    <number>0</number>
-   </property>
-   <widget class="QWidget" name="tab">
-    <attribute name="title">
-     <string>Templates</string>
-    </attribute>
-    <widget class="QLabel" name="label_13">
-     <property name="geometry">
-      <rect>
-       <x>20</x>
-       <y>460</y>
-       <width>530</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-       <bold>true</bold>
-       <underline>false</underline>
-      </font>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="text">
-      <string>Advanced Templates</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="Line" name="line">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>440</y>
-       <width>551</width>
-       <height>20</height>
-      </rect>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-    </widget>
-    <widget class="Line" name="line_2">
-     <property name="geometry">
-      <rect>
-       <x>-30</x>
-       <y>50</y>
-       <width>20</width>
-       <height>731</height>
-      </rect>
-     </property>
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-    </widget>
-    <widget class="QLabel" name="label">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>0</y>
-       <width>561</width>
-       <height>21</height>
-      </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>12</pointsize>
-       <bold>true</bold>
-       <underline>false</underline>
-      </font>
-     </property>
-     <property name="layoutDirection">
-      <enum>Qt::LeftToRight</enum>
-     </property>
-     <property name="text">
-      <string>Beginner Templates</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-     </property>
-    </widget>
-    <widget class="QGroupBox" name="groupBox">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>30</y>
-       <width>551</width>
-       <height>131</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Simple Energy System</string>
-     </property>
-     <widget class="QLabel" name="label_3">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>30</y>
-        <width>121</width>
-        <height>91</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>../../docs/source/img/simple_system_schematic.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_4">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>20</y>
-        <width>291</width>
-        <height>101</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_3">
-      <property name="geometry">
-       <rect>
-        <x>460</x>
-        <y>50</y>
-        <width>75</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Open</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>170</y>
-       <width>551</width>
-       <height>131</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Reserve Requirements</string>
-     </property>
-     <widget class="QLabel" name="label_5">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>30</y>
-        <width>121</width>
-        <height>91</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>../../docs/source/img/reserves_tutorial_schematic.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_6">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>30</y>
-        <width>291</width>
-        <height>101</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>This tutorial provides a step-by-step guide to include reserve requirements in a simple energy system with Spine Toolbox for SpineOpt.</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_4">
-      <property name="geometry">
-       <rect>
-        <x>460</x>
-        <y>60</y>
-        <width>75</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Open</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QGroupBox" name="groupBox_3">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>310</y>
-       <width>551</width>
-       <height>131</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Hydropwer Plant</string>
-     </property>
-     <widget class="QPushButton" name="pushButton_5">
-      <property name="geometry">
-       <rect>
-        <x>460</x>
-        <y>50</y>
-        <width>75</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Open</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_8">
-      <property name="geometry">
-       <rect>
-        <x>150</x>
-        <y>10</y>
-        <width>291</width>
-        <height>120</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Welcome to this Spine Toolbox Case Study tutorial. Case Study A5 is one of the Spine Project case studies designed to verify Toolbox and Model capabilities. To this end, it reproduces an already existing study about hydropower on the Skellefte river, which models one week of operation of the fifteen power stations along the river.</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_7">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>30</y>
-        <width>121</width>
-        <height>91</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>../../docs/source/img/case_study_a5_schematic.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>true</bool>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QGroupBox" name="groupBox_4">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>490</y>
-       <width>551</width>
-       <height>121</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>Coal Plant</string>
-     </property>
-     <widget class="QLabel" name="label_10">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>20</y>
-        <width>121</width>
-        <height>91</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>../../docs/source/img/tutorial_fig_flextool.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_9">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>10</y>
-        <width>291</width>
-        <height>101</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>The system contains three demand nodes, connections between them, a coal plant and a wind plant to provide the energy to the time varying demand. The system is run over a 48 hour timeline.</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_6">
-      <property name="geometry">
-       <rect>
-        <x>460</x>
-        <y>40</y>
-        <width>75</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Open</string>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QGroupBox" name="groupBox_5">
-     <property name="geometry">
-      <rect>
-       <x>10</x>
-       <y>620</y>
-       <width>551</width>
-       <height>131</height>
-      </rect>
-     </property>
-     <property name="title">
-      <string>TBD ???</string>
-     </property>
-     <widget class="QLabel" name="label_11">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>30</y>
-        <width>121</width>
-        <height>91</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>../../docs/source/img/simple_system_schematic.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_12">
-      <property name="geometry">
-       <rect>
-        <x>140</x>
-        <y>10</y>
-        <width>291</width>
-        <height>101</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>This tutorial provides a step-by-step guide to include reserve requirements in a simple energy system with Spine Toolbox for SpineOpt.</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::PlainText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButton_7">
-      <property name="geometry">
-       <rect>
-        <x>460</x>
-        <y>40</y>
-        <width>75</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Open</string>
-      </property>
-     </widget>
-    </widget>
-   </widget>
-   <widget class="QWidget" name="tab_2">
-    <attribute name="title">
-     <string>Tutorials</string>
-    </attribute>
-   </widget>
-  </widget>
   <widget class="QGroupBox" name="groupBox_6">
    <property name="geometry">
     <rect>
-     <x>820</x>
-     <y>50</y>
-     <width>151</width>
-     <height>761</height>
+     <x>910</x>
+     <y>40</y>
+     <width>191</width>
+     <height>611</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -499,20 +48,27 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>30</y>
-      <width>131</width>
-      <height>301</height>
+      <y>40</y>
+      <width>171</width>
+      <height>561</height>
      </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">background-color: rgb(240, 240, 240);
+border-color: rgb(240, 240, 240);</string>
+    </property>
+    <property name="showDropIndicator" stdset="0">
+     <bool>true</bool>
     </property>
    </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_7">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>50</y>
+     <x>50</x>
+     <y>40</y>
      <width>151</width>
-     <height>761</height>
+     <height>611</height>
     </rect>
    </property>
    <property name="minimumSize">
@@ -553,12 +109,505 @@
    <widget class="QListWidget" name="listWidget">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>110</y>
-      <width>121</width>
-      <height>192</height>
+      <width>131</width>
+      <height>331</height>
      </rect>
     </property>
+    <property name="styleSheet">
+     <string notr="true">background-color: rgb(240, 240, 240);
+border-color: rgb(240, 240, 240);</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QTabWidget" name="tabWidget">
+   <property name="geometry">
+    <rect>
+     <x>210</x>
+     <y>40</y>
+     <width>691</width>
+     <height>611</height>
+    </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true"/>
+   </property>
+   <property name="currentIndex">
+    <number>0</number>
+   </property>
+   <widget class="QWidget" name="tab_2">
+    <attribute name="title">
+     <string>Tutorials</string>
+    </attribute>
+    <widget class="QScrollArea" name="scrollArea_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>10</y>
+       <width>661</width>
+       <height>561</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true"/>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="verticalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>false</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents_3">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>-73</y>
+        <width>668</width>
+        <height>642</height>
+       </rect>
+      </property>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>670</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+         <bold>true</bold>
+         <underline>false</underline>
+        </font>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>Introductory Tutorials</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_14">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>430</y>
+         <width>670</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>12</pointsize>
+         <bold>true</bold>
+         <underline>false</underline>
+        </font>
+       </property>
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="text">
+        <string>Advanced Tutorials</string>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>631</width>
+         <height>101</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Tutorial 1</string>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_10">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>170</y>
+         <width>631</width>
+         <height>111</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Tutorial 2</string>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_11">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>300</y>
+         <width>631</width>
+         <height>101</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Tutorial 3</string>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_13">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>460</y>
+         <width>631</width>
+         <height>101</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Tutorial 5</string>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="groupBox_9">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>580</y>
+         <width>631</width>
+         <height>101</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Tutorial 6</string>
+       </property>
+      </widget>
+     </widget>
+    </widget>
+   </widget>
+   <widget class="QWidget" name="tab">
+    <attribute name="title">
+     <string>Templates</string>
+    </attribute>
+    <layout class="QVBoxLayout" name="verticalLayout_3">
+     <item>
+      <widget class="QScrollArea" name="scrollArea">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOff</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOff</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>false</bool>
+       </property>
+       <widget class="QWidget" name="scrollAreaWidgetContents_2">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>-78</y>
+          <width>668</width>
+          <height>642</height>
+         </rect>
+        </property>
+        <widget class="QLabel" name="label">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>10</y>
+           <width>670</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+           <bold>true</bold>
+           <underline>false</underline>
+          </font>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>Beginner Templates</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_13">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>410</y>
+           <width>670</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>12</pointsize>
+           <bold>true</bold>
+           <underline>false</underline>
+          </font>
+         </property>
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>Advanced Templates</string>
+         </property>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_8">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>50</y>
+           <width>631</width>
+           <height>111</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>Simple Energy System</string>
+         </property>
+         <widget class="QLabel" name="label_5">
+          <property name="geometry">
+           <rect>
+            <x>90</x>
+            <y>20</y>
+            <width>351</width>
+            <height>71</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.</string>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::PlainText</enum>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="pushButton_3">
+          <property name="geometry">
+           <rect>
+            <x>460</x>
+            <y>40</y>
+            <width>141</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Open</string>
+          </property>
+         </widget>
+        </widget>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>170</y>
+           <width>631</width>
+           <height>101</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>Reserve Requirement</string>
+         </property>
+         <widget class="QPushButton" name="pushButton_4">
+          <property name="geometry">
+           <rect>
+            <x>460</x>
+            <y>30</y>
+            <width>141</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Open</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_6">
+          <property name="geometry">
+           <rect>
+            <x>90</x>
+            <y>20</y>
+            <width>361</width>
+            <height>50</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>This tutorial provides a step-by-step guide to include reserve requirements in a simple energy system with Spine Toolbox for SpineOpt.</string>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::PlainText</enum>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>280</y>
+           <width>631</width>
+           <height>111</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>Hydropower Plant</string>
+         </property>
+         <widget class="QPushButton" name="pushButton_5">
+          <property name="geometry">
+           <rect>
+            <x>464</x>
+            <y>40</y>
+            <width>131</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Open</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_8">
+          <property name="geometry">
+           <rect>
+            <x>80</x>
+            <y>20</y>
+            <width>361</width>
+            <height>81</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Welcome to this Spine Toolbox Case Study tutorial. Case Study A5 is one of the Spine Project case studies designed to verify Toolbox and Model capabilities. To this end, it reproduces an already existing study about hydropower on the Skellefte river, which models one week of operation of the fifteen power stations along the river.</string>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::PlainText</enum>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_3">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>440</y>
+           <width>631</width>
+           <height>80</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>TBD?</string>
+         </property>
+         <widget class="QPushButton" name="pushButton_7">
+          <property name="geometry">
+           <rect>
+            <x>471</x>
+            <y>30</y>
+            <width>121</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Open</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_12">
+          <property name="geometry">
+           <rect>
+            <x>70</x>
+            <y>20</y>
+            <width>371</width>
+            <height>50</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>TO BE Defined</string>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::PlainText</enum>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </widget>
+        <widget class="QGroupBox" name="groupBox_5">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>540</y>
+           <width>631</width>
+           <height>91</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>Coal Plant</string>
+         </property>
+         <widget class="QPushButton" name="pushButton_6">
+          <property name="geometry">
+           <rect>
+            <x>470</x>
+            <y>30</y>
+            <width>121</width>
+            <height>24</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Open</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="label_9">
+          <property name="geometry">
+           <rect>
+            <x>80</x>
+            <y>20</y>
+            <width>361</width>
+            <height>64</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>The system contains three demand nodes, connections between them, a coal plant and a wind plant to provide the energy to the time varying demand. The system is run over a 48 hour timeline.</string>
+          </property>
+          <property name="textFormat">
+           <enum>Qt::PlainText</enum>
+          </property>
+          <property name="scaledContents">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </widget>
+       </widget>
+      </widget>
+     </item>
+    </layout>
    </widget>
   </widget>
  </widget>
