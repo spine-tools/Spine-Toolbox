@@ -14,8 +14,8 @@
 from PySide6.QtWidgets import QWidget, QPushButton
 from PySide6.QtCore import Qt, Slot, Signal
 from spinetoolbox.ui.startup_box import Ui_Form
-
 from PySide6.QtWidgets import QListWidgetItem
+
 
 class StartupBoxWidget(QWidget):
     project_load_requested = Signal(str)
@@ -26,6 +26,9 @@ class StartupBoxWidget(QWidget):
         super().__init__(parent=parent, f=Qt.WindowType.Window)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
+
+
+
 
         # Connect the clicked signal of open project button
         self._ui.pushButton_8.clicked.connect(self.open_project_startbox)

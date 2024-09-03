@@ -228,18 +228,19 @@ class ToolboxUI(QMainWindow):
         self._disable_project_actions()
         self.connect_signals()
 
-
-        #startbox = StartUpMainWindow(self)
-        #startbox.project_load_requested.connect(self.restore_project)
-        #startbox.show()
-
+        # Start Up box Widget
         self.startup_box_widget = StartupBoxWidget(self)
+        # Connect to restore_project the function in the start_up_box.py
         self.startup_box_widget.project_load_requested.connect(self.restore_project)
+        # Connect to open_project the function in the start_up_box.py
+        self.startup_box_widget.project_opener.connect(self.open_project)
+        # Show the Start Up box
         self.startup_box_widget.show()
 
+        # Get the changelog differences
         diff = get_changelog_diff(self._qsettings)
-        print(diff)
-        # Assuming you create StartupBoxWidget somewhere in ui_main.py
+
+        # Connect to set_changelog_diff the function in the start_up_box.py
         self.startup_box_widget.set_changelog_diff(diff)
 
     def eventFilter(self, obj, ev):
