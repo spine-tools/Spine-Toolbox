@@ -20,7 +20,7 @@ from unittest import mock
 import networkx as nx
 from PySide6.QtCore import QVariantAnimation
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QMessageBox, QGraphicsRectItem
+from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QMessageBox
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
