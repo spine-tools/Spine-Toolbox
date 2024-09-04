@@ -408,8 +408,8 @@ class SetJumpConditionCommand(SpineToolboxCommand):
         self._jump_properties = jump_properties
         self._jump_source = jump.source
         self._jump_destination = jump.destination
-        self._condition = condition
-        self._previous_condition = jump.condition
+        self._condition = dict(condition)
+        self._previous_condition = dict(jump.condition)
         self.setText(f"change loop condition for jump {jump.name}")
 
     def redo(self):
