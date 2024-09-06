@@ -13,6 +13,7 @@
 """Models that vertically concatenate two or more table models."""
 import bisect
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
+from ..helpers import rows_to_row_count_tuples
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 
@@ -20,8 +21,7 @@ class CompoundTableModel(MinimalTableModel):
     """A model that concatenates several sub table models vertically."""
 
     def __init__(self, parent=None, header=None):
-        """Initializes model.
-
+        """
         Args:
             parent (QObject, optional): the parent object
             header (list of str, optional): header labels
@@ -125,7 +125,7 @@ class CompoundTableModel(MinimalTableModel):
             row_map (list): tuples (model, row number)
         """
         for model_row_tup in row_map:
-            self._inv_row_map[model_row_tup] = self.rowCount()
+            self._inv_row_map[model_row_tup] = len(self._row_map)
             self._row_map.append(model_row_tup)
 
     def _row_map_iterator_for_model(self, model):
@@ -331,20 +331,21 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         row_map = self._row_map_for_model(model)
         if not row_map:
             return
-        try:
-            first = self._inv_row_map[row_map[0]]
-        except KeyError:
-            # Sometimes the submodel may get reset before it has been added to the inverted row map.
-            # In this case there are no rows to remove, so we can bail out here.
-            return
-        last = first + len(row_map) - 1
-        tail_row_map = self._row_map[last + 1 :]
-        self.beginRemoveRows(QModelIndex(), first, last)
-        for key in self._row_map[first:]:
-            del self._inv_row_map[key]
-        self._row_map[first:] = []
-        self._append_row_map(tail_row_map)
-        self.endRemoveRows()
+        removed_rows = []
+        for mapped_row in row_map:
+            try:
+                removed_rows.append(self._inv_row_map[mapped_row])
+            except KeyError:
+                pass
+        for first, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
+            last = first + count - 1
+            tail_row_map = self._row_map[last + 1 :]
+            self.beginRemoveRows(QModelIndex(), first, last)
+            for key in self._row_map[first:]:
+                del self._inv_row_map[key]
+            del self._row_map[first:]
+            self._append_row_map(tail_row_map)
+            self.endRemoveRows()
 
     def _handle_single_model_reset(self, model):
         """Runs when given model is reset."""

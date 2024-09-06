@@ -192,7 +192,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             for db_map, entity_class_id in values:
                 if model.db_map == db_map and (entity_class_id is None or model.entity_class_id == entity_class_id):
                     break
-            else:  # nobreak
+            else:
                 return False
         return True
 
@@ -391,7 +391,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Args:
             db_map_data (dict): list of removed dict-items keyed by DatabaseMapping
         """
-        self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
             if db_map not in self.db_maps:
                 continue
@@ -403,23 +402,77 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
                 removed_ids = {x["id"] for x in items_per_class.get(model.entity_class_id, {})}
                 if not removed_ids:
                     continue
-                removed_rows = []
+                removed_invisible_rows = set()
+                removed_visible_rows = []
                 for row in range(model.rowCount()):
                     id_ = model._main_data[row]
                     if id_ in removed_ids:
-                        removed_rows.append(row)
                         removed_ids.remove(id_)
-                        if not removed_ids:
-                            break
-                for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-                    del model._main_data[row : row + count]
+                        if (model, row) in self._inv_row_map:
+                            removed_visible_rows.append(row)
+                        else:
+                            removed_invisible_rows.add(row)
+                removed_compound_rows = [self._inv_row_map[(model, row)] for row in removed_visible_rows]
+                if removed_invisible_rows:
+                    new_kept_rows = self._delete_rows_from_single_model(model, removed_invisible_rows)
+                    self._update_single_model_rows_in_row_map(model, new_kept_rows)
+                for first_compound_row, count in sorted(rows_to_row_count_tuples(removed_compound_rows), reverse=True):
+                    self.beginRemoveRows(QModelIndex(), first_compound_row, first_compound_row + count - 1)
+                    removed_model_rows = {
+                        self._row_map[r][1] for r in range(first_compound_row, first_compound_row + count)
+                    }
+                    new_kept_rows = self._delete_rows_from_single_model(model, removed_model_rows)
+                    for row in removed_model_rows:
+                        del self._inv_row_map[(model, row)]
+                    self._update_single_model_rows_in_row_map(model, new_kept_rows)
+                    del self._row_map[first_compound_row : first_compound_row + count]
+                    for row, mapped_row in enumerate(self._row_map[first_compound_row:]):
+                        self._inv_row_map[mapped_row] = row + first_compound_row
+                    self.endRemoveRows()
                 if model.rowCount() == 0:
                     emptied_single_model_indexes.append(model_index)
             for model_index in reversed(emptied_single_model_indexes):
                 model = self.sub_models.pop(model_index)
                 model.deleteLater()
-        self._do_refresh()
-        self.layoutChanged.emit()
+
+    def _delete_rows_from_single_model(self, model, rows_to_remove):
+        """Removes rows from given single model and computes a map from original rows to retained rows.
+
+        Args:
+            model (SingleModelBase): single model to delete data from
+            rows_to_remove (set of int): row index that should be removed
+
+        Returns:
+            dict: mapping from original row index to post-removal row index
+        """
+        new_kept_rows = {}
+        sorted_deleted_rows = []
+        for row in range(model.rowCount()):
+            if row in rows_to_remove:
+                sorted_deleted_rows.append(row)
+            else:
+                new_kept_rows[row] = row - len(sorted_deleted_rows)
+        for row in reversed(sorted_deleted_rows):
+            del model._main_data[row]
+        return new_kept_rows
+
+    def _update_single_model_rows_in_row_map(self, model, new_rows):
+        """Rewrites single model rows in row map.
+
+        Args:
+            model (SingleModelBase): single model whose rows to update
+            new_rows (dict): mapping from old row index to updated index
+        """
+        new_inv_row_map = {}
+        for row, new_row in new_rows.items():
+            try:
+                compound_row = self._inv_row_map.pop((model, row))
+            except KeyError:
+                continue
+            self._row_map[compound_row] = (model, new_row)
+            new_inv_row_map[(model, new_row)] = compound_row
+        for mapped_row, compound_row in new_inv_row_map.items():
+            self._inv_row_map[mapped_row] = compound_row
 
     def db_item(self, index):
         sub_index = self.map_to_sub(index)

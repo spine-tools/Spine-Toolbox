@@ -13,7 +13,7 @@
 """Unit tests for the classes in ``custom_combobox`` module.
 OpenProjectDialogComboBox is tested in test_open_project_dialog module."""
 import unittest
-from PySide6.QtGui import QPaintEvent
+from PySide6.QtGui import QColor, QImage, QPaintEvent
 from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.custom_combobox import CustomQComboBox, ElidedCombobox
 from tests.mock_helpers import TestCaseWithQApplication
@@ -21,14 +21,15 @@ from tests.mock_helpers import TestCaseWithQApplication
 
 class TestCustomComboBoxes(TestCaseWithQApplication):
     def test_custom_combobox(self):
-        parent = QWidget()
-        cb = CustomQComboBox(parent)
+        cb = CustomQComboBox(None)
         cb.addItems(["a", "b", "c"])
         self.assertEqual("a", cb.itemText(0))
-        parent.deleteLater()
+        cb.deleteLater()
 
     def test_elided_combobox(self):
-        parent = QWidget()
-        cb = ElidedCombobox(parent)
+        cb = ElidedCombobox(None)
+        image = QImage(cb.size(), QImage.Format.Format_RGB32)
+        image.fill(QColor("white"))
+        cb.paintEngine = image.paintEngine
         cb.paintEvent(QPaintEvent(cb.rect()))
-        parent.deleteLater()
+        cb.deleteLater()
