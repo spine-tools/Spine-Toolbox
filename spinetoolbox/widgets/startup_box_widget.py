@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QWidget, QPushButton
 from PySide6.QtCore import Qt, Slot, Signal
 from spinetoolbox.ui.startup_box import Ui_Form
 from PySide6.QtWidgets import QListWidgetItem
+import webbrowser
 
 
 class StartupBoxWidget(QWidget):
@@ -43,6 +44,18 @@ class StartupBoxWidget(QWidget):
         # Connect the clicked signal of each button to a specific slot
         self._ui.pushButton_3.clicked.connect(self.open_tutorial1)
         self._ui.pushButton_7.clicked.connect(self.open_tutorial5)
+
+        # Connect the clicked button to open the link1
+        self._ui.pushButton.clicked.connect(self.open_link1)
+
+        # Connect the clicked button to open the link2
+        self._ui.pushButton_2.clicked.connect(self.open_link2)
+
+        # Connect the clicked button to open the link3
+        self._ui.pushButton_4.clicked.connect(self.open_link3)
+
+        # Connect the clicked button to open the link4
+        self._ui.pushButton_5.clicked.connect(self.open_link4)
 
     def set_changelog_diff(self, diff_list):
         # Add diff_list items to listWidget_2
@@ -87,6 +100,26 @@ class StartupBoxWidget(QWidget):
         item = self._ui.listWidget.currentItem()
         path = item.data(Qt.UserRole)
         self.project_load_requested.emit(path)
+
+
+
+    def open_link1(self):
+        print("Open link")
+        webbrowser.open_new_tab("https://spine-toolbox.readthedocs.io/en/latest/getting_started.html")
+
+    def open_link2(self):
+        print("Open link")
+        webbrowser.open_new_tab("https://github.com/energy-modelling-workbench/spine-data-model#spine-data-model")
+
+    def open_link3(self):
+        print("Open link")
+        webbrowser.open_new_tab("https://spine-toolbox.readthedocs.io/en/latest/getting_started.html#adding-a-data-connection-item-to-the-project")
+
+    def open_link4(self):
+        print("Open link")
+        webbrowser.open_new_tab("https://spine-toolbox.readthedocs.io/en/latest/executing_projects.html")
+
+
 
     def open_tutorial1(self):
         print("Open 1st tutorial")
