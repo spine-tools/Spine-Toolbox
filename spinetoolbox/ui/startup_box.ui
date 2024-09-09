@@ -1,17 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
-# Copyright Spine Toolbox contributors
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
-######################################################################################################################
--->
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
@@ -244,6 +231,35 @@ border-color: rgb(240, 240, 240);</string>
        <property name="title">
         <string>Hello World</string>
        </property>
+       <widget class="QLabel" name="label_6">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>25</y>
+          <width>401</width>
+          <height>61</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string> In this guide you will learn two ways of running a “Hello, World!” program on Spine Toolbox.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton">
+        <property name="geometry">
+         <rect>
+          <x>510</x>
+          <y>46</y>
+          <width>101</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Open Document</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_10">
        <property name="geometry">
@@ -257,6 +273,35 @@ border-color: rgb(240, 240, 240);</string>
        <property name="title">
         <string>Introduction to Spine Data Structure</string>
        </property>
+       <widget class="QLabel" name="label_7">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>30</y>
+          <width>401</width>
+          <height>61</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Learn more on the Spine Data Structure through this GitHub document.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_2">
+        <property name="geometry">
+         <rect>
+          <x>510</x>
+          <y>52</y>
+          <width>101</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Open Document</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_11">
        <property name="geometry">
@@ -270,6 +315,35 @@ border-color: rgb(240, 240, 240);</string>
        <property name="title">
         <string>Setting up a Workflow</string>
        </property>
+       <widget class="QLabel" name="label_8">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>25</y>
+          <width>381</width>
+          <height>61</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>This documento will show how to add a Tool item to your project.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_4">
+        <property name="geometry">
+         <rect>
+          <x>510</x>
+          <y>48</y>
+          <width>101</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Open Document</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_13">
        <property name="geometry">
@@ -283,8 +357,37 @@ border-color: rgb(240, 240, 240);</string>
        <property name="title">
         <string>Executing Projects</string>
        </property>
+       <widget class="QLabel" name="label_9">
+        <property name="geometry">
+         <rect>
+          <x>100</x>
+          <y>25</y>
+          <width>391</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>This document describes how executing a project works and what resources are passed between project items at execution time.</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_5">
+        <property name="geometry">
+         <rect>
+          <x>510</x>
+          <y>40</y>
+          <width>101</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Open Document</string>
+        </property>
+       </widget>
       </widget>
-      </widget>
+     </widget>
     </widget>
    </widget>
    <widget class="QWidget" name="tab">
@@ -345,7 +448,7 @@ border-color: rgb(240, 240, 240);</string>
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>240</y>
+           <y>280</y>
            <width>621</width>
            <height>21</height>
           </rect>
@@ -368,7 +471,7 @@ border-color: rgb(240, 240, 240);</string>
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>60</y>
+           <y>120</y>
            <width>631</width>
            <height>131</height>
           </rect>
@@ -416,7 +519,7 @@ border-color: rgb(240, 240, 240);</string>
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>320</y>
+           <y>340</y>
            <width>631</width>
            <height>131</height>
           </rect>
@@ -463,14 +566,20 @@ border-color: rgb(240, 240, 240);</string>
         <widget class="QLabel" name="label_4">
          <property name="geometry">
           <rect>
-           <x>10</x>
-           <y>280</y>
-           <width>631</width>
+           <x>20</x>
+           <y>50</y>
+           <width>531</width>
            <height>31</height>
           </rect>
          </property>
+         <property name="autoFillBackground">
+          <bool>false</bool>
+         </property>
          <property name="text">
-          <string>Prerequisite to run the and Julia, SpineOpt</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prerequisites: To run the following project templates, make sure to install both Julia and SpineOpt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::RichText</enum>
          </property>
         </widget>
        </widget>
