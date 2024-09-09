@@ -21,6 +21,7 @@ class StartupBoxWidget(QWidget):
     project_load_requested = Signal(str)
     project_opener = Signal(str)
     recent_projects = Signal(str)
+    new_project_opener = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent=parent, f=Qt.WindowType.Window)
@@ -33,14 +34,14 @@ class StartupBoxWidget(QWidget):
         # Connect the clicked signal of open project button
         self._ui.pushButton_8.clicked.connect(self.open_project_startbox)
 
+        # Connect the clicked signal of open project button
+        self._ui.pushButton_9.clicked.connect(self.open_new_project_startbox)
+
         # Connect the signal of recent projects
         self.open_recent()
 
         # Connect the clicked signal of each button to a specific slot
         self._ui.pushButton_3.clicked.connect(self.open_tutorial1)
-        self._ui.pushButton_4.clicked.connect(self.open_tutorial2)
-        self._ui.pushButton_5.clicked.connect(self.open_tutorial3)
-        self._ui.pushButton_6.clicked.connect(self.open_tutorial4)
         self._ui.pushButton_7.clicked.connect(self.open_tutorial5)
 
     def set_changelog_diff(self, diff_list):
@@ -54,6 +55,12 @@ class StartupBoxWidget(QWidget):
     def open_project_startbox(self):
         # Execute the open_project function in the ui_main.py
         self.project_opener.emit(self)
+
+    def open_new_project_startbox(self):
+        # Execute the open_project function in the ui_main.py
+        self.new_project_opener.emit(self)
+
+
 
     def open_recent(self):
         # Access qsettings from the parent object

@@ -234,6 +234,10 @@ class ToolboxUI(QMainWindow):
         self.startup_box_widget.project_load_requested.connect(self.restore_project)
         # Connect to open_project the function in the start_up_box.py
         self.startup_box_widget.project_opener.connect(self.open_project)
+
+        # Connect to open_project the function in the start_up_box.py
+        self.startup_box_widget.new_project_opener.connect(self.new_project)
+
         # Show the Start Up box
         self.startup_box_widget.show()
 
