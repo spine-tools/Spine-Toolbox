@@ -19,12 +19,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>823</width>
+    <width>820</width>
     <height>615</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Spine Toolbox [dev mode]</string>
+   <string>Spine Toolbox [design mode]</string>
   </property>
   <property name="dockNestingEnabled">
    <bool>true</bool>
@@ -35,7 +35,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>823</width>
+     <width>820</width>
      <height>33</height>
     </rect>
    </property>
@@ -898,14 +898,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CustomQTextBrowser</class>
-   <extends>QTextBrowser</extends>
-   <header>spinetoolbox/widgets/custom_qtextbrowser.h</header>
-  </customwidget>
-  <customwidget>
    <class>DesignQGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomQTextBrowser</class>
+   <extends>QTextBrowser</extends>
+   <header>spinetoolbox/widgets/custom_qtextbrowser.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

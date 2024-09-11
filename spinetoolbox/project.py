@@ -17,7 +17,7 @@ import json
 import os
 from pathlib import Path
 import networkx as nx
-from PySide6.QtCore import QCoreApplication, Signal
+from PySide6.QtCore import QCoreApplication, Signal, Slot
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
@@ -62,6 +62,8 @@ from .project_settings import ProjectSettings
 from .project_upgrader import ProjectUpgrader
 from .server.engine_client import EngineClient
 from .spine_engine_worker import SpineEngineWorker
+from .ui_main_lite import ToolboxUILite
+from .group import Group
 
 
 @unique
@@ -107,6 +109,10 @@ class SpineToolboxProject(MetaObject):
     """Emitted after a specification has been replaced."""
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
+    group_added = Signal(object)
+    """Emitted after new Group has been added to project."""
+    group_disbanded = Signal(object)
+    """Emitted after a Group has been removed from project."""
 
     LOCAL_EXECUTION_JOB_ID = "1"
 
@@ -132,6 +138,8 @@ class SpineToolboxProject(MetaObject):
         self._settings = settings
         self._engine_workers = []
         self._execution_in_progress = False
+        # self._execution_groups = {}
+        self._groups = dict()
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
@@ -172,6 +180,55 @@ class SpineToolboxProject(MetaObject):
     @property
     def app_settings(self):
         return self._app_settings
+
+    @property
+    def groups(self):
+        return self._groups
+
+    def make_new_group_name(self):
+        """Returns a unique name for a new Group."""
+        group_number = 1
+        group_name_taken = True
+        group_name = "NA"
+        while group_name_taken:
+            group_name = "Group " + str(group_number)
+            if group_name in self.groups.keys():
+                group_name_taken = True
+                group_number += 1
+            else:
+                group_name_taken = False
+        return group_name
+
+    def make_group(self, group_name, item_names):
+        """Adds a Group with the given name and given item names to project.
+
+        Args:
+            group_name (str): Group name
+            item_names (list): List of item names to group
+        """
+        group = Group(self.toolbox().active_ui_window, group_name, item_names)
+        self._groups[group_name] = group
+        self.group_added.emit(group)
+
+    def add_item_to_group(self, item_name, group_name):
+        """Adds item with given name to Group with given name."""
+        self.groups[group_name].add_item(item_name)
+
+    def remove_item_from_group(self, item_name, group_name):
+        """Removes item with given name from given group. If only
+        one item remains in the group, destroys the whole group."""
+        self.groups[group_name].remove_item(item_name)
+        if len(self.groups[group_name].project_items) == 1:
+            self.disband_group(False, group_name)
+
+    @Slot(bool, str)
+    def disband_group(self, _, group_name):
+        """Removes all items from a given group and destroys the group."""
+        self.groups[group_name].remove_all_items()
+        self.groups[group_name].prepareGeometryChange()
+        self.groups[group_name].setGraphicsEffect(None)
+        group = self.groups.pop(group_name)
+        self.group_disbanded.emit(group)
 
     def has_items(self):
         """Returns True if project has project items.
@@ -260,6 +317,7 @@ class SpineToolboxProject(MetaObject):
             "specifications": serialized_spec_paths,
             "connections": [connection.to_dict() for connection in self._connections],
             "jumps": [jump.to_dict() for jump in self._jumps],
+            "groups": [group.to_dict() for group in self.groups.values()],
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
@@ -370,8 +428,9 @@ class SpineToolboxProject(MetaObject):
         if not items_dict:
             self._logger.msg_warning.emit("Project has no items")
         self.restore_project_items(items_dict, item_factories)
-        self._logger.msg.emit("Restoring connections...")
         connection_dicts = project_info["project"]["connections"]
+        if len(connection_dicts) > 0:
+            self._logger.msg.emit("Restoring connections...")
         connections = list(map(self.connection_from_dict, connection_dicts))
         for connection in connections:
             self.add_connection(connection, silent=True, notify_resource_changes=False)
@@ -381,10 +440,17 @@ class SpineToolboxProject(MetaObject):
             self._notify_rsrc_changes(destination, source)
         for connection in connections:
             connection.link.update_icons()
-        self._logger.msg.emit("Restoring jumps...")
         jump_dicts = project_info["project"].get("jumps", [])
+        if len(jump_dicts) > 0:
+            self._logger.msg.emit("Restoring jumps...")
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
+        groups_list = project_info["project"].get("groups", [])
+        if len(groups_list) > 0:
+            self._logger.msg.emit("Restoring groups...")
+        for group_dict in groups_list:
+            for group_name, item_names in group_dict.items():
+                self.make_group(group_name, item_names)
         return True
 
     @staticmethod
@@ -668,7 +734,7 @@ class SpineToolboxProject(MetaObject):
             self._logger.error_box.emit("Invalid name", msg)
             return False
         item = self._project_items.pop(previous_name, None)
-        if item is None:
+        if not item:
             # Happens when renaming an item, removing, and then closing the project.
             # We try to undo the renaming because it's critical, but the item doesn't exist anymore so it's fine.
             return True

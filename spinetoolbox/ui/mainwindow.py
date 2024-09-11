@@ -41,7 +41,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(823, 615)
+        MainWindow.resize(820, 615)
         MainWindow.setDockNestingEnabled(True)
         self.actionQuit = QAction(MainWindow)
         self.actionQuit.setObjectName(u"actionQuit")
@@ -202,7 +202,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 823, 33))
+        self.menubar.setGeometry(QRect(0, 0, 820, 33))
         self.menubar.setNativeMenuBar(False)
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
@@ -418,7 +418,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Spine Toolbox [dev mode]", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Spine Toolbox [design mode]", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
 #if QT_CONFIG(tooltip)
         self.actionQuit.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Quit</p></body></html>", None))

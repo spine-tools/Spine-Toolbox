@@ -36,7 +36,8 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     ITEM_EXTENT = 64
     FONT_SIZE_PIXELS = 12  # pixel size to prevent font scaling by system
-    DEFAULT_SELECTION_PEN_WIDTH = 1
+    DEFAULT_ICON_SELECTION_PEN_W = 1
+    USER_MODE_ICON_SELECTION_PEN_W = 5
 
     def __init__(self, toolbox, icon_file, icon_color):
         """
@@ -55,6 +56,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._moved_on_scene = False
         self.previous_pos = QPointF()
         self.icon_group = {self}
+        self.my_groups = set()
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem(self)
         self.svg_item.setZValue(100)
@@ -68,7 +70,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.rank_icon = RankIcon(self)
         # Make item name graphics item.
         self._name = ""
-        self.name_item = QGraphicsTextItem(self._name)
+        self.name_item = QGraphicsTextItem(self._name, parent=self)
         self.name_item.setZValue(100)
         self.set_name_attributes()  # Set font, size, position, etc.
         self.spec_item = None  # For displaying Tool Spec icon
@@ -137,9 +139,9 @@ class ProjectItemIcon(QGraphicsPathItem):
         path = QPainterPath()
         path.addRoundedRect(self._rect.adjusted(-margin, -margin, margin, margin), radius + margin, radius + margin)
         self._selection_halo.setPath(path)
-        self.set_selection_halo_pen(self.DEFAULT_SELECTION_PEN_WIDTH)
+        self.set_icon_selection_pen_w(self.DEFAULT_ICON_SELECTION_PEN_W)
 
-    def set_selection_halo_pen(self, pen_width):
+    def set_icon_selection_pen_w(self, pen_width):
         """Sets the selected items dash line width."""
         selection_pen = QPen(Qt.PenStyle.DashLine)
         selection_pen.setWidthF(pen_width)
@@ -197,12 +199,8 @@ class ProjectItemIcon(QGraphicsPathItem):
         )
         self.rank_icon.setPos(self.rect().topLeft())
 
+    @property
     def name(self):
-        """Returns name of the item that is represented by this icon.
-
-        Returns:
-            str: icon's name
-        """
         return self._name
 
     def update_name_item(self, new_name):
@@ -228,7 +226,8 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def _reposition_name_item(self):
         """Sets name item position (centered on top of the master icon)."""
-        main_rect = self.sceneBoundingRect()
+
+        main_rect = self.boundingRect()
         name_rect = self.name_item.sceneBoundingRect()
         self.name_item.setPos(main_rect.center().x() - name_rect.width() / 2, main_rect.y() - name_rect.height() - 4)
 
@@ -354,7 +353,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         event.accept()
         self.scene().clearSelection()
         self.setSelected(True)
-        item = self._toolbox.project.get_item(self.name())
+        item = self._toolbox.project.get_item(self.name)
         self._toolbox.show_project_or_item_context_menu(event.screenPos(), item)
 
     def itemChange(self, change, value):
@@ -376,6 +375,7 @@ class ProjectItemIcon(QGraphicsPathItem):
             self._reposition_name_item()
             self.update_links_geometry()
             self._handle_collisions()
+            self.update_group_rectangle()
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
@@ -388,6 +388,13 @@ class ProjectItemIcon(QGraphicsPathItem):
                 self._scene.addItem(self.name_item)
                 self._reposition_name_item()
         return super().itemChange(change, value)
+
+    def update_group_rectangle(self):
+        """Updates group icon if this icon is in a group."""
+        if not self.my_groups:
+            return
+        for group in self.my_groups:
+            group.update_group_rect()
 
     def set_pos_without_bumping(self, pos):
         """Sets position without bumping other items. Needed for undoing move operations.
@@ -413,7 +420,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         """Makes room for another item.
 
         Args:
-            item (ProjectItemIcon)
+            other (ProjectItemIcon): Other item
         """
         if self not in other.bumped_rects:
             other.bumped_rects[self] = self.sceneBoundingRect()
@@ -480,7 +487,7 @@ class ConnectorButton(QGraphicsPathItem):
         elif position == "right":
             self._rect.moveCenter(QPointF(parent_rect.right() - extent / 2, parent_rect.center().y()))
         self.setAcceptHoverEvents(True)
-        self.setCursor(Qt.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def rect(self):
         return self._rect
@@ -503,7 +510,7 @@ class ConnectorButton(QGraphicsPathItem):
 
     def parent_name(self):
         """Returns project item name owning this connector button."""
-        return self._parent.name()
+        return self._parent.name
 
     def project_item(self):
         """Returns the project item this connector button is attached to.
@@ -511,7 +518,7 @@ class ConnectorButton(QGraphicsPathItem):
         Returns:
             ProjectItem: project item
         """
-        return self._toolbox.project.get_item(self._parent.name())
+        return self._toolbox.project.get_item(self._parent.name)
 
     def mousePressEvent(self, event):
         """Connector button mouse press event.
@@ -595,17 +602,17 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._text_item.setFont(font)
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
         # pylint: disable=undefined-variable
         self.normal_brush = qApp.palette().window()
         self.selected_brush = qApp.palette().highlight()
         self.setBrush(self.normal_brush)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.hide()
 
     def item_name(self):
-        return self._parent.name()
+        return self._parent.name
 
     def _repaint(self, text, color):
         self._text_item.prepareGeometryChange()

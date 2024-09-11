@@ -77,10 +77,12 @@ from .project_commands import (
     ReplaceSpecificationCommand,
     SaveSpecificationAsCommand,
     SpineToolboxCommand,
+    RenameGroupCommand,
 )
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from .project_item_icon import ProjectItemIcon
 from .project_settings import ProjectSettings
+from .group import Group
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_db_manager import SpineDBManager
 from .spine_engine_manager import make_engine_manager
@@ -99,7 +101,7 @@ from .widgets.settings_widget import SettingsWidget
 
 
 class ToolboxUI(QMainWindow):
-    """Class for application main GUI functions."""
+    """Class for the application main GUI functions in Design Mode."""
 
     # Signals to comply with the spinetoolbox.logger_interface.LoggerInterface interface.
     msg = Signal(str)
@@ -200,7 +202,6 @@ class ToolboxUI(QMainWindow):
         self._plugin_manager.load_installed_plugins()
         self.refresh_toolbars()
         self.restore_dock_widgets()
-        # self.restore_ui()
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
@@ -220,6 +221,14 @@ class ToolboxUI(QMainWindow):
     @property
     def undo_stack(self):
         return self.toolboxuibase.undo_stack
+
+    @property
+    def active_ui_window(self):
+        return self.toolboxuibase.active_ui_window
+
+    @property
+    def active_ui_mode(self):
+        return self.toolboxuibase.active_ui_mode
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -318,11 +327,15 @@ class ToolboxUI(QMainWindow):
 
     def switch_to_user_mode(self):
         """Switches the main window into user mode."""
+        self.ui.graphicsView.scene().clearSelection()
         self.disconnect_project_signals()
         self.ui.graphicsView.scene().clear_icons_and_links()
         self.toolboxuibase.ui.stackedWidget.setCurrentWidget(self.toolboxui_lite)
         self.toolboxuibase.reload_icons_and_links()
+        self.toolboxuibase.active_ui_mode = "toolboxuilite"
         self.toolboxui_lite.connect_project_signals()
+        self.toolboxui_lite.populate_groups_model()
+        self.toolboxui_lite.groups_combobox.setCurrentIndex(0)
         self.toolboxui_lite.ui.graphicsView.reset_zoom()
 
     def _update_execute_enabled(self):
@@ -486,7 +499,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)  # Disable in a clean project
         self.toolboxuibase.connect_project_signals()
         self.toolboxuibase.update_window_title()
-        self.toolboxuibase.current_page.ui.graphicsView.reset_zoom()
+        self.toolboxuibase.active_ui_window.ui.graphicsView.reset_zoom()
         # Update recentProjects
         self.update_recent_projects()
         # Update recentProjectStorages
@@ -557,7 +570,6 @@ class ToolboxUI(QMainWindow):
             logger=self,
         )
         self.specification_model.connect_to_project(self._project)
-
         self.toolboxuibase.connect_project_signals()
         self.toolboxuibase.update_window_title()
         # Populate project model with project items
@@ -571,7 +583,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)  # Save is disabled in a clean project
         self._plugin_manager.reload_plugins_with_local_data()
         # Reset zoom on Design View
-        self.toolboxuibase.current_page.ui.graphicsView.reset_zoom()
+        self.toolboxuibase.active_ui_window.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
@@ -1630,19 +1642,41 @@ class ToolboxUI(QMainWindow):
 
         Args:
             pos (QPoint): Mouse position
-            item (ProjectItem, optional): Project item or None
+            item (ProjectItem, Group, optional): Project item, Group or None
         """
+        menu = QMenu(self)
+        menu.setToolTipsVisible(True)
+        menu.aboutToShow.connect(self.refresh_edit_action_states)
+        menu.aboutToHide.connect(self.enable_edit_actions)
         if not item:  # Clicked on a blank area in Design view
-            menu = QMenu(self)
             menu.addAction(self.ui.actionPaste)
             menu.addAction(self.ui.actionPasteAndDuplicateFiles)
             menu.addSeparator()
             menu.addAction(self.ui.actionOpen_project_directory)
         else:  # Clicked on an item, show the context menu for that item
-            menu = self.project_item_context_menu(item.actions())
-        menu.setToolTipsVisible(True)
-        menu.aboutToShow.connect(self.refresh_edit_action_states)
-        menu.aboutToHide.connect(self.enable_edit_actions)
+            if item.actions():
+                for action in item.actions():
+                    menu.addAction(action)
+                menu.addSeparator()
+            if isinstance(item, Group):
+                menu.addAction(self.ui.actionOpen_project_directory)
+            else:
+                menu.addAction(self.ui.actionCopy)
+                menu.addAction(self.ui.actionPaste)
+                menu.addAction(self.ui.actionPasteAndDuplicateFiles)
+                menu.addAction(self.ui.actionDuplicate)
+                menu.addAction(self.ui.actionDuplicateAndDuplicateFiles)
+                menu.addAction(self.ui.actionOpen_item_directory)
+                menu.addSeparator()
+                menu.addAction(self.ui.actionRemove)
+                menu.addSeparator()
+                menu.addAction(self.ui.actionRename_item)
+                if len(item.get_icon().my_groups) > 0:
+                    menu.addSeparator()
+                    for group in item.get_icon().my_groups:
+                        text = f"Leave {group.name}"
+                        slot = lambda checked=False, item_name=item.name, group_name=group.name: self.ui.graphicsView.push_remove_item_from_group_command(checked, item_name, group_name)
+                        menu.addAction(text, slot)
         menu.exec(pos)
         menu.deleteLater()
 
@@ -1680,10 +1714,10 @@ class ToolboxUI(QMainWindow):
         can_copy = any(isinstance(x, ProjectItemIcon) for x in selected_items)
         has_items = self.project.n_items > 0
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
-        _methods = [getattr(self.project.get_item(x.name()), "copy_local_data") for x in selected_project_items]
+        _methods = [getattr(self.project.get_item(x.name), "copy_local_data") for x in selected_project_items]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
-        for item in (self.project.get_item(x.name()) for x in selected_project_items):
+        for item in (self.project.get_item(x.name) for x in selected_project_items):
             if item.item_type() == "Data Store" and item.has_listeners():
                 self.ui.actionRename_item.setEnabled(False)
                 self.ui.actionRename_item.setToolTip(
@@ -1799,7 +1833,7 @@ class ToolboxUI(QMainWindow):
         for item_icon in selected_project_items:
             if not isinstance(item_icon, ProjectItemIcon):
                 continue
-            name = item_icon.name()
+            name = item_icon.name
             project_item = self.project.get_item(name)
             item_dict = dict(project_item.item_dict())
             item_dict["original_data_dir"] = project_item.data_dir
@@ -1945,6 +1979,8 @@ class ToolboxUI(QMainWindow):
         self.project.jump_added.connect(self.ui.graphicsView.do_add_jump)
         self.project.jump_about_to_be_removed.connect(self.ui.graphicsView.do_remove_jump)
         self.project.jump_updated.connect(self.ui.graphicsView.do_update_jump)
+        self.project.group_added.connect(self.ui.graphicsView.add_group_on_scene)
+        self.project.group_disbanded.connect(self.ui.graphicsView.remove_group_from_scene)
         self.project.specification_added.connect(self.repair_specification)
         self.project.specification_saved.connect(self._log_specification_saved)
 
@@ -1962,6 +1998,8 @@ class ToolboxUI(QMainWindow):
         self.project.jump_added.disconnect()
         self.project.jump_about_to_be_removed.disconnect()
         self.project.jump_updated.disconnect()
+        self.project.group_added.disconnect()
+        self.project.group_disbanded.disconnect()
         self.project.specification_added.disconnect()
         self.project.specification_saved.disconnect()
 
@@ -2056,7 +2094,7 @@ class ToolboxUI(QMainWindow):
         has_connections = False
         for item in selected_items:
             if isinstance(item, ProjectItemIcon):
-                project_item_names.add(item.name())
+                project_item_names.add(item.name)
             elif isinstance(item, (JumpLink, Link)):
                 has_connections = True
         if not project_item_names and not has_connections:
@@ -2092,46 +2130,31 @@ class ToolboxUI(QMainWindow):
     def _rename_project_item(self, _):
         """Renames active project item."""
         item = self.active_project_item
+        new_name = self._show_simple_input_dialog("Rename Item", "New name:", item.name)
+        if not new_name:
+            return
+        self.undo_stack.push(RenameProjectItemCommand(self._project, item.name, new_name))
+
+    @Slot(bool)
+    def rename_group(self, _, group_name):
+        """Renames Group."""
+        new_name = self._show_simple_input_dialog("Rename Group", "New name:", group_name)
+        if not new_name:
+            return
+        self.undo_stack.push(RenameGroupCommand(self._project, group_name, new_name))
+
+    def _show_simple_input_dialog(self, title, label_txt, prefilled_text):
+        """Shows a QInputDialog and returns typed text."""
         answer = QInputDialog.getText(
             self,
-            "Rename Item",
-            "New name:",
-            text=item.name,
+            title,
+            label_txt,
+            text=prefilled_text,
             flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
         )
         if not answer[1]:
-            return
-        new_name = answer[0]
-        self.undo_stack.push(RenameProjectItemCommand(self._project, item.name, new_name))
-
-    def project_item_context_menu(self, additional_actions):
-        """Creates a context menu for project items.
-
-        Args:
-            additional_actions (list of QAction): Actions to be prepended to the menu
-
-        Returns:
-            QMenu: Project item context menu
-        """
-        menu = QMenu(self)
-        menu.setToolTipsVisible(True)
-        if additional_actions:
-            for action in additional_actions:
-                menu.addAction(action)
-            menu.addSeparator()
-        menu.addAction(self.ui.actionCopy)
-        menu.addAction(self.ui.actionPaste)
-        menu.addAction(self.ui.actionPasteAndDuplicateFiles)
-        menu.addAction(self.ui.actionDuplicate)
-        menu.addAction(self.ui.actionDuplicateAndDuplicateFiles)
-        menu.addAction(self.ui.actionOpen_item_directory)
-        menu.addSeparator()
-        menu.addAction(self.ui.actionRemove)
-        menu.addSeparator()
-        menu.addAction(self.ui.actionRename_item)
-        menu.aboutToShow.connect(self.refresh_edit_action_states)
-        menu.aboutToHide.connect(self.enable_edit_actions)
-        return menu
+            return None
+        return answer[0]
 
     @Slot(str, QIcon, bool)
     def start_detached_jupyter_console(self, kernel_name, icon, conda):

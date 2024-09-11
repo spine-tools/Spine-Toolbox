@@ -25,7 +25,7 @@ class SetDescriptionDialog(QDialog):
             toolbox (ToolboxUI): QMainWindow instance
             project (SpineToolboxProject)
         """
-        super().__init__(parent=toolbox, f=Qt.Popup)
+        super().__init__(parent=toolbox, f=Qt.WindowType.Popup)
         self._project = project
         self._toolbox = toolbox
         layout = QFormLayout(self)

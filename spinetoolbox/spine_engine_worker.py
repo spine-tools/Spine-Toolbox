@@ -37,15 +37,17 @@ def _handle_node_execution_started(item, direction):
     icon = item.get_icon()
     if direction == ExecutionDirection.FORWARD:
         icon.execution_icon.mark_execution_started()
+        item.update_progress_bar()
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_started.emit()
 
 
-@Slot(object, object, object, object)
+@Slot(object, object, object)
 def _handle_node_execution_finished(item, direction, item_state):
     icon = item.get_icon()
     if direction == ExecutionDirection.FORWARD:
         icon.execution_icon.mark_execution_finished(item_state)
+        item.update_progress_bar()
         if hasattr(icon, "animation_signaller"):
             icon.animation_signaller.animation_stopped.emit()
 
@@ -60,7 +62,7 @@ def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
     item.add_process_message(filter_id, msg_type, msg_text)
 
 
-@Slot(dict, object)
+@Slot(dict, object, object)
 def _handle_prompt_arrived(prompt, engine_mngr, logger=None):
     prompter_id = prompt["prompter_id"]
     title, text, option_to_answer, notes, preferred = prompt["data"]
@@ -155,11 +157,11 @@ class SpineEngineWorker(QObject):
         """
         self._engine_data = engine_data
 
-    @Slot(object, str, str)
+    @Slot(object, str, str, str)
     def _handle_event_message_arrived_silent(self, item, filter_id, msg_type, msg_text):
         self.event_messages.setdefault(msg_type, []).append(msg_text)
 
-    @Slot(object, str, str)
+    @Slot(object, str, str, str)
     def _handle_process_message_arrived_silent(self, item, filter_id, msg_type, msg_text):
         self.process_messages.setdefault(msg_type, []).append(msg_text)
 

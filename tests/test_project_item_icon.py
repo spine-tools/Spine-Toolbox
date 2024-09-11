@@ -44,7 +44,7 @@ class TestProjectItemIcon(TestCaseWithQApplication):
 
     def test_init(self):
         icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
-        self.assertEqual(icon.name(), "")
+        self.assertEqual(icon.name, "")
         self.assertEqual(icon.x(), 0)
         self.assertEqual(icon.y(), 0)
         self.assertEqual(icon.incoming_links(), [])
@@ -53,7 +53,7 @@ class TestProjectItemIcon(TestCaseWithQApplication):
     def test_finalize(self):
         icon = ProjectItemIcon(self._toolbox, ":/icons/home.svg", QColor(Qt.GlobalColor.gray))
         icon.finalize("new name", -43, 314)
-        self.assertEqual(icon.name(), "new name")
+        self.assertEqual(icon.name, "new name")
         self.assertEqual(icon.x(), -43)
         self.assertEqual(icon.y(), 314)
 

@@ -71,10 +71,10 @@ class MoveIconCommand(SpineToolboxCommand):
         self._representative = next(iter(icon_group), None)
         if self._representative is None:
             self.setObsolete(True)
-        self._previous_pos = {x.name(): x.previous_pos for x in icon_group}
-        self._current_pos = {x.name(): x.scenePos() for x in icon_group}
+        self._previous_pos = {x.name: x.previous_pos for x in icon_group}
+        self._current_pos = {x.name: x.scenePos() for x in icon_group}
         if len(icon_group) == 1:
-            self.setText(f"move {self._representative.name()}")
+            self.setText(f"move {self._representative.name}")
         else:
             self.setText("move multiple items")
 
@@ -242,6 +242,119 @@ class RenameProjectItemCommand(SpineToolboxCommand):
     @property
     def is_critical(self):
         return True
+
+
+class MakeGroupCommand(SpineToolboxCommand):
+    """Command to add a group of project items to project."""
+
+    def __init__(self, project, item_names):
+        """
+        Args:
+            project (SpineToolboxProject): project
+            item_names (list): List of item names to group
+        """
+        super().__init__()
+        self._project = project
+        self._item_names = item_names
+        self._group_name = self._project.make_new_group_name()
+        self.setText(f"make {self._group_name}")
+
+    def redo(self):
+        self._project.make_group(self._group_name, self._item_names)
+
+    def undo(self):
+        self._project.disband_group(False, self._group_name)
+
+
+class RenameGroupCommand(SpineToolboxCommand):
+    """Command to rename groups."""
+
+    def __init__(self, project, previous_name, new_name):
+        """
+        Args:
+            project (SpineToolboxProject): The project
+            previous_name (str): Groups previous name
+            new_name (str): New Group name
+        """
+        super().__init__()
+        self._project = project
+        self._previous_name = previous_name
+        self._new_name = new_name
+        self.setText(f"rename Group {self._previous_name} to {self._new_name}")
+
+    def redo(self):
+        if self._new_name in self._project.groups.keys():
+            self.setObsolete(True)
+        group = self._project.groups.pop(self._previous_name)
+        group.name = self._new_name
+        self._project.groups[self._new_name] = group
+
+    def undo(self):
+        group = self._project.groups.pop(self._new_name)
+        group.name = self._previous_name
+        self._project.groups[self._previous_name] = group
+
+
+class RemoveItemFromGroupCommand(SpineToolboxCommand):
+    """Command to remove an item from a group. If only one item
+    remains in the group after the operation, disbands the group."""
+
+    def __init__(self, project, item_name, group_name):
+        """
+        Args:
+            project (SpineToolboxProject): Project
+            item_name (str): Item name to remove from group
+            group_name (str): Group to edit
+        """
+        super().__init__()
+        self._project = project
+        self._item_name = item_name
+        self._group_name = group_name
+        self._item_names = self._project.groups[group_name].item_names
+        self._links_removed = []
+        self._remake_group = False
+        if len(self._project.groups[group_name].project_items) == 2:
+            self._remake_group = True
+        self.setText(f"disband {self._group_name}")
+
+    def redo(self):
+        self._project.remove_item_from_group(self._item_name, self._group_name)
+        if not self._remake_group:
+            self._links_removed = [i for i in self._item_names if i not in self._project.groups[self._group_name].item_names]
+            self._links_removed.remove(self._item_name)
+
+    def undo(self):
+        if self._remake_group:
+            # Redo removed the whole group
+            self._project.make_group(self._group_name, self._item_names)
+            return
+        # First, add the project item icon back into group
+        self._project.add_item_to_group(self._item_name, self._group_name)
+        # Then, add link icons back
+        for link_name in self._links_removed:
+            self._project.add_item_to_group(link_name, self._group_name)
+
+
+class DisbandGroupCommand(SpineToolboxCommand):
+    """Command to disband a group of project items."""
+
+    def __init__(self, project, group_name):
+        """
+        Args:
+            project (SpineToolboxProject): project
+            group_name (Group): Name of Group to disband
+        """
+        super().__init__()
+        self._project = project
+        self._group_name = group_name
+        self._item_names = self._project.groups[group_name].item_names
+        self.setText(f"disband {self._group_name}")
+
+    def redo(self):
+        self._project.disband_group(False, self._group_name)
+
+    def undo(self):
+        self._project.make_group(self._group_name, self._item_names)
 
 
 class AddConnectionCommand(SpineToolboxCommand):

@@ -17,8 +17,17 @@ from PySide6.QtGui import QContextMenuEvent, QCursor, QMouseEvent
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem, QGraphicsView
 from ..helpers import LinkType
 from ..link import JumpLink, Link
-from ..project_commands import AddConnectionCommand, AddJumpCommand, RemoveConnectionsCommand, RemoveJumpsCommand
+from ..project_commands import (
+    AddConnectionCommand,
+    AddJumpCommand,
+    MakeGroupCommand,
+    RemoveConnectionsCommand,
+    RemoveJumpsCommand,
+    DisbandGroupCommand,
+    RemoveItemFromGroupCommand,
+)
 from ..project_item_icon import ProjectItemIcon
+from ..group import Group
 from ..ui_main_lite import ToolboxUILite
 from .custom_qgraphicsscene import DesignGraphicsScene
 
@@ -66,11 +75,11 @@ class CustomQGraphicsView(QGraphicsView):
         Args:
             event (QKeyEvent): key press event
         """
-        if event.key() == Qt.Key_Plus:
+        if event.key() == Qt.Key.Key_Plus:
             self.zoom_in()
-        elif event.key() == Qt.Key_Minus:
+        elif event.key() == Qt.Key.Key_Minus:
             self.zoom_out()
-        elif event.key() == Qt.Key_Comma:
+        elif event.key() == Qt.Key.Key_Comma:
             self.reset_zoom()
         else:
             super().keyPressEvent(event)
@@ -84,7 +93,7 @@ class CustomQGraphicsView(QGraphicsView):
         if not item or not item.acceptedMouseButtons() & event.buttons():
             button = event.button()
             if button == Qt.MouseButton.LeftButton:
-                self.viewport().setCursor(Qt.CrossCursor)
+                self.viewport().setCursor(Qt.CursorShape.CrossCursor)
             elif button == Qt.MouseButton.MiddleButton:
                 self.reset_zoom()
             elif button == Qt.MouseButton.RightButton:
@@ -113,10 +122,10 @@ class CustomQGraphicsView(QGraphicsView):
             if self._drag_duration_passed(event):
                 context_menu_disabled = True
                 self.disable_context_menu()
-            elif event.button() == Qt.MouseButton.RightButton:
-                self.contextMenuEvent(
-                    QContextMenuEvent(QContextMenuEvent.Reason.Mouse, event.pos(), event.globalPos(), event.modifiers())
-                )
+            # elif event.button() == Qt.MouseButton.RightButton:  # TODO: This creates a second context menu on Design View
+            #     self.contextMenuEvent(
+            #         QContextMenuEvent(QContextMenuEvent.Reason.Mouse, event.pos(), event.globalPos(), event.modifiers())
+            #     )
             event = _fake_left_button_event(event)
         super().mouseReleaseEvent(event)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -128,7 +137,7 @@ class CustomQGraphicsView(QGraphicsView):
         if item:
             self.viewport().setCursor(item.cursor())
         else:
-            self.viewport().setCursor(Qt.ArrowCursor)
+            self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
 
     def _scroll_scene_by(self, dx, dy):
         if dx == dy == 0:
@@ -223,7 +232,7 @@ class CustomQGraphicsView(QGraphicsView):
         """
         super().setScene(scene)
         scene.item_move_finished.connect(self._handle_item_move_finished)
-        self.viewport().setCursor(Qt.ArrowCursor)
+        self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
 
     @Slot(QGraphicsItem)
     def _handle_item_move_finished(self, item):
@@ -248,13 +257,13 @@ class CustomQGraphicsView(QGraphicsView):
         raise NotImplementedError()
 
     def _handle_zoom_time_line_advanced(self, pos):
-        """Performs zoom whenever the smooth zoom time line advances."""
+        """Performs zoom whenever the smooth zoom timeline advances."""
         factor = 1.0 + self._scheduled_transformations / 100.0
         self.gentle_zoom(factor, pos)
 
     @Slot()
     def _handle_transformation_time_line_finished(self):
-        """Cleans up after the smooth transformation time line finishes."""
+        """Cleans up after the smooth transformation timeline finishes."""
         if self._scheduled_transformations > 0:
             self._scheduled_transformations -= 1
         else:
@@ -266,7 +275,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot()
     def _handle_resize_time_line_finished(self):
-        """Cleans up after resizing time line finishes."""
+        """Cleans up after resizing timeline finishes."""
         if self.sender():
             self.sender().deleteLater()
         self.time_line = None
@@ -328,7 +337,7 @@ class CustomQGraphicsView(QGraphicsView):
         viewport_scene_rect = self._get_viewport_scene_rect()
         if not viewport_scene_rect.contains(item_scene_rect.topLeft()):
             scene_rect = viewport_scene_rect.united(item_scene_rect)
-            self.fitInView(scene_rect, Qt.KeepAspectRatio)
+            self.fitInView(scene_rect, Qt.AspectRatioMode.KeepAspectRatio)
             self._set_preferred_scene_rect()
 
     @Slot()
@@ -393,6 +402,36 @@ class DesignQGraphicsView(CustomQGraphicsView):
         viewport_extent = min(self.viewport().width(), self.viewport().height())
         return viewport_extent / item_view_rect.width()
 
+    def mouseReleaseEvent(self, event):
+        """Makes an execution group if rubber band contains items and links."""
+        if self.dragMode() == QGraphicsView.DragMode.RubberBandDrag:
+            if self.rubberBandRect():
+                selected_items = list()
+                for item in self.scene().selectedItems():
+                    if isinstance(item, (ProjectItemIcon, Link, JumpLink)):
+                        selected_items.append(item)
+                if self.can_make_group(selected_items):
+                    self.push_make_group_command(selected_items)
+        super().mouseReleaseEvent(event)
+
+    def can_make_group(self, items):
+        """Checks whether a group can be made from given items.
+
+        Args:
+            items (list): List of ProjectItemIcons, Links, or JumpLinks
+
+        Returns:
+            bool: True when a new group can be made, False otherwise
+        """
+        item_icons = [it for it in items if isinstance(it, ProjectItemIcon)]
+        if len(item_icons) < 2:  # Groups must have at least two ProjectItems
+            return False
+        for group in self._toolbox.project.groups.values():  # Don't make duplicate groups
+            if set(item_icons) == set(group.project_items):
+                self._toolbox.msg_warning.emit(f"{group.name} already has the same items")
+                return False
+        return True
+
     @Slot(str)
     def add_icon(self, item_name):
         """Adds project item's icon to the scene.
@@ -403,9 +442,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
         project_item = self._toolbox.project.get_item(item_name)
         icon = project_item.get_icon()
         if isinstance(self._toolbox, ToolboxUILite):
-            icon.set_selection_halo_pen(5)
+            icon.set_icon_selection_pen_w(icon.USER_MODE_ICON_SELECTION_PEN_W)
         else:
-            icon.set_selection_halo_pen(1)
+            icon.set_icon_selection_pen_w(icon.DEFAULT_ICON_SELECTION_PEN_W)
         if not icon.graphicsEffect():
             # Restore effects when an icon is removed and added to another scene
             icon.set_graphics_effects()
@@ -423,9 +462,56 @@ class DesignQGraphicsView(CustomQGraphicsView):
         scene.removeItem(icon)
         self._set_preferred_scene_rect()
 
-    def add_link(self, src_connector, dst_connector):
+    def push_make_group_command(self, items):
+        """Pushes an MakeGroupCommand to toolbox undo stack.
+
+        Args:
+            items (list): List of selected icons to group
         """
-        Pushes an AddLinkCommand to the toolbox undo stack.
+        item_names = [item.name for item in items if isinstance(item, (ProjectItemIcon, Link, JumpLink))]
+        self._toolbox.undo_stack.push(MakeGroupCommand(self._toolbox.project, item_names))
+
+    @Slot(object)
+    def add_group_on_scene(self, group):
+        """Adds a Group on scene.
+
+        Args:
+            group (Group): Group to add
+        """
+        self.scene().addItem(group)
+
+    @Slot(bool, str, str)
+    def push_remove_item_from_group_command(self, _, item_name, group_name):
+        """Pushes a RemoveItemFromGroupCommand to toolbox undo stack.
+
+        Args:
+            _ (bool): Boolean sent by triggered signal
+            item_name (str): Item name to remove from group
+            group_name (str): Group to edit
+        """
+        self._toolbox.undo_stack.push(RemoveItemFromGroupCommand(self._toolbox.project, item_name, group_name))
+
+    @Slot(bool, str)
+    def push_disband_group_command(self, _, group_name):
+        """Pushes a DisbandGroupCommand to toolbox undo stack.
+
+        Args:
+            _ (bool): Boolean sent by triggered signal
+            group_name (str): Group to disband
+        """
+        self._toolbox.undo_stack.push(DisbandGroupCommand(self._toolbox.project, group_name))
+
+    @Slot(object)
+    def remove_group_from_scene(self, group):
+        """Removes given group from scene.
+
+        Args:
+            group (Group): Group to remove
+        """
+        self.scene().removeItem(group)
+
+    def add_link(self, src_connector, dst_connector):
+        """Pushes an AddLinkCommand to the toolbox undo stack.
 
         Args:
             src_connector (ConnectorButton): source connector button
@@ -456,6 +542,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         connection.link = link = Link(self._toolbox, source_connector, destination_connector, connection)
         source_connector.links.append(link)
         destination_connector.links.append(link)
+        if isinstance(self._toolbox, ToolboxUILite):
+            link.set_link_selection_pen_w(link.USER_MODE_LINK_SELECTION_PEN_W)
+        else:
+            link.set_link_selection_pen_w(link.DEFAULT_LINK_SELECTION_PEN_W)
         self.scene().addItem(link)
 
     @Slot(object)
@@ -548,6 +638,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         jump.jump_link = jump_link = JumpLink(self._toolbox, source_connector, destination_connector, jump)
         source_connector.links.append(jump_link)
         destination_connector.links.append(jump_link)
+        if isinstance(self._toolbox, ToolboxUILite):
+            jump_link.set_link_selection_pen_w(jump_link.USER_MODE_LINK_SELECTION_PEN_W)
+        else:
+            jump_link.set_link_selection_pen_w(jump_link.DEFAULT_LINK_SELECTION_PEN_W)
         self.scene().addItem(jump_link)
 
     @Slot(object)
@@ -575,18 +669,19 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 break
 
     def contextMenuEvent(self, event):
-        """Shows context menu for the blank view
+        """Shows context menu on Design View.
 
         Args:
             event (QContextMenuEvent): Event
         """
         if not self._toolbox.project:
             return
-        QGraphicsView.contextMenuEvent(self, event)  # Pass the event first to see if any item accepts it
-        if not event.isAccepted():
-            event.accept()
-            global_pos = self.viewport().mapToGlobal(event.pos())
-            self._toolbox.show_project_or_item_context_menu(global_pos, None)
+        super().contextMenuEvent(event)  # Pass the event first to see if any item accepts it
+        if event.isAccepted():
+            return
+        event.accept()
+        global_pos = self.viewport().mapToGlobal(event.pos())
+        self._toolbox.show_project_or_item_context_menu(global_pos, None)
 
 
 def _fake_left_button_event(mouse_event):

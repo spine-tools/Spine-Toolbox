@@ -432,7 +432,7 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         dags = list(project._dag_iterator())
         self.assertEqual(len(dags), 1)
         self.assertEqual(node_successors(dags[0]), {"destination": [], "renamed source": ["destination"]})
-        self.assertEqual(source_item.get_icon().name(), "renamed source")
+        self.assertEqual(source_item.get_icon().name, "renamed source")
         self.assertEqual(os.path.split(source_item.data_dir)[1], shorten("renamed source"))
 
     def test_connections_for_item_no_connections(self):

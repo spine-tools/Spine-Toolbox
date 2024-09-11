@@ -13,7 +13,7 @@
 """Contains a class for the base main window of Spine Toolbox."""
 import sys
 import locale
-from PySide6.QtCore import QSettings, Qt, Slot
+from PySide6.QtCore import QSettings, Qt, Slot, Signal
 from PySide6.QtWidgets import QMainWindow, QApplication, QStyleFactory, QMessageBox, QCheckBox
 from PySide6.QtGui import QIcon, QUndoStack, QGuiApplication, QAction, QKeySequence
 from .helpers import set_taskbar_icon, ensure_window_is_on_screen
@@ -48,6 +48,7 @@ class ToolboxUIBase(QMainWindow):
         self.ui.stackedWidget.setCurrentWidget(self.toolboxui)
         self.restore_ui()
         self.connect_signals()
+        self._active_ui_mode = "toolboxui"
 
     @property
     def toolboxui(self):
@@ -70,8 +71,16 @@ class ToolboxUIBase(QMainWindow):
         return self._undo_stack
 
     @property
-    def current_page(self):
+    def active_ui_window(self):
         return self.ui.stackedWidget.currentWidget()
+
+    @property
+    def active_ui_mode(self):
+        return self._active_ui_mode
+
+    @active_ui_mode.setter
+    def active_ui_mode(self, tb):
+        self._active_ui_mode = tb
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -149,23 +158,25 @@ class ToolboxUIBase(QMainWindow):
         if not self.project:
             return
         for item_name in self.project.all_item_names:
-            self.current_page.ui.graphicsView.add_icon(item_name)
+            self.active_ui_window.ui.graphicsView.add_icon(item_name)
         for connection in self.project.connections:
-            self.current_page.ui.graphicsView.do_add_link(connection)
+            self.active_ui_window.ui.graphicsView.do_add_link(connection)
             connection.link.update_icons()
         for jump in self.project.jumps:
-            self.current_page.ui.graphicsView.do_add_jump(jump)
+            self.active_ui_window.ui.graphicsView.do_add_jump(jump)
             jump.jump_link.update_icons()
+        for group in self.project.groups.values():
+            self.active_ui_window.ui.graphicsView.add_group_on_scene(group)
 
     def connect_project_signals(self):
         """Connects project signals based on current UI mode."""
-        self.current_page.connect_project_signals()
+        self.active_ui_window.connect_project_signals()
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         self.toolboxui.activate_no_selection_tab()  # Clear properties widget
         self.toolboxui._restore_original_console()
-        self.current_page.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
+        self.active_ui_window.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self.toolboxui._shutdown_engine_kernels()
         self.toolboxui._close_consoles()
 
@@ -301,6 +312,6 @@ class ToolboxUIBase(QMainWindow):
 
     def nr_of_items(self):
         """For debugging."""
-        n_items = len(self.current_page.ui.graphicsView.scene().items())
+        n_items = len(self.active_ui_window.ui.graphicsView.scene().items())
         print(f"Items on scene:{n_items}")
 

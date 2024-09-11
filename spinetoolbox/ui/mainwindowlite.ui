@@ -54,56 +54,7 @@
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout">
          <item>
-          <widget class="QGroupBox" name="groupBox_2">
-           <property name="title">
-            <string>Execution</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
-            <item>
-             <widget class="QToolButton" name="toolButton_execute_group">
-              <property name="toolButtonStyle">
-               <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QComboBox" name="comboBox_groups"/>
-            </item>
-            <item>
-             <widget class="QToolButton" name="toolButton_stop">
-              <property name="toolButtonStyle">
-               <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
           <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string>Actions</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout">
-            <item>
-             <widget class="QToolButton" name="toolButton_show_event_log">
-              <property name="toolButtonStyle">
-               <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QToolButton" name="toolButton_to_expert_mode">
-              <property name="toolButtonStyle">
-               <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox_3">
            <property name="title">
             <string>Scenarios</string>
            </property>
@@ -171,13 +122,16 @@
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="actionSwitch_to_expert_mode">
+  <action name="actionSwitch_to_design_mode">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/retweet.svg</normaloff>:/icons/menu_icons/retweet.svg</iconset>
    </property>
    <property name="text">
-    <string>Switch to expert mode</string>
+    <string>Switch to design mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Switch to design mode</string>
    </property>
    <property name="shortcut">
     <string>§</string>

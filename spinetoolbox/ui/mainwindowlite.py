@@ -27,10 +27,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QColumnView, QComboBox, QGraphicsView,
-    QGroupBox, QHBoxLayout, QMainWindow, QMenu,
-    QMenuBar, QScrollArea, QSizePolicy, QSplitter,
-    QStatusBar, QToolButton, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QColumnView, QGraphicsView, QGroupBox,
+    QHBoxLayout, QMainWindow, QMenu, QMenuBar,
+    QScrollArea, QSizePolicy, QSplitter, QStatusBar,
+    QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 from spinetoolbox import resources_icons_rc
@@ -40,11 +40,11 @@ class Ui_MainWindowLite(object):
         if not MainWindowLite.objectName():
             MainWindowLite.setObjectName(u"MainWindowLite")
         MainWindowLite.resize(800, 600)
-        self.actionSwitch_to_expert_mode = QAction(MainWindowLite)
-        self.actionSwitch_to_expert_mode.setObjectName(u"actionSwitch_to_expert_mode")
+        self.actionSwitch_to_design_mode = QAction(MainWindowLite)
+        self.actionSwitch_to_design_mode.setObjectName(u"actionSwitch_to_design_mode")
         icon = QIcon()
         icon.addFile(u":/icons/menu_icons/retweet.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.actionSwitch_to_expert_mode.setIcon(icon)
+        self.actionSwitch_to_design_mode.setIcon(icon)
         self.actionExecute_group = QAction(MainWindowLite)
         self.actionExecute_group.setObjectName(u"actionExecute_group")
         icon1 = QIcon()
@@ -80,61 +80,18 @@ class Ui_MainWindowLite(object):
         self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 780, 293))
         self.horizontalLayout = QHBoxLayout(self.scrollAreaWidgetContents)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.groupBox_2 = QGroupBox(self.scrollAreaWidgetContents)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.verticalLayout_4 = QVBoxLayout(self.groupBox_2)
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.toolButton_execute_group = QToolButton(self.groupBox_2)
-        self.toolButton_execute_group.setObjectName(u"toolButton_execute_group")
-        self.toolButton_execute_group.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.verticalLayout_4.addWidget(self.toolButton_execute_group)
-
-        self.comboBox_groups = QComboBox(self.groupBox_2)
-        self.comboBox_groups.setObjectName(u"comboBox_groups")
-
-        self.verticalLayout_4.addWidget(self.comboBox_groups)
-
-        self.toolButton_stop = QToolButton(self.groupBox_2)
-        self.toolButton_stop.setObjectName(u"toolButton_stop")
-        self.toolButton_stop.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.verticalLayout_4.addWidget(self.toolButton_stop)
-
-
-        self.horizontalLayout.addWidget(self.groupBox_2)
-
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox.setObjectName(u"groupBox")
-        self.verticalLayout = QVBoxLayout(self.groupBox)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.toolButton_show_event_log = QToolButton(self.groupBox)
-        self.toolButton_show_event_log.setObjectName(u"toolButton_show_event_log")
-        self.toolButton_show_event_log.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.verticalLayout.addWidget(self.toolButton_show_event_log)
-
-        self.toolButton_to_expert_mode = QToolButton(self.groupBox)
-        self.toolButton_to_expert_mode.setObjectName(u"toolButton_to_expert_mode")
-        self.toolButton_to_expert_mode.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.verticalLayout.addWidget(self.toolButton_to_expert_mode)
-
-
-        self.horizontalLayout.addWidget(self.groupBox)
-
-        self.groupBox_3 = QGroupBox(self.scrollAreaWidgetContents)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.verticalLayout_5 = QVBoxLayout(self.groupBox_3)
+        self.verticalLayout_5 = QVBoxLayout(self.groupBox)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.columnView = QColumnView(self.groupBox_3)
+        self.columnView = QColumnView(self.groupBox)
         self.columnView.setObjectName(u"columnView")
         self.columnView.setMinimumSize(QSize(50, 30))
 
         self.verticalLayout_5.addWidget(self.columnView)
 
 
-        self.horizontalLayout.addWidget(self.groupBox_3)
+        self.horizontalLayout.addWidget(self.groupBox)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.splitter.addWidget(self.scrollArea)
@@ -173,16 +130,17 @@ class Ui_MainWindowLite(object):
 
     def retranslateUi(self, MainWindowLite):
         MainWindowLite.setWindowTitle(QCoreApplication.translate("MainWindowLite", u"Spine Toolbox [user mode]", None))
-        self.actionSwitch_to_expert_mode.setText(QCoreApplication.translate("MainWindowLite", u"Switch to expert mode", None))
+        self.actionSwitch_to_design_mode.setText(QCoreApplication.translate("MainWindowLite", u"Switch to design mode", None))
+#if QT_CONFIG(tooltip)
+        self.actionSwitch_to_design_mode.setToolTip(QCoreApplication.translate("MainWindowLite", u"Switch to design mode", None))
+#endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
-        self.actionSwitch_to_expert_mode.setShortcut(QCoreApplication.translate("MainWindowLite", u"\u00a7", None))
+        self.actionSwitch_to_design_mode.setShortcut(QCoreApplication.translate("MainWindowLite", u"\u00a7", None))
 #endif // QT_CONFIG(shortcut)
         self.actionExecute_group.setText(QCoreApplication.translate("MainWindowLite", u"Execute group", None))
         self.actionStop.setText(QCoreApplication.translate("MainWindowLite", u"Stop", None))
         self.actionShow_event_log_console.setText(QCoreApplication.translate("MainWindowLite", u"Show event log and console", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("MainWindowLite", u"Execution", None))
-        self.groupBox.setTitle(QCoreApplication.translate("MainWindowLite", u"Actions", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("MainWindowLite", u"Scenarios", None))
+        self.groupBox.setTitle(QCoreApplication.translate("MainWindowLite", u"Scenarios", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindowLite", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindowLite", u"Help", None))
     # retranslateUi

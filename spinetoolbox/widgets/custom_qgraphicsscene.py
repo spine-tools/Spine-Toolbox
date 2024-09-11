@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 from ..helpers import LinkType
 from ..link import ConnectionLinkDrawer, JumpLink, JumpLinkDrawer, Link
 from ..project_item_icon import ProjectItemIcon
+from ..group import Group
 from ..ui.resources.cat import Cat
 from .project_item_drag import ProjectItemDragMixin
 
@@ -73,7 +74,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def clear_icons_and_links(self):
         for item in self.items():
-            if isinstance(item, (Link, JumpLink, ProjectItemIcon)):
+            if isinstance(item, (Link, JumpLink, ProjectItemIcon, Group)):
                 self.removeItem(item)
 
     def mouseMoveEvent(self, event):
@@ -81,7 +82,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
         if self.link_drawer is not None:
             self.link_drawer.tip = event.scenePos()
             self.link_drawer.update_geometry()
-            event.setButtons(Qt.NoButton)  # this is so super().mouseMoveEvent sends hover events to connector buttons
+            # this enables super().mouseMoveEvent to send hover events to connector buttons
+            event.setButtons(Qt.MouseButton.NoButton)
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
@@ -163,12 +165,12 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 links.append(item)
         # Set active project item and active link in toolbox
         active_project_item = (
-            self._toolbox.project.get_item(project_item_icons[0].name()) if len(project_item_icons) == 1 else None
+            self._toolbox.project.get_item(project_item_icons[0].name) if len(project_item_icons) == 1 else None
         )
         active_link_item = links[0].item if len(links) == 1 else None
-        selected_item_names = {icon.name() for icon in project_item_icons}
+        selected_item_names = {icon.name for icon in project_item_icons}
         selected_link_icons = [conn.parent for link in links for conn in (link.src_connector, link.dst_connector)]
-        selected_item_names |= set(icon.name() for icon in selected_link_icons)
+        selected_item_names |= set(icon.name for icon in selected_link_icons)
         self._toolbox.refresh_active_elements(active_project_item, active_link_item, selected_item_names)
         self._toolbox.override_console_and_execution_list()
 
@@ -184,7 +186,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         """Set background choice when this is changed in Settings.
 
         Args:
-            bg (str): "grid", "tree", or "solid"
+            bg_choice (str): "grid", "tree", or "solid"
         """
         self.bg_choice = bg_choice
 

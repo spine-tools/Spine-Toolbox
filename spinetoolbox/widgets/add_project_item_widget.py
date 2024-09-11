@@ -109,7 +109,7 @@ class AddProjectItemWidget(QWidget):
         self.call_add_item()
         self._toolbox.ui.graphicsView.scene().clearSelection()
         for icon in self._toolbox.ui.graphicsView.scene().project_item_icons():
-            if icon.name() == self.name:
+            if icon.name == self.name:
                 icon.setSelected(True)
         self.close()
 

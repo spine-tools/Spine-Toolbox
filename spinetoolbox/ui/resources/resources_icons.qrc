@@ -15,6 +15,7 @@
   <qresource prefix="/icons">
     <file>menu_icons/retweet.svg</file>
     <file>menu_icons/bolt-lightning.svg</file>
+    <file>menu_icons/object-group.svg</file>
     <file>file-upload.svg</file>
     <file>share.svg</file>
     <file>menu_icons/server.svg</file>

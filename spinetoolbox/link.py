@@ -40,6 +40,8 @@ class LinkBase(QGraphicsPathItem):
     """
 
     _COLOR = QColor(0, 0, 0, 0)
+    DEFAULT_LINK_SELECTION_PEN_W = 2
+    USER_MODE_LINK_SELECTION_PEN_W = 5
 
     def __init__(self, toolbox, src_connector, dst_connector):
         """
@@ -53,20 +55,20 @@ class LinkBase(QGraphicsPathItem):
         self.src_connector = src_connector
         self.dst_connector = dst_connector
         self.arrow_angle = pi / 4
-        self.setCursor(Qt.PointingHandCursor)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._guide_path = None
         self._pen = QPen(self._COLOR)
         self._pen.setWidthF(self.magic_number)
-        self._pen.setJoinStyle(Qt.MiterJoin)
+        self._pen.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
         self.setPen(self._pen)
-        self.selected_pen = QPen(self.outline_color, 2, Qt.DotLine)
+        self.selected_pen = QPen(self.outline_color, self.DEFAULT_LINK_SELECTION_PEN_W, Qt.PenStyle.DotLine)
         self.normal_pen = QPen(self.outline_color, 1)
         self._outline = QGraphicsPathItem(self)
-        self._outline.setFlag(QGraphicsPathItem.ItemStacksBehindParent)
+        self._outline.setFlag(QGraphicsPathItem.GraphicsItemFlag.ItemStacksBehindParent)
         self._outline.setPen(self.normal_pen)
         self._stroker = QPainterPathStroker()
         self._stroker.setWidth(self.magic_number)
-        self._stroker.setJoinStyle(Qt.MiterJoin)
+        self._stroker.setJoinStyle(Qt.PenJoinStyle.MiterJoin)
         self._shape = QPainterPath()
 
     def shape(self):
@@ -100,6 +102,10 @@ class LinkBase(QGraphicsPathItem):
         """Returns the center point of the destination rectangle."""
         return self.dst_rect.center()
 
+    def set_link_selection_pen_w(self, pen_width):
+        """Sets selected links dash line width."""
+        self.selected_pen = QPen(self.outline_color, pen_width, Qt.PenStyle.DotLine)
+
     def moveBy(self, _dx, _dy):
         """Does nothing. This item is not moved the regular way, but follows the ConnectorButtons it connects."""
 
@@ -131,7 +137,7 @@ class LinkBase(QGraphicsPathItem):
         """Adds an ellipse for the link's base.
 
         Args:
-            QPainterPath
+            path (QPainterPath)
         """
         radius = 0.5 * self.magic_number
         rect = QRectF(0, 0, radius, radius)
@@ -145,7 +151,7 @@ class LinkBase(QGraphicsPathItem):
         """Returns an arrow path for the link's tip.
 
         Args:
-            QPainterPath
+            path (QPainterPath)
         """
         angle = self._get_joint_angle()
         arrow_p0 = self.dst_center + 0.5 * self.magic_number * self._get_dst_offset()
@@ -275,7 +281,7 @@ class _IconBase(QGraphicsEllipseItem):
         if tooltip:
             self.setToolTip(tooltip)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.setBrush(palette.window())
 
     def hoverEnterEvent(self, event):
@@ -300,7 +306,7 @@ class _SvgIcon(_IconBase):
         scale = 0.8 * self.rect().width() / self._renderer.defaultSize().width()
         self._svg_item.setScale(scale)
         self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -315,12 +321,12 @@ class _TextIcon(_IconBase):
     def __init__(self, parent, extent, char, tooltip=None, active=False):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
-        font = QFont("Font Awesome 5 Free Solid", weight=QFont.Bold)
+        font = QFont("Font Awesome 5 Free Solid", weight=QFont.Weight.Bold)
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -342,11 +348,12 @@ class JumpOrLink(LinkBase):
 
     def __init__(self, toolbox, src_connector, dst_connector):
         super().__init__(toolbox, src_connector, dst_connector)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, enabled=True)
         self._icon_extent = 3 * self.magic_number
         self._icons = []
         self._anim = self._make_execution_animation()
+        self.my_groups = set()
         self.update_geometry()
 
     @property
@@ -385,6 +392,7 @@ class JumpOrLink(LinkBase):
         """
         if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
             e.ignore()
+            return
 
     def contextMenuEvent(self, e):
         """Selects the link and shows context menu.
@@ -396,7 +404,7 @@ class JumpOrLink(LinkBase):
         self._toolbox.show_link_context_menu(e.screenPos(), self)
 
     def paint(self, painter, option, widget=None):
-        """Sets a dashed pen if selected."""
+        """Sets a dotted pen when selected."""
         if option.state & QStyle.StateFlag.State_Selected:
             option.state &= ~QStyle.StateFlag.State_Selected
             self._outline.setPen(self.selected_pen)

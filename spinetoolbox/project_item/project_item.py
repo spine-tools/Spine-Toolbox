@@ -19,6 +19,7 @@ from ..helpers import create_dir, open_url, rename_dir
 from ..log_mixin import LogMixin
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
+from ..ui_main_lite import ToolboxUILite
 
 
 class ProjectItem(LogMixin, MetaObject):
@@ -210,6 +211,12 @@ class ProjectItem(LogMixin, MetaObject):
             self.get_icon().rank_icon.set_rank(rank + 1)
         else:
             self.get_icon().rank_icon.set_rank("X")
+
+    def update_progress_bar(self):
+        # print(f"{self._project.active_toolboxui}")
+        if self._toolbox.active_ui_mode == "toolboxuilite":
+            n_selected = len(self._toolbox.ui.graphicsView.scene().selectedItems())
+            print(f"[{n_selected}] started: {self.name}")
 
     @property
     def executable_class(self):
