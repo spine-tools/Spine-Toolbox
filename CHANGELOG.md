@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+## [0.8.3]
+
+### Added
+
 - Entity group column in *Add entities* dialog. If filled, the created entity will be added to the specified group.
   If the group doesn't yet exist, it will be created.
 - Native kernel (i.e. python3 for Python) can now be used in the Detached Console or in Tool execution.
@@ -24,18 +36,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - One dimensional entities can now also be added through *Parameter value* and *Entity alternative* tables.
 - Special data types like dates, times and booleans are now properly pasted from Excel. 
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 - [Bundled App] Fixed execution in Jupyter Console and opening Detached Consoles by adding jupyter-client and 
   qtconsole packages to the bundle.
 - [Bundled App] Fixed creating new kernel specs in Settings->Tools by adding ipykernel package to the 
   **embedded Python**.
 - [Bundled App] Fixed 'Install Julia' button in Settings->Tools by adding the jill package to the **embedded Python**.
-
-### Security
 
 ## [0.8.2]
 

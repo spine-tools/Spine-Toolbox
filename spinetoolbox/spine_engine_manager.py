@@ -224,7 +224,10 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
     """Responsible for remote project execution."""
 
     def __init__(self, job_id=""):
-        """Initializer."""
+        """
+        Args:
+            job_id (str): Job id of ProjectExtractionService for finding the extracted project on server
+        """
         super().__init__()
         self._runner = threading.Thread(name="RemoteSpineEngineManagerRunnerThread", target=self._run)
         self._engine_data = None
