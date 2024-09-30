@@ -138,8 +138,7 @@ class SpineToolboxProject(MetaObject):
         self._settings = settings
         self._engine_workers = []
         self._execution_in_progress = False
-        # self._execution_groups = {}
-        self._groups = dict()
+        self._groups = dict()  # Dictionary, which maps group names to group instances
         self.project_dir = None  # Full path to project directory
         self.config_dir = None  # Full path to .spinetoolbox directory
         self.items_dir = None  # Full path to items directory
@@ -215,10 +214,10 @@ class SpineToolboxProject(MetaObject):
         self.groups[group_name].add_item(item_name)
 
     def remove_item_from_group(self, item_name, group_name):
-        """Removes item with given name from given group. If only
-        one item remains in the group, destroys the whole group."""
+        """Removes item with given name from given group. If the last item in
+        the group was removed, destroys the whole group."""
         self.groups[group_name].remove_item(item_name)
-        if len(self.groups[group_name].project_items) == 1:
+        if not self.groups[group_name].project_items:
             self.disband_group(False, group_name)
 
     @Slot(bool, str)

@@ -14,8 +14,6 @@
 from PySide6.QtCore import Qt, Slot, QRect
 from PySide6.QtWidgets import QMainWindow, QToolBar, QMenu, QComboBox, QProgressBar
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QPainterPath, QTransform
-# from .project_item_icon import ProjectItemIcon
-# from .link import JumpOrLink
 
 
 class ToolboxUILite(QMainWindow):
@@ -199,14 +197,12 @@ class ToolboxUILite(QMainWindow):
         group = self.project.groups[group_name]
         path = QPainterPath()
         path.addRect(group.rect())
-        print(f"selection path:{path}")
         self.ui.graphicsView.scene().setSelectionArea(path, QTransform())
 
     def execute_group(self):
         """Executes a group."""
         if self.groups_combobox.currentIndex() == 0:
             return
-        print(f"Executing {self.groups_combobox.currentText()}")
         if self.groups_combobox.currentText() == "All":
             self.toolboxui._execute_project()
             return

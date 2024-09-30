@@ -122,10 +122,10 @@ class CustomQGraphicsView(QGraphicsView):
             if self._drag_duration_passed(event):
                 context_menu_disabled = True
                 self.disable_context_menu()
-            # elif event.button() == Qt.MouseButton.RightButton:  # TODO: This creates a second context menu on Design View
-            #     self.contextMenuEvent(
-            #         QContextMenuEvent(QContextMenuEvent.Reason.Mouse, event.pos(), event.globalPos(), event.modifiers())
-            #     )
+            elif event.button() == Qt.MouseButton.RightButton:  # TODO: This creates a second context menu on Design View
+                self.contextMenuEvent(
+                    QContextMenuEvent(QContextMenuEvent.Reason.Mouse, event.pos(), event.globalPos(), event.modifiers())
+                )
             event = _fake_left_button_event(event)
         super().mouseReleaseEvent(event)
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -402,35 +402,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
         viewport_extent = min(self.viewport().width(), self.viewport().height())
         return viewport_extent / item_view_rect.width()
 
-    def mouseReleaseEvent(self, event):
-        """Makes an execution group if rubber band contains items and links."""
-        if self.dragMode() == QGraphicsView.DragMode.RubberBandDrag:
-            if self.rubberBandRect():
-                selected_items = list()
-                for item in self.scene().selectedItems():
-                    if isinstance(item, (ProjectItemIcon, Link, JumpLink)):
-                        selected_items.append(item)
-                if self.can_make_group(selected_items):
-                    self.push_make_group_command(selected_items)
-        super().mouseReleaseEvent(event)
-
-    def can_make_group(self, items):
-        """Checks whether a group can be made from given items.
-
-        Args:
-            items (list): List of ProjectItemIcons, Links, or JumpLinks
-
-        Returns:
-            bool: True when a new group can be made, False otherwise
-        """
-        item_icons = [it for it in items if isinstance(it, ProjectItemIcon)]
-        if len(item_icons) < 2:  # Groups must have at least two ProjectItems
-            return False
-        for group in self._toolbox.project.groups.values():  # Don't make duplicate groups
-            if set(item_icons) == set(group.project_items):
-                self._toolbox.msg_warning.emit(f"{group.name} already has the same items")
-                return False
-        return True
+    # def mouseReleaseEvent(self, event):
+    #     """Makes an execution group if rubber band contains items and links."""
+    #     if self.dragMode() == QGraphicsView.DragMode.RubberBandDrag:
+    #         if self.rubberBandRect():
+    #             selected_items = list()
+    #             for item in self.scene().selectedItems():
+    #                 if isinstance(item, (ProjectItemIcon, Link, JumpLink)):
+    #                     selected_items.append(item)
+    #             # if self.can_make_group(selected_items):
+    #             #     self.push_make_group_command(selected_items)
+    #     super().mouseReleaseEvent(event)
 
     @Slot(str)
     def add_icon(self, item_name):
@@ -462,13 +444,24 @@ class DesignQGraphicsView(CustomQGraphicsView):
         scene.removeItem(icon)
         self._set_preferred_scene_rect()
 
-    def push_make_group_command(self, items):
-        """Pushes an MakeGroupCommand to toolbox undo stack.
+    @Slot(bool)
+    def group_items(self, _):
+        selected = self.scene().selectedItems()
+        all_item_icons = [item for item in selected if isinstance(item, (ProjectItemIcon, Link, JumpLink))]
+        all_item_icon_names = [item.name for item in all_item_icons]
+        project_item_icons = [icon for icon in all_item_icons if isinstance(icon, ProjectItemIcon)]
+        for group in self._toolbox.project.groups.values():  # Don't make duplicate groups
+            if set(project_item_icons) == set(group.project_items):
+                self._toolbox.msg_warning.emit(f"{group.name} already has the same item(s)")
+                return
+        self.push_make_group_command(all_item_icon_names)
+
+    def push_make_group_command(self, item_names):
+        """Pushes a MakeGroupCommand to toolbox undo stack.
 
         Args:
-            items (list): List of selected icons to group
+            item_names (list): List of item names to group
         """
-        item_names = [item.name for item in items if isinstance(item, (ProjectItemIcon, Link, JumpLink))]
         self._toolbox.undo_stack.push(MakeGroupCommand(self._toolbox.project, item_names))
 
     @Slot(object)
@@ -478,6 +471,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         Args:
             group (Group): Group to add
         """
+        if not group.graphicsEffect():
+            group.set_graphics_effects()
         self.scene().addItem(group)
 
     @Slot(bool, str, str)
@@ -491,12 +486,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """
         self._toolbox.undo_stack.push(RemoveItemFromGroupCommand(self._toolbox.project, item_name, group_name))
 
-    @Slot(bool, str)
-    def push_disband_group_command(self, _, group_name):
+    def push_disband_group_command(self, group_name):
         """Pushes a DisbandGroupCommand to toolbox undo stack.
 
         Args:
-            _ (bool): Boolean sent by triggered signal
             group_name (str): Group to disband
         """
         self._toolbox.undo_stack.push(DisbandGroupCommand(self._toolbox.project, group_name))

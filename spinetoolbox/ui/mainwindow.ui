@@ -895,6 +895,21 @@
     <string>§</string>
    </property>
   </action>
+  <action name="actionGroup_items">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/object-group.svg</normaloff>:/icons/menu_icons/object-group.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Group items</string>
+   </property>
+   <property name="toolTip">
+    <string>Group selected items</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

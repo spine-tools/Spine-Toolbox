@@ -306,6 +306,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_item_directory.triggered.connect(self._open_project_item_directory)
         self.ui.actionRename_item.triggered.connect(self._rename_project_item)
         self.ui.actionRemove.triggered.connect(self._remove_selected_items)
+        self.ui.actionGroup_items.triggered.connect(self.ui.graphicsView.group_items)
         # Debug actions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)
@@ -1649,6 +1650,7 @@ class ToolboxUI(QMainWindow):
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
         if not item:  # Clicked on a blank area in Design view
+            menu.addAction(self.ui.actionGroup_items)
             menu.addAction(self.ui.actionPaste)
             menu.addAction(self.ui.actionPasteAndDuplicateFiles)
             menu.addSeparator()
@@ -1716,6 +1718,7 @@ class ToolboxUI(QMainWindow):
         selected_project_items = [x for x in selected_items if isinstance(x, ProjectItemIcon)]
         _methods = [getattr(self.project.get_item(x.name), "copy_local_data") for x in selected_project_items]
         can_duplicate_files = any(m.__qualname__.partition(".")[0] != "ProjectItem" for m in _methods)
+        can_make_group = True if len(selected_project_items) > 0 else False
         # Renaming an item should always be allowed except when it's a Data Store that is open in an editor
         for item in (self.project.get_item(x.name) for x in selected_project_items):
             if item.item_type() == "Data Store" and item.has_listeners():
@@ -1733,6 +1736,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionDuplicateAndDuplicateFiles.setEnabled(can_duplicate_files)
         self.ui.actionRemove.setEnabled(bool(selected_items))
         self.ui.actionRemove_all.setEnabled(has_items)
+        self.ui.actionGroup_items.setEnabled(can_make_group)
 
     def disable_edit_actions(self):
         """Disables edit actions."""
@@ -2130,20 +2134,12 @@ class ToolboxUI(QMainWindow):
     def _rename_project_item(self, _):
         """Renames active project item."""
         item = self.active_project_item
-        new_name = self._show_simple_input_dialog("Rename Item", "New name:", item.name)
+        new_name = self.show_simple_input_dialog("Rename Item", "New name:", item.name)
         if not new_name:
             return
         self.undo_stack.push(RenameProjectItemCommand(self._project, item.name, new_name))
 
-    @Slot(bool)
-    def rename_group(self, _, group_name):
-        """Renames Group."""
-        new_name = self._show_simple_input_dialog("Rename Group", "New name:", group_name)
-        if not new_name:
-            return
-        self.undo_stack.push(RenameGroupCommand(self._project, group_name, new_name))
-
-    def _show_simple_input_dialog(self, title, label_txt, prefilled_text):
+    def show_simple_input_dialog(self, title, label_txt, prefilled_text):
         """Shows a QInputDialog and returns typed text."""
         answer = QInputDialog.getText(
             self,

@@ -213,7 +213,6 @@ class ProjectItem(LogMixin, MetaObject):
             self.get_icon().rank_icon.set_rank("X")
 
     def update_progress_bar(self):
-        # print(f"{self._project.active_toolboxui}")
         if self._toolbox.active_ui_mode == "toolboxuilite":
             n_selected = len(self._toolbox.ui.graphicsView.scene().selectedItems())
             print(f"[{n_selected}] started: {self.name}")

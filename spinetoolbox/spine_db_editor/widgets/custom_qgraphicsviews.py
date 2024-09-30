@@ -854,7 +854,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             item.apply_zoom(self.zoom_factor)
         cursor_pos = self.mapFromGlobal(QCursor.pos())
         self._update_cross_hairs_pos(cursor_pos)
-        self.viewport().setCursor(Qt.BlankCursor)
+        self.viewport().setCursor(Qt.CursorShape.BlankCursor)
 
     def clear_cross_hairs_items(self):
         self.entity_class = None
@@ -875,7 +875,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         if not self.cross_hairs_items:
             super().mousePressEvent(event)
             return
-        if event.buttons() & Qt.RightButton or not self._hovered_ent_item:
+        if event.buttons() & Qt.MouseButton.RightButton or not self._hovered_ent_item:
             self.clear_cross_hairs_items()
             return
         if self._cross_hairs_has_valid_target():
@@ -937,7 +937,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def keyPressEvent(self, event):
         """Aborts relationship creation if user presses ESC."""
         super().keyPressEvent(event)
-        if event.key() == Qt.Key_Escape and self.cross_hairs_items:
+        if event.key() == Qt.Key.Key_Escape and self.cross_hairs_items:
             self._spine_db_editor.msg.emit("Relationship creation aborted.")
             self.clear_cross_hairs_items()
 

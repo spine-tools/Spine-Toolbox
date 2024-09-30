@@ -54,6 +54,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         self.icon_file = icon_file
         self._icon_color = icon_color
         self._moved_on_scene = False
+        self.this_icons_group_is_moving = False
         self.previous_pos = QPointF()
         self.icon_group = {self}
         self.my_groups = set()
@@ -308,11 +309,19 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def mousePressEvent(self, event):
         """Updates scene's icon group."""
-        super().mousePressEvent(event)
+        for group in self.my_groups:
+            group.mouse_press_pos = event.pos()
         icon_group = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)) | {self}
         for icon in icon_group:
             icon.previous_pos = icon.scenePos()
         self.scene().icon_group = icon_group
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Updates group rectangles on scene, if this item is in group(s)."""
+        for group in self.my_groups:
+            group.update_group_rect(event.pos())
+        super().mouseMoveEvent(event)
 
     def update_links_geometry(self):
         """Updates geometry of connected links to reflect this item's most recent position."""
@@ -330,6 +339,8 @@ class ProjectItemIcon(QGraphicsPathItem):
 
     def mouseReleaseEvent(self, event):
         """Clears pre-bump rects, and pushes a move icon command if necessary."""
+        for group in self.my_groups:
+            group.mouse_press_pos = None
         for icon in self.scene().icon_group:
             icon.bumped_rects.clear()
         # pylint: disable=undefined-variable
@@ -375,7 +386,6 @@ class ProjectItemIcon(QGraphicsPathItem):
             self._reposition_name_item()
             self.update_links_geometry()
             self._handle_collisions()
-            self.update_group_rectangle()
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
@@ -388,13 +398,6 @@ class ProjectItemIcon(QGraphicsPathItem):
                 self._scene.addItem(self.name_item)
                 self._reposition_name_item()
         return super().itemChange(change, value)
-
-    def update_group_rectangle(self):
-        """Updates group icon if this icon is in a group."""
-        if not self.my_groups:
-            return
-        for group in self.my_groups:
-            group.update_group_rect()
 
     def set_pos_without_bumping(self, pos):
         """Sets position without bumping other items. Needed for undoing move operations.

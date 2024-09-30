@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Class for drawing an item group on QGraphicsScene."""
-from PySide6.QtCore import Qt, QMarginsF, QRectF
+from PySide6.QtCore import Qt, Slot, QMarginsF, QRectF, QPointF
 from PySide6.QtGui import QBrush, QPen, QAction, QPainterPath, QTransform
 from PySide6.QtWidgets import (
     QGraphicsItem,
@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
     QStyle
 )
 from .project_item_icon import ProjectItemIcon
+from .project_commands import RenameGroupCommand
+from widgets.notification import Notification
 
 
 class Group(QGraphicsRectItem):
@@ -29,8 +31,8 @@ class Group(QGraphicsRectItem):
 
     def __init__(self, toolbox, name, item_names):
         super().__init__()
-        print(f"toolbox:{toolbox}")
         self._toolbox = toolbox
+        self._scene = None
         self._name = name
         self._item_names = item_names  # strings
         self._items = dict()  # QGraphicsItems
@@ -46,17 +48,19 @@ class Group(QGraphicsRectItem):
             item_icon.my_groups.add(self)
         self._n_items = len(self._items)
         disband_action = QAction("Ungroup items")
-        disband_action.triggered.connect(lambda checked=False, group_name=self.name: self._toolbox.ui.graphicsView.push_disband_group_command(checked, group_name))
+        disband_action.triggered.connect(self.call_disband_group)
         rename_group_action = QAction("Rename group...")
-        rename_group_action.triggered.connect(lambda checked=False, group_name=self.name: self._toolbox.rename_group(checked, group_name))
+        rename_group_action.triggered.connect(self.rename_group)
         self._actions = [disband_action, rename_group_action]
         self.margins = QMarginsF(0, 0, 0, 10.0)  # left, top, right, bottom
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
         self.setZValue(-10)
         self.name_item = QGraphicsTextItem(self._name, parent=self)
         self.set_name_attributes()
-        self.setRect(self.rect())
+        self.setRect(self.current_rect())
         self._reposition_name_item()
         self.setBrush(self._toolbox.ui.graphicsView.scene().bg_color.lighter(107))
         self.normal_pen = QPen(QBrush("gray"), 1, Qt.PenStyle.SolidLine)
@@ -64,6 +68,11 @@ class Group(QGraphicsRectItem):
         self.selected_pen = QPen(QBrush("black"), 1, Qt.PenStyle.DashLine)
         self.setPen(self.normal_pen)
         self.set_graphics_effects()
+        self.previous_pos = QPointF()
+        self._moved_on_scene = False
+        self._bumping = True
+        # self.setOpacity(0.5)
+        self.mouse_press_pos = None
 
     @property
     def name(self):
@@ -145,26 +154,81 @@ class Group(QGraphicsRectItem):
         item.my_groups.remove(self)
         self.update_group_rect()
 
+    @Slot(bool)
+    def call_disband_group(self, _=False):
+        self._toolbox.toolboxuibase.active_ui_window.ui.graphicsView.push_disband_group_command(self.name)
+
+    @Slot(bool)
+    def rename_group(self, _=False):
+        """Renames Group."""
+        new_name = self._toolbox.show_simple_input_dialog("Rename Group", "New name:", self.name)
+        if not new_name or new_name == self.name:
+            return
+        if new_name in self._toolbox.project.groups.keys():
+            notif = Notification(self._toolbox.toolboxuibase.active_ui_window, f"Group {new_name} already exists")
+            notif.show()
+            return
+        self._toolbox.toolboxuibase.undo_stack.push(RenameGroupCommand(self._toolbox.project, self.name, new_name))
+
     def remove_all_items(self):
         """Removes all items (ProjectItemIcons) from this group."""
         for item in self.project_items:
             self.remove_item(item.name)
 
-    def update_group_rect(self):
-        """Updates group rectangle and it's attributes when group member(s) is/are moved."""
-        self.setRect(self.rect())
+    def update_group_rect(self, current_pos=None):
+        """Updates group rectangle, and it's position when group member(s) is/are moved."""
+        self.prepareGeometryChange()
+        r = self.current_rect()
+        self.setRect(r)
+        if current_pos is not None:
+            diff_x = current_pos.x() - self.mouse_press_pos.x()
+            diff_y = current_pos.y() - self.mouse_press_pos.y()
+            self.setPos(QPointF(diff_x, diff_y))
         self._reposition_name_item()
 
-    def rect(self):
+    def current_rect(self):
         """Calculates the size of the rectangle for this group."""
         united_rect = QRectF()
         for item in self.items:
             if isinstance(item, ProjectItemIcon):
-                united_rect = united_rect.united(item.name_item.sceneBoundingRect().united(item.sceneBoundingRect()))
+                # Combine item icon box and name item
+                icon_rect = item.name_item.sceneBoundingRect().united(item.sceneBoundingRect())
+                # Combine spec item rect if available
+                if item.spec_item is not None:
+                    icon_rect = icon_rect.united(item.spec_item.sceneBoundingRect())
+                united_rect = united_rect.united(icon_rect)
             else:
                 united_rect = united_rect.united(item.sceneBoundingRect())
-        rect_with_margins = united_rect.marginsAdded(self.margins)
-        return rect_with_margins
+        return united_rect
+
+    def itemChange(self, change, value):
+        """
+        Reacts to item removal and position changes.
+
+        In particular, destroys the drop shadow effect when the item is removed from a scene
+        and keeps track of item's movements on the scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
+            self._moved_on_scene = True
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            self.prepareGeometryChange()
+            self.setGraphicsEffect(None)
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneHasChanged:
+            scene = value
+            if scene is None:
+                self._scene.removeItem(self.name_item)
+            else:
+                self._scene = scene
+                self._scene.addItem(self.name_item)
+                self._reposition_name_item()
+        return super().itemChange(change, value)
 
     def set_graphics_effects(self):
         shadow_effect = QGraphicsDropShadowEffect()
@@ -179,13 +243,37 @@ class Group(QGraphicsRectItem):
             event (QMousePressEvent): Event
         """
         event.accept()
+        self.scene().clearSelection()
         path = QPainterPath()
-        path.addRect(self.rect())
+        path.addRect(self.sceneBoundingRect())
         self._toolbox.toolboxuibase.active_ui_window.ui.graphicsView.scene().setSelectionArea(path, QTransform())
+        icon_group = set(self.project_items)
+        for icon in icon_group:
+            icon.this_icons_group_is_moving = True
+            icon.previous_pos = icon.scenePos()
+        self.scene().icon_group = icon_group
 
     def mouseReleaseEvent(self, event):
         """Accepts the event to prevent graphics view's mouseReleaseEvent from clearing the selections."""
-        event.accept()
+        if (self.scenePos() - self.previous_pos).manhattanLength() > qApp.startDragDistance():
+            # self._toolbox.undo_stack.push(MoveGroupCommand(self, self._toolbox.project))
+            self.notify_item_move()
+            event.accept()
+        # icon_group = set(self.project_items)
+        # for icon in icon_group:
+        #     icon.this_icons_group_is_moving = False
+        super().mouseReleaseEvent(event)
+
+    def set_pos_without_bumping(self, pos):
+        self._bumping = False
+        self.setPos(pos)
+        self._bumping = True
+
+    def notify_item_move(self):
+        if self._moved_on_scene:
+            self._moved_on_scene = False
+            scene = self.scene()
+            scene.item_move_finished.emit(self)
 
     def contextMenuEvent(self, event):
         """Opens context-menu in design mode."""
@@ -222,7 +310,7 @@ class Group(QGraphicsRectItem):
         return {self.name: self.item_names}
 
     def paint(self, painter, option, widget=None):
-        """Sets a dashline pen when selected."""
+        """Sets a dash line pen when selected."""
         if option.state & QStyle.StateFlag.State_Selected:
             option.state &= ~QStyle.StateFlag.State_Selected
             if self._toolbox.active_ui_mode == "toolboxui":

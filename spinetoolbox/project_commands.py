@@ -92,6 +92,45 @@ class MoveIconCommand(SpineToolboxCommand):
         self._representative.notify_item_move()
 
 
+class MoveGroupCommand(SpineToolboxCommand):
+    """Command to move Group in the Design view."""
+
+    def __init__(self, icon, project):
+        """
+        Args:
+            icon (Group): the icon
+            project (SpineToolboxProject): project
+        """
+        super().__init__()
+        self._icon = icon
+        self._project = project
+        icon_group = icon.scene().icon_group
+        self._representative = next(iter(icon_group), None)
+        if self._representative is None:
+            self.setObsolete(True)
+        self._previous_group_position = self._icon.previous_pos
+        self._current_group_position = self._icon.scenePos()
+        self._previous_item_positions = {x.name: x.previous_pos for x in icon_group}
+        self._current_item_positions = {x.name: x.scenePos() for x in icon_group}
+        if len(icon_group) == 1:
+            self.setText(f"move {self._icon.name}")
+        else:
+            self.setText("move multiple items")
+
+    def redo(self):
+        self._move_to(self._current_item_positions, self._current_group_position)
+
+    def undo(self):
+        self._move_to(self._previous_item_positions, self._previous_group_position)
+
+    def _move_to(self, item_positions, group_position):
+        for item_name, position in item_positions.items():
+            icon = self._project.get_item(item_name).get_icon()
+            icon.set_pos_without_bumping(position)
+        self._icon.set_pos_without_bumping(group_position)
+        self._icon.notify_item_move()
+
+
 class SetProjectDescriptionCommand(SpineToolboxCommand):
     """Command to set the project description."""
 
@@ -313,7 +352,7 @@ class RemoveItemFromGroupCommand(SpineToolboxCommand):
         self._item_names = self._project.groups[group_name].item_names
         self._links_removed = []
         self._remake_group = False
-        if len(self._project.groups[group_name].project_items) == 2:
+        if len(self._project.groups[group_name].project_items) == 1:
             self._remake_group = True
         self.setText(f"disband {self._group_name}")
 
