@@ -30,16 +30,16 @@ class ProjectItemDragMixin:
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
-        self.setCursor(Qt.OpenHandCursor)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
 
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
-        self.setCursor(Qt.ClosedHandCursor)
+        self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""
         super().mouseMoveEvent(event)
-        if not event.buttons() & Qt.LeftButton:
+        if not event.buttons() & Qt.MouseButton.LeftButton:
             return
         if not self.drag_start_pos:
             return
@@ -62,7 +62,7 @@ class ProjectItemDragMixin:
 
     def enterEvent(self, event):
         super().enterEvent(event)
-        self.setCursor(Qt.OpenHandCursor)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
 
 
 class NiceButton(QToolButton):
@@ -73,20 +73,27 @@ class NiceButton(QToolButton):
         self.setFont(font)
 
     def setText(self, text):
-        super().setText(fill(text, width=12, break_long_words=False))
+        if self.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextUnderIcon:
+            super().setText(fill(text, width=12, break_long_words=False))
+        elif self.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonTextBesideIcon:
+            txt_l = text.strip().split()  # Remove all newlines
+            txt = " ".join(txt_l)
+            trunc = txt[:12] + ".." if len(txt) > 14 else txt  # Truncate text to 14 characters with .. in the end
+            super().setText(trunc)
 
     def set_orientation(self, orientation):
         if orientation == Qt.Orientation.Horizontal:
             self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
             self.setStyleSheet("QToolButton{margin: 16px 2px 2px 2px;}")
         else:
-            self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+            self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
             self.setStyleSheet("QToolButton{margin: 2px;}")
 
 
 class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
-    def __init__(self, toolbox, item_type, icon, parent=None):
+    def __init__(self, toolbox, item_type, icon, style, parent=None):
         super().__init__(parent=parent)
+        self.setToolButtonStyle(style)
         self._toolbox = toolbox
         self.item_type = item_type
         self._icon = icon
@@ -113,7 +120,7 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
     def mousePressEvent(self, event):
         """Register drag start position"""
         super().mousePressEvent(event)
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.drag_start_pos = event.position().toPoint()
             self.pixmap = self.icon().pixmap(self.iconSize())
             self.mime_data = QMimeData()
@@ -126,10 +133,14 @@ class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
 class ProjectItemButton(ProjectItemButtonBase):
     double_clicked = Signal()
 
-    def __init__(self, toolbox, item_type, icon, parent=None):
-        super().__init__(toolbox, item_type, icon, parent=parent)
+    def __init__(self, toolbox, item_type, icon, style, parent=None):
+        super().__init__(toolbox, item_type, icon, style, parent=parent)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{item_type}</b> item.</p>")
         self.setText(item_type)
+
+    def set_orientation(self, orientation):
+        super().set_orientation(orientation)
+        self.setText(self.item_type)
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, ""])
@@ -139,12 +150,11 @@ class ProjectItemButton(ProjectItemButtonBase):
 
 
 class ProjectItemSpecButton(ProjectItemButtonBase):
-    def __init__(self, toolbox, item_type, icon, spec_name="", parent=None):
-        super().__init__(toolbox, item_type, icon, parent=parent)
+    def __init__(self, toolbox, item_type, icon, style, spec_name="", parent=None):
+        super().__init__(toolbox, item_type, icon, style, parent=parent)
         self._spec_name = None
         self._index = None
         self.spec_name = spec_name
-        self.setText(self.spec_name)
 
     @property
     def spec_name(self):
@@ -155,6 +165,10 @@ class ProjectItemSpecButton(ProjectItemButtonBase):
         self._spec_name = spec_name
         self.setText(self._spec_name)
         self.setToolTip(f"<p>Drag-and-drop this onto the Design View to create a new <b>{self.spec_name}</b> item.</p>")
+
+    def set_orientation(self, orientation):
+        super().set_orientation(orientation)
+        self.setText(self.spec_name)
 
     def _make_mime_data_text(self):
         return ",".join([self.item_type, self.spec_name])

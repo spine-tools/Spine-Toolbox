@@ -74,13 +74,14 @@ class ToolBar(QToolBar):
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
         self.addWidget(_TitleWidget(self.name(), self))
+        self.setIconSize(QSize(20, 20))
 
     def name(self):
         return self._name
 
     def paintEvent(self, ev):
         super().paintEvent(ev)
-        if self.orientation() == Qt.Vertical:
+        if self.orientation() == Qt.Orientation.Vertical:
             return
         layout = self.layout()
         title_pos_x = (
@@ -157,6 +158,8 @@ class ToolBar(QToolBar):
             QToolButton: created button
         """
         button = NiceButton()
+        style = self._get_toolbutton_style()
+        button.setToolButtonStyle(style)
         button.setIcon(icon)
         button.setText(text)
         button.setToolTip(f"<p>{tip}</p>")
@@ -170,6 +173,11 @@ class ToolBar(QToolBar):
         icon_file_name = factory.icon()
         icon_color = factory.icon_color().darker(120)
         return ColoredIcon(icon_file_name, icon_color, self.iconSize(), colored=colored)
+
+    def _get_toolbutton_style(self):
+        if self.orientation() == Qt.Orientation.Horizontal:
+            return Qt.ToolButtonStyle.ToolButtonTextUnderIcon
+        return Qt.ToolButtonStyle.ToolButtonTextBesideIcon
 
 
 class PluginToolBar(ToolBar):
@@ -202,7 +210,8 @@ class PluginToolBar(ToolBar):
             for spec in specs:
                 factory = self._toolbox.item_factories[spec.item_type]
                 icon = self._icon_from_factory(factory)
-                button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
+                style = self._get_toolbutton_style()
+                button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, style, spec.name)
                 button.setIconSize(self.iconSize())
                 if spec.name in disabled_names:
                     button.setEnabled(False)
@@ -244,7 +253,8 @@ class SpecToolBar(ToolBar):
             next_row += 1
         factory = self._toolbox.item_factories[spec.item_type]
         icon = self._icon_from_factory(factory)
-        button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, spec.name)
+        style = self._get_toolbutton_style()
+        button = ProjectItemSpecButton(self._toolbox, spec.item_type, icon, style, spec.name)
         button.setIconSize(self.iconSize())
         action = (
             self._insert_tool_button(self._actions[next_spec.name], button)
@@ -288,10 +298,10 @@ class SpecToolBar(ToolBar):
             ).setIcon(self._icon_from_factory(factory))
         menu.addSeparator()
         menu.addAction("From specification file...", self._toolbox.import_specification).setIcon(
-            QIcon(CharIconEngine("\uf067", color=Qt.darkGreen))
+            QIcon(CharIconEngine("\uf067", color=Qt.GlobalColor.darkGreen))
         )
-        button = self._make_tool_button(QIcon(CharIconEngine("\uf067", color=Qt.darkGreen)), "New...")
-        button.setPopupMode(QToolButton.InstantPopup)
+        button = self._make_tool_button(QIcon(CharIconEngine("\uf067", color=Qt.GlobalColor.darkGreen)), "New...")
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         button.setMenu(menu)
 
 
@@ -334,7 +344,8 @@ class ItemsToolBar(ToolBar):
         if factory.is_deprecated():
             return
         icon = self._icon_from_factory(factory)
-        button = ProjectItemButton(self._toolbox, item_type, icon)
+        style = self._get_toolbutton_style()
+        button = ProjectItemButton(self._toolbox, item_type, icon, style)
         self._add_tool_button(button)
         self._buttons.append(button)
 
