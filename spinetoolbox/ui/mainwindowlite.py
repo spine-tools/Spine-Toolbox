@@ -27,19 +27,20 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QColumnView, QGraphicsView, QGroupBox,
-    QHBoxLayout, QMainWindow, QMenu, QMenuBar,
-    QScrollArea, QSizePolicy, QSplitter, QStatusBar,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QColumnView, QDockWidget, QGraphicsView,
+    QGroupBox, QHBoxLayout, QMainWindow, QMenu,
+    QMenuBar, QScrollArea, QSizePolicy, QSplitter,
+    QStatusBar, QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowserLite
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindowLite(object):
     def setupUi(self, MainWindowLite):
         if not MainWindowLite.objectName():
             MainWindowLite.setObjectName(u"MainWindowLite")
-        MainWindowLite.resize(800, 600)
+        MainWindowLite.resize(761, 600)
         self.actionSwitch_to_design_mode = QAction(MainWindowLite)
         self.actionSwitch_to_design_mode.setObjectName(u"actionSwitch_to_design_mode")
         icon = QIcon()
@@ -57,12 +58,18 @@ class Ui_MainWindowLite(object):
         icon2.addFile(u":/icons/menu_icons/stop-circle-regular.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionStop.setIcon(icon2)
         self.actionStop.setMenuRole(QAction.MenuRole.NoRole)
-        self.actionShow_event_log_console = QAction(MainWindowLite)
-        self.actionShow_event_log_console.setObjectName(u"actionShow_event_log_console")
+        self.actionShow_event_log = QAction(MainWindowLite)
+        self.actionShow_event_log.setObjectName(u"actionShow_event_log")
         icon3 = QIcon()
         icon3.addFile(u":/icons/menu_icons/edit.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.actionShow_event_log_console.setIcon(icon3)
-        self.actionShow_event_log_console.setMenuRole(QAction.MenuRole.NoRole)
+        self.actionShow_event_log.setIcon(icon3)
+        self.actionShow_event_log.setMenuRole(QAction.MenuRole.NoRole)
+        self.actionShow_console = QAction(MainWindowLite)
+        self.actionShow_console.setObjectName(u"actionShow_console")
+        icon4 = QIcon()
+        icon4.addFile(u":/icons/menu_icons/terminal.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.actionShow_console.setIcon(icon4)
+        self.actionShow_console.setMenuRole(QAction.MenuRole.NoRole)
         self.centralwidget = QWidget(MainWindowLite)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
@@ -77,7 +84,7 @@ class Ui_MainWindowLite(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 780, 293))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 741, 169))
         self.horizontalLayout = QHBoxLayout(self.scrollAreaWidgetContents)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
@@ -110,7 +117,7 @@ class Ui_MainWindowLite(object):
         MainWindowLite.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindowLite)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 33))
+        self.menubar.setGeometry(QRect(0, 0, 761, 33))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuHelp = QMenu(self.menubar)
@@ -119,6 +126,30 @@ class Ui_MainWindowLite(object):
         self.statusbar = QStatusBar(MainWindowLite)
         self.statusbar.setObjectName(u"statusbar")
         MainWindowLite.setStatusBar(self.statusbar)
+        self.dockWidget_event_log = QDockWidget(MainWindowLite)
+        self.dockWidget_event_log.setObjectName(u"dockWidget_event_log")
+        self.dockWidget_event_log.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dockWidget_event_log.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.dockWidgetContents = QWidget()
+        self.dockWidgetContents.setObjectName(u"dockWidgetContents")
+        self.verticalLayout_3 = QVBoxLayout(self.dockWidgetContents)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.textBrowser = CustomQTextBrowserLite(self.dockWidgetContents)
+        self.textBrowser.setObjectName(u"textBrowser")
+
+        self.verticalLayout_3.addWidget(self.textBrowser)
+
+        self.dockWidget_event_log.setWidget(self.dockWidgetContents)
+        MainWindowLite.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget_event_log)
+        self.dockWidget_console = QDockWidget(MainWindowLite)
+        self.dockWidget_console.setObjectName(u"dockWidget_console")
+        self.dockWidget_console.setFeatures(QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+        self.dockWidget_console.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.dockWidgetContents_2 = QWidget()
+        self.dockWidgetContents_2.setObjectName(u"dockWidgetContents_2")
+        self.dockWidget_console.setWidget(self.dockWidgetContents_2)
+        MainWindowLite.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget_console)
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
@@ -139,9 +170,18 @@ class Ui_MainWindowLite(object):
 #endif // QT_CONFIG(shortcut)
         self.actionExecute_group.setText(QCoreApplication.translate("MainWindowLite", u"Execute group", None))
         self.actionStop.setText(QCoreApplication.translate("MainWindowLite", u"Stop", None))
-        self.actionShow_event_log_console.setText(QCoreApplication.translate("MainWindowLite", u"Show event log and console", None))
+        self.actionShow_event_log.setText(QCoreApplication.translate("MainWindowLite", u"Show event log", None))
+#if QT_CONFIG(tooltip)
+        self.actionShow_event_log.setToolTip(QCoreApplication.translate("MainWindowLite", u"Show event log", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionShow_console.setText(QCoreApplication.translate("MainWindowLite", u"Show console", None))
+#if QT_CONFIG(tooltip)
+        self.actionShow_console.setToolTip(QCoreApplication.translate("MainWindowLite", u"Show console", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox.setTitle(QCoreApplication.translate("MainWindowLite", u"Scenarios", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindowLite", u"File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindowLite", u"Help", None))
+        self.dockWidget_event_log.setWindowTitle(QCoreApplication.translate("MainWindowLite", u"Event Log", None))
+        self.dockWidget_console.setWindowTitle(QCoreApplication.translate("MainWindowLite", u"Console", None))
     # retranslateUi
 

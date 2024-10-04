@@ -144,7 +144,6 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.specification_model = None
         self.filtered_spec_factory_models = {}
-        self.show_datetime = self.update_datetime()
         self.active_project_item = None
         self.active_link_item = None
         self._selected_item_names = set()
@@ -1324,12 +1323,6 @@ class ToolboxUI(QMainWindow):
         else:
             self.ui.tabWidget_item_properties.tabBar().show()
 
-    def update_datetime(self):
-        """Returns a boolean, which determines whether
-        date and time is prepended to every Event Log message."""
-        d = int(self.qsettings.value("appSettings/dateTime", defaultValue="2"))
-        return d != 0
-
     @Slot(str)
     def add_message(self, msg):
         """Appends a regular message to the Event Log.
@@ -1337,7 +1330,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg, self.show_datetime)
+        message = format_log_message("msg", msg, self.toolboxuibase.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1347,7 +1340,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_success", msg, self.show_datetime)
+        message = format_log_message("msg_success", msg, self.toolboxuibase.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1357,7 +1350,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg, self.show_datetime)
+        message = format_log_message("msg_error", msg, self.toolboxuibase.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1367,7 +1360,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_warning", msg, self.show_datetime)
+        message = format_log_message("msg_warning", msg, self.toolboxuibase.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1645,6 +1638,8 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             item (ProjectItem, Group, optional): Project item, Group or None
         """
+        if item is not None:
+            print(f"item my_groups:{item.get_icon().my_groups}")
         menu = QMenu(self)
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
@@ -1689,6 +1684,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The link in question
         """
+        print(f"link my_groups:{link.my_groups}")
         menu = QMenu(self)
         menu.addAction(self.ui.actionRemove)
         self.ui.actionRemove.setEnabled(True)

@@ -14,6 +14,7 @@
 from PySide6.QtCore import Qt, Slot, QRect
 from PySide6.QtWidgets import QMainWindow, QToolBar, QMenu, QComboBox, QProgressBar
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QPainterPath, QTransform
+from .helpers import format_log_message_lite
 
 
 class ToolboxUILite(QMainWindow):
@@ -35,6 +36,8 @@ class ToolboxUILite(QMainWindow):
         self.toolbar = self.make_toolbar()
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         self.ui.graphicsView.set_ui(self)
+        self.ui.dockWidget_event_log.setVisible(False)
+        self.ui.dockWidget_console.setVisible(False)
         self.connect_signals()
 
     @property
@@ -109,7 +112,8 @@ class ToolboxUILite(QMainWindow):
         self.progress_bar.setMaximum(100)
         tb.addWidget(self.progress_bar)
         tb.addSeparator()
-        tb.addAction(self.ui.actionShow_event_log_console)
+        tb.addAction(self.ui.actionShow_event_log)
+        tb.addAction(self.ui.actionShow_console)
         tb.addAction(self.ui.actionSwitch_to_design_mode)
         return tb
 
@@ -123,7 +127,8 @@ class ToolboxUILite(QMainWindow):
         self.msg_proc_error.connect(self.add_process_error_message)
         self.ui.actionExecute_group.triggered.connect(self.execute_group)
         self.ui.actionStop.triggered.connect(self.toolboxui._stop_execution)
-        self.ui.actionShow_event_log_console.triggered.connect(self.show_event_log_and_console)
+        self.ui.actionShow_event_log.triggered.connect(self.show_event_log)
+        self.ui.actionShow_console.triggered.connect(self.show_console)
         self.ui.actionSwitch_to_design_mode.triggered.connect(self.switch_to_design_mode)
         self.groups_combobox.currentTextChanged.connect(self._select_group)
 
@@ -212,8 +217,43 @@ class ToolboxUILite(QMainWindow):
     def _set_progress_bar_finished(self):
         self.progress_bar.setValue(self.progress_bar.maximum())
 
-    def show_event_log_and_console(self):
-        print("Not implemented")
+    @Slot(bool)
+    def show_event_log(self, _=False):
+        """Shows or hides the Event Log. If Console is already visible,
+        splits the bottom dock widget area 50-50."""
+        if self.ui.dockWidget_event_log.isVisible():
+            self.ui.dockWidget_event_log.setVisible(False)
+            return
+        self.ui.dockWidget_event_log.setVisible(True)
+        if self.ui.dockWidget_console.isVisible():
+            # If Console is visible, split bottom dock widget area 50-50
+            # Hide console first and show it again, so that Event Log is always on the left side, console on the right
+            self.ui.dockWidget_console.setVisible(False)
+            self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_event_log)
+            self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_console)
+            self.ui.dockWidget_console.setVisible(True)
+            docks = (self.ui.dockWidget_event_log, self.ui.dockWidget_console)
+            width = sum(d.size().width() for d in docks)
+            self.resizeDocks(docks, [0.5 * width, 0.5 * width], Qt.Orientation.Horizontal)
+        else:
+            self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_event_log)
+
+    @Slot(bool)
+    def show_console(self, _=False):
+        """Shows or hides the Console. If Event Log is already visible,
+        splits the bottom dock widget area 50-50."""
+        if self.ui.dockWidget_console.isVisible():
+            self.ui.dockWidget_console.setVisible(False)
+            return
+        self.ui.dockWidget_console.setVisible(True)
+        if self.ui.dockWidget_event_log.isVisible():
+            # If Event Log is visible, split bottom dock widget area 50-50
+            self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_console)
+            docks = (self.ui.dockWidget_event_log, self.ui.dockWidget_console)
+            width = sum(d.size().width() for d in docks)
+            self.resizeDocks(docks, [0.5 * width, 0.5 * width], Qt.Orientation.Horizontal)
+        else:
+            self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.ui.dockWidget_console)
 
     def refresh_active_elements(self, active_project_item, active_link_item, selected_item_names):
         """Does something when scene selection has changed."""
@@ -225,7 +265,10 @@ class ToolboxUILite(QMainWindow):
 
     def show_project_or_item_context_menu(self, global_pos, item):
         """Shows the Context menu for project or item in user mode."""
-        print(f"Not implemented yet. item:{item}")
+        print("Not implemented yet")
+        if not item:
+            return
+        print(f"item my_groups:{item.get_icon().my_groups}")
 
     def show_link_context_menu(self, pos, link):
         """Shows the Context menu for connection links in user mode.
@@ -234,6 +277,7 @@ class ToolboxUILite(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The link in question
         """
+        print(f"link my_groups:{link.my_groups}")
         menu = QMenu(self)
         menu.addAction(self.toolboxui.ui.actionTake_link)
         action = menu.exec(pos)
@@ -248,7 +292,8 @@ class ToolboxUILite(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        return
+        message = format_log_message_lite("msg", msg, self.toolboxuibase.show_datetime)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_success_message(self, msg):
@@ -257,7 +302,8 @@ class ToolboxUILite(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        return
+        message = format_log_message_lite("msg_success", msg, self.toolboxuibase.show_datetime)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_error_message(self, msg):
@@ -266,7 +312,8 @@ class ToolboxUILite(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        print(f"[ERROR]:{msg}")
+        message = format_log_message_lite("msg_error", msg, self.toolboxuibase.show_datetime)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_warning_message(self, msg):
@@ -275,7 +322,8 @@ class ToolboxUILite(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        print(f"[WARNING]:{msg}")
+        message = format_log_message_lite("msg_warning", msg, self.toolboxuibase.show_datetime)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_process_message(self, msg):
@@ -284,7 +332,8 @@ class ToolboxUILite(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        return
+        message = format_log_message_lite("msg", msg)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_process_error_message(self, msg):
@@ -293,4 +342,5 @@ class ToolboxUILite(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        return
+        message = format_log_message_lite("msg_error", msg)
+        self.ui.textBrowser.append(message)

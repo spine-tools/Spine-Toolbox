@@ -402,18 +402,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         viewport_extent = min(self.viewport().width(), self.viewport().height())
         return viewport_extent / item_view_rect.width()
 
-    # def mouseReleaseEvent(self, event):
-    #     """Makes an execution group if rubber band contains items and links."""
-    #     if self.dragMode() == QGraphicsView.DragMode.RubberBandDrag:
-    #         if self.rubberBandRect():
-    #             selected_items = list()
-    #             for item in self.scene().selectedItems():
-    #                 if isinstance(item, (ProjectItemIcon, Link, JumpLink)):
-    #                     selected_items.append(item)
-    #             # if self.can_make_group(selected_items):
-    #             #     self.push_make_group_command(selected_items)
-    #     super().mouseReleaseEvent(event)
-
     @Slot(str)
     def add_icon(self, item_name):
         """Adds project item's icon to the scene.

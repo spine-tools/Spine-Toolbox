@@ -115,7 +115,25 @@ def format_log_message(msg_type, message, show_datetime=True):
     Returns:
         str: formatted message
     """
-    color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
+    color = {"msg": "white", "msg_success": "#00cc00", "msg_error": "#ff3333", "msg_warning": "#e6e600"}[msg_type]
+    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
+    date_str = get_datetime(show=show_datetime)
+    return open_tag + date_str + message + "</span>"
+
+
+def format_log_message_lite(msg_type, message, show_datetime=True):
+    """Adds color tags and optional time stamp to message.
+    Text colors are selected for a QTextBrowser with a white background.
+
+    Args:
+        msg_type (str): message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
+        message (str): message to format
+        show_datetime (bool): True to add time stamp, False to omit it
+
+    Returns:
+        str: formatted message
+    """
+    color = {"msg": "black", "msg_success": "#009900", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"

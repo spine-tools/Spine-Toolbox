@@ -19,6 +19,7 @@ from PySide6.QtGui import QIcon, QUndoStack, QGuiApplication, QAction, QKeySeque
 from .helpers import set_taskbar_icon, ensure_window_is_on_screen
 from .ui_main import ToolboxUI
 from .ui_main_lite import ToolboxUILite
+from .link import JumpOrLink
 
 
 class ToolboxUIBase(QMainWindow):
@@ -46,6 +47,7 @@ class ToolboxUIBase(QMainWindow):
         self.ui.stackedWidget.addWidget(self.toolboxui)
         self.ui.stackedWidget.addWidget(self.toolboxui_lite)
         self.ui.stackedWidget.setCurrentWidget(self.toolboxui)
+        self.show_datetime = self.update_datetime()
         self.restore_ui()
         self.connect_signals()
         self._active_ui_mode = "toolboxui"
@@ -167,6 +169,14 @@ class ToolboxUIBase(QMainWindow):
             jump.jump_link.update_icons()
         for group in self.project.groups.values():
             self.active_ui_window.ui.graphicsView.add_group_on_scene(group)
+            # TODO:
+            # Remove all links from Groups. items contains wrong link icon references
+            # Then find the new links from the scene and add them back to the group and to the links my_groups
+            # ex_items = [for item in]
+            # for item in group.items:
+            #     if isinstance(item, JumpOrLink):
+            #         print(item.name)
+            #         item.my_groups.add(group)
 
     def connect_project_signals(self):
         """Connects project signals based on current UI mode."""
@@ -179,6 +189,12 @@ class ToolboxUIBase(QMainWindow):
         self.active_ui_window.ui.graphicsView.scene().clear_icons_and_links()  # Clear all items from scene
         self.toolboxui._shutdown_engine_kernels()
         self.toolboxui._close_consoles()
+
+    def update_datetime(self):
+        """Returns a boolean, which determines whether
+        date and time is prepended to every Event Log message."""
+        d = int(self.qsettings.value("appSettings/dateTime", defaultValue="2"))
+        return d != 0
 
     def _tasks_before_exit(self):
         """Returns a list of tasks to perform before exiting the application.

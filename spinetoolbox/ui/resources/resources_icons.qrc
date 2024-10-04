@@ -13,6 +13,7 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/terminal.svg</file>
     <file>menu_icons/retweet.svg</file>
     <file>menu_icons/bolt-lightning.svg</file>
     <file>menu_icons/object-group.svg</file>
