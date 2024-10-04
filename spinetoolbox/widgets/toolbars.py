@@ -159,7 +159,8 @@ class ToolBar(QToolBar):
         button = NiceButton()
         button.setIcon(icon)
         button.setText(text)
-        button.setToolTip(f"<p>{tip}</p>")
+        if tip is not None:
+            button.setToolTip(f"<p>{tip}</p>")
         if slot is not None:
             button.clicked.connect(slot)
         self._add_tool_button(button)
