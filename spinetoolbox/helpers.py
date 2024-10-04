@@ -29,11 +29,13 @@ import sys
 import tempfile
 import time
 from typing import Sequence  # pylint: disable=unused-import
+from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
 from PySide6.QtGui import (
+    QAction,
     QBrush,
     QColor,
     QCursor,
@@ -1846,3 +1848,38 @@ def order_key(name):
     if key_list and key_list[0].isdigit():
         key_list.insert(0, "\U0010FFFF")
     return key_list
+
+
+def add_keyboard_shortcut_to_tool_tip(action):
+    """Adds keyboard shortcut to action's tool tip.
+
+    Args:
+        action (QAction): action to modify
+    """
+    shortcut = action.shortcut()
+    if shortcut.isEmpty():
+        return
+    tool_tip = action.toolTip()
+    if "<html>" not in tool_tip or "<p>" not in tool_tip:
+        tool_tip = "<p>" + tool_tip + "</p>"
+    root = ElementTree.fromstring(tool_tip)
+    paragraphs = [paragraph for paragraph in root.iter("p")]
+    new_root = ElementTree.Element("qt")
+    for paragraph in paragraphs:
+        new_root.append(paragraph)
+    tool_tip_element = ElementTree.SubElement(new_root, "p")
+    ElementTree.SubElement(tool_tip_element, "em").text = shortcut.toString()
+    action.setToolTip(ElementTree.tostring(new_root, encoding="utf-8", method="html").decode())
+
+
+def add_keyboard_shortcuts_to_action_tool_tips(ui):
+    """Appends keyboard shortcuts to the tool tip texts of given UI's actions.
+
+    Args:
+        ui (object): UI to modify
+    """
+    for attribute in dir(ui):
+        action = getattr(ui, attribute)
+        if not isinstance(action, QAction):
+            continue
+        add_keyboard_shortcut_to_tool_tip(action)
