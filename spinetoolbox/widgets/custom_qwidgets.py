@@ -760,7 +760,7 @@ class SelectDatabaseItemsDialog(QDialog):
             )
         if self._warn_checked_non_data_items:
             if self._item_check_boxes_widget.any_structural_item_checked():
-                self._ui.warning_label.setText("Warning! Structural data items selected.")
+                self._ui.warning_label.setText("Warning! You are about to delete structural items.")
             else:
                 self._ui.warning_label.clear()
 

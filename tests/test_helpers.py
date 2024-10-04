@@ -19,11 +19,14 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QSettings
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
     HTMLTagFilter,
+    add_keyboard_shortcut_to_tool_tip,
+    add_keyboard_shortcuts_to_action_tool_tips,
     copy_files,
     create_dir,
     dir_is_valid,
@@ -54,7 +57,7 @@ from spinetoolbox.helpers import (
     tuple_itemgetter,
     unique_name,
 )
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestHelpers(TestCaseWithQApplication):
@@ -460,6 +463,73 @@ class TestPlainToToolTip(unittest.TestCase):
         self.assertIsNone(plain_to_tool_tip(None))
         self.assertIsNone(plain_to_tool_tip(""))
         self.assertEqual(plain_to_tool_tip("Is not None."), plain_to_rich("Is not None."))
+
+
+class TestAddKeyboardShortcutToToolTip(TestCaseWithQApplication):
+    def test_tool_tip_remains_unchanged_without_shortcut(self):
+        with q_object(QAction()) as action:
+            text = "<html><head /><body><p>A useful action</p></body></html>"
+            action.setToolTip(text)
+            add_keyboard_shortcut_to_tool_tip(action)
+            self.assertEqual(action.toolTip(), text)
+
+    def test_shortcut_get_added_to_html_tool_tip(self):
+        with q_object(QAction()) as action:
+            text = "<html><head /><body><p>A useful action</p></body></html>"
+            action.setToolTip(text)
+            action.setShortcut(QKeySequence("g"))
+            add_keyboard_shortcut_to_tool_tip(action)
+            self.assertEqual(action.toolTip(), "<qt><p>A useful action</p><p><em>G</em></p></qt>")
+
+    def test_shortcut_get_added_to_plain_text_tool_tip(self):
+        with q_object(QAction()) as action:
+            text = "A useful action"
+            action.setToolTip(text)
+            action.setShortcut(QKeySequence("g"))
+            add_keyboard_shortcut_to_tool_tip(action)
+            self.assertEqual(action.toolTip(), "<qt><p>A useful action</p><p><em>G</em></p></qt>")
+
+    def test_html_formatting_within_tool_tip_is_preserved(self):
+        with q_object(QAction()) as action:
+            text = "<html><head /><body><p>A <b>useful</b> action</p></body></html>"
+            action.setToolTip(text)
+            action.setShortcut(QKeySequence("g"))
+            add_keyboard_shortcut_to_tool_tip(action)
+            self.assertEqual(action.toolTip(), "<qt><p>A <b>useful</b> action</p><p><em>G</em></p></qt>")
+
+
+class TestAddKeyboardShortcutsToActionToolTips(TestCaseWithQApplication):
+    def test_ui_without_actions_works(self):
+        class Ui:
+            no_action = object()
+
+        ui = Ui()
+        add_keyboard_shortcuts_to_action_tool_tips(ui)
+
+    def test_ui_with_action_without_shortscuts_leaves_tool_tips_as_is(self):
+        class Ui:
+            no_action = object()
+            action = None
+
+        ui = Ui()
+        with q_object(QAction()) as action:
+            action.setToolTip("A highly useful thing")
+            ui.action = action
+            add_keyboard_shortcuts_to_action_tool_tips(ui)
+            self.assertEqual(action.toolTip(), "A highly useful thing")
+
+    def test_shortcut_gets_appended_to_tool_tip(self):
+        class Ui:
+            no_action = object()
+            action = None
+
+        ui = Ui()
+        with q_object(QAction()) as action:
+            action.setToolTip("A highly useful thing")
+            action.setShortcut(QKeySequence("w"))
+            ui.action = action
+            add_keyboard_shortcuts_to_action_tool_tips(ui)
+            self.assertEqual(action.toolTip(), "<qt><p>A highly useful thing</p><p><em>W</em></p></qt>")
 
 
 if __name__ == "__main__":

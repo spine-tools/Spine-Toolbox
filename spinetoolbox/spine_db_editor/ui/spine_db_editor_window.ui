@@ -27,10 +27,10 @@
    <string>MainWindow</string>
   </property>
   <property name="layoutDirection">
-   <enum>Qt::LayoutDirection::LeftToRight</enum>
+   <enum>Qt::LeftToRight</enum>
   </property>
   <property name="dockOptions">
-   <set>QMainWindow::DockOption::AllowNestedDocks|QMainWindow::DockOption::AllowTabbedDocks|QMainWindow::DockOption::AnimatedDocks|QMainWindow::DockOption::GroupedDragging</set>
+   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::GroupedDragging</set>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
@@ -42,7 +42,7 @@
   </widget>
   <widget class="QDockWidget" name="alternative_dock_widget">
    <property name="allowedAreas">
-    <set>Qt::DockWidgetArea::AllDockWidgetAreas</set>
+    <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
     <string>Alternative</string>
@@ -73,16 +73,16 @@
         <string>alternative tree</string>
        </property>
        <property name="editTriggers">
-        <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::DoubleClicked|QAbstractItemView::EditTrigger::EditKeyPressed</set>
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
        </property>
        <property name="dragEnabled">
         <bool>true</bool>
        </property>
        <property name="dragDropMode">
-        <enum>QAbstractItemView::DragDropMode::DragOnly</enum>
+        <enum>QAbstractItemView::DragOnly</enum>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+        <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <property name="uniformRowHeights">
         <bool>false</bool>
@@ -122,10 +122,10 @@
         <string>parameter value list</string>
        </property>
        <property name="editTriggers">
-        <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::DoubleClicked|QAbstractItemView::EditTrigger::EditKeyPressed</set>
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+        <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <attribute name="headerVisible">
         <bool>true</bool>
@@ -165,22 +165,22 @@
         <bool>true</bool>
        </property>
        <property name="contextMenuPolicy">
-        <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>parameter value</string>
        </property>
        <property name="layoutDirection">
-        <enum>Qt::LayoutDirection::LeftToRight</enum>
+        <enum>Qt::LeftToRight</enum>
        </property>
        <property name="tabKeyNavigation">
         <bool>false</bool>
        </property>
        <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectionBehavior::SelectItems</enum>
+        <enum>QAbstractItemView::SelectItems</enum>
        </property>
        <property name="horizontalScrollMode">
-        <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
        <property name="sortingEnabled">
         <bool>false</bool>
@@ -229,7 +229,7 @@
      <item>
       <widget class="ParameterDefinitionTableView" name="tableView_parameter_definition">
        <property name="contextMenuPolicy">
-        <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="accessibleName">
         <string>parameter definition</string>
@@ -238,10 +238,10 @@
         <bool>false</bool>
        </property>
        <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectionBehavior::SelectItems</enum>
+        <enum>QAbstractItemView::SelectItems</enum>
        </property>
        <property name="horizontalScrollMode">
-        <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
        <property name="sortingEnabled">
         <bool>false</bool>
@@ -265,7 +265,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_entity_tree">
    <property name="allowedAreas">
-    <set>Qt::DockWidgetArea::AllDockWidgetAreas</set>
+    <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
     <string>Entity tree</string>
@@ -302,13 +302,13 @@
         <string>entity tree</string>
        </property>
        <property name="editTriggers">
-        <set>QAbstractItemView::EditTrigger::EditKeyPressed</set>
+        <set>QAbstractItemView::EditKeyPressed</set>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+        <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectionBehavior::SelectItems</enum>
+        <enum>QAbstractItemView::SelectItems</enum>
        </property>
        <property name="iconSize">
         <size>
@@ -360,10 +360,10 @@
         <bool>true</bool>
        </property>
        <property name="frameShape">
-        <enum>QFrame::Shape::NoFrame</enum>
+        <enum>QFrame::NoFrame</enum>
        </property>
        <property name="dragMode">
-        <enum>QGraphicsView::DragMode::ScrollHandDrag</enum>
+        <enum>QGraphicsView::ScrollHandDrag</enum>
        </property>
       </widget>
      </item>
@@ -406,13 +406,13 @@
      <item>
       <widget class="PivotTableView" name="pivot_table">
        <property name="contextMenuPolicy">
-        <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="tabKeyNavigation">
         <bool>false</bool>
        </property>
        <property name="horizontalScrollMode">
-        <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
       </widget>
      </item>
@@ -452,10 +452,10 @@
         <bool>false</bool>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
+        <enum>QAbstractItemView::NoSelection</enum>
        </property>
        <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+        <enum>QAbstractItemView::SelectRows</enum>
        </property>
        <attribute name="horizontalHeaderVisible">
         <bool>false</bool>
@@ -476,10 +476,10 @@
     </size>
    </property>
    <property name="features">
-    <set>QDockWidget::DockWidgetFeature::DockWidgetClosable</set>
+    <set>QDockWidget::DockWidgetClosable</set>
    </property>
    <property name="allowedAreas">
-    <set>Qt::DockWidgetArea::BottomDockWidgetArea</set>
+    <set>Qt::BottomDockWidgetArea</set>
    </property>
    <property name="windowTitle">
     <string>Exports</string>
@@ -512,7 +512,7 @@
        <item>
         <spacer name="horizontalSpacer">
          <property name="orientation">
-          <enum>Qt::Orientation::Horizontal</enum>
+          <enum>Qt::Horizontal</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -637,19 +637,19 @@
         <string>scenario tree</string>
        </property>
        <property name="editTriggers">
-        <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::DoubleClicked|QAbstractItemView::EditTrigger::EditKeyPressed</set>
+        <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
        </property>
        <property name="dragEnabled">
         <bool>true</bool>
        </property>
        <property name="dragDropMode">
-        <enum>QAbstractItemView::DragDropMode::DragDrop</enum>
+        <enum>QAbstractItemView::DragDrop</enum>
        </property>
        <property name="defaultDropAction">
-        <enum>Qt::DropAction::MoveAction</enum>
+        <enum>Qt::MoveAction</enum>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
+        <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
        <property name="uniformRowHeights">
         <bool>false</bool>
@@ -689,7 +689,7 @@
         <bool>false</bool>
        </property>
        <property name="horizontalScrollMode">
-        <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
+        <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
        <property name="wordWrap">
         <bool>false</bool>
@@ -776,7 +776,7 @@
     <string>&amp;Commit...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Commit&lt;/p&gt;&lt;p&gt;Ctrl+Return&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Commit changes to database&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
@@ -794,7 +794,7 @@
     <string>Roll&amp;back</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rollback&lt;/p&gt;&lt;p&gt;Ctrl+Backspace&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Rollback changes since last commit.&lt;/p&gt;&lt;p&gt;Ctrl+Backspace&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Backspace</string>
@@ -811,6 +811,9 @@
    <property name="text">
     <string>Close</string>
    </property>
+   <property name="toolTip">
+    <string>Close current tab</string>
+   </property>
   </action>
   <action name="actionImport">
    <property name="enabled">
@@ -824,7 +827,7 @@
     <string>I&amp;mport...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data from file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import data or template from file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionExport">
@@ -854,7 +857,7 @@
     <string>Cop&amp;y as text</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy as text&lt;/p&gt;&lt;p&gt;Ctrl+C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy selection to clipboard&lt;/p&gt;&lt;p&gt;Ctrl+C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -872,7 +875,7 @@
     <string>P&amp;aste</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Paste&lt;/p&gt;&lt;p&gt;Ctrl+V&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Paste into selection&lt;/p&gt;&lt;p&gt;Ctrl+V&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
@@ -890,7 +893,7 @@
     <string>T&amp;able</string>
    </property>
    <property name="toolTip">
-    <string>Table view</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch to Table view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionGraph_style">
@@ -905,7 +908,7 @@
     <string>&amp;Graph</string>
    </property>
    <property name="toolTip">
-    <string>Graph view</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch to Graph view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionView_history">
@@ -918,6 +921,9 @@
    </property>
    <property name="text">
     <string>&amp;History...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Commit viewer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionMass_remove_items">
@@ -947,7 +953,7 @@
     <string>E&amp;xport session...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export current session (changes since last commit) into file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export changes since last commit into file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionSettings">
@@ -957,6 +963,9 @@
    </property>
    <property name="text">
     <string>Settings...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open editor settings&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+,</string>
@@ -969,6 +978,9 @@
    </property>
    <property name="text">
     <string>User guide</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open User guide in web browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>F1</string>
@@ -986,7 +998,7 @@
     <string>Un&amp;do</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Undo&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Undo last action&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionRedo">
@@ -1001,7 +1013,7 @@
     <string>&amp;Redo</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Redo&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Redo last undone action&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionNew_db_file">
@@ -1013,7 +1025,7 @@
     <string>&amp;New...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;New database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new SQLite database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionOpen_db_file">
@@ -1025,7 +1037,7 @@
     <string>&amp;Open...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open SQLite database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionAdd_db_file">
@@ -1037,7 +1049,7 @@
     <string>&amp;Add...</string>
    </property>
    <property name="toolTip">
-    <string>Add database file to the current view</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add database to the current view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionVacuum">
@@ -1047,6 +1059,9 @@
    </property>
    <property name="text">
     <string>Vacuum</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Optimize SQLite database file size&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionValue">
@@ -1061,7 +1076,7 @@
     <string>&amp;Value</string>
    </property>
    <property name="toolTip">
-    <string>Pivot view: Value</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch to Pivot table's Value view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionIndex">
@@ -1076,7 +1091,7 @@
     <string>&amp;Index</string>
    </property>
    <property name="toolTip">
-    <string>Pivot view: Index</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch to Pivot table's Index view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionElement">
@@ -1091,7 +1106,7 @@
     <string>E&amp;lement</string>
    </property>
    <property name="toolTip">
-    <string>Pivot view: Element</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Switch to Pivot table's Element view to manage entity elements&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionScenario">
@@ -1106,7 +1121,7 @@
     <string>&amp;Scenario</string>
    </property>
    <property name="toolTip">
-    <string>Pivot view: Scenario</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Swith to Pivot table's Scenario view to manage scenarios&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionOpen_recent">

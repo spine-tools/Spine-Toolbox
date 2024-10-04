@@ -54,6 +54,7 @@ from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient,
 from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
+    add_keyboard_shortcuts_to_action_tool_tips,
     busy_effect,
     color_from_index,
     create_dir,
@@ -125,7 +126,6 @@ class ToolboxUI(QMainWindow):
     persistent_console_requested = Signal(object, str, tuple, str)
 
     def __init__(self):
-        """Initializes application and main window."""
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         super().__init__(flags=Qt.Window)
@@ -135,14 +135,15 @@ class ToolboxUI(QMainWindow):
         self._update_qsettings()
         locale.setlocale(locale.LC_NUMERIC, 'C')
         self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)  # Set up gui widgets from Qt Designer files
+        self.ui.setupUi(self)
+        add_keyboard_shortcuts_to_action_tool_tips(self.ui)
         self.label_item_name = QLabel()
         self._button_item_dir = QToolButton()
         self._properties_title = QWidget()
         self._setup_properties_title()
         self.takeCentralWidget().deleteLater()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        set_taskbar_icon()  # in helpers.py
+        set_taskbar_icon()
         self.ui.graphicsView.set_ui(self)
         self.key_press_filter = ChildCyclingKeyPressFilter(self)
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
