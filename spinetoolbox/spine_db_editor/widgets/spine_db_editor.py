@@ -31,6 +31,7 @@ from spinedb_api.helpers import vacuum
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 from ...helpers import (
+    add_keyboard_shortcuts_to_action_tool_tips,
     busy_effect,
     call_on_focused_widget,
     format_string_list,
@@ -83,6 +84,7 @@ class SpineDBEditorBase(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        add_keyboard_shortcuts_to_action_tool_tips(self.ui)
         self.takeCentralWidget().deleteLater()
         self.toolbar = DBEditorToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
@@ -336,9 +338,7 @@ class SpineDBEditorBase(QMainWindow):
     @Slot()
     def _refresh_undo_redo_actions(self):
         self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
-        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}</p><p>Ctrl+Z</p>")
         self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
-        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}</p><p>Ctrl+Y</p>")
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):

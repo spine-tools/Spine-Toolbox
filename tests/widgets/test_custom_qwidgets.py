@@ -99,7 +99,7 @@ class TestSelectDatabaseItemsDialog(TestCaseWithQApplication):
         with _select_database_items_dialog(None, None) as dialog:
             self.assertEqual(dialog._ui.warning_label.text(), "")
             dialog._item_check_boxes_widget._item_check_boxes["entity_class"].setChecked(True)
-            self.assertEqual(dialog._ui.warning_label.text(), "Warning! Structural data items selected.")
+            self.assertEqual(dialog._ui.warning_label.text(), "Warning! You are about to delete structural items.")
 
 
 @contextmanager
