@@ -815,7 +815,7 @@
     <string>Execute all items in project.</string>
    </property>
    <property name="shortcut">
-    <string>F5</string>
+    <string>Shift+F9</string>
    </property>
   </action>
   <action name="actionExecute_selection">
@@ -830,7 +830,7 @@
     <string>Execute selected items.</string>
    </property>
    <property name="shortcut">
-    <string>F6</string>
+    <string>F9</string>
    </property>
   </action>
   <action name="actionStop_execution">
@@ -845,7 +845,7 @@
     <string>Stop execution.</string>
    </property>
    <property name="shortcut">
-    <string>F7</string>
+    <string>F10</string>
    </property>
   </action>
   <action name="actionTake_link">

@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'jump_properties.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -54,7 +54,7 @@ class Ui_Form(object):
 
         self.comboBox_tool_spec = QComboBox(self.groupBox_condition)
         self.comboBox_tool_spec.setObjectName(u"comboBox_tool_spec")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.comboBox_tool_spec.sizePolicy().hasHeightForWidth())
@@ -65,7 +65,7 @@ class Ui_Form(object):
         self.toolButton_edit_tool_spec = QToolButton(self.groupBox_condition)
         self.toolButton_edit_tool_spec.setObjectName(u"toolButton_edit_tool_spec")
         icon = QIcon()
-        icon.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/icons/wrench.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_edit_tool_spec.setIcon(icon)
 
         self.horizontalLayout_2.addWidget(self.toolButton_edit_tool_spec)
@@ -85,7 +85,7 @@ class Ui_Form(object):
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
 
@@ -107,19 +107,19 @@ class Ui_Form(object):
         self.toolButton_add_arg = QToolButton(Form)
         self.toolButton_add_arg.setObjectName(u"toolButton_add_arg")
         icon1 = QIcon()
-        icon1.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/icons/file-upload.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_add_arg.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.toolButton_add_arg)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
 
         self.toolButton_remove_arg = QToolButton(Form)
         self.toolButton_remove_arg.setObjectName(u"toolButton_remove_arg")
         icon2 = QIcon()
-        icon2.addFile(u":/icons/minus.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/icons/minus.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_remove_arg.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.toolButton_remove_arg)
