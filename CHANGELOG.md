@@ -3,19 +3,20 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased]
-
-### Added
+## [0.8.5]
 
 ### Changed
 
-### Deprecated
+- Execution button shortcuts have been changed because F5 is traditionally reserved for refreshing.
+  The shortcuts are now:
 
-### Removed
+  - **Shift+F9** to execute project
+  - **F9** to execute selection
+  - **F10** to stop execution
 
 ### Fixed
 
-### Security
+- Fixed a bug where scenario filters could cause Tracebacks in tools that were using ``spinedb_api``.
 
 ## [0.8.4]
 
