@@ -19,14 +19,14 @@ from .custom_qwidgets import MenuItemToolBarWidget
 
 class _InstallPluginModel(QStandardItemModel):
     def data(self, index, role=None):
-        if role == Qt.SizeHintRole:
+        if role == Qt.ItemDataRole.SizeHintRole:
             return QSize(0, 40)
         return super().data(index, role)
 
 
 class _ManagePluginsModel(_InstallPluginModel):
     def flags(self, index):
-        return super().flags(index) & ~Qt.ItemIsSelectable
+        return super().flags(index) & ~Qt.ItemFlag.ItemIsSelectable
 
 
 class InstallPluginDialog(QDialog):
@@ -44,7 +44,7 @@ class InstallPluginDialog(QDialog):
         self._model = QSortFilterProxyModel(self)
         self._source_model = _InstallPluginModel(self)
         self._model.setSourceModel(self._source_model)
-        self._model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        self._model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._list_view.setModel(self._model)
         self._timer = QTimer(self)
         self._timer.setInterval(200)
@@ -54,7 +54,7 @@ class InstallPluginDialog(QDialog):
         self.layout().addWidget(self._line_edit)
         self.layout().addWidget(self._list_view)
         self.layout().addWidget(self._button_box)
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setMinimumWidth(400)
         self._button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.close)
         self._button_box.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._handle_ok_clicked)
@@ -109,13 +109,14 @@ class ManagePluginsDialog(QDialog):
         self._button_box.setStandardButtons(QDialogButtonBox.StandardButton.Close)
         self.layout().addWidget(self._list_view)
         self.layout().addWidget(self._button_box)
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setMinimumWidth(400)
         self._button_box.button(QDialogButtonBox.StandardButton.Close).clicked.connect(self.close)
 
     def populate_list(self, names):
         for name, can_update in names:
-            item = QStandardItem(name)
+            item = QStandardItem()  # Don't put name into DisplayRole or the plugin name is shown twice
+            item.setData(name, role=Qt.ItemDataRole.UserRole)
             self._model.appendRow(item)
             widget = self._create_plugin_widget(name, can_update)
             index = self._model.indexFromItem(item)
@@ -131,7 +132,7 @@ class ManagePluginsDialog(QDialog):
 
     def _emit_item_removed(self, plugin_name):
         for row in range(self._model.rowCount()):
-            if self._model.index(row, 0).data(Qt.ItemDataRole.DisplayRole) == plugin_name:
+            if self._model.index(row, 0).data(Qt.ItemDataRole.UserRole) == plugin_name:
                 self._model.removeRow(row)
                 break
         self.item_removed.emit(plugin_name)
