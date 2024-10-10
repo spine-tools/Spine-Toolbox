@@ -1,0 +1,59 @@
+name: Execution tests
+
+on:
+  workflow_call:
+    inputs:
+      host-os:
+        required: true
+        type: string
+      python-version:
+        required: true
+        type: string
+      repository:
+        required: false
+        type: string
+        default: ${{ github.repository }}
+      post-installation-command:
+        required: false
+        type: string
+        default: ""
+    secrets:
+      CODECOV_TOKEN:
+        required: true
+
+jobs:
+  execution-tests:
+    name: Run execution tests
+    runs-on: ${{ inputs.host-os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
+            dev-requirements.txt
+      - name: Install additional packages for Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libegl1
+      - name: Install dependencies
+        env:
+          PYTHONUTF8: 1
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r dev-requirements.txt
+      - name: Run post-install command
+        if: ${{ inputs.post-installation-command }}
+        run:
+          ${{ inputs.post-installation-command }}
+      - name: Run tests
+        run:
+          python -m unittest discover --pattern execution_test.py --verbose
