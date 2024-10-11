@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
+    QApplication,
 )
 from spine_engine.utils.helpers import resolve_current_python_interpreter
 from ..config import APPLICATION_PATH
@@ -156,7 +157,7 @@ class SelectDirsPage(QWizardPage):
         install_dir_button.clicked.connect(self._select_install_dir)
         symlink_dir_button.clicked.connect(self._select_symlink_dir)
         self.setCommitPage(True)
-        self.setButtonText(QWizard.CommitButton, "Install Julia")
+        self.setButtonText(QWizard.WizardButton.CommitButton, "Install Julia")
 
     def initializePage(self):
         self._install_dir_line_edit.setText(jill_install.default_install_dir())
@@ -215,12 +216,12 @@ class InstallJuliaPage(QWizardProcessPage):
         self.msg_success.emit("Julia installation started")
         cmd = python + " " + " ".join(args)
         self.msg.emit(f"$ <b>{cmd}<b/>")
-        qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
     @Slot(int)
     def _handle_julia_install_finished(self, ret):
-        qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
+        QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_julia_install_finished)
         if self.wizard().currentPage() != self:
             return

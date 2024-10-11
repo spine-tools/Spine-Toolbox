@@ -128,7 +128,7 @@ class ToolboxUI(QMainWindow):
     def __init__(self):
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
-        super().__init__(flags=Qt.Window)
+        super().__init__(flags=Qt.WindowType.Window)
         self.set_app_style()
         self.set_error_mode()
         self._qsettings = QSettings("SpineProject", "Spine Toolbox", self)
@@ -227,16 +227,16 @@ class ToolboxUI(QMainWindow):
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
         if obj == self.ui.listView_console_executions:
-            if ev.type() == QEvent.Hide:
+            if ev.type() == QEvent.Type.Hide:
                 self._qsettings.setValue("mainWindow/consoleSplitterPosition", self.ui.splitter_console.saveState())
-            elif ev.type() == QEvent.Show:
+            elif ev.type() == QEvent.Type.Show:
                 splitter_state = self._qsettings.value("mainWindow/consoleSplitterPosition", defaultValue="false")
                 if splitter_state != "false":
                     self.ui.splitter_console.restoreState(splitter_state)
         return super().eventFilter(obj, ev)
 
     def _setup_properties_title(self):
-        self.label_item_name.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.label_item_name.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         self.label_item_name.setMinimumHeight(28)
         self._button_item_dir.setIcon(QIcon(":icons/folder-open-regular.svg"))
         layout = QHBoxLayout(self._properties_title)
@@ -316,7 +316,9 @@ class ToolboxUI(QMainWindow):
         # Consoles
         self.jupyter_console_requested.connect(self._setup_jupyter_console)
         self.kernel_shutdown.connect(self._handle_kernel_shutdown)
-        self.persistent_console_requested.connect(self._setup_persistent_console, Qt.BlockingQueuedConnection)
+        self.persistent_console_requested.connect(
+            self._setup_persistent_console, Qt.ConnectionType.BlockingQueuedConnection
+        )
 
     @staticmethod
     def set_app_style():

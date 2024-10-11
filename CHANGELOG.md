@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 ### Added
 
 ### Changed
+- **Add/Update SpineOpt** wizard in **File->Settings->Tools** now requires SpineOpt v0.8.3 or higher.
 
 ### Deprecated
 

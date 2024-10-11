@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
+    QApplication,
 )
 from ..config import REQUIRED_SPINE_OPT_VERSION
 from ..execution_managers import QProcessExecutionManager
@@ -42,7 +43,6 @@ class _PageId(IntEnum):
     FAILURE = auto()
     TROUBLESHOOT_PROBLEMS = auto()
     TROUBLESHOOT_SOLUTION = auto()
-    RESET_REGISTRY = auto()
     ADD_UP_SPINE_OPT_AGAIN = auto()
     TOTAL_FAILURE = auto()
 
@@ -69,7 +69,6 @@ class AddUpSpineOptWizard(QWizard):
         self.setPage(_PageId.FAILURE, FailurePage(self))
         self.setPage(_PageId.TROUBLESHOOT_PROBLEMS, TroubleshootProblemsPage(self))
         self.setPage(_PageId.TROUBLESHOOT_SOLUTION, TroubleshootSolutionPage(self))
-        self.setPage(_PageId.RESET_REGISTRY, ResetRegistryPage(self))
         self.setPage(_PageId.ADD_UP_SPINE_OPT_AGAIN, AddUpSpineOptAgainPage(self))
         self.setPage(_PageId.TOTAL_FAILURE, TotalFailurePage(self))
         self.setStartId(_PageId.INTRO)
@@ -94,7 +93,7 @@ class IntroPage(QWizardPage):
 class SelectJuliaPage(QWizardPage):
     def __init__(self, parent, julia_exe, julia_project):
         super().__init__(parent)
-        self.setTitle("Select Julia project")
+        self.setTitle("Select Julia")
         self._julia_exe = julia_exe
         self._julia_project = julia_project
         self._julia_exe_line_edit = QLineEdit()
@@ -103,14 +102,14 @@ class SelectJuliaPage(QWizardPage):
         self.registerField("julia_exe*", self._julia_exe_line_edit)
         self.registerField("julia_project", self._julia_project_line_edit)
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Julia executable:"))
+        layout.addWidget(QLabel("Julia executable"))
         julia_exe_widget = QWidget()
         julia_exe_layout = QHBoxLayout(julia_exe_widget)
         julia_exe_layout.addWidget(self._julia_exe_line_edit)
         julia_exe_button = QPushButton("Browse")
         julia_exe_layout.addWidget(julia_exe_button)
         layout.addWidget(julia_exe_widget)
-        layout.addWidget(QLabel("Julia project (directory):"))
+        layout.addWidget(QLabel("Julia project/environment (directory)"))
         julia_project_widget = QWidget()
         julia_project_layout = QHBoxLayout(julia_project_widget)
         julia_project_layout.addWidget(self._julia_project_line_edit)
@@ -134,7 +133,7 @@ class SelectJuliaPage(QWizardPage):
     @Slot(bool)
     def _select_julia_project(self, _):
         julia_project = QFileDialog.getExistingDirectory(
-            self, "Select Julia project (directory)", self.field("julia_project")
+            self, "Select Julia project/environment (directory)", self.field("julia_project")
         )
         if not julia_project:
             return
@@ -179,11 +178,11 @@ class CheckPreviousInstallPage(QWizardPage):
         self._exec_mngr = QProcessExecutionManager(self, julia_exe, args, silent=True)
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_check_install_finished)
-        qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
     def _handle_check_install_finished(self, ret):
-        qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
+        QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_check_install_finished)
         if self.wizard().currentPage() is not self:
             return
@@ -212,20 +211,20 @@ class CheckPreviousInstallPage(QWizardPage):
                 return
             msg = (
                 f"SpineOpt version {spine_opt_version} is installed, "
-                f"but version {REQUIRED_SPINE_OPT_VERSION} is required."
+                f"but version {REQUIRED_SPINE_OPT_VERSION} or higher is required."
             )
             self.layout().addWidget(WrapLabel(msg))
             self.wizard().required_action = "update"
             self.setFinalPage(False)
             self.setCommitPage(True)
-            self.setButtonText(QWizard.CommitButton, "Update SpineOpt")
+            self.setButtonText(QWizard.WizardButton.CommitButton, "Update SpineOpt")
             self.completeChanged.emit()
             return
         self.layout().addWidget(QLabel("SpineOpt is not installed."))
         self.wizard().required_action = "add"
         self.setFinalPage(False)
         self.setCommitPage(True)
-        self.setButtonText(QWizard.CommitButton, "Install SpineOpt")
+        self.setButtonText(QWizard.WizardButton.CommitButton, "Install SpineOpt")
         self.completeChanged.emit()
 
     def nextId(self):
@@ -255,11 +254,11 @@ class AddUpSpineOptPage(QWizardProcessPage):
         self.msg_success.emit(f"SpineOpt {process} started")
         cmd = julia_exe + " " + " ".join(args)
         self.msg.emit(f"$ <b>{cmd}<b/>")
-        qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
     def _handle_spine_opt_add_up_finished(self, ret):
-        qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
+        QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_spine_opt_add_up_finished)
         if self.wizard().currentPage() is not self:
             return
@@ -270,9 +269,10 @@ class AddUpSpineOptPage(QWizardProcessPage):
             configured = {"add": "installed", "update": "updated"}[self.wizard().required_action]
             self.msg_success.emit(f"SpineOpt successfully {configured}")
             return
-        process = {"add": "installation", "update": "updatee"}[self.wizard().required_action]
+        process = {"add": "installation", "update": "update"}[self.wizard().required_action]
         self.msg_error.emit(f"SpineOpt {process} failed")
         self.wizard().process_log = self._log.toHtml()
+        self.wizard().process_log_plain = self._log.toPlainText()
 
     def nextId(self):
         if self._successful:
@@ -296,13 +296,16 @@ class SuccessPage(QWizardPage):
 
 
 class FailurePage(QWizardPage):
-    def __init__(self, parent):
-        super().__init__(parent)
+    def initializePage(self):
+        process = {"add": "Installation", "update": "Update"}[self.wizard().required_action]
+        self.setTitle(f"{process} failed")
         check_box = QCheckBox("Troubleshoot problems")
         check_box.setChecked(True)
         self.registerField("troubleshoot", check_box)
         layout = QVBoxLayout(self)
-        msg = "Apologies."
+        msg = ("Apologies. Please see the Troubleshoot problems section "
+               "by clicking <b>Next</b> or click <b>Cancel</b> to close "
+               "the wizard.")
         layout.addWidget(WrapLabel(msg))
         layout.addStretch()
         layout.addWidget(check_box)
@@ -313,10 +316,6 @@ class FailurePage(QWizardPage):
     @Slot(bool)
     def _handle_check_box_clicked(self, checked=False):
         self.setFinalPage(not checked)
-
-    def initializePage(self):
-        process = {"add": "Installation", "update": "Update"}[self.wizard().required_action]
-        self.setTitle(f"{process} failed")
 
     def nextId(self):
         if self.field("troubleshoot"):
@@ -329,10 +328,11 @@ class TroubleshootProblemsPage(QWizardPage):
         super().__init__(parent)
         self.setTitle("Troubleshooting")
         msg = "Select your problem from the list."
-        self._button1 = QRadioButton("Installing SpineOpt fails with one of the following messages (or similar):")
-        msg1a = MonoSpaceFontTextBrowser(self)
-        msg1b = MonoSpaceFontTextBrowser(self)
-        msg1a.append(
+        self._button1 = QRadioButton("None of the below")
+        self._button2 = QRadioButton("Installing SpineOpt fails with one of the following messages (or similar):")
+        msg2a = MonoSpaceFontTextBrowser(self)
+        msg2b = MonoSpaceFontTextBrowser(self)
+        msg2a.append(
             """
             \u22ee<br>
             Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
@@ -341,7 +341,7 @@ class TroubleshootProblemsPage(QWizardPage):
             \u22ee
             """
         )
-        msg1b.append(
+        msg2b.append(
             """
             \u22ee<br>
             Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
@@ -350,9 +350,9 @@ class TroubleshootProblemsPage(QWizardPage):
             \u22ee
             """
         )
-        self._button2 = QRadioButton("On Windows 7, installing SpineOpt fails with the following message (or similar):")
-        msg2 = MonoSpaceFontTextBrowser(self)
-        msg2.append(
+        self._button3 = QRadioButton("On Windows 7, installing SpineOpt fails with the following message (or similar):")
+        msg3 = MonoSpaceFontTextBrowser(self)
+        msg3.append(
             """
             \u22ee<br>
             Downloading artifact: OpenBLAS32<br>
@@ -371,13 +371,15 @@ class TroubleshootProblemsPage(QWizardPage):
         layout.addWidget(WrapLabel(msg))
         layout.addStretch()
         layout.addWidget(self._button1)
-        layout.addWidget(msg1a)
-        layout.addWidget(msg1b)
         layout.addStretch()
         layout.addWidget(self._button2)
-        layout.addWidget(msg2)
+        layout.addWidget(msg2a)
+        layout.addWidget(msg2b)
         layout.addStretch()
-        button_view_log = QPushButton("View process log")
+        layout.addWidget(self._button3)
+        layout.addWidget(msg3)
+        layout.addStretch()
+        button_view_log = QPushButton("View log")
         widget_view_log = QWidget()
         layout_view_log = QHBoxLayout(widget_view_log)
         layout_view_log.addStretch()
@@ -386,16 +388,18 @@ class TroubleshootProblemsPage(QWizardPage):
         layout.addStretch()
         self.registerField("problem1", self._button1)
         self.registerField("problem2", self._button2)
+        self.registerField("problem3", self._button3)
         self._button1.toggled.connect(lambda _: self.completeChanged.emit())
         self._button2.toggled.connect(lambda _: self.completeChanged.emit())
+        self._button3.toggled.connect(lambda _: self.completeChanged.emit())
         button_view_log.clicked.connect(self._show_log)
 
     def isComplete(self):
-        return self.field("problem1") or self.field("problem2")
+        return self.field("problem1") or self.field("problem2") or self.field("problem3")
 
     @Slot(bool)
     def _show_log(self, _=False):
-        log_widget = QWidget(self, f=Qt.Window)
+        log_widget = QWidget(self, f=Qt.WindowType.Window)
         layout = QVBoxLayout(log_widget)
         log = MonoSpaceFontTextBrowser(log_widget)
         log.append(self.wizard().process_log)
@@ -412,95 +416,106 @@ class TroubleshootSolutionPage(QWizardPage):
         self.setCommitPage(True)
         QVBoxLayout(self)
 
-    def cleanupPage(self):
-        super().cleanupPage()
-        self.wizard().reset_registry = False
-
     def initializePage(self):
         _clear_layout(self.layout())
         if self.field("problem1"):
             self._initialize_page_solution1()
         elif self.field("problem2"):
             self._initialize_page_solution2()
+        elif self.field("problem3"):
+            self._initialize_page_solution3()
 
     def _initialize_page_solution1(self):
-        self.wizard().reset_registry = True
-        self.setTitle("Reset Julia General Registry")
-        description = (
-            "<p>The issue you're facing can be due to an error in the installation of the Julia General registry "
-            "from the Julia Package Server.</p>"
-            "<p>The simplest solution is to delete any trace of the registry and install it again, from GitHub.</p>"
-            "<p>However, <b>this will also remove all your installed packages</b>.</p>"
+        action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
+        julia = self.field("julia_exe")
+        env = self.field("julia_project")
+        if not env:
+            install_cmds = f"""
+            <span style="color:green;">julia> </span><span>import Pkg</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.Registry.add(Pkg.RegistrySpec(url="https://github.com/spine-tools/SpineJuliaRegistry"))</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
+        else:
+            install_cmds = f"""
+            <span style="color:green;">julia> </span><span>import Pkg</span><br>
+            <span style="color:green;">julia> </span><span>cd("{env}")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.activate(".")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.Registry.add(Pkg.RegistrySpec(url="https://github.com/spine-tools/SpineJuliaRegistry"))</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
+        if not env:
+            update_cmds = """
+            <span style="color:green;">julia> </span><span>import Pkg</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.update("SpineOpt")</span><br>"""
+        else:
+            update_cmds = f"""
+            <span style="color:green;">julia> </span><span>import Pkg</span><br>
+            <span style="color:green;">julia> </span><span>cd("{env}")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.activate(".")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.update("SpineOpt")</span><br>"""
+        action_cmds = {"Install SpineOpt": install_cmds, "Update SpineOpt": update_cmds}
+        self.setTitle("What now?")
+        msg_browser = MonoSpaceFontTextBrowser(self)
+        msg_browser.append(action_cmds[action])
+        label1_txt = (
+            "<p><ol type'1'>"
+            f"<li>Click the <b>{action}</b> button to try again.</li>"
+            f"<li><b>{action}</b> manually. Open your favorite terminal (ie. Command prompt) and start the "
+            f"Julia REPL using command:<br><br><i>{julia}</i><br><br>"
+            "In the Julia REPL, enter the following commands (gray text, not the green one):</li></ol></p>"
         )
-        self.layout().addWidget(HyperTextLabel(description))
-        self.setButtonText(QWizard.CommitButton, "Reset registry")
+        label2_txt = (
+            "<p>See also up-to-date "
+            "<a href=https://spine-tools.github.io/SpineOpt.jl/latest/getting_started/installation>installation "
+            "instructions in SpineOpt documentation</a>.</p>"
+        )
+        self.layout().addWidget(HyperTextLabel(label1_txt))
+        self.layout().addWidget(msg_browser)
+        self.layout().addWidget(HyperTextLabel(label2_txt))
+        self.setButtonText(QWizard.WizardButton.CommitButton, action)
 
     def _initialize_page_solution2(self):
         action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
-        self.setTitle("Update Windows Managemet Framework")
+        julia = self.field("julia_exe")
+        self.setTitle("Reset Julia General Registry")
         description = (
-            "<p>The issue you're facing can be solved by installing Windows Managemet Framework 3 or greater, "
+            "<p>The issue you're facing can be due to an error in the installation of the Julia General registry "
+            "from the Julia Package Server. The simplest solution is to delete any trace of the registry and install "
+            "it again from GitHub.</p>"
+            "<p>To do this, open your favorite terminal (ie. Command prompt) and start the Julia REPL using "
+            f"command:<br><br><i>{julia}</i><br><br>In the Julia REPL, enter the commands below (gray text, "
+            "not the green one). Afterwards, try Add/Update SpineOpt again.</p>"
+            "<p><b>NOTE: this will also remove all your installed packages</b>.</p>"
+        )
+        cmds = f"""
+        <span style="color:green;">julia> </span><span>import Pkg</span><br>
+        <span style="color:green;">julia> </span><span>Pkg.Registry.rm("SpineRegistry")</span><br>
+        <span style="color:green;">julia> </span><span>Pkg.Registry.rm("General")</span><br>
+        <span style="color:green;">julia> </span><span>Pkg.Registry.add()</span><br>"""
+        cmd_browser = MonoSpaceFontTextBrowser(self)
+        cmd_browser.append(cmds)
+        self.layout().addWidget(HyperTextLabel(description))
+        self.layout().addWidget(cmd_browser)
+        self.setButtonText(QWizard.WizardButton.CommitButton, action)
+
+    def _initialize_page_solution3(self):
+        action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
+        self.setTitle("Update Windows Management Framework")
+        description = (
+            "<p>The issue you're facing can be solved by updating Windows Management Framework to 5.1 or greater, "
             "as follows:<ul>"
-            "<li>Install .NET 4.5 "
-            "from <a href=https://dotnet.microsoft.com/download/dotnet-framework/thank-you/"
-            "net45-web-installer>here</a>.</li>"
-            "<li>Install Windows management framework 3 or later "
-            "from <a href=https://docs.microsoft.com/en-us/powershell/scripting/windows-powershell/wmf/"
-            "overview?view=powershell-7.1>here</a>.</li>"
+            "<li>Install latest .NET Framework (minimum 4.5) "
+            "from <a href='https://dotnet.microsoft.com/en-us/download/dotnet-framework'>here</a>.</li>"
+            "<li>Install Windows management framework 5.1 or later "
+            "from <a href='https://www.microsoft.com/en-us/download/details.aspx?id=54616'>here</a>.</li>"
             f"<li>{action} again.</li>"
             "</ul></p>"
         )
         self.layout().addWidget(HyperTextLabel(description))
-        self.setButtonText(QWizard.CommitButton, action)
+        self.setButtonText(QWizard.WizardButton.CommitButton, action)
 
     def nextId(self):
-        if self.field("problem1"):
-            return _PageId.RESET_REGISTRY
         return _PageId.ADD_UP_SPINE_OPT_AGAIN
-
-
-class ResetRegistryPage(QWizardProcessPage):
-    def initializePage(self):
-        code = (
-            "using Pkg; "
-            'rm(joinp ath(DEPOT_PATH[1], "registries", "General"); force=true, recursive=true); '
-            'withenv("JULIA_PKG_SERVER"=>"") do pkg"registry add" end'
-        )
-        self.setTitle("Resetting Julia General Registry")
-        julia_exe = self.field("julia_exe")
-        julia_project = self.field("julia_project")
-        args = [f"--project={julia_project}", "-e", code]
-        self._exec_mngr = QProcessExecutionManager(self, julia_exe, args, semisilent=True)
-        self.completeChanged.emit()
-        self._exec_mngr.execution_finished.connect(self._handle_registry_reset_finished)
-        self.msg_success.emit("Registry reset started")
-        cmd = julia_exe + " " + " ".join(args)
-        self.msg.emit(f"$ <b>{cmd}<b/>")
-        qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
-        self._exec_mngr.start_execution()
-
-    def _handle_registry_reset_finished(self, ret):
-        qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
-        self._exec_mngr.execution_finished.disconnect(self._handle_registry_reset_finished)
-        if self.wizard().currentPage() is not self:
-            return
-        self._exec_mngr = None
-        self._successful = ret == 0
-        if self._successful:
-            self.msg_success.emit("Registry successfully reset")
-            self.setCommitPage(True)
-            action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
-            self.setButtonText(QWizard.CommitButton, action)
-        else:
-            # FIXME: Rather, add a button to copy log to clipboard?
-            # self.wizard().process_log = self._log.toHtml()
-            self.msg_error.emit("Registry reset failed")
-        self.completeChanged.emit()
-
-    def nextId(self):
-        if self._successful:
-            return _PageId.ADD_UP_SPINE_OPT_AGAIN
-        return _PageId.TOTAL_FAILURE
 
 
 class AddUpSpineOptAgainPage(AddUpSpineOptPage):
@@ -513,10 +528,29 @@ class AddUpSpineOptAgainPage(AddUpSpineOptPage):
 class TotalFailurePage(QWizardPage):
     def __init__(self, parent):
         super().__init__(parent)
+        self._copy_label = QLabel()
+
+    def initializePage(self):
         self.setTitle("Troubleshooting failed")
-        msg = "<p>Please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue with SpineOpt</a>."
+        msg = ("<p>Please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue with SpineOpt</a>."
+               "<br>Copy the log and paste it into the issue description.</p>")
         layout = QVBoxLayout(self)
         layout.addWidget(HyperTextLabel(msg))
+        copy_widget = QWidget()
+        copy_button = QPushButton("Copy log")
+        self._copy_label.setText("Log copied to clipboard")
+        self._copy_label.hide()
+        layout_copy = QHBoxLayout(copy_widget)
+        layout_copy.addWidget(copy_button)
+        layout_copy.addWidget(self._copy_label)
+        layout_copy.addStretch()
+        layout.addWidget(copy_widget)
+        copy_button.clicked.connect(self._handle_copy_clicked)
+
+    @Slot(bool)
+    def _handle_copy_clicked(self, _=False):
+        self._copy_label.show()
+        QApplication.clipboard().setText(self.wizard().process_log_plain)  # pylint: disable=undefined-variable
 
     def nextId(self):
         return -1
