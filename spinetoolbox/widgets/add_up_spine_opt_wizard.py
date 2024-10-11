@@ -420,7 +420,7 @@ class TroubleshootSolutionPage(QWizardPage):
         _clear_layout(self.layout())
         if self.field("problem1"):
             self._initialize_page_solution1()
-        if self.field("problem2"):
+        elif self.field("problem2"):
             self._initialize_page_solution2()
         elif self.field("problem3"):
             self._initialize_page_solution3()
