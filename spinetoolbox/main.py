@@ -47,7 +47,6 @@ def main():
     )
     if not pyside6_version_check():
         return 1
-    _add_pywin32_system32_to_path()
     parser = _make_argument_parser()
     args = parser.parse_args()
     if args.execute_only or args.list_items or args.execute_remotely:
@@ -98,14 +97,3 @@ def _make_argument_parser():
     )
     parser.add_argument("--execute-remotely", help="execute remotely", action="append", metavar="SERVER CONFIG FILE")
     return parser
-
-
-def _add_pywin32_system32_to_path():
-    """Adds a directory to PATH on Windows that is required to make pywin32 work
-    on (Conda) Python 3.8. See https://github.com/spine-tools/Spine-Toolbox/issues/1230."""
-    if sys.platform != "win32":
-        return
-    if sys.version_info[0:2] == (3, 8):
-        p = os.path.join(sys.exec_prefix, "Lib", "site-packages", "pywin32_system32")
-        if os.path.exists(p):
-            os.environ["PATH"] = p + ";" + os.environ["PATH"]
