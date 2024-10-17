@@ -41,7 +41,7 @@ def _handle_node_execution_started(item, direction):
             icon.animation_signaller.animation_started.emit()
 
 
-@Slot(object, object, object, object)
+@Slot(object, object, object)
 def _handle_node_execution_finished(item, direction, item_state):
     icon = item.get_icon()
     if direction == ExecutionDirection.FORWARD:
@@ -50,12 +50,12 @@ def _handle_node_execution_finished(item, direction, item_state):
             icon.animation_signaller.animation_stopped.emit()
 
 
-@Slot(object, str, str)
+@Slot(object, str, str, str)
 def _handle_event_message_arrived(item, filter_id, msg_type, msg_text):
     item.add_event_message(filter_id, msg_type, msg_text)
 
 
-@Slot(object, str, str)
+@Slot(object, str, str, str)
 def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
     item.add_process_message(filter_id, msg_type, msg_text)
 
