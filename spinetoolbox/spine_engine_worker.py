@@ -368,39 +368,30 @@ class SpineEngineWorker(QObject):
             self._logger.kernel_shutdown.emit(item, msg["filter_id"])
 
     def _handle_process_msg(self, data):
-        self._do_handle_process_msg(**data)
-
-    def _do_handle_process_msg(self, item_name, filter_id, msg_type, msg_text):
+        item_name = data["item_name"]
         item = self._project_items.get(item_name) or self._connections.get(item_name)
-        self._process_message_arrived.emit(item, filter_id, msg_type, msg_text)
+        self._process_message_arrived.emit(item, data["filter_id"], data["msg_type"], data["msg_text"])
 
     def _handle_event_msg(self, data):
-        self._do_handle_event_msg(**data)
-
-    def _do_handle_event_msg(self, item_name, filter_id, msg_type, msg_text):
+        item_name = data["item_name"]
         item = self._project_items.get(item_name) or self._connections.get(item_name)
-        self._event_message_arrived.emit(item, filter_id, msg_type, msg_text)
+        self._event_message_arrived.emit(item, data["filter_id"], data["msg_type"], data["msg_text"])
 
     def _handle_node_execution_started(self, data):
-        self._do_handle_node_execution_started(**data)
-
-    def _do_handle_node_execution_started(self, item_name, direction):
         """Starts item icon animation when executing forward."""
-        item = self._project_items[item_name]
+        item = self._project_items[data["item_name"]]
         self._executing_items.add(item)
-        self._node_execution_started.emit(item, direction)
+        self._node_execution_started.emit(item, data["direction"])
 
     def _handle_node_execution_finished(self, data):
-        self._do_handle_node_execution_finished(**data)
-
-    def _do_handle_node_execution_finished(self, item_name, direction, state, item_state):
-        item = self._project_items[item_name]
-        if item_state == ItemExecutionFinishState.SUCCESS:
-            self.successful_executions.append((item, direction, state))
+        item = self._project_items[data["item_name"]]
+        direction = data["direction"]
+        if data["item_state"] == ItemExecutionFinishState.SUCCESS:
+            self.successful_executions.append((item, direction, data["state"]))
         self._executing_items.discard(item)
         # NOTE: A single item may seemingly finish multiple times
         # when the execution is stopped by user during filtered execution.
-        self._node_execution_finished.emit(item, direction, item_state)
+        self._node_execution_finished.emit(item, direction, data["item_state"])
 
     def _handle_server_status_msg(self, data):
         if data["msg_type"] == "success":
