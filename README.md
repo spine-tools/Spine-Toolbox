@@ -50,7 +50,7 @@ These steps apply to both [Python/pipx](#installation-with-python-and-pipx) opti
 [From source files](#installation-from-sources-using-git) option.
 
 1. If you don't have Python installed, please install it e.g. from 
-[Python.org](https://www.python.org/downloads/).
+[Python.org](https://www.python.org/downloads/). Please note that newest Python might not work (On 19th Oct. 2024, Python 3.13.0 failed due 'pg_config executable not found'. Python 3.11.9 did work.)
 
 2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
 
