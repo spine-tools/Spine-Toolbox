@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.8%20|%203.9%20|%203.10%20|%203.11|%203.12-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue.svg)](https://www.python.org/downloads/release/python-379/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -244,7 +244,7 @@ run it, and follow the instructions to install Spine Toolbox.
 
 ### About requirements
 
-Python 3.8.1 or later is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
+Python 3.9 or later is required.
 
 See the files `pyproject.toml` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -277,7 +277,7 @@ also [Problems in starting the application](#problems-in-starting-the-applicatio
 
 #### Installation fails
 
-Please make sure you are using Python 3.8.1 or later to install the requirements.
+Please make sure you are using Python 3.9 or later to install the requirements.
 
 #### 'No Python' error when installing with pipx
 
@@ -316,8 +316,6 @@ recommended.**
 The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide6` application, those 
 are not needed and there is a chance of conflicts between the packages.
-
-**Note**: Python 3.8.0 is not supported. Use Python 3.8.1 or later.
 
 ## Recorded Webinars showing the use of Spine Tools
 

@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+This version of Spine Toolbox requires Python version 3.9 or later.
+
 ### Added
 
 ### Changed
