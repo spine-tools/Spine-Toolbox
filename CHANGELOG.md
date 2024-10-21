@@ -3,22 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased]
+## [0.9.0]
 
-This version of Spine Toolbox requires Python version 3.9 or later.
-
-### Added
+Dropped support for Python 3.8.
+This version of Spine Toolbox requires Python version from 3.9 to 3.12.
 
 ### Changed
 - **Add/Update SpineOpt** wizard in **File->Settings->Tools** now requires SpineOpt v0.8.3 or higher.
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.8.5]
 
