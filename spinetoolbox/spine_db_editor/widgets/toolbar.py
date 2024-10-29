@@ -35,7 +35,7 @@ from spinedb_api.filters.tools import (
     filter_configs,
     name_from_dict,
 )
-from spinetoolbox.helpers import CharIconEngine, add_keyboard_shortcut_to_tool_tip, plain_to_tool_tip
+from spinetoolbox.helpers import CharIconEngine, add_keyboard_shortcut_to_tool_tip, plain_to_rich
 
 
 class DBEditorToolBar(QToolBar):
@@ -44,20 +44,20 @@ class DBEditorToolBar(QToolBar):
         self.setObjectName("spine_db_editor_toolbar")
         self._db_editor = db_editor
         self.reload_action = QAction(QIcon(CharIconEngine("\uf021")), "Reload")
-        self.reload_action.setToolTip("Reload data from database keeping changes")
+        self.reload_action.setToolTip(plain_to_rich("Reload data from database keeping changes"))
         self.reload_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_R))
         add_keyboard_shortcut_to_tool_tip(self.reload_action)
         self.reload_action.setEnabled(False)
         self.reset_docks_action = QAction(QIcon(CharIconEngine("\uf2d2")), "Reset docks")
-        self.reset_docks_action.setToolTip(plain_to_tool_tip("Reset window back to default configuration<"))
+        self.reset_docks_action.setToolTip(plain_to_rich("Reset window back to default configuration"))
         self.show_toolbox_action = QAction(QIcon(":/symbols/Spine_symbol.png"), "Show Toolbox")
         self.show_toolbox_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Escape))
-        self.show_toolbox_action.setToolTip("Show Spine Toolbox window")
+        self.show_toolbox_action.setToolTip(plain_to_rich("Show Spine Toolbox window"))
         add_keyboard_shortcut_to_tool_tip(self.show_toolbox_action)
         self._filter_action = QAction(QIcon(CharIconEngine("\uf0b0")), "Filter")
-        self._filter_action.setToolTip(plain_to_tool_tip("Set DB API level scenario filters<"))
+        self._filter_action.setToolTip(plain_to_rich("Set DB API level scenario filters"))
         self.show_url_action = QAction(QIcon(CharIconEngine("\uf550")), "Show URLs")
-        self.show_url_action.setToolTip(plain_to_tool_tip("Show URLs of currently databases in the session"))
+        self.show_url_action.setToolTip(plain_to_rich("Show URLs of currently databases in the session"))
         self._add_actions()
         self._connect_signals()
         self.setMovable(False)
