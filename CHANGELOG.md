@@ -3,19 +3,11 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased]
-
-### Added
-
-### Changed
-
-### Deprecated
+## [0.9.1]
 
 ### Removed
 
-### Fixed
-
-### Security
+- Removed support for MSSQL dialect. It did not work anyway.
 
 ## [0.9.0]
 
