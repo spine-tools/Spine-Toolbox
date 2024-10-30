@@ -30,7 +30,7 @@ class TreeModelBase(MinimalTreeModel):
         self.db_editor = db_editor
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self.destroyed.connect(lambda _: self._tear_down_tree)
+        self.destroyed.connect(lambda _: self._invisible_root_item.tear_down_recursively())
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 2.
@@ -66,7 +66,3 @@ class TreeModelBase(MinimalTreeModel):
 
     def db_row(self, item):
         return self.db_item(item).child_number()
-
-    def _tear_down_tree(self):
-        """Tears down tree items recursively"""
-        self._invisible_root_item.tear_down_recursively()
