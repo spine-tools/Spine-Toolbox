@@ -24,7 +24,7 @@ class AlternativeModel(TreeModelBase):
     """A model to display alternatives in a tree view."""
 
     def _make_db_item(self, db_map):
-        return DBItem(self, db_map)
+        return DBItem(self, db_map, self.db_mngr.name_registry)
 
     def mimeData(self, indexes):
         """Stores selected indexes into MIME data.

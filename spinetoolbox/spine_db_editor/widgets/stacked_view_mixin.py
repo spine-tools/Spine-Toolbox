@@ -22,9 +22,7 @@ from .element_name_list_editor import ElementNameListEditor
 
 
 class StackedViewMixin:
-    """
-    Provides stacked parameter tables for the Spine db editor.
-    """
+    """Provides stacked parameter tables for the Spine db editor."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -102,7 +100,7 @@ class StackedViewMixin:
         """
         if index is None or not index.isValid():
             default_db_map = next(iter(self.db_maps))
-            default_data = {"database": default_db_map.codename}
+            default_data = {"database": self.db_mngr.name_registry.display_name(default_db_map.sa_url)}
         else:
             item = index.model().item_from_index(index)
             default_db_map = item.first_db_map

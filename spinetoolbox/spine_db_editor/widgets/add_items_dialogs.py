@@ -145,11 +145,11 @@ class AddItemsDialog(ManageItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            *db_maps: DiffDatabaseMapping instances
+            *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
         self.db_maps = db_maps
-        self.keyed_db_maps = {x.codename: x for x in db_maps}
+        self.keyed_db_maps = db_mngr.name_registry.map_display_names_to_db_maps(db_maps)
         self.remove_rows_button = QToolButton(self)
         self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.remove_rows_button.setText("Remove selected rows")
@@ -170,10 +170,8 @@ class AddItemsDialog(ManageItemsDialog):
             self.model.removeRows(row, 1)
 
     def all_databases(self, row):
-        """Returns a list of db names available for a given row.
-        Used by delegates.
-        """
-        return [x.codename for x in self.db_maps]
+        """Returns a list of db names available for a given row."""
+        return [self.db_mngr.name_registry.display_name(x.sa_url) for x in self.db_maps]
 
 
 class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, AddItemsDialog):
@@ -211,7 +209,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         labels = ["dimension name (1)"] if dimension_one_name is not None else []
         labels += ["entity class name", "description", "display icon", "active by default", "databases"]
         self.model.set_horizontal_header_labels(labels)
-        db_names = ",".join(x.codename for x in item.db_maps)
+        db_names = ", ".join(db_mngr.name_registry.display_name_iter(item.db_maps))
         self.default_display_icon = None
         self.model.set_default_row(
             **{
@@ -310,7 +308,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
-            for db_name in db_names.split(","):
+            for db_name in db_names.split(", "):
                 if db_name not in self.keyed_db_maps:
                     self.parent().msg_error.emit(f"Invalid database {db_name} at row {i + 1}")
                     return
@@ -501,7 +499,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         class_name = self.db_map_ent_cls_lookup[db_maps[0]][key]["name"]
         if len(db_maps) == len(self.db_maps):
             return class_name
-        return class_name + "@(" + ", ".join(db_map.codename for db_map in db_maps) + ")"
+        return class_name + "@(" + ", ".join(self.db_mngr.name_registry.display_name_iter(db_maps)) + ")"
 
     def _accepts_class(self, ent_cls):
         if self.entity_class is None:
@@ -519,7 +517,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         header = self.dimension_name_list + ("entity name", "alternative", "entity group", "databases")
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
-        db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
+        db_names = ", ".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
         alt_selection_model = self.parent().ui.alternative_tree_view.selectionModel()
         alt_selection = alt_selection_model.selection()
         selected_alt_name = None
@@ -553,7 +551,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         """
         if len(db_maps) == len(self.parent().db_maps):
             return name
-        return name + "@(" + ", ".join(db_map.codename for db_map in db_maps) + ")"
+        return name + "@(" + ", ".join(self.db_mngr.name_registry.display_name_iter(db_maps)) + ")"
 
     def get_db_map_data(self):
         db_map_data = {}
@@ -570,7 +568,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             db_names = row_data[db_column]
             if db_names is None:
                 db_names = ""
-            for db_name in db_names.split(","):
+            for db_name in db_names.split(", "):
                 if db_name not in self.keyed_db_maps:
                     self.parent().msg_error.emit(f"Invalid database {db_name} at row {i + 1}")
                     return
@@ -636,7 +634,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             entity_name = row_data[name_column]
             entity = entities[entity_name]
             db_names = row_data[db_column]
-            for db_name in db_names.split(","):
+            for db_name in db_names.split(", "):
                 db_map = self.keyed_db_maps[db_name]
                 entity_alternatives.setdefault(db_map, []).append(
                     {
@@ -664,7 +662,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             entity = entities[entity_name]
             class_name = entity["entity_class_name"]
             db_names = row_data[db_column]
-            for db_name in db_names.split(","):
+            for db_name in db_names.split(", "):
                 db_map = self.keyed_db_maps[db_name]
                 db_map_data.setdefault(db_map, {}).setdefault("entities", set()).add((class_name, entity_group))
                 db_map_data.setdefault(db_map, {}).setdefault("entity_groups", set()).add(
@@ -725,8 +723,9 @@ class ManageElementsDialog(AddEntitiesOrManageElementsDialog):
         self.existing_items_model = MinimalTableModel(self, lazy=False)
         self.new_items_model = MinimalTableModel(self, lazy=False)
         self.model.sub_models = [self.new_items_model, self.existing_items_model]
-        self.db_combo_box.addItems([db_map.codename for db_map in db_maps])
-        self.reset_entity_class_combo_box(db_maps[0].codename)
+        names = list(db_mngr.name_registry.display_name_iter(db_maps))
+        self.db_combo_box.addItems(names)
+        self.reset_entity_class_combo_box(names[0])
         self.connect_signals()
 
     def _populate_layout(self):
@@ -891,7 +890,7 @@ class EntityGroupDialogBase(QDialog):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self.db_map = db_maps[0]
-        self.db_maps_by_codename = {db_map.codename: db_map for db_map in db_maps}
+        self.db_maps_by_db_name = db_mngr.name_registry.map_display_names_to_db_maps(db_maps)
         self.db_combo_box = QComboBox(self)
         self.header_widget = QWidget(self)
         self.group_name_line_edit = QLineEdit(self)
@@ -938,7 +937,7 @@ class EntityGroupDialogBase(QDialog):
         layout.addWidget(self.members_tree, 1, 2)
         layout.addWidget(self.button_box, 2, 0, 1, 3)
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.db_combo_box.addItems(list(self.db_maps_by_codename))
+        self.db_combo_box.addItems(list(self.db_maps_by_db_name))
         self.db_map_entity_ids = {
             db_map: {
                 x["name"]: x["id"]
@@ -958,7 +957,7 @@ class EntityGroupDialogBase(QDialog):
         self.remove_button.clicked.connect(self.remove_members)
 
     def reset_list_widgets(self, database):
-        self.db_map = self.db_maps_by_codename[database]
+        self.db_map = self.db_maps_by_db_name[database]
         entity_ids = self.db_map_entity_ids[self.db_map]
         members = []
         non_members = []
@@ -1015,7 +1014,7 @@ class AddEntityGroupDialog(EntityGroupDialogBase):
         self.setWindowTitle("Add entity group")
         self.group_name_line_edit.setFocus()
         self.group_name_line_edit.setPlaceholderText("Type group name here")
-        self.reset_list_widgets(db_maps[0].codename)
+        self.reset_list_widgets(self.db_mngr.name_registry.display_name(db_maps[0].sa_url))
         self.connect_signals()
 
     def initial_member_ids(self):
@@ -1071,7 +1070,7 @@ class ManageMembersDialog(EntityGroupDialogBase):
         self.group_name_line_edit.setReadOnly(True)
         self.group_name_line_edit.setText(entity_item.name)
         self.entity_item = entity_item
-        self.reset_list_widgets(db_maps[0].codename)
+        self.reset_list_widgets(self.db_mngr.name_registry.display_name(db_maps[0].sa_url))
         self.connect_signals()
 
     def _entity_groups(self):

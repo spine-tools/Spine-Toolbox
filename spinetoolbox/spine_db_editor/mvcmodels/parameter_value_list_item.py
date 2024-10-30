@@ -31,10 +31,6 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
     """An item representing a db."""
 
     @property
-    def item_type(self):
-        return "db"
-
-    @property
     def fetch_item_type(self):
         return "parameter_value_list"
 
@@ -50,9 +46,7 @@ class ListItem(
 ):
     """A list item."""
 
-    @property
-    def item_type(self):
-        return "parameter_value_list"
+    item_type = "parameter_value_list"
 
     @property
     def fetch_item_type(self):
@@ -95,9 +89,7 @@ class ListItem(
 
 
 class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
-    @property
-    def item_type(self):
-        return "list_value"
+    item_type = "list_value"
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         if role == Qt.ItemDataRole.DisplayRole and not self.id:

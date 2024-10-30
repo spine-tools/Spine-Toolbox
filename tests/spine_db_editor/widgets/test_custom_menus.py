@@ -14,8 +14,9 @@
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QWidget
+from spinetoolbox.database_display_names import NameRegistry
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.spine_db_editor.widgets.custom_menus import TabularViewCodenameFilterMenu
+from spinetoolbox.spine_db_editor.widgets.custom_menus import TabularViewDatabaseNameFilterMenu
 from tests.mock_helpers import TestCaseWithQApplication
 
 
@@ -28,11 +29,14 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
 
     def test_init_fills_filter_list_with_database_codenames(self):
         db_map1 = mock.MagicMock()
-        db_map1.codename = "db map 1"
+        db_map1.sa_url = "sqlite://a"
         db_map2 = mock.MagicMock()
-        db_map2.codename = "db map 2"
+        db_map2.sa_url = "sqlite://b"
         db_maps = [db_map1, db_map2]
-        menu = TabularViewCodenameFilterMenu(self._parent, db_maps, "database")
+        name_registry = NameRegistry()
+        name_registry.register(db_map1.sa_url, "db map 1")
+        name_registry.register(db_map2.sa_url, "db map 2")
+        menu = TabularViewDatabaseNameFilterMenu(self._parent, db_maps, "database", name_registry)
         self.assertIs(menu.anchor, self._parent)
         filter_list_model = menu._filter._filter_model
         filter_rows = []
@@ -42,11 +46,14 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
 
     def test_filter_changed_signal_is_emitted_correctly(self):
         db_map1 = mock.MagicMock()
-        db_map1.codename = "db map 1"
+        db_map1.sa_url = "sqlite://a"
         db_map2 = mock.MagicMock()
-        db_map2.codename = "db map 2"
+        db_map2.sa_url = "sqlite://b"
         db_maps = [db_map1, db_map2]
-        menu = TabularViewCodenameFilterMenu(self._parent, db_maps, "database")
+        name_registry = NameRegistry()
+        name_registry.register(db_map1.sa_url, "db map 1")
+        name_registry.register(db_map2.sa_url, "db map 2")
+        menu = TabularViewDatabaseNameFilterMenu(self._parent, db_maps, "database", name_registry)
         with signal_waiter(menu.filterChanged, timeout=0.1) as waiter:
             menu._clear_filter()
             waiter.wait()

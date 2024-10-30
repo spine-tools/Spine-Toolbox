@@ -22,11 +22,12 @@ class _SelectDatabases(QWidget):
 
     checked_state_changed = Signal(int)
 
-    def __init__(self, db_maps, checked_states, parent):
+    def __init__(self, db_maps, checked_states, db_name_registry, parent):
         """
         Args:
             db_maps (tuple of DatabaseMapping): database maps
             checked_states (dict, optional): mapping from item name to check state boolean
+            db_name_registry (NameRegistry): database display name registry
             parent (QWidget): parent widget
         """
         super().__init__(parent)
@@ -34,7 +35,9 @@ class _SelectDatabases(QWidget):
 
         self._ui = Ui_Form()
         self._ui.setupUi(self)
-        self._check_boxes = {db_map: QCheckBox(db_map.codename, self) for db_map in db_maps}
+        self._check_boxes = {
+            db_map: QCheckBox(db_name_registry.display_name(db_map.sa_url), self) for db_map in db_maps
+        }
         add_check_boxes(
             self._check_boxes,
             checked_states,
@@ -80,7 +83,9 @@ class MassSelectItemsDialog(SelectDatabaseItemsDialog):
         database_checked_states = (
             stored_state["databases"] if stored_state is not None else {db_map: True for db_map in db_maps}
         )
-        self._database_check_boxes_widget = _SelectDatabases(tuple(db_maps), database_checked_states, self)
+        self._database_check_boxes_widget = _SelectDatabases(
+            tuple(db_maps), database_checked_states, db_mngr.name_registry, self
+        )
         self._database_check_boxes_widget.checked_state_changed.connect(self._handle_check_box_state_changed)
         self._ui.root_layout.insertWidget(0, self._database_check_boxes_widget)
 

@@ -117,7 +117,7 @@ class MultiDBTreeItem(TreeItem):
     @property
     def display_database(self):
         """Returns the database for display."""
-        return ",".join([db_map.codename for db_map in self.db_maps])
+        return ", ".join(self.model.db_mngr.name_registry.display_name_iter(self._db_map_ids))
 
     @property
     def display_icon(self):
@@ -489,7 +489,7 @@ class MultiDBTreeItem(TreeItem):
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""
-        return {"database": self.first_db_map.codename}
+        return {"database": self.db_mngr.name_registry.display_name(self.first_db_map.sa_url)}
 
     def tear_down(self):
         super().tear_down()

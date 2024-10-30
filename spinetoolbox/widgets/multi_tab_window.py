@@ -70,7 +70,7 @@ class MultiTabWindow(QMainWindow):
         """Creates a new tab.
 
         Args:
-            *args: positional arguments neede to make a new tab
+            *args: positional arguments needed to make a new tab
             **kwargs: keyword arguments needed to make a new tab
         """
         raise NotImplementedError()

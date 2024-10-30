@@ -24,7 +24,7 @@ class ScenarioModel(TreeModelBase):
     """A model to display scenarios in a tree view."""
 
     def _make_db_item(self, db_map):
-        return ScenarioDBItem(self, db_map)
+        return ScenarioDBItem(self, db_map, self.db_mngr.name_registry)
 
     def supportedDropActions(self):
         return Qt.DropAction.CopyAction | Qt.DropAction.MoveAction

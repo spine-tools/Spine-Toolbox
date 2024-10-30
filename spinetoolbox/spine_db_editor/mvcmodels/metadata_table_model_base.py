@@ -127,7 +127,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole:
             if column == Column.DB_MAP:
                 db_map = self._data[row][column] if row < len(self._data) else self._adder_row[column]
-                return db_map.codename if db_map is not None else ""
+                return self._db_mngr.name_registry.display_name(db_map.sa_url) if db_map is not None else ""
             return self._data[row][column] if row < len(self._data) else self._adder_row[column]
         if (
             role == Qt.ItemDataRole.BackgroundRole
@@ -208,7 +208,7 @@ class MetadataTableModelBase(QAbstractTableModel):
         columns = []
         previous_values = []
         data_length = len(self._data)
-        available_codenames = {db_map.codename: db_map for db_map in self._db_maps}
+        available_codenames = self._db_mngr.name_registry.map_display_names_to_db_maps(self._db_maps)
         reserved = self._reserved_metadata()
         for index, value in zip(indexes, values):
             if not self.flags(index) & Qt.ItemIsEditable:
@@ -440,35 +440,33 @@ class MetadataTableModelBase(QAbstractTableModel):
                     self._data = self._data[:row] + self._data[row + count :]
                     self.endRemoveRows()
 
-    def sort(self, column, order=Qt.AscendingOrder):
+    def sort(self, column, order=Qt.SortOrder.AscendingOrder):
         if not self._data or column < 0:
             return
 
         def db_map_sort_key(row):
             db_map = row[Column.DB_MAP]
-            return db_map.codename if db_map is not None else ""
+            return self._db_mngr.name_registry.display_name(db_map.sa_url) if db_map is not None else ""
 
         sort_key = itemgetter(column) if column != Column.DB_MAP else db_map_sort_key
-        self._data.sort(key=sort_key, reverse=order == Qt.DescendingOrder)
+        self._data.sort(key=sort_key, reverse=order == Qt.SortOrder.DescendingOrder)
         top_left = self.index(0, 0)
         bottom_right = self.index(len(self._data) - 1, Column.DB_MAP)
         self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.BackgroundRole])
 
-    def _find_db_map(self, codename):
-        """Finds database mapping with given codename.
+    def _find_db_map(self, name):
+        """Finds database mapping with given name.
 
         Args:
-            codename (str): database mapping's code name
+            name (str): database mapping's name
 
         Returns:
-            DiffDatabaseMapping: database mapping or None if not found
+            DatabaseMapping: database mapping or None if not found
         """
-        match = None
-        for db_map in self._db_maps:
-            if codename == db_map.codename:
-                match = db_map
-                break
-        return match
+        return next(
+            iter(db_map for db_map in self._db_maps if name == self._db_mngr.name_registry.display_name(db_map.sa_url)),
+            None,
+        )
 
     def _reserved_metadata(self):
         """Collects metadata names and values that are already in database.

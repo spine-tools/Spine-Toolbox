@@ -275,7 +275,10 @@ class DatabaseNameDelegate(TableDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         editor = SearchBarEditor(self.parent(), parent)
-        editor.set_data(index.data(Qt.ItemDataRole.DisplayRole), [x.codename for x in self.db_mngr.db_maps])
+        editor.set_data(
+            index.data(Qt.ItemDataRole.DisplayRole),
+            list(self.db_mngr.name_registry.display_name_iter(self.db_mngr.db_maps)),
+        )
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
@@ -758,7 +761,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
         dbs_by_alternative_name = {}
         database_column = self.parent().model.horizontal_header_labels().index("databases")
         database_index = index.model().index(index.row(), database_column)
-        databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(",")
+        databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(", ")
         for db_map_codename in databases:  # Filter possible alternatives based on selected databases
             db_map = self.parent().keyed_db_maps[db_map_codename]
             alternatives = self.parent().db_mngr.get_items(db_map, "alternative")
@@ -781,11 +784,12 @@ class ManageItemsDelegate(QStyledItemDelegate):
         """
         database_column = self.parent().model.horizontal_header_labels().index("databases")
         database_index = index.model().index(index.row(), database_column)
-        databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(",")
+        databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(", ")
         entity_class = self.parent().class_item
-        dbs_by_entity_group = {}  # A mapping from entity_group to db_map(s)
+        dbs_by_entity_group = {}
         for db_map in entity_class.db_maps:
-            if db_map.codename not in databases:  # Allow groups that are in selected DBs under "databases" -column.
+            if parent.db_mngr.name_registry.display_name(db_map.sa_url) not in databases:
+                # Allow groups that are in selected DBs under "databases" column.
                 continue
             class_item = self.parent().db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)
             if not class_item:
@@ -814,7 +818,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
         """
         editor = CheckListEditor(parent)
         all_databases = self.parent().all_databases(index.row())
-        databases = index.data(Qt.ItemDataRole.DisplayRole).split(",")
+        databases = index.data(Qt.ItemDataRole.DisplayRole).split(", ")
         editor.set_data(all_databases, databases)
         return editor
 
