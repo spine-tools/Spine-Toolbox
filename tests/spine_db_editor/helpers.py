@@ -32,8 +32,9 @@ class TestBase(TestCaseWithQApplication):
         self._common_tear_down()
 
     def _common_setup(self, url, create):
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
@@ -44,9 +45,10 @@ class TestBase(TestCaseWithQApplication):
         QApplication.processEvents()
 
     def _common_tear_down(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
         while not self._db_map.closed:

@@ -26,8 +26,9 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
         """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test.sqlite")
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
@@ -41,9 +42,12 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
+        with (
+            mock.patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+            ) as mock_save_w_s,
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
