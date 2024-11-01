@@ -292,10 +292,9 @@ class TestHelpers(TestCaseWithQApplication):
                     # initial dir should be according to the text in line edit
                     self.assertEqual(mock_native_dialog.call_args[1]["File"], str(executable))
                     self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
-                    with (
-                        patch("spinetoolbox.helpers.os.path.exists") as mock_exists,
-                        patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath,
-                    ):
+                    with patch("spinetoolbox.helpers.os.path.exists") as mock_exists, patch(
+                        "spinetoolbox.helpers.os.path.abspath"
+                    ) as mock_abspath:
                         mock_exists.return_value = True
                         mock_abspath.return_value = python_in_path
                         line_edit.clear()
@@ -317,10 +316,9 @@ class TestHelpers(TestCaseWithQApplication):
                     select_python_interpreter(None, line_edit)
                     # initial dir should be according to the text in line edit
                     mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", str(executable))
-                    with (
-                        patch("spinetoolbox.helpers.os.path.exists") as mock_exists,
-                        patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath,
-                    ):
+                    with patch("spinetoolbox.helpers.os.path.exists") as mock_exists, patch(
+                        "spinetoolbox.helpers.os.path.abspath"
+                    ) as mock_abspath:
                         mock_exists.return_value = True
                         mock_abspath.return_value = python_in_path
                         line_edit.clear()

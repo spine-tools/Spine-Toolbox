@@ -24,9 +24,8 @@ class TestEntityItem(TestCaseWithQApplication):
     _db_mngr = None
 
     def setUp(self):
-        with (
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
@@ -60,12 +59,9 @@ class TestEntityItem(TestCaseWithQApplication):
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
 
     def tearDown(self):
-        with (
-            mock.patch(
-                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-            ) as mock_save_w_s,
-            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
-        ):
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+        ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self._spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         self._db_mngr.close_all_sessions()

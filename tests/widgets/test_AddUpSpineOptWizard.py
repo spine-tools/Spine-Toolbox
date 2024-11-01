@@ -22,14 +22,11 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()
-        with (
-            mock.patch(
-                "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels"
-            ) as mock_fetch_python_kernels,
-            mock.patch(
-                "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels"
-            ) as mock_fetch_julia_kernels,
-        ):
+        with mock.patch(
+            "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels"
+        ) as mock_fetch_python_kernels, mock.patch(
+            "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels"
+        ) as mock_fetch_julia_kernels:
             self.settings_widget = SettingsWidget(self.toolbox)
             mock_fetch_python_kernels.assert_called()
             mock_fetch_julia_kernels.assert_called()

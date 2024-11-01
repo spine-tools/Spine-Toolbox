@@ -22,9 +22,8 @@ from tests.mock_helpers import TestCaseWithQApplication
 class TestMassRemoveItemsDialog(TestCaseWithQApplication):
     def setUp(self):
         url = "sqlite:///"
-        with (
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0

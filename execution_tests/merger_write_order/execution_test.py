@@ -43,5 +43,5 @@ class MergerWriteOrder(unittest.TestCase):
             self.assertEqual(from_database(value_rows[0].value, value_rows[0].type), 99.0)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

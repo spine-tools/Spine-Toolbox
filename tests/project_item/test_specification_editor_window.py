@@ -56,12 +56,9 @@ class TestSpecificationEditorWindowBase(TestCaseWithQApplication):
         self._temp_dir.cleanup()
 
     def test_init(self):
-        with (
-            patch.object(SpecificationEditorWindowBase, "_make_ui") as mock_make_ui,
-            patch.object(
-                SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
-            ) as mock_settings_group,
-        ):
+        with patch.object(SpecificationEditorWindowBase, "_make_ui") as mock_make_ui, patch.object(
+            SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
+        ) as mock_settings_group:
             mock_settings_group.return_value = "settings group"
             window = SpecificationEditorWindowBase(self._toolbox)
             mock_make_ui.assert_called_once()
@@ -71,12 +68,9 @@ class TestSpecificationEditorWindowBase(TestCaseWithQApplication):
             window.deleteLater()
 
     def test_init_with_existing_specification(self):
-        with (
-            patch.object(SpecificationEditorWindowBase, "_make_ui"),
-            patch.object(
-                SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
-            ) as mock_settings_group,
-        ):
+        with patch.object(SpecificationEditorWindowBase, "_make_ui"), patch.object(
+            SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
+        ) as mock_settings_group:
             mock_settings_group.return_value = "settings group"
             specification = ProjectItemSpecification("spec name", "spec description")
             window = SpecificationEditorWindowBase(self._toolbox, specification)
@@ -87,16 +81,17 @@ class TestSpecificationEditorWindowBase(TestCaseWithQApplication):
             window.deleteLater()
 
     def test_save_specification(self):
-        with (
-            patch.object(SpecificationEditorWindowBase, "_make_ui"),
-            patch.object(
-                SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
-            ) as mock_settings_group,
-            patch.object(SpecificationEditorWindowBase, "_make_new_specification") as mock_make_specification,
-            patch.object(ProjectItemSpecification, "save") as mock_save,
-            patch.object(ProjectItemFactory, "icon") as mock_icon,
-            patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
-        ):
+        with patch.object(SpecificationEditorWindowBase, "_make_ui"), patch.object(
+            SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
+        ) as mock_settings_group, patch.object(
+            SpecificationEditorWindowBase, "_make_new_specification"
+        ) as mock_make_specification, patch.object(
+            ProjectItemSpecification, "save"
+        ) as mock_save, patch.object(
+            ProjectItemFactory, "icon"
+        ) as mock_icon, patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
             specification = ProjectItemSpecification("spec name", "spec description", "Mock")
             mock_settings_group.return_value = "settings group"
             mock_make_specification.return_value = specification
@@ -117,17 +112,19 @@ class TestSpecificationEditorWindowBase(TestCaseWithQApplication):
             window.deleteLater()
 
     def test_make_new_specification_for_item(self):
-        with (
-            patch.object(SpecificationEditorWindowBase, "_make_ui"),
-            patch.object(
-                SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
-            ) as mock_settings_group,
-            patch.object(SpecificationEditorWindowBase, "_make_new_specification") as mock_make_specification,
-            patch.object(ProjectItemSpecification, "save") as mock_save,
-            patch.object(ProjectItemFactory, "make_icon") as mock_make_icon,
-            patch.object(ProjectItemFactory, "icon") as mock_icon,
-            patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
-        ):
+        with patch.object(SpecificationEditorWindowBase, "_make_ui"), patch.object(
+            SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
+        ) as mock_settings_group, patch.object(
+            SpecificationEditorWindowBase, "_make_new_specification"
+        ) as mock_make_specification, patch.object(
+            ProjectItemSpecification, "save"
+        ) as mock_save, patch.object(
+            ProjectItemFactory, "make_icon"
+        ) as mock_make_icon, patch.object(
+            ProjectItemFactory, "icon"
+        ) as mock_icon, patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
             mock_settings_group.return_value = "settings group"
             mock_make_icon.return_value = ProjectItemIcon(
                 self._toolbox, ":/icons/item_icons/hammer.svg", QColor("white")
@@ -157,17 +154,19 @@ class TestSpecificationEditorWindowBase(TestCaseWithQApplication):
             window.deleteLater()
 
     def test_rename_specification_for_item(self):
-        with (
-            patch.object(SpecificationEditorWindowBase, "_make_ui"),
-            patch.object(
-                SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
-            ) as mock_settings_group,
-            patch.object(SpecificationEditorWindowBase, "_make_new_specification") as mock_make_specification,
-            patch.object(ProjectItemSpecification, "save") as mock_save,
-            patch.object(ProjectItemFactory, "make_icon") as mock_make_icon,
-            patch.object(ProjectItemFactory, "icon") as mock_icon,
-            patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
-        ):
+        with patch.object(SpecificationEditorWindowBase, "_make_ui"), patch.object(
+            SpecificationEditorWindowBase, "settings_group", new_callable=PropertyMock
+        ) as mock_settings_group, patch.object(
+            SpecificationEditorWindowBase, "_make_new_specification"
+        ) as mock_make_specification, patch.object(
+            ProjectItemSpecification, "save"
+        ) as mock_save, patch.object(
+            ProjectItemFactory, "make_icon"
+        ) as mock_make_icon, patch.object(
+            ProjectItemFactory, "icon"
+        ) as mock_icon, patch.object(
+            ProjectItemFactory, "icon_color"
+        ) as mock_icon_color:
             mock_settings_group.return_value = "settings group"
             mock_make_icon.return_value = ProjectItemIcon(
                 self._toolbox, ":/icons/item_icons/hammer.svg", QColor("white")

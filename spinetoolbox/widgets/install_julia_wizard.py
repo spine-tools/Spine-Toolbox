@@ -13,7 +13,6 @@
 """Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
 import os
-import sys
 
 try:
     import jill.install as jill_install
@@ -73,15 +72,13 @@ class InstallJuliaWizard(QWizard):
         self.setStartId(_PageId.INTRO)
 
     def set_julia_exe(self):
-        """Returns the path to the jill julia launcher, which always launches the latest Julia release."""
-        if not sys.platform == "win32":
-            julia_launcher_path = os.path.join(self.field("symlink_dir"), "julia")
-        else:
-            julia_launcher_path = os.path.join(self.field("symlink_dir"), "julia.cmd")
-        if not os.path.exists(julia_launcher_path):
+        basename = next(
+            (file for file in os.listdir(self.field("symlink_dir")) if file.lower().startswith("julia")), None
+        )
+        if basename is None:
             self.julia_exe = None
             return
-        self.julia_exe = julia_launcher_path
+        self.julia_exe = os.path.join(self.field("symlink_dir"), basename)
 
     def accept(self):
         super().accept()

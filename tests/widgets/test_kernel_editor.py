@@ -51,11 +51,10 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             python_exec = "python.exe" if sys.platform == "win32" else "python"
             python_path = pathlib.Path(environment_dir, "Scripts", python_exec)
             kernel_name = "spinetoolbox_test_make_python_kernel"
-            with (
-                patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
-                patch.object(KernelEditorBase, "_python_interpreter_name", return_value=str(python_path)),
-                patch.object(KernelEditorBase, "_python_kernel_name", return_value=kernel_name),
-                patch.object(KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"),
+            with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box, patch.object(
+                KernelEditorBase, "_python_interpreter_name", return_value=str(python_path)
+            ), patch.object(KernelEditorBase, "_python_kernel_name", return_value=kernel_name), patch.object(
+                KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"
             ):
                 mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
                 editor = KernelEditorBase(self._settings_widget, "python")
@@ -82,11 +81,10 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             self.skipTest("Julia not found in PATH.")
         kernel_name = "spinetoolbox_test_make_julia_kernel"
         # with TemporaryDirectory() as julia_project_dir:
-        with (
-            patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
-            patch.object(KernelEditorBase, "_julia_kernel_name", return_value=kernel_name),
-            patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec),
-            patch.object(KernelEditorBase, "_julia_project", return_value="@."),
+        with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box, patch.object(
+            KernelEditorBase, "_julia_kernel_name", return_value=kernel_name
+        ), patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec), patch.object(
+            KernelEditorBase, "_julia_project", return_value="@."
         ):
             mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
             editor = KernelEditorBase(self._settings_widget, "julia")

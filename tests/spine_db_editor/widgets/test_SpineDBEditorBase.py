@@ -20,11 +20,9 @@ from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 class TestSpineDBEditorBase(TestCaseWithQApplication):
     def setUp(self):
         """Builds a SpineDBEditorBase object."""
-        with (
-            mock.patch("spinetoolbox.spine_db_worker.DatabaseMapping") as mock_DiffDBMapping,
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
-        ):
+        with mock.patch("spinetoolbox.spine_db_worker.DatabaseMapping") as mock_DiffDBMapping, mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"
+        ), mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
@@ -40,10 +38,9 @@ class TestSpineDBEditorBase(TestCaseWithQApplication):
 
     def tearDown(self):
         """Frees resources after each test."""
-        with (
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
-        ):
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
             self.db_editor._parameter_models = []
             self.db_editor.close()
         self.db_mngr.close_all_sessions()
@@ -52,31 +49,25 @@ class TestSpineDBEditorBase(TestCaseWithQApplication):
         self.db_editor = None
 
     def test_import_file_recognizes_excel(self):
-        with (
-            mock.patch.object(self.db_editor, "qsettings"),
-            mock.patch.object(self.db_editor, "import_from_excel") as mock_import_from_excel,
-            mock.patch("spinetoolbox.helpers.QFileDialog") as mock_file_dialog,
-        ):
+        with mock.patch.object(self.db_editor, "qsettings"), mock.patch.object(
+            self.db_editor, "import_from_excel"
+        ) as mock_import_from_excel, mock.patch("spinetoolbox.helpers.QFileDialog") as mock_file_dialog:
             mock_file_dialog.getOpenFileName.return_value = "my_excel_file.xlsx", "Excel files (*.xlsx)"
             self.db_editor.import_file()
             mock_import_from_excel.assert_called_once_with("my_excel_file.xlsx")
 
     def test_import_file_recognizes_sqlite(self):
-        with (
-            mock.patch.object(self.db_editor, "qsettings"),
-            mock.patch.object(self.db_editor, "import_from_sqlite") as mock_import_from_sqlite,
-            mock.patch("spinetoolbox.helpers.QFileDialog") as mock_file_dialog,
-        ):
+        with mock.patch.object(self.db_editor, "qsettings"), mock.patch.object(
+            self.db_editor, "import_from_sqlite"
+        ) as mock_import_from_sqlite, mock.patch("spinetoolbox.helpers.QFileDialog") as mock_file_dialog:
             mock_file_dialog.getOpenFileName.return_value = "my_sqlite_file.sqlite", "SQLite files (*.sqlite)"
             self.db_editor.import_file()
             mock_import_from_sqlite.assert_called_once_with("my_sqlite_file.sqlite")
 
     def test_import_file_recognizes_json(self):
-        with (
-            mock.patch.object(self.db_editor, "qsettings"),
-            mock.patch.object(self.db_editor, "import_from_json") as mock_import_from_json,
-            mock.patch("spinetoolbox.helpers.QFileDialog") as mock_file_dialog,
-        ):
+        with mock.patch.object(self.db_editor, "qsettings"), mock.patch.object(
+            self.db_editor, "import_from_json"
+        ) as mock_import_from_json, mock.patch("spinetoolbox.helpers.QFileDialog") as mock_file_dialog:
             mock_file_dialog.getOpenFileName.return_value = "my_json_file.json", "JSON files (*.json)"
             self.db_editor.import_file()
             mock_import_from_json.assert_called_once_with("my_json_file.json")

@@ -47,9 +47,8 @@ class TestScenarioModel(_TestBase):
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
 
     def tearDown(self):
-        with (
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
@@ -440,9 +439,8 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
             self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: "test_db_2"})
 
     def tearDown(self):
-        with (
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
+            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()

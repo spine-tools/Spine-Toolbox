@@ -92,5 +92,5 @@ class RunHelloWorldOnServer(unittest.TestCase):
         self.assertEqual("Hello! World!", text)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
