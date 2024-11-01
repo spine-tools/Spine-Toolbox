@@ -28,7 +28,9 @@ class ActiveByDefault(unittest.TestCase):
             self._check_addition(db_map.add_entity_class_item(name="VisibleByDefault", active_by_default=True))
             self._check_addition(db_map.add_entity_item(name="visible", entity_class_name="VisibleByDefault"))
             self._check_addition(db_map.add_scenario_item(name="base_scenario"))
-            self._check_addition(db_map.add_scenario_alternative_item(scenario_name="base_scenario", alternative_name="Base", rank=0))
+            self._check_addition(
+                db_map.add_scenario_alternative_item(scenario_name="base_scenario", alternative_name="Base", rank=0)
+            )
             db_map.commit_session("Add test data.")
 
     def test_execution(self):
@@ -46,5 +48,5 @@ class ActiveByDefault(unittest.TestCase):
         self.assertCountEqual(entities, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

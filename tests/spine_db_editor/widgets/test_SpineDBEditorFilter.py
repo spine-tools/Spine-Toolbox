@@ -333,9 +333,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         """Tests that the graph view filters the entities correctly based on Entity Tree selection"""
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
         entity_tree_view.expandAll()
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # When nothing selected, no entities should be visible
             self.assertFalse(self.spine_db_editor.entity_items)
@@ -383,13 +384,11 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
     def test_filtering_with_alternative_selections(self):
         """Tests that the graph view filters the entities correctly based on Alternative tree selections"""
         alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_parameter_value, "isVisible", return_value=True
-        ), mock.patch.object(
-            self.spine_db_editor.qsettings, "value"
-        ) as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_parameter_value, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # Selecting the root shouldn't do anything
             select_item_with_index(alternative_tree_view, self.indexes["alternative_root"])
@@ -425,9 +424,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         """Tests that the graph view filters the entities correctly based on Entity and Alternative tree selections"""
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
         alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # Select entity classes A and B along with alternative Alt1.
             select_item_with_index(entity_tree_view, self.indexes["entity_class_A"])
@@ -456,9 +456,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         """Tests that a click on empty space in one of the trees clears all selections"""
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
         alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # Select the entity class A
             select_item_with_index(entity_tree_view, self.indexes["entity_class_A"])
@@ -473,9 +474,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         """Tests that the graph view filters the entities correctly based on Scenario tree selections"""
         scenario_tree_view = self.spine_db_editor.ui.scenario_tree_view
         scenario_tree_view.expandAll()
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # When nothing selected, no entities should be visible
             self.assertFalse(self.spine_db_editor.entity_items)
@@ -524,9 +526,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         """Tests that deselection with ctrl pressed is consistent"""
         scenario_tree_view = self.spine_db_editor.ui.scenario_tree_view
         scenario_tree_view.expandAll()
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # When nothing selected, no entities should be visible
             self.assertFalse(self.spine_db_editor.entity_items)
@@ -579,9 +582,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         auto-expand is enabled"""
         self.gv.set_property("auto_expand_entities", True)
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # When nothing selected, no entities should be visible
             self.assertFalse(self.spine_db_editor.entity_items)
@@ -620,9 +624,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
         entity_tree_view.expandAll()
         alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # Select entity ba
             select_item_with_index(entity_tree_view, self.indexes["entity_ba"])
@@ -649,9 +654,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
 
     def test_start_connecting_entities(self):
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             select_item_with_index(entity_tree_view, self.indexes["entity_root"])
             entity_tree_view.fully_expand()
@@ -680,9 +686,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         entity_tree_view = self.spine_db_editor.ui.treeView_entity
         alternative_tree_view = self.spine_db_editor.ui.alternative_tree_view
         entity_tree_view.expandAll()
-        with mock.patch.object(
-            self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True
-        ), mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value:
+        with (
+            mock.patch.object(self.spine_db_editor.ui.dockWidget_entity_graph, "isVisible", return_value=True),
+            mock.patch.object(self.spine_db_editor.qsettings, "value") as mock_value,
+        ):
             mock_value.side_effect = lambda key, defaultValue: ("false" if key == "appSettings/stickySelection" else 0)
             # Select entity classes A then B then Alt1.
             select_item_with_index(entity_tree_view, self.indexes["entity_class_A"])

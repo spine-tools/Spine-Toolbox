@@ -91,10 +91,11 @@ class TestToolboxUI(TestCaseWithQApplication):
         project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
         self.assertTrue(os.path.exists(project_dir))
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
-            "spinetoolbox.project.create_dir"
-        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
-            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        with (
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
+            mock.patch("spinetoolbox.project.create_dir"),
+            mock.patch("spinetoolbox.project_item.project_item.create_dir"),
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
         ):
             self.toolbox.open_project(project_dir)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
@@ -149,10 +150,11 @@ class TestToolboxUI(TestCaseWithQApplication):
         project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
         self.assertTrue(os.path.exists(project_dir))
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
-            "spinetoolbox.project.create_dir"
-        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
-            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        with (
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
+            mock.patch("spinetoolbox.project.create_dir"),
+            mock.patch("spinetoolbox.project_item.project_item.create_dir"),
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
         ):
             self.toolbox.init_project(project_dir)
         self.assertIsNotNone(self.toolbox.project())
@@ -160,9 +162,11 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_new_project(self):
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
-            "spinetoolbox.ui_main.QSettings.sync"
-        ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        with (
+            mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
+            mock.patch("spinetoolbox.ui_main.QSettings.sync"),
+            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
+        ):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         self.assertIsNotNone(self.toolbox.project())
@@ -170,9 +174,11 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_save_project(self):
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
-            "spinetoolbox.ui_main.QSettings.sync"
-        ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        with (
+            mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
+            mock.patch("spinetoolbox.ui_main.QSettings.sync"),
+            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
+        ):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc_trough_undo_stack(self.toolbox, "DC")
@@ -184,10 +190,11 @@ class TestToolboxUI(TestCaseWithQApplication):
             mock_qsettings_value.side_effect = qsettings_value_side_effect
             self.assertTrue(self.toolbox.close_project())
             mock_qsettings_value.assert_called()
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
-            "spinetoolbox.project.create_dir"
-        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
-            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        with (
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
+            mock.patch("spinetoolbox.project.create_dir"),
+            mock.patch("spinetoolbox.project_item.project_item.create_dir"),
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
         ):
             self.toolbox.open_project(self._temp_dir.name)
         self.assertIsNotNone(self.toolbox.project())
@@ -195,9 +202,11 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_prevent_project_closing_with_unsaved_changes(self):
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.QSettings.setValue"), mock.patch(
-            "spinetoolbox.ui_main.QSettings.sync"
-        ), mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        with (
+            mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
+            mock.patch("spinetoolbox.ui_main.QSettings.sync"),
+            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
+        ):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc_trough_undo_stack(self.toolbox, "DC1")
@@ -213,12 +222,12 @@ class TestToolboxUI(TestCaseWithQApplication):
             with mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel):
                 self.assertFalse(self.toolbox.close_project())
             mock_qsettings_value.assert_called()
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
-            "spinetoolbox.project.create_dir"
-        ), mock.patch("spinetoolbox.project_item.project_item.create_dir"), mock.patch(
-            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
-        ), mock.patch.object(
-            QMessageBox, "exec", return_value=QMessageBox.Cancel
+        with (
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
+            mock.patch("spinetoolbox.project.create_dir"),
+            mock.patch("spinetoolbox.project_item.project_item.create_dir"),
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
+            mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel),
         ):
             # Selecting cancel on the project close confirmation
             with mock.patch("spinetoolbox.ui_main.ToolboxUI.add_warning_message") as warning_msg:
@@ -247,9 +256,11 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_show_project_or_item_context_menu(self):
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value, mock.patch(
-            "spinetoolbox.ui_main.QSettings.sync"
-        ) as mock_sync, mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        with (
+            mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value,
+            mock.patch("spinetoolbox.ui_main.QSettings.sync") as mock_sync,
+            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
+        ):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
             mock_set_value.assert_called()
@@ -277,9 +288,11 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertFalse(self.toolbox.ui.actionRemove_all.isEnabled())
         # Make project
         self._temp_dir = TemporaryDirectory()
-        with mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value, mock.patch(
-            "spinetoolbox.ui_main.QSettings.sync"
-        ) as mock_sync, mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter:
+        with (
+            mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value,
+            mock.patch("spinetoolbox.ui_main.QSettings.sync") as mock_sync,
+            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
+        ):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
             mock_set_value.assert_called()
@@ -474,11 +487,11 @@ class TestToolboxUI(TestCaseWithQApplication):
         gv = self.toolbox.ui.graphicsView
         pos = QPoint(0, 0)
         event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
-        with mock.patch(
-            "PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source"
-        ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
-            self.toolbox, "show_add_project_item_form"
-        ) as mock_show_add_project_item_form:
+        with (
+            mock.patch("PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source") as mock_drop_event_source,
+            mock.patch.object(self.toolbox, "project"),
+            mock.patch.object(self.toolbox, "show_add_project_item_form") as mock_show_add_project_item_form,
+        ):
             mock_drop_event_source.return_value = "Invalid source"
             gv.dropEvent(event)
             mock_show_add_project_item_form.assert_not_called()
@@ -493,11 +506,11 @@ class TestToolboxUI(TestCaseWithQApplication):
         scene_pos = QPointF(44, 20)
         pos = gv.mapFromScene(scene_pos)
         event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
-        with mock.patch(
-            "PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source"
-        ) as mock_drop_event_source, mock.patch.object(self.toolbox, "project"), mock.patch.object(
-            self.toolbox, "show_add_project_item_form"
-        ) as mock_show_add_project_item_form:
+        with (
+            mock.patch("PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source") as mock_drop_event_source,
+            mock.patch.object(self.toolbox, "project"),
+            mock.patch.object(self.toolbox, "show_add_project_item_form") as mock_show_add_project_item_form,
+        ):
             mock_drop_event_source.return_value = MockDraggableButton()
             gv.dropEvent(event)
             mock_show_add_project_item_form.assert_called_once()
@@ -544,8 +557,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         project_dir = os.path.abspath(os.path.join(str(Path(__file__).parent), "test_resources", "Project Directory"))
         self.assertTrue(os.path.exists(project_dir))
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"), mock.patch(
-            "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+        with (
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
         ):
             self.toolbox.open_project(project_dir)
         # Tool spec model must be empty at this point
@@ -555,9 +569,10 @@ class TestToolboxUI(TestCaseWithQApplication):
         )
         self.assertTrue(os.path.exists(tool_spec_path))
         # Add a Tool spec to 'project.json' file
-        with mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename, mock.patch(
-            "spine_items.tool.tool_specifications.ToolSpecification.save"
-        ) as mock_save_specification:
+        with (
+            mock.patch("spinetoolbox.ui_main.QFileDialog.getOpenFileName") as mock_filename,
+            mock.patch("spine_items.tool.tool_specifications.ToolSpecification.save") as mock_save_specification,
+        ):
             mock_filename.return_value = [tool_spec_path]
             mock_save_specification.return_value = True
             self.toolbox.import_specification()

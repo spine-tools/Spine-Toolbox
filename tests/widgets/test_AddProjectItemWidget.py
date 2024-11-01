@@ -26,9 +26,10 @@ class TestAddProjectItemWidget(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()
-        with patch("spinetoolbox.ui_main.JumpPropertiesWidget") as mock_jump_props_widget, patch(
-            "spinetoolbox.ui_main.load_project_items"
-        ) as mock_load_project_items:
+        with (
+            patch("spinetoolbox.ui_main.JumpPropertiesWidget") as mock_jump_props_widget,
+            patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items,
+        ):
             mock_jump_props_widget.return_value = QWidget()
             mock_load_project_items.return_value = {TestProjectItem.item_type(): TestItemFactory}
             self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
@@ -51,11 +52,11 @@ class TestAddProjectItemWidgetWithSpecifications(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self._temp_dir = TemporaryDirectory()
-        with patch("spinetoolbox.ui_main.JumpPropertiesWidget") as mock_jump_props_widget, patch(
-            "spinetoolbox.ui_main.load_project_items"
-        ) as mock_load_project_items, patch(
-            "spinetoolbox.ui_main.load_item_specification_factories"
-        ) as mock_load_specification_factories:
+        with (
+            patch("spinetoolbox.ui_main.JumpPropertiesWidget") as mock_jump_props_widget,
+            patch("spinetoolbox.ui_main.load_project_items") as mock_load_project_items,
+            patch("spinetoolbox.ui_main.load_item_specification_factories") as mock_load_specification_factories,
+        ):
             mock_jump_props_widget.return_value = QWidget()
             mock_load_project_items.return_value = {TestProjectItem.item_type(): TestItemFactory}
             mock_load_specification_factories.return_value = {TestProjectItem.item_type(): TestSpecificationFactory}

@@ -79,5 +79,5 @@ class ParallelImporterWithDatapackage(unittest.TestCase):
         self.assertTrue(scenario_2_checked)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

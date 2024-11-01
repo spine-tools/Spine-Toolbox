@@ -43,5 +43,5 @@ class LoopConditionWithCmdLineArgs(unittest.TestCase):
         self.assertEqual(output_value, Map(expected_x, expected_y))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

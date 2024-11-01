@@ -73,5 +73,5 @@ class AlternativeFilters(unittest.TestCase):
         self.assertCountEqual(entities, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
