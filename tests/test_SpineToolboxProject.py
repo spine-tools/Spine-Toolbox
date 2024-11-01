@@ -249,9 +249,10 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         """
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value, mock.patch(
-            "spinetoolbox.project.make_settings_dict_for_engine"
-        ) as mock_settings_dict:
+        with (
+            mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value,
+            mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_settings_dict,
+        ):
             # Make sure that the test uses LocalSpineEngineManager
             # This mocks the check for engineSettings/remoteEngineEnabled in SpineToolboxProject.execute_dags()
             mock_qsettings_value.side_effect = qsettings_value_side_effect
@@ -557,8 +558,9 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
     def test_save_when_storing_item_local_data(self):
         project = self.toolbox.project()
         item = _MockItemWithLocalData(project)
-        with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
-            self.toolbox, "project_item_icon"
+        with (
+            mock.patch.object(self.toolbox, "project_item_properties_ui"),
+            mock.patch.object(self.toolbox, "project_item_icon"),
         ):
             project.add_item(item)
         project.save()
@@ -585,16 +587,19 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
     def test_load_when_storing_item_local_data(self):
         project = self.toolbox.project()
         item = _MockItemWithLocalData(project)
-        with mock.patch.object(self.toolbox, "project_item_properties_ui"), mock.patch.object(
-            self.toolbox, "project_item_icon"
+        with (
+            mock.patch.object(self.toolbox, "project_item_properties_ui"),
+            mock.patch.object(self.toolbox, "project_item_icon"),
         ):
             project.add_item(item)
         project.save()
         self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
         self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests()}
-        with mock.patch.object(self.toolbox, "update_recent_projects"), mock.patch.object(
-            self.toolbox, "project_item_properties_ui"
-        ), mock.patch.object(self.toolbox, "project_item_icon"):
+        with (
+            mock.patch.object(self.toolbox, "update_recent_projects"),
+            mock.patch.object(self.toolbox, "project_item_properties_ui"),
+            mock.patch.object(self.toolbox, "project_item_icon"),
+        ):
             self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
         item = self.toolbox.project().get_item("test item")
         self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
@@ -603,9 +608,10 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         project = self.toolbox.project()
         self.toolbox.item_factories = {"Tester": ProjectItemFactory()}
         specification = _MockSpecification("a specification", "Specification for testing.", "Tester")
-        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
-            ProjectItemFactory, "icon_color"
-        ) as mock_icon_color:
+        with (
+            mock.patch.object(ProjectItemFactory, "icon") as mock_icon,
+            mock.patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
+        ):
             mock_icon.return_value = ":/icons/item_icons/hammer.svg"
             mock_icon_color.return_value = QColor("white")
             project.add_specification(specification)
@@ -629,9 +635,10 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         specification = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
-            ProjectItemFactory, "icon_color"
-        ) as mock_icon_color:
+        with (
+            mock.patch.object(ProjectItemFactory, "icon") as mock_icon,
+            mock.patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
+        ):
             mock_icon.return_value = ":/icons/item_icons/hammer.svg"
             mock_icon_color.return_value = QColor("white")
             project.add_specification(specification)
@@ -662,9 +669,10 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         original_specification = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
-            ProjectItemFactory, "icon_color"
-        ) as mock_icon_color:
+        with (
+            mock.patch.object(ProjectItemFactory, "icon") as mock_icon,
+            mock.patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
+        ):
             mock_icon.return_value = ":/icons/item_icons/hammer.svg"
             mock_icon_color.return_value = QColor("white")
             project.add_specification(original_specification)
@@ -697,9 +705,10 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         specification_with_local_data = _MockSpecificationWithLocalData(
             "a specification", "Specification for testing.", "Tester", "my precious data"
         )
-        with mock.patch.object(ProjectItemFactory, "icon") as mock_icon, mock.patch.object(
-            ProjectItemFactory, "icon_color"
-        ) as mock_icon_color:
+        with (
+            mock.patch.object(ProjectItemFactory, "icon") as mock_icon,
+            mock.patch.object(ProjectItemFactory, "icon_color") as mock_icon_color,
+        ):
             mock_icon.return_value = ":/icons/item_icons/hammer.svg"
             mock_icon_color.return_value = QColor("white")
             project.add_specification(specification_with_local_data)

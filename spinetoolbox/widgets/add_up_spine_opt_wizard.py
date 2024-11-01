@@ -303,9 +303,11 @@ class FailurePage(QWizardPage):
         check_box.setChecked(True)
         self.registerField("troubleshoot", check_box)
         layout = QVBoxLayout(self)
-        msg = ("Apologies. Please see the Troubleshoot problems section "
-               "by clicking <b>Next</b> or click <b>Cancel</b> to close "
-               "the wizard.")
+        msg = (
+            "Apologies. Please see the Troubleshoot problems section "
+            "by clicking <b>Next</b> or click <b>Cancel</b> to close "
+            "the wizard."
+        )
         layout.addWidget(WrapLabel(msg))
         layout.addStretch()
         layout.addWidget(check_box)
@@ -532,8 +534,10 @@ class TotalFailurePage(QWizardPage):
 
     def initializePage(self):
         self.setTitle("Troubleshooting failed")
-        msg = ("<p>Please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue with SpineOpt</a>."
-               "<br>Copy the log and paste it into the issue description.</p>")
+        msg = (
+            "<p>Please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue with SpineOpt</a>."
+            "<br>Copy the log and paste it into the issue description.</p>"
+        )
         layout = QVBoxLayout(self)
         layout.addWidget(HyperTextLabel(msg))
         copy_widget = QWidget()

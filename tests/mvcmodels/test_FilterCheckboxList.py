@@ -47,12 +47,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
     def test_add_item_with_select_without_filter(self):
         new_item = ["aaaa"]
         self.model.set_list(self.data)
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._data, self.data + new_item)
@@ -61,12 +61,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
     def test_add_item_without_select_without_filter(self):
         new_item = ["aaaa"]
         self.model.set_list(self.data)
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
         ):
             self.model.add_items(new_item, selected=False)
         self.assertFalse(self.model._all_selected)
@@ -237,12 +237,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         new_item = ["bbbb"]
         self.model.set_list(self.data)
         self.model.set_filter("b")
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._data, sorted(self.data + new_item))
@@ -255,12 +255,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         new_item = ["0b"]
         self.model.set_list(self.data)
         self.model.set_filter("b")
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
@@ -270,12 +270,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         new_item = ["b1"]
         self.model.set_list(self.data)
         self.model.set_filter("b")
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"
-        ), mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
         ):
             self.model.add_items(new_item)
         self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
@@ -284,9 +284,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
     def test_remove_items_data(self):
         items = set("a")
         self.model.set_list(self.data)
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-        ), mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"):
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
+        ):
             self.model.remove_items(items)
         self.assertEqual(self.model._data, self.data[1:])
         self.assertEqual(self.model._data_set, set(self.data[1:]))
@@ -294,9 +297,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
     def test_remove_items_selected(self):
         items = set("a")
         self.model.set_list(self.data)
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-        ), mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"):
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
+        ):
             self.model.remove_items(items)
         self.assertEqual(self.model._selected, set(self.data[1:]))
         self.assertTrue(self.model._all_selected)
@@ -306,9 +312,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         self.model.set_list(self.data)
         self.model._selected.discard("a")
         self.model._all_selected = False
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-        ), mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"):
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
+        ):
             self.model.remove_items(items)
         self.assertEqual(self.model._selected, set(self.data[1:]))
         self.assertTrue(self.model._all_selected)
@@ -317,9 +326,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         items = set("b")
         self.model.set_list(self.data)
         self.model.set_filter("b")
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-        ), mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"):
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
+        ):
             self.model.remove_items(items)
         self.assertEqual(self.model._filter_index, [3, 4])
         self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
@@ -328,9 +340,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         items = set("bb")
         self.model.set_list(self.data)
         self.model.set_filter("b")
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-        ), mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"):
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
+        ):
             self.model.remove_items(items)
         self.assertEqual(self.model._filter_index, [3, 4])
 
@@ -340,9 +355,12 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         self.model.set_filter("b")
         self.model._selected_filtered.discard("a")
         self.model._all_selected = False
-        with mock.patch(
-            "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-        ), mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"):
+        with (
+            mock.patch(
+                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
+            ),
+            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
+        ):
             self.model.remove_items(items)
         self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
         self.assertTrue(self.model._all_selected)
