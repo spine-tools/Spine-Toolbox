@@ -28,11 +28,12 @@ class AutoFilterMenu(FilterMenuBase):
     def __init__(self, parent, db_mngr, db_maps, item_type, field, show_empty=True):
         """
         Args:
-            parent (SpineDBEditor)
+            parent (SpineDBEditor): parent widget
             db_mngr (SpineDBManager)
             db_maps (Sequence of DatabaseMapping)
             item_type (str)
             field (str): the field name
+            show_empty (bool)
         """
         super().__init__(parent)
         self._item_type = item_type
@@ -62,12 +63,12 @@ class AutoFilterMenu(FilterMenuBase):
 
     def _get_value(self, item, db_map):
         if self._field == "database":
-            return db_map.codename
+            return self._db_mngr.name_registry.display_name(db_map.sa_url)
         return item[self._field]
 
     def _get_display_value(self, item, db_map):
         if self._field in ("value", "default_value"):
-            return self._db_mngr.get_value(db_map, item, role=Qt.DisplayRole)
+            return self._db_mngr.get_value(db_map, item, role=Qt.ItemDataRole.DisplayRole)
         if self._field == "entity_byname":
             return DB_ITEM_SEPARATOR.join(item[self._field])
         return self._get_value(item, db_map) or "(empty)"
@@ -216,20 +217,21 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
         self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
 
 
-class TabularViewCodenameFilterMenu(TabularViewFilterMenuBase):
-    """Filter menu to filter database codenames in Pivot table."""
+class TabularViewDatabaseNameFilterMenu(TabularViewFilterMenuBase):
+    """Filter menu to filter database names in Pivot table."""
 
-    def __init__(self, parent, db_maps, identifier, show_empty=True):
+    def __init__(self, parent, db_maps, identifier, db_name_registry, show_empty=True):
         """
         Args:
             parent (SpineDBEditor): parent widget
             db_maps (Sequence of DatabaseMapping): database mappings
             identifier (str): header identifier
+            db_name_registry (NameRegistry): database display name registry
             show_empty (bool): if True, an empty row will be added to the end of the item list
         """
         super().__init__(parent, identifier)
         self._set_up(SimpleFilterCheckboxListModel, self, show_empty=show_empty)
-        self._filter.set_filter_list([db_map.codename for db_map in db_maps])
+        self._filter.set_filter_list(list(db_name_registry.display_name_iter(db_maps)))
 
     def emit_filter_changed(self, valid_values):
         """See base class."""

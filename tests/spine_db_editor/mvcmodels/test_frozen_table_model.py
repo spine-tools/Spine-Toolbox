@@ -26,7 +26,8 @@ class TestFrozenTableModel(TestCaseWithQApplication):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)
         self._parent = QObject()
         self._model = FrozenTableModel(self._db_mngr, self._parent)
 

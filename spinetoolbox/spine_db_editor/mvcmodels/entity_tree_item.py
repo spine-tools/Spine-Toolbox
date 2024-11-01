@@ -116,7 +116,10 @@ class EntityClassItem(MultiDBTreeItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return {"entity_class_name": self.name, "database": self.first_db_map.codename}
+        return {
+            "entity_class_name": self.name,
+            "database": self.db_mngr.name_registry.display_name(self.first_db_map.sa_url),
+        }
 
     @property
     def display_data(self):
@@ -260,12 +263,13 @@ class EntityItem(MultiDBTreeItem):
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
         item = self.db_map_data(self.first_db_map)
+        db_name = self.db_mngr.name_registry.display_name(self.first_db_map.sa_url)
         if not item:
-            return {"database": self.first_db_map.codename}
+            return {"database": db_name}
         return {
             "entity_class_name": item["entity_class_name"],
             "entity_byname": DB_ITEM_SEPARATOR.join(item["entity_byname"]),
-            "database": self.first_db_map.codename,
+            "database": db_name,
         }
 
     def is_valid(self):

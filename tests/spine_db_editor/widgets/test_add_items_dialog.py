@@ -37,7 +37,8 @@ class TestAddItemsDialog(TestCaseWithQApplication):
             logger = mock.MagicMock()
             self._temp_dir = TemporaryDirectory()
             url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="mock_db", create=True)
+            self._db_map = self._db_mngr.get_db_map(url, logger, create=True)
+            self._db_mngr.name_registry.register(url, "mock_db")
             self._db_editor = SpineDBEditor(self._db_mngr, {url: "mock_db"})
 
     def tearDown(self):

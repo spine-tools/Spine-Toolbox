@@ -318,7 +318,8 @@ class TestImportExportData(TestCaseWithQApplication):
         self.editor = MagicMock()
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
-        self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
+        self._db_map = self._db_mngr.get_db_map(url, logger, create=True)
+        self._db_mngr.name_registry.register(url, "test_import_export_data_db")
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -402,52 +403,6 @@ class TestImportExportData(TestCaseWithQApplication):
         )
 
 
-class TestOpenDBEditor(TestCaseWithQApplication):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        db_path = Path(self._temp_dir.name, "db.sqlite")
-        self._db_url = "sqlite:///" + str(db_path)
-        self._db_mngr = SpineDBManager(QSettings(), None)
-        self._logger = MagicMock()
-
-    @unittest.skip("FIXME")
-    def test_open_db_editor(self):
-        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
-        self.assertFalse(editors)
-        self._db_mngr.open_db_editor({self._db_url: "test"}, reuse_existing_editor=True)
-        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
-        self.assertEqual(len(editors), 1)
-        self._db_mngr.open_db_editor({self._db_url: "test"}, reuse_existing_editor=True)
-        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
-        self.assertEqual(len(editors), 1)
-        self._db_mngr.open_db_editor({self._db_url: "not_the_same"}, reuse_existing_editor=True)
-        self.assertEqual(len(editors), 1)
-        editor = editors[0]
-        self.assertEqual(editor.tab_widget.count(), 1)
-        # Finally try to open the first tab again
-        self._db_mngr.open_db_editor({self._db_url: "test"}, reuse_existing_editor=True)
-        editors = list(self._db_mngr.get_all_multi_spine_db_editors())
-        editor = editors[0]
-        self.assertEqual(editor.tab_widget.count(), 1)
-        for editor in self._db_mngr.get_all_multi_spine_db_editors():
-            QApplication.processEvents()
-            editor.close()
-
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
-        # Database connection may still be open. Retry cleanup until it succeeds.
-        running = True
-        while running:
-            QApplication.processEvents()
-            try:
-                self._temp_dir.cleanup()
-            except NotADirectoryError:
-                pass
-            else:
-                running = False
-
-
 class TestDuplicateEntity(TestCaseWithQApplication):
     @classmethod
     def setUpClass(cls):
@@ -457,7 +412,8 @@ class TestDuplicateEntity(TestCaseWithQApplication):
     def setUp(self):
         self._db_mngr = SpineDBManager(QSettings(), None)
         logger = MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -526,7 +482,8 @@ class TestUpdateExpandedParameterValues(TestCaseWithQApplication):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = SpineDBManager(mock_settings, None)
         self._logger = MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="database", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "test_update_expanded_parameter_values_db")
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -571,7 +528,8 @@ class TestRemoveScenarioAlternative(TestCaseWithQApplication):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = SpineDBManager(mock_settings, None)
         self._logger = MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, codename="database", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "test_remove_scenario_alternative_db")
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()

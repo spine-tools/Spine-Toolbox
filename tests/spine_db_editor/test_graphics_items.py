@@ -32,7 +32,8 @@ class TestEntityItem(TestCaseWithQApplication):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+            self._db_mngr.name_registry.register(self._db_map.sa_url, "database")
             self._spine_db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "database"})
             self._spine_db_editor.pivot_table_model = mock.MagicMock()
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})

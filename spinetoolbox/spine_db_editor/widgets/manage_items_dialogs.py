@@ -167,7 +167,7 @@ class GetEntityClassesMixin:
         """
         db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
-        db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
+        db_maps = [self.keyed_db_maps[x] for x in db_names.split(", ") if x in self.keyed_db_maps]
         return self._entity_class_name_list_from_db_maps(*db_maps)
 
     def _entity_class_name_list_from_db_maps(self, *db_maps):
@@ -234,7 +234,7 @@ class GetEntitiesMixin:
         """
         db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
-        db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
+        db_maps = [self.keyed_db_maps[x] for x in db_names.split(", ") if x in self.keyed_db_maps]
         return sorted(set(x for db_map in db_maps for x in self.db_map_alt_id_lookup[db_map]))
 
     def entity_name_list(self, row, column):
@@ -243,7 +243,7 @@ class GetEntitiesMixin:
         """
         db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
-        db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
+        db_maps = [self.keyed_db_maps[x] for x in db_names.split(", ") if x in self.keyed_db_maps]
         entity_name_lists = []
         for db_map in db_maps:
             entity_classes = self.db_map_ent_cls_lookup[db_map]

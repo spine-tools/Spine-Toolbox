@@ -692,12 +692,13 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
     return plot_data(data_list, plot_widget)
 
 
-def plot_db_mngr_items(items, db_maps, plot_widget=None):
+def plot_db_mngr_items(items, db_maps, db_name_registry, plot_widget=None):
     """Returns a plot widget with plots of database manager parameter value items.
 
     Args:
         items (list of dict): parameter value items
         db_maps (list of DatabaseMapping): database mappings corresponding to items
+        db_name_registry (NameRegistry): database display name registry
         plot_widget (PlotWidget, optional): widget to add plots to
     """
     if not items:
@@ -707,13 +708,13 @@ def plot_db_mngr_items(items, db_maps, plot_widget=None):
     root_node = TreeNode("database")
     for item, db_map in zip(items, db_maps):
         value = from_database(item["value"], item["type"])
+        db_name = db_name_registry.display_name(db_map.sa_url)
         if value is None:
             continue
         try:
             leaf_content = _convert_to_leaf(value)
         except PlottingError as error:
-            raise PlottingError(f"Failed to plot value in {db_map.codename}: {error}") from error
-        db_name = db_map.codename
+            raise PlottingError(f"Failed to plot value in {db_name}: {error}") from error
         parameter_name = item["parameter_definition_name"]
         entity_byname = item["entity_byname"]
         if not isinstance(entity_byname, tuple):

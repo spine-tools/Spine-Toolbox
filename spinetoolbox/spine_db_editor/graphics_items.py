@@ -157,7 +157,7 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def display_database(self):
-        return ",".join([db_map.codename for db_map in self.db_maps])
+        return ", ".join(self.db_mngr.name_registry.display_name_iter(self.db_maps))
 
     @property
     def db_maps(self):
@@ -370,7 +370,7 @@ class EntityItem(QGraphicsRectItem):
         return {
             "entity_class_name": self.entity_class_name,
             "entity_byname": DB_ITEM_SEPARATOR.join(self.byname),
-            "database": self.first_db_map.codename,
+            "database": self.db_mngr.name_registry.display_name(self.first_db_map.sa_url),
         }
 
     def shape(self):
@@ -667,7 +667,7 @@ class EntityItem(QGraphicsRectItem):
         for name, db_map_ent_clss in self._db_map_entity_class_lists.items():
             for db_map, ent_cls in db_map_ent_clss:
                 icon = self.db_mngr.entity_class_icon(db_map, ent_cls["id"])
-                action_name = name + "@" + db_map.codename
+                action_name = name + "@" + self.db_mngr.name_registry.display_name(db_map.sa_url)
                 enabled = set(ent_cls["dimension_id_list"]) <= entity_class_ids_in_graph.get(db_map, set())
                 action_name_icon_enabled.append((action_name, icon, enabled))
         for action_name, icon, enabled in sorted(action_name_icon_enabled):
@@ -702,7 +702,11 @@ class EntityItem(QGraphicsRectItem):
         class_name, db_name = action.text().split("@")
         db_map_ent_cls_lst = self._db_map_entity_class_lists[class_name]
         db_map, ent_cls = next(
-            iter((db_map, ent_cls) for db_map, ent_cls in db_map_ent_cls_lst if db_map.codename == db_name)
+            iter(
+                (db_map, ent_cls)
+                for db_map, ent_cls in db_map_ent_cls_lst
+                if self.db_mngr.name_registry.display_name(db_map.sa_url) == db_name
+            )
         )
         self._spine_db_editor.start_connecting_entities(db_map, ent_cls, self)
 

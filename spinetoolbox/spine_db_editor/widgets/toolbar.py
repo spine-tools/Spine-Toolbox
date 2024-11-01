@@ -111,8 +111,8 @@ class DBEditorToolBar(QToolBar):
         self.addWidget(tool_button)
 
     def _show_url_codename_widget(self):
-        """Shows the url codename widget"""
-        dialog = _URLDialog(self._db_editor.db_url_codenames, parent=self)
+        """Shows the url widget"""
+        dialog = _URLDialog(self._db_editor.db_urls, self._db_editor.db_mngr.name_registry, self)
         dialog.show()
 
     @Slot(bool)
@@ -163,6 +163,7 @@ class _FilterArrayWidget(QWidget):
         super().__init__(parent=parent)
         layout = QHBoxLayout(self)
         self._offset = 0
+        self._db_mngr = db_mngr
         self._db_map = db_map
         self._filter_widgets = []
         active_filter_configs = {cfg["type"]: cfg for cfg in filter_configs(db_map.db_url)}
@@ -181,7 +182,7 @@ class _FilterArrayWidget(QWidget):
             if not filter_config_:
                 continue
             url = append_filter_config(url, filter_config_)
-        return url, self._db_map.codename
+        return url, self._db_mngr.name_registry.display_name(self._db_map.sa_url)
 
     def sizeHint(self):
         size = super().sizeHint()
@@ -206,7 +207,7 @@ class _DBListWidget(QTreeWidget):
         self.header().hide()
         self._filter_arrays = []
         for db_map in db_maps:
-            top_level_item = QTreeWidgetItem([db_map.codename])
+            top_level_item = QTreeWidgetItem([db_mngr.name_registry.display_name(db_map.sa_url)])
             self.addTopLevelItem(top_level_item)
             child = QTreeWidgetItem()
             top_level_item.addChild(child)
@@ -262,13 +263,13 @@ class _UrlFilterDialog(QDialog):
 
 
 class _URLDialog(QDialog):
-    """Class for showing URLs and codenames in the database"""
+    """Class for showing URLs and database names in the editor"""
 
-    def __init__(self, url_codenames, parent=None):
+    def __init__(self, urls, name_registry, parent=None):
         super().__init__(parent=parent, f=Qt.Popup)
         self.textEdit = QTextEdit(self)
         self.textEdit.setObjectName("textEdit")
-        text = "<br>".join([f"<b>{codename}</b>: {url}" for url, codename in url_codenames.items()])
+        text = "<br>".join([f"<b>{name_registry.display_name(url)}</b>: {url}" for url in urls])
         self.textEdit.setHtml(text)
         self.textEdit.setReadOnly(True)
         self.textEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)

@@ -20,7 +20,7 @@ class ParameterValueListModel(TreeModelBase):
     """A model to display parameter_value_list data in a tree view."""
 
     def _make_db_item(self, db_map):
-        return DBItem(self, db_map)
+        return DBItem(self, db_map, self.db_mngr.name_registry)
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1."""

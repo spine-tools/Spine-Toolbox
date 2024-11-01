@@ -13,6 +13,7 @@
 """Contains unit tests for the SpineDBEditorBase class."""
 import unittest
 from unittest import mock
+from sqlalchemy.engine.url import make_url
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditorBase
 from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
@@ -21,7 +22,7 @@ class TestSpineDBEditorBase(TestCaseWithQApplication):
     def setUp(self):
         """Builds a SpineDBEditorBase object."""
         with (
-            mock.patch("spinetoolbox.spine_db_worker.DatabaseMapping") as mock_DiffDBMapping,
+            mock.patch("spinetoolbox.spine_db_worker.DatabaseMapping") as mock_DBMapping,
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
@@ -29,14 +30,15 @@ class TestSpineDBEditorBase(TestCaseWithQApplication):
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
 
-            def DiffDBMapping_side_effect(url, codename=None, upgrade=False, create=False):
+            def DBMapping_side_effect(url, upgrade=False, create=False):
                 mock_db_map = mock.MagicMock()
-                mock_db_map.codename = codename
                 mock_db_map.db_url = url
+                mock_db_map.sa_url = make_url(url)
                 return mock_db_map
 
-            mock_DiffDBMapping.side_effect = DiffDBMapping_side_effect
+            mock_DBMapping.side_effect = DBMapping_side_effect
             self.db_editor = SpineDBEditorBase(self.db_mngr)
+            self.db_editor.connect_signals()
 
     def tearDown(self):
         """Frees resources after each test."""
