@@ -1329,7 +1329,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def new_db_editor(self):
-        editor = MultiSpineDBEditor(self.db_mngr, {})
+        editor = MultiSpineDBEditor(self.db_mngr, [])
         editor.show()
 
     @Slot()
