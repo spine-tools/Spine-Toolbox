@@ -213,7 +213,7 @@ def _get_existing_spine_db_editor(db_urls):
     for multi_db_editor in db_editor_registry.windows():
         for k in range(multi_db_editor.tab_widget.count()):
             db_editor = multi_db_editor.tab_widget.widget(k)
-            if all(url in db_urls for url in db_editor.db_urls):
+            if db_editor.db_urls and all(url in db_urls for url in db_editor.db_urls):
                 return multi_db_editor, db_editor
     return None
 
