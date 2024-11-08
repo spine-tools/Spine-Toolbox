@@ -30,7 +30,7 @@ class TestCommitViewer(TestCaseWithQApplication):
             self._db_mngr = SpineDBManager(mock_settings, None, synchronous=True)
             logger = mock.MagicMock()
             url = "sqlite://"
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="mock_db", create=True)
+            self._db_map = self._db_mngr.get_db_map(url, logger, create=True)
             with mock.patch.object(QSplitter, "restoreState"):
                 self._commit_viewer = CommitViewer(mock_settings, self._db_mngr, self._db_map)
 

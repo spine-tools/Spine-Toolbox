@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A tree model for parameter_value lists."""
+from typing import ClassVar
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon
 from spinetoolbox.fetch_parent import FlexibleFetchParent
@@ -21,9 +22,8 @@ from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
 class StandardTreeItem(TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
-    @property
-    def item_type(self):
-        return None
+    item_type: ClassVar[str] = None
+    icon_code: ClassVar[str] = None
 
     @property
     def db_mngr(self):
@@ -31,10 +31,6 @@ class StandardTreeItem(TreeItem):
 
     @property
     def display_data(self):
-        return None
-
-    @property
-    def icon_code(self):
         return None
 
     def tool_tip(self, column):
@@ -223,19 +219,18 @@ class FetchMoreMixin:
 class StandardDBItem(SortChildrenMixin, StandardTreeItem):
     """An item representing a db."""
 
-    def __init__(self, model, db_map):
-        """Init class.
+    item_type = "db"
 
+    def __init__(self, model, db_map, db_name_registry):
+        """
         Args:
-            model (MinimalTreeModel)
-            db_map (DatabaseMapping)
+            model (MinimalTreeModel): tree model
+            db_map (DatabaseMapping): database mapping
+            db_name_registry (NameRegistry): database display name registry
         """
         super().__init__(model)
         self.db_map = db_map
-
-    @property
-    def item_type(self):
-        return "db"
+        self._db_name_registry = db_name_registry
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Shows Spine icon for fun."""
@@ -244,7 +239,7 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
         if role == Qt.ItemDataRole.DecorationRole:
             return QIcon(":/symbols/Spine_symbol.png")
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
-            return self.db_map.codename
+            return self._db_name_registry.display_name(self.db_map.sa_url)
 
 
 class LeafItem(StandardTreeItem):
@@ -259,10 +254,6 @@ class LeafItem(StandardTreeItem):
 
     def _make_item_data(self):
         return {"name": f"Type new {self.item_type} name here...", "description": ""}
-
-    @property
-    def item_type(self):
-        raise NotImplementedError()
 
     @property
     def db_map(self):

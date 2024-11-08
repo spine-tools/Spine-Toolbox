@@ -29,9 +29,9 @@ def main():
     editor = MultiSpineDBEditor(db_mngr)
     if args.separate_tabs:
         for url in args.url:
-            editor.add_new_tab({url: None})
+            editor.add_new_tab([url])
     else:
-        editor.add_new_tab({url: None for url in args.url})
+        editor.add_new_tab(args.url)
     editor.show()
     return_code = app.exec()
     return return_code

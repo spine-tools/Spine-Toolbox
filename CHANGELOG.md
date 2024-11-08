@@ -17,6 +17,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Security
 
+## [0.9.1]
+
+### Removed
+
+- Removed support for MSSQL dialect. It did not work anyway.
+
 ## [0.9.0]
 
 Dropped support for Python 3.8.

@@ -150,8 +150,7 @@ class OpenSQLiteFileButton(OpenFileButton):
 
     @Slot(bool)
     def open_file(self, checked=False):
-        codename = os.path.splitext(self.file_name)[0]
-        self.db_editor._open_sqlite_url(self.url, codename)
+        self.db_editor.add_new_tab(self.url)
 
 
 class ShootingLabel(QLabel):
@@ -459,14 +458,14 @@ class ExportAsVideoDialog(QDialog):
 class AddedEntitiesPopup(QDialog):
     """Class for showing automatically added entities"""
 
-    def __init__(self, parent, added_entities):
+    def __init__(self, parent, db_name_registry, added_entities):
         super().__init__(parent)
         self.setWindowTitle("Added Entities")
         self._textEdit = QTextEdit(self)
         self._text = None
         self._entity_names = None
         self._create_entity_names(added_entities)
-        self._create_text()
+        self._create_text(db_name_registry)
         self._textEdit.setHtml(self._text)
         self._textEdit.setReadOnly(True)
         self._textEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -484,10 +483,10 @@ class AddedEntitiesPopup(QDialog):
         self.setSizeGripEnabled(True)
         self.resize(400, 400)
 
-    def _create_text(self):
+    def _create_text(self, db_name_registry):
         lines = []
         for db_map, classes in self._entity_names.items():
-            lines.append(f"<b>{db_map.codename}</b>:")
+            lines.append(f"<b>{db_name_registry.display_name(db_map.sa_url)}</b>:")
             for cls_name, ent_names in classes.items():
                 lines.append(f"<ul><li><b>{cls_name}</b>:</li>")
                 for ent_name in ent_names:

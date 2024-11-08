@@ -30,7 +30,7 @@ class TestMassRemoveItemsDialog(TestCaseWithQApplication):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = SpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
+            self._db_map = self._db_mngr.get_db_map(url, logger, create=True)
         QApplication.processEvents()
 
     def tearDown(self):

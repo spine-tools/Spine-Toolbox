@@ -278,7 +278,7 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
 
     def __init__(self, model):
         super().__init__(model)
-        self._suggested_codename = None
+        self._suggested_db_name = None
 
     @property
     def header_type(self):
@@ -290,7 +290,7 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
 
     def header_data(self, header_id, role=Qt.ItemDataRole.DisplayRole):
         """See base class."""
-        return header_id.codename
+        return self._model.db_mngr.name_registry.display_name(header_id.sa_url)
 
     def update_data(self, db_map_data):
         """See base class."""
@@ -300,17 +300,17 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
         """See base class."""
         return False
 
-    def set_data(self, codename):
-        """Sets database mapping's codename.
+    def set_data(self, name):
+        """Sets database mapping's name.
 
         Args:
-            codename (str): database codename
+            name (str): database name
 
         Returns:
-            bool: True if codename was acceptable, False otherwise
+            bool: True if name was acceptable, False otherwise
         """
-        if any(db_map.codename == codename for db_map in self.model.db_maps):
-            self._suggested_codename = codename
+        if any(self._model.db_mngr.name_registry.display_name(db_map.sa_url) == name for db_map in self._model.db_maps):
+            self._suggested_db_name = name
             return True
         return False
 
@@ -320,23 +320,23 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
         Returns:
             DatabaseMapping: database mapping
         """
-        if self._suggested_codename is not None:
+        if self._suggested_db_name is not None:
             for db_map in self.model.db_maps:
-                if db_map.codename == self._suggested_codename:
-                    self._suggested_codename = None
+                if self._model.db_mngr.name_registry.display_name(db_map.sa_url) == self._suggested_db_name:
+                    self._suggested_db_name = None
                     return db_map
-            raise RuntimeError(f"Logic error: no such database mapping `{self._suggested_codename}`")
+            raise RuntimeError(f"Logic error: no such database mapping `{self._suggested_db_name}`")
         return next(iter(self.model.db_maps))
 
-    def suggest_db_map_codename(self):
-        """Suggests a database mapping codename.
+    def suggest_db_map_name(self):
+        """Suggests a database mapping name.
 
         Returns:
-            str: codename
+            str: database display name
         """
-        if self._suggested_codename is not None:
-            return self._suggested_codename
-        return next(iter(self.model.db_maps)).codename
+        if self._suggested_db_name is not None:
+            return self._suggested_db_name
+        return self._model.db_mngr.name_registry.display_name(next(iter(self.model.db_maps)).sa_url)
 
 
 class PivotTableModelBase(QAbstractTableModel):
@@ -837,14 +837,14 @@ class PivotTableModelBase(QAbstractTableModel):
                     with suppress(ValueError):
                         database_header_column = self.model.pivot_rows.index("database")
                         if index.column() == database_header_column:
-                            return self.top_left_headers["database"].suggest_db_map_codename()
+                            return self.top_left_headers["database"].suggest_db_map_name()
                 elif (
                     self.emptyColumnCount() > 0 and index.column() == self.headerColumnCount() + self.dataColumnCount()
                 ):
                     with suppress(ValueError):
                         database_header_row = self.model.pivot_columns.index("database")
                         if index.row() == database_header_row:
-                            return self.top_left_headers["database"].suggest_db_map_codename()
+                            return self.top_left_headers["database"].suggest_db_map_name()
             return None
         if role == Qt.ItemDataRole.FontRole and self.index_in_top_left(index):
             font = QFont()
@@ -1200,7 +1200,7 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         entity_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in entity_ids]
         parameter_name = self.db_mngr.get_item(db_map, "parameter_definition", parameter_id).get("name", "")
         alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id).get("name", "")
-        return entity_names, parameter_name, alternative_name, db_map.codename
+        return entity_names, parameter_name, alternative_name, self.db_mngr.name_registry.display_name(db_map.sa_url)
 
     def index_name(self, index):
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.

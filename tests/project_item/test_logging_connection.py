@@ -103,9 +103,7 @@ class TestLoggingConnectionWithDatabaseManager(TestCaseWithQApplication):
         project.add_item(store_2)
         self._db_mngr_logger = MagicMock()
         self._url = "sqlite:///" + str(Path(self._temp_dir.name, "test_database.sqlite"))
-        self._db_map = self._toolbox.db_mngr.get_db_map(
-            self._url, self._db_mngr_logger, codename="database", create=True
-        )
+        self._db_map = self._toolbox.db_mngr.get_db_map(self._url, self._db_mngr_logger, create=True)
 
     def tearDown(self):
         clean_up_toolbox(self._toolbox)

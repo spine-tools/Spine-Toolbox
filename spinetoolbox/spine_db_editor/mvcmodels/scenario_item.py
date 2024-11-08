@@ -28,10 +28,6 @@ class ScenarioDBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
     """A root item representing a db."""
 
     @property
-    def item_type(self):
-        return "db"
-
-    @property
     def fetch_item_type(self):
         return "scenario"
 
@@ -45,17 +41,12 @@ class ScenarioDBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
 class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMixin, BoldTextMixin, LeafItem):
     """A scenario leaf item."""
 
-    @property
-    def item_type(self):
-        return "scenario"
+    item_type = "scenario"
+    icon_code = _SCENARIO_ICON
 
     @property
     def fetch_item_type(self):
         return "scenario_alternative"
-
-    @property
-    def icon_code(self):
-        return _SCENARIO_ICON
 
     def tool_tip(self, column):
         if column == 0 and not self.id:
@@ -125,9 +116,7 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
 class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     """A scenario alternative leaf item."""
 
-    @property
-    def item_type(self):
-        return "scenario_alternative"
+    item_type = "scenario_alternative"
 
     def tool_tip(self, column):
         if column == 0:

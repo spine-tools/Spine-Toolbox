@@ -29,7 +29,8 @@ class TestTypeValidator(TestCaseWithQApplication):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = TestSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)
         self._db_mngr.parameter_type_validator.set_interval(0)
 
     def tearDown(self):

@@ -27,7 +27,7 @@ from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
-from .custom_menus import TabularViewCodenameFilterMenu, TabularViewDBItemFilterMenu
+from .custom_menus import TabularViewDatabaseNameFilterMenu, TabularViewDBItemFilterMenu
 from .tabular_view_header_widget import TabularViewHeaderWidget
 
 
@@ -402,7 +402,9 @@ class TabularViewMixin:
         """
         if identifier not in self.filter_menus:
             if identifier == "database":
-                menu = TabularViewCodenameFilterMenu(self, self.db_maps, identifier, show_empty=False)
+                menu = TabularViewDatabaseNameFilterMenu(
+                    self, self.db_maps, identifier, self.db_mngr.name_registry, show_empty=False
+                )
             else:
                 header = self.pivot_table_model.top_left_headers[identifier]
                 if header.header_type == "parameter":

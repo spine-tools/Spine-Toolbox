@@ -107,7 +107,7 @@ class AddItemsCommand(SpineDBCommand):
         self.redo_data = data
         self.undo_ids = None
         self._check = check
-        self.setText(f"add {item_type} items to {db_map.codename}")
+        self.setText(f"add {item_type} items to {db_mngr.name_registry.display_name(db_map.sa_url)}")
 
     def redo(self):
         super().redo()
@@ -143,7 +143,7 @@ class UpdateItemsCommand(SpineDBCommand):
         if self.redo_data == self.undo_data:
             self.setObsolete(True)
         self._check = check
-        self.setText(f"update {item_type} items in {db_map.codename}")
+        self.setText(f"update {item_type} items in {self.db_mngr.name_registry.display_name(db_map.sa_url)}")
 
     def redo(self):
         super().redo()
@@ -183,7 +183,7 @@ class AddUpdateItemsCommand(SpineDBCommand):
         self.redo_update_data = None
         self.undo_remove_ids = None
         self.undo_update_data = None
-        self.setText(f"update {item_type} items in {db_map.codename}")
+        self.setText(f"update {item_type} items in {self.db_mngr.name_registry.display_name(db_map.sa_url)}")
 
     def redo(self):
         super().redo()
@@ -225,7 +225,7 @@ class RemoveItemsCommand(SpineDBCommand):
         self.item_type = item_type
         self.ids = ids
         self._check = check
-        self.setText(f"remove {item_type} items from {db_map.codename}")
+        self.setText(f"remove {item_type} items from {self.db_mngr.name_registry.display_name(db_map.sa_url)}")
 
     def redo(self):
         super().redo()

@@ -34,8 +34,9 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self.db_map = self.db_mngr.get_db_map(url, logger, codename="db", create=True)
-            self.spine_db_editor = SpineDBEditor(self.db_mngr, {url: "db"})
+            self.db_map = self.db_mngr.get_db_map(url, logger, create=True)
+            self.spine_db_editor = SpineDBEditor(self.db_mngr, [url])
+            self.db_mngr.name_registry.register(self.db_map.sa_url, "db")
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
 
     def tearDown(self):

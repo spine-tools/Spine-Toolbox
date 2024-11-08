@@ -31,7 +31,8 @@ class DBEditorTestBase(TestCaseWithQApplication):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, create=True)
+            self.db_mngr.name_registry.register("sqlite://", self.db_codename)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": self.db_codename})
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
             self.spine_db_editor.entity_tree_model.hide_empty_classes = False

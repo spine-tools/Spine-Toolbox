@@ -39,6 +39,7 @@ from ..helpers import (
 from ..kernel_fetcher import KernelFetcher
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
+from ..spine_db_editor.editors import db_editor_registry
 from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEditor
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
@@ -234,7 +235,7 @@ class SpineDBEditorSettingsMixin:
 
     @Slot(bool)
     def set_hide_empty_classes(self, checked=False):
-        for db_editor in self.db_mngr.get_all_spine_db_editors():
+        for db_editor in db_editor_registry.tabs():
             db_editor.entity_tree_model.hide_empty_classes = checked
 
     @Slot(bool)
@@ -266,7 +267,7 @@ class SpineDBEditorSettingsMixin:
         self._set_graph_property("neg_weight_exp", value)
 
     def _set_graph_property(self, name, value):
-        for db_editor in self.db_mngr.get_all_spine_db_editors():
+        for db_editor in db_editor_registry.tabs():
             db_editor.ui.graphicsView.set_property(name, value)
 
 

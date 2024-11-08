@@ -263,7 +263,7 @@ class TestClosingDBEditors(TestCaseWithQApplication):
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
