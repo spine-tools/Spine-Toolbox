@@ -505,7 +505,7 @@ class TroubleshootSolutionPage(QWizardPage):
         self.setFinalPage(True)
         julia = self.field("julia_exe")
         env = self.field("julia_project")
-        self.setTitle("<b>JULIA_SSL_CA_ROOTS_PATH</b> environment variable missing")
+        self.setTitle("Environment variable JULIA_SSL_CA_ROOTS_PATH missing")
         description = (
             "<p>You are most likely running Toolbox in a Conda environment and the issue "
             "you're facing is due to a missing environment variable. The simplest solution "
