@@ -13,7 +13,7 @@
 """Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QCursor
+from PySide6.QtGui import QCursor, QTextCursor
 from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
@@ -72,6 +72,7 @@ class AddUpSpineOptWizard(QWizard):
         self.setPage(_PageId.ADD_UP_SPINE_OPT_AGAIN, AddUpSpineOptAgainPage(self))
         self.setPage(_PageId.TOTAL_FAILURE, TotalFailurePage(self))
         self.setStartId(_PageId.INTRO)
+        self.setOption(QWizard.WizardOption.NoCancelButtonOnLastPage)
 
 
 class IntroPage(QWizardPage):
@@ -238,11 +239,10 @@ class AddUpSpineOptPage(QWizardProcessPage):
         processing, code, process = {
             "add": (
                 "Installing",
-                'using Pkg; pkg"registry add General https://github.com/spine-tools/SpineJuliaRegistry.git"; '
-                'pkg"add SpineOpt"',
+                'using Pkg; Pkg.Registry.add("General"); Pkg.add("SpineOpt")',
                 "installation",
             ),
-            "update": ("Updating", 'using Pkg; pkg"up SpineOpt"', "update"),
+            "update": ("Updating", 'using Pkg; Pkg.update("SpineOpt")', "update"),
         }[self.wizard().required_action]
         self.setTitle(f"{processing} SpineOpt")
         julia_exe = self.field("julia_exe")
@@ -331,10 +331,23 @@ class TroubleshootProblemsPage(QWizardPage):
         self.setTitle("Troubleshooting")
         msg = "Select your problem from the list."
         self._button1 = QRadioButton("None of the below")
-        self._button2 = QRadioButton("Installing SpineOpt fails with one of the following messages (or similar):")
-        msg2a = MonoSpaceFontTextBrowser(self)
-        msg2b = MonoSpaceFontTextBrowser(self)
-        msg2a.append(
+        self._button2 = QRadioButton("Installing SpineOpt fails with the following message (or similar):")
+        msg2 = MonoSpaceFontTextBrowser(self)
+        msg2.append(
+            """
+            \u22ee<br>
+            error: GitError(Code:ERROR, Class:SSL, Your Julia is built with a SSL/TLS engine that libgit2 
+            doesn't know how to configure to use a file or directory of certificate authority roots, 
+            but your environment specifies one via the SSL_CERT_FILE variable. If you believe your 
+            system's root certificates are safe to use, you can `export JULIA_SSL_CA_ROOTS_PATH=""` 
+            in your environment to use those instead.<br>
+            \u22ee
+            """
+        )
+        self._button3 = QRadioButton("Installing SpineOpt fails with one of the following messages (or similar):")
+        msg3a = MonoSpaceFontTextBrowser(self)
+        msg3b = MonoSpaceFontTextBrowser(self)
+        msg3a.append(
             """
             \u22ee<br>
             Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
@@ -343,7 +356,7 @@ class TroubleshootProblemsPage(QWizardPage):
             \u22ee
             """
         )
-        msg2b.append(
+        msg3b.append(
             """
             \u22ee<br>
             Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
@@ -352,9 +365,9 @@ class TroubleshootProblemsPage(QWizardPage):
             \u22ee
             """
         )
-        self._button3 = QRadioButton("On Windows 7, installing SpineOpt fails with the following message (or similar):")
-        msg3 = MonoSpaceFontTextBrowser(self)
-        msg3.append(
+        self._button4 = QRadioButton("On Windows 7, installing SpineOpt fails with the following message (or similar):")
+        msg4 = MonoSpaceFontTextBrowser(self)
+        msg4.append(
             """
             \u22ee<br>
             Downloading artifact: OpenBLAS32<br>
@@ -375,11 +388,14 @@ class TroubleshootProblemsPage(QWizardPage):
         layout.addWidget(self._button1)
         layout.addStretch()
         layout.addWidget(self._button2)
-        layout.addWidget(msg2a)
-        layout.addWidget(msg2b)
+        layout.addWidget(msg2)
         layout.addStretch()
         layout.addWidget(self._button3)
-        layout.addWidget(msg3)
+        layout.addWidget(msg3a)
+        layout.addWidget(msg3b)
+        layout.addStretch()
+        layout.addWidget(self._button4)
+        layout.addWidget(msg4)
         layout.addStretch()
         button_view_log = QPushButton("View log")
         widget_view_log = QWidget()
@@ -388,16 +404,24 @@ class TroubleshootProblemsPage(QWizardPage):
         layout_view_log.addWidget(button_view_log)
         layout.addWidget(widget_view_log)
         layout.addStretch()
+        cursor = QTextCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.Start, QTextCursor.MoveMode.MoveAnchor)
+        msg2.setTextCursor(cursor)  # Scroll to the beginning of the document
+        msg3a.setTextCursor(cursor)
+        msg3b.setTextCursor(cursor)
+        msg4.setTextCursor(cursor)
         self.registerField("problem1", self._button1)
         self.registerField("problem2", self._button2)
         self.registerField("problem3", self._button3)
+        self.registerField("problem4", self._button4)
         self._button1.toggled.connect(lambda _: self.completeChanged.emit())
         self._button2.toggled.connect(lambda _: self.completeChanged.emit())
         self._button3.toggled.connect(lambda _: self.completeChanged.emit())
+        self._button4.toggled.connect(lambda _: self.completeChanged.emit())
         button_view_log.clicked.connect(self._show_log)
 
     def isComplete(self):
-        return self.field("problem1") or self.field("problem2") or self.field("problem3")
+        return self.field("problem1") or self.field("problem2") or self.field("problem3") or self.field("problem4")
 
     @Slot(bool)
     def _show_log(self, _=False):
@@ -426,8 +450,11 @@ class TroubleshootSolutionPage(QWizardPage):
             self._initialize_page_solution2()
         elif self.field("problem3"):
             self._initialize_page_solution3()
+        elif self.field("problem4"):
+            self._initialize_page_solution4()
 
     def _initialize_page_solution1(self):
+        self.setFinalPage(False)
         action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
         julia = self.field("julia_exe")
         env = self.field("julia_project")
@@ -435,7 +462,6 @@ class TroubleshootSolutionPage(QWizardPage):
             install_cmds = f"""
             <span style="color:green;">julia> </span><span>import Pkg</span><br>
             <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
-            <span style="color:green;">julia> </span><span>Pkg.Registry.add(Pkg.RegistrySpec(url="https://github.com/spine-tools/SpineJuliaRegistry"))</span><br>
             <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
         else:
             install_cmds = f"""
@@ -443,7 +469,6 @@ class TroubleshootSolutionPage(QWizardPage):
             <span style="color:green;">julia> </span><span>cd("{env}")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.activate(".")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
-            <span style="color:green;">julia> </span><span>Pkg.Registry.add(Pkg.RegistrySpec(url="https://github.com/spine-tools/SpineJuliaRegistry"))</span><br>
             <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
         if not env:
             update_cmds = """
@@ -477,7 +502,42 @@ class TroubleshootSolutionPage(QWizardPage):
         self.setButtonText(QWizard.WizardButton.CommitButton, action)
 
     def _initialize_page_solution2(self):
-        action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
+        self.setFinalPage(True)
+        julia = self.field("julia_exe")
+        env = self.field("julia_project")
+        self.setTitle("Environment variable JULIA_SSL_CA_ROOTS_PATH missing")
+        description = (
+            "<p>You are most likely running Toolbox in a Conda environment and the issue "
+            "you're facing is due to a missing environment variable. The simplest solution "
+            "is to open the Julia REPL from the Anaconda Prompt, add the environment variable, "
+            "and then install SpineOpt.</p>"
+            "<p>To do this, open your Anaconda prompt and start the Julia REPL using "
+            f"command:<br><br><i>{julia}</i><br><br>In the Julia REPL, enter the commands below (gray text, "
+            "not the green one). After entering the commands, SpineOpt should be installed. If you run into "
+            "other problems, please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue "
+            "with SpineOpt</a>.</p>"
+        )
+        if not env:
+            install_cmds = f"""
+            <span style="color:green;">julia> </span><span>using Pkg</span><br>
+            <span style="color:green;">julia> </span><span>ENV["JULIA_SSL_CA_ROOTS_PATH"] = ""</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
+        else:
+            install_cmds = f"""
+            <span style="color:green;">julia> </span><span>using Pkg</span><br>
+            <span style="color:green;">julia> </span><span>cd("{env}")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.activate(".")</span><br>
+            <span style="color:green;">julia> </span><span>ENV["JULIA_SSL_CA_ROOTS_PATH"] = ""</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
+        cmd_browser = MonoSpaceFontTextBrowser(self)
+        cmd_browser.append(install_cmds)
+        self.layout().addWidget(HyperTextLabel(description))
+        self.layout().addWidget(cmd_browser)
+
+    def _initialize_page_solution3(self):
+        self.setFinalPage(True)
         julia = self.field("julia_exe")
         self.setTitle("Reset Julia General Registry")
         description = (
@@ -491,16 +551,15 @@ class TroubleshootSolutionPage(QWizardPage):
         )
         cmds = f"""
         <span style="color:green;">julia> </span><span>import Pkg</span><br>
-        <span style="color:green;">julia> </span><span>Pkg.Registry.rm("SpineRegistry")</span><br>
         <span style="color:green;">julia> </span><span>Pkg.Registry.rm("General")</span><br>
         <span style="color:green;">julia> </span><span>Pkg.Registry.add()</span><br>"""
         cmd_browser = MonoSpaceFontTextBrowser(self)
         cmd_browser.append(cmds)
         self.layout().addWidget(HyperTextLabel(description))
         self.layout().addWidget(cmd_browser)
-        self.setButtonText(QWizard.WizardButton.CommitButton, action)
 
-    def _initialize_page_solution3(self):
+    def _initialize_page_solution4(self):
+        self.setFinalPage(True)
         action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
         self.setTitle("Update Windows Management Framework")
         description = (
@@ -514,9 +573,10 @@ class TroubleshootSolutionPage(QWizardPage):
             "</ul></p>"
         )
         self.layout().addWidget(HyperTextLabel(description))
-        self.setButtonText(QWizard.WizardButton.CommitButton, action)
 
     def nextId(self):
+        if self.field("problem2") or self.field("problem3") or self.field("problem4"):
+            return -1
         return _PageId.ADD_UP_SPINE_OPT_AGAIN
 
 

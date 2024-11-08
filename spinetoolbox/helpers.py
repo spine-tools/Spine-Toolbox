@@ -1062,24 +1062,26 @@ def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
     return True
 
 
-def dir_is_valid(parent, dir_path, msgbox_title):
+def dir_is_valid(parent, dir_path, msgbox_title, msg=None):
     """Checks that given path is a directory. Needed in
-    SettingsWdiget and KernelEditor because the QLineEdits
+    SettingsWidget and KernelEditor because the QLineEdits
     are editable. Returns True when dir_path is an empty string so that
-    we can use default values (e.g. from line edit place holder text)
+    we can use default values (e.g. from line edit placeholder text)
 
     Args:
         parent (QWidget): Parent widget for the message box
         dir_path (str): Directory path to check
         msgbox_title (str): Message box title
+        msg (str): Warning message
 
     Returns:
         bool: True if given path is an empty string or if path is an existing directory, False otherwise
     """
+    if not msg:
+        msg = "Please select a valid directory"
     if dir_path == "":
         return True
     if not os.path.isdir(dir_path):
-        msg = "Please select a valid directory"
         # noinspection PyCallByClass, PyArgumentList
         QMessageBox.warning(parent, msgbox_title, msg)
         return False

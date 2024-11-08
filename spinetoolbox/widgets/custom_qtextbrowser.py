@@ -48,7 +48,7 @@ class CustomQTextBrowser(QTextBrowser):
         self._frame_format.setBorder(1)
         self._selected_frame_format = QTextFrameFormat(self._frame_format)
         palette = self.palette()
-        self._selected_frame_format.setBackground(QBrush(palette.color(QPalette.Highlight).darker()))
+        self._selected_frame_format.setBackground(QBrush(palette.color(QPalette.ColorRole.Highlight).darker()))
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)
 
@@ -226,12 +226,13 @@ class CustomQTextBrowser(QTextBrowser):
             frame.setFrameFormat(frame_format)
 
 
-class MonoSpaceFontTextBrowser(CustomQTextBrowser):
+class MonoSpaceFontTextBrowser(QTextBrowser):
     def __init__(self, parent):
         """
         Args:
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
-        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        self.setStyleSheet(TEXTBROWSER_SS)
+        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         self.setFont(font)

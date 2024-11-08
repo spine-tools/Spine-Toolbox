@@ -19,6 +19,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ## [0.9.1]
 
+### Changed
+
+- **Add/Update SpineOpt** wizard in **File->Settings->Tools** now installs SpineOpt v0.9.0 
+from Julia's General Registry. Previously SpineOpt was installed from a custom 
+SpineJuliaRegistry registry.
+
 ### Removed
 
 - Removed support for MSSQL dialect. It did not work anyway.

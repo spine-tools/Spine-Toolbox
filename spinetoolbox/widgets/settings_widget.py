@@ -443,6 +443,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _show_add_up_spine_opt_wizard(self, _=False):
         """Opens the add/update SpineOpt wizard."""
         use_julia_jupyter_console, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
+        if julia_project_path != "@." and not dir_is_valid(
+            self,
+            julia_project_path,
+            "Invalid Julia Project",
+            "Julia project must be an existing directory, @., or empty",
+        ):
+            return
         settings = QSettings("SpineProject", "AddUpSpineOptWizard")
         settings.setValue("appSettings/useJuliaKernel", use_julia_jupyter_console)
         settings.setValue("appSettings/juliaPath", julia_path)
