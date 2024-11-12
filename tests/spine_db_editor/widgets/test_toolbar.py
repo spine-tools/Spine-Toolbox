@@ -33,7 +33,7 @@ class TestDBEditorToolBar(DBEditorTestBase):
         self.db_mngr.setParent(self._toolbox)
         tb = DBEditorToolBar(self.spine_db_editor)
         self.assertEqual([{"database": "sqlite://"}], self.spine_db_editor._history)
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.toolbar._UrlFilterDialog.show") as mock_show_dialog:
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.toolbar._URLDialog.show") as mock_show_dialog:
             mock_show_dialog.show.return_value = True
-            tb._show_filter_menu()
+            tb._show_url_codename_widget()
             mock_show_dialog.assert_called()

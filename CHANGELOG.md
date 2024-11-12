@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Removed
 
+- The Filter button has been removed from Spine Database Editor's toolbar.
+  The functionality was broken anyhow and has been superseded by filtering from the Scenario tree.
+
 ### Fixed
 
 ### Security
