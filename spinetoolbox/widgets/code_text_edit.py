@@ -65,10 +65,11 @@ class CodeTextEdit(QPlainTextEdit):
         self.setDocument(doc)
 
     def setDocument(self, doc):
-        doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
+        if doc is not None:
+            doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
+            doc.setDefaultFont(self.font())
         super().setDocument(doc)
         self._highlighter.setDocument(doc)
-        doc.setDefaultFont(self.font())
         self.setTabStopDistance(QFontMetrics(self.font()).horizontalAdvance(4 * " "))
 
     def line_number_area_width(self):

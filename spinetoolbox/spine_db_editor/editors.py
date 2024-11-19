@@ -10,10 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Starts Spine Toolbox."""
+"""Contains Spine Database editor's window registry."""
+from spinetoolbox.multi_tab_windows import MultiTabWindowRegistry
 
-if __name__ == "__main__":
-    import sys
-    from spinetoolbox.main import main
-
-    sys.exit(main())
+db_editor_registry = MultiTabWindowRegistry()

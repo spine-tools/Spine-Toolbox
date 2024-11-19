@@ -32,21 +32,24 @@ class TestBase(TestCaseWithQApplication):
         self._common_tear_down()
 
     def _common_setup(self, url, create):
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename=self.db_codename, create=create)
-            self._db_editor = SpineDBEditor(self._db_mngr, {url: self.db_codename})
+            self._db_map = self._db_mngr.get_db_map(url, logger, create=create)
+            self._db_mngr.name_registry.register(url, self.db_codename)
+            self._db_editor = SpineDBEditor(self._db_mngr, [url])
         QApplication.processEvents()
 
     def _common_tear_down(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
         while not self._db_map.closed:

@@ -251,7 +251,7 @@ class CommitViewer(QMainWindow):
         self._current_index = 0
         for db_map in self._db_maps:
             widget = _DBCommitViewer(self._db_mngr, db_map)
-            tab_widget.addTab(widget, db_map.codename)
+            tab_widget.addTab(widget, db_mngr.name_registry.display_name(db_map.sa_url))
         restore_ui(self, self._qsettings, "commitViewer")
         self._qsettings.beginGroup("commitViewer")
         current = self.centralWidget().widget(self._current_index)

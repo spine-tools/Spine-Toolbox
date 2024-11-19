@@ -23,22 +23,27 @@ class DBEditorTestBase(TestCaseWithQApplication):
 
     def setUp(self):
         """Makes instances of SpineDBEditor classes."""
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+            self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, create=True)
+            self.db_mngr.name_registry.register("sqlite://", self.db_codename)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, {"sqlite://": self.db_codename})
             self.spine_db_editor.pivot_table_model = mock.MagicMock()
             self.spine_db_editor.entity_tree_model.hide_empty_classes = False
 
     def tearDown(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
+        with (
+            mock.patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+            ) as mock_save_w_s,
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
             self.spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         self.db_mngr.close_all_sessions()

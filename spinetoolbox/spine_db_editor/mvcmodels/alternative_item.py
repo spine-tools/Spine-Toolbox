@@ -21,10 +21,6 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
     """A root item representing a db."""
 
     @property
-    def item_type(self):
-        return "db"
-
-    @property
     def fetch_item_type(self):
         return "alternative"
 
@@ -38,13 +34,8 @@ class DBItem(EmptyChildMixin, FetchMoreMixin, StandardDBItem):
 class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
     """An alternative leaf item."""
 
-    @property
-    def item_type(self):
-        return "alternative"
-
-    @property
-    def icon_code(self):
-        return _ALTERNATIVE_ICON
+    item_type = "alternative"
+    icon_code = _ALTERNATIVE_ICON
 
     def tool_tip(self, column):
         if column == 0 and self.id:

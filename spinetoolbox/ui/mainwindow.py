@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -241,7 +241,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
         self.dockWidget_eventlog.setSizePolicy(sizePolicy)
         self.dockWidget_eventlog.setMinimumSize(QSize(82, 104))
-        self.dockWidget_eventlog.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable|QDockWidget.DockWidgetFeature.DockWidgetFloatable|QDockWidget.DockWidgetFeature.DockWidgetMovable)
+        self.dockWidget_eventlog.setFeatures(QDockWidget.DockWidgetClosable|QDockWidget.DockWidgetFloatable|QDockWidget.DockWidgetMovable)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -260,7 +260,7 @@ class Ui_MainWindow(object):
         self.textBrowser_eventlog.setObjectName(u"textBrowser_eventlog")
         sizePolicy.setHeightForWidth(self.textBrowser_eventlog.sizePolicy().hasHeightForWidth())
         self.textBrowser_eventlog.setSizePolicy(sizePolicy)
-        self.textBrowser_eventlog.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
+        self.textBrowser_eventlog.setContextMenuPolicy(Qt.DefaultContextMenu)
         self.textBrowser_eventlog.setOpenLinks(False)
 
         self.verticalLayout_7.addWidget(self.textBrowser_eventlog)
@@ -270,8 +270,8 @@ class Ui_MainWindow(object):
         icon21 = QIcon()
         icon21.addFile(u":/icons/check-circle.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_executions.setIcon(icon21)
-        self.toolButton_executions.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.toolButton_executions.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.toolButton_executions.setPopupMode(QToolButton.InstantPopup)
+        self.toolButton_executions.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         self.verticalLayout_7.addWidget(self.toolButton_executions)
 
@@ -291,7 +291,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
         self.splitter_console = QSplitter(self.dockWidgetContents_console)
         self.splitter_console.setObjectName(u"splitter_console")
-        self.splitter_console.setOrientation(Qt.Orientation.Vertical)
+        self.splitter_console.setOrientation(Qt.Vertical)
         self.splitter_console.setChildrenCollapsible(False)
         self.listView_console_executions = QTreeView(self.splitter_console)
         self.listView_console_executions.setObjectName(u"listView_console_executions")
@@ -303,8 +303,8 @@ class Ui_MainWindow(object):
         self.splitter_console.addWidget(self.listView_console_executions)
         self.label_no_console = QLabel(self.splitter_console)
         self.label_no_console.setObjectName(u"label_no_console")
-        self.label_no_console.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
-        self.label_no_console.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_no_console.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.label_no_console.setAlignment(Qt.AlignCenter)
         self.label_no_console.setWordWrap(True)
         self.splitter_console.addWidget(self.label_no_console)
 
@@ -314,6 +314,7 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.dockWidget_console)
         self.dockWidget_design_view = QDockWidget(MainWindow)
         self.dockWidget_design_view.setObjectName(u"dockWidget_design_view")
+        self.dockWidget_design_view.setFeatures(QDockWidget.DockWidgetMovable)
         self.dockWidgetContents_5 = QWidget()
         self.dockWidgetContents_5.setObjectName(u"dockWidgetContents_5")
         self.verticalLayout_2 = QVBoxLayout(self.dockWidgetContents_5)
@@ -322,13 +323,13 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = DesignQGraphicsView(self.dockWidgetContents_5)
         self.graphicsView.setObjectName(u"graphicsView")
-        self.graphicsView.setFrameShape(QFrame.Shape.NoFrame)
-        self.graphicsView.setFrameShadow(QFrame.Shadow.Raised)
-        self.graphicsView.setRenderHints(QPainter.RenderHint.Antialiasing|QPainter.RenderHint.TextAntialiasing)
-        self.graphicsView.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
-        self.graphicsView.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-        self.graphicsView.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
-        self.graphicsView.setRubberBandSelectionMode(Qt.ItemSelectionMode.ContainsItemBoundingRect)
+        self.graphicsView.setFrameShape(QFrame.NoFrame)
+        self.graphicsView.setFrameShadow(QFrame.Raised)
+        self.graphicsView.setRenderHints(QPainter.Antialiasing|QPainter.TextAntialiasing)
+        self.graphicsView.setDragMode(QGraphicsView.RubberBandDrag)
+        self.graphicsView.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.graphicsView.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        self.graphicsView.setRubberBandSelectionMode(Qt.ContainsItemBoundingRect)
 
         self.verticalLayout_2.addWidget(self.graphicsView)
 
@@ -595,21 +596,21 @@ class Ui_MainWindow(object):
         self.actionExecute_project.setToolTip(QCoreApplication.translate("MainWindow", u"Execute all items in project.", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
-        self.actionExecute_project.setShortcut(QCoreApplication.translate("MainWindow", u"F5", None))
+        self.actionExecute_project.setShortcut(QCoreApplication.translate("MainWindow", u"Shift+F9", None))
 #endif // QT_CONFIG(shortcut)
         self.actionExecute_selection.setText(QCoreApplication.translate("MainWindow", u"Selection", None))
 #if QT_CONFIG(tooltip)
         self.actionExecute_selection.setToolTip(QCoreApplication.translate("MainWindow", u"Execute selected items.", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
-        self.actionExecute_selection.setShortcut(QCoreApplication.translate("MainWindow", u"F6", None))
+        self.actionExecute_selection.setShortcut(QCoreApplication.translate("MainWindow", u"F9", None))
 #endif // QT_CONFIG(shortcut)
         self.actionStop_execution.setText(QCoreApplication.translate("MainWindow", u"Stop", None))
 #if QT_CONFIG(tooltip)
         self.actionStop_execution.setToolTip(QCoreApplication.translate("MainWindow", u"Stop execution.", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
-        self.actionStop_execution.setShortcut(QCoreApplication.translate("MainWindow", u"F7", None))
+        self.actionStop_execution.setShortcut(QCoreApplication.translate("MainWindow", u"F10", None))
 #endif // QT_CONFIG(shortcut)
         self.actionTake_link.setText(QCoreApplication.translate("MainWindow", u"Take link", None))
 #if QT_CONFIG(tooltip)

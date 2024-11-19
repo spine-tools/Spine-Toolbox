@@ -255,14 +255,15 @@ class TestSpineDBEditor(DBEditorTestBase):
 class TestClosingDBEditors(TestCaseWithQApplication):
     def setUp(self):
         self._editors = []
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
@@ -282,11 +283,13 @@ class TestClosingDBEditors(TestCaseWithQApplication):
         editor_2 = self._make_db_editor()
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
-        ) as commit_changes:
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+            mock.patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
+            ) as commit_changes,
+        ):
             commit_changes.return_value = QMessageBox.StandardButton.Discard
             editor_1.close()
             commit_changes.assert_not_called()
@@ -299,11 +302,13 @@ class TestClosingDBEditors(TestCaseWithQApplication):
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         non_editor_listener = object()
         self._db_mngr.register_listener(non_editor_listener, self._db_map)
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ), mock.patch("spinetoolbox.spine_db_manager.QMessageBox"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
-        ) as commit_changes:
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+            mock.patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor._prompt_to_commit_changes"
+            ) as commit_changes,
+        ):
             commit_changes.return_value = QMessageBox.StandardButton.Discard
             editor.close()
             commit_changes.assert_called_once()

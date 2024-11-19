@@ -29,7 +29,8 @@ class TestMetadataTableModel(TestCaseWithQApplication):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = TestSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "database")
         QApplication.processEvents()
         self._model = MetadataTableModel(self._db_mngr, [self._db_map], None)
         fetch_model(self._model)
@@ -94,7 +95,8 @@ class TestMetadataTableModel(TestCaseWithQApplication):
             database_path = Path(temp_dir, "db.sqlite")
             url = "sqlite:///" + str(database_path)
             try:
-                db_map_2 = self._db_mngr.get_db_map(url, logger, codename="2nd database", create=True)
+                db_map_2 = self._db_mngr.get_db_map(url, logger, create=True)
+                self._db_mngr.name_registry.register(url, "2nd database")
                 self._model.set_db_maps([self._db_map, db_map_2])
                 fetch_model(self._model)
                 index = self._model.index(1, Column.DB_MAP)

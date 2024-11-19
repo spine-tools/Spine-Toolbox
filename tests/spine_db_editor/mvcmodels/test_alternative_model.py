@@ -30,13 +30,15 @@ class TestAlternativeModel(TestCaseWithQApplication):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename=self.db_codename, create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
+            self._db_editor = SpineDBEditor(self._db_mngr)
 
     def tearDown(self):
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+        with (
+            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()
@@ -128,15 +130,18 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
         app_settings = MagicMock()
         logger = MagicMock()
         self._db_mngr = TestSpineDBManager(app_settings, None)
-        self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, codename="test_db_1", create=True)
+        self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db2.sqlite"))
-        self._db_map2 = self._db_mngr.get_db_map(url2, logger, codename=self.db_codename, create=True)
+        self._db_map2 = self._db_mngr.get_db_map(url2, logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map1.sa_url, "test_db_1")
+        self._db_mngr.name_registry.register(self._db_map2.sa_url, self.db_codename)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: self.db_codename})
+            self._db_editor = SpineDBEditor(self._db_mngr)
 
     def tearDown(self):
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"), patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"
+        with (
+            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
         ):
             self._db_editor.close()
         self._db_mngr.close_all_sessions()

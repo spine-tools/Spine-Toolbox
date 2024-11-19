@@ -336,7 +336,7 @@ class FrozenTableModel(QAbstractTableModel):
         elif header == "index":
             tool_tip = str(value[1])
         elif header == "database":
-            tool_tip = value.codename
+            tool_tip = self.db_mngr.name_registry.display_name(value.sa_url)
         elif header == "entity":
             db_map, id_ = value
             tool_tip = self.db_mngr.get_item(db_map, "entity", id_).get("description")
@@ -365,7 +365,7 @@ class FrozenTableModel(QAbstractTableModel):
         if header == "index":
             return str(value[1])
         if header == "database":
-            return value.codename
+            return self.db_mngr.name_registry.display_name(value.sa_url)
         db_map, id_ = value
         item = self.db_mngr.get_item(db_map, "entity", id_)
         return item.get("name")

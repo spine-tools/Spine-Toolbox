@@ -239,7 +239,7 @@ class ToolBarWidgetAction(CustomWidgetAction):
         parent.installEventFilter(self)
 
     def eventFilter(self, obj, ev):
-        if ev.type() == QEvent.KeyPress:
+        if ev.type() == QEvent.Type.KeyPress:
             self._parent_key_press_event = QKeyEvent(ev.type(), ev.key(), ev.modifiers())
         return super().eventFilter(obj, ev)
 
@@ -342,7 +342,7 @@ class _MenuToolBar(QToolBar):
         for i in range(layout.count()):
             item = layout.itemAt(i)
             if item.widget() in self._buttons:
-                item.setAlignment(Qt.AlignBottom)
+                item.setAlignment(Qt.AlignmentFlag.AlignBottom)
 
     def add_frame(self, left, right, title):
         """Add frame around given actions, with given title.
@@ -394,16 +394,16 @@ class _MenuToolBar(QToolBar):
             top_left = left.geometry().topLeft()
             bottom_right = right.geometry().bottomRight()
             rect = QRect(top_left, bottom_right).adjusted(-1, -fm.height() / 2, 1, 1)
-            painter.setPen(Qt.gray)
+            painter.setPen(Qt.GlobalColor.gray)
             painter.drawRoundedRect(rect, 1, 1)
             title_rect = fm.boundingRect(title).adjusted(-4, 0, 4, 0)
             title_rect.moveCenter(rect.center())
             title_rect.moveTop(rect.top() - fm.height() / 2)
-            painter.setBrush(Qt.white)
-            painter.setPen(Qt.NoPen)
+            painter.setBrush(Qt.GlobalColor.white)
+            painter.setPen(Qt.PenStyle.NoPen)
             painter.drawRect(title_rect)
-            painter.setPen(Qt.black)
-            painter.drawText(title_rect, Qt.AlignHCenter | Qt.AlignTop, title)
+            painter.setPen(Qt.GlobalColor.black)
+            painter.drawText(title_rect, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop, title)
         painter.end()
 
     def _setup_action_button(self, action):
@@ -438,29 +438,29 @@ class _MenuToolBar(QToolBar):
         """Installed on each action's QToolButton.
         Ignores Up and Down key press events, so they are handled by the toolbar for custom navigation.
         """
-        if ev.type() == QEvent.KeyPress:
-            if ev.key() in (Qt.Key_Left, Qt.Key_Right):
+        if ev.type() == QEvent.Type.KeyPress:
+            if ev.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
                 ev.accept()
                 return True
-            if ev.key() in (Qt.Key_Up, Qt.Key_Down):
+            if ev.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
                 ev.ignore()
                 return True
         return super().eventFilter(obj, ev)
 
     def keyPressEvent(self, ev):
         """Navigates over the tool bar buttons."""
-        if ev.key() in (Qt.Key_Left, Qt.Key_Right):  # FIXME
+        if ev.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):  # FIXME
             ev.ignore()
             return
-        if ev.key() in (Qt.Key_Up, Qt.Key_Down):
+        if ev.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
             widgets = [self.widgetForAction(a) for a in self.actions() if not a.isSeparator() and a.isEnabled()]
             if self._focus_widget not in widgets:
                 self._focus_widget = None
             if self._focus_widget is None:
-                next_index = 0 if ev.key() == Qt.Key_Down else len(widgets) - 1
+                next_index = 0 if ev.key() == Qt.Key.Key_Down else len(widgets) - 1
             else:
                 index = widgets.index(self._focus_widget)
-                next_index = index + 1 if ev.key() == Qt.Key_Down else index - 1
+                next_index = index + 1 if ev.key() == Qt.Key.Key_Down else index - 1
             if 0 <= next_index < len(widgets):
                 self._focus_widget = widgets[next_index]
                 self._focus_widget.setFocus()
@@ -760,7 +760,7 @@ class SelectDatabaseItemsDialog(QDialog):
             )
         if self._warn_checked_non_data_items:
             if self._item_check_boxes_widget.any_structural_item_checked():
-                self._ui.warning_label.setText("Warning! Structural data items selected.")
+                self._ui.warning_label.setText("Warning! You are about to delete structural items.")
             else:
                 self._ui.warning_label.clear()
 

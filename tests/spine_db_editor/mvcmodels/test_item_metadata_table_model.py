@@ -78,7 +78,8 @@ class TestItemMetadataTableModelWithExistingData(TestCaseWithQApplication):
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
         self._db_mngr = TestSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
-        self._db_map = self._db_mngr.get_db_map(self._url, logger, codename="database")
+        self._db_map = self._db_mngr.get_db_map(self._url, logger)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "database")
         QApplication.processEvents()
         self._db_map.fetch_all()
         self._model = ItemMetadataTableModel(self._db_mngr, [self._db_map], None)

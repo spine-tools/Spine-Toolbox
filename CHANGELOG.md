@@ -1,7 +1,7 @@
 # Changelog
 All **notable** changes to this project are documented here.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
+The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
@@ -13,7 +13,55 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Removed
 
+- The Filter button has been removed from Spine Database Editor's toolbar.
+  The functionality was broken anyhow and has been superseded by filtering from the Scenario tree.
+
 ### Fixed
+
+### Security
+
+## [0.9.1]
+
+### Changed
+
+- **Add/Update SpineOpt** wizard in **File->Settings->Tools** now installs SpineOpt v0.9.0 
+from Julia's General Registry. Previously SpineOpt was installed from a custom 
+SpineJuliaRegistry registry.
+
+### Removed
+
+- Removed support for MSSQL dialect. It did not work anyway.
+
+## [0.9.0]
+
+Dropped support for Python 3.8.
+This version of Spine Toolbox requires Python version from 3.9 to 3.12.
+
+### Changed
+
+- **Add/Update SpineOpt** wizard in **File->Settings->Tools** now requires SpineOpt v0.8.3 or higher.
+
+## [0.8.5]
+
+### Changed
+
+- Execution button shortcuts have been changed because F5 is traditionally reserved for refreshing.
+  The shortcuts are now:
+
+  - **Shift+F9** to execute project
+  - **F9** to execute selection
+  - **F10** to stop execution
+
+### Fixed
+
+- Fixed a bug where scenario filters could cause Tracebacks in tools that were using ``spinedb_api``.
+
+## [0.8.4]
+
+### Changed
+
+- ``gamsapi`` replaced the ancient ``gdxcc`` package.
+  You may need to have a relatively recent GAMS installed to utilize .gdx import/export functionalities.
 
 ## [0.8.3]
 

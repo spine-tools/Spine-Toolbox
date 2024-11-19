@@ -22,14 +22,15 @@ from tests.mock_helpers import TestCaseWithQApplication
 class TestMassRemoveItemsDialog(TestCaseWithQApplication):
     def setUp(self):
         url = "sqlite:///"
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = SpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, codename="database", create=True)
+            self._db_map = self._db_mngr.get_db_map(url, logger, create=True)
         QApplication.processEvents()
 
     def tearDown(self):

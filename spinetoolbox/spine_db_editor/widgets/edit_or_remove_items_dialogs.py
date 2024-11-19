@@ -32,11 +32,9 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         self.items = []
 
     def all_databases(self, row):
-        """Returns a list of db names available for a given row.
-        Used by delegates.
-        """
+        """Returns a list of db names available for a given row."""
         item = self.items[row]
-        return [db_map.codename for db_map in item.db_maps]
+        return list(self.db_mngr.name_registry.display_name_iter(item.db_maps))
 
 
 class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
@@ -89,8 +87,15 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
                 db_names = ""
             item = self.items[i]
             db_maps = []
-            for database in db_names.split(","):
-                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+            for database in db_names.split(", "):
+                db_map = next(
+                    (
+                        db_map
+                        for db_map in item.db_maps
+                        if self.db_mngr.name_registry.display_name(db_map.sa_url) == database
+                    ),
+                    None,
+                )
                 if db_map is None:
                     self.parent().msg_error.emit(f"Invalid database {database} at row {i + 1}")
                     return
@@ -137,7 +142,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
         self.connect_signals()
         self.db_maps = set(db_map for item in selected for db_map in item.db_maps)
-        self.keyed_db_maps = {x.codename: x for x in self.db_maps}
+        self.keyed_db_maps = self.db_mngr.name_registry.map_display_names_to_db_maps(self.db_maps)
         self.class_key = class_key
         self.model.set_horizontal_header_labels(
             [x + " byname" for x in self.dimension_name_list] + ["entity name", "databases"]
@@ -174,9 +179,16 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
             if db_names is None:
                 db_names = ""
             db_maps = []
-            for database in db_names.split(","):
-                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
-                if db_map is None:
+            for database in db_names.split(", "):
+                try:
+                    db_map = next(
+                        (
+                            db_map
+                            for db_map in item.db_maps
+                            if self.db_mngr.name_registry.display_name(db_map.sa_url) == database
+                        )
+                    )
+                except StopIteration:
                     self.parent().msg_error.emit(f"Invalid database {database} at row {i + 1}")
                     return
                 db_maps.append(db_map)
@@ -187,7 +199,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                 entity_classes = self.db_map_ent_cls_lookup[db_map]
                 if (self.class_key) not in entity_classes:
                     self.parent().msg_error.emit(
-                        f"Invalid entity class '{self.class_name}' for db '{db_map.codename}' at row {i + 1}"
+                        f"Invalid entity class '{self.class_name}' for db '{self.db_mngr.name_registry.display_name(db_map.sa_url)}' at row {i + 1}"
                     )
                     return
                 ent_cls = entity_classes[self.class_key]
@@ -198,7 +210,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
                 for dimension_id, element_name in zip(dimension_id_list, element_name_list):
                     if (dimension_id, element_name) not in entities:
                         self.parent().msg_error.emit(
-                            f"Invalid entity '{element_name}' for db '{db_map.codename}' at row {i + 1}"
+                            f"Invalid entity '{element_name}' for db '{self.db_mngr.name_registry.display_name(db_map.sa_url)}' at row {i + 1}"
                         )
                         return
                     element_id = entities[dimension_id, element_name]["id"]
@@ -248,8 +260,15 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
                 db_names = ""
             item = self.items[i]
             db_maps = []
-            for database in db_names.split(","):
-                db_map = next((db_map for db_map in item.db_maps if db_map.codename == database), None)
+            for database in db_names.split(", "):
+                db_map = next(
+                    (
+                        db_map
+                        for db_map in item.db_maps
+                        if self.db_mngr.name_registry.display_name(db_map.sa_url) == database
+                    ),
+                    None,
+                )
                 if db_map is None:
                     self.parent().msg_error.emit(f"Invalid database {database} at row {i + 1}")
                     return
@@ -282,7 +301,7 @@ class SelectSuperclassDialog(GetEntityClassesMixin, DialogWithButtons):
                 combobox.setCurrentText(superclass_subclass["superclass_name"])
             else:
                 combobox.setCurrentIndex(0)
-            self._tab_widget.addTab(combobox, db_map.codename)
+            self._tab_widget.addTab(combobox, self.db_mngr.name_registry.display_name(db_map.sa_url))
         self.connect_signals()
         self.setWindowTitle(f"Select {self._subclass_name}'s superclass")
 

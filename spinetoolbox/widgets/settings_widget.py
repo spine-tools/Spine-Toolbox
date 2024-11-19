@@ -39,6 +39,7 @@ from ..helpers import (
 from ..kernel_fetcher import KernelFetcher
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
+from ..spine_db_editor.editors import db_editor_registry
 from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEditor
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
@@ -234,7 +235,7 @@ class SpineDBEditorSettingsMixin:
 
     @Slot(bool)
     def set_hide_empty_classes(self, checked=False):
-        for db_editor in self.db_mngr.get_all_spine_db_editors():
+        for db_editor in db_editor_registry.tabs():
             db_editor.entity_tree_model.hide_empty_classes = checked
 
     @Slot(bool)
@@ -266,7 +267,7 @@ class SpineDBEditorSettingsMixin:
         self._set_graph_property("neg_weight_exp", value)
 
     def _set_graph_property(self, name, value):
-        for db_editor in self.db_mngr.get_all_spine_db_editors():
+        for db_editor in db_editor_registry.tabs():
             db_editor.ui.graphicsView.set_property(name, value)
 
 
@@ -442,6 +443,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _show_add_up_spine_opt_wizard(self, _=False):
         """Opens the add/update SpineOpt wizard."""
         use_julia_jupyter_console, julia_path, julia_project_path, julia_kernel = self._get_julia_settings()
+        if julia_project_path != "@." and not dir_is_valid(
+            self,
+            julia_project_path,
+            "Invalid Julia Project",
+            "Julia project must be an existing directory, @., or empty",
+        ):
+            return
         settings = QSettings("SpineProject", "AddUpSpineOptWizard")
         settings.setValue("appSettings/useJuliaKernel", use_julia_jupyter_console)
         settings.setValue("appSettings/juliaPath", julia_path)

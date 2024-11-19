@@ -15,8 +15,7 @@ from contextlib import suppress
 import json
 import os
 from PySide6.QtCore import QObject, Qt, Signal, Slot
-from PySide6.QtGui import QWindow
-from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     Array,
@@ -48,6 +47,7 @@ from spinedb_api.parameter_value import (
     split_value_and_type,
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinetoolbox.database_display_names import NameRegistry
 from .helpers import busy_effect, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
 from .parameter_type_validation import ParameterTypeValidator, ValidationKey
@@ -58,7 +58,6 @@ from .spine_db_commands import (
     RemoveItemsCommand,
     UpdateItemsCommand,
 )
-from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_db_icon_manager import SpineDBIconManager
 from .spine_db_worker import SpineDBWorker
 from .widgets.options_dialog import OptionsDialog
@@ -96,6 +95,13 @@ class SpineDBManager(QObject):
         str: item type, such as "object_class"
         dict: mapping DatabaseMapping to list of updated dict-items.
     """
+    database_clean_changed = Signal(object, bool)
+    """Emitted whenever database becomes clean or dirty.
+
+    Args:
+        object: database mapping
+        bool: True if database has become clean, False if it became dirty
+    """
 
     def __init__(self, settings, parent, synchronous=False):
         """
@@ -107,6 +113,7 @@ class SpineDBManager(QObject):
         super().__init__(parent)
         self.qsettings = settings
         self._db_maps = {}
+        self.name_registry = NameRegistry(self)
         self._workers = {}
         self.listeners = {}
         self.undo_stack = {}
@@ -116,7 +123,6 @@ class SpineDBManager(QObject):
         self._connect_signals()
         self._cmd_id = 0
         self._synchronous = synchronous
-        self.data_stores = {}
         self._validated_values = {"parameter_definition": {}, "parameter_value": {}}
         self._parameter_type_validator = ParameterTypeValidator(self)
         self._parameter_type_validator.validated.connect(self._parameter_value_validated)
@@ -190,7 +196,7 @@ class SpineDBManager(QObject):
         worker.register_fetch_parent(parent)
 
     def can_fetch_more(self, db_map, parent):
-        """Whether or not we can fetch more items of given type from given db.
+        """Whether we can fetch more items of given type from given db.
 
         Args:
             db_map (DatabaseMapping)
@@ -327,6 +333,7 @@ class SpineDBManager(QObject):
             worker.clean_up()
         del self._validated_values["parameter_definition"][id(db_map)]
         del self._validated_values["parameter_value"][id(db_map)]
+        self.undo_stack[db_map].cleanChanged.disconnect()
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
         del self.redo_action[db_map]
@@ -336,15 +343,13 @@ class SpineDBManager(QObject):
         for url in list(self._db_maps):
             self.close_session(url)
 
-    def get_db_map(self, url, logger, window=False, codename=None, create=False, force_upgrade_prompt=False):
+    def get_db_map(self, url, logger, create=False, force_upgrade_prompt=False):
         """Returns a DatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
 
         Args:
             url (str, URL)
             logger (LoggerInterface)
-            window (bool)
-            codename (str, optional)
             create (bool)
             force_upgrade_prompt (bool)
 
@@ -354,8 +359,6 @@ class SpineDBManager(QObject):
         url = str(url)
         db_map = self._db_maps.get(url)
         if db_map is not None:
-            if not window and codename is not None and db_map.codename != codename:
-                return None
             return db_map
         try:
             prompt_data = DatabaseMapping.get_upgrade_db_prompt_data(url, create=create)
@@ -374,7 +377,7 @@ class SpineDBManager(QObject):
                 return None
         else:
             kwargs = {}
-        kwargs.update(codename=codename, create=create)
+        kwargs["create"] = create
         try:
             return self._do_get_db_map(url, **kwargs)
         except SpineDBAPIError as err:
@@ -384,13 +387,10 @@ class SpineDBManager(QObject):
     @busy_effect
     def _do_get_db_map(self, url, **kwargs):
         """Returns a memorized DatabaseMapping instance from url.
-        Called by `get_db_map`.
 
         Args:
             url (str, URL)
-            codename (str, NoneType)
-            upgrade (bool)
-            create (bool)
+            **kwargs: arguments passed to worker's get_db_map()
 
         Returns:
             DatabaseMapping
@@ -406,6 +406,7 @@ class SpineDBManager(QObject):
         self._validated_values["parameter_definition"][id(db_map)] = {}
         self._validated_values["parameter_value"][id(db_map)] = {}
         stack = self.undo_stack[db_map] = AgedUndoStack(self)
+        stack.cleanChanged.connect(lambda clean: self.database_clean_changed.emit(db_map, clean))
         self.undo_action[db_map] = stack.createUndoAction(self)
         self.redo_action[db_map] = stack.createRedoAction(self)
         return db_map
@@ -435,7 +436,6 @@ class SpineDBManager(QObject):
             listener (object)
             *db_maps
         """
-        self.update_data_store_db_maps()
         for db_map in db_maps:
             self.add_db_map_listener(db_map, listener)
             stack = self.undo_stack[db_map]
@@ -443,11 +443,6 @@ class SpineDBManager(QObject):
                 stack.canRedoChanged.connect(listener.update_undo_redo_actions)
                 stack.canUndoChanged.connect(listener.update_undo_redo_actions)
                 stack.cleanChanged.connect(listener.update_commit_enabled)
-                stores = self.data_stores.get(db_map)
-                if not stores:
-                    continue
-                for store in stores:
-                    self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
 
@@ -476,12 +471,6 @@ class SpineDBManager(QObject):
                     # for that db map is closed. This way the dirtiness state of a data store that is
                     # not open in a db editor can still be affected.
                     continue
-                stores = self.data_stores.get(db_map)
-                if not stores:
-                    continue
-                for store in stores:
-                    self.undo_stack[db_map].cleanChanged.disconnect(store.notify_about_dirtiness)
-                    store.notify_about_dirtiness(True)
             except AttributeError:
                 pass
         if dirty_db_maps:
@@ -496,43 +485,12 @@ class SpineDBManager(QObject):
                 self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
                 self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
-                stores = self.data_stores.get(db_map)
-                if not stores:
-                    continue
-                for store in stores:
-                    self.undo_stack[db_map].cleanChanged.connect(store.notify_about_dirtiness)
             except AttributeError:
                 pass
         for db_map in db_maps:
             if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)
         return failed_db_maps
-
-    def add_data_store_db_map(self, db_map, store):
-        """Adds a Data Store instance under a db_map into memory"""
-        if db_map in self.data_stores:
-            self.data_stores[db_map].append(store)
-        else:
-            self.data_stores[db_map] = [store]
-
-    def remove_data_store_db_map(self, db_map, store):
-        """Removes a Data Store instance from memory"""
-        if self.data_stores.get(db_map):
-            self.data_stores[db_map].remove(store)
-
-    def update_data_store_db_maps(self):
-        """Updates the db maps of the dict that maps db_maps to Data Stores"""
-        new_data_stores = {}
-        old_stores = []
-        for store in self.data_stores.values():
-            old_stores.extend(store)
-        for store in old_stores:
-            db_map = store.get_db_map_for_ds()
-            if db_map in new_data_stores:
-                new_data_stores[db_map].append(store)
-            else:
-                new_data_stores[db_map] = [store]
-        self.data_stores = new_data_stores
 
     def is_dirty(self, db_map):
         """Returns True if mapping has pending changes.
@@ -1684,7 +1642,7 @@ class SpineDBManager(QObject):
         try:
             db_map.commit_session("Export data from Spine Toolbox.")
         except SpineDBAPIError as err:
-            error_msg = f"[SpineDBAPIError] Unable to export file <b>{db_map.codename}</b>: {err.msg}"
+            error_msg = f"[SpineDBAPIError] Unable to export file <b>{file_path}</b>: {err.msg}"
             caller.msg_error.emit(error_msg)
         else:
             caller.file_exported.emit(file_path, 1.0, True)
@@ -1735,63 +1693,6 @@ class SpineDBManager(QObject):
         except KeyError:
             return {}
         return worker.commit_cache.get(commit_id.db_id, {})
-
-    @staticmethod
-    def get_all_multi_spine_db_editors():
-        """Yields all instances of MultiSpineDBEditor currently open.
-
-        Yields:
-            MultiSpineDBEditor
-        """
-        for window in qApp.topLevelWindows():  # pylint: disable=undefined-variable
-            if isinstance(window, QWindow):
-                widget = QWidget.find(window.winId())
-                if isinstance(widget, MultiSpineDBEditor) and widget.accepting_new_tabs:
-                    yield widget
-
-    def get_all_spine_db_editors(self):
-        """Yields all instances of SpineDBEditor currently open.
-
-        Yields:
-            SpineDBEditor
-        """
-        for w in self.get_all_multi_spine_db_editors():
-            for k in range(w.tab_widget.count()):
-                yield w.tab_widget.widget(k)
-
-    def _get_existing_spine_db_editor(self, db_url_codenames):
-        db_url_codenames = {str(url): codename for url, codename in db_url_codenames.items()}
-        for multi_db_editor in self.get_all_multi_spine_db_editors():
-            for k in range(multi_db_editor.tab_widget.count()):
-                db_editor = multi_db_editor.tab_widget.widget(k)
-                if db_editor.db_url_codenames == db_url_codenames:
-                    return multi_db_editor, db_editor
-        return None
-
-    def open_db_editor(self, db_url_codenames, reuse_existing_editor):
-        """Opens a SpineDBEditor with given urls. Uses an existing MultiSpineDBEditor if any.
-        Also, if the same urls are open in an existing SpineDBEditor, just raises that one
-        instead of creating another.
-
-        Args:
-            db_url_codenames (dict): mapping url to codename
-            reuse_existing_editor (bool): if True and the same URL is already open, just raise the existing window
-        """
-        multi_db_editor = next(self.get_all_multi_spine_db_editors(), None) if reuse_existing_editor else None
-        if multi_db_editor is None:
-            multi_db_editor = MultiSpineDBEditor(self, db_url_codenames)
-            if multi_db_editor.tab_load_success:  # don't open an editor if tabs were not loaded successfully
-                multi_db_editor.show()
-            return
-        existing = self._get_existing_spine_db_editor(db_url_codenames)
-        if existing is None:
-            multi_db_editor.add_new_tab(db_url_codenames)
-        else:
-            multi_db_editor, db_editor = existing
-            multi_db_editor.set_current_tab(db_editor)
-        if multi_db_editor.isMinimized():
-            multi_db_editor.showNormal()
-        multi_db_editor.activateWindow()
 
     @Slot(ValidationKey, bool)
     def _parameter_value_validated(self, key, is_valid):

@@ -19,6 +19,7 @@ from ...config import MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL
 from ...helpers import CharIconEngine, open_url
 from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
+from ..editors import db_editor_registry
 from .custom_qwidgets import OpenFileButton, OpenSQLiteFileButton, ShootingLabel
 from .spine_db_editor import SpineDBEditor
 
@@ -26,11 +27,11 @@ from .spine_db_editor import SpineDBEditor
 class MultiSpineDBEditor(MultiTabWindow):
     """Database editor's tabbed main window."""
 
-    def __init__(self, db_mngr, db_url_codenames=None):
+    def __init__(self, db_mngr, db_urls=None):
         """
         Args:
             db_mngr (SpineDBManager): database manager
-            db_url_codenames (dict, optional): mapping from database URL to its codename
+            db_urls (Iterable of str, optional): URLs of database to load
         """
         super().__init__(db_mngr.qsettings, "spineDBEditor")
         self.db_mngr = db_mngr
@@ -42,9 +43,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.setStatusBar(_CustomStatusBar(self))
         self.statusBar().hide()
         self.tab_load_success = True
-        if db_url_codenames is not None:
-            if not self.add_new_tab(db_url_codenames, window=True):
+        if db_urls is not None:
+            if not self.add_new_tab(db_urls):
                 self.tab_load_success = False
+        db_editor_registry.register_window(self)
 
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)
@@ -84,10 +86,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
         return True
 
-    def _make_new_tab(self, db_url_codenames=None, window=False):  # pylint: disable=arguments-differ
+    def _make_new_tab(self, db_urls=None):  # pylint: disable=arguments-differ
         """Makes a new tab, if successful return the tab, returns None otherwise"""
         tab = SpineDBEditor(self.db_mngr)
-        if not tab.load_db_urls(db_url_codenames, create=True, window=window):
+        if not tab.load_db_urls(db_urls if db_urls is not None else [], create=True):
             return
         return tab
 
@@ -102,7 +104,7 @@ class MultiSpineDBEditor(MultiTabWindow):
             return
         menu = QMenu(self)
         for name, url in ds_urls.items():
-            action = menu.addAction(name, lambda name=name, url=url: self.db_mngr.open_db_editor({url: name}, True))
+            action = menu.addAction(name, lambda url=url: open_db_editor([url], self.db_mngr, True))
             action.setEnabled(url is not None and is_url_validated[name])
         menu.popup(global_pos)
         menu.aboutToHide.connect(menu.deleteLater)
@@ -114,13 +116,11 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab = self.tab_widget.widget(index)
         menu.addSeparator()
         menu.addAction(tab.toolbar.reload_action)
-        db_url_codenames = tab.db_url_codenames
+        db_urls = tab.db_urls
         menu.addAction(
             QIcon(CharIconEngine("\uf24d")),
             "Duplicate",
-            lambda _=False, index=index + 1, db_url_codenames=db_url_codenames: self.insert_new_tab(
-                index, db_url_codenames
-            ),
+            lambda _=False, index=index + 1, db_urls=db_urls: self.insert_new_tab(index, db_urls),
         )
         return menu
 
@@ -160,16 +160,17 @@ class MultiSpineDBEditor(MultiTabWindow):
         button = (OpenSQLiteFileButton if is_sqlite else OpenFileButton)(file_path, progress, self)
         self._insert_statusbar_button(button)
 
-    def _open_sqlite_url(self, url, codename):
-        """Opens sqlite url."""
-        self.add_new_tab({url: codename})
-
     @Slot(bool)
     def show_user_guide(self, checked=False):
         """Opens Spine db editor documentation page in browser."""
         doc_url = f"{ONLINE_DOCUMENTATION_URL}/spine_db_editor/index.html"
         if not open_url(doc_url):
             self.msg_error.emit(f"Unable to open url <b>{doc_url}</b>")
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if event.isAccepted():
+            db_editor_registry.unregister_window(self)
 
 
 class _CustomStatusBar(QStatusBar):
@@ -198,3 +199,49 @@ class _CustomStatusBar(QStatusBar):
         self.insertPermanentWidget(0, self._hide_button)
         self.setSizeGripEnabled(False)
         self._hide_button.clicked.connect(self.hide)
+
+
+def _get_existing_spine_db_editor(db_urls):
+    """Returns existing editor window and tab or None for given database URLs.
+
+    Args:
+        db_urls (Sequence of str): database URLs
+
+    Returns:
+        tuple: editor window and tab or None if not found
+    """
+    for multi_db_editor in db_editor_registry.windows():
+        for k in range(multi_db_editor.tab_widget.count()):
+            db_editor = multi_db_editor.tab_widget.widget(k)
+            if db_editor.db_urls and all(url in db_urls for url in db_editor.db_urls):
+                return multi_db_editor, db_editor
+    return None
+
+
+def open_db_editor(db_urls, db_mngr, reuse_existing_editor):
+    """Opens a SpineDBEditor with given urls.
+
+    Optionally uses an existing MultiSpineDBEditor if any.
+    Also, if the same urls are open in an existing SpineDBEditor, just raises that one
+    instead of creating another.
+
+    Args:
+        db_urls (Iterable of str): URLs of databases to open
+        db_mngr (SpineDBManager): database manager
+        reuse_existing_editor (bool): if True and the same URL is already open, just raise the existing window
+    """
+    multi_db_editor = db_editor_registry.get_some_window() if reuse_existing_editor else None
+    if multi_db_editor is None:
+        multi_db_editor = MultiSpineDBEditor(db_mngr, db_urls)
+        if multi_db_editor.tab_load_success:
+            multi_db_editor.show()
+        return
+    existing = _get_existing_spine_db_editor(list(map(str, db_urls)))
+    if existing is None:
+        multi_db_editor.add_new_tab(db_urls)
+    else:
+        multi_db_editor, db_editor = existing
+        multi_db_editor.set_current_tab(db_editor)
+    if multi_db_editor.isMinimized():
+        multi_db_editor.showNormal()
+    multi_db_editor.activateWindow()

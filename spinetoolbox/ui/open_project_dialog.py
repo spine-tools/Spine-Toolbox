@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'open_project_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -46,7 +46,7 @@ class Ui_Dialog(object):
         self.toolButton_root = QToolButton(Dialog)
         self.toolButton_root.setObjectName(u"toolButton_root")
         icon = QIcon()
-        icon.addFile(u":/icons/slash.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/icons/slash.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_root.setIcon(icon)
 
         self.horizontalLayout.addWidget(self.toolButton_root)
@@ -54,7 +54,7 @@ class Ui_Dialog(object):
         self.toolButton_home = QToolButton(Dialog)
         self.toolButton_home.setObjectName(u"toolButton_home")
         icon1 = QIcon()
-        icon1.addFile(u":/icons/home.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/icons/home.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_home.setIcon(icon1)
 
         self.horizontalLayout.addWidget(self.toolButton_home)
@@ -62,7 +62,7 @@ class Ui_Dialog(object):
         self.toolButton_documents = QToolButton(Dialog)
         self.toolButton_documents.setObjectName(u"toolButton_documents")
         icon2 = QIcon()
-        icon2.addFile(u":/icons/book.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/icons/book.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_documents.setIcon(icon2)
 
         self.horizontalLayout.addWidget(self.toolButton_documents)
@@ -70,12 +70,12 @@ class Ui_Dialog(object):
         self.toolButton_desktop = QToolButton(Dialog)
         self.toolButton_desktop.setObjectName(u"toolButton_desktop")
         icon3 = QIcon()
-        icon3.addFile(u":/icons/desktop.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/icons/desktop.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_desktop.setIcon(icon3)
 
         self.horizontalLayout.addWidget(self.toolButton_desktop)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 

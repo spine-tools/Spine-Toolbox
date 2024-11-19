@@ -24,14 +24,16 @@ class TestEntityItem(TestCaseWithQApplication):
     _db_mngr = None
 
     def setUp(self):
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"), mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"
+        with (
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
             self._db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, codename="database", create=True)
+            self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
+            self._db_mngr.name_registry.register(self._db_map.sa_url, "database")
             self._spine_db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "database"})
             self._spine_db_editor.pivot_table_model = mock.MagicMock()
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
@@ -59,9 +61,12 @@ class TestEntityItem(TestCaseWithQApplication):
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
 
     def tearDown(self):
-        with mock.patch(
-            "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-        ) as mock_save_w_s, mock.patch("spinetoolbox.spine_db_manager.QMessageBox"):
+        with (
+            mock.patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
+            ) as mock_save_w_s,
+            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
             self._spine_db_editor.close()
             mock_save_w_s.assert_called_once()
         self._db_mngr.close_all_sessions()

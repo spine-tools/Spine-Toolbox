@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.8%20|%203.9%20|%203.10%20|%203.11|%203.12-blue.svg)](https://www.python.org/downloads/release/python-379/)
+[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -51,6 +51,7 @@ These steps apply to both [Python/pipx](#installation-with-python-and-pipx) opti
 
 1. If you don't have Python installed, please install it e.g. from 
 [Python.org](https://www.python.org/downloads/).
+Please note that we support Python versions from 3.9 to 3.12. (As of 21st Oct. 2024, Python 3.13 has issues with some of our dependencies)
 
 2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
 
@@ -145,10 +146,10 @@ anywhere on your system. <br><br>
     Optional: Instead of venv, one can also use a
 [miniconda](https://docs.conda.io/projects/conda/en/stable/glossary.html#miniconda-glossary) environment. 
 You can [download miniconda from here](https://docs.conda.io/en/latest/miniconda.html). **Note: Anaconda 
-environments are not supported.** Create a new Python 3.11 miniconda environment without linking packages from the 
+environments are not supported.** Create a new Python 3.12 (check the supported Python versions above) miniconda environment without linking packages from the 
 base environment using
 
-        conda create -n spinetoolbox python=3.11
+        conda create -n spinetoolbox python=3.12
 
 4. Activate the venv environment on Windows (provided that you are in `Spine-Toolbox` directory) using
 
@@ -244,7 +245,7 @@ run it, and follow the instructions to install Spine Toolbox.
 
 ### About requirements
 
-Python 3.8.1 or later is required. Python 3.8.0 is not supported due to problems in DLL loading on Windows.
+Python 3.9 or later is required (check above for supported Python versions).
 
 See the files `pyproject.toml` and `requirements.txt` for packages required to run Spine Toolbox.
 (Additional packages needed for development are listed in `dev-requirements.txt`.)
@@ -277,7 +278,7 @@ also [Problems in starting the application](#problems-in-starting-the-applicatio
 
 #### Installation fails
 
-Please make sure you are using Python 3.8.1 or later to install the requirements.
+Please make sure you are using Python 3.9 or later to install the requirements (check above for supported Python versions).
 
 #### 'No Python' error when installing with pipx
 
@@ -316,8 +317,6 @@ recommended.**
 The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide6` application, those 
 are not needed and there is a chance of conflicts between the packages.
-
-**Note**: Python 3.8.0 is not supported. Use Python 3.8.1 or later.
 
 ## Recorded Webinars showing the use of Spine Tools
 

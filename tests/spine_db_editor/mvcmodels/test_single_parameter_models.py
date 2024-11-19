@@ -78,7 +78,8 @@ class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
     def setUp(self):
         self._db_mngr = TestSpineDBManager(None, None)
         self._logger = MagicMock()
-        self._db_map = self._db_mngr.get_db_map("sqlite:///", self._logger, codename="Test database", create=True)
+        self._db_map = self._db_mngr.get_db_map("sqlite:///", self._logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.db_url, "Test database")
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()

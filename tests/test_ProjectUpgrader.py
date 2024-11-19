@@ -119,15 +119,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v1 = make_v1_project_dict()
         self.assertTrue(pu.is_valid(1, proj_v1))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 2
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 2),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 # Upgrade to version 2
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 proj_v2 = pu.upgrade(proj_v1, project_dir)
@@ -150,15 +147,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v2 = make_v2_project_dict()
         self.assertTrue(pu.is_valid(2, proj_v2))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 3
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 3),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
@@ -184,15 +178,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v3 = make_v3_project_dict()
         self.assertTrue(pu.is_valid(3, proj_v3))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 4
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 4),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
@@ -218,15 +209,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v4 = make_v4_project_dict()
         self.assertTrue(pu.is_valid(4, proj_v4))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 5
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 5),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
@@ -261,15 +249,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v9 = make_v9_project_dict()
         self.assertTrue(pu.is_valid(9, proj_v9))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 10
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 10),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file
@@ -305,15 +290,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v10 = make_v10_project_dict()
         self.assertTrue(pu.is_valid(10, proj_v10))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 11
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 11),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 proj_v11 = pu.upgrade(proj_v10, project_dir)
@@ -333,15 +315,12 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v11 = make_v11_project_dict()
         self.assertTrue(pu.is_valid(11, proj_v11))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 12
-            ), mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 12),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 proj_v12 = pu.upgrade(proj_v11, project_dir)
@@ -357,13 +336,11 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         proj_v1 = make_v1_project_dict()
         self.assertTrue(pu.is_valid(1, proj_v1))
         with TemporaryDirectory() as project_dir:
-            with mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file"
-            ) as mock_backup, mock.patch(
-                "spinetoolbox.project_upgrader.ProjectUpgrader.force_save"
-            ) as mock_force_save, mock.patch(
-                "spinetoolbox.project_upgrader.QMessageBox.question"
-            ) as mock_mb:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
                 mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 # Make temp preprocessing_tool.json tool spec file

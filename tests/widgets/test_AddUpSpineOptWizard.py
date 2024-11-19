@@ -22,11 +22,14 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
     def setUp(self):
         """Set up toolbox."""
         self.toolbox = create_toolboxui()
-        with mock.patch(
-            "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels"
-        ) as mock_fetch_python_kernels, mock.patch(
-            "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels"
-        ) as mock_fetch_julia_kernels:
+        with (
+            mock.patch(
+                "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels"
+            ) as mock_fetch_python_kernels,
+            mock.patch(
+                "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels"
+            ) as mock_fetch_julia_kernels,
+        ):
             self.settings_widget = SettingsWidget(self.toolbox)
             mock_fetch_python_kernels.assert_called()
             mock_fetch_julia_kernels.assert_called()
@@ -41,7 +44,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
-        self.assertEqual("Select Julia project", wizard.currentPage().title())
+        self.assertEqual("Select Julia", wizard.currentPage().title())
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
             wizard.next()
@@ -60,7 +63,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
-        self.assertEqual("Select Julia project", wizard.currentPage().title())
+        self.assertEqual("Select Julia", wizard.currentPage().title())
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             # We need the process to return a version that's lower than required
             curr_ver_split = [int(x) for x in REQUIRED_SPINE_OPT_VERSION.split(".")]
@@ -84,7 +87,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
-        self.assertEqual("Select Julia project", wizard.currentPage().title())
+        self.assertEqual("Select Julia", wizard.currentPage().title())
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             stdout = REQUIRED_SPINE_OPT_VERSION.encode()
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit), stdout=stdout)
@@ -97,7 +100,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
-        self.assertEqual("Select Julia project", wizard.currentPage().title())
+        self.assertEqual("Select Julia", wizard.currentPage().title())
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
             wizard.next()
@@ -114,22 +117,35 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
     def test_spine_opt_installation_fails(self):
         wizard = self._make_failed_wizard()
         wizard.setField("troubleshoot", False)
+        self.assertEqual("Installation failed", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())
 
-    def test_registry_reset_succeeds(self):
+    def test_troubleshoot_solution_page1_and_retry_spineopt_install_fails(self):
         wizard = self._make_failed_wizard()
         wizard.next()
         self.assertEqual("Troubleshooting", wizard.currentPage().title())
         wizard.setField("problem1", True)
         wizard.next()
-        self.assertEqual("Reset Julia General Registry", wizard.currentPage().title())
+        self.assertEqual("What now?", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Reset registry", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
+        self.assertEqual("Install SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
+            MockQProcess.return_value = MockInstantQProcess(finished_args=(-1, MockQProcess.NormalExit))
             wizard.next()
-        self.assertEqual("Resetting Julia General Registry", wizard.currentPage().title())
+        self.assertEqual("Installing SpineOpt", wizard.currentPage().title())
+        wizard.next()
+        self.assertEqual("Troubleshooting failed", wizard.currentPage().title())
+        self.assertTrue(wizard.currentPage().isFinalPage())
+
+    def test_troubleshoot_solution_page1_and_retry_spineopt_install_succeeds(self):
+        wizard = self._make_failed_wizard()
+        wizard.next()
+        self.assertEqual("Troubleshooting", wizard.currentPage().title())
+        wizard.setField("problem1", True)
+        wizard.next()
+        self.assertEqual("What now?", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isCommitPage())
+        self.assertFalse(wizard.currentPage().isFinalPage())
         self.assertEqual("Install SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
@@ -139,76 +155,29 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         self.assertEqual("Installation successful", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())
 
-    def test_registry_reset_fails(self):
-        wizard = self._make_failed_wizard()
-        wizard.next()
-        self.assertEqual("Troubleshooting", wizard.currentPage().title())
-        wizard.setField("problem1", True)
-        wizard.next()
-        self.assertEqual("Reset Julia General Registry", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Reset registry", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
-        with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(-1, MockQProcess.NormalExit))
-            wizard.next()
-        self.assertEqual("Resetting Julia General Registry", wizard.currentPage().title())
-        wizard.next()
-        self.assertEqual("Troubleshooting failed", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isFinalPage())
-
-    def test_registry_reset_succeeds_but_installing_spine_opt_fails_again_afterwards(self):
-        wizard = self._make_failed_wizard()
-        wizard.next()
-        self.assertEqual("Troubleshooting", wizard.currentPage().title())
-        wizard.setField("problem1", True)
-        wizard.next()
-        self.assertEqual("Reset Julia General Registry", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Reset registry", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
-        with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
-            wizard.next()
-        self.assertEqual("Resetting Julia General Registry", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Install SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
-        with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(-1, MockQProcess.NormalExit))
-            wizard.next()
-        self.assertEqual("Installing SpineOpt", wizard.currentPage().title())
-        wizard.next()
-        self.assertEqual("Troubleshooting failed", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isFinalPage())
-
-    def test_updating_wmf_succeeds(self):
+    def test_troubleshoot_solution_page2(self):
         wizard = self._make_failed_wizard()
         wizard.next()
         self.assertEqual("Troubleshooting", wizard.currentPage().title())
         wizard.setField("problem2", True)
         wizard.next()
-        self.assertEqual("Update Windows Managemet Framework", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Install SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
-        with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
-            wizard.next()
-        self.assertEqual("Installing SpineOpt", wizard.currentPage().title())
-        wizard.next()
-        self.assertEqual("Installation successful", wizard.currentPage().title())
+        self.assertEqual("Environment variable JULIA_SSL_CA_ROOTS_PATH missing", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())
 
-    def test_updating_wmf_fails(self):
+    def test_troubleshoot_solution_page3(self):
         wizard = self._make_failed_wizard()
         wizard.next()
         self.assertEqual("Troubleshooting", wizard.currentPage().title())
-        wizard.setField("problem2", True)
+        wizard.setField("problem3", True)
         wizard.next()
-        self.assertEqual("Update Windows Managemet Framework", wizard.currentPage().title())
-        self.assertTrue(wizard.currentPage().isCommitPage())
-        self.assertEqual("Install SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
-        with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(-1, MockQProcess.NormalExit))
-            wizard.next()
-        self.assertEqual("Installing SpineOpt", wizard.currentPage().title())
+        self.assertEqual("Reset Julia General Registry", wizard.currentPage().title())
+        self.assertTrue(wizard.currentPage().isFinalPage())
+
+    def test_troubleshoot_solution_page4(self):
+        wizard = self._make_failed_wizard()
         wizard.next()
-        self.assertEqual("Troubleshooting failed", wizard.currentPage().title())
+        self.assertEqual("Troubleshooting", wizard.currentPage().title())
+        wizard.setField("problem4", True)
+        wizard.next()
+        self.assertEqual("Update Windows Management Framework", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())

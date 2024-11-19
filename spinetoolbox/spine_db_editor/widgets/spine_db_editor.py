@@ -31,6 +31,7 @@ from spinedb_api.helpers import vacuum
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 from ...helpers import (
+    add_keyboard_shortcuts_to_action_tool_tips,
     busy_effect,
     call_on_focused_widget,
     format_string_list,
@@ -74,8 +75,8 @@ class SpineDBEditorBase(QMainWindow):
         from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
         self.db_mngr = db_mngr
-        self.db_maps = []
-        self.db_urls = []
+        self.db_maps: list[DatabaseMapping] = []
+        self.db_urls: list[str] = []
         self._history = []
         self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
         self._change_notifiers = []
@@ -83,6 +84,7 @@ class SpineDBEditorBase(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        add_keyboard_shortcuts_to_action_tool_tips(self.ui)
         self.takeCentralWidget().deleteLater()
         self.toolbar = DBEditorToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
@@ -123,36 +125,37 @@ class SpineDBEditorBase(QMainWindow):
         return ";".join(self.db_urls)
 
     @property
-    def db_names(self):
-        return ", ".join([f"{db_map.codename}" for db_map in self.db_maps])
-
-    @property
     def first_db_map(self):
         return self.db_maps[0]
 
-    @property
-    def db_url_codenames(self):
-        return {db_map.db_url: db_map.codename for db_map in self.db_maps}
-
     @staticmethod
     def is_db_map_editor():
-        """Always returns True as SpineDBEditors are truly database editors.
-
-        Unless, of course, the database can one day be opened in read-only mode.
-        In that case this method should return False.
-
-        Returns:
-            bool: Always True
-        """
+        """Always returns True as SpineDBEditors are truly database editors."""
         return True
 
-    def load_db_urls(self, db_url_codenames, create=False, update_history=True, window=False):
+    @Slot(str, str)
+    def _update_title(self, url, name):
+        """Updates window title if database display name has changed.
+
+        Args:
+            url (str): database url
+            name (str): database display name
+        """
+        if not any(str(db_map.sa_url) == url for db_map in self.db_maps):
+            return
+        self._reset_window_title()
+
+    def _reset_window_title(self):
+        """Sets new window title according to open databases."""
+        self.setWindowTitle(", ".join(self.db_mngr.name_registry.display_name_iter(self.db_maps)))
+
+    def load_db_urls(self, db_urls, create=False, update_history=True):
         self.ui.actionImport.setEnabled(False)
         self.ui.actionExport.setEnabled(False)
         self.ui.actionMass_remove_items.setEnabled(False)
         self.ui.actionVacuum.setEnabled(False)
         self.toolbar.reload_action.setEnabled(False)
-        if not db_url_codenames:
+        if not db_urls:
             return True
         if not self.tear_down():
             return False
@@ -161,10 +164,8 @@ class SpineDBEditorBase(QMainWindow):
         self.db_maps = []
         self._changelog.clear()
         self._purge_change_notifiers()
-        for url, codename in db_url_codenames.items():
-            db_map = self.db_mngr.get_db_map(
-                url, self, codename=codename, create=create, window=window, force_upgrade_prompt=True
-            )
+        for url in db_urls:
+            db_map = self.db_mngr.get_db_map(url, self, create=create, force_upgrade_prompt=True)
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:
@@ -182,9 +183,9 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.register_listener(self, *self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()
-        self.setWindowTitle(f"{self.db_names}")  # This sets the tab name, just in case
+        self._reset_window_title()
         if update_history:
-            self.add_urls_to_history(self.db_url_codenames)
+            self.add_urls_to_history()
         self.update_last_view()
         self.restore_ui(self.last_view, fresh=True)
         self.update_commit_enabled()
@@ -198,19 +199,16 @@ class SpineDBEditorBase(QMainWindow):
             self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_dbs_menu)
 
-    def add_urls_to_history(self, db_urls):
-        """Adds urls to history.
-
-        Args:
-            db_urls (dict)
-        """
+    def add_urls_to_history(self):
+        """Adds current urls to history."""
         opened_names = set()
         for row in self._history:
             for name in row:
                 opened_names.add(name)
-        for db_url, name in db_urls.items():
+        for url in self.db_urls:
+            name = self.db_mngr.name_registry.display_name(url)
             if name not in opened_names:
-                self._history.insert(0, {name: db_url})
+                self._history.insert(0, {name: url})
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
@@ -226,8 +224,8 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
-        url = "sqlite:///" + file_path
-        self.load_db_urls({url: None})
+        url = "sqlite:///" + os.path.normcase(file_path)
+        self.load_db_urls([url])
 
     @Slot(bool)
     def add_db_file(self, _=False):
@@ -238,10 +236,8 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
-        url = "sqlite:///" + file_path
-        db_url_codenames = self.db_url_codenames
-        db_url_codenames[url] = None
-        self.load_db_urls(db_url_codenames)
+        url = "sqlite:///" + os.path.normcase(file_path)
+        self.load_db_urls(self.db_urls + [url])
 
     @Slot(bool)
     def create_db_file(self, _=False):
@@ -256,8 +252,8 @@ class SpineDBEditorBase(QMainWindow):
             os.remove(file_path)
         except OSError:
             pass
-        url = "sqlite:///" + file_path
-        self.load_db_urls({url: None}, create=True)
+        url = "sqlite:///" + os.path.normcase(file_path)
+        self.load_db_urls([url], create=True)
 
     def reset_docks(self):
         """Resets the layout of the dock widgets for this URL"""
@@ -282,13 +278,12 @@ class SpineDBEditorBase(QMainWindow):
 
     def connect_signals(self):
         """Connects signals to slots."""
-        # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.err_msg.showMessage)
         self.db_mngr.items_added.connect(self._handle_items_added)
         self.db_mngr.items_updated.connect(self._handle_items_updated)
         self.db_mngr.items_removed.connect(self._handle_items_removed)
-        # Menu actions
+        self.db_mngr.name_registry.display_name_changed.connect(self._update_title)
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionView_history.triggered.connect(self._browse_commits)
@@ -308,7 +303,7 @@ class SpineDBEditorBase(QMainWindow):
         msg = "Vacuum finished<ul>"
         for db_map in self.db_maps:
             freed, unit = vacuum(db_map.db_url)
-            msg += f"<li>{freed} {unit} freed from {db_map.codename}</li>"
+            msg += f"<li>{freed} {unit} freed from {self.db_mngr.name_registry.display_name(db_map.sa_url)}</li>"
         msg += "</ul>"
         self.msg.emit(msg)
 
@@ -336,9 +331,7 @@ class SpineDBEditorBase(QMainWindow):
     @Slot()
     def _refresh_undo_redo_actions(self):
         self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
-        self.ui.actionUndo.setToolTip(f"<p>{self.undo_action.text()}</p><p>Ctrl+Z</p>")
         self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
-        self.ui.actionRedo.setToolTip(f"<p>{self.redo_action.text()}</p><p>Ctrl+Y</p>")
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
@@ -555,7 +548,7 @@ class SpineDBEditorBase(QMainWindow):
         Duplicates a scenario.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             scen_id (int)
         """
         orig_name = self.db_mngr.get_item(db_map, "scenario", scen_id)["name"]
@@ -597,7 +590,7 @@ class SpineDBEditorBase(QMainWindow):
         dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
         if not dirty_db_maps:
             return
-        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        db_names = ", ".join(self.db_mngr.name_registry.display_name_iter(dirty_db_maps))
         commit_msg = self._get_commit_msg(db_names)
         if not commit_msg:
             return
@@ -609,7 +602,7 @@ class SpineDBEditorBase(QMainWindow):
         dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
         if not dirty_db_maps:
             return
-        db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+        db_names = ", ".join(self.db_mngr.name_registry.display_name_iter(dirty_db_maps))
         if not self._get_rollback_confirmation(db_names):
             return
         self.db_mngr.rollback_session(*dirty_db_maps)
@@ -618,7 +611,7 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        db_names = ", ".join([x.codename for x in db_maps])
+        db_names = ", ".join(self.db_mngr.name_registry.display_name_iter(db_maps))
         if cookie is self:
             msg = f"All changes in {db_names} committed successfully."
             self.msg.emit(msg)
@@ -631,7 +624,7 @@ class SpineDBEditorBase(QMainWindow):
         db_maps = set(self.db_maps) & set(db_maps)
         if not db_maps:
             return
-        db_names = ", ".join([x.codename for x in db_maps])
+        db_names = ", ".join(self.db_mngr.name_registry.display_name_iter(db_maps))
         msg = f"All changes in {db_names} rolled back successfully."
         self.msg.emit(msg)
 
@@ -681,7 +674,9 @@ class SpineDBEditorBase(QMainWindow):
         for db_map, error_log in db_map_error_log.items():
             if isinstance(error_log, str):
                 error_log = [error_log]
-            msg = "From " + db_map.codename + ":" + format_string_list(error_log)
+            msg = (
+                "From " + self.db_mngr.name_registry.display_name(db_map.sa_url) + ": " + format_string_list(error_log)
+            )
             msgs.append(msg)
         self.msg_error.emit(format_string_list(msgs))
 
@@ -769,7 +764,7 @@ class SpineDBEditorBase(QMainWindow):
             answer = self._prompt_to_commit_changes()
             if answer == QMessageBox.StandardButton.Cancel:
                 return False
-            db_names = ", ".join([db_map.codename for db_map in dirty_db_maps])
+            db_names = ", ".join(self.db_mngr.name_registry.display_name_iter(dirty_db_maps))
             if answer == QMessageBox.StandardButton.Save:
                 commit_dirty = True
                 commit_msg = self._get_commit_msg(db_names)
@@ -781,7 +776,7 @@ class SpineDBEditorBase(QMainWindow):
             self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
         )
         if failed_db_maps:
-            msg = f"Failed to commit {[db_map.codename for db_map in failed_db_maps]}"
+            msg = f"Failed to commit {list(self.db_mngr.name_registry.display_name_iter(failed_db_maps))}"
             self.db_mngr.receive_error_msg({i: [msg] for i in failed_db_maps})
             return False
         return True
@@ -872,6 +867,7 @@ class SpineDBEditorBase(QMainWindow):
             event.ignore()
             return
         self.save_window_state()
+        self.db_mngr.name_registry.display_name_changed.disconnect(self._update_title)
         super().closeEvent(event)
 
     @staticmethod
@@ -907,11 +903,11 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
 
     pinned_values_updated = Signal(list)
 
-    def __init__(self, db_mngr, db_url_codenames=None):
-        """Initializes everything.
-
+    def __init__(self, db_mngr, db_urls=None):
+        """
         Args:
             db_mngr (SpineDBManager): The manager to use
+            db_urls (Iterable of str, optional): URLs of databases to load
         """
         super().__init__(db_mngr)
         self._original_size = None
@@ -926,8 +922,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.connect_signals()
         self.apply_stacked_style()
         self.set_db_column_visibility(False)
-        if db_url_codenames is not None:
-            self.load_db_urls(db_url_codenames)
+        if db_urls is not None:
+            self.load_db_urls(db_urls)
 
     def set_db_column_visibility(self, visible):
         """Set the visibility of the database -column in all the views it is present"""

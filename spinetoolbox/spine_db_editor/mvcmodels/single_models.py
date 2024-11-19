@@ -48,6 +48,7 @@ class SingleModelBase(HalfSortedTableModel):
 
     item_type: ClassVar[str] = NotImplemented
     group_fields: ClassVar[Iterable[str]] = ()
+    can_be_filtered = True
 
     def __init__(self, parent, db_map, entity_class_id, committed, lazy=False):
         """
@@ -67,7 +68,9 @@ class SingleModelBase(HalfSortedTableModel):
 
     def __lt__(self, other):
         if self.entity_class_name == other.entity_class_name:
-            return self.db_map.codename < other.db_map.codename
+            return self.db_mngr.name_registry.display_name(
+                self.db_map.sa_url
+            ) < self.db_mngr.name_registry.display_name(other.db_map.sa_url)
         keys = {}
         for side, model in {"left": self, "right": other}.items():
             dim = len(model.dimension_id_list)
@@ -112,10 +115,6 @@ class SingleModelBase(HalfSortedTableModel):
     @property
     def fixed_fields(self):
         return ["entity_class_name", "database"]
-
-    @property
-    def can_be_filtered(self):
-        return True
 
     def _mapped_field(self, field):
         return self.field_map.get(field, field)
@@ -202,7 +201,7 @@ class SingleModelBase(HalfSortedTableModel):
             return FIXED_FIELD_COLOR
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
             if field == "database":
-                return self.db_map.codename
+                return self.db_mngr.name_registry.display_name(self.db_map.sa_url)
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ItemDataRole.ToolTipRole:

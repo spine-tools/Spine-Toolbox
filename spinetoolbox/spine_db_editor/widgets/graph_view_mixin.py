@@ -661,7 +661,7 @@ class GraphViewMixin:
         entity = self.db_mngr.get_item(db_map, "entity", entity_id)
         key = (entity["entity_class_name"], entity["dimension_name_list"], entity["entity_byname"])
         if not self.ui.graphicsView.get_property("merge_dbs"):
-            key += (db_map.codename,)
+            key += (self.db_mngr.name_registry.display_name(db_map.sa_url),)
         return key
 
     def _update_entity_element_inds(self, db_map_element_id_lists):

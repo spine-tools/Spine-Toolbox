@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Empty models for dialogs as well as parameter definitions and values."""
+from typing import ClassVar
 from PySide6.QtCore import Qt
 from ...helpers import DB_ITEM_SEPARATOR, rows_to_row_count_tuples
 from ...mvcmodels.empty_row_model import EmptyRowModel
@@ -22,6 +23,9 @@ from .single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAn
 class EmptyModelBase(EmptyRowModel):
     """Base class for all empty models that go in a CompoundModelBase subclass."""
 
+    item_type: ClassVar[str] = None
+    can_be_filtered = False
+
     def __init__(self, parent):
         """
         Args:
@@ -32,10 +36,6 @@ class EmptyModelBase(EmptyRowModel):
         self.db_map = None
         self.entity_class_id = None
         self._db_map_entities_to_add = {}
-
-    @property
-    def item_type(self):
-        raise NotImplementedError()
 
     @property
     def field_map(self):
@@ -68,7 +68,7 @@ class EmptyModelBase(EmptyRowModel):
 
     def _notify_about_added_entities(self):
         editor = self.parent().parent()
-        popup = AddedEntitiesPopup(editor, self._db_map_entities_to_add)
+        popup = AddedEntitiesPopup(editor, self.db_mngr.name_registry, self._db_map_entities_to_add)
         popup.show()
 
     def _clean_to_be_added_entities(self, db_map_items):
@@ -91,10 +91,6 @@ class EmptyModelBase(EmptyRowModel):
         which rows have been added and thus need to be removed."""
         raise NotImplementedError()
 
-    @property
-    def can_be_filtered(self):
-        return False
-
     def accepted_rows(self):
         return range(self.rowCount())
 
@@ -109,8 +105,8 @@ class EmptyModelBase(EmptyRowModel):
         Finds and removes model items that were successfully added to the db."""
         added_ids = set()
         for db_map, items in db_map_data.items():
+            database = self.db_mngr.name_registry.display_name(db_map.sa_url)
             for item in items:
-                database = db_map.codename
                 unique_id = (database, *self._make_unique_id(item))
                 added_ids.add(unique_id)
         removed_rows = []
@@ -167,8 +163,13 @@ class EmptyModelBase(EmptyRowModel):
         db_map_data = {}
         for item in items:
             database = item.pop("database")
-            db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
-            if not db_map:
+            try:
+                db_map = next(
+                    iter(
+                        x for x in self.db_mngr.db_maps if self.db_mngr.name_registry.display_name(x.sa_url) == database
+                    )
+                )
+            except StopIteration:
                 continue
             item = {k: v for k, v in item.items() if v is not None}
             db_map_data.setdefault(db_map, []).append(item)
@@ -177,7 +178,10 @@ class EmptyModelBase(EmptyRowModel):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == DB_MAP_ROLE:
             database = self.data(index, Qt.ItemDataRole.DisplayRole)
-            return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
+            return next(
+                iter(x for x in self.db_mngr.db_maps if self.db_mngr.name_registry.display_name(x.sa_url) == database),
+                None,
+            )
         return super().data(index, role)
 
 
@@ -244,9 +248,7 @@ class EntityMixin:
 class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelBase):
     """An empty parameter_definition model."""
 
-    @property
-    def item_type(self):
-        return "parameter_definition"
+    item_type = "parameter_definition"
 
     def _make_unique_id(self, item):
         return tuple(item.get(x) for x in ("entity_class_name", "name"))
@@ -268,9 +270,7 @@ class EmptyParameterValueModel(
 ):
     """An empty parameter_value model."""
 
-    @property
-    def item_type(self):
-        return "parameter_value"
+    item_type = "parameter_value"
 
     @staticmethod
     def _check_item(item):
@@ -309,9 +309,7 @@ class EmptyParameterValueModel(
 
 
 class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyModelBase):
-    @property
-    def item_type(self):
-        return "entity_alternative"
+    item_type = "entity_alternative"
 
     @staticmethod
     def _check_item(item):

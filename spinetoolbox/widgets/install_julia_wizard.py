@@ -13,6 +13,7 @@
 """Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
 import os
+import sys
 
 try:
     import jill.install as jill_install
@@ -31,6 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
+    QApplication,
 )
 from spine_engine.utils.helpers import resolve_current_python_interpreter
 from ..config import APPLICATION_PATH
@@ -71,13 +73,15 @@ class InstallJuliaWizard(QWizard):
         self.setStartId(_PageId.INTRO)
 
     def set_julia_exe(self):
-        basename = next(
-            (file for file in os.listdir(self.field("symlink_dir")) if file.lower().startswith("julia")), None
-        )
-        if basename is None:
+        """Returns the path to the jill julia launcher, which always launches the latest Julia release."""
+        if not sys.platform == "win32":
+            julia_launcher_path = os.path.join(self.field("symlink_dir"), "julia")
+        else:
+            julia_launcher_path = os.path.join(self.field("symlink_dir"), "julia.cmd")
+        if not os.path.exists(julia_launcher_path):
             self.julia_exe = None
             return
-        self.julia_exe = os.path.join(self.field("symlink_dir"), basename)
+        self.julia_exe = julia_launcher_path
 
     def accept(self):
         super().accept()
@@ -156,7 +160,7 @@ class SelectDirsPage(QWizardPage):
         install_dir_button.clicked.connect(self._select_install_dir)
         symlink_dir_button.clicked.connect(self._select_symlink_dir)
         self.setCommitPage(True)
-        self.setButtonText(QWizard.CommitButton, "Install Julia")
+        self.setButtonText(QWizard.WizardButton.CommitButton, "Install Julia")
 
     def initializePage(self):
         self._install_dir_line_edit.setText(jill_install.default_install_dir())
@@ -215,12 +219,12 @@ class InstallJuliaPage(QWizardProcessPage):
         self.msg_success.emit("Julia installation started")
         cmd = python + " " + " ".join(args)
         self.msg.emit(f"$ <b>{cmd}<b/>")
-        qApp.setOverrideCursor(QCursor(Qt.BusyCursor))  # pylint: disable=undefined-variable
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
     @Slot(int)
     def _handle_julia_install_finished(self, ret):
-        qApp.restoreOverrideCursor()  # pylint: disable=undefined-variable
+        QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_julia_install_finished)
         if self.wizard().currentPage() != self:
             return

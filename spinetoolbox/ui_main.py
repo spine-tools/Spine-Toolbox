@@ -47,6 +47,7 @@ from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient,
 from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
+    add_keyboard_shortcuts_to_action_tool_tips,
     busy_effect,
     color_from_index,
     create_dir,
@@ -126,6 +127,7 @@ class ToolboxUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)  # Set up gui widgets from Qt Designer files
         self.takeCentralWidget().deleteLater()
+        add_keyboard_shortcuts_to_action_tool_tips(self.ui)
         self.label_item_name = QLabel()
         self._button_item_dir = QToolButton()
         self._properties_title = QWidget()
@@ -394,7 +396,7 @@ class ToolboxUI(QMainWindow):
         """
         self._display_welcome_message()
         if sys.version_info < (3, 9):
-            self._display_python_38_deprecation_message()
+            self._display_deprecated_python_warning()
         self.init_project(project_dir_from_args)
 
     def _display_welcome_message(self):
@@ -408,12 +410,11 @@ class ToolboxUI(QMainWindow):
         welcome_msg = f"Welcome to Spine Toolbox! If you need help, please read the {getting_started_anchor} guide."
         self.msg.emit(welcome_msg)
 
-    def _display_python_38_deprecation_message(self):
-        """Shows Python 3.8 deprecation message in the event log."""
+    def _display_deprecated_python_warning(self):
+        """Shows a warning message in Event log."""
         self.msg_warning.emit("Please upgrade your Python.")
         self.msg_warning.emit(
-            f"Looks like you are running Python {sys.version_info[0]}.{sys.version_info[1]}. "
-            f"Support for <b>Python older than 3.9 </b> will be dropped in September 2024."
+            f"Your Python version {sys.version_info[0]}.{sys.version_info[1]} is unsupported. Expect trouble."
         )
 
     def init_project(self, project_dir):
@@ -1235,7 +1236,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(bool)
     def new_db_editor(self):
-        editor = MultiSpineDBEditor(self.db_mngr, {})
+        editor = MultiSpineDBEditor(self.db_mngr, [])
         editor.show()
 
     @Slot()
