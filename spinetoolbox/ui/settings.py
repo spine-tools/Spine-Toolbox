@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.3
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -63,24 +63,24 @@ class Ui_SettingsForm(object):
         self.splitter.setChildrenCollapsible(False)
         self.listWidget = QListWidget(self.splitter)
         icon = QIcon()
-        icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem = QListWidgetItem(self.listWidget)
         __qlistwidgetitem.setIcon(icon);
         __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
         icon1 = QIcon()
-        icon1.addFile(u":/icons/project_item_icons/hammer.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon1.addFile(u":/icons/project_item_icons/hammer.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem1 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem1.setIcon(icon1);
         icon2 = QIcon()
-        icon2.addFile(u":/icons/database.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon2.addFile(u":/icons/database.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem2 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem2.setIcon(icon2);
         icon3 = QIcon()
-        icon3.addFile(u":/icons/wrench.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon3.addFile(u":/icons/wrench.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem3.setIcon(icon3);
         icon4 = QIcon()
-        icon4.addFile(u":/icons/tractor.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon4.addFile(u":/icons/tractor.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
         __qlistwidgetitem4.setIcon(icon4);
         self.listWidget.setObjectName(u"listWidget")
@@ -91,14 +91,14 @@ class Ui_SettingsForm(object):
         self.listWidget.setSizePolicy(sizePolicy1)
         self.listWidget.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustIgnored)
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.listWidget.setProperty("showDropIndicator", True)
+        self.listWidget.setProperty(u"showDropIndicator", True)
         self.listWidget.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
         self.listWidget.setDefaultDropAction(Qt.DropAction.CopyAction)
         self.listWidget.setAlternatingRowColors(False)
         self.listWidget.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.listWidget.setMovement(QListView.Movement.Static)
         self.listWidget.setFlow(QListView.Flow.TopToBottom)
-        self.listWidget.setProperty("isWrapping", False)
+        self.listWidget.setProperty(u"isWrapping", False)
         self.listWidget.setResizeMode(QListView.ResizeMode.Fixed)
         self.listWidget.setLayoutMode(QListView.LayoutMode.SinglePass)
         self.listWidget.setSpacing(0)
@@ -153,7 +153,7 @@ class Ui_SettingsForm(object):
         sizePolicy4.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
         self.toolButton_browse_work.setSizePolicy(sizePolicy4)
         icon5 = QIcon()
-        icon5.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Normal, QIcon.Off)
+        icon5.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_browse_work.setIcon(icon5)
 
         self.horizontalLayout_6.addWidget(self.toolButton_browse_work)
@@ -406,8 +406,8 @@ class Ui_SettingsForm(object):
 
         self.line_3 = QFrame(self.groupBox_julia)
         self.line_3.setObjectName(u"line_3")
-        self.line_3.setFrameShape(QFrame.VLine)
-        self.line_3.setFrameShadow(QFrame.Sunken)
+        self.line_3.setFrameShape(QFrame.Shape.VLine)
+        self.line_3.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout_14.addWidget(self.line_3)
 
@@ -489,8 +489,8 @@ class Ui_SettingsForm(object):
 
         self.line = QFrame(self.groupBox_julia)
         self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.verticalLayout_10.addWidget(self.line)
 
@@ -543,8 +543,8 @@ class Ui_SettingsForm(object):
 
         self.line_2 = QFrame(self.groupBox_python)
         self.line_2.setObjectName(u"line_2")
-        self.line_2.setFrameShape(QFrame.VLine)
-        self.line_2.setFrameShadow(QFrame.Sunken)
+        self.line_2.setFrameShape(QFrame.Shape.VLine)
+        self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
         self.horizontalLayout_5.addWidget(self.line_2)
 
@@ -909,7 +909,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_18.setObjectName(u"horizontalLayout_18")
         self.lineEdit_secfolder = QLineEdit(self.groupBox_4)
         self.lineEdit_secfolder.setObjectName(u"lineEdit_secfolder")
-        self.lineEdit_secfolder.setCursor(QCursor(Qt.ArrowCursor))
+        self.lineEdit_secfolder.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.lineEdit_secfolder.setReadOnly(False)
         self.lineEdit_secfolder.setClearButtonEnabled(True)
 
@@ -949,7 +949,7 @@ class Ui_SettingsForm(object):
         self.spinBox_port.setFrame(True)
         self.spinBox_port.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.spinBox_port.setAccelerated(True)
-        self.spinBox_port.setProperty("showGroupSeparator", False)
+        self.spinBox_port.setProperty(u"showGroupSeparator", False)
         self.spinBox_port.setMinimum(49152)
         self.spinBox_port.setMaximum(65535)
 

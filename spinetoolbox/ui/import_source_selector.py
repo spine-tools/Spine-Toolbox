@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'import_source_selector.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################

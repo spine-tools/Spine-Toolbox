@@ -211,10 +211,8 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
-        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
-        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
-        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
-        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
+        self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingConnection], "Link properties")
+        self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingJump], "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
         self.refresh_toolbars()
@@ -809,22 +807,8 @@ class ToolboxUI(QMainWindow):
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
-            color = factory.icon_color()
-            icon = factory.icon()
-            properties_ui.set_color_and_icon(color, icon)
-            scroll_area = QScrollArea(self)
-            scroll_area.setWidget(properties_ui)
-            scroll_area.setWidgetResizable(True)
-            tab = self._make_properties_tab(scroll_area)
-            self.ui.tabWidget_item_properties.addTab(tab, item_type)
-
-    def _make_properties_tab(self, properties_ui):
-        tab = QWidget(self)
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(properties_ui)
-        return tab
+            properties_ui.set_color_and_icon(factory.icon_color(), factory.icon())
+            self.ui.tabWidget_item_properties.addTab(properties_ui, item_type)
 
     def add_project_items(self, items_dict):
         """Pushes an AddProjectItemsCommand to the undo stack.
