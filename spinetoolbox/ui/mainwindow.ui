@@ -151,7 +151,7 @@
     </size>
    </property>
    <property name="features">
-    <set>QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
+    <set>QDockWidget::DockWidgetFeature::DockWidgetClosable|QDockWidget::DockWidgetFeature::DockWidgetFloatable|QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
    </property>
    <property name="windowTitle">
     <string>Event Log</string>
@@ -196,7 +196,7 @@
           </sizepolicy>
          </property>
          <property name="contextMenuPolicy">
-          <enum>Qt::DefaultContextMenu</enum>
+          <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
          </property>
          <property name="openLinks">
           <bool>false</bool>
@@ -213,10 +213,10 @@
            <normaloff>:/icons/check-circle.svg</normaloff>:/icons/check-circle.svg</iconset>
          </property>
          <property name="popupMode">
-          <enum>QToolButton::InstantPopup</enum>
+          <enum>QToolButton::ToolButtonPopupMode::InstantPopup</enum>
          </property>
          <property name="toolButtonStyle">
-          <enum>Qt::ToolButtonTextBesideIcon</enum>
+          <enum>Qt::ToolButtonStyle::ToolButtonTextBesideIcon</enum>
          </property>
         </widget>
        </item>
@@ -255,7 +255,7 @@
      <item>
       <widget class="QSplitter" name="splitter_console">
        <property name="orientation">
-        <enum>Qt::Vertical</enum>
+        <enum>Qt::Orientation::Vertical</enum>
        </property>
        <property name="childrenCollapsible">
         <bool>false</bool>
@@ -275,13 +275,13 @@
        </widget>
        <widget class="QLabel" name="label_no_console">
         <property name="contextMenuPolicy">
-         <enum>Qt::DefaultContextMenu</enum>
+         <enum>Qt::ContextMenuPolicy::DefaultContextMenu</enum>
         </property>
         <property name="text">
          <string>Select an executing item to see its console</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <set>Qt::AlignmentFlag::AlignCenter</set>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -294,7 +294,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_design_view">
    <property name="features">
-    <set>QDockWidget::DockWidgetMovable</set>
+    <set>QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
    </property>
    <property name="windowTitle">
     <string>Design View</string>
@@ -322,25 +322,25 @@
      <item>
       <widget class="DesignQGraphicsView" name="graphicsView">
        <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
+        <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
+        <enum>QFrame::Shadow::Raised</enum>
        </property>
        <property name="renderHints">
-        <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
+        <set>QPainter::RenderHint::Antialiasing|QPainter::RenderHint::TextAntialiasing</set>
        </property>
        <property name="dragMode">
-        <enum>QGraphicsView::RubberBandDrag</enum>
+        <enum>QGraphicsView::DragMode::RubberBandDrag</enum>
        </property>
        <property name="resizeAnchor">
-        <enum>QGraphicsView::AnchorUnderMouse</enum>
+        <enum>QGraphicsView::ViewportAnchor::AnchorUnderMouse</enum>
        </property>
        <property name="viewportUpdateMode">
-        <enum>QGraphicsView::FullViewportUpdate</enum>
+        <enum>QGraphicsView::ViewportUpdateMode::FullViewportUpdate</enum>
        </property>
        <property name="rubberBandSelectionMode">
-        <enum>Qt::ContainsItemBoundingRect</enum>
+        <enum>Qt::ItemSelectionMode::ContainsItemBoundingRect</enum>
        </property>
       </widget>
      </item>
