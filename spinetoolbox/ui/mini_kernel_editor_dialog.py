@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mini_kernel_editor_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -48,13 +48,13 @@ class Ui_Dialog(object):
         self.verticalLayout = QVBoxLayout(self.widget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
 
         self.label_message = QLabel(self.widget)
         self.label_message.setObjectName(u"label_message")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(2)
         sizePolicy.setHeightForWidth(self.label_message.sizePolicy().hasHeightForWidth())
@@ -68,14 +68,14 @@ class Ui_Dialog(object):
 
         self.verticalLayout.addWidget(self.label_message)
 
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer_2)
 
         self.splitter.addWidget(self.widget)
         self.textBrowser_process = QTextBrowser(self.splitter)
         self.textBrowser_process.setObjectName(u"textBrowser_process")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(1)
         sizePolicy1.setHeightForWidth(self.textBrowser_process.sizePolicy().hasHeightForWidth())
@@ -86,7 +86,7 @@ class Ui_Dialog(object):
 
         self.stackedWidget = QStackedWidget(Dialog)
         self.stackedWidget.setObjectName(u"stackedWidget")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
@@ -103,7 +103,7 @@ class Ui_Dialog(object):
         self.lineEdit_python_interpreter = QLineEdit(self.stackedWidgetPage1)
         self.lineEdit_python_interpreter.setObjectName(u"lineEdit_python_interpreter")
         self.lineEdit_python_interpreter.setEnabled(True)
-        self.lineEdit_python_interpreter.setCursor(QCursor(Qt.IBeamCursor))
+        self.lineEdit_python_interpreter.setCursor(QCursor(Qt.CursorShape.IBeamCursor))
         self.lineEdit_python_interpreter.setFocusPolicy(Qt.StrongFocus)
         self.lineEdit_python_interpreter.setReadOnly(True)
         self.lineEdit_python_interpreter.setClearButtonEnabled(False)
@@ -113,7 +113,7 @@ class Ui_Dialog(object):
         self.stackedWidget.addWidget(self.stackedWidgetPage1)
         self.stackedWidgetPage2 = QWidget()
         self.stackedWidgetPage2.setObjectName(u"stackedWidgetPage2")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.stackedWidgetPage2.sizePolicy().hasHeightForWidth())

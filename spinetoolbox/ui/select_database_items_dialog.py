@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'select_database_items_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.2
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -37,7 +37,7 @@ class Ui_Dialog(object):
         Dialog.resize(400, 307)
         self.root_layout = QVBoxLayout(Dialog)
         self.root_layout.setObjectName(u"root_layout")
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.root_layout.addItem(self.verticalSpacer)
 
