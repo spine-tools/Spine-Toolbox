@@ -96,6 +96,10 @@ class Group(QGraphicsRectItem):
         return [item for item in self.items if isinstance(item, ProjectItemIcon)]
 
     @property
+    def links(self):
+        return [item for item in self.items if not isinstance(item, ProjectItemIcon)]
+
+    @property
     def n_items(self):
         return len(self._items)
 
@@ -153,6 +157,23 @@ class Group(QGraphicsRectItem):
                     link.my_groups.remove(self)
         item.my_groups.remove(self)
         self.update_group_rect()
+
+    def refresh_links(self):
+        """Removes all links and jumps from this group and add them back.
+
+        This is needed when UI mode is changed because all link and jump instances
+        are destroyed when UI mode changes.
+        """
+        link_names = [l.name for l in self.links]
+        print(f"links to refresh:{link_names}")
+        for link in link_names:
+            self._items.pop(link)
+        for connection in self._toolbox.project.connections:
+            if connection.name in link_names:
+                self.add_item(connection.name)
+        for jump in self._toolbox.project.jumps:
+            if jump.name in link_names:
+                self.add_item(jump.name)
 
     @Slot(bool)
     def call_disband_group(self, _=False):
@@ -277,6 +298,7 @@ class Group(QGraphicsRectItem):
 
     def contextMenuEvent(self, event):
         """Opens context-menu in design mode."""
+        print(f"{self.name}: {self.item_names}")
         if self._toolbox.active_ui_mode == "toolboxuilite":
             event.ignore()  # Send context-menu request to graphics view
             return

@@ -168,15 +168,8 @@ class ToolboxUIBase(QMainWindow):
             self.active_ui_window.ui.graphicsView.do_add_jump(jump)
             jump.jump_link.update_icons()
         for group in self.project.groups.values():
+            group.refresh_links()
             self.active_ui_window.ui.graphicsView.add_group_on_scene(group)
-            # TODO:
-            # Remove all links from Groups. items contains wrong link icon references
-            # Then find the new links from the scene and add them back to the group and to the links my_groups
-            # ex_items = [for item in]
-            # for item in group.items:
-            #     if isinstance(item, JumpOrLink):
-            #         print(item.name)
-            #         item.my_groups.add(group)
 
     def connect_project_signals(self):
         """Connects project signals based on current UI mode."""

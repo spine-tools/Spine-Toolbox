@@ -1639,8 +1639,6 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             item (ProjectItem, Group, optional): Project item, Group or None
         """
-        if item is not None:
-            print(f"item my_groups:{item.get_icon().my_groups}")
         menu = QMenu(self)
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
@@ -1670,6 +1668,7 @@ class ToolboxUI(QMainWindow):
                 menu.addSeparator()
                 menu.addAction(self.ui.actionRename_item)
                 if len(item.get_icon().my_groups) > 0:
+                    print(f"item my_groups:{item.get_icon().my_groups}")
                     menu.addSeparator()
                     for group in item.get_icon().my_groups:
                         text = f"Leave {group.name}"
