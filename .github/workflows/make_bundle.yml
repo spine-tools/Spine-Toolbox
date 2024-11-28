@@ -65,7 +65,7 @@ jobs:
         run: |
           cd embedded-python/Scripts
           ./pip.exe --version
-          ./pip.exe install ipykernel jill
+          ./pip.exe install ipykernel jill pandas spinedb-api
       - name: List packages in embedded Python
         run: |
           cd embedded-python/Scripts
