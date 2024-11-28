@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- [Bundled App] **Embedded Python** now includes spinedb-api and pandas 
+in addition to ipykernel and jill.
+
 ### Changed
 
 ### Deprecated
