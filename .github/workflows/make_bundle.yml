@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir embedded-python
           cd embedded-python
-          curl -o python.zip https://www.python.org/ftp/python/3.12.3/python-3.12.3-embed-amd64.zip
+          curl -o python.zip https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip
           tar xf python.zip
           del python.zip
       - name: Edit embedded Python search paths
@@ -65,7 +65,7 @@ jobs:
         run: |
           cd embedded-python/Scripts
           ./pip.exe --version
-          ./pip.exe install ipykernel jill
+          ./pip.exe install spinedb-api pandas ipykernel jill
       - name: List packages in embedded Python
         run: |
           cd embedded-python/Scripts
@@ -79,7 +79,7 @@ jobs:
         run: |
           python -c "from importlib.metadata import version; print('version=' + version('spinetoolbox'))" >> $GITHUB_OUTPUT
       - name: Upload archive
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: "./dist/Spine Toolbox"
