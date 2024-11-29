@@ -335,6 +335,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
+        self.ui.toolButton_reset_main_window.clicked.connect(self._remove_main_window_settings)
+        self.ui.toolButton_reset_all_settings.clicked.connect(self._remove_all_settings)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_button_clicked)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_button_clicked)
         self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_button_clicked)
@@ -431,6 +433,49 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.comboBox_security.setEnabled(state)
         self.ui.lineEdit_secfolder.setEnabled(state)
         self.ui.toolButton_pick_secfolder.setEnabled(state)
+
+    @Slot(bool)
+    def _remove_main_window_settings(self, _=False):
+        msg = ("Do you want to reset main window size, location, dock widgets, and splitters into factory "
+               "defaults? <b>Spine Toolbox will be shutdown</b> for the changes to take effect.<br/>Continue?")
+        box_title = "Reset main window settings and shutdown?"
+        box = QMessageBox(
+            QMessageBox.Icon.Question,
+            box_title,
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self,
+        )
+        box.button(QMessageBox.StandardButton.Ok).setText("Reset and Shutdown")
+        answer = box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
+            return False
+        self.qsettings.remove("mainWindow")
+        self._toolbox.shutdown_with_reset_main_window = True
+        self.save_and_close()
+        self._toolbox.close()
+
+    @Slot(bool)
+    def _remove_all_settings(self, _=False):
+        msg = ("Do you want to reset all settings to factory defaults? <b>Spine Toolbox will be shutdown</b> "
+               "for the changes to take effect.<br/>Continue?")
+        box_title = "Return to factory defaults and shutdown?"
+        box = QMessageBox(
+            QMessageBox.Icon.Question,
+            box_title,
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self,
+        )
+        box.button(QMessageBox.StandardButton.Ok).setText("Reset and Shutdown")
+        answer = box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
+            return False
+        self.qsettings.clear()
+        # TODO: Remove SpineProject key and everything under it. Including AddUpSpineOptWizard Settings
+        self._toolbox.shutdown_with_reset_everything = True
+        self.close()
+        self._toolbox.close()
 
     @Slot(bool)
     def _show_install_julia_wizard(self, _=False):

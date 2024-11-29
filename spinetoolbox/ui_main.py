@@ -166,6 +166,8 @@ class ToolboxUI(QMainWindow):
         self.execution_in_progress = False
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
+        self.shutdown_with_reset_main_window = False
+        self.shutdown_with_reset_everything = False
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -1971,6 +1973,9 @@ class ToolboxUI(QMainWindow):
         Args:
              event (QCloseEvent): PySide6 event
         """
+        if self.shutdown_with_reset_everything:
+            event.accept()
+            return
         # Show confirm exit message box
         exit_confirmed = self._perform_pre_exit_tasks()
         if not exit_confirmed:
@@ -1986,13 +1991,14 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
-        self._qsettings.setValue("mainWindow/windowSize", self.size())
-        self._qsettings.setValue("mainWindow/windowPosition", self.pos())
-        self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
-        self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
-        # Save number of screens
-        # noinspection PyArgumentList
-        self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
+        if not self.shutdown_with_reset_main_window:
+            self._qsettings.setValue("mainWindow/windowSize", self.size())
+            self._qsettings.setValue("mainWindow/windowPosition", self.pos())
+            self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
+            self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
+            # Save number of screens
+            # noinspection PyArgumentList
+            self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self._shutdown_engine_kernels()
         self._close_consoles()
         if self._project is not None:
