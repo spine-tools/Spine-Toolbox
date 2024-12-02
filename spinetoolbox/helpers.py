@@ -31,7 +31,7 @@ import time
 from typing import Sequence  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
-from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot
+from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot, QSettings
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
 from PySide6.QtGui import (
@@ -1885,3 +1885,15 @@ def add_keyboard_shortcuts_to_action_tool_tips(ui):
         if not isinstance(action, QAction):
             continue
         add_keyboard_shortcut_to_tool_tip(action)
+
+
+def clear_qsettings(settings):
+    """Clears Application Settings.
+
+    Args:
+        settings (QSettings): Settings instance that refers to
+        'Spine Toolbox' application in a 'SpineProject' organization.
+    """
+    settings.clear()
+    s1 = QSettings("SpineProject", "AddUpSpineOptWizard")
+    s1.clear()

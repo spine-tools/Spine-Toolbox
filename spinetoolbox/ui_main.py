@@ -69,6 +69,7 @@ from .helpers import (
     solve_connection_file,
     supported_img_formats,
     unique_name,
+    clear_qsettings,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
@@ -166,8 +167,7 @@ class ToolboxUI(QMainWindow):
         self.execution_in_progress = False
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
-        self.shutdown_with_reset_main_window = False
-        self.shutdown_with_reset_everything = False
+        self.shutdown_and_clear_settings = False
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -855,7 +855,7 @@ class ToolboxUI(QMainWindow):
             self.move(0, 0)
         ensure_window_is_on_screen(self, original_size)
         if window_maximized == "true":
-            self.setWindowState(Qt.WindowMaximized)
+            self.setWindowState(Qt.WindowState.WindowMaximized)
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -1645,7 +1645,9 @@ class ToolboxUI(QMainWindow):
         """Retrieves project from server."""
         msg = "Retrieve project by Job Id"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, msg, "Job Id?:", flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, msg, "Job Id?:", flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
+        )
         job_id = answer[0]
         if not job_id:  # Cancel button clicked
             return
@@ -1973,10 +1975,6 @@ class ToolboxUI(QMainWindow):
         Args:
              event (QCloseEvent): PySide6 event
         """
-        if self.shutdown_with_reset_everything:
-            event.accept()
-            return
-        # Show confirm exit message box
         exit_confirmed = self._perform_pre_exit_tasks()
         if not exit_confirmed:
             event.ignore()
@@ -1991,14 +1989,13 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
             self.update_recent_projects()
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
-        if not self.shutdown_with_reset_main_window:
-            self._qsettings.setValue("mainWindow/windowSize", self.size())
-            self._qsettings.setValue("mainWindow/windowPosition", self.pos())
-            self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
-            self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
-            # Save number of screens
-            # noinspection PyArgumentList
-            self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
+        self._qsettings.setValue("mainWindow/windowSize", self.size())
+        self._qsettings.setValue("mainWindow/windowPosition", self.pos())
+        self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
+        self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized)
+        # Save number of screens
+        # noinspection PyArgumentList
+        self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self._shutdown_engine_kernels()
         self._close_consoles()
         if self._project is not None:
@@ -2006,6 +2003,8 @@ class ToolboxUI(QMainWindow):
         for item_type in self.item_factories:
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
+        if self.shutdown_and_clear_settings:
+            clear_qsettings(self._qsettings)
         event.accept()
 
     def _serialize_selected_items(self):

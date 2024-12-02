@@ -212,26 +212,6 @@ class Ui_SettingsForm(object):
         self.groupBox_ui.setObjectName(u"groupBox_ui")
         self.gridLayout_2 = QGridLayout(self.groupBox_ui)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.checkBox_color_toolbar_icons = QCheckBox(self.groupBox_ui)
-        self.checkBox_color_toolbar_icons.setObjectName(u"checkBox_color_toolbar_icons")
-
-        self.gridLayout_2.addWidget(self.checkBox_color_toolbar_icons, 0, 0, 1, 1)
-
-        self.checkBox_color_properties_widgets = QCheckBox(self.groupBox_ui)
-        self.checkBox_color_properties_widgets.setObjectName(u"checkBox_color_properties_widgets")
-
-        self.gridLayout_2.addWidget(self.checkBox_color_properties_widgets, 1, 0, 1, 1)
-
-        self.checkBox_use_curved_links = QCheckBox(self.groupBox_ui)
-        self.checkBox_use_curved_links.setObjectName(u"checkBox_use_curved_links")
-
-        self.gridLayout_2.addWidget(self.checkBox_use_curved_links, 2, 0, 1, 1)
-
-        self.checkBox_drag_to_draw_links = QCheckBox(self.groupBox_ui)
-        self.checkBox_drag_to_draw_links.setObjectName(u"checkBox_drag_to_draw_links")
-
-        self.gridLayout_2.addWidget(self.checkBox_drag_to_draw_links, 3, 0, 1, 1)
-
         self.checkBox_prevent_overlapping = QCheckBox(self.groupBox_ui)
         self.checkBox_prevent_overlapping.setObjectName(u"checkBox_prevent_overlapping")
 
@@ -242,15 +222,10 @@ class Ui_SettingsForm(object):
 
         self.gridLayout_2.addWidget(self.checkBox_use_rounded_items, 5, 0, 1, 1)
 
-        self.checkBox_datetime = QCheckBox(self.groupBox_ui)
-        self.checkBox_datetime.setObjectName(u"checkBox_datetime")
+        self.checkBox_use_curved_links = QCheckBox(self.groupBox_ui)
+        self.checkBox_use_curved_links.setObjectName(u"checkBox_use_curved_links")
 
-        self.gridLayout_2.addWidget(self.checkBox_datetime, 6, 0, 1, 1)
-
-        self.checkBox_use_smooth_zoom = QCheckBox(self.groupBox_ui)
-        self.checkBox_use_smooth_zoom.setObjectName(u"checkBox_use_smooth_zoom")
-
-        self.gridLayout_2.addWidget(self.checkBox_use_smooth_zoom, 7, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.checkBox_use_curved_links, 2, 0, 1, 1)
 
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
@@ -344,34 +319,58 @@ class Ui_SettingsForm(object):
 
         self.gridLayout_2.addLayout(self.formLayout, 8, 0, 1, 1)
 
+        self.checkBox_drag_to_draw_links = QCheckBox(self.groupBox_ui)
+        self.checkBox_drag_to_draw_links.setObjectName(u"checkBox_drag_to_draw_links")
+
+        self.gridLayout_2.addWidget(self.checkBox_drag_to_draw_links, 3, 0, 1, 1)
+
+        self.checkBox_datetime = QCheckBox(self.groupBox_ui)
+        self.checkBox_datetime.setObjectName(u"checkBox_datetime")
+
+        self.gridLayout_2.addWidget(self.checkBox_datetime, 6, 0, 1, 1)
+
+        self.checkBox_color_toolbar_icons = QCheckBox(self.groupBox_ui)
+        self.checkBox_color_toolbar_icons.setObjectName(u"checkBox_color_toolbar_icons")
+
+        self.gridLayout_2.addWidget(self.checkBox_color_toolbar_icons, 0, 0, 1, 1)
+
+        self.checkBox_color_properties_widgets = QCheckBox(self.groupBox_ui)
+        self.checkBox_color_properties_widgets.setObjectName(u"checkBox_color_properties_widgets")
+
+        self.gridLayout_2.addWidget(self.checkBox_color_properties_widgets, 1, 0, 1, 1)
+
+        self.checkBox_use_smooth_zoom = QCheckBox(self.groupBox_ui)
+        self.checkBox_use_smooth_zoom.setObjectName(u"checkBox_use_smooth_zoom")
+
+        self.gridLayout_2.addWidget(self.checkBox_use_smooth_zoom, 7, 0, 1, 1)
+
+
+        self.verticalLayout_6.addWidget(self.groupBox_ui)
+
+        self.groupBox_3 = QGroupBox(self.General)
+        self.groupBox_3.setObjectName(u"groupBox_3")
+        self.gridLayout_6 = QGridLayout(self.groupBox_3)
+        self.gridLayout_6.setObjectName(u"gridLayout_6")
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.label_17 = QLabel(self.groupBox_ui)
+        self.label_17 = QLabel(self.groupBox_3)
         self.label_17.setObjectName(u"label_17")
 
         self.horizontalLayout.addWidget(self.label_17)
 
-        self.toolButton_reset_main_window = QToolButton(self.groupBox_ui)
-        self.toolButton_reset_main_window.setObjectName(u"toolButton_reset_main_window")
-        icon6 = QIcon()
-        icon6.addFile(u":/icons/menu_icons/undo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.toolButton_reset_main_window.setIcon(icon6)
-
-        self.horizontalLayout.addWidget(self.toolButton_reset_main_window)
-
-        self.toolButton_reset_all_settings = QToolButton(self.groupBox_ui)
+        self.toolButton_reset_all_settings = QToolButton(self.groupBox_3)
         self.toolButton_reset_all_settings.setObjectName(u"toolButton_reset_all_settings")
-        icon7 = QIcon()
-        icon7.addFile(u":/icons/menu_icons/trash-alt.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.toolButton_reset_all_settings.setIcon(icon7)
+        icon6 = QIcon()
+        icon6.addFile(u":/icons/menu_icons/trash-alt.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.toolButton_reset_all_settings.setIcon(icon6)
 
         self.horizontalLayout.addWidget(self.toolButton_reset_all_settings)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout, 9, 0, 1, 1)
+        self.gridLayout_6.addLayout(self.horizontalLayout, 0, 0, 1, 1)
 
 
-        self.verticalLayout_6.addWidget(self.groupBox_ui)
+        self.verticalLayout_6.addWidget(self.groupBox_3)
 
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
@@ -1038,8 +1037,7 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.radioButton_bg_tree, self.radioButton_bg_solid)
         QWidget.setTabOrder(self.radioButton_bg_solid, self.toolButton_bg_color)
         QWidget.setTabOrder(self.toolButton_bg_color, self.horizontalSlider_data_flow_animation_duration)
-        QWidget.setTabOrder(self.horizontalSlider_data_flow_animation_duration, self.toolButton_reset_main_window)
-        QWidget.setTabOrder(self.toolButton_reset_main_window, self.toolButton_reset_all_settings)
+        QWidget.setTabOrder(self.horizontalSlider_data_flow_animation_duration, self.toolButton_reset_all_settings)
         QWidget.setTabOrder(self.toolButton_reset_all_settings, self.lineEdit_gams_path)
         QWidget.setTabOrder(self.lineEdit_gams_path, self.toolButton_browse_gams)
         QWidget.setTabOrder(self.toolButton_browse_gams, self.radioButton_use_julia_basic_console)
@@ -1148,23 +1146,12 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.checkBox_open_previous_project.setText(QCoreApplication.translate("SettingsForm", u"Open previous project at startup", None))
         self.groupBox_ui.setTitle(QCoreApplication.translate("SettingsForm", u"UI", None))
-        self.checkBox_color_toolbar_icons.setText(QCoreApplication.translate("SettingsForm", u"Color toolbar icons", None))
-        self.checkBox_color_properties_widgets.setText(QCoreApplication.translate("SettingsForm", u"Color properties widgets", None))
+        self.checkBox_prevent_overlapping.setText(QCoreApplication.translate("SettingsForm", u"Prevent items from overlapping", None))
+        self.checkBox_use_rounded_items.setText(QCoreApplication.translate("SettingsForm", u"Rounded items", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_use_curved_links.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or straight connectors are used in Design View.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_use_curved_links.setText(QCoreApplication.translate("SettingsForm", u"Curved links", None))
-        self.checkBox_drag_to_draw_links.setText(QCoreApplication.translate("SettingsForm", u"Drag to draw links", None))
-        self.checkBox_prevent_overlapping.setText(QCoreApplication.translate("SettingsForm", u"Prevent items from overlapping", None))
-        self.checkBox_use_rounded_items.setText(QCoreApplication.translate("SettingsForm", u"Rounded items", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_datetime.setText(QCoreApplication.translate("SettingsForm", u"Show date and time in Event Log messages", None))
-#if QT_CONFIG(tooltip)
-        self.checkBox_use_smooth_zoom.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_use_smooth_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
         self.label_7.setText(QCoreApplication.translate("SettingsForm", u"Background", None))
         self.radioButton_bg_grid.setText(QCoreApplication.translate("SettingsForm", u"Grid", None))
         self.radioButton_bg_tree.setText(QCoreApplication.translate("SettingsForm", u"Tree of Life", None))
@@ -1176,13 +1163,22 @@ class Ui_SettingsForm(object):
         self.label_4.setText(QCoreApplication.translate("SettingsForm", u"Link flash speed", None))
         self.label_5.setText(QCoreApplication.translate("SettingsForm", u"Slow", None))
         self.label_8.setText(QCoreApplication.translate("SettingsForm", u"Fast", None))
+        self.checkBox_drag_to_draw_links.setText(QCoreApplication.translate("SettingsForm", u"Drag to draw links", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_datetime.setText(QCoreApplication.translate("SettingsForm", u"Show date and time in Event Log messages", None))
+        self.checkBox_color_toolbar_icons.setText(QCoreApplication.translate("SettingsForm", u"Color toolbar icons", None))
+        self.checkBox_color_properties_widgets.setText(QCoreApplication.translate("SettingsForm", u"Color properties widgets", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_use_smooth_zoom.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls whether smooth or discete zoom is used in Design and Graph Views.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_use_smooth_zoom.setText(QCoreApplication.translate("SettingsForm", u"Smooth zoom", None))
+        self.groupBox_3.setTitle(QCoreApplication.translate("SettingsForm", u"Danger zone", None))
 #if QT_CONFIG(tooltip)
         self.label_17.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>See tool tip in button</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_17.setText(QCoreApplication.translate("SettingsForm", u"Reset to factory defaults", None))
-#if QT_CONFIG(tooltip)
-        self.toolButton_reset_main_window.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Resets main window size, position, dock widget sizes and positions, and slider positions to factory defaults.</p><p><span style=\" font-weight:700;\">The app must be shutdown</span> for the changes to take effect, so make sure to close all windows and save the project before clicking this button.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
+        self.label_17.setText(QCoreApplication.translate("SettingsForm", u"Reset settings to factory defaults", None))
 #if QT_CONFIG(tooltip)
         self.toolButton_reset_all_settings.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Resets all settings to factory defaults.</p><p><span style=\" font-weight:700;\">The app must be shutdown</span> for the changes to take effect, so make sure to close all windows and save the project before clicking this button.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
