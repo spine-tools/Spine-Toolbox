@@ -82,7 +82,7 @@ class SettingsWidgetBase(QWidget):
         Args:
             e (QKeyEvent): Received key press event.
         """
-        if e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key.Key_Escape:
             self.update_ui_and_close()
 
     def mousePressEvent(self, e):
@@ -322,10 +322,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._remote_host = ""
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
-        for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
+        for item in self.ui.listWidget.findItems("*", Qt.MatchFlag.MatchWildcard):
             item.setSizeHint(QSize(128, 44))
         # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
         self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
@@ -437,7 +437,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _remove_all_settings(self, _=False):
         msg = ("Do you want to reset all settings to factory defaults? <b>Spine Toolbox will be shutdown</b> "
                "for the changes to take effect.<br/>Continue?")
-        box_title = "Return to factory defaults and shutdown?"
+        box_title = "Close app and return to factory defaults?"
         box = QMessageBox(
             QMessageBox.Icon.Question,
             box_title,
@@ -448,7 +448,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         box.button(QMessageBox.StandardButton.Ok).setText("Reset and Shutdown")
         answer = box.exec()
         if answer != QMessageBox.StandardButton.Ok:
-            return False
+            return
         self._toolbox.shutdown_and_clear_settings = True
         self.close()
         self._toolbox.close()
@@ -795,7 +795,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if save_spec == 0:
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Unchecked)
         elif save_spec == 1:
-            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.PartiallyChecked)
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.PartiallyChecked)
         else:  # save_spec == 2:
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Checked)
         if spec_show_undo == 2:
@@ -1050,7 +1050,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         prep_str = "tcp://"
         if new_text.startswith(prep_str):  # prep str already present
-            new = new_text[len(prep_str) :]
+            new = new_text[len(prep_str):]
         else:  # First letter has been entered
             new = new_text
         # Clear when only prep str present or when clear (x) button is clicked
