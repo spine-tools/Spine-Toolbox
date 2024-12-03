@@ -57,16 +57,20 @@ class PropertiesWidgetBase(QWidget):
         bnw_pixmap = QPixmap(icon)
         self._pixmap = QPixmap(bnw_pixmap.size())
         self._pixmap.fill(self._fg_color)
-        self._pixmap.setMask(bnw_pixmap.createMaskFromColor(Qt.transparent))
+        self._pixmap.setMask(bnw_pixmap.createMaskFromColor(Qt.GlobalColor.transparent))
 
     def eventFilter(self, obj, ev):
-        if ev.type() == QEvent.Paint:
+        if ev.type() == QEvent.Type.Paint:
             painter = QPainter(obj)
             painter.fillRect(obj.rect(), QColor(255, 255, 255, 180))
         return super().eventFilter(obj, ev)
 
     def paintEvent(self, ev):
-        """Paints background"""
+        """Paints background.
+
+        Note: The backgrounds of the properties widget's QScrollArea
+        and the scrollAreaWidgetContents QWidget are set to transparent in stylesheets.
+        """
         settings = self._toolbox.qsettings()
         if settings.value("appSettings/colorPropertiesWidgets", defaultValue="false") == "false":
             super().paintEvent(ev)
@@ -80,10 +84,10 @@ class PropertiesWidgetBase(QWidget):
         new_transparent_widgets -= self._transparent_widgets
         self._transparent_widgets |= new_transparent_widgets
         for widget in new_transparent_widgets:
-            widget.setAttribute(Qt.WA_NoSystemBackground)
+            widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
             widget.installEventFilter(self)
             try:
-                widget.viewport().setAttribute(Qt.WA_TranslucentBackground)
+                widget.viewport().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
             except AttributeError:
                 pass
         rect = self.rect()

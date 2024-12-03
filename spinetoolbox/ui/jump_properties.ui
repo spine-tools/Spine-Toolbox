@@ -26,6 +26,10 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">QScrollArea { background: transparent; }
+QScrollArea &gt; QWidget &gt; QWidget { background: transparent; }</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_3">
    <property name="spacing">
     <number>0</number>
@@ -44,6 +48,9 @@
    </property>
    <item>
     <widget class="QScrollArea" name="scrollArea">
+     <property name="frameShape">
+      <enum>QFrame::Shape::NoFrame</enum>
+     </property>
      <property name="widgetResizable">
       <bool>true</bool>
      </property>
@@ -52,8 +59,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>305</width>
-        <height>398</height>
+        <width>307</width>
+        <height>400</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -157,7 +164,7 @@
               <string>...</string>
              </property>
              <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
+              <iconset>
                <normaloff>:/icons/file-upload.svg</normaloff>:/icons/file-upload.svg</iconset>
              </property>
             </widget>
