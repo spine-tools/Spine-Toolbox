@@ -340,7 +340,7 @@ class Ui_MainWindow(object):
         self.tab_no_selection.setObjectName(u"tab_no_selection")
         self.verticalLayout_14 = QVBoxLayout(self.tab_no_selection)
         self.verticalLayout_14.setObjectName(u"verticalLayout_14")
-        self.verticalLayout_14.setContentsMargins(6, 6, 6, 6)
+        self.verticalLayout_14.setContentsMargins(0, 0, 0, 0)
         self.label_no_selection = QLabel(self.tab_no_selection)
         self.label_no_selection.setObjectName(u"label_no_selection")
         self.label_no_selection.setAlignment(Qt.AlignmentFlag.AlignCenter)
