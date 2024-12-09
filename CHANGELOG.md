@@ -5,11 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
-### Added
+### Added 
 
-### Changed
+new item added 123
 
-### Deprecated
+
 
 ### Removed
 
@@ -802,5 +802,3 @@ Many parts of the Spine data structure have been redesigned.
 
 ## [0.1] - 2018-08-20
 
-### Added
-- Basic functionality

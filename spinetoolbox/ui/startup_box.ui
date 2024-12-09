@@ -35,9 +35,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>40</y>
+      <y>60</y>
       <width>171</width>
-      <height>561</height>
+      <height>541</height>
      </rect>
     </property>
     <property name="styleSheet">
@@ -46,6 +46,51 @@ border-color: rgb(240, 240, 240);</string>
     </property>
     <property name="showDropIndicator" stdset="0">
      <bool>true</bool>
+    </property>
+    <property name="isWrapping" stdset="0">
+     <bool>false</bool>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_17">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>20</y>
+      <width>171</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Courier</family>
+      <pointsize>11</pointsize>
+      <italic>true</italic>
+      <bold>false</bold>
+     </font>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Shape::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Shadow::Raised</enum>
+    </property>
+    <property name="lineWidth">
+     <number>1</number>
+    </property>
+    <property name="text">
+     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#1a0ec1;&quot;&gt;TextLabel&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    </property>
+    <property name="scaledContents">
+     <bool>false</bool>
     </property>
    </widget>
   </widget>
@@ -153,13 +198,13 @@ border-color: rgb(240, 240, 240);</string>
       <string notr="true"/>
      </property>
      <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
      <property name="verticalScrollBarPolicy">
-      <enum>Qt::ScrollBarAlwaysOff</enum>
+      <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
      </property>
      <property name="horizontalScrollBarPolicy">
-      <enum>Qt::ScrollBarAlwaysOff</enum>
+      <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
      </property>
      <property name="widgetResizable">
       <bool>false</bool>
@@ -190,7 +235,7 @@ border-color: rgb(240, 240, 240);</string>
         </font>
        </property>
        <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
+        <enum>Qt::LayoutDirection::LeftToRight</enum>
        </property>
        <property name="text">
         <string>Introductory Learning Material</string>
@@ -213,7 +258,7 @@ border-color: rgb(240, 240, 240);</string>
         </font>
        </property>
        <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
+        <enum>Qt::LayoutDirection::LeftToRight</enum>
        </property>
        <property name="text">
         <string>Advanced Learning Material</string>
@@ -260,6 +305,25 @@ border-color: rgb(240, 240, 240);</string>
          <string>Open Document</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_10">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>60</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>../../docs/source/img/tutorials_images/say_hello_thumbnail.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_10">
        <property name="geometry">
@@ -300,6 +364,25 @@ border-color: rgb(240, 240, 240);</string>
         </property>
         <property name="text">
          <string>Open Document</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_11">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>60</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>../../docs/source/img/tutorials_images/data_structure_thumbnail.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
         </property>
        </widget>
       </widget>
@@ -344,6 +427,25 @@ border-color: rgb(240, 240, 240);</string>
          <string>Open Document</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_15">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>60</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>../../docs/source/img/tutorials_images/workflow_thumbnail.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_13">
        <property name="geometry">
@@ -386,6 +488,25 @@ border-color: rgb(240, 240, 240);</string>
          <string>Open Document</string>
         </property>
        </widget>
+       <widget class="QLabel" name="label_16">
+        <property name="geometry">
+         <rect>
+          <x>20</x>
+          <y>30</y>
+          <width>60</width>
+          <height>51</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>../../docs/source/img/tutorials_images/advanced_material_thumbmail.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+       </widget>
       </widget>
      </widget>
     </widget>
@@ -401,13 +522,13 @@ border-color: rgb(240, 240, 240);</string>
         <bool>true</bool>
        </property>
        <property name="frameShape">
-        <enum>QFrame::NoFrame</enum>
+        <enum>QFrame::Shape::NoFrame</enum>
        </property>
        <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOff</enum>
+        <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
        </property>
        <property name="horizontalScrollBarPolicy">
-        <enum>Qt::ScrollBarAlwaysOff</enum>
+        <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
        </property>
        <property name="widgetResizable">
         <bool>false</bool>
@@ -438,7 +559,7 @@ border-color: rgb(240, 240, 240);</string>
           </font>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="text">
           <string>Spine Toolbox</string>
@@ -461,7 +582,7 @@ border-color: rgb(240, 240, 240);</string>
           </font>
          </property>
          <property name="layoutDirection">
-          <enum>Qt::LeftToRight</enum>
+          <enum>Qt::LayoutDirection::LeftToRight</enum>
          </property>
          <property name="text">
           <string>Model specific workflows</string>
@@ -492,7 +613,7 @@ border-color: rgb(240, 240, 240);</string>
            <string>https://spine-toolbox.readthedocs.io/en/latest/data_import_export.html</string>
           </property>
           <property name="textFormat">
-           <enum>Qt::PlainText</enum>
+           <enum>Qt::TextFormat::PlainText</enum>
           </property>
           <property name="scaledContents">
            <bool>false</bool>
@@ -553,7 +674,7 @@ border-color: rgb(240, 240, 240);</string>
            <string>This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.</string>
           </property>
           <property name="textFormat">
-           <enum>Qt::PlainText</enum>
+           <enum>Qt::TextFormat::PlainText</enum>
           </property>
           <property name="scaledContents">
            <bool>false</bool>
@@ -579,7 +700,7 @@ border-color: rgb(240, 240, 240);</string>
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prerequisites: To run the following project templates, make sure to install both Julia and SpineOpt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="textFormat">
-          <enum>Qt::RichText</enum>
+          <enum>Qt::TextFormat::RichText</enum>
          </property>
         </widget>
        </widget>

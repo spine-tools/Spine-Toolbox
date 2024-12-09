@@ -17,6 +17,9 @@ from spinetoolbox.ui.startup_box import Ui_Form
 from PySide6.QtWidgets import QListWidgetItem
 import webbrowser
 
+from PySide6.QtGui import QFont, QColor, QBrush
+
+
 
 class StartupBoxWidget(QWidget):
     project_load_requested = Signal(str)
@@ -58,11 +61,62 @@ class StartupBoxWidget(QWidget):
         self._ui.pushButton_5.clicked.connect(self.open_link4)
 
     def set_changelog_diff(self, diff_list):
-        # Add diff_list items to listWidget_2
-        for item in diff_list:
+        # Filter out empty rows or rows with only whitespace
+        filtered_diff_list = [item for item in diff_list if item.strip()]
+
+        version_set = False  # Flag to ensure the version is set only once
+
+        # Clear the label first to avoid overlapping text
+        self._ui.label_17.clear()
+
+        for line in filtered_diff_list:
+            line = line.strip()
+
+            # Check for versioning lines (with ##)
+            if line.startswith("##"):
+                # Extract version text (e.g., ## [Unreleased] or ## [1.0])
+                line_content = line[3:].strip()  # Remove the "##" part
+
+                # Check if the line contains version info within brackets
+                if "[" in line_content and "]" in line_content and not version_set:
+                    # Extract version text within brackets
+                    version = line_content[line_content.find("[") + 1:line_content.find("]")]
+                    # Display the version in label_17 only once
+                    self._ui.label_17.setText(version)
+                    version_set = True  # Set the flag to avoid overwriting the version
+                    continue  # Skip adding this line to listWidget_2
+
+            # Create a list widget item
+            item = QListWidgetItem()
+
+            # Check for subtitle headers (with ###)
+            if line.startswith("###"):
+                # Subtitle (e.g., ### Added) - bold gray, font size 9px
+                line_content = line[3:].strip()  # Remove the "###" part
+                font = QFont("Arial", 9, QFont.Bold)  # Font size 9px, bold
+                item.setFont(font)
+                item.setForeground(QBrush(QColor("#555555")))  # Lighter gray color
+
+            # Check for bullet points (with -)
+            elif line.startswith("-"):
+                # Bullet point (e.g., - The Filter button) - font size 8px, gray
+                line_content = line[1:].strip()  # Remove the "-" part
+                font = QFont("Arial", 8)  # Font size 8px for bullet points
+                item.setFont(font)
+                item.setForeground(QBrush(QColor("#888888")))  # Gray color
+
+            # Handle plain text (regular paragraphs)
+            else:
+                line_content = line.strip()
+                font = QFont("Arial", 8)  # Font size 8px for plain text
+                item.setFont(font)
+                item.setForeground(QBrush(QColor("#888888")))  # Gray color
+
+            # Set the cleaned-up text content
+            item.setText(line_content)
+
+            # Add the styled item to listWidget_2
             self._ui.listWidget_2.addItem(item)
-
-
 
     @Slot()
     def open_project_startbox(self):

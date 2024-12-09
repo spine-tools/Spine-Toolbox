@@ -51,6 +51,7 @@ from PySide6.QtWidgets import (
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
+from .changelog_diff import pick_latest_release
 from .config import SPINE_TOOLBOX_REPO_URL
 from .widgets.startup_box_widget import StartupBoxWidget
 from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
@@ -242,10 +243,11 @@ class ToolboxUI(QMainWindow):
         self.startup_box_widget.show()
 
         # Get the changelog differences
-        diff = get_changelog_diff(self._qsettings)
+        diff = pick_latest_release(self._qsettings)
 
-        # Connect to set_changelog_diff the function in the start_up_box.py
-        self.startup_box_widget.set_changelog_diff(diff)
+        if diff is not None:
+            # Connect to set_changelog_diff the function in the start_up_box.py
+            self.startup_box_widget.set_changelog_diff(diff)
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -2039,7 +2041,7 @@ class ToolboxUI(QMainWindow):
         for item_type in self.item_factories:
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
-        save_changelog_to_settings(self._qsettings)
+        #save_changelog_to_settings(self._qsettings)
         event.accept()
 
     def _serialize_selected_items(self):
