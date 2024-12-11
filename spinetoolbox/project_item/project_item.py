@@ -153,7 +153,7 @@ class ProjectItem(LogMixin, MetaObject):
         return self._specification
 
     def set_specification(self, specification):
-        """Pushes a new SetItemSpecificationCommand to the toolbox' undo stack."""
+        """Pushes a new SetItemSpecificationCommand to the undo stack."""
         if specification == self._specification:
             return
         self._toolbox.undo_stack.push(
