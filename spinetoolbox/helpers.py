@@ -954,20 +954,22 @@ def select_certificate_directory(parent, line_edit):
     line_edit.setText(answer)
 
 
-def select_root_directory(parent, line_edit):
+def select_root_directory(parent, line_edit, project_path):
     """Shows file browser and inserts selected root directory to given line edit.
     Used in Tool Properties.
 
     Args:
         parent (QWidget, optional): Parent of QFileDialog
         line_edit (QLineEdit): Line edit where the selected path will be inserted
+        project_path (str): Project path
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path is not None else project_path
     answer = QFileDialog.getExistingDirectory(parent, "Select root directory", initial_path)
     if not answer:
         return
     line_edit.setText(answer)
+    return
 
 
 def get_current_path(le):
