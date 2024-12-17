@@ -23,6 +23,7 @@ from .widgets.options_dialog import OptionsDialog
 
 class GUIUpdater(QObject):
     """Contains slots for updating UI widgets based on messages received from the engine worker."""
+
     @Slot(list)
     def handle_dag_execution_started(self, project_items):
         for item in project_items:
