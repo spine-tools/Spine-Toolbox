@@ -435,8 +435,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot(bool)
     def _remove_all_settings(self, _=False):
-        msg = ("Do you want to reset all settings to factory defaults? <b>Spine Toolbox will be shutdown</b> "
-               "for the changes to take effect.<br/>Continue?")
+        msg = (
+            "Do you want to reset all settings to factory defaults? <b>Spine Toolbox will be shutdown</b> "
+            "for the changes to take effect.<br/>Continue?"
+        )
         box_title = "Close app and return to factory defaults?"
         box = QMessageBox(
             QMessageBox.Icon.Question,
@@ -1050,7 +1052,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """
         prep_str = "tcp://"
         if new_text.startswith(prep_str):  # prep str already present
-            new = new_text[len(prep_str):]
+            new = new_text[len(prep_str) :]
         else:  # First letter has been entered
             new = new_text
         # Clear when only prep str present or when clear (x) button is clicked

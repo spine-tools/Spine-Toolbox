@@ -17,7 +17,7 @@ import json
 import os
 from pathlib import Path
 import networkx as nx
-from PySide6.QtCore import QCoreApplication, Signal
+from PySide6.QtCore import QCoreApplication, Signal, Slot
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
@@ -1041,7 +1041,7 @@ class SpineToolboxProject(MetaObject):
             self._logger.msg.emit(f"<b>Starting DAG {dag_identifier}</b>")
             item_names = (darker(name) if not execution_permits[name] else name for name in nx.topological_sort(dag))
             self._logger.msg.emit(darker(" -> ").join(item_names))
-            worker.finished.connect(lambda worker=worker: self._handle_engine_worker_finished(worker))
+            worker.finished.connect(self._handle_engine_worker_finished)
             self._engine_workers.append(worker)
         timestamp = create_timestamp()
         self._toolbox.make_execution_timestamp(timestamp)
@@ -1097,6 +1097,7 @@ class SpineToolboxProject(MetaObject):
         worker = SpineEngineWorker(data, dag, dag_identifier, items, connections, self._logger, job_id)
         return worker
 
+    @Slot(object)
     def _handle_engine_worker_finished(self, worker):
         finished_outcomes = {
             "USER_STOPPED": [self._logger.msg_warning, "stopped by the user"],
