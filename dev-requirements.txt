@@ -1,9 +1,9 @@
 coverage[toml]
 black == 24.4.2
 pre-commit
-pylint
 pyperf
 sphinx
 sphinx_rtd_theme
-sphinx-autoapi
+sphinx-autoapi < 3.4
 recommonmark
+pylint

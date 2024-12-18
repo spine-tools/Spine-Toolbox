@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QGraphicsTextItem,
     QStyle,
     QToolTip,
+    QApplication,
 )
 from spine_engine.spine_engine import ItemExecutionFinishState
 from .helpers import LinkType, fix_lightness_color
@@ -588,13 +589,13 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._text_item.setFont(font)
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
         # pylint: disable=undefined-variable
-        self.normal_brush = qApp.palette().window()
-        self.selected_brush = qApp.palette().highlight()
+        self.normal_brush = QApplication.palette().window()
+        self.selected_brush = QApplication.palette().highlight()
         self.setBrush(self.normal_brush)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.hide()
 
     def item_name(self):
@@ -667,7 +668,7 @@ class ExclamationIcon(QGraphicsTextItem):
         doc = self.document()
         doc.setDocumentMargin(0)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.hide()
 
     def clear_notifications(self):

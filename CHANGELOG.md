@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - [Bundled App] **Embedded Python** now includes spinedb-api and pandas 
 in addition to ipykernel and jill.
+- Support PySide 6.8.1
 
 ### Changed
 
