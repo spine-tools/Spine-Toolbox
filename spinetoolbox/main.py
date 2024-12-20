@@ -13,6 +13,7 @@
 """Provides the main() function."""
 import multiprocessing
 import os
+import asyncio
 import PySide6
 
 dirname = os.path.dirname(PySide6.__file__)
@@ -39,6 +40,8 @@ from spine_items import resources_icons_rc  # pylint: disable=unused-import  # i
 def main():
     """Creates main window GUI and starts main event loop."""
     multiprocessing.freeze_support()
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
