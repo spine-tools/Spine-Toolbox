@@ -241,7 +241,7 @@ def open_url(url):
     Returns:
         bool: True if successful, False otherwise
     """
-    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+    return QDesktopServices.openUrl(QUrl(url, QUrl.ParsingMode.TolerantMode))
 
 
 def set_taskbar_icon():

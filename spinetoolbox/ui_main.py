@@ -2241,7 +2241,7 @@ class ToolboxUI(QMainWindow):
         if self._project is None:
             self.msg.emit("Please open or create a project first")
             return
-        open_url("file:///" + self._project.project_dir)
+        open_url("file:///" + self._project.project_dir + "/")
 
     @Slot(bool)
     def _open_project_item_directory(self, _):
