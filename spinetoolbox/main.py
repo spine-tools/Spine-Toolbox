@@ -39,8 +39,9 @@ from spine_items import resources_icons_rc  # pylint: disable=unused-import  # i
 
 def main():
     """Creates main window GUI and starts main event loop."""
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     multiprocessing.freeze_support()
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
