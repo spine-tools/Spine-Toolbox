@@ -168,14 +168,14 @@ class SpineDBEditorSettingsMixin:
         snap_entities = self._qsettings.value("appSettings/snapEntities", defaultValue="false")
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
-        max_ent_dim_count = int(self.qsettings.value("appSettings/maxEntityDimensionCount", defaultValue="5"))
-        build_iters = int(self.qsettings.value("appSettings/layoutAlgoBuildIterations", defaultValue="12"))
-        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
-        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
+        max_ent_dim_count = int(self._qsettings.value("appSettings/maxEntityDimensionCount", defaultValue="5"))
+        build_iters = int(self._qsettings.value("appSettings/layoutAlgoBuildIterations", defaultValue="12"))
+        spread_factor = int(self._qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
+        neg_weight_exp = int(self._qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Unchecked)
         elif commit_at_exit == 1:
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Checked)
         self.ui.checkBox_entity_tree_sticky_selection.setChecked(sticky_selection == "true")

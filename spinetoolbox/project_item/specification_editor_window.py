@@ -130,7 +130,7 @@ class SpecificationEditorWindowBase(QMainWindow):
         self._spec_toolbar = _SpecNameDescriptionToolbar(self, specification, self._undo_stack)
         self._spec_toolbar.show_toolbox_action.triggered.connect(self._toolbox.restore_and_activate)
         self._spec_toolbar.name_changed.connect(self._set_window_title)
-        self.addToolBar(Qt.TopToolBarArea, self._spec_toolbar)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self._spec_toolbar)
         self._populate_main_menu()
         self._spec_toolbar.save_action.triggered.connect(self._save)
         self._spec_toolbar.duplicate_action.triggered.connect(self._duplicate)
