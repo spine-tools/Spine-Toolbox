@@ -7,23 +7,29 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- [Bundled App] **Embedded Python** now includes spinedb-api and pandas in addition to ipykernel and jill.
-- Support PySide 6.8.1
-- Tools now support executing programs where the main program file is not in the work directory root, but 
-in a subfolder. You can use this feature by setting a 'root directory path' for a Tool in **Tool Properties**. 
-
 ### Changed
 
 ### Deprecated
 
 ### Removed
 
-- The Filter button has been removed from Spine Database Editor's toolbar.
-  The functionality was broken anyhow and has been superseded by filtering from the Scenario tree.
-
 ### Fixed
 
 ### Security
+
+## [0.9.2]
+
+### Added
+
+- [Bundled App] **Embedded Python** now includes spinedb-api and pandas in addition to ipykernel and jill.
+- Support PySide 6.8.1
+- Tools now support executing programs where the main program file is not in the work directory root, but 
+in a subfolder. You can use this feature by setting a 'root directory path' for a Tool in **Tool Properties**. 
+
+### Removed
+
+- The Filter button has been removed from Spine Database Editor's toolbar.
+  The functionality was broken anyhow and has been superseded by filtering from the Scenario tree.
 
 ## [0.9.1]
 
