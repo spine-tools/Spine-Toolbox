@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Support for Python 3.13.
+
 ### Changed
 
 ### Deprecated
