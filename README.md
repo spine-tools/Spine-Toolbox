@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -11,7 +11,7 @@ Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badg
 Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. 
 You can have your local workflow, but work as a team through version control and SQL databases.
 
-<p align="center" width="100%">
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./fig/spinetoolbox_logo.svg" width="50%">
     <img alt="Spine Toolbox" src="./fig/spinetoolbox_on_wht.svg" width="50%">
@@ -51,7 +51,7 @@ These steps apply to both [Python/pipx](#installation-with-python-and-pipx) opti
 
 1. If you don't have Python installed, please install it e.g. from 
 [Python.org](https://www.python.org/downloads/).
-Please note that we support Python versions from 3.9 to 3.12. (As of 21st Oct. 2024, Python 3.13 has issues with some of our dependencies)
+Please note that we support Python versions from 3.9 to 3.13.
 
 2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
 
@@ -458,7 +458,6 @@ already open in the issue tracker.
 
 &nbsp;
 <hr>
-<center>
 <table width=500px frame="none">
 <tr>
 <td valign="middle" width=100px>
@@ -472,4 +471,3 @@ Innovation Actions under grant agreement N°101095998.</td>
 <td valign="middle">This work has been partially supported by EU project Spine (2017-2021), which has received funding 
 from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
 </table>
-</center>
