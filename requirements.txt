@@ -1,4 +1,4 @@
--e git+https://github.com/spine-tools/Spine-Database-API.git#egg=spinedb_api
--e git+https://github.com/spine-tools/spine-engine.git#egg=spine_engine
--e git+https://github.com/spine-tools/spine-items.git#egg=spine_items
+-e git+https://github.com/spine-tools/Spine-Database-API.git@sqlalchemy-1.4#egg=spinedb_api
+-e git+https://github.com/spine-tools/spine-engine.git@sqlalchemy-1.4#egg=spine_engine
+-e git+https://github.com/spine-tools/spine-items.git@sqlalchemy-1.4#egg=spine_items
 -e .
