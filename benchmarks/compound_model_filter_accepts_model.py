@@ -1,11 +1,13 @@
 """
 This script benchmarks CompoundModelBase.filter_accepts_model().
 """
+
 import os
 import sys
 
 if sys.platform == "win32" and "HOMEPATH" not in os.environ:
     import pathlib
+
     os.environ["HOMEPATH"] = str(pathlib.Path(sys.executable).parent)
 
 import time
@@ -19,9 +21,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleModelBase
 from spinetoolbox.spine_db_manager import SpineDBManager
 
 
-def call_filter_accepts_model(
-    loops: int, compound_model: CompoundModelBase, single_model: SingleModelBase
-) -> float:
+def call_filter_accepts_model(loops: int, compound_model: CompoundModelBase, single_model: SingleModelBase) -> float:
     duration = 0.0
     for _ in range(loops):
         start = time.perf_counter()
@@ -36,11 +36,14 @@ def run_benchmark(output_file: Optional[str]):
     db_mngr = SpineDBManager(QSettings(), parent=None)
     logger = StdOutLogger()
     db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
-    entity_class, error = db_map.add_entity_class_item(name="Object")
-    assert error is None
-    db_map.add_entity_class_item(name="Subject")
-    relationship_class, error = db_map.add_entity_class_item(name="Object__Subject", dimension_name_list=("Object", "Subject"))
-    assert error is None
+    with db_map:
+        entity_class, error = db_map.add_entity_class_item(name="Object")
+        assert error is None
+        db_map.add_entity_class_item(name="Subject")
+        relationship_class, error = db_map.add_entity_class_item(
+            name="Object__Subject", dimension_name_list=("Object", "Subject")
+        )
+        assert error is None
     compound_model = CompoundParameterValueModel(None, db_mngr, db_map)
     compound_model.set_filter_class_ids({db_map: {entity_class["id"]}})
     single_model = SingleModelBase(compound_model, db_map, relationship_class["id"], committed=False)
@@ -49,7 +52,7 @@ def run_benchmark(output_file: Optional[str]):
         "CompoundModelBase.filter_accepts_model[filter by class ids]",
         call_filter_accepts_model,
         compound_model,
-        single_model
+        single_model,
     )
     if output_file:
         pyperf.add_runs(output_file, benchmark)

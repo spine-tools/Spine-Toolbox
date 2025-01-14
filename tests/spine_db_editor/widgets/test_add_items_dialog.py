@@ -72,7 +72,8 @@ class TestAddItemsDialog(TestCaseWithQApplication):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._commit_changes_to_database("Add object class.")
-        data = self._db_map.query(self._db_map.object_class_sq).all()
+        with self._db_map:
+            data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "fish")
 
@@ -336,7 +337,7 @@ class TestManageElementsDialog(TestBase):
         dialog.remove_selected_rows()
         self.assertEqual(dialog.existing_items_model.rowCount(), 1)
         dialog.accept()
-        relationships = [x.resolve() for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
+        relationships = [x.resolve() for x in self._db_map.get_items("entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
             [{"class_id": 3, "description": None, "id": 5, "name": "r21", "element_id_list": (2, 3)}],

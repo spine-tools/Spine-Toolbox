@@ -20,7 +20,7 @@ from tests.spine_db_editor.helpers import TestBase
 class TestScenarioGenerator(TestBase):
     def test_alternative_list_contains_alternatives(self):
         self._db_mngr.add_alternatives({self._db_map: [{"name": "alt1"}]})
-        alternatives = self._db_mngr.get_items(self._db_map, "alternative")
+        alternatives = self._db_map.get_items("alternative")
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         list_widget = scenario_generator._ui.alternative_list
         listed_alternatives = [list_widget.item(row).text() for row in range(list_widget.count())]
@@ -31,19 +31,19 @@ class TestScenarioGenerator(TestBase):
     def test_zero_padding_in_generated_scenario_names(self):
         db_map_items = [{"name": f"alt{n}"} for n in range(13)]
         self._db_mngr.add_alternatives({self._db_map: db_map_items})
-        alternatives = self._db_mngr.get_items(self._db_map, "alternative")
+        alternatives = self._db_map.get_items("alternative")
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         scenario_generator._ui.scenario_prefix_edit.setText("S_")
         scenario_generator._ui.operation_combo_box.setCurrentText("Scenario for each alternative")
         scenario_generator._ui.use_base_alternative_check_box.setCheckState(Qt.CheckState.Unchecked)
         scenario_generator._ui.button_box.accepted.emit()
-        scenarios = self._db_mngr.get_items(self._db_map, "scenario")
+        scenarios = self._db_map.get_items("scenario")
         scenario_names = {s["name"] for s in scenarios}
         self.assertEqual(scenario_names, {f"S_{n:02}" for n in range(1, 15)})
         scenario_id_to_name = {s["id"]: s["name"] for s in scenarios}
-        alternatives = self._db_mngr.get_items(self._db_map, "alternative")
+        alternatives = self._db_map.get_items("alternative")
         alternative_id_to_name = {a["id"]: a["name"] for a in alternatives}
-        scenario_alternatives = self._db_mngr.get_items(self._db_map, "scenario_alternative")
+        scenario_alternatives = self._db_map.get_items("scenario_alternative")
         scenario_alternatives_by_name = {
             scenario_id_to_name[item["scenario_id"]]: (alternative_id_to_name[item["alternative_id"]], item["rank"])
             for item in scenario_alternatives

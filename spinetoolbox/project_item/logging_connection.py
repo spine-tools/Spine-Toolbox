@@ -81,19 +81,16 @@ class HeadlessConnection(ResourceConvertingConnection):
             if not url:
                 continue
             try:
-                db_map = DatabaseMapping(url)
+                with DatabaseMapping(url) as db_map:
+                    scenario_filter_ids = resource_filter_ids.get(SCENARIO_FILTER_TYPE)
+                    if scenario_filter_ids is not None:
+                        specific_filter_settings = self._filter_settings.known_filters.setdefault(
+                            resource.label, {}
+                        ).setdefault(SCENARIO_FILTER_TYPE, {})
+                        for row in db_map.query(db_map.scenario_sq):
+                            specific_filter_settings[row.name]: row.id = row.id in scenario_filter_ids
             except (SpineDBAPIError, SpineDBVersionError):
                 continue
-            try:
-                scenario_filter_ids = resource_filter_ids.get(SCENARIO_FILTER_TYPE)
-                if scenario_filter_ids is not None:
-                    specific_filter_settings = self._filter_settings.known_filters.setdefault(
-                        resource.label, {}
-                    ).setdefault(SCENARIO_FILTER_TYPE, {})
-                    for row in db_map.query(db_map.scenario_sq):
-                        specific_filter_settings[row.name]: row.id = row.id in scenario_filter_ids
-            finally:
-                db_map.close()
         self._legacy_resource_filter_ids = None
 
     @staticmethod

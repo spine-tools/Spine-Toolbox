@@ -138,7 +138,9 @@ class SpineDBWorker(QObject):
             return
         fully_fetched = item_type in self._fetched_item_types
         # Only trust mapping if no external commits or fully fetched
-        if not self._db_map.has_external_commits() or fully_fetched:
+        with self._db_mngr.get_lock(self._db_map):
+            has_external_commits = self._db_map.has_external_commits()
+        if not has_external_commits or fully_fetched:
             if self._iterate_mapping(parent):
                 # Something fetched from mapping
                 return
@@ -165,7 +167,8 @@ class SpineDBWorker(QObject):
     @busy_effect
     def _busy_db_map_fetch_more(self, item_type):
         offset = self._offsets.setdefault(item_type, 0)
-        chunk = self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE, offset=offset)
+        with self._db_mngr.get_lock(self._db_map):
+            chunk = self._db_map.fetch_more(item_type, limit=_CHUNK_SIZE, offset=offset)
         if len(chunk) < _CHUNK_SIZE:
             self._fetched_item_types.add(item_type)
         self._offsets[item_type] += len(chunk)
@@ -186,17 +189,14 @@ class SpineDBWorker(QObject):
             if commit_id is not None:
                 self.commit_cache.setdefault(commit_id, {}).setdefault(item_type, []).append(item["id"])
 
-    def fetch_all(self):
-        self._db_map.fetch_all()
-
     def close_db_map(self):
-        # FIXME: maybe check if self._db_map.closed is True in self._do_fetch_more instead?
-        self._do_fetch_more = lambda worker, *args, **kwargs: None
-        for parents in self._parents_by_type.values():
-            for parent in parents:
-                if not parent.is_obsolete:
-                    parent.set_obsolete(True)
-        self._db_map.close()
+        with self._db_mngr.get_lock(self._db_map):
+            self._db_map.close()
+            self._do_fetch_more = lambda worker, *args, **kwargs: None
+            for parents in self._parents_by_type.values():
+                for parent in parents:
+                    if not parent.is_obsolete:
+                        parent.set_obsolete(True)
 
     @busy_effect
     def add_items(self, item_type, orig_items, check):
@@ -207,7 +207,8 @@ class SpineDBWorker(QObject):
             orig_items (list): dict-items to add
             check (bool): Whether to check integrity
         """
-        items, errors = self._db_map.add_items(item_type, *orig_items, check=check)
+        with self._db_mngr.get_lock(self._db_map):
+            items, errors = self._db_map.add_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.update_icons(self._db_map, item_type, items)
@@ -229,9 +230,10 @@ class SpineDBWorker(QObject):
         Args:
             item_type (str): item type
             orig_items (list): dict-items to update
-            check (bool): Whether or not to check integrity
+            check (bool): Whether to check integrity
         """
-        items, errors = self._db_map.update_items(item_type, *orig_items, check=check)
+        with self._db_mngr.get_lock(self._db_map):
+            items, errors = self._db_map.update_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.update_icons(self._db_map, item_type, items)
@@ -245,9 +247,10 @@ class SpineDBWorker(QObject):
         Args:
             item_type (str): item type
             orig_items (list): dict-items to update
-            check (bool): Whether or not to check integrity
+            check (bool): Whether to check integrity
         """
-        added, updated, errors = self._db_map.add_update_items(item_type, *orig_items, check=check)
+        with self._db_mngr.get_lock(self._db_map):
+            added, updated, errors = self._db_map.add_update_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.update_icons(self._db_map, item_type, added + updated)
@@ -264,7 +267,8 @@ class SpineDBWorker(QObject):
             item_type (str): item type
             ids (set): ids of items to remove
         """
-        items, errors = self._db_map.remove_items(item_type, *ids, check=check)
+        with self._db_mngr.get_lock(self._db_map):
+            items, errors = self._db_map.remove_items(item_type, *ids, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
         self._db_mngr.items_removed.emit(item_type, {self._db_map: items})

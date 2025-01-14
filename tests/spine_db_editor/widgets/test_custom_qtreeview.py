@@ -144,7 +144,8 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add entity class.")
-        data = self._db_map.query(self._db_map.entity_class_sq).all()
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "an_entity_class")
 
@@ -162,11 +163,12 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add entity classes.")
-        entity_class = (
-            self._db_map.query(self._db_map.wide_entity_class_sq)
-            .filter(self._db_map.wide_entity_class_sq.c.name == "a_relationship_class")
-            .one()
-        )
+        with self._db_map:
+            entity_class = (
+                self._db_map.query(self._db_map.wide_entity_class_sq)
+                .filter(self._db_map.wide_entity_class_sq.c.name == "a_relationship_class")
+                .one()
+            )
         self.assertEqual(entity_class.name, "a_relationship_class")
         self.assertEqual(entity_class.dimension_name_list, "an_entity_class")
 
@@ -188,12 +190,13 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         entity_database_index = model.index(0, 1, class_index)
         self.assertEqual(entity_database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add entity.")
-        data = self._db_map.query(self._db_map.entity_class_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "an_entity_class")
-        data = self._db_map.query(self._db_map.entity_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "an_entity")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_class_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "an_entity_class")
+            data = self._db_map.query(self._db_map.entity_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "an_entity")
 
     def test_add_entity_with_alternative(self):
         """Tests that adding a new entity with the alternative -column filled
@@ -228,12 +231,13 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         entity_database_index = model.index(0, 1, class_index)
         self.assertEqual(entity_database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add entity.")
-        data = self._db_map.query(self._db_map.entity_class_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "an_entity_class")
-        data = self._db_map.query(self._db_map.entity_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "an_entity")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_class_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "an_entity_class")
+            data = self._db_map.query(self._db_map.entity_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "an_entity")
 
     def test_add_entity_with_group(self):
         """Tests that adding a new entity with the group -column filled
@@ -265,12 +269,13 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         entity_database_index = model.index(0, 1, class_index)
         self.assertEqual(entity_database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add entity.")
-        data = self._db_map.query(self._db_map.entity_class_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "classy")
-        data = self._db_map.query(self._db_map.entity_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "wine")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_class_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "classy")
+            data = self._db_map.query(self._db_map.entity_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "wine")
 
     def test_add_entity_with_single_dimension(self):
         view = self._db_editor.ui.treeView_entity
@@ -296,17 +301,18 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         database_index = model.index(0, 1, class_index)
         self.assertEqual(database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add an entities.")
-        class_id = (
-            self._db_map.query(self._db_map.entity_class_sq)
-            .filter(self._db_map.entity_class_sq.c.name == "a_relationship_class")
-            .one()
-            .id
-        )
-        entity = (
-            self._db_map.query(self._db_map.wide_entity_sq)
-            .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
-            .one()
-        )
+        with self._db_map:
+            class_id = (
+                self._db_map.query(self._db_map.entity_class_sq)
+                .filter(self._db_map.entity_class_sq.c.name == "a_relationship_class")
+                .one()
+                .id
+            )
+            entity = (
+                self._db_map.query(self._db_map.wide_entity_sq)
+                .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
+                .one()
+            )
         self.assertEqual(entity.name, "a_relationship")
         self.assertEqual(entity.element_name_list, "an_entity")
 
@@ -329,7 +335,8 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), self.db_codename)
         self._commit_changes_to_database("Add entity classes.")
-        data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
+        with self._db_map:
+            data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
         self.assertEqual(len(data), 2)
         self.assertEqual(data[0].name, "an_entity_class")
         self.assertIsNone(data[0].dimension_name_list)
@@ -356,11 +363,10 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_entity_classes(db_map, (("entity_class_1",),))
-        import_entities(db_map, (("entity_class_1", "entity_1"), ("entity_class_1", "entity_2")))
-        db_map.commit_session("Add entities.")
-        db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_entity_classes(db_map, (("entity_class_1",),))
+            import_entities(db_map, (("entity_class_1", "entity_1"), ("entity_class_1", "entity_2")))
+            db_map.commit_session("Add entities.")
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         root_index = model.index(0, 0)
@@ -414,9 +420,10 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         class_index = model.index(0, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename entity class.")
-        data = self._db_map.query(self._db_map.entity_class_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "renamed_class")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_class_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "renamed_class")
 
     def test_rename_entity(self):
         view = self._db_editor.ui.treeView_entity
@@ -436,9 +443,10 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         entity_index = model.index(0, 0, class_index)
         self.assertEqual(entity_index.data(), "renamed_entity")
         self._commit_changes_to_database("Rename entity.")
-        data = self._db_map.query(self._db_map.entity_sq).all()
-        self.assertEqual(len(data), 2)
-        self.assertEqual(data[0].name, "renamed_entity")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_sq).all()
+            self.assertEqual(len(data), 2)
+            self.assertEqual(data[0].name, "renamed_entity")
 
     def test_remove_entity_class(self):
         view = self._db_editor.ui.treeView_entity
@@ -449,8 +457,9 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         _remove_entity_class(view)
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove entity class.")
-        data = self._db_map.query(self._db_map.entity_class_sq).all()
-        self.assertEqual(len(data), 0)
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_class_sq).all()
+            self.assertEqual(len(data), 0)
 
     def test_remove_entity(self):
         view = self._db_editor.ui.treeView_entity
@@ -472,9 +481,10 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         entity_index = model.index(0, 0, class_index)
         self.assertEqual(entity_index.data(), "entity_2")
         self._commit_changes_to_database("Remove entity.")
-        data = self._db_map.query(self._db_map.entity_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "entity_2")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "entity_2")
 
     def test_set_db_column_visibility(self):
         view = self._db_editor.ui.treeView_entity
@@ -517,24 +527,26 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_entity_classes(db_map, (("object_class_1",), ("object_class_2",)))
-        import_entities(
-            db_map,
-            (
-                ("object_class_1", "object_11"),
-                ("object_class_1", "object_12"),
-                ("object_class_2", "object_21"),
-                ("object_class_2", "object_22"),
-            ),
-        )
-        import_entity_classes(db_map, (("relationship_class", ("object_class_1", "object_class_2")),))
-        import_entities(
-            db_map,
-            (("relationship_class", ("object_11", "object_21")), ("relationship_class", ("object_11", "object_22"))),
-        )
-        db_map.commit_session("Add relationships.")
-        db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_entity_classes(db_map, (("object_class_1",), ("object_class_2",)))
+            import_entities(
+                db_map,
+                (
+                    ("object_class_1", "object_11"),
+                    ("object_class_1", "object_12"),
+                    ("object_class_2", "object_21"),
+                    ("object_class_2", "object_22"),
+                ),
+            )
+            import_entity_classes(db_map, (("relationship_class", ("object_class_1", "object_class_2")),))
+            import_entities(
+                db_map,
+                (
+                    ("relationship_class", ("object_11", "object_21")),
+                    ("relationship_class", ("object_11", "object_22")),
+                ),
+            )
+            db_map.commit_session("Add relationships.")
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         root_index = model.index(0, 0)
@@ -591,13 +603,14 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         class_index = model.index(2, 0, root_index)
         self.assertEqual(class_index.data(), "renamed_class")
         self._commit_changes_to_database("Rename relationship class.")
-        entity_class = (
-            self._db_map.query(self._db_map.entity_class_sq)
-            .filter(self._db_map.entity_class_sq.c.name == "renamed_class")
-            .one()
-        )
-        self.assertIsNotNone(entity_class)
-        self.assertEqual(entity_class.name, "renamed_class")
+        with self._db_map:
+            entity_class = (
+                self._db_map.query(self._db_map.entity_class_sq)
+                .filter(self._db_map.entity_class_sq.c.name == "renamed_class")
+                .one()
+            )
+            self.assertIsNotNone(entity_class)
+            self.assertEqual(entity_class.name, "renamed_class")
 
     def test_rename_multidimensional_entity(self):
         view = self._db_editor.ui.treeView_entity
@@ -615,20 +628,21 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         self._rename_entity("renamed_relationship")
         QApplication.processEvents()  # Fixes a "silent" Traceback.
         self._commit_changes_to_database("Rename relationship.")
-        class_id = (
-            self._db_map.query(self._db_map.entity_class_sq)
-            .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
-            .one()
-            .id
-        )
-        data = (
-            self._db_map.query(self._db_map.wide_entity_sq)
-            .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
-            .all()
-        )
-        self.assertEqual(len(data), 2)
-        names = {i.name for i in data}
-        self.assertEqual(names, {"renamed_relationship", "object_11__object_22"})
+        with self._db_map:
+            class_id = (
+                self._db_map.query(self._db_map.entity_class_sq)
+                .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
+                .one()
+                .id
+            )
+            data = (
+                self._db_map.query(self._db_map.wide_entity_sq)
+                .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
+                .all()
+            )
+            self.assertEqual(len(data), 2)
+            names = {i.name for i in data}
+            self.assertEqual(names, {"renamed_relationship", "object_11__object_22"})
 
     def test_modify_entitys_elements(self):
         view = self._db_editor.ui.treeView_entity
@@ -648,16 +662,17 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         QApplication.processEvents()  # Fixes "silent" Traceback.
         self.assertEqual(entity_index.data(), "object_12 ǀ object_21")
         self._commit_changes_to_database("Change relationship's objects.")
-        class_id = (
-            self._db_map.query(self._db_map.entity_class_sq)
-            .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
-            .one()
-            .id
-        )
-        data = self._db_map.query(self._db_map.wide_entity_sq).all()
-        self.assertEqual(len(data), 6)
-        objects = {i.element_name_list for i in data if i.class_id == class_id}
-        self.assertEqual(objects, {"object_12,object_21", "object_11,object_22"})
+        with self._db_map:
+            class_id = (
+                self._db_map.query(self._db_map.entity_class_sq)
+                .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
+                .one()
+                .id
+            )
+            data = self._db_map.query(self._db_map.wide_entity_sq).all()
+            self.assertEqual(len(data), 6)
+            objects = {i.element_name_list for i in data if i.class_id == class_id}
+            self.assertEqual(objects, {"object_12,object_21", "object_11,object_22"})
 
     def test_remove_multidimensional_entity_class(self):
         view = self._db_editor.ui.treeView_entity
@@ -672,9 +687,10 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         self._remove_class()
         self.assertEqual(model.rowCount(root_index), 2)
         self._commit_changes_to_database("Remove relationship class.")
-        data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
-        self.assertEqual(len(data), 2)
-        self.assertEqual({i.name for i in data}, {"object_class_1", "object_class_2"})
+        with self._db_map:
+            data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
+            self.assertEqual(len(data), 2)
+            self.assertEqual({i.name for i in data}, {"object_class_1", "object_class_2"})
 
     def test_remove_multidimensional_entity(self):
         view = self._db_editor.ui.treeView_entity
@@ -694,18 +710,19 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
         self._commit_changes_to_database("Remove relationship.")
-        class_id = (
-            self._db_map.query(self._db_map.entity_class_sq)
-            .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
-            .one()
-            .id
-        )
-        record = (
-            self._db_map.query(self._db_map.wide_entity_sq)
-            .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
-            .one()
-        )
-        self.assertEqual(record.name, "object_11__object_22")
+        with self._db_map:
+            class_id = (
+                self._db_map.query(self._db_map.entity_class_sq)
+                .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
+                .one()
+                .id
+            )
+            record = (
+                self._db_map.query(self._db_map.wide_entity_sq)
+                .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
+                .one()
+            )
+            self.assertEqual(record.name, "object_11__object_22")
 
     def test_removing_dimension_class_removes_corresponding_multidimensional_entity_class(self):
         object_tree_view = self._db_editor.ui.treeView_entity
@@ -724,9 +741,10 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         QApplication.processEvents()
         self.assertEqual(model.rowCount(root_index), 1)
         self._commit_changes_to_database("Remove object class.")
-        data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual({i.name for i in data}, {"object_class_2"})
+        with self._db_map:
+            data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual({i.name for i in data}, {"object_class_2"})
 
     def test_removing_element_removes_corresponding_entity(self):
         object_tree_view = self._db_editor.ui.treeView_entity
@@ -757,9 +775,10 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         entity_index = model.index(0, 0, class_index)
         self.assertEqual(entity_index.data(), "object_11 ǀ object_22")
         self._commit_changes_to_database("Remove object.")
-        data = self._db_map.query(self._db_map.entity_sq).all()
-        self.assertEqual(len(data), 4)
-        self.assertEqual({i.name for i in data}, {"object_11", "object_12", "object_22", "object_11__object_22"})
+        with self._db_map:
+            data = self._db_map.query(self._db_map.entity_sq).all()
+            self.assertEqual(len(data), 4)
+            self.assertEqual({i.name for i in data}, {"object_11", "object_12", "object_22", "object_11__object_22"})
 
     def _rename_class(self, class_name):
         view = self._db_editor.ui.treeView_entity
@@ -784,26 +803,25 @@ class TestEntityTreeViewSorting(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_entity_classes(db_map, (("entity_class",), ("P_entity_class",), ("P_entity_class (1)",)))
-        import_entities(
-            db_map,
-            (
-                ("entity_class", "entity_11"),
-                ("entity_class", "entity_12"),
-                ("P_entity_class", "entity_1"),
-                ("P_entity_class", "entity_2"),
-                ("P_entity_class (1)", "entity_1 (1)"),
-                ("P_entity_class (1)", "entity_2 (1)"),
-            ),
-        )
-        import_entity_classes(db_map, (("entity_class_ND", ("entity_class", "P_entity_class")),))
-        import_entities(
-            db_map,
-            (("entity_class_ND", ("entity_11", "entity_2")), ("entity_class_ND", ("entity_12", "entity_1"))),
-        )
-        db_map.commit_session("Add entities.")
-        db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_entity_classes(db_map, (("entity_class",), ("P_entity_class",), ("P_entity_class (1)",)))
+            import_entities(
+                db_map,
+                (
+                    ("entity_class", "entity_11"),
+                    ("entity_class", "entity_12"),
+                    ("P_entity_class", "entity_1"),
+                    ("P_entity_class", "entity_2"),
+                    ("P_entity_class (1)", "entity_1 (1)"),
+                    ("P_entity_class (1)", "entity_2 (1)"),
+                ),
+            )
+            import_entity_classes(db_map, (("entity_class_ND", ("entity_class", "P_entity_class")),))
+            import_entities(
+                db_map,
+                (("entity_class_ND", ("entity_11", "entity_2")), ("entity_class_ND", ("entity_12", "entity_1"))),
+            )
+            db_map.commit_session("Add entities.")
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         self.root_item = model.root_item
@@ -884,23 +902,23 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
             QApplication.processEvents()
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Add parameter value list.")
-        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "a_value_list")
-        data = self._db_map.query(self._db_map.list_value_sq).all()
-        self.assertEqual(len(data), 2)
-        for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
+        with self._db_map:
+            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "a_value_list")
+            data = self._db_map.query(self._db_map.list_value_sq).all()
+            self.assertEqual(len(data), 2)
+            for i, expected_value in enumerate(("value_1", "value_2")):
+                self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
 class TestParameterValueListTreeViewWithExistingData(TestBase):
     def setUp(self):
         self._temp_dir = TemporaryDirectory()
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_parameter_value_lists(db_map, (("value_list_1", "value_1"), ("value_list_1", "value_2")))
-        db_map.commit_session("Add parameter value list.")
-        db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_parameter_value_lists(db_map, (("value_list_1", "value_1"), ("value_list_1", "value_2")))
+            db_map.commit_session("Add parameter value list.")
         self._common_setup(url, create=False)
 
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -951,12 +969,13 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         list_name_index = model.index(1, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list value.")
-        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "value_list_1")
-        data = self._db_map.query(self._db_map.list_value_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(from_database(data[0].value, data[0].type), "value_2")
+        with self._db_map:
+            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "value_list_1")
+            data = self._db_map.query(self._db_map.list_value_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(from_database(data[0].value, data[0].type), "value_2")
 
     def test_remove_list(self):
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -971,8 +990,9 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         self.assertEqual(model.rowCount(list_name_index), 0)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Remove parameter value list.")
-        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-        self.assertEqual(len(data), 0)
+        with self._db_map:
+            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
+            self.assertEqual(len(data), 0)
 
     def test_change_value(self):
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -984,13 +1004,14 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         self.assertEqual(model.index(0, 0, list_name_index).data(), "new_value")
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
         self._commit_changes_to_database("Update parameter value list value.")
-        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "value_list_1")
-        data = self._db_map.query(self._db_map.list_value_sq).all()
-        self.assertEqual(len(data), 2)
-        for i, expected_value in enumerate(("new_value", "value_2")):
-            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
+        with self._db_map:
+            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "value_list_1")
+            data = self._db_map.query(self._db_map.list_value_sq).all()
+            self.assertEqual(len(data), 2)
+            for i, expected_value in enumerate(("new_value", "value_2")):
+                self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
     def test_rename_list(self):
         view = self._db_editor.ui.treeView_parameter_value_list
@@ -1008,13 +1029,14 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         list_name_index = model.index(1, 0, root_index)
         self.assertEqual(list_name_index.data(), "Type new list name here...")
         self._commit_changes_to_database("Rename parameter value list.")
-        data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0].name, "new_list_name")
-        data = self._db_map.query(self._db_map.list_value_sq).all()
-        self.assertEqual(len(data), 2)
-        for i, expected_value in enumerate(("value_1", "value_2")):
-            self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
+        with self._db_map:
+            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
+            self.assertEqual(len(data), 1)
+            self.assertEqual(data[0].name, "new_list_name")
+            data = self._db_map.query(self._db_map.list_value_sq).all()
+            self.assertEqual(len(data), 2)
+            for i, expected_value in enumerate(("value_1", "value_2")):
+                self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
 if __name__ == "__main__":
