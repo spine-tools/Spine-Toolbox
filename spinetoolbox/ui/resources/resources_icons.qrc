@@ -1,6 +1,8 @@
 <RCC>
   <qresource prefix="/symbols">
     <file>Spine_symbol.png</file>
+    <file>julia-logo.svg</file>
+    <file>python-logo.svg</file>
     <file>spinetoolbox_on_wht.png</file>
     <file>app.ico</file>
   </qresource>
@@ -13,6 +15,7 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/terminal.svg</file>
     <file>menu_icons/bolt-lightning.svg</file>
     <file>share.svg</file>
     <file>menu_icons/server.svg</file>

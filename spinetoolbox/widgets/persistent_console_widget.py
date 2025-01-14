@@ -12,7 +12,10 @@
 
 """Contains a widget acting as a console for Julia & Python REPL's."""
 import os
+import sys
 import uuid
+import multiprocessing
+from queue import Empty
 from pygments.lexers import get_lexer_by_name
 from pygments.styles import get_style_by_name
 from pygments.token import Token
@@ -28,8 +31,13 @@ from PySide6.QtGui import (
     QTextCursor,
     QTextOption,
 )
-from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy
+from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy, QWidget, QVBoxLayout
 from spine_engine.exception import RemoteEngineInitFailed
+from spine_engine.execution_managers.persistent_execution_manager import (
+    PythonPersistentExecutionManager,
+    JuliaPersistentExecutionManager,
+)
+from spine_engine.utils.queue_logger import QueueLogger
 from spinetoolbox.helpers import CustomSyntaxHighlighter
 from spinetoolbox.qthread_pool_executor import QtBasedThreadPoolExecutor
 from spinetoolbox.spine_engine_manager import make_engine_manager
@@ -42,13 +50,13 @@ class _CustomLineEdit(QPlainTextEdit):
         self._console = console
         self._current_prompt = ""
         self.setStyleSheet("QPlainTextEdit {background-color: transparent; color: transparent; border:none;}")
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.document().setDocumentMargin(0)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.setTabChangesFocus(False)
         self.setUndoRedoEnabled(False)
-        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
         self.cursorPositionChanged.connect(self._handle_cursor_position_changed)
         self.textChanged.connect(self._handle_text_changed)
 
@@ -116,10 +124,10 @@ class _CustomLineEdit(QPlainTextEdit):
         self._updating = False
 
     def keyPressEvent(self, ev):
-        if ev.matches(QKeySequence.Copy):
+        if ev.matches(QKeySequence.StandardKey.Copy):
             ev.ignore()
             return
-        if ev.key() == Qt.Key_Backspace:
+        if ev.key() == Qt.Key.Key_Backspace:
             cursor = self.textCursor()
             if cursor.position() == self.min_pos:
                 return
@@ -131,13 +139,13 @@ class _CustomLineEdit(QPlainTextEdit):
                 )
                 cursor.removeSelectedText()
                 return
-        if ev.key() == Qt.Key_Left:
+        if ev.key() == Qt.Key.Key_Left:
             cursor = self.textCursor()
             if cursor.positionInBlock() == self.new_line_indent:
                 cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, n=self.new_line_indent + 1)
                 self.setTextCursor(cursor)
                 return
-        if ev.key() == Qt.Key_Delete:
+        if ev.key() == Qt.Key.Key_Delete:
             cursor = self.textCursor()
             if cursor.atBlockEnd():
                 cursor.movePosition(
@@ -166,18 +174,22 @@ class PersistentConsoleWidget(QPlainTextEdit):
     _MAX_LINES_PER_CYCLE = _MAX_LINES_PER_SECOND * 1000 / _FLUSH_INTERVAL
     _MAX_LINES_COUNT = 2000
 
-    def __init__(self, toolbox, key, language, owner=None):
+    def __init__(self, toolbox, key, language, owner=None, console=None):
         """
         Args:
             toolbox (ToolboxUI)
             key (tuple): persistent process identifier
             language (str): for syntax highlighting and prompting, etc.
             owner (ProjectItemBase, optional): console owner
+            console (ConsoleWindow): A window for displaying the console if running in detached mode
         """
-        super().__init__(parent=toolbox)
+        parent_widget = toolbox if not console else console
+        super().__init__(parent=parent_widget)
+        if console is not None:
+            console.lay_out.addWidget(self)
         self._executor = QtBasedThreadPoolExecutor(max_workers=1)
         self._updating = False
-        font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         self.setFont(font)
         self.setMaximumBlockCount(self._MAX_LINES_COUNT)
         self._toolbox = toolbox
@@ -198,12 +210,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
             f"QPlainTextEdit {{background-color: {background_color}; color: {foreground_color}; border: 0px}}"
         )
         cursor_width = self.fontMetrics().horizontalAdvance("x")
-        self.setWordWrapMode(QTextOption.WrapAnywhere)
+        self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
         self.setTabStopDistance(4 * cursor_width)
         self._line_edit = _CustomLineEdit(self)
         self._line_edit.setFont(font)
         self._line_edit.setCursorWidth(cursor_width)
-        self._line_edit.setWordWrapMode(QTextOption.WrapAnywhere)
+        self._line_edit.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
         self._line_edit.setTabStopDistance(4 * cursor_width)
         self._highlighter = CustomSyntaxHighlighter(None)
         self._highlighter.set_style(self._style)
@@ -236,10 +248,17 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._completions_available.connect(self._display_completions)
         self._restarted.connect(self._handle_restarted)
         self._killed.connect(self._do_set_killed)
+        self._execution_manager = None
+        self._q = multiprocessing.Queue()
+        self._logger = QueueLogger(self._q, "DetachedBasicConsole", None, {})
+        self._console = console
+        self.detached_console_id = None
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
         self._executor.shutdown()
+        if isinstance(self.parent(), ConsoleWindow):
+            self.parent().close()
 
     def name(self):
         """Returns console name for display purposes."""
@@ -263,9 +282,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def mouseMoveEvent(self, ev):
         super().mouseMoveEvent(ev)
         if self.anchorAt(ev.position().toPoint()):
-            self.viewport().setCursor(Qt.PointingHandCursor)
+            self.viewport().setCursor(Qt.CursorShape.PointingHandCursor)
         else:
-            self.viewport().setCursor(Qt.IBeamCursor)
+            self.viewport().setCursor(Qt.CursorShape.IBeamCursor)
 
     def mousePressEvent(self, ev):
         super().mousePressEvent(ev)
@@ -279,7 +298,7 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if text_buffer is None:
             return
         cursor = self.cursorForPosition(ev.position().toPoint())
-        cursor.select(cursor.BlockUnderCursor)
+        cursor.select(cursor.SelectionType.BlockUnderCursor)
         cursor.removeSelectedText()
         cursor.beginEditBlock()
         while text_buffer:
@@ -398,9 +417,9 @@ class PersistentConsoleWidget(QPlainTextEdit):
     def _make_prompt(self):
         text_format = QTextCharFormat()
         if self._language == "julia":
-            prompt = "\njulia> "
-            text_format.setForeground(Qt.darkGreen)
-            text_format.setFontWeight(QFont.Bold)
+            prompt = "julia> "
+            text_format.setForeground(Qt.GlobalColor.darkGreen)
+            text_format.setFontWeight(QFont.Weight.Bold)
         elif self._language == "python":
             prompt = ">>> "
         else:
@@ -548,13 +567,13 @@ class PersistentConsoleWidget(QPlainTextEdit):
         """
         self._at_bottom = True
         text = self._get_current_text()
-        if ev.key() in (Qt.Key_Return, Qt.Key_Enter):
+        if ev.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self._issue_command(text)
-        elif ev.key() == Qt.Key_Up:
+        elif ev.key() == Qt.Key.Key_Up:
             self._move_history(text, True)
-        elif ev.key() == Qt.Key_Down:
+        elif ev.key() == Qt.Key.Key_Down:
             self._move_history(text, False)
-        elif ev.key() == Qt.Key_Tab:
+        elif ev.key() == Qt.Key.Key_Tab:
             self._autocomplete(text)
         else:
             return False
@@ -585,12 +604,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
         Args:
             text (str)
         """
+        if not text.strip():  # Don't send empty command to executor
+            self._make_prompt_block(prompt=self._prompt)
+            return
         self._executor.submit(self._do_check_command, text)
 
     def _do_check_command(self, text):
-        if not text.strip():  # Don't send empty command to execution manager
-            self._make_prompt_block(prompt=self._prompt)
-            return
         engine_mngr = self.create_engine_manager()
         if not engine_mngr:
             return
@@ -769,6 +788,91 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._extend_menu(menu)
         menu.exec(ev.globalPos())
 
+    def request_start_kernel(self, exec_path):
+        """Requests Spine Engine to launch a persistent kernel manager for the given Python.
+
+        Args:
+            exec_path (str): Abs. path to kernel file (e.g. ../../julia.exe or ../../python.exe)
+
+        Returns:
+            str or None: Kernel manager key if kernel manager was launched successfully, None otherwise
+        """
+        if self._language == "python":
+            manager_class = PythonPersistentExecutionManager
+        elif self._language == "julia":
+            manager_class = JuliaPersistentExecutionManager
+        else:
+            self._logger.msg_error.emit(f"Unsupported console language '{self._language}'")
+            return None
+        self._execution_manager = manager_class(
+            self._logger, [exec_path], [], f"Detached Basic {self._language.capitalize()} Console", False, None
+        )
+        try:
+            msg_type, msg = self._q.get(timeout=20)  # Blocks until msg (tuple(str, dict)  is received, or timeout.
+        except Empty:
+            msg_type, msg = "No response from Engine", {}
+        if msg_type != "persistent_execution_msg":
+            self._toolbox.msg_error.emit(f"Starting console failed: {msg_type} [{msg}]")
+            self.release_exec_mngr_resources()
+            return None
+        else:
+            retval = self._handle_exec_mngr_started_msg(msg)
+            self.detached_console_id = exec_path
+            return retval
+
+    def insert_banner(self, language):
+        """Inserts banner for the detached Python console on Windows.
+
+        Note: Julia consoles on Windows are missing the banner. You can get the banner
+        in Julia 1.11 with REPL.banner() but this function doesn't exist on older Julias
+        (e.g. Julia 1.8). On older Julias, you can get the banner using the Base.banner()
+        function, which doesn't exist on Julia 1.11.
+        """
+        if sys.platform != "win32":
+            return
+        if language == "python":
+            engine_mngr = self.create_engine_manager()
+            if not engine_mngr:
+                return
+            sys_version = ""
+            sys_platform = ""
+            for msg in engine_mngr.issue_persistent_command(self._key, "sys.version"):
+                if msg["type"] == "stdout":
+                    sys_version = msg["data"]
+            for msg in engine_mngr.issue_persistent_command(self._key, "sys.platform"):
+                if msg["type"] == "stdout":
+                    sys_platform = msg["data"]
+            banner = "Python " + sys_version.replace("'", "") + " on " + sys_platform.replace("'", "")
+            self._insert_text_before_prompt(banner)
+
+    def release_exec_mngr_resources(self):
+        """Closes _io.TextIOWrapper files."""
+        if self._execution_manager is not None:
+            self._execution_manager.std_out.close()
+            self._execution_manager.std_err.close()
+            self._execution_manager = None
+
+    def _handle_exec_mngr_started_msg(self, msg):
+        """Handles the response message from PythonPersistentExecutionManager.
+
+        Args:
+            msg (dict): Message with item_name, type, etc. keys
+
+        Returns:
+            str or None: Persistent process key if engine started the requested kernel
+            manager successfully, None otherwise.
+        """
+        if msg["type"] == "persistent_started":
+            self._key = msg["key"]
+            self.parent().set_key(self._key)
+            return self._key
+        if msg["type"] == "persistent_failed_to_start":
+            self._toolbox.msg_error.emit(f"Basic Console failed to start:<br/>{msg}")
+            return None
+        else:
+            self._toolbox.msg.emit(f"Unhandled message: {msg}")
+        return None
+
 
 # Translated from
 # https://code.qt.io/cgit/qt-creator/qt-creator.git/tree/src/libs/utils/ansiescapecodehandler.cpp?h=master
@@ -787,10 +891,10 @@ class AnsiEscapeCodeHandler:
         default_format.setForeground(self._fg_color)
         return default_format
 
-    def endFormatScope(self):
+    def end_format_scope(self):
         self._previous_format_closed = True
 
-    def setFormatScope(self, char_format):
+    def set_format_scope(self, char_format):
         self._previous_format = char_format
         self._previous_format_closed = False
 
@@ -880,55 +984,55 @@ class AnsiEscapeCodeHandler:
                 stripped_text = stripped_text[1:]
                 if not numbers:
                     char_format = self._make_default_format()
-                    self.endFormatScope()
+                    self.end_format_scope()
                 for i in range(len(numbers)):  # pylint: disable=consider-using-enumerate
                     code = int(numbers[i])
                     if AnsiEscapeCode.TextColorStart <= code <= AnsiEscapeCode.TextColorEnd:
                         char_format.setForeground(_ansi_color(code - AnsiEscapeCode.TextColorStart))
-                        self.setFormatScope(char_format)
+                        self.set_format_scope(char_format)
                     elif AnsiEscapeCode.BrightTextColorStart <= code <= AnsiEscapeCode.BrightTextColorEnd:
                         char_format.setForeground(_ansi_color(code - AnsiEscapeCode.BrightTextColorStart, bright=True))
-                        self.setFormatScope(char_format)
+                        self.set_format_scope(char_format)
                     elif AnsiEscapeCode.BackgroundColorStart <= code <= AnsiEscapeCode.BackgroundColorEnd:
                         char_format.setBackground(_ansi_color(code - AnsiEscapeCode.BackgroundColorStart))
-                        self.setFormatScope(char_format)
+                        self.set_format_scope(char_format)
                     elif AnsiEscapeCode.BrightBackgroundColorStart <= code <= AnsiEscapeCode.BrightBackgroundColorEnd:
                         char_format.setBackground(
                             _ansi_color(code - AnsiEscapeCode.BrightBackgroundColorStart, bright=True)
                         )
-                        self.setFormatScope(char_format)
+                        self.set_format_scope(char_format)
                     else:
                         if code == AnsiEscapeCode.ResetFormat:
                             char_format = self._make_default_format()
-                            self.endFormatScope()
+                            self.end_format_scope()
                             break
                         if code == AnsiEscapeCode.BoldText:
-                            char_format.setFontWeight(QFont.Bold)
-                            self.setFormatScope(char_format)
+                            char_format.setFontWeight(QFont.Weight.Bold)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.FaintText:
-                            char_format.setFontWeight(QFont.Light)
-                            self.setFormatScope(char_format)
+                            char_format.setFontWeight(QFont.Weight.Light)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.ItalicText:
                             char_format.setFontItalic(True)
-                            self.setFormatScope(char_format)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.NormalIntensity:
-                            char_format.setFontWeight(QFont.Normal)
-                            self.setFormatScope(char_format)
+                            char_format.setFontWeight(QFont.Weight.Normal)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.NotItalic:
                             char_format.setFontItalic(False)
-                            self.setFormatScope(char_format)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.DefaultTextColor:
                             char_format.setForeground(self._fg_color)
-                            self.setFormatScope(char_format)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.DefaultBackgroundColor:
                             char_format.setBackground(self._bg_color)
-                            self.setFormatScope(char_format)
+                            self.set_format_scope(char_format)
                             break
                         if code == AnsiEscapeCode.RgbBackgroundColor:
                             # See http://en.wikipedia.org/wiki/ANSI_escape_code#Colors
@@ -944,7 +1048,7 @@ class AnsiEscapeCodeHandler:
                                         char_format.setForeground(color)
                                     else:
                                         char_format.setBackground(color)
-                                self.setFormatScope(char_format)
+                                self.set_format_scope(char_format)
                                 i += 3
                                 break
                             if j == 5:
@@ -969,7 +1073,7 @@ class AnsiEscapeCodeHandler:
                                     char_format.setForeground(color)
                                 else:
                                     char_format.setBackground(color)
-                                self.setFormatScope(char_format)
+                                self.set_format_scope(char_format)
                                 i += 1
                             break
                         break
@@ -984,3 +1088,25 @@ def _ansi_color(code, bright=False):
     green = on if code & 2 else off
     blue = on if code & 4 else off
     return QColor(red, green, blue)
+
+
+class ConsoleWindow(QWidget):
+    """A window for displaying a detached basic console."""
+
+    console_closed = Signal(str)
+
+    def __init__(self, icon, language):
+        super().__init__(parent=None, f=Qt.WindowType.Window)
+        self.setWindowIcon(icon)
+        self.resize(600, 350)
+        self.lay_out = QVBoxLayout(self)
+        self.lay_out.setContentsMargins(0, 0, 0, 0)
+        self._key = None
+        self.setWindowTitle(f"{language.capitalize()}" + " Basic Console [Detached]")
+        self.show()
+
+    def set_key(self, key):
+        self._key = key
+
+    def closeEvent(self, event):
+        self.console_closed.emit(self._key)
