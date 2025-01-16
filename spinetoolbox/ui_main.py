@@ -50,7 +50,7 @@ from PySide6.QtWidgets import (
 )
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.load_project_items import load_item_specification_factories
-from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable
+from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable, resolve_julia_project
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
@@ -2347,20 +2347,22 @@ class ToolboxUI(QMainWindow):
     def start_detached_julia_basic_console(self):
         """Starts basic console with the default Julia executable."""
         julia = resolve_julia_executable(self.qsettings())
+        project = resolve_julia_project(self.qsettings())
         if not julia:
             self.msg_warning.emit("No Julia installation found. Add path to a Julia executable in Spine "
                                   "Toolbox Settings [<b>File->Settings->Tools</b>]")
             return
         _set_resource_limits(self.qsettings(), threading.Lock())
-        self.start_detached_basic_console("julia", julia)
+        self.start_detached_basic_console("julia", julia, project)
 
-    def start_detached_basic_console(self, language, executable):
+    def start_detached_basic_console(self, language, executable, julia_project=None):
         """Launches a new detached basic console with the given executable
         or activates an existing Console if the kernel is already running.
 
         Args:
             language (str): Console kernel language
             executable (str): Abs. path to kernel file
+            julia_project (str): Path to Julia environment
         """
         for pcw in self._persistent_consoles.values():
             if pcw.detached_console_id is not None:
@@ -2373,7 +2375,7 @@ class ToolboxUI(QMainWindow):
         icon = basic_console_icon(language)
         console_window = ConsoleWindow(icon, language)
         c = PersistentConsoleWidget(self, None, language, None, console_window)
-        key = c.request_start_kernel(executable)
+        key = c.request_start_kernel(executable, julia_project)
         if not key:
             self.msg_error.emit(f"Starting Basic Console for {executable} failed")
             return

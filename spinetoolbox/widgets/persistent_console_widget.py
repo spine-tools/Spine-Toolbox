@@ -788,24 +788,28 @@ class PersistentConsoleWidget(QPlainTextEdit):
         self._extend_menu(menu)
         menu.exec(ev.globalPos())
 
-    def request_start_kernel(self, exec_path):
+    def request_start_kernel(self, exec_path, julia_project=None):
         """Requests Spine Engine to launch a persistent kernel manager for the given Python.
 
         Args:
             exec_path (str): Abs. path to kernel file (e.g. ../../julia.exe or ../../python.exe)
+            julia_project (str): Path to Julia environment
 
         Returns:
             str or None: Kernel manager key if kernel manager was launched successfully, None otherwise
         """
+        args = [exec_path]
         if self._language == "python":
             manager_class = PythonPersistentExecutionManager
         elif self._language == "julia":
             manager_class = JuliaPersistentExecutionManager
+            if julia_project:
+                args += ["--project=" + julia_project]
         else:
             self._logger.msg_error.emit(f"Unsupported console language '{self._language}'")
             return None
         self._execution_manager = manager_class(
-            self._logger, [exec_path], [], f"Detached Basic {self._language.capitalize()} Console", False, None
+            self._logger, args, [], f"Detached Basic {self._language.capitalize()} Console", False, None
         )
         try:
             msg_type, msg = self._q.get(timeout=20)  # Blocks until msg (tuple(str, dict)  is received, or timeout.
