@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ToolboxUI class."""
+import sys
 from contextlib import contextmanager
 import json
 import os
@@ -28,7 +29,7 @@ from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.resources_icons_rc import qInitResources
 import spinetoolbox.ui_main
-from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget
+from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget, ConsoleWindow
 from spinetoolbox.widgets.project_item_drag import NiceButton, ProjectItemDragMixin
 from .mock_helpers import (
     TestCaseWithQApplication,
@@ -219,7 +220,7 @@ class TestToolboxUI(TestCaseWithQApplication):
             # Make sure that the test uses LocalSpineEngineManager
             mock_qsettings_value.side_effect = qsettings_value_side_effect
             # Selecting cancel on the project close confirmation
-            with mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel):
+            with mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):
                 self.assertFalse(self.toolbox.close_project())
             mock_qsettings_value.assert_called()
         with (
@@ -227,7 +228,7 @@ class TestToolboxUI(TestCaseWithQApplication):
             mock.patch("spinetoolbox.project.create_dir"),
             mock.patch("spinetoolbox.project_item.project_item.create_dir"),
             mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
-            mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel),
+            mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel),
         ):
             # Selecting cancel on the project close confirmation
             with mock.patch("spinetoolbox.ui_main.ToolboxUI.add_warning_message") as warning_msg:
@@ -336,7 +337,7 @@ class TestToolboxUI(TestCaseWithQApplication):
         dc1_item = self.toolbox.project().get_item(dc1)
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coords.
         # Simulate mouse click on Data Connection in Design View
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, dc1_center_point)
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC1
         self.assertEqual(self.toolbox.project().get_item(dc1), self.toolbox.active_project_item)
@@ -359,9 +360,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, dc1_center_point)
         # Then mouse click on dc2
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc2_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, dc2_center_point)
         self.assertEqual(1, len(gv.scene().selectedItems()))
         # Active project item should be DC2
         self.assertEqual(self.toolbox.project().get_item(dc2), self.toolbox.active_project_item)
@@ -378,9 +379,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         dc1_item = self.toolbox.project().get_item(dc1)
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         # Mouse click on dc1
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, dc1_center_point)
         # Then mouse click somewhere else in Design View (not on project item)
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, QPoint(1, 1))
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(1, 1))
         self.assertEqual(0, len(gv.scene().selectedItems()))  # No items in design view should be selected
         # Active project item should be None
         self.assertIsNone(self.toolbox.active_project_item)
@@ -410,7 +411,7 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertEqual(1, len(links))
         link_center_point = self.find_click_point_of_link(links[0], gv)
         # Mouse click on link
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, link_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, link_center_point)
         # One item should be selected in Design View (the Link)
         selected_items = gv.scene().selectedItems()
         self.assertEqual(1, len(selected_items))
@@ -445,9 +446,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         link_center_point = self.find_click_point_of_link(links[0], gv)
         # Mouse click on dc1
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, dc1_center_point)
         # Mouse click on link
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, link_center_point)
+        QTest.mouseClick(gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, link_center_point)
         # One item should be selected in Design View (the Link)
         selected_items = gv.scene().selectedItems()
         self.assertEqual(1, len(selected_items))
@@ -475,9 +476,13 @@ class TestToolboxUI(TestCaseWithQApplication):
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
         # Mouse click on dc1
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.ControlModifier, dc1_center_point)
+        QTest.mouseClick(
+            gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ControlModifier, dc1_center_point
+        )
         # Then mouse click on dc2
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.ControlModifier, dc2_center_point)
+        QTest.mouseClick(
+            gv.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ControlModifier, dc2_center_point
+        )
         self.assertEqual(2, len(gv.scene().selectedItems()))
         # Active project item should be None
         self.assertIsNone(self.toolbox.active_project_item)
@@ -486,7 +491,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         mime_data = QMimeData()
         gv = self.toolbox.ui.graphicsView
         pos = QPoint(0, 0)
-        event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
+        event = QDropEvent(
+            pos, Qt.DropAction.CopyAction, mime_data, Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier
+        )
         with (
             mock.patch("PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source") as mock_drop_event_source,
             mock.patch.object(self.toolbox, "project"),
@@ -505,7 +512,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         gv = self.toolbox.ui.graphicsView
         scene_pos = QPointF(44, 20)
         pos = gv.mapFromScene(scene_pos)
-        event = QDropEvent(pos, Qt.CopyAction, mime_data, Qt.NoButton, Qt.NoModifier)
+        event = QDropEvent(
+            pos, Qt.DropAction.CopyAction, mime_data, Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier
+        )
         with (
             mock.patch("PySide6.QtWidgets.QGraphicsSceneDragDropEvent.source") as mock_drop_event_source,
             mock.patch.object(self.toolbox, "project"),
@@ -725,10 +734,57 @@ class TestToolboxUI(TestCaseWithQApplication):
             ind = view.model().index(row, 0)
             view.scrollTo(ind)
             rect = view.visualRect(ind)
-            QTest.mouseClick(view.viewport(), Qt.LeftButton, Qt.ControlModifier, rect.center())
+            QTest.mouseClick(
+                view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ControlModifier, rect.center()
+            )
             console = self.toolbox.ui.splitter_console.widget(1)
             self.assertTrue(isinstance(console, PersistentConsoleWidget))
             self.assertEqual(console.owners, {item})
+
+    def test_detached_python_basic_console(self):
+        with (
+            mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,
+            mock.patch("spinetoolbox.ui_main.resolve_python_interpreter") as mock_resolve_python,
+        ):
+            mock_resolve_python.return_value = sys.executable
+            self.toolbox.ui.actionStart_default_python_in_basic_console.trigger()
+            mock_resolve_python.assert_called()
+            mock_show.assert_called()
+        self.assertEqual(len(self.toolbox._persistent_consoles), 1)
+        pcw = self.toolbox._persistent_consoles[list(self.toolbox._persistent_consoles.keys())[0]]
+        self.assertIsInstance(pcw, PersistentConsoleWidget)
+        self.assertIsInstance(pcw.parent(), ConsoleWindow)
+        self.assertTrue(pcw.detached_console_id, sys.executable)
+        pcw.parent().close()  # Send close event to ConsoleWindow
+        self.assertEqual(len(self.toolbox._persistent_consoles), 0)
+
+    def test_detached_julia_basic_console(self):
+        with (
+            mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,
+            mock.patch("spinetoolbox.ui_main.resolve_julia_executable") as mock_resolve_julia,
+            mock.patch("spinetoolbox.ui_main.resolve_julia_project") as mock_resolve_julia_project,
+            mock.patch(
+                "spinetoolbox.widgets.persistent_console_widget.JuliaPersistentExecutionManager"
+            ) as mock_julia_manager_class,
+            mock.patch("spinetoolbox.widgets.persistent_console_widget.multiprocessing.Queue") as mock_queue,
+        ):
+            mock_resolve_julia.return_value = "/some/julia"
+            mock_resolve_julia_project.return_value = "/some/julia/env"
+            mock_queue.return_value = MockQueue()
+            self.toolbox.ui.actionStart_default_julia_in_basic_console.trigger()
+            mock_show.assert_called()
+            mock_resolve_julia.assert_called()
+            mock_resolve_julia_project.assert_called()
+            mock_julia_manager_class.assert_called_once()
+            self.assertEqual(mock_julia_manager_class.call_args.args[1], ["/some/julia", "--project=/some/julia/env"])
+            mock_queue.assert_called()
+        self.assertEqual(len(self.toolbox._persistent_consoles), 1)
+        pcw = self.toolbox._persistent_consoles[list(self.toolbox._persistent_consoles.keys())[0]]
+        self.assertIsInstance(pcw, PersistentConsoleWidget)
+        self.assertIsInstance(pcw.parent(), ConsoleWindow)
+        self.assertTrue(pcw.detached_console_id, "/some/julia")
+        pcw.parent().close()
+        self.assertEqual(len(self.toolbox._persistent_consoles), 0)
 
     def test_closeEvent_saves_window_state(self):
         self.toolbox._qsettings = mock.NonCallableMagicMock()
@@ -888,6 +944,11 @@ def toolbox_with_settings(settings_dict):
 class MockQMenu(QMenu):
     def exec(self, pos):
         return True
+
+
+class MockQueue:
+    def get(self, timeout=1):
+        return "persistent_execution_msg", {"type": "persistent_started", "key": "123"}
 
 
 if __name__ == "__main__":

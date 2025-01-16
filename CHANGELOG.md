@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 ### Added
 
 - Support for Python 3.13.
+- You can now open a detached Basic Console with the default Python or Julia from the Consoles menu. Default 
+Python and Julia are defined in app settings (File->Settings->Tools)
 
 ### Changed
 
