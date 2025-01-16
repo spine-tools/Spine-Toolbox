@@ -256,9 +256,12 @@ class PersistentConsoleWidget(QPlainTextEdit):
 
     def closeEvent(self, ev):
         super().closeEvent(ev)
-        self._executor.shutdown()
+        self.shutdown_executor()
         if isinstance(self.parent(), ConsoleWindow):
             self.parent().close()
+
+    def shutdown_executor(self):
+        self._executor.shutdown()
 
     def name(self):
         """Returns console name for display purposes."""

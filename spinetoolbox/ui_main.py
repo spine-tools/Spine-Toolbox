@@ -2537,6 +2537,7 @@ class ToolboxUI(QMainWindow):
         c = self._persistent_consoles.pop(key, None)
         if not c:
             return
+        c.shutdown_executor()
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
         engine_mngr.kill_persistent(key)
