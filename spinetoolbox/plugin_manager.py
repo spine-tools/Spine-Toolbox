@@ -155,7 +155,7 @@ class PluginManager:
     def _create_worker(self):
         worker = _PluginWorker()
         self._workers.append(worker)
-        worker.finished.connect(lambda worker=worker: self._clean_up_worker(worker))
+        worker.finished.connect(lambda wrkr=worker: self._clean_up_worker(wrkr))
         return worker
 
     def _clean_up_worker(self, worker):
@@ -199,7 +199,7 @@ class PluginManager:
         plugin_local_dir = os.path.join(PLUGINS_PATH, plugin_name)
         worker = self._create_worker()
         worker.succeeded.connect(
-            lambda plugin_local_dir=plugin_local_dir: self._load_installed_plugin(plugin_local_dir)
+            lambda plugin_local_d=plugin_local_dir: self._load_installed_plugin(plugin_local_d)
         )
         worker.failed.connect(self._toolbox.msg_error)
         worker.start(_download_plugin, plugin, plugin_local_dir)
@@ -269,7 +269,6 @@ class _PluginWorker(QObject):
     def __init__(self):
         super().__init__()
         self._thread = QThread()
-        self.moveToThread(self._thread)
         self._function = None
         self._args = None
         self._kwargs = None
