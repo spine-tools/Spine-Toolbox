@@ -14,6 +14,7 @@
 from contextlib import suppress
 import json
 import os
+from threading import RLock
 from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtWidgets import QApplication, QMessageBox
 from sqlalchemy.engine.url import URL
@@ -115,6 +116,8 @@ class SpineDBManager(QObject):
         self._db_maps = {}
         self.name_registry = NameRegistry(self)
         self._workers = {}
+        self._lock_lock = RLock()
+        self._db_locks = {}
         self.listeners = {}
         self.undo_stack = {}
         self.undo_action = {}
@@ -179,6 +182,9 @@ class SpineDBManager(QObject):
             SpineDBWorker: worker for the db_map
         """
         return self._workers[db_map]
+
+    def get_lock(self, db_map):
+        return self._db_locks[db_map]
 
     def register_fetch_parent(self, db_map, parent):
         """Registers a fetch parent.
@@ -331,6 +337,9 @@ class SpineDBManager(QObject):
         if worker is not None:
             worker.close_db_map()  # NOTE: This calls ThreadPoolExecutor.shutdown() which waits for Futures to finish
             worker.clean_up()
+        with self._lock_lock:
+            with suppress(KeyError):
+                del self._db_locks[db_map]
         del self._validated_values["parameter_definition"][id(db_map)]
         del self._validated_values["parameter_value"][id(db_map)]
         self.undo_stack[db_map].cleanChanged.disconnect()
@@ -402,6 +411,8 @@ class SpineDBManager(QObject):
             worker.clean_up()
             raise error
         self._workers[db_map] = worker
+        with self._lock_lock:
+            self._db_locks[db_map] = RLock()
         self._db_maps[url] = db_map
         self._validated_values["parameter_definition"][id(db_map)] = {}
         self._validated_values["parameter_value"][id(db_map)] = {}
@@ -718,18 +729,19 @@ class SpineDBManager(QObject):
     def get_field(self, db_map, item_type, id_, field):
         return self.get_item(db_map, item_type, id_).get(field)
 
-    @staticmethod
-    def get_items(db_map, item_type):
+    def get_items(self, db_map, item_type, **kwargs):
         """Returns a list of the items of the given type in the given db map.
 
         Args:
             db_map (DatabaseMapping)
             item_type (str)
+            **kwargs: extra arguments passed to database mapping
 
         Returns:
             list
         """
-        return db_map.get_items(item_type)
+        with self.get_lock(db_map):
+            return db_map.get_items(item_type, **kwargs)
 
     def get_items_by_field(self, db_map, item_type, field, value):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -744,7 +756,7 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
+        return [x for x in db_map.get_items(item_type) if x.get(field) == value]
 
     def get_item_by_field(self, db_map, item_type, field, value):
         """Returns the first item of the given type in the given db map
@@ -987,21 +999,22 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
-            errors = []
-            try:
-                data_for_import = get_data_for_import(db_map, errors, **data)
-            except (TypeError, ValueError) as err:
-                errors.append(str(err))
-                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
-                db_map_error_log.setdefault(db_map, []).append(msg)
-                continue
-            db_map_error_log.setdefault(db_map, []).extend(errors)
-            identifier = self.get_command_identifier()
-            for item_type, items in data_for_import:
-                if isinstance(items, tuple):
-                    items, errors = items
-                    db_map_error_log.setdefault(db_map, []).extend(errors)
-                self.add_update_items(item_type, {db_map: list(items)}, identifier=identifier)
+            with db_map:
+                errors = []
+                try:
+                    data_for_import = get_data_for_import(db_map, errors, **data)
+                except (TypeError, ValueError) as err:
+                    errors.append(str(err))
+                    msg = f"Failed to import data: {err}. Please check that your data source has the right format."
+                    db_map_error_log.setdefault(db_map, []).append(msg)
+                    continue
+                db_map_error_log.setdefault(db_map, []).extend(errors)
+                identifier = self.get_command_identifier()
+                for item_type, items in data_for_import:
+                    if isinstance(items, tuple):
+                        items, errors = items
+                        db_map_error_log.setdefault(db_map, []).extend(errors)
+                    self.add_update_items(item_type, {db_map: list(items)}, identifier=identifier)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1609,8 +1622,9 @@ class SpineDBManager(QObject):
     def _get_data_for_export(self, db_map_item_ids):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
-            for key, items in export_data(db_map, parse_value=load_db_value, **item_ids).items():
-                data.setdefault(key, []).extend(items)
+            with db_map:
+                for key, items in export_data(db_map, parse_value=load_db_value, **item_ids).items():
+                    data.setdefault(key, []).extend(items)
         return data
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
@@ -1636,18 +1650,15 @@ class SpineDBManager(QObject):
         url = URL("sqlite", database=file_path)
         if not self._is_url_available(url, caller):
             return
-        create_new_spine_database(url)
-        db_map = DatabaseMapping(url)
-        import_data(db_map, **data_for_export)
-        try:
-            db_map.commit_session("Export data from Spine Toolbox.")
-        except SpineDBAPIError as err:
-            error_msg = f"[SpineDBAPIError] Unable to export file <b>{file_path}</b>: {err.msg}"
-            caller.msg_error.emit(error_msg)
-        else:
-            caller.file_exported.emit(file_path, 1.0, True)
-        finally:
-            db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_data(db_map, **data_for_export)
+            try:
+                db_map.commit_session("Export data from Spine Toolbox.")
+            except SpineDBAPIError as err:
+                error_msg = f"[SpineDBAPIError] Unable to export file <b>{file_path}</b>: {err.msg}"
+                caller.msg_error.emit(error_msg)
+            else:
+                caller.file_exported.emit(file_path, 1.0, True)
 
     @staticmethod
     def export_to_json(file_path, data_for_export, caller):

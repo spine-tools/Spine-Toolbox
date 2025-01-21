@@ -787,16 +787,15 @@ class ManageItemsDelegate(QStyledItemDelegate):
         databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(", ")
         entity_class = self.parent().class_item
         dbs_by_entity_group = {}
+        db_mngr = self.parent().db_mngr
         for db_map in entity_class.db_maps:
             if parent.db_mngr.name_registry.display_name(db_map.sa_url) not in databases:
                 # Allow groups that are in selected DBs under "databases" column.
                 continue
-            class_item = self.parent().db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)
+            class_item = db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)
             if not class_item:
                 continue
-            ent_groups = self.parent().db_mngr.get_items_by_field(
-                db_map, "entity_group", "entity_class_id", class_item["id"]
-            )
+            ent_groups = db_mngr.get_items_by_field(db_map, "entity_group", "entity_class_id", class_item["id"])
             for ent_group in ent_groups:
                 dbs_by_entity_group.setdefault(ent_group["group_name"], set()).add(db_map)
         name_list = set()

@@ -169,7 +169,7 @@ class EntityItem(QGraphicsRectItem):
     def entity_class_ids(self, db_map):
         return {self.entity_class_id(db_map)} | {
             x["superclass_id"]
-            for x in db_map.get_items("superclass_subclass", subclass_id=self.entity_class_id(db_map))
+            for x in self.db_mngr.get_items(db_map, "superclass_subclass", subclass_id=self.entity_class_id(db_map))
         }
 
     def entity_id(self, db_map):

@@ -69,10 +69,10 @@ class TestMassRemoveItemsDialog(TestCaseWithQApplication):
 
     def test_purge_objects(self):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
-        classes = self._db_mngr.get_items(self._db_map, "entity_class")
+        classes = self._db_map.get_items("entity_class")
         class_id = classes[0]["id"]
         self._db_mngr.add_entities({self._db_map: [{"class_id": class_id, "name": "my_object"}]})
-        entities = [item._asdict() for item in self._db_mngr.get_items(self._db_map, "entity")]
+        entities = [item._asdict() for item in self._db_map.get_items("entity")]
         self.assertEqual(len(entities), 1)
         entity_id = entities[0]["id"]
         self.assertEqual(
@@ -91,7 +91,7 @@ class TestMassRemoveItemsDialog(TestCaseWithQApplication):
         dialog._database_check_boxes_widget._check_boxes[self._db_map].setChecked(True)
         dialog._item_check_boxes_widget._item_check_boxes["entity"].setChecked(True)
         dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
-        self.assertEqual(self._db_mngr.get_items(self._db_map, "entity"), [])
+        self.assertEqual(self._db_map.get_items("entity"), [])
 
 
 if __name__ == "__main__":

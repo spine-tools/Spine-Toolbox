@@ -263,11 +263,11 @@ class TestAddItems(TestCaseWithQApplication):
 
     def test_add_object_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, None, create=True)
-        import_functions.import_object_classes(db_map, ("my_class",))
-        import_functions.import_objects(db_map, (("my_class", "my_object"),))
-        import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
-        db_map.commit_session("Add test data.")
-        db_map.close()
+        with db_map:
+            import_functions.import_object_classes(db_map, ("my_class",))
+            import_functions.import_objects(db_map, (("my_class", "my_object"),))
+            import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
+            db_map.commit_session("Add test data.")
         db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
         self._db_mngr.add_items("entity_metadata", db_map_data)
         self.assertEqual(
@@ -359,7 +359,8 @@ class TestImportExportData(TestCaseWithQApplication):
         self.assertEqual(errors, [])
         self._db_mngr.import_data({self._db_map: mapped_data})
         self._db_map.commit_session("imported items")
-        value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
+        with self._db_map:
+            value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
         time_series = from_database(value.value, value.type)
         expected_result = TimeSeriesVariableResolution(
             (
@@ -392,8 +393,8 @@ class TestImportExportData(TestCaseWithQApplication):
                 {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
             )
             waiter.wait()
-        value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
-        list_values = self._db_mngr.get_items(self._db_map, "list_value")
+        value_lists = self._db_map.get_items("parameter_value_list")
+        list_values = self._db_map.get_items("list_value")
         self.assertEqual(len(value_lists), 1)
         value_list = value_lists[0]
         self.assertEqual(value_list["name"], "list_1")

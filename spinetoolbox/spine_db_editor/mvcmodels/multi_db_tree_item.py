@@ -213,14 +213,19 @@ class MultiDBTreeItem(TreeItem):
 
     def db_map_data_field(self, db_map, field, default=None):
         """Returns field from data for this item in given db_map or None if not found."""
-        return self.db_map_data(db_map).get(field, default)
+        try:
+            lock = self.db_mngr.get_lock(db_map)
+        except KeyError:
+            return default
+        with lock:
+            return self.db_map_data(db_map).get(field, default)
 
     def _create_new_children(self, db_map, children_ids, **kwargs):
         """
         Creates new items from ids associated to a db map.
 
         Args:
-            db_map (DiffDatabaseMapping): create children for this db_map
+            db_map (DatabaseMapping): create children for this db_map
             children_ids (iter): create children from these ids
 
         Returns:
@@ -336,7 +341,7 @@ class MultiDBTreeItem(TreeItem):
         Appends children by id.
 
         Args:
-            db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
+            db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         new_children = []
         for db_map, ids in db_map_ids.items():
@@ -348,7 +353,7 @@ class MultiDBTreeItem(TreeItem):
         Removes children by id.
 
         Args:
-            db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
+            db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
@@ -372,7 +377,7 @@ class MultiDBTreeItem(TreeItem):
           another db_map --> we need to merge
 
         Args:
-            db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
+            db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         # Find rows to update and db_map ids to add
         rows_to_update = set()
