@@ -672,6 +672,23 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         return super().icon(info)
 
 
+def basic_console_icon(language):
+    """Returns an SVG icon for the given language or an empty QIcon if not available.
+
+    Args:
+        language (str): Kernel language
+
+    Returns:
+        QIcon: Icon
+    """
+    if language == "python":
+        return QIcon(":/symbols/python-logo.svg")
+    elif language == "julia":
+        return QIcon(":/symbols/julia-logo.svg")
+    else:
+        return QIcon()
+
+
 def ensure_window_is_on_screen(window, size):
     """
     Checks if window is on screen and if not, moves and resizes it to make it visible on the primary screen.

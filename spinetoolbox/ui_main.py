@@ -17,6 +17,7 @@ import logging
 import os
 import pathlib
 import sys
+import threading
 from zipfile import ZipFile
 import numpy as np
 from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
@@ -43,13 +44,13 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
-    QScrollArea,
     QStyleFactory,
     QToolButton,
-    QVBoxLayout,
     QWidget,
 )
+from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.load_project_items import load_item_specification_factories
+from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable, resolve_julia_project
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
@@ -70,6 +71,7 @@ from .helpers import (
     supported_img_formats,
     unique_name,
     clear_qsettings,
+    basic_console_icon,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
@@ -104,7 +106,7 @@ from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.open_project_dialog import OpenProjectDialog
-from .widgets.persistent_console_widget import PersistentConsoleWidget
+from .widgets.persistent_console_widget import PersistentConsoleWidget, ConsoleWindow
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.settings_widget import SettingsWidget
 
@@ -266,6 +268,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
         self.kernels_menu.aboutToShow.connect(self.fetch_kernels)
         self.kernels_menu.aboutToHide.connect(self.stop_fetching_kernels)
+        self.ui.actionStart_default_python_in_basic_console.triggered.connect(self.start_detached_python_basic_console)
+        self.ui.actionStart_default_julia_in_basic_console.triggered.connect(self.start_detached_julia_basic_console)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
@@ -2135,7 +2139,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionRemove,
         ]
         for action in actions:
-            action.setShortcutContext(Qt.WidgetShortcut)
+            action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
             self.ui.graphicsView.addAction(action)
 
     @Slot(str, str)
@@ -2148,7 +2152,7 @@ class ToolboxUI(QMainWindow):
         """Shows an error message with the given title and message."""
         box = QErrorMessage(self)
         box.setWindowTitle(title)
-        box.setWindowModality(Qt.ApplicationModal)
+        box.setWindowModality(Qt.WindowModality.ApplicationModal)
         box.showMessage(message)
 
     def _connect_project_signals(self):
@@ -2295,7 +2299,8 @@ class ToolboxUI(QMainWindow):
         """Renames active project item."""
         item = self.active_project_item
         answer = QInputDialog.getText(
-            self, "Rename Item", "New name:", text=item.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            self, "Rename Item", "New name:", text=item.name,
+            flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
         )
         if not answer[1]:
             return
@@ -2330,6 +2335,54 @@ class ToolboxUI(QMainWindow):
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
+
+    @Slot()
+    def start_detached_python_basic_console(self):
+        """Starts basic console with the default Python interpreter."""
+        python = resolve_python_interpreter(self.qsettings())
+        _set_resource_limits(self.qsettings(), threading.Lock())
+        self.start_detached_basic_console("python", python)
+
+    @Slot()
+    def start_detached_julia_basic_console(self):
+        """Starts basic console with the default Julia executable."""
+        julia = resolve_julia_executable(self.qsettings())
+        project = resolve_julia_project(self.qsettings())
+        if not julia:
+            self.msg_warning.emit("No Julia installation found. Add path to a Julia executable in Spine "
+                                  "Toolbox Settings [<b>File->Settings->Tools</b>]")
+            return
+        _set_resource_limits(self.qsettings(), threading.Lock())
+        self.start_detached_basic_console("julia", julia, project)
+
+    def start_detached_basic_console(self, language, executable, julia_project=None):
+        """Launches a new detached basic console with the given executable
+        or activates an existing Console if the kernel is already running.
+
+        Args:
+            language (str): Console kernel language
+            executable (str): Abs. path to kernel file
+            julia_project (str): Path to Julia environment
+        """
+        for pcw in self._persistent_consoles.values():
+            if pcw.detached_console_id is not None:
+                if os.path.samefile(pcw.detached_console_id, executable) and None in pcw.owners:
+                    # Console running the requested kernel already exists, show and activate it
+                    if pcw.parent().isMinimized():
+                        pcw.parent().showNormal()
+                    pcw.parent().activateWindow()
+                    return
+        icon = basic_console_icon(language)
+        console_window = ConsoleWindow(icon, language)
+        c = PersistentConsoleWidget(self, None, language, None, console_window)
+        key = c.request_start_kernel(executable, julia_project)
+        if not key:
+            self.msg_error.emit(f"Starting Basic Console for {executable} failed")
+            return
+        c.insert_banner(language)
+        self._persistent_consoles[key] = c
+        console_window.console_closed.connect(self._cleanup_basic_console)
+        c.show()
 
     @Slot(str, QIcon, bool)
     def start_detached_jupyter_console(self, kernel_name, icon, conda):
@@ -2477,6 +2530,17 @@ class ToolboxUI(QMainWindow):
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
         engine_mngr.shutdown_kernel(conn_file)
+
+    @Slot(str)
+    def _cleanup_basic_console(self, key):
+        """Removes reference to the Basic Console and closes the kernel manager on Engine."""
+        c = self._persistent_consoles.pop(key, None)
+        if not c:
+            return
+        c.shutdown_executor()
+        exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr.kill_persistent(key)
 
     def _shutdown_engine_kernels(self):
         """Shuts down all persistent and Jupyter kernels managed by Spine Engine."""
