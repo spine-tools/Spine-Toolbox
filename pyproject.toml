@@ -16,7 +16,7 @@ dependencies = [
     "pyside6 >= 6.5.0, != 6.5.3, < 6.6",
     "jupyter-client >=6.0",
     "qtconsole >=5.1",
-    "spinedb_api ==0.30.5",
+    "spinedb_api ==0.30.6",
     "spine_engine ==0.23.4",
     "numpy >=1.20.2",
     "matplotlib >= 3.5",

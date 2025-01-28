@@ -3,6 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.7.6]
+
+### Fixed
+
+- Fixed dependencies of ``spinedb_api``.
+
+
 ## [0.7.5]
 
 ### Changed
