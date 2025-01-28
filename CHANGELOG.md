@@ -3,19 +3,11 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
-
-### Added
+## [0.7.5]
 
 ### Changed
 
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
+- Freeze Spine dependencies, so we install only compatible packages.
 
 ## [0.7.4]
 
