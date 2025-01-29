@@ -1,4 +1,4 @@
--e git+https://github.com/spine-tools/Spine-Database-API.git@release-0.30.5#egg=spinedb_api
+-e git+https://github.com/spine-tools/Spine-Database-API.git@release-0.30.6#egg=spinedb_api
 -e git+https://github.com/spine-tools/spine-engine.git@release-0.23.4#egg=spine_engine
 -e git+https://github.com/spine-tools/spine-items.git@release-0.21.5#egg=spine_items
 -e .[dev]
