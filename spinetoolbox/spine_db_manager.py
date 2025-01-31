@@ -985,9 +985,11 @@ class SpineDBManager(QObject):
         ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
-        with self._db_locks[db_map]:
-            scen = self.get_item(db_map, "scenario", scen_id)
-        return scen["alternative_id_list"] if scen else []
+        if db_map in self._db_locks:
+            with self._db_locks[db_map]:
+                scen = self.get_item(db_map, "scenario", scen_id)
+                return scen["alternative_id_list"] if scen else []
+        return []
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -1312,8 +1314,7 @@ class SpineDBManager(QObject):
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    @staticmethod
-    def get_data_to_set_scenario_alternatives(db_map, scenarios):
+    def get_data_to_set_scenario_alternatives(self, db_map, scenarios):
         """Returns data to add and remove, in order to set wide scenario alternatives.
 
         Args:
@@ -1335,23 +1336,28 @@ class SpineDBManager(QObject):
         scen_alts_to_add = []
         scen_alt_ids_to_remove = {}
         errors = []
-        for scen in scenarios:
-            current_scen = db_map.get_item("scenario", id=scen["id"])
-            if current_scen is None:
-                error = f"no scenario matching {scen} to set alternatives for"
-                errors.append(error)
-                continue
-            for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
-                item_to_add = {"scenario_id": current_scen["id"], "alternative_id": alternative_id, "rank": k + 1}
-                scen_alts_to_add.append(item_to_add)
-            for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
-                item_to_add = {"scenario_id": current_scen["id"], "alternative_name": alternative_name, "rank": k + 1}
-                scen_alts_to_add.append(item_to_add)
-            for alternative_name in current_scen["alternative_name_list"]:
-                current_scen_alt = db_map.get_item(
-                    "scenario_alternative", scenario_name=current_scen["name"], alternative_name=alternative_name
-                )
-                scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
+        with self._db_locks[db_map]:
+            for scen in scenarios:
+                current_scen = db_map.get_item("scenario", id=scen["id"])
+                if current_scen is None:
+                    error = f"no scenario matching {scen} to set alternatives for"
+                    errors.append(error)
+                    continue
+                for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
+                    item_to_add = {"scenario_id": current_scen["id"], "alternative_id": alternative_id, "rank": k + 1}
+                    scen_alts_to_add.append(item_to_add)
+                for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
+                    item_to_add = {
+                        "scenario_id": current_scen["id"],
+                        "alternative_name": alternative_name,
+                        "rank": k + 1,
+                    }
+                    scen_alts_to_add.append(item_to_add)
+                for alternative_name in current_scen["alternative_name_list"]:
+                    current_scen_alt = db_map.get_item(
+                        "scenario_alternative", scenario_name=current_scen["name"], alternative_name=alternative_name
+                    )
+                    scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
         # Remove items that are both to add and to remove
         for id_, to_rm in list(scen_alt_ids_to_remove.items()):
             i = next((i for i, to_add in enumerate(scen_alts_to_add) if _is_equal(to_add, to_rm)), None)
