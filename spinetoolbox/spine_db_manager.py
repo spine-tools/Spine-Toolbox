@@ -985,7 +985,8 @@ class SpineDBManager(QObject):
         ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
-        scen = self.get_item(db_map, "scenario", scen_id)
+        with self._db_locks[db_map]:
+            scen = self.get_item(db_map, "scenario", scen_id)
         return scen["alternative_id_list"] if scen else []
 
     def import_data(self, db_map_data, command_text="Import data"):
