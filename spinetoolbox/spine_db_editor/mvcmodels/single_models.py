@@ -342,8 +342,9 @@ class ParameterMixin:
             PARAMETER_TYPE_VALIDATION_ROLE,
         }:
             id_ = self._main_data[index.row()]
-            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
-            return self.db_mngr.get_value(self.db_map, item, role)
+            with self.db_mngr.get_lock(self.db_map):
+                item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+                return self.db_mngr.get_value(self.db_map, item, role)
         return super().data(index, role)
 
     def add_rows(self, ids):

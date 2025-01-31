@@ -70,7 +70,8 @@ class ParameterTypeValidator(QObject):
         if not self._process.is_alive():
             self._process.start()
         for item_id in value_item_ids:
-            item = db_mngr.get_item(db_map, item_id.item_type, item_id)
+            with db_mngr.get_lock(db_map):
+                item = db_mngr.get_item(db_map, item_id.item_type, item_id)
             args = type_check_args(item)
             self._task_queue.append(
                 ValidatableValue(ValidationKey(item_id.item_type, id(db_map), item_id.private_id), args)
