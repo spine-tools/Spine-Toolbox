@@ -1654,7 +1654,7 @@ class SpineDBManager(QObject):
 
     def export_to_sqlite(self, file_path, data_for_export, caller):
         """Exports given data into SQLite file."""
-        url = URL("sqlite", database=file_path)
+        url = URL.create("sqlite", database=file_path)
         if not self._is_url_available(url, caller):
             return
         with DatabaseMapping(url, create=True) as db_map:
@@ -1679,7 +1679,7 @@ class SpineDBManager(QObject):
     def export_to_excel(file_path, data_for_export, caller):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
-        url = URL("sqlite", database="")
+        url = URL.create("sqlite", database="")
         with DatabaseMapping(url, create=True) as db_map:
             count, errors = import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             file_name = os.path.split(file_path)[1]

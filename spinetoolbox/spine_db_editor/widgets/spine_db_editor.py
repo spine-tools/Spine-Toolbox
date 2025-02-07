@@ -430,7 +430,7 @@ class SpineDBEditorBase(QMainWindow):
         self.msg.emit(f"File {filename} successfully imported.")
 
     def import_from_sqlite(self, file_path):
-        url = URL("sqlite", database=file_path)
+        url = URL.create("sqlite", database=file_path)
         filename = os.path.split(file_path)[1]
         try:
             db_map = DatabaseMapping(url)
