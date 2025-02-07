@@ -37,12 +37,13 @@ system with scenario and data management" SoftwareX, Vol. 17, 100967, https://do
 
 ## Installation
 
-We provide three options for installing Spine Toolbox. The first two options also require that you **follow 
+We provide multiple options for installing Spine Toolbox. The first two options also require that you **follow 
 the Pre-installation steps**: 
 - [Python/pipx](#installation-with-python-and-pipx) (we intend to make stable releases every month or so)
 - [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
 - [Windows executable as .zip bundle](https://spine-tools.github.io/Downloads/) (requires only unzipping the downloaded .zip file - however, the embedded Python is likely not usable for the Python tools you might want to run)
 - [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
+- [MacOS from source files using Homebrew](#macos-installation-from-sources-with-homebrew) (to work around some rough edges on Macs)
 
 ### Pre-installation
 
@@ -197,6 +198,50 @@ generated from Git tags during the `python -m pip install ...` step.
 This makes it important to fetch new tags from GitHub before running the 
 `python -m pip install ...` when upgrading. This is true also for editable 
 installations.
+
+### MacOS installation from sources with Homebrew
+
+1. Open Terminal.
+2. Install [Homebrew](https://brew.sh).
+3. Install Python with
+
+        brew install python
+
+4. Restart Terminal. Ensure your Python is the one from Homebrew by checking that the following command gives `/opt/homebrew/bin/python3`
+
+        which python3
+
+5. Clone this repository with
+
+        git clone https://github.com/spine-tools/Spine-Toolbox.git
+
+6. Use the `cd` command to go to `Spine-Toolbox` dir that was just created
+
+        cd Spine-Toolbox
+
+7. Create a Python virtual environment
+
+        python3 -m venv venv
+
+8. Activate the virtual environment (yes, the next command starts with a `.` and a space)
+
+        . venv/bin/activate
+
+9. Install Spine Toolbox along with its dependencies with
+
+        python -m pip install -r requirements.txt
+
+10. Once the installation has finished, you can now launch Spine Toolbox using
+
+        spinetoolbox
+
+Successully installed Spine Toolbox can be launched from Terminal with
+
+    cd Spine-Toolbox
+    . venv/bin/activate
+    spinetoolbox
+
+See [Upgrade when using git](#upgrade-when-using-git) on how to upgrade the installation.
 
 #### Additional comments for developers
 
