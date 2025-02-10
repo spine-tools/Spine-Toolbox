@@ -15,6 +15,7 @@ from PySide6.QtCore import QBuffer, QPointF, QRectF, Qt
 from PySide6.QtGui import QFont, QIcon, QPainter, QTextOption
 from PySide6.QtSvg import QSvgGenerator, QSvgRenderer
 from PySide6.QtWidgets import QGraphicsScene
+from .font import TOOLBOX_FONT
 from .helpers import TransparentIconEngine, default_icon_id, interpret_icon_id
 
 
@@ -96,7 +97,7 @@ class SpineDBIconManager:
 
     def _create_icon_renderer(self, icon_code, color_code):
         scene = QGraphicsScene()
-        font = QFont("Font Awesome 5 Free Solid")
+        font = QFont(TOOLBOX_FONT.family)
         text_item = scene.addText(icon_code, font)
         text_item.setDefaultTextColor(color_code)
         _align_text_in_item(text_item)
@@ -128,7 +129,7 @@ class SpineDBIconManager:
                 )
             ] = self.icon_renderer("\uf1b3", 0)
             return
-        font = QFont("Font Awesome 5 Free Solid")
+        font = QFont(TOOLBOX_FONT.family)
         scene = QGraphicsScene()
         display_icon = self.display_icons.get(name, None)
         if display_icon and display_icon != default_icon_id():  # If the entity class has an icon set, use that one.
@@ -228,7 +229,7 @@ class SpineDBIconManager:
     def _create_group_renderer(self, class_name):
         display_icon = self.display_icons.get(class_name, -1)
         icon_code, color_code = interpret_icon_id(display_icon)
-        font = QFont("Font Awesome 5 Free Solid")
+        font = QFont(TOOLBOX_FONT.family)
         scene = QGraphicsScene()
         x = 0
         for _ in range(2):

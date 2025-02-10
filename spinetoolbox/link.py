@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 from spinetoolbox.helpers import color_from_index
+from .font import TOOLBOX_FONT
 from .project_item_icon import ConnectorButton
 
 LINK_COLOR = color_from_index(0, 2, base_hue=60)
@@ -275,7 +276,7 @@ class _IconBase(QGraphicsEllipseItem):
         if tooltip:
             self.setToolTip(tooltip)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.setBrush(palette.window())
 
     def hoverEnterEvent(self, event):
@@ -300,7 +301,7 @@ class _SvgIcon(_IconBase):
         scale = 0.8 * self.rect().width() / self._renderer.defaultSize().width()
         self._svg_item.setScale(scale)
         self._svg_item.setPos(self.sceneBoundingRect().center() - self._svg_item.sceneBoundingRect().center())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -315,12 +316,12 @@ class _TextIcon(_IconBase):
     def __init__(self, parent, extent, char, tooltip=None, active=False):
         super().__init__(0, 0, extent, extent, parent, tooltip=tooltip, active=active)
         self._text_item = QGraphicsTextItem(self)
-        font = QFont("Font Awesome 5 Free Solid", weight=QFont.Bold)
+        font = QFont(TOOLBOX_FONT.family, weight=QFont.Weight.Bold)
         self._text_item.setFont(font)
         self._text_item.setDefaultTextColor(self._fg_color)
         self._text_item.setPlainText(char)
         self._text_item.setPos(self.sceneBoundingRect().center() - self._text_item.sceneBoundingRect().center())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
 
     def wipe_out(self):
         """Cleans up icon's resources."""
@@ -342,8 +343,8 @@ class JumpOrLink(LinkBase):
 
     def __init__(self, toolbox, src_connector, dst_connector):
         super().__init__(toolbox, src_connector, dst_connector)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsFocusable, enabled=True)
         self._icon_extent = 3 * self.magic_number
         self._icons = []
         self._anim = self._make_execution_animation()
