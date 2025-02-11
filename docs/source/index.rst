@@ -8,8 +8,9 @@ Welcome to Spine Toolbox's User Guide!
    :align: center
    :scale: 30%
 
-`Spine Toolbox <https://github.com/spine-tools/Spine-Toolbox>`_ is an application, which provides means to define, manage, and execute complex data processing and
-computation tasks, such as energy system models.
+`Spine Toolbox <https://github.com/spine-tools/Spine-Toolbox>`_ is an application,
+which provides means to define, manage, and execute complex data processing and
+computation workflows, such as energy system models.
 
 If you are new to Spine Toolbox, :ref:`Getting Started` section is a good place to start. If you want to run
 `SpineOpt.jl <https://github.com/spine-tools/SpineOpt.jl>`_ using Spine Toolbox, :ref:`How to Set up SpineOpt.jl`
@@ -32,21 +33,19 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    links_and_loops
    tool_specification_editor
    executing_projects
+   scenarios_and_alternatives
    settings
    Spine Database Editor <spine_db_editor/index>
    plotting
    parameter_value_editor
-   metadata_description
    data_import_export
    spine_engine_server
    terminology
    contribution_guide
    developer_documentation
-   autoapi/index
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

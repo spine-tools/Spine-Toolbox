@@ -24,8 +24,8 @@ from spinetoolbox.version import __version__, __version_info__
 # -- Project information -----------------------------------------------------
 
 project = "Spine Toolbox"
-author = "Spine project consortium"
-copyright = "2017-2021 {}".format(author)
+author = "Spine project consortium, Spine Toolbox contributors"
+copyright = "2017-2022 Spine project consortium, Spine Toolbox contributors".format(author)
 
 
 # The short X.Y version
@@ -52,7 +52,6 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "recommonmark",
-    "autoapi.extension",
     "sphinx_rtd_theme",
 ]
 
@@ -79,21 +78,6 @@ exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "sphinx"
-
-# Settings for Sphinx AutoAPI
-autoapi_python_class_content = "both"
-autoapi_add_toctree_entry = True
-autoapi_root = "autoapi"
-autoapi_dirs = ["../../spinetoolbox"]  # package to be documented
-autoapi_ignore = [
-    "*_rc.py",
-    "*/spinetoolbox/build/*",
-    "*/spinetoolbox/dist/*",
-    "*/spinetoolbox/ui/*",
-    "*/spinetoolbox/setup.py",
-    "*/spinetoolbox/project_items/*/ui/*",
-]  # ignored modules
-autoapi_keep_files=True
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -153,7 +137,7 @@ latex_documents = [
         master_doc,
         "SpineToolbox.tex",
         "Spine Toolbox Documentation",
-        "Spine project consortium",
+        author,
         "manual",
     )
 ]
@@ -178,8 +162,8 @@ texinfo_documents = [
         "Spine Toolbox Documentation",
         author,
         "SpineToolbox",
-        "One line description of project.",
-        "Miscellaneous",
+        "An open source application to manage data, scenarios and workflows for modelling and simulation.",
+        "",
     )
 ]
 
