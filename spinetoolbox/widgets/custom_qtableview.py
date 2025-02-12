@@ -20,9 +20,9 @@ import locale
 from numbers import Number
 from operator import methodcaller
 import re
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QPoint, Qt, Slot
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
-from PySide6.QtWidgets import QApplication, QTableView
+from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView
 from spinedb_api import (
     DateTime,
     Duration,
@@ -34,6 +34,7 @@ from spinedb_api import (
 )
 from spinedb_api.parameter_value import FLOAT_VALUE_TYPE, join_value_and_type, split_value_and_type
 from ..helpers import busy_effect
+from ..mvcmodels.empty_row_model import EmptyRowModel
 from .paste_excel import EXCEL_CLIPBOARD_MIME_TYPE, clipboard_excel_as_table
 
 _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -51,6 +52,17 @@ class CopyPasteTableView(QTableView):
         self.addAction(self._delete_action)
         self._pasted_data_converters = {}
         self._delete_action.triggered.connect(self.delete_content)
+
+    def moveCursor(self, cursor_action, modifiers):
+        """Inserts an extra row to the table if moving down from the last row and the model supports it."""
+        if cursor_action == QAbstractItemView.CursorAction.MoveDown and modifiers == Qt.KeyboardModifier.NoModifier:
+            model = self.model()
+            if isinstance(model, EmptyRowModel):
+                current_index = self.currentIndex()
+                row_count = model.rowCount()
+                if current_index.row() == row_count - 1:
+                    model.insertRows(row_count, 1, QModelIndex())
+        return super().moveCursor(cursor_action, modifiers)
 
     def init_copy_and_paste_actions(self):
         """Initializes copy and paste actions and connects relevant signals."""
