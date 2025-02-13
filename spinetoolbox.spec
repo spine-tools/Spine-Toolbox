@@ -35,7 +35,8 @@ Steps to bundle Spine Toolbox:
     pip install ipykernel
 11. Run
     pip install jill
-12. Finally, run
+12. cd to the directory where this file is
+13. Finally, run
     python -m PyInstaller spinetoolbox.spec -- --embedded-python=<path-to-embeddable-python>
 """
 
