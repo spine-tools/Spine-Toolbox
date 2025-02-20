@@ -1,11 +1,14 @@
 # Changelog
-All **notable** changes to this project are documented here.
+All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
 ### Added
+
+- Importer now has a new Source type: Fixed.
+  When set, the data is read from a fixed cell (defined by table name, row and column) in any available source table.
 
 ### Changed
 

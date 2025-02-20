@@ -17,28 +17,72 @@ This section explains the different ways of importing and exporting data to and 
 .. contents::
    :local:
 
-Importing data with Importer
+Importing Data with Importer
 ****************************
 
 Data importing is handled by the Importer project item
 which can import tabulated and to some degree tree-structured data
 into a Spine database from various formats.
-The same functionality is also available in **Spine database editor** from **File->Import**
-but using an Importer item is preferred because then the process is documented and repeatable.
+An Importer lets you define *mappings* that map the input data to Spine data structure.
+Importing is also available in **Spine database editor** from **File->Import...**
+but it uses fixed mappings.
+Even then using an Importer item is preferred because then the process is documented and repeatable.
 
-.. tip::
-   A Tool item can also be connected to Importer to import tool's output files to a database.
+A common use case for Importer is to transform data from one or more input files to a Data Store
+as the first step in a workflow.
+The files can be provided by one or more Data Connection items.
 
-The heart of Importer is the **Importer Specification Editor** window in which the mappings from source data
-to Spine database entities are set up. The editor window can be accessed
-by the |wrench| button in Importer's Properties dock where existing specifications can also be selected
-or by double-clicking the item on the **Design View**.
+.. image:: img/data_connection_importer_data_store.png
+   :align: center
+
+If importing multiple CSV files with differing contents, it might be beneficial to pack the files into a datapackage
+by checking **Pack CSV file (as datapackage.json)** in the properties of the incoming link.
+This way the files appear as a single source in Importer
+where each file represents a separate table.
+
+It might also be worth checking **Purge before writing** in the outgoing link.
+This ensures that the target database gets cleaned before new data is imported.
+
+If multiple Importers are to write to the same Data Store,
+consider setting write indexes in the outgoing arrow.
+This makes the process repeatable
+and is crucial if the data imported by one of the Importers depends on data from another Importer.
+
+Another common use case is to import the results of a data processing Tool to an output Data Store.
+The Tool's specification has to have **Output files** specified so Importer knows what files to expect.
+
+.. image:: img/tool_importer_data_store.png
+   :align: center
+
+Again, if the Tool produces multiple CSV files, using a datapackage might a good option.
+
+If no alternative is specified by Importer's mappings,
+parameter values will be imported for a synthetic alternative,
+name of which consists of the selected scenario and current time stamp.
+This allows identification of the results by scenario and run time.
+In this case there is no need set the target Data Store to be purged before writing.
+
+Properties Dock
+~~~~~~~~~~~~~~~
 
 .. image:: img/importer_properties.png
    :align: center
 
-In the **Properties** tab there is also the option to cancel the import if an non-fatal error occurs during execution and
-also three options for how to handle if some of the values that you are trying to import already exist in the target Data Store.
+At the top of the **Properties** dock (or tab), there is a combo box and the |wrench| button
+which you can use to select and modify the Importer's specification.
+
+The **Available resources** pane lists files and database URLs provided by predecessor project items,
+e.g Data Connections, that can be imported.
+The items in the list can be checked and unchecked for import.
+
+.. note::
+
+   The mappings defined in Importer's specification are applied to each selected resource individually,
+   meaning that the resources must be of the same input type and contain the same tables.
+   For example, Excel files with different sheets and content need different Importers.
+
+There is also the option to cancel the import if a non-fatal error occurs during execution and
+three options for how to handle if some of the values that you are trying to import already exist in the target Data Store.
 The three choices are:
 
 *Keep existing*
@@ -46,7 +90,7 @@ The three choices are:
     be kept and the new data the Importer tried to import is forgotten.
 
 *Replace*
-    This option means the imported data replaces old data in the target Data Store.
+    This option means that the imported data replaces old data in the target Data Store.
 
 *Merge indexes*
     This option works mostly like the *Replace* option,
@@ -55,10 +99,19 @@ The three choices are:
     be appended to it. If an index that is going to get imported already exist, the new imported value will overwrite
     the old value.
 
-When the specification editor is opened for an Importer without a specification, a list of the supported
-connectors (file formats or other data sources) is presented.
-If the Importer is already connected to some data, it may have already selected
-the proper connector and is only waiting confirmation
+Importer Specification Editor
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The heart of Importer is the **Importer Specification Editor** window
+in which the mappings from source data to Spine data are set up.
+The editor window can be accessed
+by the |wrench| button in Importer's Properties dock where existing specifications can also be selected,
+or by double-clicking the item on the **Design View**.
+
+When the specification editor is opened for an Importer without a specification, a list of supported
+file formats or other data sources is presented.
+If the Importer is connected to some data, it may have already selected
+the proper connector and is only waiting for confirmation
 
 .. image:: img/importer_connector_type.png
    :align: center
@@ -66,21 +119,27 @@ the proper connector and is only waiting confirmation
 When creating a Importer specification, it is usually helpful to have the data already connected to the Importer in
 question so it is easier to visualize how the importer is handling the data.
 
-Importer specification editor
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 In the upper part of the specification editor, the name and description for the specification can be set.
-Underneath, the filepath is shown and it is modifiable. Next to the filepath the used connector type
-is shown. On the left side, the different tables the file has or that user has set up are shown. Next to that
-there are the connector specific options and underneath that a preview of the selected table is shown. The items in
-the table are highlighted according to the selected mapping. The mappings are listed on the right side of the editor.
-Underneath, the to be imported item types can be specified and other options set. Below that
-you can select the specific places in the source data where the entity names, values etc. will be taken from.
+
+Underneath, a modifiable **Input file/URL** field is shown.
+Importer reads table names and the data that is shown in the center pane from this input source.
+Usually, you would use the Importer's actual input resource as the input source here,
+but nothing stops you from building or viewing the mappings based on any other file or database.
+
+Next to the input file/URL the input type is shown.
+This can be changed from **Menu->Switch input type...**.
+On the left side, the different tables the file has or that user has set up are shown.
+In top center, there are input type specific options that apply to the currently selected table.
+Below the options, a preview of the selected table is shown.
+The items in the table are highlighted according to the selected mapping.
+The selection is done from the table-specific mapping list in the right side of the editor.
+Underneath the list, the to be imported item types can be specified and other options set for the selected mapping.
+Below that you can select the specific places in the source data where the entity names, values etc. will be taken from.
 
 .. image:: img/import_editor_window.png
    :align: center
 
-All tables available in the file selected in **File path** are listed in the leftmost dock widget.
+All tables available in the source selected in **Input file/URL** are listed in the leftmost pane.
 If the file does not have tables or the file type does not support them (e.g. CSV), all of the file's data will be
 in a single table called 'data'.
 The tables can be selected and deselected using the check boxes
@@ -90,42 +149,46 @@ If the Importer is opened in `anonymous mode`_, there is also the option to add 
 The tables are imported in the order show on the list.
 The order can be changed by dragging and dropping the table names.
 
-.. tip:: Multiple CSV files can be bundled into a *datapackage* which uses its own connector in Importer.
-   Specifically, each CSV file in the datapackage shows up as a separate table in **Source tables**.
+.. tip:: Multiple CSV files can be bundled into a *datapackage* which has its own input type in Importer.
+   Specifically, each CSV file in the datapackage shows up as a separate table in the table list.
    See :ref:`Setting up datapackages in Links` for more information on how to pack CSVs into a datapackage
    automatically within your workflow.
 
-Next to the table dock widget, there is a small dock widget that allows to "format" the incoming data.
-The available options can differ depending on the selected connector. The above picture shows the available
+Next to the table list, there is a small widget that allows to "format" the selected table.
+The available options differ depending on the selected input type. The above picture shows some of the available
 options for Excel files. **Max rows** specifies the amount of rows from the input data that are considered
 by the Importer. The option **Has header** converts the first row into headers. **Skip rows** and **Skip columns**
 skip the first *N* specified rows or columns from the table. If the table has empty rows or columns and some
 other data after that that you don't want to use, **Read until empty row/column on first column/row** options
 can be used to "crop" the imported data to the first relevant block of information. Other possible options for
-different connector types include **Encoding**, **Delimiter**, **Custom Delimiter**, **Quotechar** and
-**Maximum Depth**. **Load default mapping** sets all of the selections in the spec editor to their default values.
+different input types include **Encoding**, **Delimiter**, **Custom Delimiter**, **Quotechar** and
+**Maximum Depth**. **Load default mapping** button sets all of the selections in the spec editor to their default values.
 Be careful not to press this button unless you want to wipe the whole specification clean.
 
-.. note:: If you are working on a specification and accidentally press the *load default mapping* button
+.. note:: If you are working on a specification and accidentally press the **Load default mapping** button
           you can undo previous changes for the specification from the hamburger menu or by pressing **Ctrl+Z**.
           To redo actions, or press **Crl+Y**.
 
 When a table is selected, it's data and a preview of how the selected mapping will
-import the data will be presented under the options dock widget. An important aspect of data import is
+import the data will be presented under the options widget. An important aspect of data import is
 whether each item in the input data should be read as a string, a number,
 a time stamp or something else. In other words, the importer should know the data types of the input data.
 By default all input data is read as strings.
-However, more often than not things like parameter values are actually numbers. Though types are usually casted automatically,
-it is possible to manually control what type of data each column (and sometimes each row) contains from the preview table.
+However, often things like parameter values are actually numbers.
 Clicking the data type indicator button on column or row headers pops up a menu with a selection of available data types.
 Right clicking the column/row header also gives the opportunity to change the data type of all columns/rows at once.
+Below the preview table, the **Surplus column data type** allows selecting data type for the "rest"
+of the columns if the tables have more columns when executing the importer.
+This is often the case with pivoted data.
 
 The input data should conform to the specified data type. For float (number) type the decimal separator 
-should be point. For datetimes such as time stamps the recommended format is ISO8601 (e.g. ``2020-03-01T01:00``). 
+should be the dot :literal:`.`.
+For datetimes such as time stamps the recommended format is ISO8601 (e.g. ``2020-03-01T01:00``).
 If non-ISO8601 format is 
 detected, the importer falls back to the dateutil Python library which supports a lot of different formats.
-However, ambiguous formats can be interpreted wrongly. For example, 01-03-2020 is interpreted as January 3, 2020.
-If the source file is an Excel file, date cells are interpreted correctly although the way the are shown in
+However, it is slow and still, ambiguous formats can be interpreted wrongly.
+For example, 01-03-2020 is interpreted as January 3, 2020.
+If the source file is an Excel file, date cells are interpreted correctly although the way they are shown in
 Excel can be ambiguous. For time durations you can use long units in the format ``x unit``, where x is an integer 
 and unit is either ``year``, ``month``, ``day``, ``hour``, ``minute``, or ``second``. Plural forms of the unit
 names can also be used. Alternative is short units 
@@ -146,27 +209,51 @@ multiple item types at the same time from a single table in a file.
 Underneath **Mappings** there are options that help the importer get a feel for what kind of data it will be importing.
 The available *item type* options are *Entity class, Entity group, Alternative, Scenario,
 Scenario alternative* and *Parameter value list*. The other available
-options are dependent on the Item type. *Import entities* allows to import entities alongside
-or entity groups. *Parameter type* is used to specify what type of parameters, if any, the sheet contains. It has options
+options are dependent on the Item type.
+*Parameter type* is used to specify what type of parameters, if any, the table contains. It has options
 *Value, Definition* and *None*. If *Value* or *Definition* is selected
-the value or respectively the default value type can be set from the drop-down list. *Use before alternative* is only
-available for *Scenario alternative* -item type. *Read data from row* lets you specify the row where the importer
-starts to read the data. *Ignore columns* allow you to select individual columns that you want to exclude from the
-whole importing process. *Number of dimensions* sets the amount of dimensions the entity to be imported has.
-*Repeat time series* sets the repeat flag to true when importing time series. *Map dimensions* sets the
-number of map indexes when importing map values. *Use before alternative* maps scenario before alternatives when
-importing scenario alternatives. *Compress Maps* can be used to compress value maps.
+the value or respectively the default value type can be set from the *Value* drop-down list.
+*Number of dimensions* sets the number of dimensions the entity to be imported has.
+*Map dimensions* sets the number of map indexes when importing Map values.
+*Read data from row* lets you specify the row where the importer
+starts to read the data.
+Note, that this is additive to the possible *Skip rows* option in the table-specific options above the preview table.
+*Ignore columns* allows you to select individual columns that you want to exclude from the
+whole importing process.
+*Import entity alternatives* should be selected if the table contains entity alternative data.
+*Import entities* allows to import the elements of N-dimensional entities
+or members of entity groups.
+It is off by default to prevent importing invalid entries due to e.g. typos in the table.
+*Repeat time series* sets the repeat flag to true when importing time series.
+*Compress Maps* can be set to compress Map values if their leaf values can be converted to time series.
 
 Once everything in the before mentioned options is in order, the next step is to set the mapping specification.
 Below the options there is the part where the decisions are made on how the input data is interpreted:
 which row or column contains the entity class names, parameter values, time stamps and so on.
-The dock widget contains all of the targets that the selected mapping options specify.
-Each target has a *Source reference* and a *Source type*. *Source type* specifies if the data for the target
-is coming in the form of a column, row, table name etc. In the *Source ref.* section you can pinpoint to the
-exact row, column etc. to use as the data. The *Filter* section can be used to further specify which values to
-include using regular expressions. More on regular expressions in section `Basic regular expressions for filtering`_.
+The table contains all of the targets that the selected mapping options specify.
+Each target has a *Source type*, *Source ref.* and *Filter*. *Source type* specifies if the data for the target
+is coming in the form of a column, row, table name etc. In the *Source ref.* section you can pinpoint the
+exact row, column etc. to use as the data.
+The available *Source types* and the corresponding interpretations of the *Source ref.* are listed in the table below.
+The *Filter* section can be used to further specify which values to
+include using regular expressions. More on regular expressions in section `Basic Regular Expressions for Filtering`_.
 
-It might be helpful to fill in the *Source type* and *Source ref.* using the preview table in the *Sources data*.
+============= ========================== ============================================
+Source type   Source ref.                Description
+============= ========================== ============================================
+Constant      data                       Import the data in *Source ref.*
+Column        column number/name         Import from given column
+Row           row number                 Import from given row; pivots the table
+Column Header column number              Import specific column header
+Headers       N/A                        Import from column headers
+Table Name    N/A                        Import table name
+Mapping Name  N/A                        Import mapping's name
+Fixed         <table name>: <row>, <col> Import the value in the given table cell
+Fixed         <row>, <col>               Same as above, <table name> is current table
+None          N/A                        Not imported
+============= ========================== ============================================
+
+It might be helpful to fill in the *Source type* and *Source ref.* using the preview table.
 Right clicking on the table cells shows a popup menu that lets one to configure where the selected row/column/header
 is mapped to. It can also be used to simultaneously map all headers to one target.
 
@@ -175,12 +262,12 @@ is mapped to. It can also be used to simultaneously map all headers to one targe
 
 .. _anonymous mode:
 
-Anonymous mode
+Anonymous Mode
 ~~~~~~~~~~~~~~
 
 The importer specification editor can be opened in a mode where there is no input data available.
-This might be useful when creating or modifying a generalized specifications.
-Anonymous mode entered when opening the specification of an Importer without incoming files or when
+This might be useful when creating or modifying a generalized specification.
+Anonymous mode can be entered when opening the specification of an Importer without incoming files or when
 opening the spec editor from Toolbox **Main Toolbar**.
 
 .. image:: img/importer_spec_editor_anonymous_mode.png
@@ -191,9 +278,9 @@ and writing in a name for the new table. The preview will show an infinite grid 
 can create different mappings.
 
 .. note:: You can exit the Anonymous mode by browsing to and selecting an existing file using the controls in
-   *File path*.
+   **Input file/URL**.
 
-Exporting data with Exporter
+Exporting Data with Exporter
 ****************************
 
 Exporter writes database data into regular files that can be used by Tools and external software
@@ -212,7 +299,7 @@ or by double clicking Exporter's icon on the **Design View**.
 A specification that is not associated with any specific Exporter project item can be created
 and edited from the Main toolbar.
 
-Properties dock
+Properties Dock
 ~~~~~~~~~~~~~~~
 
 Exporter's **Properties** dock controls project item specific settings
@@ -240,7 +327,7 @@ that may be otherwise non-fatal.
 Exporter's data directory can be opened in system's file browser by the |open-folder| button.
 The output files are written in data directory's :literal:`output` subdirectory.
 
-Exporter specification editor
+Exporter Specification Editor
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Specification editor is used to create **mappings** that define how data is exported to the output file.
@@ -298,7 +385,7 @@ Selecting a table from the list shows the table's contents on the *Preview conte
 .. note:: The preview is oblivious of any filters possibly set up in the workflow.
    Therefore, it may show entries, e.g. parameter values, that would be filtered out during execution.
 
-Mapping options
+Mapping Options
 ---------------
 
 The currently selected mapping is edited using the controls in *Mapping options* and *Mapping specification* docks.
@@ -327,7 +414,7 @@ contains items that are *hidden*, it is possible that a number of data elements 
 output table cell. The *Group function* combobox offers some basic functions to aggregate such data
 into the cells.
 
-Mapping specification
+Mapping Specification
 ---------------------
 
 .. image:: img/exporter_mapping_specification_dock.png
@@ -384,10 +471,10 @@ Note that checking the *Always export header* option in the *Mapping options* do
 even if there is no other data in a table.
 
 The *Mapping specification* dock's *Filter* column provides refined control on which database items the mapping outputs.
-The column uses regular expressions (see section `Basic regular expressions for filtering`_)
+The column uses regular expressions (see section `Basic Regular Expressions for Filtering`_)
 to filter what gets outputted.
 
-CSV and multiple tables
+CSV and Multiple Tables
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 CSV files are flat text files and therefore do not directly support multiple tables.
@@ -398,7 +485,7 @@ actually write to the file/label specified on the Exporter's properties dock.
 Named tables get written to files named after the table plus the :literal:`.csv` extension.
 For example, a table named :literal:`node` would result in a file called ``node.csv``.
 
-SQL export
+SQL Export
 ~~~~~~~~~~
 
 To set up export to a remote database, first an Exporter specification with SQL selected as the format needs
@@ -421,7 +508,7 @@ The SQL backend writes the tables to the target database in a relatively straigh
 * Pivot tables do not generally make sense with the SQL backend
   unless the resulting table somehow follows the above rules.
 
-GAMS gdx export
+GAMS GDX Export
 ~~~~~~~~~~~~~~~
 
 .. note::
@@ -468,9 +555,9 @@ GAMS special value  Original value
 Eps                 2.2250738585072014e-308, 1e-10 or the string ``EPS``
 ==================  ====================================================
 
-.. _Basic regular expressions for filtering:
+.. _Basic Regular Expressions for Filtering:
 
-Basic regular expressions for filtering
+Basic Regular Expressions for Filtering
 ***************************************
 
 See regular expressions on `wikipedia <https://en.wikipedia.org/wiki/Regular_expression>`_ and on
