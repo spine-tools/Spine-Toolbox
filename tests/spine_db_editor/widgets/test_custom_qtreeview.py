@@ -324,7 +324,10 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         entity_class_index = entity_model.index(0, 0, root_index)
         entity_tree_view._context_item = entity_model.item_from_index(entity_class_index)
         add_entity_tree_item(
-            {1: "my_first_dimension_is_an_entity_class"}, entity_tree_view, "Add entity classes", AddEntityClassesDialog
+            {1: "my_first_dimension_is_an_entity_class"},
+            entity_tree_view,
+            "Add entity classes...",
+            AddEntityClassesDialog,
         )
         view = self._db_editor.ui.treeView_entity
         model = view.model()
@@ -349,14 +352,14 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         add_entity_tree_item(
             item_names,
             self._db_editor.ui.treeView_entity,
-            "Add entity classes",
+            "Add entity classes...",
             AddEntityClassesDialog,
         )
 
     def _add_multidimensional_entity(self, element_name, entity_names):
         item_names = dict(enumerate(entity_names))
         item_names[len(entity_names)] = element_name
-        add_entity_tree_item(item_names, self._db_editor.ui.treeView_entity, "Add entities", AddEntitiesDialog)
+        add_entity_tree_item(item_names, self._db_editor.ui.treeView_entity, "Add entities...", AddEntitiesDialog)
 
 
 class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
