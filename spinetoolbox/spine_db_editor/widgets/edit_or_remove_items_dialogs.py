@@ -12,7 +12,7 @@
 
 """Classes for custom QDialogs to edit items in databases."""
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import QComboBox, QTabWidget
+from PySide6.QtWidgets import QComboBox, QTabWidget, QVBoxLayout
 from ...helpers import DB_ITEM_SEPARATOR, default_icon_id
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..helpers import string_to_bool, string_to_display_icon
@@ -306,7 +306,10 @@ class SelectSuperclassDialog(GetEntityClassesMixin, DialogWithButtons):
         self.setWindowTitle(f"Select {self._subclass_name}'s superclass")
 
     def _populate_layout(self):
-        self.layout().addWidget(self._tab_widget)
+        tab_layout = QVBoxLayout()
+        tab_layout.addWidget(self._tab_widget)
+        tab_layout.addStretch(1)
+        self.layout().addLayout(tab_layout, 0, 0)
         super()._populate_layout()
 
     @Slot()

@@ -89,18 +89,20 @@ class EntityTreeView(CopyPasteTreeView):
 
     def _add_middle_actions(self):
         self._add_entity_classes_action = self._menu.addAction(
-            self._cube_plus_icon, "Add entity classes", self.add_entity_classes
+            self._cube_plus_icon, "Add entity classes...", self.add_entity_classes
         )
-        self._add_entities_action = self._menu.addAction(self._cube_plus_icon, "Add entities", self.add_entities)
+        self._add_entities_action = self._menu.addAction(self._cube_plus_icon, "Add entities...", self.add_entities)
         self._add_entity_group_action = self._menu.addAction(
-            self._cube_plus_icon, "Add entity group", self.add_entity_group
+            self._cube_plus_icon, "Add entity group...", self.add_entity_group
         )
         self._manage_elements_action = self._menu.addAction(
-            self._cubes_pen_icon, "Manage elements", self.manage_elements
+            self._cubes_pen_icon, "Manage elements...", self.manage_elements
         )
-        self._manage_members_action = self._menu.addAction(self._cube_pen_icon, "Manage members", self.manage_members)
+        self._manage_members_action = self._menu.addAction(
+            self._cube_pen_icon, "Manage members...", self.manage_members
+        )
         self._select_superclass_action = self._menu.addAction(
-            self._cube_pen_icon, "Select superclass", self.select_superclass
+            self._cube_pen_icon, "Select superclass...", self.select_superclass
         )
         self._menu.addSeparator()
         self._find_next_action = self._menu.addAction(
