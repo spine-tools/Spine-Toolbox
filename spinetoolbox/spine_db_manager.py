@@ -51,7 +51,7 @@ from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinetoolbox.database_display_names import NameRegistry
 from .helpers import busy_effect, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
-from .parameter_type_validation import ParameterTypeValidator, ValidationKey
+from .parameter_type_validation import ParameterTypeValidator
 from .spine_db_commands import (
     AddItemsCommand,
     AddUpdateItemsCommand,
@@ -1712,10 +1712,11 @@ class SpineDBManager(QObject):
             return {}
         return worker.commit_cache.get(commit_id.db_id, {})
 
-    @Slot(ValidationKey, bool)
-    def _parameter_value_validated(self, key, is_valid):
-        with suppress(KeyError):
-            self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
+    @Slot(list, list)
+    def _parameter_value_validated(self, keys, is_valid_list):
+        for key, is_valid in zip(keys, is_valid_list):
+            with suppress(KeyError):
+                self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
 
     def _clear_validated_value_ids(self, item_type, db_map_data):
         db_map_validated_values = self._validated_values[item_type]
