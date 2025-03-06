@@ -13,7 +13,6 @@
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from typing import ClassVar, Iterable
 from PySide6.QtCore import Qt, Slot
-from PySide6.QtGui import QColor
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
@@ -369,23 +368,40 @@ class ParameterMixin:
             self.db_mngr, self.db_map, (id_ for id_ in ids if id_.private_id in new_ids)
         )
 
-    def _parameter_type_validated(self, key, is_valid):
+    def _parameter_type_validated(self, keys, is_valid_list):
         """Notifies the model that values have been validated.
 
         Args:
-            key (ValidationKey): validation key
-            is_valid (bool): True if value type is valid, False otherwise
+            keys (list of ValidationKey): validation keys
+            is_valid_list (list of bool): True if value type is valid, False otherwise for each key
         """
-        if key.item_type != self.item_type or key.db_map_id != id(self.db_map):
+        db_map_id = id(self.db_map)
+        private_ids_of_interest = set()
+        for key in keys:
+            if key.item_type != self.item_type or key.db_map_id != db_map_id:
+                continue
+            private_ids_of_interest.add(key.item_private_id)
+        if not private_ids_of_interest:
             return
-        self._ids_pending_type_validation.discard(key.item_private_id)
+        self._ids_pending_type_validation -= private_ids_of_interest
         if not self._ids_pending_type_validation:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
         value_column = self.header.index(self.value_field)
+        min_row = None
+        max_row = None
         for row, id_ in enumerate(self._main_data):
-            if id_.private_id == key.item_private_id:
-                self.dataChanged.emit(self.index(row, value_column), [PARAMETER_TYPE_VALIDATION_ROLE])
-                break
+            if id_.private_id in private_ids_of_interest:
+                private_ids_of_interest.discard(id_.private_id)
+                if min_row is None:
+                    min_row = row
+                max_row = row
+                if not private_ids_of_interest:
+                    break
+        if min_row is None:
+            return
+        top_left = self.index(min_row, value_column)
+        bottom_right = self.index(max_row, value_column)
+        self.dataChanged.emit(top_left, bottom_right, [PARAMETER_TYPE_VALIDATION_ROLE])
 
     @Slot(object)
     def _stop_waiting_validation(self):
