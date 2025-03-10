@@ -1337,25 +1337,29 @@ class SpineDBManager(QObject):
         scen_alt_ids_to_remove = {}
         errors = []
         with self._db_locks[db_map]:
+            scenario_table = db_map.mapped_table("scenario")
             for scen in scenarios:
-                current_scen = db_map.get_item("scenario", id=scen["id"])
+                current_scen = scenario_table.find_item_by_id(scen["id"])
                 if current_scen is None:
                     error = f"no scenario matching {scen} to set alternatives for"
                     errors.append(error)
                     continue
+                scenario_id = current_scen["id"]
                 for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
-                    item_to_add = {"scenario_id": current_scen["id"], "alternative_id": alternative_id, "rank": k + 1}
+                    item_to_add = {"scenario_id": scenario_id, "alternative_id": alternative_id, "rank": k + 1}
                     scen_alts_to_add.append(item_to_add)
                 for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
                     item_to_add = {
-                        "scenario_id": current_scen["id"],
+                        "scenario_id": scenario_id,
                         "alternative_name": alternative_name,
                         "rank": k + 1,
                     }
                     scen_alts_to_add.append(item_to_add)
+                scenario_alternative_table = db_map.mapped_table("scenario_alternative")
+                scenario_name = current_scen["name"]
                 for alternative_name in current_scen["alternative_name_list"]:
-                    current_scen_alt = db_map.get_item(
-                        "scenario_alternative", scenario_name=current_scen["name"], alternative_name=alternative_name
+                    current_scen_alt = scenario_alternative_table.find_item(
+                        {"scenario_name": scenario_name, "alternative_name": alternative_name}
                     )
                     scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
         # Remove items that are both to add and to remove

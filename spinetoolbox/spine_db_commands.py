@@ -175,7 +175,8 @@ class AddUpdateItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.item_type = item_type
         self.new_data = data
-        old_data = [x._asdict() for item in data if (x := self.db_map.get_item(item_type, **item))]
+        table = db_map.mapped_table(item_type)
+        old_data = [x._asdict() for item in data if (x := table.find_item(item))]
         if self.new_data == old_data:
             self.setObsolete(True)
         self.old_data = {x["id"]: x for x in old_data}
