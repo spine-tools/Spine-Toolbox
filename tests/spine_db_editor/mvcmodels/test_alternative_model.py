@@ -78,8 +78,9 @@ class TestAlternativeModel(TestCaseWithQApplication):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
-        self._db_mngr.update_alternatives({self._db_map: [{"id": 2, "name": "renamed"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        alternative_id = self._db_map.alternative(name="alternative_1")["id"]
+        self._db_mngr.update_alternatives({self._db_map: [{"id": alternative_id, "name": "renamed"}]})
         data = model_data_to_dict(model)
         expected = [
             [
@@ -99,8 +100,9 @@ class TestAlternativeModel(TestCaseWithQApplication):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
-        self._db_mngr.remove_items({self._db_map: {"alternative": {2}}})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        alternative_id = self._db_map.alternative(name="alternative_1")["id"]
+        self._db_mngr.remove_items({self._db_map: {"alternative": {alternative_id}}})
         data = model_data_to_dict(model)
         expected = [
             [{self.db_codename: [["Base", "Base alternative"], ["Type new alternative name here...", ""]]}, None]

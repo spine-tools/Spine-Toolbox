@@ -1512,63 +1512,78 @@ class SpineDBManager(QObject):
         """Finds and returns cascading entity classes for the given dimension ids."""
         db_map_cascading_data = {}
         for db_map, dimension_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity_class"):
-                if set(item["dimension_id_list"]) & set(dimension_ids):
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            dimension_ids = set(dimension_ids)
+            with self.get_lock(db_map):
+                class_table = db_map.mapped_table("entity_class")
+                db_map.do_fetch_all(class_table)
+                for item in class_table.values():
+                    if item.is_valid() and not dimension_ids.isdisjoint(item["dimension_id_list"]):
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_entities(self, db_map_ids):
         """Finds and returns cascading entities for the given element ids."""
         db_map_cascading_data = {}
         for db_map, element_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity"):
-                if set(item["element_id_list"]) & set(element_ids):
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            element_ids = set(element_ids)
+            with self.get_lock(db_map):
+                entity_table = db_map.mapped_table("entity")
+                db_map.do_fetch_all(entity_table)
+                for item in entity_table.values():
+                    if item.is_valid() and not element_ids.isdisjoint(item["element_id_list"]):
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_data(self, db_map_ids, item_type):
+    def find_cascading_parameter_definitions(self, db_map_ids):
         """Finds and returns cascading parameter definitions or values for the given entity_class ids."""
         db_map_cascading_data = {}
         for db_map, entity_class_ids in db_map_ids.items():
-            for item in self.get_items(db_map, item_type):
-                if item["entity_class_id"] in entity_class_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            entity_class_ids = set(entity_class_ids)
+            with self.get_lock(db_map):
+                definition_table = db_map.mapped_table("parameter_definition")
+                db_map.do_fetch_all(definition_table)
+                for item in definition_table.values():
+                    if item.is_valid() and item["entity_class_id"] in entity_class_ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = {}
         for db_map, entity_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["entity_id"] in entity_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
-        return db_map_cascading_data
-
-    def find_cascading_parameter_values_by_definition(self, db_map_ids):
-        """Finds and returns cascading parameter values for the given parameter_definition ids."""
-        db_map_cascading_data = {}
-        for db_map, param_def_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["parameter_id"] in param_def_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            entity_ids = set(entity_ids)
+            with self.get_lock(db_map):
+                parameter_table = db_map.mapped_table("parameter_value")
+                db_map.do_fetch_all(parameter_table)
+                for item in parameter_table.values():
+                    if item.is_valid() and item["entity_id"] in entity_ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids):
         """Finds and returns cascading scenario alternatives for the given scenario ids."""
         db_map_cascading_data = {}
         for db_map, ids in db_map_ids.items():
-            for item in self.get_items(db_map, "scenario_alternative"):
-                if item["scenario_id"] in ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            ids = set(ids)
+            with self.get_lock(db_map):
+                scenario_alternative_table = db_map.mapped_table("scenario_alternative")
+                db_map.do_fetch_all(scenario_alternative_table)
+                for item in scenario_alternative_table.values():
+                    if item.is_valid() and item["scenario_id"] in ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_groups_by_entity(self, db_map_ids):
         """Finds and returns groups for the given entity ids."""
         db_map_group_data = {}
         for db_map, entity_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity_group"):
-                if item["entity_id"] in entity_ids:
-                    db_map_group_data.setdefault(db_map, []).append(item)
+            entity_ids = set(entity_ids)
+            with self.get_lock(db_map):
+                entity_group_table = db_map.mapped_table("entity_group")
+                db_map.do_fetch_all(entity_group_table)
+                for item in entity_group_table.values():
+                    if item.is_valid() and item["entity_id"] in entity_ids:
+                        db_map_group_data.setdefault(db_map, []).append(item.public_item)
         return db_map_group_data
 
     def duplicate_scenario(self, scen_data, dup_name, db_map):
