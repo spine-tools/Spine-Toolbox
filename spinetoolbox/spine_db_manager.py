@@ -721,13 +721,10 @@ class SpineDBManager(QObject):
             PublicItem: the item
         """
         mapped_table = db_map.mapped_table(item_type)
-        item = mapped_table.find_item_by_id(id_)
-        if hasattr(item, "public_item"):
-            return item.public_item
-        return item
-
-    def get_field(self, db_map, item_type, id_, field):
-        return self.get_item(db_map, item_type, id_).get(field)
+        try:
+            return mapped_table[id_].public_item
+        except KeyError:
+            return None
 
     def get_items(self, db_map, item_type, **kwargs):
         """Returns a list of the items of the given type in the given db map.
@@ -741,7 +738,8 @@ class SpineDBManager(QObject):
             list
         """
         with self.get_lock(db_map):
-            return db_map.get_items(item_type, **kwargs)
+            table = db_map.mapped_table(item_type)
+            return db_map.find(table, **kwargs)
 
     def get_items_by_field(self, db_map, item_type, field, value):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -928,7 +926,7 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value or definition id
         """
         item = self.get_item(db_map, item_type, id_)
-        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+        parsed_value = item["parsed_value"]
         if isinstance(parsed_value, IndexedValue):
             return parsed_value.indexes
         return [""]
@@ -944,7 +942,7 @@ class SpineDBManager(QObject):
             role (int, optional)
         """
         item = self.get_item(db_map, item_type, id_)
-        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+        parsed_value = item["parsed_value"]
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
         if role == Qt.ItemDataRole.EditRole:
@@ -979,10 +977,12 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
-        return [
-            self.get_value(db_map, item, role=role)
-            for item in self.get_items_by_field(db_map, "list_value", "parameter_value_list_id", id_)
-        ]
+        with self.get_lock(db_map):
+            list_value_table = db_map.mapped_table("list_value")
+            return [
+                self.get_value(db_map, item, role=role)
+                for item in db_map.find(list_value_table, parameter_value_list_id=id_)
+            ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
         if db_map in self._db_locks:
@@ -1216,9 +1216,10 @@ class SpineDBManager(QObject):
             for item in expanded_data:
                 packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
             items = []
+            value_table = db_map.mapped_table("parameter_value")
             for id_, indexed_values in packed_data.items():
-                item = self.get_item(db_map, "parameter_value", id_)
-                parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+                item = value_table.find_item_by_id(id_)
+                parsed_value = item["parsed_value"]
                 if isinstance(parsed_value, IndexedValue):
                     parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():

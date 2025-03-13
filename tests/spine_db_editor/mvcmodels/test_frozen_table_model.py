@@ -66,7 +66,8 @@ class TestFrozenTableModel(TestCaseWithQApplication):
 
     def test_add_values(self):
         self._model.set_headers(["alternative", "database"])
-        self._model.add_values({((self._db_map, 1), self._db_map)})
+        alternative_id = self._db_map.alternative(name="Base")["id"]
+        self._model.add_values({((self._db_map, alternative_id), self._db_map)})
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.columnCount(), 2)
         self.assertEqual(self._model.index(0, 0).data(), "alternative")
@@ -134,7 +135,8 @@ class TestFrozenTableModel(TestCaseWithQApplication):
         self.assertEqual(self._model.get_frozen_value(), ((self._db_map, 1), self._db_map))
 
     def test_insert_column_data_to_empty_model(self):
-        self._model.insert_column_data("alternative", {(self._db_map, 1)}, 0)
+        alternative_id = self._db_map.alternative(name="Base")["id"]
+        self._model.insert_column_data("alternative", {(self._db_map, alternative_id)}, 0)
         self.assertEqual(self._model.columnCount(), 1)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, 0).data(), "alternative")
@@ -228,9 +230,16 @@ class TestFrozenTableModel(TestCaseWithQApplication):
 
     def test_table_stays_sorted(self):
         self._model.insert_column_data("database", {self._db_map}, 0)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1", "id": 2}]})
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Gadget", "id": 1}]})
-        self._db_mngr.add_entities({self._db_map: [{"class_id": 1, "name": "fork"}, {"class_id": 1, "name": "spoon"}]})
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Gadget"}]})
+        self._db_mngr.add_entities(
+            {
+                self._db_map: [
+                    {"entity_class_name": "Gadget", "name": "fork"},
+                    {"entity_class_name": "Gadget", "name": "spoon"},
+                ]
+            }
+        )
         alternatives = self._db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
         self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 0)
@@ -258,7 +267,8 @@ class TestFrozenTableModel(TestCaseWithQApplication):
 
     def test_tooltips_work_when_no_data_is_available(self):
         self._model.insert_column_data("database", {self._db_map}, 0)
-        self._db_mngr.remove_items({self._db_map: {"alternative": [1]}})
+        alternative_id = self._db_map.alternative(name="Base")["id"]
+        self._db_mngr.remove_items({self._db_map: {"alternative": [alternative_id]}})
         self._model.insert_column_data("alternative", {(self._db_map, None)}, 1)
         self.assertEqual(self._model.headers, ["database", "alternative"])
         model_data = model_data_to_table(self._model)

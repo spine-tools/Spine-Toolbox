@@ -254,24 +254,35 @@ class TestAddItems(TestCaseWithQApplication):
 
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
-        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value.", "id": 1}]}
+        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
         self._db_mngr.add_items("metadata", db_map_data)
+        metadata_id = db_map.metadata(name="my_metadata", value="Metadata value.")["id"]
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "metadata", 1).resolve(),
-            {"name": "my_metadata", "value": "Metadata value.", "id": 1},
+            self._db_mngr.get_item(db_map, "metadata", metadata_id).resolve(),
+            {"name": "my_metadata", "value": "Metadata value.", "id": None},
         )
 
     def test_add_object_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, None, create=True)
         with db_map:
-            import_functions.import_object_classes(db_map, ("my_class",))
-            import_functions.import_objects(db_map, (("my_class", "my_object"),))
+            import_functions.import_entity_classes(db_map, ("my_class",))
+            import_functions.import_entities(db_map, (("my_class", "my_object"),))
             import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
             db_map.commit_session("Add test data.")
-        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
+            entity_id = db_map.entity(entity_class_name="my_class", name="my_object")["id"]
+            metadata_id = db_map.metadata(name="metaname", value="metavalue")["id"]
+
+        db_map_data = {db_map: [{"entity_id": entity_id, "metadata_id": metadata_id}]}
         self._db_mngr.add_items("entity_metadata", db_map_data)
+        entity_metadata_id = db_map.entity_metadata(
+            entity_class_name="my_class",
+            entity_byname=("my_object",),
+            metadata_name="metaname",
+            metadata_value="metavalue",
+        )["id"]
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "entity_metadata", 1).resolve(), {"entity_id": 1, "metadata_id": 1, "id": 1}
+            self._db_mngr.get_item(db_map, "entity_metadata", entity_metadata_id)._asdict(),
+            {"entity_id": entity_id, "metadata_id": metadata_id, "id": entity_metadata_id},
         )
 
 
