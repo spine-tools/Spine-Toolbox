@@ -922,10 +922,9 @@ class SpineDBEditorBase(QMainWindow):
     @Slot()
     def focus_widget(self, widget):
         """Focus a specific widget and make its dock visible if needed."""
-        # Find the dock containing the widget
         for dock in self.findChildren(QDockWidget):
             if widget in dock.findChildren(type(widget).__base__):
-                dock.raise_()  # Brings dock to front
+                dock.raise_()
                 dock.setFocus()
                 widget.setFocus()
                 return True
