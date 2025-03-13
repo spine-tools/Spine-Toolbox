@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -185,21 +185,21 @@ class Ui_MainWindow(object):
         self.actionStart_jupyter_console = QAction(MainWindow)
         self.actionStart_jupyter_console.setObjectName(u"actionStart_jupyter_console")
         icon17 = QIcon()
-        icon17.addFile(u":/icons/desktop.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon17.addFile(u":/symbols/Jupyter-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionStart_jupyter_console.setIcon(icon17)
         self.actionGitHub = QAction(MainWindow)
         self.actionGitHub.setObjectName(u"actionGitHub")
         icon18 = QIcon()
         icon18.addFile(u":/icons/menu_icons/github-mark.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionGitHub.setIcon(icon18)
-        self.actionStart_default_python_in_basic_console = QAction(MainWindow)
-        self.actionStart_default_python_in_basic_console.setObjectName(u"actionStart_default_python_in_basic_console")
+        self.actionStart_python = QAction(MainWindow)
+        self.actionStart_python.setObjectName(u"actionStart_python")
         icon19 = QIcon()
         icon19.addFile(u":/icons/menu_icons/terminal.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.actionStart_default_python_in_basic_console.setIcon(icon19)
-        self.actionStart_default_julia_in_basic_console = QAction(MainWindow)
-        self.actionStart_default_julia_in_basic_console.setObjectName(u"actionStart_default_julia_in_basic_console")
-        self.actionStart_default_julia_in_basic_console.setIcon(icon19)
+        self.actionStart_python.setIcon(icon19)
+        self.actionStart_julia = QAction(MainWindow)
+        self.actionStart_julia.setObjectName(u"actionStart_julia")
+        self.actionStart_julia.setIcon(icon19)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         MainWindow.setCentralWidget(self.centralwidget)
@@ -410,8 +410,8 @@ class Ui_MainWindow(object):
         self.menuPlugins.addSeparator()
         self.menuPlugins.addAction(self.actionCreate_plugin)
         self.menuConsoles.addAction(self.actionStart_jupyter_console)
-        self.menuConsoles.addAction(self.actionStart_default_python_in_basic_console)
-        self.menuConsoles.addAction(self.actionStart_default_julia_in_basic_console)
+        self.menuConsoles.addAction(self.actionStart_python)
+        self.menuConsoles.addAction(self.actionStart_julia)
         self.menuServer.addAction(self.actionRetrieve_project)
 
         self.retranslateUi(MainWindow)
@@ -620,8 +620,11 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionGitHub.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open Spine-Toolbox repository in GitHub</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.actionStart_default_python_in_basic_console.setText(QCoreApplication.translate("MainWindow", u"Start Default Python in Basic Console", None))
-        self.actionStart_default_julia_in_basic_console.setText(QCoreApplication.translate("MainWindow", u"Start Default Julia in Basic Console", None))
+        self.actionStart_python.setText(QCoreApplication.translate("MainWindow", u"Start Python", None))
+#if QT_CONFIG(tooltip)
+        self.actionStart_python.setToolTip(QCoreApplication.translate("MainWindow", u"Start Python", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionStart_julia.setText(QCoreApplication.translate("MainWindow", u"Start Julia", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
