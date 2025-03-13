@@ -1,14 +1,19 @@
 import unittest
 from unittest.mock import MagicMock, patch
+from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QShortcut, QKeySequence
+from PySide6.QtCore import QByteArray
 
+app = QApplication.instance() or QApplication([])
 
 class TestSpineDBEditorShortcuts(unittest.TestCase):
     def setUp(self):
         from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
         self.mock_settings = MagicMock()
-        with patch(
-                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.init_models") as mock_init_models:
+
+        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.init_models"), \
+                patch.object(SpineDBEditor, 'last_view', create=True, new=QByteArray()), \
+                patch.object(SpineDBEditor, 'restoreState', return_value=True):
             self.spine_db_editor = SpineDBEditor(self.mock_settings)
 
     def tearDown(self):
