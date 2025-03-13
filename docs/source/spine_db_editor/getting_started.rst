@@ -71,6 +71,8 @@ open in the same configuration when it is opened the next time. The dock configu
 the configurations for the URL can be restored back to default from the **Menu bar->View->Docks...->Reset docks**,
 or from the button in the **Toolbar** with the same name.
 
+There are keyboard shortcuts to activate most of the widgets. For example Entity tree is activated with Alt+1.
+
 Tab bar
 =======
 

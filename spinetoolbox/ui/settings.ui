@@ -1198,7 +1198,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox_entity_tree">
           <property name="title">
-           <string>Entity tree</string>
+           <string>"Entity tree"</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>

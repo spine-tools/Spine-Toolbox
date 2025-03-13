@@ -268,7 +268,7 @@
     <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
-    <string>Entity tree</string>
+    <string>"Entity tree"</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>

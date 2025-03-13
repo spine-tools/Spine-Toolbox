@@ -14,7 +14,7 @@
 import json
 import os
 from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPalette
+from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QCheckBox,
@@ -45,6 +45,7 @@ from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
+from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ..helpers import table_name_from_item_type
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
@@ -56,7 +57,6 @@ from .stacked_view_mixin import StackedViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .toolbar import DBEditorToolBar
 from .tree_view_mixin import TreeViewMixin
-
 
 class SpineDBEditorBase(QMainWindow):
     """Base class for SpineDBEditor (i.e. Spine database editor)."""
@@ -115,6 +115,7 @@ class SpineDBEditorBase(QMainWindow):
         self._export_items_dialog_state = None
         self.update_commit_enabled()
         self.last_view = None
+        self.setup_focus_shortcuts()
 
     @property
     def toolbox(self):
@@ -897,6 +898,34 @@ class SpineDBEditorBase(QMainWindow):
         )
         model.dock.setWindowTitle(table_name)
 
+    def setup_focus_shortcuts(self):
+        # Direct focus shortcuts for widgets in the DB editor
+        QShortcut(QKeySequence("Alt+1"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.treeView_entity))
+        QShortcut(QKeySequence("Alt+3"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.tableView_parameter_value))
+        QShortcut(QKeySequence("Alt+Shift+3"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.tableView_parameter_definition))
+        QShortcut(QKeySequence("Alt+4"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.tableView_entity_alternative))
+        QShortcut(QKeySequence("Alt+5"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.alternative_tree_view))
+        QShortcut(QKeySequence("Alt+6"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.scenario_tree_view))
+        QShortcut(QKeySequence("Alt+9"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.treeView_parameter_value_list))
+
+    @Slot()
+    def focus_widget(self, widget):
+        """Focus a specific widget and make its dock visible if needed."""
+        # Find the dock containing the widget
+        for dock in self.findChildren(QDockWidget):
+            if widget in dock.findChildren(type(widget).__base__):
+                dock.raise_()  # Brings dock to front
+                dock.setFocus()
+                widget.setFocus()
+                return True
+        return False
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):
     """A widget to visualize Spine dbs."""
