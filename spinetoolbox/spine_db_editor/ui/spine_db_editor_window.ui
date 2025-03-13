@@ -45,7 +45,7 @@
     <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
-    <string>Alternative</string>
+    <string>Alternative (Alt+5)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -94,7 +94,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_parameter_value_list">
    <property name="windowTitle">
-    <string>Parameter value list</string>
+    <string>Parameter value list (Alt+9)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -137,7 +137,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_parameter_value">
    <property name="windowTitle">
-    <string>Parameter value</string>
+    <string>Parameter value (Alt+3)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -204,7 +204,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_parameter_definition">
    <property name="windowTitle">
-    <string>Parameter definition</string>
+    <string>Parameter definition (Alt+Shift+3)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -268,7 +268,7 @@
     <set>Qt::AllDockWidgetAreas</set>
    </property>
    <property name="windowTitle">
-    <string>"Entity tree"</string>
+    <string>Entity tree (Alt+1)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -606,7 +606,7 @@
   </widget>
   <widget class="QDockWidget" name="scenario_dock_widget">
    <property name="windowTitle">
-    <string>Scenario tree</string>
+    <string>Scenario tree (Alt+6)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -661,7 +661,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_entity_alternative">
    <property name="windowTitle">
-    <string>Entity alternative</string>
+    <string>Entity alternative (Alt+4)</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
