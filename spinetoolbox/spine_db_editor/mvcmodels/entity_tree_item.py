@@ -54,7 +54,7 @@ class EntityTreeRootItem(MultiDBTreeItem):
 
     @property
     def visible_children(self):
-        return [x for x in self.children if not x.is_hidden()]
+        return [x for x in self._children if not x.is_hidden()]
 
     @property
     def display_id(self):
@@ -286,15 +286,10 @@ class EntityItem(MultiDBTreeItem):
         return self.parent_item.name in self.element_name_list
 
     def _can_fetch_more_entity_groups(self):
-        result = False
-        for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent)
-        return result
+        return any(self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent) for db_map in self.db_maps)
 
     def can_fetch_more(self):
-        result = self._can_fetch_more_entity_groups()
-        result |= super().can_fetch_more()
-        return result
+        return self._can_fetch_more_entity_groups() or super().can_fetch_more()
 
     def _fetch_more_entity_groups(self):
         for db_map in self.db_maps:

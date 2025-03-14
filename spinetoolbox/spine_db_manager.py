@@ -103,6 +103,12 @@ class SpineDBManager(QObject):
         object: database mapping
         bool: True if database has become clean, False if it became dirty
     """
+    database_reset = Signal(object)
+    """Emitted whenever database is reset.
+
+    Args:
+        object: database mapping
+    """
 
     def __init__(self, settings, parent, synchronous=False):
         """
@@ -579,6 +585,7 @@ class SpineDBManager(QObject):
             worker.reset_session()
             self.undo_stack[db_map].clear()
             reset_db_maps.add(db_map)
+            self.database_reset.emit(db_map)
         return reset_db_maps
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
