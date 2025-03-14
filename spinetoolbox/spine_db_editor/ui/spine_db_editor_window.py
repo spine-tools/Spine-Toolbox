@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -655,23 +655,23 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionGitHub.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open Spine-Toolbox repository in GitHub</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative", None))
+        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative (Alt+5)", None))
 #if QT_CONFIG(accessibility)
         self.alternative_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
 #endif // QT_CONFIG(accessibility)
-        self.dockWidget_parameter_value_list.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value list", None))
+        self.dockWidget_parameter_value_list.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value list (Alt+9)", None))
 #if QT_CONFIG(accessibility)
         self.treeView_parameter_value_list.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value list", None))
 #endif // QT_CONFIG(accessibility)
-        self.dockWidget_parameter_value.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value", None))
+        self.dockWidget_parameter_value.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter value (Alt+3)", None))
 #if QT_CONFIG(accessibility)
         self.tableView_parameter_value.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter value", None))
 #endif // QT_CONFIG(accessibility)
-        self.dockWidget_parameter_definition.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter definition", None))
+        self.dockWidget_parameter_definition.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter definition (Alt+Shift+3)", None))
 #if QT_CONFIG(accessibility)
         self.tableView_parameter_definition.setAccessibleName(QCoreApplication.translate("MainWindow", u"parameter definition", None))
 #endif // QT_CONFIG(accessibility)
-        self.dockWidget_entity_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity tree", None))
+        self.dockWidget_entity_tree.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity tree (Alt+1)", None))
 #if QT_CONFIG(accessibility)
         self.treeView_entity.setAccessibleName(QCoreApplication.translate("MainWindow", u"entity tree", None))
 #endif // QT_CONFIG(accessibility)
@@ -681,11 +681,11 @@ class Ui_MainWindow(object):
         self.dockWidget_exports.setWindowTitle(QCoreApplication.translate("MainWindow", u"Exports", None))
         self.metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Metadata", None))
         self.item_metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item metadata", None))
-        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree", None))
+        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree (Alt+6)", None))
 #if QT_CONFIG(accessibility)
         self.scenario_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"scenario tree", None))
 #endif // QT_CONFIG(accessibility)
-        self.dockWidget_entity_alternative.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity alternative", None))
+        self.dockWidget_entity_alternative.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity alternative (Alt+4)", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Sess&ion", None))

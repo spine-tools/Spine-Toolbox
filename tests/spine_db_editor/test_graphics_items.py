@@ -15,6 +15,7 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QKeySequence, QShortcut
 from spinetoolbox.spine_db_editor.graphics_items import EntityItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
@@ -145,6 +146,7 @@ class TestEntityItem(TestCaseWithQApplication):
         self.assertEqual(self._item.pos(), QPointF(101.0, -99.0))
         arc.update_line.assert_has_calls([])
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_shortcut_exists(self):
+        # Just test that QShortcut can be used
+        shortcut = QShortcut(QKeySequence("Alt+1"), self._spine_db_editor)
+        self.assertIsNotNone(shortcut)

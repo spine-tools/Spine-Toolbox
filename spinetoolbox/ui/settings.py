@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -91,14 +91,14 @@ class Ui_SettingsForm(object):
         self.listWidget.setSizePolicy(sizePolicy1)
         self.listWidget.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustIgnored)
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.listWidget.setProperty(u"showDropIndicator", True)
+        self.listWidget.setProperty("showDropIndicator", True)
         self.listWidget.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
         self.listWidget.setDefaultDropAction(Qt.DropAction.CopyAction)
         self.listWidget.setAlternatingRowColors(False)
         self.listWidget.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.listWidget.setMovement(QListView.Movement.Static)
         self.listWidget.setFlow(QListView.Flow.TopToBottom)
-        self.listWidget.setProperty(u"isWrapping", False)
+        self.listWidget.setProperty("isWrapping", False)
         self.listWidget.setResizeMode(QListView.ResizeMode.Fixed)
         self.listWidget.setLayoutMode(QListView.LayoutMode.SinglePass)
         self.listWidget.setSpacing(0)
@@ -974,7 +974,7 @@ class Ui_SettingsForm(object):
         self.spinBox_port.setFrame(True)
         self.spinBox_port.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.spinBox_port.setAccelerated(True)
-        self.spinBox_port.setProperty(u"showGroupSeparator", False)
+        self.spinBox_port.setProperty("showGroupSeparator", False)
         self.spinBox_port.setMinimum(49152)
         self.spinBox_port.setMaximum(65535)
 
@@ -1275,7 +1275,7 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session before closing", None))
         self.checkBox_db_editor_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
-        self.groupBox_entity_tree.setTitle(QCoreApplication.translate("SettingsForm", u"Entity tree", None))
+        self.groupBox_entity_tree.setTitle(QCoreApplication.translate("SettingsForm", u"\"Entity tree\"", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_entity_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

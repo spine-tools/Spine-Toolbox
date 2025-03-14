@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Classes for custom QDialogs to add items to databases. """
+"""Classes for custom QDialogs to add items to databases."""
 from itertools import product
 from PySide6.QtCore import QModelIndex, QSize, Qt, Slot
 from PySide6.QtGui import QIcon

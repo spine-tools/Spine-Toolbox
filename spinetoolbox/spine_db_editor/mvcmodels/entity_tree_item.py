@@ -240,7 +240,7 @@ class EntityItem(MultiDBTreeItem):
                 (
                     x
                     if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.byname
-                    else ["\u066D"] * len(x)
+                    else ["\u066d"] * len(x)
                 )
                 for x in element_byname_list
             ]
