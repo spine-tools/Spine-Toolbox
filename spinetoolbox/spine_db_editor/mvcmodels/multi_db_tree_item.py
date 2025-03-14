@@ -12,6 +12,7 @@
 
 """Base classes to represent items from multiple databases in a tree."""
 from PySide6.QtCore import Qt
+from spinedb_api import DatabaseMapping
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -46,10 +47,12 @@ class MultiDBTreeItem(TreeItem):
             key_for_index=self._key_for_index,
             owner=self,
         )
+        if self._fetch_index is not None:
+            self._fetch_index.connect(model.db_mngr)
 
     @property
     def visible_children(self):
-        return self.children
+        return self._children
 
     def row_count(self):
         """Overriden to use visible_children."""
@@ -300,12 +303,9 @@ class MultiDBTreeItem(TreeItem):
         return self.child_item_class.item_type
 
     def can_fetch_more(self):
-        if self.fetch_item_type is None:
-            return False
-        result = False
-        for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
-        return result
+        return self.fetch_item_type is not None and any(
+            self.db_mngr.can_fetch_more(db_map, self._fetch_parent) for db_map in self.db_maps
+        )
 
     def fetch_more(self):
         """Fetches children from all associated databases."""

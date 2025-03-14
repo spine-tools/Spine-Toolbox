@@ -16,8 +16,8 @@ from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtGui import QColor, QPen
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
-from .helpers import select_item_with_index
-from .spine_db_editor_test_base import DBEditorTestBase
+from tests.spine_db_editor.widgets.helpers import select_item_with_index
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
 class TestSpineDBEditorStackedFilter(DBEditorTestBase):

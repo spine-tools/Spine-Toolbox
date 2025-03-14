@@ -42,7 +42,7 @@ class SpineDBParcel:
         if ids is Asterisk:
             fields = {x.get(field) for x in self.db_mngr.get_items(db_map, item_type)}
         else:
-            fields = {self.db_mngr.get_field(db_map, item_type, id_, field) for id_ in ids}
+            fields = {self.db_mngr.get_item(db_map, item_type, id_).get(field) for id_ in ids}
         fields.discard(None)
         return fields
 
@@ -162,9 +162,7 @@ class SpineDBParcel:
         """Pushes parameter definitions associated with given entity classes.
         This essentially full_pushes the entity classes, their parameter definitions, and their member entity classes.
         """
-        param_def_ids = self.db_mngr.db_map_ids(
-            self.db_mngr.find_cascading_parameter_data(db_map_ids, "parameter_definition")
-        )
+        param_def_ids = self.db_mngr.db_map_ids(self.db_mngr.find_cascading_parameter_definitions(db_map_ids))
         self.push_parameter_definition_ids(param_def_ids)
         db_map_ids = {db_map: ids - param_def_ids.get(db_map, set()) for db_map, ids in db_map_ids.items()}
         self.push_entity_class_ids(db_map_ids)

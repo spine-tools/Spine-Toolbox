@@ -11,8 +11,10 @@
 ######################################################################################################################
 
 """The FetchParent and FlexibleFetchParent classes."""
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from contextlib import suppress
+from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from .helpers import busy_effect
+from .spine_db_manager import SpineDBManager
 
 
 class FetchParent(QObject):
@@ -71,8 +73,6 @@ class FetchParent(QObject):
         self._fetched = False
         self._busy = False
         self._position.clear()
-        if self.index is not None:
-            self.index.reset()
 
     def position(self, db_map):
         return self._position.setdefault(db_map, 0)
@@ -344,10 +344,20 @@ class FetchIndex(dict):
     def __init__(self):
         super().__init__()
         self._position = {}
+        self._connected_to_db_mngr = False
 
-    def reset(self):
-        self._position.clear()
-        self.clear()
+    def connect(self, db_mngr: SpineDBManager) -> None:
+        if self._connected_to_db_mngr:
+            return
+        db_mngr.database_reset.connect(self.reset)
+        self._connected_to_db_mngr = True
+
+    @Slot(object)
+    def reset(self, db_map):
+        with suppress(KeyError):
+            del self._position[db_map]
+        with suppress(KeyError):
+            del self[db_map]
 
     def process_item(self, item, db_map):
         raise NotImplementedError()

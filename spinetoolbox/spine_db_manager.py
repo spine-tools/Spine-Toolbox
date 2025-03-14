@@ -103,6 +103,12 @@ class SpineDBManager(QObject):
         object: database mapping
         bool: True if database has become clean, False if it became dirty
     """
+    database_reset = Signal(object)
+    """Emitted whenever database is reset.
+
+    Args:
+        object: database mapping
+    """
 
     def __init__(self, settings, parent, synchronous=False):
         """
@@ -579,6 +585,7 @@ class SpineDBManager(QObject):
             worker.reset_session()
             self.undo_stack[db_map].clear()
             reset_db_maps.add(db_map)
+            self.database_reset.emit(db_map)
         return reset_db_maps
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
@@ -721,13 +728,10 @@ class SpineDBManager(QObject):
             PublicItem: the item
         """
         mapped_table = db_map.mapped_table(item_type)
-        item = mapped_table.find_item_by_id(id_)
-        if hasattr(item, "public_item"):
-            return item.public_item
-        return item
-
-    def get_field(self, db_map, item_type, id_, field):
-        return self.get_item(db_map, item_type, id_).get(field)
+        try:
+            return mapped_table[id_].public_item
+        except KeyError:
+            return None
 
     def get_items(self, db_map, item_type, **kwargs):
         """Returns a list of the items of the given type in the given db map.
@@ -741,7 +745,8 @@ class SpineDBManager(QObject):
             list
         """
         with self.get_lock(db_map):
-            return db_map.get_items(item_type, **kwargs)
+            table = db_map.mapped_table(item_type)
+            return db_map.find(table, **kwargs)
 
     def get_items_by_field(self, db_map, item_type, field, value):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -928,7 +933,7 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value or definition id
         """
         item = self.get_item(db_map, item_type, id_)
-        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+        parsed_value = item["parsed_value"]
         if isinstance(parsed_value, IndexedValue):
             return parsed_value.indexes
         return [""]
@@ -944,7 +949,7 @@ class SpineDBManager(QObject):
             role (int, optional)
         """
         item = self.get_item(db_map, item_type, id_)
-        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+        parsed_value = item["parsed_value"]
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
         if role == Qt.ItemDataRole.EditRole:
@@ -979,10 +984,12 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
-        return [
-            self.get_value(db_map, item, role=role)
-            for item in self.get_items_by_field(db_map, "list_value", "parameter_value_list_id", id_)
-        ]
+        with self.get_lock(db_map):
+            list_value_table = db_map.mapped_table("list_value")
+            return [
+                self.get_value(db_map, item, role=role)
+                for item in db_map.find(list_value_table, parameter_value_list_id=id_)
+            ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
         if db_map in self._db_locks:
@@ -1216,9 +1223,10 @@ class SpineDBManager(QObject):
             for item in expanded_data:
                 packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
             items = []
+            value_table = db_map.mapped_table("parameter_value")
             for id_, indexed_values in packed_data.items():
-                item = self.get_item(db_map, "parameter_value", id_)
-                parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+                item = value_table.find_item_by_id(id_)
+                parsed_value = item["parsed_value"]
                 if isinstance(parsed_value, IndexedValue):
                     parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():
@@ -1337,25 +1345,29 @@ class SpineDBManager(QObject):
         scen_alt_ids_to_remove = {}
         errors = []
         with self._db_locks[db_map]:
+            scenario_table = db_map.mapped_table("scenario")
             for scen in scenarios:
-                current_scen = db_map.get_item("scenario", id=scen["id"])
+                current_scen = scenario_table.find_item_by_id(scen["id"])
                 if current_scen is None:
                     error = f"no scenario matching {scen} to set alternatives for"
                     errors.append(error)
                     continue
+                scenario_id = current_scen["id"]
                 for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
-                    item_to_add = {"scenario_id": current_scen["id"], "alternative_id": alternative_id, "rank": k + 1}
+                    item_to_add = {"scenario_id": scenario_id, "alternative_id": alternative_id, "rank": k + 1}
                     scen_alts_to_add.append(item_to_add)
                 for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
                     item_to_add = {
-                        "scenario_id": current_scen["id"],
+                        "scenario_id": scenario_id,
                         "alternative_name": alternative_name,
                         "rank": k + 1,
                     }
                     scen_alts_to_add.append(item_to_add)
+                scenario_alternative_table = db_map.mapped_table("scenario_alternative")
+                scenario_name = current_scen["name"]
                 for alternative_name in current_scen["alternative_name_list"]:
-                    current_scen_alt = db_map.get_item(
-                        "scenario_alternative", scenario_name=current_scen["name"], alternative_name=alternative_name
+                    current_scen_alt = scenario_alternative_table.find_item(
+                        {"scenario_name": scenario_name, "alternative_name": alternative_name}
                     )
                     scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
         # Remove items that are both to add and to remove
@@ -1508,63 +1520,78 @@ class SpineDBManager(QObject):
         """Finds and returns cascading entity classes for the given dimension ids."""
         db_map_cascading_data = {}
         for db_map, dimension_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity_class"):
-                if set(item["dimension_id_list"]) & set(dimension_ids):
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            dimension_ids = set(dimension_ids)
+            with self.get_lock(db_map):
+                class_table = db_map.mapped_table("entity_class")
+                db_map.do_fetch_all(class_table)
+                for item in class_table.values():
+                    if item.is_valid() and not dimension_ids.isdisjoint(item["dimension_id_list"]):
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_entities(self, db_map_ids):
         """Finds and returns cascading entities for the given element ids."""
         db_map_cascading_data = {}
         for db_map, element_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity"):
-                if set(item["element_id_list"]) & set(element_ids):
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            element_ids = set(element_ids)
+            with self.get_lock(db_map):
+                entity_table = db_map.mapped_table("entity")
+                db_map.do_fetch_all(entity_table)
+                for item in entity_table.values():
+                    if item.is_valid() and not element_ids.isdisjoint(item["element_id_list"]):
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_data(self, db_map_ids, item_type):
+    def find_cascading_parameter_definitions(self, db_map_ids):
         """Finds and returns cascading parameter definitions or values for the given entity_class ids."""
         db_map_cascading_data = {}
         for db_map, entity_class_ids in db_map_ids.items():
-            for item in self.get_items(db_map, item_type):
-                if item["entity_class_id"] in entity_class_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            entity_class_ids = set(entity_class_ids)
+            with self.get_lock(db_map):
+                definition_table = db_map.mapped_table("parameter_definition")
+                db_map.do_fetch_all(definition_table)
+                for item in definition_table.values():
+                    if item.is_valid() and item["entity_class_id"] in entity_class_ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = {}
         for db_map, entity_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["entity_id"] in entity_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
-        return db_map_cascading_data
-
-    def find_cascading_parameter_values_by_definition(self, db_map_ids):
-        """Finds and returns cascading parameter values for the given parameter_definition ids."""
-        db_map_cascading_data = {}
-        for db_map, param_def_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["parameter_id"] in param_def_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            entity_ids = set(entity_ids)
+            with self.get_lock(db_map):
+                parameter_table = db_map.mapped_table("parameter_value")
+                db_map.do_fetch_all(parameter_table)
+                for item in parameter_table.values():
+                    if item.is_valid() and item["entity_id"] in entity_ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids):
         """Finds and returns cascading scenario alternatives for the given scenario ids."""
         db_map_cascading_data = {}
         for db_map, ids in db_map_ids.items():
-            for item in self.get_items(db_map, "scenario_alternative"):
-                if item["scenario_id"] in ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            ids = set(ids)
+            with self.get_lock(db_map):
+                scenario_alternative_table = db_map.mapped_table("scenario_alternative")
+                db_map.do_fetch_all(scenario_alternative_table)
+                for item in scenario_alternative_table.values():
+                    if item.is_valid() and item["scenario_id"] in ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_groups_by_entity(self, db_map_ids):
         """Finds and returns groups for the given entity ids."""
         db_map_group_data = {}
         for db_map, entity_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity_group"):
-                if item["entity_id"] in entity_ids:
-                    db_map_group_data.setdefault(db_map, []).append(item)
+            entity_ids = set(entity_ids)
+            with self.get_lock(db_map):
+                entity_group_table = db_map.mapped_table("entity_group")
+                db_map.do_fetch_all(entity_group_table)
+                for item in entity_group_table.values():
+                    if item.is_valid() and item["entity_id"] in entity_ids:
+                        db_map_group_data.setdefault(db_map, []).append(item.public_item)
         return db_map_group_data
 
     def duplicate_scenario(self, scen_data, dup_name, db_map):
