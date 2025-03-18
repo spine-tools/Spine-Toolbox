@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Classes for custom QDialogs to add items to databases. """
+"""Classes for custom QDialogs to add items to databases."""
 from itertools import product
 from PySide6.QtCore import QModelIndex, QSize, Qt, Slot
 from PySide6.QtGui import QIcon
@@ -608,9 +608,8 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         created_entities = {}
         for db_map, data in db_map_data.items():
             for item in data:
-                created_entities.update(
-                    {item["name"]: db_map.get_entity_item(class_id=item["class_id"], name=item["name"])}
-                )
+                entity_name = item["name"]
+                created_entities[entity_name] = db_map.get_entity_item(class_id=item["class_id"], name=entity_name)
         entity_alternatives = self.make_entity_alternatives(created_entities)
         if entity_alternatives:  # If alternatives have been defined
             self.db_mngr.add_entity_alternatives(entity_alternatives)
@@ -630,9 +629,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             alternative = row_data[alternative_column]
             if not alternative:
                 continue
-            alternative = alternative.split("@")[0]
             entity_name = row_data[name_column]
             entity = entities[entity_name]
+            if not entity:
+                continue
+            alternative = alternative.split("@")[0]
             db_names = row_data[db_column]
             for db_name in db_names.split(", "):
                 db_map = self.keyed_db_maps[db_name]

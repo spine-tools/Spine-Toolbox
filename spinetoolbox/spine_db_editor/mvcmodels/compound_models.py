@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Compound models. These models concatenate several 'single' models and one 'empty' model. """
+"""Compound models. These models concatenate several 'single' models and one 'empty' model."""
 from typing import ClassVar
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QFont

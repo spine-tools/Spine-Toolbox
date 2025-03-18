@@ -1,11 +1,13 @@
 """
 This script benchmarks SpineDBManager.get_item().
 """
+
 import os
 import sys
 
 if sys.platform == "win32" and "HOMEPATH" not in os.environ:
     import pathlib
+
     os.environ["HOMEPATH"] = str(pathlib.Path(sys.executable).parent)
 
 import time
@@ -37,12 +39,13 @@ def run_benchmark(output_file: Optional[str]):
     db_mngr = SpineDBManager(QSettings(), parent=None)
     logger = StdOutLogger()
     db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
-    inner_loops = 10
-    ids = []
-    for i in range(inner_loops):
-        item, error = db_map.add_entity_class_item(name=str(i))
-        assert error is None
-        ids.append(item["id"])
+    with db_map:
+        inner_loops = 10
+        ids = []
+        for i in range(inner_loops):
+            item, error = db_map.add_entity_class_item(name=str(i))
+            assert error is None
+            ids.append(item["id"])
     runner = pyperf.Runner()
     benchmark = runner.bench_time_func(
         "SpineDBManager.get_value[parameter_value, DisplayRole]",

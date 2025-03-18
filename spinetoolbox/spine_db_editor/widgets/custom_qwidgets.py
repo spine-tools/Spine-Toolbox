@@ -146,7 +146,7 @@ class OpenSQLiteFileButton(OpenFileButton):
 
     def __init__(self, file_path, progress, db_editor):
         super().__init__(file_path, progress, db_editor)
-        self.url = URL("sqlite", database=self.file_path)
+        self.url = URL.create("sqlite", database=self.file_path)
 
     @Slot(bool)
     def open_file(self, checked=False):

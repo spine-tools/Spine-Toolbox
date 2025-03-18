@@ -28,12 +28,12 @@ General
 To execute a Julia, Python, GAMS, or an executable script in Spine Toolbox, you must first create a Tool
 specification for your project. You can open the Tool specification editor in several ways.
 One way is to press the arrow next to the Tool icon in the toolbar to expand the Tool specifications,
-and then press the *New...* button.
+and then press the **New...** button.
 
 .. image:: img/open_tool_specification_editor.png
    :align: center
 
-When you press *New...* the following form pops up;
+When you press **New...** the following form pops up;
 
 .. image:: img/edit_tool_specification_blank.png
    :align: center
@@ -47,37 +47,37 @@ or you can browse to find an existing main program file by pressing the |folder_
 
 Command line arguments can be appended to the actual command that
 Spine Toolbox executes in the background. For example, you may have a Windows batch file called ``do_things.bat``,
-which accepts command line arguments `a` and `b`.
-Writing `a b` on the command line arguments field in the tool specification editor is the equivalent
+which accepts command line arguments ``a`` and ``b``.
+Writing ``a b`` on the command line arguments field in the tool specification editor is the equivalent
 of running the batch file in command prompt with the command ``do_things.bat a b``.
 
-.. tip:: Another way to pass arguments to a Tool is to write them into the *Tool arguments*
-   drop-down list in the **Properties** dock widget. There it is possible to also rearrange existing
+.. tip:: Another way to pass arguments to a Tool is to write them into the **Command line arguments**
+   list in the **Properties** dock widget. There it is possible to also rearrange existing
    arguments or to select available resources that are provided by other project items as arguments.
 
    Unlike the arguments set in Tool Specification Editor, the arguments in **Properties** are *Tool specific*.
 
-*Additional source files* is a list of files that the main program requires in order to run. You can add
+**Additional source files** is a list of files that the main program requires in order to run. You can add
 individual files the same way as with the main program file or whole directories at once by pressing the
 |folder_open_solid| button.
 
-*Input files* is a list of input data files that the program **requires** in order to execute. You can also add
-directories and subdirectories. Wildcards are **not** supported (see Optional input files).
+**Input files** is a list of input data files that the program *requires* in order to execute. You can also add
+directories and subdirectories. Wildcards are *not* supported (see **Optional input files**).
 
 Examples:
 
-- **data.csv** -> File is copied to the same work directory as the main program
-- **input/data.csv** -> Creates directory input/ to the work directory and copies file *data.csv* there
-- **output/** -> Creates an empty directory output/ into the work directory
+- ``data.csv`` -> The file is copied to the same work directory as the main program
+- ``input/data.csv`` -> Creates directory ``input/`` to the work directory and copies file ``data.csv`` there
+- ``output/`` -> Creates an empty directory ``output/`` into the work directory
 
-*Optional input files* are files that may be utilized by your program if they are found. Unix-style wildcards
+**Optional input files** are files that may be utilized by your program if they are found. Unix-style wildcards
 ``?`` and ``*`` are supported.
 
 Examples:
 
-- **data.csv** -> If found, file is copied to the same work directory as the main program
-- **\*.csv** -> All found .csv files are copied to the same work directory as the main program
-- **input/data_?.dat** -> All found files matching the pattern *data_?.dat* are copied into input/ directory in
+- ``data.csv`` -> If found, the file is copied to the same work directory as the main program
+- ``\*.csv`` -> All found ``.csv`` files are copied to the same work directory as the main program
+- ``input/data_?.dat`` -> All found files matching the pattern ``data_?.dat`` are copied into ``input/`` directory in
   the work directory.
 
 *Output files* are files that will be archived into a timestamped result directory inside Tool's data directory
@@ -85,9 +85,9 @@ after the Tool specification has finished execution. Unix-style wildcards ``?`` 
 
 Examples:
 
-- **results.csv** -> File is copied from work directory into results directory
-- **\*.csv** -> All .csv files from work directory are copied into results directory
-- **output/*.gdx** -> All GDX files from the work directory's output/ subdirectory will be copied into output/
+- ``results.csv`` -> The file is copied from work directory into results directory
+- ``\*.csv`` -> All ``.csv`` files from work directory are copied into results directory
+- ``output/*.gdx`` -> All GDX files from the work directory's ``output/`` subdirectory will be copied into ``output/``
   subdirectory in the results directory.
 
 When you are happy with your Tool specification, press **Ctrl+S** to save it. You will see a message in the Event log
@@ -142,25 +142,25 @@ Input & Output Files in Practice
 --------------------------------
 
 The file names can be either hard coded or not. For example, you could have a script that requires (hard coded
-in the script) a file `input.dat` and optionally works with a bunch of files that are expected to have the
-`.csv` extension. In that case you would define
+in the script) a file ``input.dat`` and optionally works with a bunch of files that are expected to have the
+``.csv`` extension. In that case you would define
 
-- `input.dat` as an Input file
-- `*.csv` as Optional input files
+- ``input.dat`` as an Input file
+- ``*.csv`` as Optional input files
 
-The *Output files* work similarly; you can hard code the entire file name or use wildcards for *Optional output files*.
+The **Output files** work similarly; you can hard code the entire file name or use wildcards for **Optional output files**.
 
-When specifying the *Input* and *Output files* in the Specification editor, Toolbox will copy the files to the Tool's
+When specifying the **Input** and **Output files** in the Specification editor, Toolbox will copy the files to the Tool's
 work directory when the Tool is executed, so they are available for the script in a known location. Note, that you
 can specify subdirectories for the files as well. These will be relative to the work directory.
 
 These options expect some level of hard-coding: file names, or at least file extensions as well as relative
 locations to the work directory need to be known when writing the Tool Spec script.
 
-There is another, more general way to provide *Input files* to the script that does not require any kind of hard
-coding: *command line arguments*. You can set them up in **Tool's Properties** tab. For example, in the project
-below, a Data connection provides *Input files* for the workflow. The files are visible in the
-*Available resources list* in **Tool's Properties** and they have been *dragged and dropped* into the the Tool
+There is another, more general way to provide input files to the script that does not require any kind of hard
+coding: *command line arguments*. You can set them up in **Tool Properties** tab. For example, in the project
+below, a Data connection provides input files for the workflow. The files are visible in the
+**Available resources list** in **Tool Properties** and they have been *dragged and dropped* into the the Tool
 arguments list.
 
 .. image:: img/using_input_output_files_in_tool_scripts.png

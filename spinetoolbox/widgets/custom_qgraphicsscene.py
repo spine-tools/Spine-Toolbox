@@ -68,7 +68,6 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self._jump_drawer.hide()
         self.link_drawer = None
         self.icon_group = set()  # Group of project item icons that are moving together
-        self._cat = Cat(self)
         self.connect_signals()
 
     def clear_icons_and_links(self):

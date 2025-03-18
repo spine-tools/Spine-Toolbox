@@ -12,6 +12,7 @@
 
 """Helpers and utilities for Spine Database editor."""
 from PySide6.QtGui import QColor
+from spinedb_api.helpers import string_to_bool as base_string_to_bool
 
 
 def string_to_display_icon(x):
@@ -31,8 +32,6 @@ def string_to_display_icon(x):
 
 TRUE_STRING = "true"
 FALSE_STRING = "false"
-GENERIC_TRUE = TRUE_STRING.casefold()
-GENERIC_FALSE = FALSE_STRING.casefold()
 
 
 def string_to_bool(x):
@@ -44,7 +43,10 @@ def string_to_bool(x):
     Returns:
         bool: boolean value
     """
-    return x.casefold() == GENERIC_TRUE
+    try:
+        return base_string_to_bool(x)
+    except ValueError:
+        return False
 
 
 def table_name_from_item_type(item_type):

@@ -212,7 +212,7 @@ class SearchBarEditor(QTableView):
         for item in sorted(items, key=lambda x: order_key(x.casefold())):
             qitem = QStandardItem(item)
             item_list.append(qitem)
-            qitem.setFlags(~Qt.ItemIsEditable)
+            qitem.setFlags(~Qt.ItemFlag.ItemIsEditable)
         self._model.invisibleRootItem().appendRows(item_list)
         self.first_index = self.proxy_model.mapFromSource(self._model.index(0, 0))
 
@@ -277,7 +277,7 @@ class SearchBarEditor(QTableView):
             text (str): text the user has entered on the first row
         """
         self._original_text = text
-        self.proxy_model.setFilterRegularExpression("^" + text)
+        self.proxy_model.setFilterRegularExpression(text)
         self.proxy_model.setData(self.first_index, text)
         self.refit()
 

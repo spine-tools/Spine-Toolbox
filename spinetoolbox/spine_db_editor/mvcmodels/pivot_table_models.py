@@ -1293,13 +1293,14 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
     def _make_parameter_value_to_add(self):
         if not self._parent.first_current_entity_class["dimension_id_list"]:
             return self._entity_parameter_value_to_add
-        db_map_entities = {
-            db_map: self.db_mngr.get_items_by_field(db_map, "entity", "class_id", class_id)
-            for db_map, class_id in self._parent.current_class_id.items()
-        }
-        ent_id_lookup = {
-            (db_map, x["element_id_list"]): x["id"] for db_map, entities in db_map_entities.items() for x in entities
-        }
+        ent_id_lookup = {}
+        for db_map, class_id in self._parent.current_class_id.items():
+            with self.db_mngr.get_lock(db_map):
+                entity_table = db_map.mapped_table("entity")
+                ent_id_lookup = {
+                    (db_map, entity["element_id_list"]): entity["id"]
+                    for entity in db_map.find(entity_table, class_id=class_id)
+                }
         return lambda db_map, header_ids, value, ent_id_lookup=ent_id_lookup: self._entity_parameter_value_to_add(
             db_map, header_ids, value, ent_id_lookup
         )

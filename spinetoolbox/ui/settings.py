@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.1
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -1205,7 +1205,7 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.checkBox_commit_at_exit.setText(QCoreApplication.translate("SettingsForm", u"Commit session before closing", None))
         self.checkBox_db_editor_show_undo.setText(QCoreApplication.translate("SettingsForm", u"Show undo notifications", None))
-        self.groupBox_entity_tree.setTitle(QCoreApplication.translate("SettingsForm", u"Entity tree", None))
+        self.groupBox_entity_tree.setTitle(QCoreApplication.translate("SettingsForm", u"\"Entity tree\"", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_entity_tree_sticky_selection.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Controls how selecting items in Object tree <span style=\" font-weight:600;\">using the left mouse button</span> works. </p><p>When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.</p><p>When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)

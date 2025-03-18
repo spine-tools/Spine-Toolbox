@@ -399,7 +399,8 @@ You can find metadata from all databases under **Metadata**:
 .. image:: img/metadata.png
    :align: center
 
-See also :ref:`Metadata description`.
+See also `Metadata description <https://spine-database-api.readthedocs.io/en/latest/metadata.html>`_
+in Spine Database API documentation.
 
 Viewing item metadata
 =====================

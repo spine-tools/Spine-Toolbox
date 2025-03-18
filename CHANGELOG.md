@@ -1,5 +1,5 @@
 # Changelog
-All **notable** changes to this project are documented here.
+All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
@@ -7,19 +7,24 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- Support for Python 3.13.
-- You can now open a detached Basic Console with the default Python or Julia from the Consoles menu. Default 
-Python and Julia are defined in app settings (File->Settings->Tools)
+- Importer now has a new Source type: Fixed.
+  When set, the data is read from a fixed cell (defined by table name, row and column) in any available source table.
 
 ### Changed
-
-### Deprecated
 
 ### Removed
 
 ### Fixed
 
 ### Security
+
+## [0.9.3]
+
+### Added
+
+- Support for Python 3.13.
+- You can now open a detached Basic Console with the default Python or Julia from the Consoles menu. Default 
+Python and Julia are defined in app settings (File->Settings->Tools)
 
 ## [0.9.2]
 

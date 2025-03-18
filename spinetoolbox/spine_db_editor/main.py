@@ -1,13 +1,22 @@
+######################################################################################################################
+# Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 #!/usr/bin/env python
 
 from argparse import ArgumentParser
 import locale
-import logging
 import sys
 from PySide6.QtCore import QSettings
-from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
-from spinetoolbox import resources_icons_rc  # pylint: disable=unused-import
+from spinetoolbox.font import TOOLBOX_FONT
 from spinetoolbox.helpers import pyside6_version_check
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -20,9 +29,7 @@ def main():
     parser = _make_argument_parser()
     args = parser.parse_args()
     app = QApplication(sys.argv)
-    status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
-    if status < 0:
-        logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
+    TOOLBOX_FONT.get_family_from_font_database()
     locale.setlocale(locale.LC_NUMERIC, "C")
     settings = QSettings("SpineProject", "Spine Toolbox")
     db_mngr = SpineDBManager(settings, None)

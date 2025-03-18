@@ -31,7 +31,7 @@ import time
 from typing import Sequence  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
-from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot, QSettings
+from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSettings, QSize, Qt, QUrl, Slot
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
 from PySide6.QtGui import (
@@ -76,6 +76,7 @@ from .config import (
     PROJECT_LOCAL_DATA_FILENAME,
     SPECIFICATION_LOCAL_DATA_FILENAME,
 )
+from .font import TOOLBOX_FONT
 
 if sys.platform == "win32":
     import ctypes
@@ -520,7 +521,7 @@ class CharIconEngine(TransparentIconEngine):
         super().__init__()
         self.char = char
         self.color = QColor(color)
-        self.font = QFont("Font Awesome 5 Free Solid")
+        self.font = QFont(TOOLBOX_FONT.family)
 
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()

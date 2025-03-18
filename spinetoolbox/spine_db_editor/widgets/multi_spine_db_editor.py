@@ -16,6 +16,7 @@ from PySide6.QtCore import QPoint, Slot
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
 from ...config import MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL
+from ...font import TOOLBOX_FONT
 from ...helpers import CharIconEngine, open_url
 from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
@@ -194,7 +195,7 @@ class _CustomStatusBar(QStatusBar):
             """
         )
         self._hide_button.setText("\uf00d")
-        self._hide_button.setFont(QFont("Font Awesome 5 Free Solid"))
+        self._hide_button.setFont(QFont(TOOLBOX_FONT.family))
         self._hide_button.setFixedSize(24, 24)
         self.insertPermanentWidget(0, self._hide_button)
         self.setSizeGripEnabled(False)

@@ -9,11 +9,7 @@ Terminology
 
 Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine Toolbox.
 
-- **Arc** Graph theory term. See *Connection*.
-- **Case study** Spine project has 13 case studies that help to improve, validate and deploy
-  different aspects of the SpineOpt.jl and Spine Toolbox.
-- **Connection** (aka **Arrow**) an arrow on Spine Toolbox Design View that is used to connect project items
-  to each other to form a DAG.
+- **Arc** Graph theory term. See *Link*.
 - **Data Connection** is a project item used to store a collection of data files that may or may not
   be in Spine data format. It facilitates data transfer from original data sources e.g. spreadsheet
   files to Spine Toolbox. The original data source file does not need to conform to the format that
@@ -40,9 +36,11 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   entity.
 - **Importer** is a project item that can be used to import data from e.g. an Excel file, transform it
   to Spine data structure, and into a Data Store.
+- **Link** (aka **arrow** or **connection**) an arrow on Spine Toolbox Design View that is used to connect project items
+  to each other to form a DAG.
 - **Loop** (aka **jump**) is a special sort of connection which only connects the two attached project
   items if the user defined loop condition is met.
-- **Multidimensional entity/entity class** (aka N-D entity/class) An entity/entity class that consists of multiple
+- **Multidimensional entity/entity class** (aka **N-D entity/class**) An entity/entity class that consists of multiple
   other entities that are as it's members. Acts just like any other entity/entity class.
 - **Node** Graph theory term. See *Project item*.
 - **Predecessor** Graph theory term that is also used in Spine Toolbox. Preceding project
@@ -84,8 +82,6 @@ Here is a list of definitions related to Spine project, SpineOpt.jl, and Spine T
   additional required program files, any optional input files (e.g. data), and output files. Also any
   command line arguments can be defined in a Tool specification. SpineOpt.jl is a Tool specification
   from Spine Toolbox's point-of-view.
-- **Use case** Potential way to use Spine Toolbox. Use cases together are used to test the
-  functionality and stability of Spine Toolbox and SpineOpt.jl under different potential circumstances.
 - **Vertex** Graph theory term. See *Project item*.
 - **View** A project item that can be used for visualizing project data.
 - **Work directory** Tool specifications can be executed in *Source directory* or in *work directory*.

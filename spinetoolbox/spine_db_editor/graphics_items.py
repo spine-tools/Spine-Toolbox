@@ -125,7 +125,8 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def byname(self):
-        return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("entity_byname", ())
+        table = self.first_db_map.mapped_table("entity")
+        return table[self.first_id].get("entity_byname", ())
 
     @property
     def element_name_list(self):
@@ -136,7 +137,6 @@ class EntityItem(QGraphicsRectItem):
 
     @property
     def element_byname_list(self):
-        # NOTE: Needed by EditEntitiesDialog
         return self.db_mngr.get_item(self.first_db_map, "entity", self.first_id).get("element_byname_list", ())
 
     @property
@@ -169,18 +169,19 @@ class EntityItem(QGraphicsRectItem):
     def entity_class_ids(self, db_map):
         return {self.entity_class_id(db_map)} | {
             x["superclass_id"]
-            for x in db_map.get_items("superclass_subclass", subclass_id=self.entity_class_id(db_map))
+            for x in self.db_mngr.get_items(db_map, "superclass_subclass", subclass_id=self.entity_class_id(db_map))
         }
 
     def entity_id(self, db_map):
-        return dict(self.db_map_ids).get(db_map)
+        for db_map_id in self._db_map_ids:
+            if db_map is db_map_id[0]:
+                return db_map_id[1] if db_map_id not in self._removed_db_map_ids else None
+        return None
 
     def db_map_data(self, db_map):
-        # NOTE: Needed by EditEntitiesDialog
         return self.db_mngr.get_item(db_map, "entity", self.entity_id(db_map))
 
     def db_map_id(self, db_map):
-        # NOTE: Needed by EditEntitiesDialog
         return self.entity_id(db_map)
 
     def db_items(self, db_map):
@@ -627,7 +628,7 @@ class EntityItem(QGraphicsRectItem):
         db_map_entity_class_ids = {db_map: self.entity_class_ids(db_map) for db_map in self.db_maps}
         for db_map, ent_clss in self.db_mngr.find_cascading_entity_classes(db_map_entity_class_ids).items():
             for ent_cls in ent_clss:
-                ent_cls = ent_cls._extended()
+                ent_cls = ent_cls.extended()
                 ent_cls["dimension_id_list"] = list(ent_cls["dimension_id_list"])
                 ent_cls["entity_ids"] = entity_ids_per_class.get((db_map, ent_cls["id"]), set())
                 self._db_map_entity_class_lists.setdefault(ent_cls["name"], []).append((db_map, ent_cls))

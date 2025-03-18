@@ -76,7 +76,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 ["dog", "pluto", "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
             )
         )
-        values = self._db_mngr.get_items(self._db_map, "parameter_value")
+        values = self._db_map.get_items("parameter_value")
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["entity_class_name"], "dog")
         self.assertEqual(values[0]["entity_name"], "pluto")
@@ -90,7 +90,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "Base", "salty", "mock_db"])
         )
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if not x["dimension_id_list"]]
+        values = [x for x in self._db_map.get_items("parameter_value") if not x["dimension_id_list"]]
         self.assertEqual(values, [])
 
     def test_infer_class_from_object_and_parameter(self):
@@ -105,7 +105,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             )
         )
         self.assertEqual(indexes[0].data(), "dog")
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if not x["dimension_id_list"]]
+        values = [x for x in self._db_map.get_items("parameter_value") if not x["dimension_id_list"]]
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["entity_class_name"], "dog")
         self.assertEqual(values[0]["entity_name"], "pluto")
@@ -130,7 +130,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 ],
             )
         )
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["dimension_id_list"]]
+        values = [x for x in self._db_map.get_items("parameter_value") if x["dimension_id_list"]]
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0]["entity_class_name"], "dog__fish")
         self.assertEqual(values[0]["element_name_list"], ("pluto", "nemo"))
@@ -144,7 +144,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["dog__fish", "pluto,nemo", "combined_mojo", 100, "mock_db"])
         )
-        values = [x for x in self._db_mngr.get_items(self._db_map, "parameter_value") if x["dimension_id_list"]]
+        values = [x for x in self._db_map.get_items("parameter_value") if x["dimension_id_list"]]
         self.assertEqual(values, [])
 
     def test_add_object_parameter_definitions_to_db(self):
@@ -152,9 +152,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         model = TestEmptyParameterDefinitionModel(self._db_mngr)
         fetch_model(model)
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["dog", "color", (), None, None, None, "mock_db"]))
-        definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
-        ]
+        definitions = [x for x in self._db_map.get_items("parameter_definition") if not x["dimension_id_list"]]
         self.assertEqual(len(definitions), 2)
         names = {d["name"] for d in definitions}
         self.assertEqual(names, {"breed", "color"})
@@ -168,9 +166,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 _empty_indexes(model), ["dog", "color", ("string", "array"), None, None, None, "mock_db"]
             )
         )
-        definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
-        ]
+        definitions = [x for x in self._db_map.get_items("parameter_definition") if not x["dimension_id_list"]]
         self.assertEqual(len(definitions), 2)
         type_lists = {d["parameter_type_list"] for d in definitions}
         self.assertEqual(type_lists, {(), ("array", "string")})
@@ -180,9 +176,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         model = TestEmptyParameterDefinitionModel(self._db_mngr)
         fetch_model(model)
         self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, None, None, "mock_db"]))
-        definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if not x["dimension_id_list"]
-        ]
+        definitions = [x for x in self._db_map.get_items("parameter_definition") if not x["dimension_id_list"]]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["name"], "breed")
 
@@ -193,9 +187,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         self.assertTrue(
             model.batch_set_data(_empty_indexes(model), ["dog__fish", "combined_mojo", (), None, None, None, "mock_db"])
         )
-        definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["dimension_id_list"]
-        ]
+        definitions = [x for x in self._db_map.get_items("parameter_definition") if x["dimension_id_list"]]
         self.assertEqual(len(definitions), 2)
         names = {d["name"] for d in definitions}
         self.assertEqual(names, {"relative_speed", "combined_mojo"})
@@ -209,9 +201,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 _empty_indexes(model), ["fish__dog", "each_others_opinion", None, None, None, "mock_db"]
             )
         )
-        definitions = [
-            x for x in self._db_mngr.get_items(self._db_map, "parameter_definition") if x["dimension_id_list"]
-        ]
+        definitions = [x for x in self._db_map.get_items("parameter_definition") if x["dimension_id_list"]]
         self.assertEqual(len(definitions), 1)
         self.assertEqual(definitions[0]["name"], "relative_speed")
 
@@ -230,8 +220,8 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 )
             )
             show_method.show.assert_called_once()
-        parameter_values = self._db_mngr.get_items(self._db_map, "parameter_value")
-        entities = self._db_mngr.get_items(self._db_map, "entity")
+        parameter_values = self._db_map.get_items("parameter_value")
+        entities = self._db_map.get_items("entity")
         self.assertEqual(len(parameter_values), 1)
         self.assertEqual(parameter_values[0]["entity_class_name"], "dog")
         self.assertEqual(parameter_values[0]["entity_name"], "plato")
