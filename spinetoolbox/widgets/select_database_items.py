@@ -60,6 +60,7 @@ class SelectDatabaseItems(QWidget):
         "entity_group",
         "parameter_value",
         "entity_metadata",
+        "entity_location",
         "parameter_value_metadata",
         "metadata",
     )
