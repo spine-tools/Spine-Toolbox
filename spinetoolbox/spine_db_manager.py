@@ -39,6 +39,7 @@ from spinedb_api import (
     relativedelta_to_duration,
     to_database,
 )
+from spinedb_api.exception import NothingToCommit
 from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.parameter_value import (
     deep_copy_value,
@@ -617,7 +618,11 @@ class SpineDBManager(QObject):
             bool
         """
         try:
-            transformations, info = db_map.commit_session(commit_msg, apply_compatibility_transforms=False)
+            try:
+                transformations, info = db_map.commit_session(commit_msg, apply_compatibility_transforms=False)
+            except NothingToCommit:
+                self.undo_stack[db_map].setClean()
+                return True
             self.undo_stack[db_map].setClean()
             if info:
                 info = "".join(f"- {x}\n" for x in info)
