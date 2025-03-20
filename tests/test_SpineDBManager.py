@@ -815,5 +815,30 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         self.assertEqual(self._db_mngr.find_groups_by_entity({self._db_map: [o1_id]}), {})
 
 
+class TestCommitSession(TestCaseWithQApplication):
+    def setUp(self):
+        mock_settings = MagicMock()
+        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        self._db_mngr = SpineDBManager(mock_settings, None)
+        self._logger = MagicMock()
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "test_database")
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+    def test_nothing_to_commit_is_not_error(self):
+        error_listener = MagicMock()
+        self._db_mngr.register_listener(error_listener, self._db_map)
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}]})
+        class_id = self._db_map.entity_class(name="O1")["id"]
+        self._db_mngr.remove_items({self._db_map: {"entity_class": [class_id]}})
+        self.assertEqual(self._db_mngr.commit_session("Nothing to commit.", self._db_map), [])
+        error_listener.receive_error_msg.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
