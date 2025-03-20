@@ -523,8 +523,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         selected_alt_name = None
         if alt_selection:
             selected_alt_index = alt_selection_model.currentIndex()
-            selected_alt = selected_alt_index.model().item_from_index(selected_alt_index)
-            selected_alt_name = self.append_db_codenames(selected_alt.name, {selected_alt.db_map})
+            alternative_model = self.parent().ui.alternative_tree_view.model()
+            add_new_alternative_row = alternative_model.rowCount(selected_alt_index.parent()) - 1
+            if selected_alt_index.row() < add_new_alternative_row:
+                selected_alt = selected_alt_index.model().item_from_index(selected_alt_index)
+                selected_alt_name = self.append_db_codenames(selected_alt.name, {selected_alt.db_map})
         all_databases = [db_map for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
         dbs_by_alternative = {}
         for db_map in all_databases:
