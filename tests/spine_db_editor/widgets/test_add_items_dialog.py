@@ -229,22 +229,22 @@ class TestAddItemsDialog(TestCaseWithQApplication):
         indexes = [model.index(0, header.index(field)) for field in ("first_class", "second_class", "entity name")]
         values = ["entity_1"]
         model.batch_set_data([indexes[0]], values)
-        expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
+        expected = ["entity_1", None, "entity_1__", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
         value = "entity_name"
         model.setData(indexes[2], value)
-        expected = ["entity_1", None, "entity_name", "Base", None, "mock_db"]
+        expected = ["entity_1", None, "entity_name", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
         value = "End"
         model.setData(indexes[1], value)
-        expected = ["entity_1", "End", "entity_name", "Base", None, "mock_db"]
+        expected = ["entity_1", "End", "entity_name", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
         values = [None, None]
         model.batch_set_data(indexes[1:3], values)
-        expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
+        expected = ["entity_1", None, "entity_1__", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
 
@@ -350,7 +350,7 @@ class TestManageElementsDialog(TestBase):
 
 class TestAddEntitiesDialog(TestBase):
     def test_default_alternative_skips_add_alternatives_row(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "active_by_default": False}]})
         alternative_model = self._db_editor.ui.alternative_tree_view.model()
         alternative_tree_root = alternative_model.index(0, 0)
         add_alternative_index = alternative_model.index(1, 0, alternative_tree_root)
@@ -374,6 +374,34 @@ class TestAddEntitiesDialog(TestBase):
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.index(0, 0).data(), None)
         self.assertEqual(model.index(0, 1).data(), "Base")
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 3).data(), self.db_codename)
+
+    def test_default_alternative_is_empty_if_class_is_active_by_default(self):
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}]})
+        alternative_model = self._db_editor.ui.alternative_tree_view.model()
+        alternative_tree_root = alternative_model.index(0, 0)
+        add_alternative_index = alternative_model.index(1, 0, alternative_tree_root)
+        self.assertEqual(add_alternative_index.data(), "Type new alternative name here...")
+        alternative_selection_model = self._db_editor.ui.alternative_tree_view.selectionModel()
+        alternative_selection_model.setCurrentIndex(
+            add_alternative_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        class_index = self._db_editor.entity_tree_model.index(0, 0, root_index)
+        self.assertEqual(class_index.data(), "Object_1")
+        class_item = self._db_editor.entity_tree_model.item_from_index(class_index)
+        dialog = AddEntitiesDialog(self._db_editor, class_item, self._db_mngr, self._db_map)
+        model = dialog.model
+        model.fetchMore(QModelIndex())
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.headerData(0), "entity name")
+        self.assertEqual(model.headerData(1), "alternative")
+        self.assertEqual(model.headerData(2), "entity group")
+        self.assertEqual(model.headerData(3), "databases")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), "")
         self.assertEqual(model.index(0, 2).data(), None)
         self.assertEqual(model.index(0, 3).data(), self.db_codename)
 
