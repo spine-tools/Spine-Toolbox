@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_dimensions, name_from_elements
 from ...helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.compound_table_model import CompoundTableModel
@@ -518,30 +519,39 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.model.set_horizontal_header_labels(header)
         default_db_maps = [db_map for db_map, keys in self.db_map_ent_cls_lookup.items() if self.class_key in keys]
         db_names = ", ".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
-        alt_selection_model = self.parent().ui.alternative_tree_view.selectionModel()
-        alt_selection = alt_selection_model.selection()
-        selected_alt_name = None
-        if alt_selection:
-            selected_alt_index = alt_selection_model.currentIndex()
-            alternative_model = self.parent().ui.alternative_tree_view.model()
-            add_new_alternative_row = alternative_model.rowCount(selected_alt_index.parent()) - 1
-            if selected_alt_index.row() < add_new_alternative_row:
-                selected_alt = selected_alt_index.model().item_from_index(selected_alt_index)
-                selected_alt_name = self.append_db_codenames(selected_alt.name, {selected_alt.db_map})
-        all_databases = [db_map for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
-        dbs_by_alternative = {}
-        for db_map in all_databases:
-            for alternative in self.db_mngr.get_items(db_map, "alternative"):
-                dbs_by_alternative.setdefault(alternative["name"], set()).add(db_map)
-        alt_names_list = []
-        for alternative, db_maps in dbs_by_alternative.items():
-            alt_names_list.append(self.append_db_codenames(alternative, db_maps))
-        alt_names_list.append("")  # If the db has no alternatives, defaults to nothing
-        alternative_name = selected_alt_name if selected_alt_name else alt_names_list[0]
-        defaults = {"databases": db_names, "alternative": alternative_name}
+        defaults = {"databases": db_names, "alternative": self._resolve_default_alternative(default_db_maps)}
         defaults.update(self.entity_names_by_class_name)
         self.model.set_default_row(**defaults)
         self.model.clear()
+
+    def _class_is_active_by_default(self) -> bool:
+        db_map = self.class_item.first_db_map
+        id_ = self.class_item.db_map_ids[db_map]
+        with self.db_mngr.get_lock(db_map):
+            return db_map.mapped_table("entity_class")[id_]["active_by_default"]
+
+    def _resolve_default_alternative(self, default_db_maps: list[DatabaseMapping]) -> str:
+        selected_alt_name = None
+        alt_names_list = []
+        if not self._class_is_active_by_default():
+            alt_selection_model = self.parent().ui.alternative_tree_view.selectionModel()
+            alt_selection = alt_selection_model.selection()
+            if alt_selection:
+                selected_alt_index = alt_selection_model.currentIndex()
+                alternative_model = self.parent().ui.alternative_tree_view.model()
+                add_new_alternative_row = alternative_model.rowCount(selected_alt_index.parent()) - 1
+                if selected_alt_index.row() < add_new_alternative_row:
+                    selected_alt = selected_alt_index.model().item_from_index(selected_alt_index)
+                    selected_alt_name = self.append_db_codenames(selected_alt.name, {selected_alt.db_map})
+            all_databases = [db_map for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
+            dbs_by_alternative = {}
+            for db_map in all_databases:
+                for alternative in self.db_mngr.get_items(db_map, "alternative"):
+                    dbs_by_alternative.setdefault(alternative["name"], set()).add(db_map)
+            for alternative, db_maps in dbs_by_alternative.items():
+                alt_names_list.append(self.append_db_codenames(alternative, db_maps))
+        alt_names_list.append("")  # If the db has no alternatives, defaults to nothing
+        return selected_alt_name if selected_alt_name else alt_names_list[0]
 
     def append_db_codenames(self, name, db_maps):
         """Appends a list of given databases to the given name
