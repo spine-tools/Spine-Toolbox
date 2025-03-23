@@ -344,7 +344,15 @@ class TestManageElementsDialog(TestBase):
         relationships = [x.resolve() for x in self._db_map.get_items("entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [{"class_id": None, "description": None, "id": None, "name": "r21", "element_id_list": (None, None)}],
+            [
+                {
+                    "class_id": None,
+                    "description": None,
+                    "id": None,
+                    "name": "r21",
+                    "element_id_list": (None, None),
+                }
+            ],
         )
 
 

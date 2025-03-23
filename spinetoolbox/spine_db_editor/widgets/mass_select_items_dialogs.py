@@ -116,7 +116,7 @@ class MassRemoveItemsDialog(MassSelectItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping): the dbs to select items from
+            db_maps (DatabaseMapping): the dbs to select items from
             stored_state (dict, Optional): widget's previous state
         """
         super().__init__(parent, db_mngr, *db_maps, stored_state=stored_state, ok_button_text="Purge")
@@ -145,7 +145,7 @@ class MassExportItemsDialog(MassSelectItemsDialog):
         Args:
             parent (SpineDBEditor)
             db_mngr (SpineDBManager)
-            db_maps (DiffDatabaseMapping): the dbs to select items from
+            db_maps (DatabaseMapping): the dbs to select items from
             stored_state (dict, Optional): widget's previous state
         """
         super().__init__(parent, db_mngr, *db_maps, stored_state=stored_state, ok_button_text="Export")
