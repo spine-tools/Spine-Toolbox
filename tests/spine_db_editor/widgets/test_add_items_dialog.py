@@ -351,6 +351,11 @@ class TestManageElementsDialog(TestBase):
                     "id": None,
                     "name": "r21",
                     "element_id_list": (None, None),
+                    "lat": None,
+                    "lon": None,
+                    "alt": None,
+                    "shape_name": None,
+                    "shape_blob": None,
                 }
             ],
         )
