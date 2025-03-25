@@ -23,8 +23,13 @@ class Notification(QFrame):
     _FADE_IN_OUT_DURATION = 500
 
     def __init__(
-        self, parent, txt, anim_duration=_FADE_IN_OUT_DURATION, life_span=None, word_wrap=True, corner=Qt.TopRightCorner
-    ):
+            self,
+            parent,
+            txt,
+            anim_duration=_FADE_IN_OUT_DURATION,
+            life_span=None,
+            word_wrap=True,
+            corner=Qt.Corner.TopRightCorner):
         """
 
         Args:
@@ -40,27 +45,27 @@ class Notification(QFrame):
             word_count = len(txt.split(" "))
             mspw = 60000 / 140  # Assume people can read ~140 words per minute
             life_span = mspw * word_count
-        self.setFocusPolicy(Qt.NoFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setWindowFlags(Qt.WindowType.Popup)
         self.setParent(parent)
         self._parent = parent
         self._corner = corner
         self.label = QLabel(txt)
         self.label.setMaximumSize(parent.size())
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setWordWrap(word_wrap)
         self.label.setMargin(8)
-        self.label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         font = QFont()
         font.setBold(True)
         self.label.setFont(font)
         layout = QHBoxLayout()
         layout.addWidget(self.label)
-        layout.setSizeConstraint(QLayout.SetMinimumSize)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         layout.setContentsMargins(3, 3, 3, 3)
         self.setLayout(layout)
         self.adjustSize()
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setObjectName("Notification")
         self._background_color = "#e6ffc2b3"
         ss = (
@@ -94,16 +99,16 @@ class Notification(QFrame):
         self.fade_out_anim.valueChanged.connect(self.update_opacity)
         self.fade_out_anim.finished.connect(self.close)
         # Start fade in animation
-        self.fade_in_anim.start(QPropertyAnimation.DeleteWhenStopped)
+        self.fade_in_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
     def show(self):
         """Shows widget and moves it to the selected corner of the parent widget."""
         super().show()
-        if self._corner in (Qt.TopRightCorner, Qt.BottomRightCorner):
+        if self._corner in (Qt.Corner.TopRightCorner, Qt.Corner.BottomRightCorner):
             x = self._parent.size().width() - self.width() - 2
         else:
             x = self.pos().x()
-        if self._corner in (Qt.BottomLeftCorner, Qt.BottomRightCorner):
+        if self._corner in (Qt.Corner.BottomLeftCorner, Qt.Corner.BottomRightCorner):
             y = self._parent.size().height() - self.height() - 2
         else:
             y = self.pos().y()
@@ -124,8 +129,8 @@ class Notification(QFrame):
 
     def start_self_destruction(self):
         """Starts fade-out animation and closing of the notification."""
-        self.fade_out_anim.start(QPropertyAnimation.DeleteWhenStopped)
-        self.setAttribute(Qt.WA_TransparentForMouseEvents)
+        self.fade_out_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
     def enterEvent(self, e):
         """Pauses timer as the mouse hovers the notification."""
@@ -141,7 +146,7 @@ class Notification(QFrame):
     def remaining_time(self):
         if self.timer.isActive():
             return self.timer.remainingTime()
-        if self.fade_out_anim.state() == QPropertyAnimation.Running:
+        if self.fade_out_anim.state() == QPropertyAnimation.State.Running:
             return 0
         return self.timer.interval()
 
@@ -185,7 +190,7 @@ class LinkNotification(Notification):
 
     def __init__(self, *args, open_link=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        self.label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
         if open_link is None:
             self.label.setOpenExternalLinks(True)
         else:
@@ -195,7 +200,7 @@ class LinkNotification(Notification):
 class ChangeNotifier(QObject):
     _ANIMATION_LIFE_SPAN = 5000
 
-    def __init__(self, parent, undo_stack, settings, settings_key, corner=Qt.BottomRightCorner):
+    def __init__(self, parent, undo_stack, settings, settings_key, corner=Qt.Corner.BottomRightCorner):
         """
         Args:
             parent (QWidget)

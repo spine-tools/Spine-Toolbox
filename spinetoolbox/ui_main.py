@@ -171,6 +171,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
         self.exec_compound_models = ExecutableCompoundModels(self._qsettings)
+        self.exec_compound_models.load_all()
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references

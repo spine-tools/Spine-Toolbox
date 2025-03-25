@@ -14,7 +14,7 @@
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon
-from PySide6.QtCore import QObject, Qt, Slot
+from PySide6.QtCore import QObject, Qt, Slot, QModelIndex
 from .kernel_fetcher import KernelFetcher
 from .helpers import (
     save_path_to_qsettings,
@@ -130,7 +130,8 @@ class ExecutableCompoundModels(QObject):
             if item.data()["exe"] == path:
                 return item.index()
         # TODO: Fix when path == "" and model is empty
-        Notification(notification_parent, f"Could not find Julia {path}.\nActivating the default Julia.").show()
+        if notification_parent is not None:
+            Notification(notification_parent, f"Could not find Julia {path}.\nActivating the default Julia.").show()
         return self.julia_executables_model.index(0, 0)
 
     def load_julia_projects(self, julia_projects, show_select_item=False):
@@ -184,10 +185,11 @@ class ExecutableCompoundModels(QObject):
             item = self.julia_projects_model.item(row, 0)
             if item.data()["path"] == path:
                 return item.index()
-        Notification(notification_parent, f"Could not find Julia project {path}.\nActivating the default project.").show()
+        if notification_parent is not None:
+            Notification(notification_parent, f"Could not find Julia project {path}.\nActivating the default project.").show()
         return self.julia_projects_model.index(0, 0)
 
-    def start_fetching_julia_kernels(self, finalize_slot, conda=""):
+    def start_fetching_julia_kernels(self, finalize_slot=None, conda=""):
         """Starts a thread for fetching Julia kernels."""
         if self.julia_kernel_fetcher is not None and self.julia_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
@@ -200,7 +202,8 @@ class ExecutableCompoundModels(QObject):
             conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
         self.julia_kernel_fetcher = KernelFetcher(conda, fetch_mode=4)
         self.julia_kernel_fetcher.kernel_found.connect(self.add_julia_kernel)
-        self.julia_kernel_fetcher.finished.connect(finalize_slot)
+        if finalize_slot is not None:
+            self.julia_kernel_fetcher.finished.connect(finalize_slot)
         self.julia_kernel_fetcher.finished.connect(restore_override_cursor)
         self.julia_kernel_fetcher.finished.connect(self._delete_julia_kernel_fetcher)
         self.julia_kernel_fetcher.start()
@@ -231,10 +234,10 @@ class ExecutableCompoundModels(QObject):
         item.setData(deats)
         self.julia_kernel_model.appendRow(item)
 
-    def find_julia_kernel_index(self, kname, notification_parent):
+    def find_julia_kernel_index(self, kname, notification_parent=None):
         """Finds and returns the index of given kernel name item."""
         if not kname:
-            return self.julia_kernel_model.index(0,0)
+            return self.julia_kernel_model.index(0, 0)
         items = self.julia_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
         if not items:
             Notification(
@@ -242,7 +245,7 @@ class ExecutableCompoundModels(QObject):
                 f"Could not activate Julia kernel {kname}.\nIt may have been removed."
             ).show()
             return self.julia_kernel_model.index(0, 0)
-        return items[0]
+        return items[0].index()
 
     def refresh_python_interpreters_model(self, python_interpreters=None, show_select_item=False):
         """Clears and populates the Python interpreters model with the given list of Python interpreter paths."""
@@ -304,17 +307,16 @@ class ExecutableCompoundModels(QObject):
                                           f"the current Spine Toolbox Python.").show()
         return self.python_interpreters_model.index(0, 0)
 
-    def find_python_kernel_index(self, kname, notification_parent):
+    def find_python_kernel_index(self, kname):
+        """Returns the index of the item with the given kernel name
+        in Python kernel model or an invalid index if not found."""
         if not kname:
-            return self.python_kernel_model.index(0,0)
+            print(f"FIXME: kname is None '{kname}'")
+            return None
         items = self.python_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
         if not items:
-            Notification(
-                notification_parent,
-                f"Could not activate Python kernel {kname}.\n It may have been removed."
-            ).show()
-            return self.python_kernel_model.index(0, 0)
-        return items[0]
+            return QModelIndex()
+        return items[0].index()
 
     def start_fetching_python_kernels(self, finalize_slot, conda=""):
         """Starts a thread for fetching Python kernels."""
@@ -329,7 +331,8 @@ class ExecutableCompoundModels(QObject):
             conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
         self.python_kernel_fetcher = KernelFetcher(conda, fetch_mode=2)
         self.python_kernel_fetcher.kernel_found.connect(self._add_python_kernel)
-        self.python_kernel_fetcher.finished.connect(finalize_slot)
+        if finalize_slot is not None:
+            self.python_kernel_fetcher.finished.connect(finalize_slot)
         self.python_kernel_fetcher.finished.connect(restore_override_cursor)
         self.python_kernel_fetcher.finished.connect(self._delete_python_kernel_fetcher)
         self.python_kernel_fetcher.start()
@@ -366,3 +369,52 @@ class ExecutableCompoundModels(QObject):
         """Restores default mouse cursor."""
         while QApplication.overrideCursor() is not None:
             QApplication.restoreOverrideCursor()
+
+    def default_python_execution_settings(self):
+        """Returns a dictionary with the Python execution settings stored into QSettings."""
+        use_jupyter_cons = bool(int(self._qsettings.value("appSettings/usePythonKernel", defaultValue="0")))
+        k_name = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
+        env = ""
+        if use_jupyter_cons:
+            # Find kernel from model and check its data to see if it's a Conda kernel
+            index = self.find_python_kernel_index(k_name)
+            if index is not None:
+                item = self.python_kernel_model.itemFromIndex(index)
+                print(f"item.data():{item.data()}")
+                if item.data()["is_conda"]:
+                    env = "conda"
+                print(f"Found Python kernel with env:{env}")
+        d = dict()
+        d["kernel_spec_name"] = k_name
+        d["env"] = env
+        d["use_jupyter_console"] = use_jupyter_cons
+        d["executable"] = self._qsettings.value("appSettings/pythonPath", defaultValue="")
+        return d
+
+    def default_julia_execution_settings(self):
+        """Returns a dictionary with the Julia execution settings stored into QSettings."""
+        use_jupyter_cons = bool(int(self._qsettings.value("appSettings/useJuliaKernel", defaultValue="0")))
+        k_name = self._qsettings.value("appSettings/juliaKernel", defaultValue="")
+        env = ""
+        if use_jupyter_cons:
+            # Find kernel from model and check its data to see if it's a Conda kernel
+            item = self.find_julia_kernel_index(k_name)
+            if item is not None:
+                print(f"item.data():{item.data()}")
+                if item.data()["is_conda"]:
+                    env = "conda"
+                print(f"Found Julia kernel with env:{env}")
+        d = dict()
+        d["kernel_spec_name"] = k_name
+        d["env"] = env
+        d["use_jupyter_console"] = use_jupyter_cons
+        d["executable"] = self._qsettings.value("appSettings/juliaPath", defaultValue="")
+        d["project"] = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
+        return d
+
+    def load_all(self):
+        self.refresh_python_interpreters_model()
+        self.refresh_julia_executables_model()
+        self.refresh_julia_projects_model()
+        self.start_fetching_python_kernels(finalize_slot=None)
+        self.start_fetching_julia_kernels(finalize_slot=None)

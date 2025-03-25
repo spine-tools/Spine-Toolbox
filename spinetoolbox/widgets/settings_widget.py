@@ -12,7 +12,6 @@
 
 """Widget for controlling user settings."""
 import os
-import subprocess
 from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Slot
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
@@ -45,6 +44,7 @@ from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
 from ..spine_db_editor.editors import db_editor_registry
 from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEditor
+from ..kernel_models import ExecutableCompoundModels
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
 from .notification import Notification
@@ -308,7 +308,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.listWidget.setFocus()
         self.ui.listWidget.setCurrentRow(0)
         self._toolbox = toolbox
-        self._models = self._toolbox.exec_compound_models
+        self._models = ExecutableCompoundModels(self._qsettings)
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self.ui.comboBox_julia_path.setModel(self._models.julia_executables_model)
         self.ui.comboBox_julia_project_path.setModel(self._models.julia_projects_model)
@@ -1124,8 +1124,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # if self.python_kernel_fetcher is not None and not self.python_kernel_fetcher.keep_going:
         #     # Settings widget closed while thread still running
         #     return
-        ind = self._models.find_python_kernel_index(self._saved_python_kernel, self)
-        self.ui.comboBox_python_kernels.setCurrentIndex(ind.row())
+        index = self._models.find_python_kernel_index(self._saved_python_kernel)
+        if not index.isValid():
+            Notification(
+                self,
+                f"Could not activate Python kernel {self._saved_python_kernel}.\n It may have been removed."
+            ).show()
+            index = self._models.python_kernel_model.index(0, 0)
+        self.ui.comboBox_python_kernels.setCurrentIndex(index.row())
         self._saved_python_kernel = None
 
     @Slot(bool)
