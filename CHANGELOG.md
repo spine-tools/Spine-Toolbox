@@ -3,6 +3,12 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
+## [0.9.5]
+
+### Fixed
+
+- Fixed a bug in Importer where CSV files in datapackage with over 100 rows could not be read.
+
 ## [0.9.4]
 
 ### Added
