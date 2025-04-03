@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 import sys
 
-LATEST_PROJECT_VERSION = 13
+LATEST_PROJECT_VERSION = 14
 
 # For the Add/Update SpineOpt wizard
 REQUIRED_SPINE_OPT_VERSION = "0.10.0"

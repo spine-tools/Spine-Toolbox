@@ -119,6 +119,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v11_to_v12(project_dict)
             elif v == 12:
                 project_dict = self.upgrade_v12_to_v13(project_dict)
+            elif v == 13:
+                project_dict = self.upgrade_v13_to_v14(project_dict, project_dir)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -577,6 +579,92 @@ class ProjectUpgrader:
         new["project"]["version"] = 13
         return new
 
+    def upgrade_v13_to_v14(self, old, project_dir):
+        """Upgrades version 13 project dictionary to version 14.
+
+        Changes:
+            - Update version to 14 in project.json
+            - Move execution settings from <project_dir>.spinetoolbox/local/specification_local_data.json to
+            <project_dir>/.spinetoolbox/local/project_local_data.json because they are not Tool settings
+            instead of Tool Specification settings.
+            - Make a backup copy of specification_local_data.json
+            - Move 'options' from project.json Tool item dicts to local project data. This option only
+            contains a 'julia_sysimage' key, which contains an abs. path to a Julia sys image.
+
+        Args:
+            old (dict): Version 13 project dictionary
+            project_dir (str): Project directory
+
+        Returns:
+            dict: Version 14 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 13  # TODO: Update to 14 when ready
+        spec_data, tool_data = self.get_local_data_dicts(project_dir)
+        if not spec_data:  # Nothing to upgrade
+            # TODO: Check "julia_sysimage" though
+            return new
+
+        spec_tool_dict = spec_data.get("Tool")
+        if not spec_tool_dict:  # Nothing to upgrade
+            # TODO: Check "julia_sysimage" though
+            return new
+        for spec_name in spec_tool_dict.keys():
+            exec_settings = spec_tool_dict[spec_name].get("execution_settings")
+            if not exec_settings:
+                continue
+            print(f"[{spec_name}] exec_settings:{exec_settings}")
+        # Make Tool name to Spec name mapping
+        item_dict = new["items"]
+        item_name_to_spec_name = dict()
+        for item_name in item_dict.keys():
+            if item_dict[item_name]["type"] == "Tool":
+                item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
+        print(f"mapping: {item_name_to_spec_name}")
+        # Find local Tool data items and insert exec options to options
+        tool_items_dict = tool_data.pop("items", {})
+        for item_name, spec_name in item_name_to_spec_name.items():
+            item_dict = tool_items_dict.pop(item_name, None)
+            if not item_dict:
+                tool_items_dict[item_name] = {"options": spec_tool_dict[spec_name]}
+                continue
+            item_dict["options"] = spec_tool_dict[spec_name]
+        tool_data["items"] = tool_items_dict
+        print(f"tool_data:{tool_data}")
+
+        # TODO: Move "options": {"julia_sysimage": "C:\something\something.dll"} from project.json to project_local_data.json
+        # TODO: Make "julia_sysimage" as a local option
+        # Save updated project_local_data.json
+        # try:
+        #     with open(local_tool_data_fpath, "w") as fp:
+        #         json.dump(local_tool_data, fp, indent=4)
+        # except OSError:
+        #     self._toolbox.msg_error.emit("Saving project_local_data.json file failed. Check permissions.")
+
+        return new
+
+    def get_local_data_dicts(self, project_dir):
+        """Makes a backup of local spec data file and returns local
+        spec data and local tool data dicts from project folder."""
+        local_spec_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "specification_local_data.json")
+        if not os.path.exists(local_spec_data_fpath):
+            self._toolbox.msg.emit(f"Local specification data not found [{local_spec_data_fpath}]")
+            return False, False
+        backup_filename = "specification_local_data.json.bak" + str(13)
+        dst = os.path.join(project_dir, ".spinetoolbox", "local", backup_filename)
+        try:
+            shutil.copyfile(local_spec_data_fpath, dst)
+        except OSError:
+            self._toolbox.msg_error.emit(f"Backing up '{local_spec_data_fpath}' failed. Check permissions.")
+        else:
+            self._toolbox.msg_warning.emit(f"Backed up specification_local_data.json -> {backup_filename}")
+        local_tool_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+        with open(local_spec_data_fpath) as local_spec_data_fp:
+            local_spec_data = json.load(local_spec_data_fp)
+        with open(local_tool_data_fpath) as local_tool_data_fp:
+            local_tool_data = json.load(local_tool_data_fp)
+        return local_spec_data, local_tool_data
+
     @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
@@ -633,8 +721,8 @@ class ProjectUpgrader:
             return self.is_valid_v2_to_v8(p, v)
         if 9 <= v <= 10:
             return self.is_valid_v9_to_v10(p)
-        if 11 <= v <= 13:
-            return self.is_valid_v11_to_v12(p)
+        if 11 <= v <= 14:
+            return self.is_valid_v11_to_v14(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -763,9 +851,9 @@ class ProjectUpgrader:
                 return False
         return True
 
-    def is_valid_v11_to_v12(self, p):
+    def is_valid_v11_to_v14(self, p):
         """Checks that the given project JSON dictionary contains
-        a valid version 11 or 12 Spine Toolbox project. Valid meaning, that
+        a valid version 11, 12, 13, or 14 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 
