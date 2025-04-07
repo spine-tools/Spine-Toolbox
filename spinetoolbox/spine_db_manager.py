@@ -1352,8 +1352,9 @@ class SpineDBManager(QObject):
         with self._db_locks[db_map]:
             scenario_table = db_map.mapped_table("scenario")
             for scen in scenarios:
-                current_scen = scenario_table.find_item_by_id(scen["id"])
-                if current_scen is None:
+                try:
+                    current_scen = scenario_table.find_item_by_id(scen["id"])
+                except SpineDBAPIError:
                     error = f"no scenario matching {scen} to set alternatives for"
                     errors.append(error)
                     continue
