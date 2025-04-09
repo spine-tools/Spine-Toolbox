@@ -53,7 +53,10 @@ from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .changelog_diff import pick_latest_release
+from .config import SPINE_TOOLBOX_REPO_URL
+from .widgets.startup_box_widget import StartupBoxWidget
+from .config import MAINWINDOW_SS, DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
     add_keyboard_shortcuts_to_action_tool_tips,
@@ -128,6 +131,8 @@ class ToolboxUI(QMainWindow):
     jupyter_console_requested = Signal(object, str, str, str, dict)
     kernel_shutdown = Signal(object, str)
     persistent_console_requested = Signal(object, str, tuple, str)
+
+
 
     def __init__(self):
         from .ui.mainwindow import Ui_MainWindow  # pylint: disable=import-outside-toplevel
@@ -226,6 +231,26 @@ class ToolboxUI(QMainWindow):
         self.set_work_directory()
         self._disable_project_actions()
         self.connect_signals()
+
+        # Start Up box Widget
+        self.startup_box_widget = StartupBoxWidget(self)
+        # Connect to restore_project the function in the start_up_box.py
+        self.startup_box_widget.project_load_requested.connect(self.restore_project)
+        # Connect to open_project the function in the start_up_box.py
+        self.startup_box_widget.project_opener.connect(self.open_project)
+
+        # Connect to open_project the function in the start_up_box.py
+        self.startup_box_widget.new_project_opener.connect(self.new_project)
+
+        # Show the Start Up box
+        self.startup_box_widget.show()
+
+        # Get the changelog differences
+        diff = pick_latest_release(self._qsettings)
+
+        if diff is not None:
+            # Connect to set_changelog_diff the function in the start_up_box.py
+            self.startup_box_widget.set_changelog_diff(diff)
 
     def eventFilter(self, obj, ev):
         # Save/restore splitter states when hiding/showing execution lists
@@ -2018,6 +2043,7 @@ class ToolboxUI(QMainWindow):
         for item_type in self.item_factories:
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
+        #save_changelog_to_settings(self._qsettings)
         if self.shutdown_and_clear_settings:
             clear_qsettings(self._qsettings)
         event.accept()
@@ -2603,3 +2629,6 @@ class ToolboxUI(QMainWindow):
             message (str): formatted message
         """
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)
+
+    def open_from_startbox(self, path_to_project):
+        self.restore_project(path_to_project)
