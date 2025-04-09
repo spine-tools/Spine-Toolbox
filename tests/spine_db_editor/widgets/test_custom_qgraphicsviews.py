@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``custom_qgraphicsviews`` module."""
+import math
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QWidget
@@ -45,6 +46,27 @@ class TestGraphOptionsOverlay(TestCaseWithQApplication):
         self.mock_editor.rebuild_graph.assert_not_called()
         self.graph._options_overlay._rebuild_button.click()
         self.mock_editor.rebuild_graph.assert_called_once_with(force=True)
+
+
+class TestEntityQGraphicsView(unittest.TestCase):
+    def test_latitude_longitude(self):
+        latitude, longitude = EntityQGraphicsView.latitude_longitude(0, 0)
+        self.assertEqual(latitude, 0.0)
+        self.assertEqual(longitude, 0.0)
+        latitude, longitude = EntityQGraphicsView.latitude_longitude(10, 0)
+        self.assertEqual(latitude, 0.0)
+        self.assertEqual(longitude, 1 / 6371 * 180 / math.pi)
+        latitude, longitude = EntityQGraphicsView.latitude_longitude(0, 10)
+        self.assertAlmostEqual(latitude, -1 / 6371 * 180 / math.pi, places=10)
+        self.assertEqual(longitude, 0.0)
+
+    def test_coordinate_conversion(self):
+        x = 2.3
+        y = -5.5
+        latitude, longitude = EntityQGraphicsView.latitude_longitude(x, y)
+        converted_x, converted_y = EntityQGraphicsView.x_y(latitude, longitude)
+        self.assertAlmostEqual(converted_x, x)
+        self.assertAlmostEqual(converted_y, y)
 
 
 if __name__ == "__main__":

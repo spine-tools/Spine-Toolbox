@@ -11,16 +11,21 @@
 ######################################################################################################################
 
 """Classes for custom QGraphicsViews for the Entity graph view."""
+from collections import defaultdict
+from collections.abc import Iterable
 from contextlib import contextmanager
+import math
 import os
 import sys
 import tempfile
+from typing import Any, Optional
 import numpy as np
-from PySide6.QtCore import QRectF, QRunnable, Qt, QThreadPool, QTimeLine, Signal, Slot
+from PySide6.QtCore import QRectF, QRunnable, QSettings, Qt, QThreadPool, QTimeLine, Signal, Slot
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QPageSize, QPainter, QPixmap, QShortcut
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtWidgets import (
+    QAbstractGraphicsShapeItem,
     QColorDialog,
     QGraphicsScene,
     QInputDialog,
@@ -33,23 +38,25 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from ...helpers import CharIconEngine, remove_first
+from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.custom_qwidgets import HorizontalSpinBox, ToolBarWidgetAction
 from ..graphics_items import ArcItem, BgItem, CrossHairsArcItem, EntityItem
 from ..helpers import GRAPH_OVERLAY_COLOR
 from .custom_qwidgets import ExportAsVideoDialog
 from .select_graph_parameters_dialog import SelectGraphParametersDialog
+from .spine_db_editor import SpineDBEditor
 
 
 class _GraphProperty:
-    def __init__(self, name, settings_name):
+    def __init__(self, name: str, settings_name: str):
         self._name = name
         self._settings_name = "appSettings/" + settings_name
         self._spine_db_editor = None
         self._value = None
 
     @property
-    def value(self):
+    def value(self) -> Optional[Any]:
         return self._value
 
     def connect_spine_db_editor(self, spine_db_editor):
@@ -167,6 +174,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     graph_selection_changed = Signal(list)
 
+    VIRTUAL_RADIUS = 6371.0 * 10.0
+
     def __init__(self, parent):
         """
 
@@ -174,10 +183,8 @@ class EntityQGraphicsView(CustomQGraphicsView):
             parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
         """
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
-        self._spine_db_editor = None
+        self._spine_db_editor: Optional[SpineDBEditor] = None
         self._menu = QMenu(self)
-        self.pos_x_parameter = "x"
-        self.pos_y_parameter = "y"
         self.name_parameter = ""
         self.color_parameter = ""
         self.arc_width_parameter = ""
@@ -234,15 +241,15 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._options_overlay = None
 
     @property
-    def _qsettings(self):
+    def _qsettings(self) -> QSettings:
         return self._spine_db_editor.qsettings
 
     @property
-    def db_mngr(self):
+    def db_mngr(self) -> SpineDBManager:
         return self._spine_db_editor.db_mngr
 
     @property
-    def entity_items(self):
+    def entity_items(self) -> list[EntityItem]:
         return [x for x in self.scene().items() if isinstance(x, EntityItem) and x.isVisible()]
 
     def get_property(self, name):
@@ -269,7 +276,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         default_db_map = self.selected_items[0].first_db_map if len(self.selected_items) == 1 else None
         self._spine_db_editor.set_default_parameter_data(default_data, default_db_map)
 
-    def connect_spine_db_editor(self, spine_db_editor):
+    def connect_spine_db_editor(self, spine_db_editor: SpineDBEditor) -> None:
         self._spine_db_editor = spine_db_editor
         for prop in self._properties.values():
             prop.connect_spine_db_editor(spine_db_editor)
@@ -543,8 +550,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def select_graph_parameters(self, checked=False):
         parameters = {
             "Name": self.name_parameter,
-            "Position x": self.pos_x_parameter,
-            "Position y": self.pos_y_parameter,
             "Color": self.color_parameter,
             "Arc width": self.arc_width_parameter,
             "Vertex radius": self.vertex_radius_parameter,
@@ -557,8 +562,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _set_graph_parameters(self, parameters):
         parameters = iter(parameters)
         self.name_parameter = next(parameters)
-        self.pos_x_parameter = next(parameters)
-        self.pos_y_parameter = next(parameters)
         self.color_parameter = next(parameters)
         self.arc_width_parameter = next(parameters)
         self.vertex_radius_parameter = next(parameters)
@@ -572,63 +575,54 @@ class EntityQGraphicsView(CustomQGraphicsView):
     def _save_all_positions(self, checked=False):
         self._save_positions(self.entity_items)
 
-    def _save_positions(self, items):
-        if not self.pos_x_parameter or not self.pos_y_parameter:
-            msg = "You haven't selected the position parameters"
-            self._spine_db_editor.msg.emit(msg)
-            return
-        ent_items = [item for item in items if isinstance(item, EntityItem)]
-        db_map_class_ent_items = {}
-        for item in ent_items:
-            for db_map in item.db_maps:
-                db_map_class_ent_items.setdefault(db_map, {}).setdefault(item.entity_class_name, []).append(item)
-        db_map_data = {}
-        for db_map, class_ent_items in db_map_class_ent_items.items():
-            data = db_map_data.setdefault(db_map, {})
-            for class_name, ent_items in class_ent_items.items():
-                data.setdefault("parameter_definitions", []).extend(
-                    [(class_name, self.pos_x_parameter), (class_name, self.pos_y_parameter)]
-                )
-                data.setdefault("parameter_values", []).extend(
-                    [
-                        (class_name, item.element_name_list or item.name, pname, val)
-                        for item in ent_items
-                        for pname, val in zip(
-                            (self.pos_x_parameter, self.pos_y_parameter),
-                            self._spine_db_editor.convert_position(item.pos().x(), item.pos().y()),
-                        )
-                    ]
-                )
-        self.db_mngr.import_data(db_map_data)
+    def _save_positions(self, items: Iterable[QAbstractGraphicsShapeItem]) -> None:
+        db_map_update_data = defaultdict(list)
+        for item in items:
+            if not isinstance(item, EntityItem):
+                continue
+            first_db_map, first_id = next(iter(item.db_map_ids))
+            with self.db_mngr.get_lock(first_db_map):
+                if len(first_db_map.entity(id=first_id)["element_id_list"]) > 0:
+                    continue
+            position = item.pos()
+            latitude, longitude = self.latitude_longitude(position.x(), position.y())
+            for db_map, entity_id in item.db_map_ids:
+                db_map_update_data[db_map].append({"id": entity_id, "lat": latitude, "lon": longitude})
+        if db_map_update_data:
+            self.db_mngr.update_entities(db_map_update_data)
+        else:
+            self._spine_db_editor.msg.emit("No 0-dimensional entities selected - no positions to saved.")
+
+    @staticmethod
+    def latitude_longitude(x: float, y: float) -> tuple[float, float]:
+        """Converts view coordinates to latitude and longitude."""
+        longitude = x / EntityQGraphicsView.VIRTUAL_RADIUS
+        latitude = 2 * math.atan(math.exp(-y / EntityQGraphicsView.VIRTUAL_RADIUS)) - math.pi / 2
+        return math.degrees(latitude), math.degrees(longitude)
+
+    @staticmethod
+    def x_y(latitude: float, longitude: float) -> tuple[float, float]:
+        """Converts latitude and longitude to view coordinates."""
+        x = EntityQGraphicsView.VIRTUAL_RADIUS * math.radians(longitude)
+        y = -EntityQGraphicsView.VIRTUAL_RADIUS * math.log(math.tan(math.radians(45.0 + latitude / 2)))
+        return x, y
 
     @Slot(bool)
-    def _clear_selected_positions(self, checked=False):
+    def _clear_selected_positions(self, checked: bool = False) -> None:
         self._clear_positions(self.selected_items)
 
     @Slot(bool)
-    def _clear_all_positions(self, checked=False):
+    def _clear_all_positions(self, checked: bool = False) -> None:
         self._clear_positions(self.entity_items)
 
-    def _clear_positions(self, items):
+    def _clear_positions(self, items: Iterable[EntityItem]) -> None:
         if not items:
             return
-        db_map_ids = {}
+        db_map_update_data = defaultdict(list)
         for item in items:
             for db_map, entity_id in item.db_map_ids:
-                db_map_ids.setdefault(db_map, set()).add(entity_id)
-        db_map_typed_data = {}
-        for db_map, ids in db_map_ids.items():
-            db_map_typed_data[db_map] = {
-                "parameter_value": set(
-                    pv["id"]
-                    for parameter_name in (self.pos_x_parameter, self.pos_y_parameter)
-                    for pv in self.db_mngr.get_items_by_field(
-                        db_map, "parameter_value", "parameter_name", parameter_name
-                    )
-                    if pv["entity_id"] in ids
-                )
-            }
-        self.db_mngr.remove_items(db_map_typed_data)
+                db_map_update_data[db_map].append({"id": entity_id, "lat": None, "lon": None, "alt": None})
+        self.db_mngr.update_entities(db_map_update_data)
         self._spine_db_editor.build_graph()
 
     @Slot(bool)

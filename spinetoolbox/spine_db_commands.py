@@ -15,6 +15,7 @@ from contextlib import suppress
 import time
 from PySide6.QtGui import QUndoCommand, QUndoStack
 from spinedb_api import SpineDBAPIError
+from spinedb_api.exception import SpineDBAPIError
 
 
 class AgedUndoStack(QUndoStack):
