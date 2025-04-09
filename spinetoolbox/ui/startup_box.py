@@ -26,152 +26,204 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QGroupBox, QLabel,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea,
-    QSizePolicy, QTabWidget, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QFrame, QGroupBox, QHBoxLayout,
+    QLabel, QListWidget, QListWidgetItem, QPushButton,
+    QScrollArea, QSizePolicy, QSpacerItem, QTabWidget,
+    QVBoxLayout, QWidget)
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(1481, 928)
-        self.groupBox_6 = QGroupBox(Form)
-        self.groupBox_6.setObjectName(u"groupBox_6")
-        self.groupBox_6.setGeometry(QRect(910, 40, 191, 611))
-        self.groupBox_6.setMinimumSize(QSize(0, 16))
-        self.listWidget_2 = QListWidget(self.groupBox_6)
-        self.listWidget_2.setObjectName(u"listWidget_2")
-        self.listWidget_2.setGeometry(QRect(10, 60, 171, 541))
-        self.listWidget_2.setStyleSheet(u"background-color: rgb(240, 240, 240);\n"
-"border-color: rgb(240, 240, 240);")
-        self.listWidget_2.setProperty(u"showDropIndicator", True)
-        self.listWidget_2.setProperty(u"isWrapping", False)
-        self.listWidget_2.setWordWrap(True)
-        self.label_17 = QLabel(self.groupBox_6)
-        self.label_17.setObjectName(u"label_17")
-        self.label_17.setGeometry(QRect(10, 20, 171, 31))
-        font = QFont()
-        font.setFamilies([u"Courier"])
-        font.setPointSize(11)
-        font.setBold(False)
-        font.setItalic(True)
-        self.label_17.setFont(font)
-        self.label_17.setAutoFillBackground(False)
-        self.label_17.setStyleSheet(u"")
-        self.label_17.setFrameShape(QFrame.Shape.StyledPanel)
-        self.label_17.setFrameShadow(QFrame.Shadow.Raised)
-        self.label_17.setLineWidth(1)
-        self.label_17.setScaledContents(False)
+        Form.resize(756, 708)
+        self.horizontalLayout_2 = QHBoxLayout(Form)
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.groupBox_7 = QGroupBox(Form)
         self.groupBox_7.setObjectName(u"groupBox_7")
-        self.groupBox_7.setGeometry(QRect(50, 40, 151, 611))
         self.groupBox_7.setMinimumSize(QSize(0, 16))
-        self.pushButton_8 = QPushButton(self.groupBox_7)
-        self.pushButton_8.setObjectName(u"pushButton_8")
-        self.pushButton_8.setGeometry(QRect(10, 80, 131, 24))
-        self.label_2 = QLabel(self.groupBox_7)
-        self.label_2.setObjectName(u"label_2")
-        self.label_2.setGeometry(QRect(10, 130, 49, 16))
-        self.listWidget = QListWidget(self.groupBox_7)
-        self.listWidget.setObjectName(u"listWidget")
-        self.listWidget.setGeometry(QRect(10, 160, 131, 331))
-        self.listWidget.setStyleSheet(u"background-color: rgb(240, 240, 240);\n"
-"border-color: rgb(240, 240, 240);")
+        self.verticalLayout = QVBoxLayout(self.groupBox_7)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.pushButton_9 = QPushButton(self.groupBox_7)
         self.pushButton_9.setObjectName(u"pushButton_9")
-        self.pushButton_9.setGeometry(QRect(10, 40, 131, 24))
+
+        self.verticalLayout.addWidget(self.pushButton_9)
+
+        self.pushButton_8 = QPushButton(self.groupBox_7)
+        self.pushButton_8.setObjectName(u"pushButton_8")
+
+        self.verticalLayout.addWidget(self.pushButton_8)
+
+        self.label_2 = QLabel(self.groupBox_7)
+        self.label_2.setObjectName(u"label_2")
+
+        self.verticalLayout.addWidget(self.label_2)
+
+        self.listWidget = QListWidget(self.groupBox_7)
+        self.listWidget.setObjectName(u"listWidget")
+        self.listWidget.setStyleSheet(u"background-color: rgb(240, 240, 240);\n"
+"border-color: rgb(240, 240, 240);")
+
+        self.verticalLayout.addWidget(self.listWidget)
+
+
+        self.horizontalLayout_2.addWidget(self.groupBox_7)
+
         self.tabWidget = QTabWidget(Form)
         self.tabWidget.setObjectName(u"tabWidget")
-        self.tabWidget.setGeometry(QRect(210, 40, 691, 611))
         self.tabWidget.setStyleSheet(u"")
         self.tab_2 = QWidget()
         self.tab_2.setObjectName(u"tab_2")
-        self.scrollArea_2 = QScrollArea(self.tab_2)
-        self.scrollArea_2.setObjectName(u"scrollArea_2")
-        self.scrollArea_2.setGeometry(QRect(10, 10, 661, 561))
-        self.scrollArea_2.setStyleSheet(u"")
-        self.scrollArea_2.setFrameShape(QFrame.Shape.NoFrame)
-        self.scrollArea_2.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scrollArea_2.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scrollArea_2.setWidgetResizable(False)
-        self.scrollAreaWidgetContents_3 = QWidget()
-        self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 668, 642))
-        self.label_3 = QLabel(self.scrollAreaWidgetContents_3)
+        self.verticalLayout_6 = QVBoxLayout(self.tab_2)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.scrollArea_3 = QScrollArea(self.tab_2)
+        self.scrollArea_3.setObjectName(u"scrollArea_3")
+        self.scrollArea_3.setWidgetResizable(True)
+        self.scrollAreaWidgetContents = QWidget()
+        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 450, 659))
+        self.verticalLayout_5 = QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.label_3 = QLabel(self.scrollAreaWidgetContents)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setGeometry(QRect(10, 10, 670, 21))
-        font1 = QFont()
-        font1.setPointSize(12)
-        font1.setBold(True)
-        font1.setUnderline(False)
-        self.label_3.setFont(font1)
+        font = QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setUnderline(False)
+        self.label_3.setFont(font)
         self.label_3.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.label_14 = QLabel(self.scrollAreaWidgetContents_3)
-        self.label_14.setObjectName(u"label_14")
-        self.label_14.setGeometry(QRect(10, 430, 670, 21))
-        self.label_14.setFont(font1)
-        self.label_14.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.groupBox_4 = QGroupBox(self.scrollAreaWidgetContents_3)
+
+        self.verticalLayout_4.addWidget(self.label_3)
+
+        self.groupBox_4 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_4.setObjectName(u"groupBox_4")
-        self.groupBox_4.setGeometry(QRect(10, 50, 631, 101))
-        self.label_6 = QLabel(self.groupBox_4)
-        self.label_6.setObjectName(u"label_6")
-        self.label_6.setGeometry(QRect(90, 25, 401, 61))
-        self.label_6.setWordWrap(True)
-        self.pushButton = QPushButton(self.groupBox_4)
-        self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setGeometry(QRect(510, 46, 101, 20))
+        self.horizontalLayout_3 = QHBoxLayout(self.groupBox_4)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.label_10 = QLabel(self.groupBox_4)
         self.label_10.setObjectName(u"label_10")
-        self.label_10.setGeometry(QRect(20, 30, 60, 51))
+        self.label_10.setMaximumSize(QSize(75, 75))
         self.label_10.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/say_hello_thumbnail.png"))
         self.label_10.setScaledContents(True)
-        self.groupBox_10 = QGroupBox(self.scrollAreaWidgetContents_3)
+
+        self.horizontalLayout_3.addWidget(self.label_10)
+
+        self.label_6 = QLabel(self.groupBox_4)
+        self.label_6.setObjectName(u"label_6")
+        self.label_6.setWordWrap(True)
+        self.label_6.setMargin(5)
+
+        self.horizontalLayout_3.addWidget(self.label_6)
+
+        self.pushButton = QPushButton(self.groupBox_4)
+        self.pushButton.setObjectName(u"pushButton")
+
+        self.horizontalLayout_3.addWidget(self.pushButton)
+
+
+        self.verticalLayout_4.addWidget(self.groupBox_4)
+
+        self.groupBox_10 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_10.setObjectName(u"groupBox_10")
-        self.groupBox_10.setGeometry(QRect(10, 170, 631, 111))
-        self.label_7 = QLabel(self.groupBox_10)
-        self.label_7.setObjectName(u"label_7")
-        self.label_7.setGeometry(QRect(90, 30, 401, 61))
-        self.label_7.setWordWrap(True)
-        self.pushButton_2 = QPushButton(self.groupBox_10)
-        self.pushButton_2.setObjectName(u"pushButton_2")
-        self.pushButton_2.setGeometry(QRect(510, 52, 101, 21))
+        self.horizontalLayout = QHBoxLayout(self.groupBox_10)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label_11 = QLabel(self.groupBox_10)
         self.label_11.setObjectName(u"label_11")
-        self.label_11.setGeometry(QRect(20, 30, 60, 51))
+        self.label_11.setMaximumSize(QSize(75, 75))
         self.label_11.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/data_structure_thumbnail.png"))
         self.label_11.setScaledContents(True)
-        self.groupBox_11 = QGroupBox(self.scrollAreaWidgetContents_3)
-        self.groupBox_11.setObjectName(u"groupBox_11")
-        self.groupBox_11.setGeometry(QRect(10, 300, 631, 101))
-        self.label_8 = QLabel(self.groupBox_11)
-        self.label_8.setObjectName(u"label_8")
-        self.label_8.setGeometry(QRect(100, 25, 381, 61))
-        self.label_8.setWordWrap(True)
-        self.pushButton_4 = QPushButton(self.groupBox_11)
-        self.pushButton_4.setObjectName(u"pushButton_4")
-        self.pushButton_4.setGeometry(QRect(510, 48, 101, 21))
-        self.label_15 = QLabel(self.groupBox_11)
-        self.label_15.setObjectName(u"label_15")
-        self.label_15.setGeometry(QRect(20, 30, 60, 51))
-        self.label_15.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/workflow_thumbnail.png"))
-        self.label_15.setScaledContents(True)
-        self.groupBox_13 = QGroupBox(self.scrollAreaWidgetContents_3)
+
+        self.horizontalLayout.addWidget(self.label_11)
+
+        self.label_7 = QLabel(self.groupBox_10)
+        self.label_7.setObjectName(u"label_7")
+        self.label_7.setWordWrap(True)
+        self.label_7.setMargin(5)
+
+        self.horizontalLayout.addWidget(self.label_7)
+
+        self.pushButton_2 = QPushButton(self.groupBox_10)
+        self.pushButton_2.setObjectName(u"pushButton_2")
+
+        self.horizontalLayout.addWidget(self.pushButton_2)
+
+
+        self.verticalLayout_4.addWidget(self.groupBox_10)
+
+        self.groupBox_13 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_13.setObjectName(u"groupBox_13")
-        self.groupBox_13.setGeometry(QRect(10, 460, 631, 101))
-        self.label_9 = QLabel(self.groupBox_13)
-        self.label_9.setObjectName(u"label_9")
-        self.label_9.setGeometry(QRect(100, 25, 391, 51))
-        self.label_9.setWordWrap(True)
-        self.pushButton_5 = QPushButton(self.groupBox_13)
-        self.pushButton_5.setObjectName(u"pushButton_5")
-        self.pushButton_5.setGeometry(QRect(510, 40, 101, 21))
+        self.horizontalLayout_4 = QHBoxLayout(self.groupBox_13)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.label_16 = QLabel(self.groupBox_13)
         self.label_16.setObjectName(u"label_16")
-        self.label_16.setGeometry(QRect(20, 30, 60, 51))
+        self.label_16.setMaximumSize(QSize(75, 75))
         self.label_16.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/advanced_material_thumbmail.png"))
         self.label_16.setScaledContents(True)
-        self.scrollArea_2.setWidget(self.scrollAreaWidgetContents_3)
+
+        self.horizontalLayout_4.addWidget(self.label_16)
+
+        self.label_9 = QLabel(self.groupBox_13)
+        self.label_9.setObjectName(u"label_9")
+        self.label_9.setWordWrap(True)
+        self.label_9.setMargin(5)
+
+        self.horizontalLayout_4.addWidget(self.label_9)
+
+        self.pushButton_5 = QPushButton(self.groupBox_13)
+        self.pushButton_5.setObjectName(u"pushButton_5")
+
+        self.horizontalLayout_4.addWidget(self.pushButton_5)
+
+
+        self.verticalLayout_4.addWidget(self.groupBox_13)
+
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_4.addItem(self.verticalSpacer)
+
+        self.label_14 = QLabel(self.scrollAreaWidgetContents)
+        self.label_14.setObjectName(u"label_14")
+        self.label_14.setFont(font)
+        self.label_14.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+
+        self.verticalLayout_4.addWidget(self.label_14)
+
+        self.groupBox_11 = QGroupBox(self.scrollAreaWidgetContents)
+        self.groupBox_11.setObjectName(u"groupBox_11")
+        self.horizontalLayout_5 = QHBoxLayout(self.groupBox_11)
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.label_15 = QLabel(self.groupBox_11)
+        self.label_15.setObjectName(u"label_15")
+        self.label_15.setMaximumSize(QSize(75, 75))
+        self.label_15.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/workflow_thumbnail.png"))
+        self.label_15.setScaledContents(True)
+
+        self.horizontalLayout_5.addWidget(self.label_15)
+
+        self.label_8 = QLabel(self.groupBox_11)
+        self.label_8.setObjectName(u"label_8")
+        self.label_8.setWordWrap(True)
+        self.label_8.setMargin(5)
+
+        self.horizontalLayout_5.addWidget(self.label_8)
+
+        self.pushButton_4 = QPushButton(self.groupBox_11)
+        self.pushButton_4.setObjectName(u"pushButton_4")
+
+        self.horizontalLayout_5.addWidget(self.pushButton_4)
+
+
+        self.verticalLayout_4.addWidget(self.groupBox_11)
+
+
+        self.verticalLayout_5.addLayout(self.verticalLayout_4)
+
+        self.scrollArea_3.setWidget(self.scrollAreaWidgetContents)
+
+        self.verticalLayout_6.addWidget(self.scrollArea_3)
+
         self.tabWidget.addTab(self.tab_2, "")
         self.tab = QWidget()
         self.tab.setObjectName(u"tab")
@@ -190,12 +242,12 @@ class Ui_Form(object):
         self.label = QLabel(self.scrollAreaWidgetContents_2)
         self.label.setObjectName(u"label")
         self.label.setGeometry(QRect(10, 10, 670, 21))
-        self.label.setFont(font1)
+        self.label.setFont(font)
         self.label.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.label_13 = QLabel(self.scrollAreaWidgetContents_2)
         self.label_13.setObjectName(u"label_13")
         self.label_13.setGeometry(QRect(10, 280, 621, 21))
-        self.label_13.setFont(font1)
+        self.label_13.setFont(font)
         self.label_13.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         self.groupBox_8 = QGroupBox(self.scrollAreaWidgetContents_2)
         self.groupBox_8.setObjectName(u"groupBox_8")
@@ -214,10 +266,10 @@ class Ui_Form(object):
         self.groupBox_3.setGeometry(QRect(10, 340, 631, 131))
         self.pushButton_7 = QPushButton(self.groupBox_3)
         self.pushButton_7.setObjectName(u"pushButton_7")
-        self.pushButton_7.setGeometry(QRect(470, 50, 121, 24))
+        self.pushButton_7.setGeometry(QRect(450, 60, 121, 24))
         self.label_12 = QLabel(self.groupBox_3)
         self.label_12.setObjectName(u"label_12")
-        self.label_12.setGeometry(QRect(70, 20, 371, 91))
+        self.label_12.setGeometry(QRect(80, 20, 371, 91))
         self.label_12.setTextFormat(Qt.TextFormat.PlainText)
         self.label_12.setScaledContents(False)
         self.label_12.setWordWrap(True)
@@ -232,6 +284,44 @@ class Ui_Form(object):
 
         self.tabWidget.addTab(self.tab, "")
 
+        self.horizontalLayout_2.addWidget(self.tabWidget)
+
+        self.groupBox_6 = QGroupBox(Form)
+        self.groupBox_6.setObjectName(u"groupBox_6")
+        self.groupBox_6.setMinimumSize(QSize(0, 16))
+        self.verticalLayout_2 = QVBoxLayout(self.groupBox_6)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.label_17 = QLabel(self.groupBox_6)
+        self.label_17.setObjectName(u"label_17")
+        font1 = QFont()
+        font1.setFamilies([u"Courier"])
+        font1.setPointSize(11)
+        font1.setBold(False)
+        font1.setItalic(True)
+        self.label_17.setFont(font1)
+        self.label_17.setAutoFillBackground(False)
+        self.label_17.setStyleSheet(u"")
+        self.label_17.setFrameShape(QFrame.Shape.StyledPanel)
+        self.label_17.setFrameShadow(QFrame.Shadow.Raised)
+        self.label_17.setLineWidth(1)
+        self.label_17.setScaledContents(False)
+
+        self.verticalLayout_2.addWidget(self.label_17)
+
+        self.listWidget_2 = QListWidget(self.groupBox_6)
+        self.listWidget_2.setObjectName(u"listWidget_2")
+        self.listWidget_2.setStyleSheet(u"background-color: rgb(240, 240, 240);\n"
+"border-color: rgb(240, 240, 240);")
+        self.listWidget_2.setProperty(u"showDropIndicator", True)
+        self.listWidget_2.setProperty(u"isWrapping", False)
+        self.listWidget_2.setWordWrap(True)
+
+        self.verticalLayout_2.addWidget(self.listWidget_2)
+
+
+        self.horizontalLayout_2.addWidget(self.groupBox_6)
+
+
         self.retranslateUi(Form)
 
         self.tabWidget.setCurrentIndex(0)
@@ -242,30 +332,28 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
-        self.groupBox_6.setTitle(QCoreApplication.translate("Form", u"Software Info", None))
-        self.label_17.setText(QCoreApplication.translate("Form", u"<html><head/><body><p><span style=\" color:#1a0ec1;\">TextLabel</span></p></body></html>", None))
         self.groupBox_7.setTitle(QCoreApplication.translate("Form", u"Main", None))
+        self.pushButton_9.setText(QCoreApplication.translate("Form", u"New Project", None))
         self.pushButton_8.setText(QCoreApplication.translate("Form", u"Open Project", None))
         self.label_2.setText(QCoreApplication.translate("Form", u"Recent", None))
-        self.pushButton_9.setText(QCoreApplication.translate("Form", u"New Project", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"Introductory Learning Material", None))
-        self.label_14.setText(QCoreApplication.translate("Form", u"Advanced Learning Material", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("Form", u"Hello World", None))
-        self.label_6.setText(QCoreApplication.translate("Form", u" In this guide you will learn two ways of running a 'Hello, World!' program on Spine Toolbox.", None))
-        self.pushButton.setText(QCoreApplication.translate("Form", u"Open Document", None))
         self.label_10.setText("")
+        self.label_6.setText(QCoreApplication.translate("Form", u"In this guide you will learn two ways of running a 'Hello, World!' program on Spine Toolbox.", None))
+        self.pushButton.setText(QCoreApplication.translate("Form", u"Open Document", None))
         self.groupBox_10.setTitle(QCoreApplication.translate("Form", u"Introduction to Spine Data Structure", None))
+        self.label_11.setText("")
         self.label_7.setText(QCoreApplication.translate("Form", u"Learn more on the Spine Data Structure through this GitHub document.", None))
         self.pushButton_2.setText(QCoreApplication.translate("Form", u"Open Document", None))
-        self.label_11.setText("")
-        self.groupBox_11.setTitle(QCoreApplication.translate("Form", u"Setting up a Workflow", None))
-        self.label_8.setText(QCoreApplication.translate("Form", u"This documento will show how to add a Tool item to your project.", None))
-        self.pushButton_4.setText(QCoreApplication.translate("Form", u"Open Document", None))
-        self.label_15.setText("")
         self.groupBox_13.setTitle(QCoreApplication.translate("Form", u"Executing Projects", None))
+        self.label_16.setText("")
         self.label_9.setText(QCoreApplication.translate("Form", u"This document describes how executing a project works and what resources are passed between project items at execution time.", None))
         self.pushButton_5.setText(QCoreApplication.translate("Form", u"Open Document", None))
-        self.label_16.setText("")
+        self.label_14.setText(QCoreApplication.translate("Form", u"Advanced Learning Material", None))
+        self.groupBox_11.setTitle(QCoreApplication.translate("Form", u"Setting up a Workflow", None))
+        self.label_15.setText("")
+        self.label_8.setText(QCoreApplication.translate("Form", u"This document will show how to add a Tool item to your project.", None))
+        self.pushButton_4.setText(QCoreApplication.translate("Form", u"Open Document", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("Form", u"Learning materials", None))
         self.label.setText(QCoreApplication.translate("Form", u"Spine Toolbox", None))
         self.label_13.setText(QCoreApplication.translate("Form", u"Model specific workflows", None))
@@ -277,5 +365,7 @@ class Ui_Form(object):
         self.label_12.setText(QCoreApplication.translate("Form", u"This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.", None))
         self.label_4.setText(QCoreApplication.translate("Form", u"<html><head/><body><p>Prerequisites: To run the following project templates, make sure to install both Julia and SpineOpt.</p></body></html>", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("Form", u"Templates", None))
+        self.groupBox_6.setTitle(QCoreApplication.translate("Form", u"Software Info", None))
+        self.label_17.setText(QCoreApplication.translate("Form", u"<html><head/><body><p><span style=\" color:#1a0ec1;\">TextLabel</span></p></body></html>", None))
     # retranslateUi
 
