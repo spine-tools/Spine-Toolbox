@@ -67,7 +67,7 @@ class ParallelImporter(unittest.TestCase):
         scenario_2_checked = False
         for value_row in value_rows:
             for key, expected_value in expected_common_data.items():
-                self.assertEqual(value_row[key], expected_value)
+                self.assertEqual(value_row._mapping[key], expected_value)
             value = from_database(value_row.value, value_row.type)
             if value == 11.0:
                 self.assertTrue(value_row.alternative_name.startswith("scenario_1__Import@"))
@@ -79,5 +79,5 @@ class ParallelImporter(unittest.TestCase):
         self.assertTrue(scenario_2_checked)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

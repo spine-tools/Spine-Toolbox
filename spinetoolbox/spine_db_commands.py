@@ -11,8 +11,10 @@
 ######################################################################################################################
 
 """QUndoCommand subclasses for modifying the db."""
+from contextlib import suppress
 import time
 from PySide6.QtGui import QUndoCommand, QUndoStack
+from spinedb_api import SpineDBAPIError
 
 
 class AgedUndoStack(QUndoStack):
@@ -139,7 +141,8 @@ class UpdateItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.item_type = item_type
         self.redo_data = data
-        self.undo_data = [self.db_mngr.get_item(self.db_map, item_type, item["id"])._asdict() for item in data]
+        table = db_map.mapped_table(item_type)
+        self.undo_data = [table[item["id"]]._asdict() for item in data]
         if self.redo_data == self.undo_data:
             self.setObsolete(True)
         self._check = check
@@ -175,7 +178,11 @@ class AddUpdateItemsCommand(SpineDBCommand):
             self.setObsolete(True)
         self.item_type = item_type
         self.new_data = data
-        old_data = [x._asdict() for item in data if (x := self.db_map.get_item(item_type, **item))]
+        table = db_map.mapped_table(item_type)
+        old_data = []
+        for item in data:
+            with suppress(SpineDBAPIError):
+                old_data.append(table.find_item(item)._asdict())
         if self.new_data == old_data:
             self.setObsolete(True)
         self.old_data = {x["id"]: x for x in old_data}

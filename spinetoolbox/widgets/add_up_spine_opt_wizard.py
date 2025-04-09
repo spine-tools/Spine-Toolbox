@@ -242,7 +242,7 @@ class AddUpSpineOptPage(QWizardProcessPage):
                 'using Pkg; Pkg.Registry.add("General"); Pkg.add("SpineOpt")',
                 "installation",
             ),
-            "update": ("Updating", 'using Pkg; Pkg.update("SpineOpt")', "update"),
+            "update": ("Updating", 'using Pkg; Pkg.update("SpineInterface"); Pkg.update("SpineOpt")', "update"),
         }[self.wizard().required_action]
         self.setTitle(f"{processing} SpineOpt")
         julia_exe = self.field("julia_exe")
@@ -473,12 +473,14 @@ class TroubleshootSolutionPage(QWizardPage):
         if not env:
             update_cmds = """
             <span style="color:green;">julia> </span><span>import Pkg</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.update("SpineInterface")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.update("SpineOpt")</span><br>"""
         else:
             update_cmds = f"""
             <span style="color:green;">julia> </span><span>import Pkg</span><br>
             <span style="color:green;">julia> </span><span>cd("{env}")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.activate(".")</span><br>
+            <span style="color:green;">julia> </span><span>Pkg.update("SpineInterface")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.update("SpineOpt")</span><br>"""
         action_cmds = {"Install SpineOpt": install_cmds, "Update SpineOpt": update_cmds}
         self.setTitle("What now?")

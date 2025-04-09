@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Python](https://img.shields.io/badge/python-3.9%20|%203.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -11,7 +11,7 @@ Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badg
 Spine Toolbox is an open source Python package to manage data, scenarios and workflows for modelling and simulation. 
 You can have your local workflow, but work as a team through version control and SQL databases.
 
-<p align="center" width="100%">
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./fig/spinetoolbox_logo.svg" width="50%">
     <img alt="Spine Toolbox" src="./fig/spinetoolbox_on_wht.svg" width="50%">
@@ -37,12 +37,13 @@ system with scenario and data management" SoftwareX, Vol. 17, 100967, https://do
 
 ## Installation
 
-We provide three options for installing Spine Toolbox. The first two options also require that you **follow 
+We provide multiple options for installing Spine Toolbox. The first two options also require that you **follow 
 the Pre-installation steps**: 
 - [Python/pipx](#installation-with-python-and-pipx) (we intend to make stable releases every month or so)
 - [From source files](#installation-from-sources-using-git) (this is the cutting edge - and more likely to have bugs)
 - [Windows executable as .zip bundle](https://spine-tools.github.io/Downloads/) (requires only unzipping the downloaded .zip file - however, the embedded Python is likely not usable for the Python tools you might want to run)
 - [Windows installation package](#windows-64-bit-installer-package) (these are quite old - not recommended)
+- [MacOS from source files using Homebrew](#macos-installation-from-sources-with-homebrew) (to work around some rough edges on Macs)
 
 ### Pre-installation
 
@@ -51,7 +52,7 @@ These steps apply to both [Python/pipx](#installation-with-python-and-pipx) opti
 
 1. If you don't have Python installed, please install it e.g. from 
 [Python.org](https://www.python.org/downloads/).
-Please note that we support Python versions from 3.9 to 3.12. (As of 21st Oct. 2024, Python 3.13 has issues with some of our dependencies)
+Please note that we support Python versions from 3.9 to 3.13.
 
 2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
 
@@ -197,6 +198,50 @@ generated from Git tags during the `python -m pip install ...` step.
 This makes it important to fetch new tags from GitHub before running the 
 `python -m pip install ...` when upgrading. This is true also for editable 
 installations.
+
+### MacOS installation from sources with Homebrew
+
+1. Open Terminal.
+2. Install [Homebrew](https://brew.sh).
+3. Install Python with
+
+        brew install python
+
+4. Restart Terminal. Ensure your Python is the one from Homebrew by checking that the following command gives `/opt/homebrew/bin/python3`
+
+        which python3
+
+5. Clone this repository with
+
+        git clone https://github.com/spine-tools/Spine-Toolbox.git
+
+6. Use the `cd` command to go to `Spine-Toolbox` dir that was just created
+
+        cd Spine-Toolbox
+
+7. Create a Python virtual environment
+
+        python3 -m venv venv
+
+8. Activate the virtual environment (yes, the next command starts with a `.` and a space)
+
+        . venv/bin/activate
+
+9. Install Spine Toolbox along with its dependencies with
+
+        python -m pip install -r requirements.txt
+
+10. Once the installation has finished, you can now launch Spine Toolbox using
+
+        spinetoolbox
+
+Successully installed Spine Toolbox can be launched from Terminal with
+
+    cd Spine-Toolbox
+    . venv/bin/activate
+    spinetoolbox
+
+See [Upgrade when using git](#upgrade-when-using-git) on how to upgrade the installation.
 
 #### Additional comments for developers
 
@@ -458,7 +503,6 @@ already open in the issue tracker.
 
 &nbsp;
 <hr>
-<center>
 <table width=500px frame="none">
 <tr>
 <td valign="middle" width=100px>
@@ -472,4 +516,3 @@ Innovation Actions under grant agreement N°101095998.</td>
 <td valign="middle">This work has been partially supported by EU project Spine (2017-2021), which has received funding 
 from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 774629.</td>
 </table>
-</center>

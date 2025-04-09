@@ -13,13 +13,13 @@
 from contextlib import contextmanager
 import unittest
 from spinedb_api import DatabaseMapping
-from spinedb_api.mapped_items import item_factory
+from spinedb_api.mapped_items import ITEM_CLASS_BY_TYPE
 from spinetoolbox.widgets.select_database_items import SelectDatabaseItems
 from tests.mock_helpers import TestCaseWithQApplication
 
 
 class TestSelectDatabaseItems(TestCaseWithQApplication):
-    ITEMS = tuple(type_ for type_ in DatabaseMapping.item_types() if not item_factory(type_).is_protected)
+    ITEMS = tuple(type_ for type_ in DatabaseMapping.item_types() if not ITEM_CLASS_BY_TYPE[type_].is_protected)
 
     def test_restore_previously_checked_states(self):
         stored_states = {"alternative": True, "entity": True}

@@ -22,7 +22,7 @@ The *Purge items* dialog will pop up:
    :align: center
 
 The databases that are opened in the Editor are listed under *Databases*. From there you can select
-the databases where the mass removal will take place. The *Select all* -option will check all of the
+the databases where the mass removal will take place. The *Select all* option will check all of the
 boxes and *Deselect all* will in turn uncheck every box.
 
 The type of items that are to be deleted, need to be specified under *Items*. There are a couple of useful
@@ -32,7 +32,7 @@ buttons in addition to the same *Select all* and *Deselect all*: *Select entity 
 *scenario* and *scenario_alternative* items. When you are happy with your choices, press **Purge** to perform
 the mass removal.
 
-.. note:: The purge dialog can also be opened from the **Properties** -dock widget of a Data Store.
+.. note:: The purge dialog can also be opened from the **Properties** dock widget of a Data Store.
 
 .. tip:: Purging can also be an automated part of the workflow. See :ref:`Links and Loops` for more information
          about purging a database automatically.

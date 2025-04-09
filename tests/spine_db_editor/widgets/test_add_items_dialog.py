@@ -72,7 +72,8 @@ class TestAddItemsDialog(TestCaseWithQApplication):
         model.batch_set_data(indexes, values)
         dialog.accept()
         self._commit_changes_to_database("Add object class.")
-        data = self._db_map.query(self._db_map.object_class_sq).all()
+        with self._db_map:
+            data = self._db_map.query(self._db_map.object_class_sq).all()
         self.assertEqual(len(data), 1)
         self.assertEqual(data[0].name, "fish")
 
@@ -200,17 +201,15 @@ class TestAddItemsDialog(TestCaseWithQApplication):
 
     def test_add_entities_dialog_autofill(self):
         """Test that the autofill also works for the add entities dialog."""
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "first_class"}, {"name": "second_class"}]})
         self._db_mngr.add_entity_classes(
-            {self._db_map: [{"name": "first_class", "id": 1}, {"name": "second_class", "id": 2}]}
-        )
-        self._db_mngr.add_entity_classes(
-            {self._db_map: [{"name": "entity_class", "id": 3, "dimension_id_list": [1, 2]}]}
+            {self._db_map: [{"name": "entity_class", "dimension_name_list": ["first_class", "second_class"]}]}
         )
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"class_id": 1, "name": "entity_1", "id": 1},
-                    {"class_id": 2, "name": "entity_2", "id": 2},
+                    {"entity_class_name": "first_class", "name": "entity_1"},
+                    {"entity_class_name": "second_class", "name": "entity_2"},
                 ]
             }
         )
@@ -230,22 +229,22 @@ class TestAddItemsDialog(TestCaseWithQApplication):
         indexes = [model.index(0, header.index(field)) for field in ("first_class", "second_class", "entity name")]
         values = ["entity_1"]
         model.batch_set_data([indexes[0]], values)
-        expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
+        expected = ["entity_1", None, "entity_1__", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
         value = "entity_name"
         model.setData(indexes[2], value)
-        expected = ["entity_1", None, "entity_name", "Base", None, "mock_db"]
+        expected = ["entity_1", None, "entity_name", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
         value = "End"
         model.setData(indexes[1], value)
-        expected = ["entity_1", "End", "entity_name", "Base", None, "mock_db"]
+        expected = ["entity_1", "End", "entity_name", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
         values = [None, None]
         model.batch_set_data(indexes[1:3], values)
-        expected = ["entity_1", None, "entity_1__", "Base", None, "mock_db"]
+        expected = ["entity_1", None, "entity_1__", "", None, "mock_db"]
         result = [model.index(0, column).data() for column in range(model.columnCount())]
         self.assertEqual(expected, result)
 
@@ -261,18 +260,22 @@ class TestAddItemsDialog(TestCaseWithQApplication):
 
 class TestManageElementsDialog(TestBase):
     def test_add_relationship_among_existing_ones(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"class_id": 1, "name": "object_11", "id": 1},
-                    {"class_id": 1, "name": "object_12", "id": 2},
-                    {"class_id": 2, "name": "object_21", "id": 3},
+                    {"entity_class_name": "Object_1", "name": "object_11"},
+                    {"entity_class_name": "Object_1", "name": "object_12"},
+                    {"entity_class_name": "Object_2", "name": "object_21"},
                 ]
             }
         )
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "id": 3, "dimension_id_list": [1, 2]}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 3, "element_id_list": [1, 3], "id": 4}]})
+        self._db_mngr.add_entity_classes(
+            {self._db_map: [{"name": "rc", "dimension_name_list": ["Object_1", "Object_2"]}]}
+        )
+        self._db_mngr.add_entities(
+            {self._db_map: [{"name": "r", "entity_class_name": "rc", "element_name_list": ["object_11", "object_21"]}]}
+        )
         root_index = self._db_editor.entity_tree_model.index(0, 0)
         class_index = self._db_editor.entity_tree_model.index(2, 0, root_index)
         self.assertEqual(class_index.data(), "rc")
@@ -294,22 +297,24 @@ class TestManageElementsDialog(TestBase):
         self.assertEqual(dialog.new_items_model.index(0, 2).data(), "object_12__object_21")
 
     def test_accept_relationship_removal(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "id": 1}, {"name": "Object_2", "id": 2}]})
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"class_id": 1, "name": "object_11", "id": 1},
-                    {"class_id": 1, "name": "object_12", "id": 2},
-                    {"class_id": 2, "name": "object_21", "id": 3},
+                    {"entity_class_name": "Object_1", "name": "object_11"},
+                    {"entity_class_name": "Object_1", "name": "object_12"},
+                    {"entity_class_name": "Object_2", "name": "object_21"},
                 ]
             }
         )
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "id": 3, "dimension_id_list": [1, 2]}]})
+        self._db_mngr.add_entity_classes(
+            {self._db_map: [{"name": "rc", "dimension_name_list": ["Object_1", "Object_2"]}]}
+        )
         self._db_mngr.add_entities(
             {
                 self._db_map: [
-                    {"name": "r11", "class_id": 3, "element_id_list": [1, 3], "id": 4},
-                    {"name": "r21", "class_id": 3, "element_id_list": [2, 3], "id": 5},
+                    {"name": "r11", "entity_class_name": "rc", "element_name_list": ["object_11", "object_21"]},
+                    {"name": "r21", "entity_class_name": "rc", "element_name_list": ["object_12", "object_21"]},
                 ]
             }
         )
@@ -336,11 +341,82 @@ class TestManageElementsDialog(TestBase):
         dialog.remove_selected_rows()
         self.assertEqual(dialog.existing_items_model.rowCount(), 1)
         dialog.accept()
-        relationships = [x.resolve() for x in self._db_mngr.get_items(self._db_map, "entity") if x["element_id_list"]]
+        relationships = [x.resolve() for x in self._db_map.get_items("entity") if x["element_id_list"]]
         self.assertEqual(
             relationships,
-            [{"class_id": 3, "description": None, "id": 5, "name": "r21", "element_id_list": (2, 3)}],
+            [
+                {
+                    "class_id": None,
+                    "description": None,
+                    "id": None,
+                    "name": "r21",
+                    "element_id_list": (None, None),
+                    "lat": None,
+                    "lon": None,
+                    "alt": None,
+                    "shape_name": None,
+                    "shape_blob": None,
+                }
+            ],
         )
+
+
+class TestAddEntitiesDialog(TestBase):
+    def test_default_alternative_skips_add_alternatives_row(self):
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "active_by_default": False}]})
+        alternative_model = self._db_editor.ui.alternative_tree_view.model()
+        alternative_tree_root = alternative_model.index(0, 0)
+        add_alternative_index = alternative_model.index(1, 0, alternative_tree_root)
+        self.assertEqual(add_alternative_index.data(), "Type new alternative name here...")
+        alternative_selection_model = self._db_editor.ui.alternative_tree_view.selectionModel()
+        alternative_selection_model.setCurrentIndex(
+            add_alternative_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        class_index = self._db_editor.entity_tree_model.index(0, 0, root_index)
+        self.assertEqual(class_index.data(), "Object_1")
+        class_item = self._db_editor.entity_tree_model.item_from_index(class_index)
+        dialog = AddEntitiesDialog(self._db_editor, class_item, self._db_mngr, self._db_map)
+        model = dialog.model
+        model.fetchMore(QModelIndex())
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.headerData(0), "entity name")
+        self.assertEqual(model.headerData(1), "alternative")
+        self.assertEqual(model.headerData(2), "entity group")
+        self.assertEqual(model.headerData(3), "databases")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), "Base")
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 3).data(), self.db_codename)
+
+    def test_default_alternative_is_empty_if_class_is_active_by_default(self):
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}]})
+        alternative_model = self._db_editor.ui.alternative_tree_view.model()
+        alternative_tree_root = alternative_model.index(0, 0)
+        add_alternative_index = alternative_model.index(1, 0, alternative_tree_root)
+        self.assertEqual(add_alternative_index.data(), "Type new alternative name here...")
+        alternative_selection_model = self._db_editor.ui.alternative_tree_view.selectionModel()
+        alternative_selection_model.setCurrentIndex(
+            add_alternative_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        class_index = self._db_editor.entity_tree_model.index(0, 0, root_index)
+        self.assertEqual(class_index.data(), "Object_1")
+        class_item = self._db_editor.entity_tree_model.item_from_index(class_index)
+        dialog = AddEntitiesDialog(self._db_editor, class_item, self._db_mngr, self._db_map)
+        model = dialog.model
+        model.fetchMore(QModelIndex())
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.headerData(0), "entity name")
+        self.assertEqual(model.headerData(1), "alternative")
+        self.assertEqual(model.headerData(2), "entity group")
+        self.assertEqual(model.headerData(3), "databases")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), "")
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 3).data(), self.db_codename)
 
 
 if __name__ == "__main__":

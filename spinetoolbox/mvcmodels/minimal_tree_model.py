@@ -11,6 +11,8 @@
 ######################################################################################################################
 
 """Models to represent items in a tree."""
+from __future__ import annotations
+from typing import Optional
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt
 
 
@@ -22,10 +24,9 @@ class TreeItem:
         Args:
             model (MinimalTreeModel): The model where the item belongs.
         """
-        super().__init__()
-        self._children = []
+        self._children: list[TreeItem] = []
         self._model = model
-        self._parent_item = None
+        self._parent_item: Optional[TreeItem] = None
         self._fetched = False
         self._set_up_once = False
         self._has_children_initially = False
@@ -38,33 +39,28 @@ class TreeItem:
         """Returns whether this item has or could have children."""
         if self._has_children_initially:
             return True
-        return bool(self.child_count())
+        return bool(self._children)
 
     @property
     def model(self):
         return self._model
 
     @property
-    def children(self):
+    def children(self) -> list[TreeItem]:
         return self._children
 
     @children.setter
-    def children(self, children):
-        bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
-        if bad_types:
-            raise TypeError(f"Can't set children of type {bad_types} for an item of type {type(self)}")
+    def children(self, children: list[TreeItem]) -> None:
         for child in children:
             child.parent_item = self
         self._children = children
 
     @property
-    def parent_item(self):
+    def parent_item(self) -> TreeItem:
         return self._parent_item
 
     @parent_item.setter
-    def parent_item(self, parent_item):
-        if not isinstance(parent_item, TreeItem) and parent_item is not None:
-            raise ValueError("Parent must be instance of TreeItem or None")
+    def parent_item(self, parent_item: Optional[TreeItem]) -> None:
         self._parent_item = parent_item
 
     def is_valid(self):
@@ -78,12 +74,12 @@ class TreeItem:
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
         if 0 <= row < len(self._children):
-            return self.children[row]
+            return self._children[row]
         return None
 
     def last_child(self):
         """Returns the last child."""
-        return self.child(self.child_count() - 1)
+        return self.child(len(self._children) - 1)
 
     def child_count(self):
         """Returns the number of children."""

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import QWidget
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from spinetoolbox.widgets.properties_widget import PropertiesWidgetBase
 from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
 
 
@@ -125,7 +126,7 @@ class TestItemFactory(ProjectItemFactory):
         Returns:
             QWidget: item's properties tab widget
         """
-        return MagicMock()
+        return PropertiesWidgetBase(toolbox)
 
     @staticmethod
     def make_specification_menu(parent, index):

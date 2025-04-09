@@ -327,21 +327,24 @@ class FrozenTableModel(QAbstractTableModel):
         """
         value = self._data[row][column]
         header = self._data[0][column]
-        if header == "parameter":
-            db_map, id_ = value
-            tool_tip = self.db_mngr.get_item(db_map, "parameter_definition", id_).get("description")
-        elif header == "alternative":
-            db_map, id_ = value
-            tool_tip = self.db_mngr.get_item(db_map, "alternative", id_).get("description")
-        elif header == "index":
+        if header == "index":
             tool_tip = str(value[1])
         elif header == "database":
             tool_tip = self.db_mngr.name_registry.display_name(value.sa_url)
-        elif header == "entity":
-            db_map, id_ = value
-            tool_tip = self.db_mngr.get_item(db_map, "entity", id_).get("description")
         else:
-            raise RuntimeError(f"Logic error: unknown header '{header}'")
+            db_map, id_ = value
+            if id_ is None:
+                return None
+            if header == "parameter":
+                table_name = "parameter_definition"
+            elif header == "alternative":
+                table_name = "alternative"
+            elif header == "entity":
+                table_name = "entity"
+            else:
+                raise RuntimeError(f"Logic error: unknown header '{header}'")
+            with self.db_mngr.get_lock(db_map):
+                tool_tip = db_map.mapped_table(table_name)[id_]["description"]
         return plain_to_tool_tip(tool_tip)
 
     def _name_from_data(self, value, header):
@@ -354,21 +357,21 @@ class FrozenTableModel(QAbstractTableModel):
         Returns:
             str: value's name
         """
-        if header == "parameter":
-            db_map, id_ = value
-            item = self.db_mngr.get_item(db_map, "parameter_definition", id_)
-            return item.get("name")
-        if header == "alternative":
-            db_map, id_ = value
-            item = self.db_mngr.get_item(db_map, "alternative", id_)
-            return item.get("name")
         if header == "index":
             return str(value[1])
         if header == "database":
             return self.db_mngr.name_registry.display_name(value.sa_url)
         db_map, id_ = value
-        item = self.db_mngr.get_item(db_map, "entity", id_)
-        return item.get("name")
+        if id_ is None:
+            return None
+        if header == "parameter":
+            table_name = "parameter_definition"
+        elif header == "alternative":
+            table_name = "alternative"
+        else:
+            table_name = "entity"
+        with self.db_mngr.get_lock(db_map):
+            return db_map.mapped_table(table_name)[id_]["name"]
 
     @property
     def headers(self):

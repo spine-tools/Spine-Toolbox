@@ -212,7 +212,7 @@ class SearchBarEditor(QTableView):
         for item in sorted(items, key=lambda x: order_key(x.casefold())):
             qitem = QStandardItem(item)
             item_list.append(qitem)
-            qitem.setFlags(~Qt.ItemIsEditable)
+            qitem.setFlags(~Qt.ItemFlag.ItemIsEditable)
         self._model.invisibleRootItem().appendRows(item_list)
         self.first_index = self.proxy_model.mapFromSource(self._model.index(0, 0))
 
@@ -277,7 +277,7 @@ class SearchBarEditor(QTableView):
             text (str): text the user has entered on the first row
         """
         self._original_text = text
-        self.proxy_model.setFilterRegularExpression("^" + text)
+        self.proxy_model.setFilterRegularExpression(text)
         self.proxy_model.setData(self.first_index, text)
         self.refit()
 
@@ -613,7 +613,7 @@ class ParameterTypeEditor(QWidget):
             if not check_box.isChecked():
                 continue
             type_ = check_box.objectName()[: -len("_check_box")]
-            if type_ == Map.type_():
+            if type_ == Map.TYPE:
                 rank_texts = self._ui.map_rank_line_edit.text().split(",")
                 ranks = []
                 for token in rank_texts:
@@ -639,7 +639,7 @@ class ParameterTypeEditor(QWidget):
             map_ranks = []
             for fancy_type in type_list.split(DB_ITEM_SEPARATOR):
                 type_, rank = fancy_type_to_type_and_rank(fancy_type)
-                if type_ == Map.type_():
+                if type_ == Map.TYPE:
                     map_ranks.append(str(rank))
                 check_box = getattr(self._ui, f"{type_}_check_box")
                 check_box.setChecked(True)

@@ -28,6 +28,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditor,
     SearchBarEditorWithCreation,
 )
+from ...font import TOOLBOX_FONT
 from ...helpers import object_icon
 from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
@@ -289,7 +290,7 @@ def _make_exclamation_font():
     Returns:
         QFont: font
     """
-    font = QFont("Font Awesome 5 Free Solid")
+    font = QFont(TOOLBOX_FONT.family)
     font.setPixelSize(12)
     return font
 
@@ -298,7 +299,6 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
     """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
-    EXCLAMATION_FONT = _make_exclamation_font()
     EXCLAMATION_COLOR = QColor("red")
     INDICATOR_WIDTH = 18
 
@@ -309,6 +309,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
             db_mngr (SpineDBManager): database manager
         """
         super().__init__(parent, db_mngr)
+        self._exclamation_font = _make_exclamation_font()
         self._db_value_list_lookup = {}
 
     def paint(self, painter, option, index):
@@ -323,7 +324,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
             text_position = indicator_rect.center()
             text_position.setY(text_position.y() + 5)
             text_position.setX(text_position.x() - 5)
-            painter.setFont(self.EXCLAMATION_FONT)
+            painter.setFont(self._exclamation_font)
             painter.setPen(self.EXCLAMATION_COLOR)
             painter.drawText(text_position, "\uf06a")
         super().paint(painter, option, index)
@@ -787,16 +788,15 @@ class ManageItemsDelegate(QStyledItemDelegate):
         databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(", ")
         entity_class = self.parent().class_item
         dbs_by_entity_group = {}
+        db_mngr = self.parent().db_mngr
         for db_map in entity_class.db_maps:
             if parent.db_mngr.name_registry.display_name(db_map.sa_url) not in databases:
                 # Allow groups that are in selected DBs under "databases" column.
                 continue
-            class_item = self.parent().db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)
+            class_item = db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)
             if not class_item:
                 continue
-            ent_groups = self.parent().db_mngr.get_items_by_field(
-                db_map, "entity_group", "entity_class_id", class_item["id"]
-            )
+            ent_groups = db_mngr.get_items_by_field(db_map, "entity_group", "entity_class_id", class_item["id"])
             for ent_group in ent_groups:
                 dbs_by_entity_group.setdefault(ent_group["group_name"], set()).add(db_map)
         name_list = set()

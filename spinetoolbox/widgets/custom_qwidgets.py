@@ -43,6 +43,7 @@ from PySide6.QtWidgets import (
     QWidgetAction,
     QWizardPage,
 )
+from ..font import TOOLBOX_FONT
 from ..helpers import format_log_message
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
@@ -631,7 +632,7 @@ class LabelWithCopyButton(QWidget):
         font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         line_edit.setFont(font)
         button = QToolButton()
-        font = QFont("Font Awesome 5 Free Solid")
+        font = QFont(TOOLBOX_FONT.family)
         button.setFont(font)
         button.setText("\uf0c5")
         button.setToolTip("Copy text")

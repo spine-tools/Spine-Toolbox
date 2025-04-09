@@ -325,7 +325,7 @@ class Worker(QObject):
                 for id_count, id_ in enumerate(ids):
                     db_item = self._db_mngr.get_item(self._db_map, item_type, id_)
                     if keys is None:
-                        keys = [key for key in db_item._extended() if not any(word in key for word in ("id", "parsed"))]
+                        keys = [key for key in db_item.extended() if not any(word in key for word in ("id", "parsed"))]
                     items.append([self._parse_value(self._db_mngr, self._db_map, db_item, key) for key in keys])
                     if id_count % self.CHUNK_SIZE == 0:
                         self.thread().eventDispatcher().processEvents(QEventLoop.ProcessEventsFlag.AllEvents)

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides the main() function."""
+import asyncio
 import multiprocessing
 import os
 import PySide6
@@ -24,15 +25,14 @@ from argparse import ArgumentParser
 import logging
 import sys
 from PySide6.QtCore import QTimer
-from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication
+from .font import TOOLBOX_FONT
 from .headless import Status, headless_main
 from .helpers import pyside6_version_check
 from .ui_main import ToolboxUI
 from .version import __version__
 
-# Importing resources_icons_rc initializes resources and Font Awesome gets added to the application
-from . import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
+# MacOS complains about missing item icons without the following line.
 from spine_items import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
 
 
@@ -40,6 +40,8 @@ from spine_items import resources_icons_rc  # pylint: disable=unused-import  # i
 def main():
     """Creates main window GUI and starts main event loop."""
     multiprocessing.freeze_support()
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
@@ -57,9 +59,7 @@ def main():
         return return_code
     app = QApplication(sys.argv)
     app.setApplicationName("Spine Toolbox")
-    status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
-    if status < 0:
-        logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
+    TOOLBOX_FONT.get_family_from_font_database()
     window = ToolboxUI()
     window.show()
     QTimer.singleShot(0, lambda: window.init_tasks(args.project))

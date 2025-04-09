@@ -17,6 +17,7 @@ import logging
 import os
 import pathlib
 import sys
+import threading
 from zipfile import ZipFile
 import numpy as np
 from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
@@ -43,13 +44,13 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
-    QScrollArea,
     QStyleFactory,
     QToolButton,
-    QVBoxLayout,
     QWidget,
 )
+from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.load_project_items import load_item_specification_factories
+from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable, resolve_julia_project
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .changelog_diff import pick_latest_release
 from .config import SPINE_TOOLBOX_REPO_URL
@@ -72,6 +73,8 @@ from .helpers import (
     solve_connection_file,
     supported_img_formats,
     unique_name,
+    clear_qsettings,
+    basic_console_icon,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
@@ -106,7 +109,7 @@ from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.open_project_dialog import OpenProjectDialog
-from .widgets.persistent_console_widget import PersistentConsoleWidget
+from .widgets.persistent_console_widget import PersistentConsoleWidget, ConsoleWindow
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.settings_widget import SettingsWidget
 
@@ -171,6 +174,7 @@ class ToolboxUI(QMainWindow):
         self.execution_in_progress = False
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
+        self.shutdown_and_clear_settings = False
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -216,10 +220,8 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
-        link_tab = self._make_properties_tab(self.link_properties_widgets[LoggingConnection])
-        jump_tab = self._make_properties_tab(self.link_properties_widgets[LoggingJump])
-        self.ui.tabWidget_item_properties.addTab(link_tab, "Link properties")
-        self.ui.tabWidget_item_properties.addTab(jump_tab, "Loop properties")
+        self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingConnection], "Link properties")
+        self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingJump], "Loop properties")
         self._plugin_manager = PluginManager(self)
         self._plugin_manager.load_installed_plugins()
         self.refresh_toolbars()
@@ -291,6 +293,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
         self.kernels_menu.aboutToShow.connect(self.fetch_kernels)
         self.kernels_menu.aboutToHide.connect(self.stop_fetching_kernels)
+        self.ui.actionStart_default_python_in_basic_console.triggered.connect(self.start_detached_python_basic_console)
+        self.ui.actionStart_default_julia_in_basic_console.triggered.connect(self.start_detached_julia_basic_console)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
@@ -834,22 +838,8 @@ class ToolboxUI(QMainWindow):
     def make_item_properties_uis(self):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
-            color = factory.icon_color()
-            icon = factory.icon()
-            properties_ui.set_color_and_icon(color, icon)
-            scroll_area = QScrollArea(self)
-            scroll_area.setWidget(properties_ui)
-            scroll_area.setWidgetResizable(True)
-            tab = self._make_properties_tab(scroll_area)
-            self.ui.tabWidget_item_properties.addTab(tab, item_type)
-
-    def _make_properties_tab(self, properties_ui):
-        tab = QWidget(self)
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        layout.addWidget(properties_ui)
-        return tab
+            properties_ui.set_color_and_icon(factory.icon_color(), factory.icon())
+            self.ui.tabWidget_item_properties.addTab(properties_ui, item_type)
 
     def add_project_items(self, items_dict):
         """Pushes an AddProjectItemsCommand to the undo stack.
@@ -894,7 +884,7 @@ class ToolboxUI(QMainWindow):
             self.move(0, 0)
         ensure_window_is_on_screen(self, original_size)
         if window_maximized == "true":
-            self.setWindowState(Qt.WindowMaximized)
+            self.setWindowState(Qt.WindowState.WindowMaximized)
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -1684,7 +1674,9 @@ class ToolboxUI(QMainWindow):
         """Retrieves project from server."""
         msg = "Retrieve project by Job Id"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, msg, "Job Id?:", flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, msg, "Job Id?:", flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
+        )
         job_id = answer[0]
         if not job_id:  # Cancel button clicked
             return
@@ -2012,7 +2004,6 @@ class ToolboxUI(QMainWindow):
         Args:
              event (QCloseEvent): PySide6 event
         """
-        # Show confirm exit message box
         exit_confirmed = self._perform_pre_exit_tasks()
         if not exit_confirmed:
             event.ignore()
@@ -2030,7 +2021,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
-        self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowMaximized)
+        self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized)
         # Save number of screens
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
@@ -2042,6 +2033,8 @@ class ToolboxUI(QMainWindow):
             for editor in self.get_all_multi_tab_spec_editors(item_type):
                 editor.close()
         #save_changelog_to_settings(self._qsettings)
+        if self.shutdown_and_clear_settings:
+            clear_qsettings(self._qsettings)
         event.accept()
 
     def _serialize_selected_items(self):
@@ -2172,7 +2165,7 @@ class ToolboxUI(QMainWindow):
             self.ui.actionRemove,
         ]
         for action in actions:
-            action.setShortcutContext(Qt.WidgetShortcut)
+            action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
             self.ui.graphicsView.addAction(action)
 
     @Slot(str, str)
@@ -2185,7 +2178,7 @@ class ToolboxUI(QMainWindow):
         """Shows an error message with the given title and message."""
         box = QErrorMessage(self)
         box.setWindowTitle(title)
-        box.setWindowModality(Qt.ApplicationModal)
+        box.setWindowModality(Qt.WindowModality.ApplicationModal)
         box.showMessage(message)
 
     def _connect_project_signals(self):
@@ -2278,7 +2271,7 @@ class ToolboxUI(QMainWindow):
         if self._project is None:
             self.msg.emit("Please open or create a project first")
             return
-        open_url("file:///" + self._project.project_dir)
+        open_url("file:///" + self._project.project_dir + "/")
 
     @Slot(bool)
     def _open_project_item_directory(self, _):
@@ -2332,7 +2325,8 @@ class ToolboxUI(QMainWindow):
         """Renames active project item."""
         item = self.active_project_item
         answer = QInputDialog.getText(
-            self, "Rename Item", "New name:", text=item.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            self, "Rename Item", "New name:", text=item.name,
+            flags=Qt.WindowType.WindowTitleHint | Qt.WindowType.WindowCloseButtonHint
         )
         if not answer[1]:
             return
@@ -2367,6 +2361,54 @@ class ToolboxUI(QMainWindow):
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
         return menu
+
+    @Slot()
+    def start_detached_python_basic_console(self):
+        """Starts basic console with the default Python interpreter."""
+        python = resolve_python_interpreter(self.qsettings())
+        _set_resource_limits(self.qsettings(), threading.Lock())
+        self.start_detached_basic_console("python", python)
+
+    @Slot()
+    def start_detached_julia_basic_console(self):
+        """Starts basic console with the default Julia executable."""
+        julia = resolve_julia_executable(self.qsettings())
+        project = resolve_julia_project(self.qsettings())
+        if not julia:
+            self.msg_warning.emit("No Julia installation found. Add path to a Julia executable in Spine "
+                                  "Toolbox Settings [<b>File->Settings->Tools</b>]")
+            return
+        _set_resource_limits(self.qsettings(), threading.Lock())
+        self.start_detached_basic_console("julia", julia, project)
+
+    def start_detached_basic_console(self, language, executable, julia_project=None):
+        """Launches a new detached basic console with the given executable
+        or activates an existing Console if the kernel is already running.
+
+        Args:
+            language (str): Console kernel language
+            executable (str): Abs. path to kernel file
+            julia_project (str): Path to Julia environment
+        """
+        for pcw in self._persistent_consoles.values():
+            if pcw.detached_console_id is not None:
+                if os.path.samefile(pcw.detached_console_id, executable) and None in pcw.owners:
+                    # Console running the requested kernel already exists, show and activate it
+                    if pcw.parent().isMinimized():
+                        pcw.parent().showNormal()
+                    pcw.parent().activateWindow()
+                    return
+        icon = basic_console_icon(language)
+        console_window = ConsoleWindow(icon, language)
+        c = PersistentConsoleWidget(self, None, language, None, console_window)
+        key = c.request_start_kernel(executable, julia_project)
+        if not key:
+            self.msg_error.emit(f"Starting Basic Console for {executable} failed")
+            return
+        c.insert_banner(language)
+        self._persistent_consoles[key] = c
+        console_window.console_closed.connect(self._cleanup_basic_console)
+        c.show()
 
     @Slot(str, QIcon, bool)
     def start_detached_jupyter_console(self, kernel_name, icon, conda):
@@ -2514,6 +2556,17 @@ class ToolboxUI(QMainWindow):
         exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
         engine_mngr = make_engine_manager(exec_remotely)
         engine_mngr.shutdown_kernel(conn_file)
+
+    @Slot(str)
+    def _cleanup_basic_console(self, key):
+        """Removes reference to the Basic Console and closes the kernel manager on Engine."""
+        c = self._persistent_consoles.pop(key, None)
+        if not c:
+            return
+        c.shutdown_executor()
+        exec_remotely = self.qsettings().value("engineSettings/remoteExecutionEnabled", "false") == "true"
+        engine_mngr = make_engine_manager(exec_remotely)
+        engine_mngr.kill_persistent(key)
 
     def _shutdown_engine_kernels(self):
         """Shuts down all persistent and Jupyter kernels managed by Spine Engine."""

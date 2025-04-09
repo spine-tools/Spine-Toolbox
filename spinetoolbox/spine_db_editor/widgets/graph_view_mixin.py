@@ -700,7 +700,7 @@ class GraphViewMixin:
         )
         if not pv:
             return None
-        return from_database(pv["value"], pv["type"])
+        return pv["parsed_value"]
 
     def get_item_name(self, db_map, entity_id):
         if not self.ui.graphicsView.name_parameter:

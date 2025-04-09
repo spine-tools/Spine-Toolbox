@@ -58,7 +58,7 @@ class TestTypeValidator(TestCaseWithQApplication):
             waiter.wait()
             self.assertEqual(
                 waiter.args,
-                (ValidationKey("parameter_definition", id(self._db_map), price["id"].private_id), True),
+                ([ValidationKey("parameter_definition", id(self._db_map), price["id"].private_id)], [True]),
             )
 
     def test_invalid_parameter_default_value(self):
@@ -78,7 +78,7 @@ class TestTypeValidator(TestCaseWithQApplication):
             waiter.wait()
             self.assertEqual(
                 waiter.args,
-                (ValidationKey("parameter_definition", id(self._db_map), price["id"].private_id), False),
+                ([ValidationKey("parameter_definition", id(self._db_map), price["id"].private_id)], [False]),
             )
 
     def test_valid_parameter_value(self):
@@ -103,7 +103,7 @@ class TestTypeValidator(TestCaseWithQApplication):
             waiter.wait()
             self.assertEqual(
                 waiter.args,
-                (ValidationKey("parameter_value", id(self._db_map), fish_n_chips_price["id"].private_id), True),
+                ([ValidationKey("parameter_value", id(self._db_map), fish_n_chips_price["id"].private_id)], [True]),
             )
 
 

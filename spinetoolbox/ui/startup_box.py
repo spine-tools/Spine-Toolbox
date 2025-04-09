@@ -251,7 +251,7 @@ class Ui_Form(object):
         self.label_3.setText(QCoreApplication.translate("Form", u"Introductory Learning Material", None))
         self.label_14.setText(QCoreApplication.translate("Form", u"Advanced Learning Material", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("Form", u"Hello World", None))
-        self.label_6.setText(QCoreApplication.translate("Form", u" In this guide you will learn two ways of running a \u201cHello, World!\u201d program on Spine Toolbox.", None))
+        self.label_6.setText(QCoreApplication.translate("Form", u" In this guide you will learn two ways of running a 'Hello, World!' program on Spine Toolbox.", None))
         self.pushButton.setText(QCoreApplication.translate("Form", u"Open Document", None))
         self.label_10.setText("")
         self.groupBox_10.setTitle(QCoreApplication.translate("Form", u"Introduction to Spine Data Structure", None))

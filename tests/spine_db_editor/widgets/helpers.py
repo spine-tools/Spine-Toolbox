@@ -110,7 +110,7 @@ def add_entity_tree_item(item_names, view, menu_action_text, dialog_class):
 
 def add_zero_dimension_entity_class(view, name):
     view._context_item = view.model().root_item
-    add_entity_tree_item({0: name}, view, "Add entity classes", AddEntityClassesDialog)
+    add_entity_tree_item({0: name}, view, "Add entity classes...", AddEntityClassesDialog)
 
 
 def add_entity(view, name, entity_class_index=0, alternative=None, group=None):
@@ -123,7 +123,7 @@ def add_entity(view, name, entity_class_index=0, alternative=None, group=None):
         data.update({1: alternative})
     if group:
         data.update({2: group})
-    add_entity_tree_item(data, view, "Add entities", AddEntitiesDialog)
+    add_entity_tree_item(data, view, "Add entities...", AddEntitiesDialog)
 
 
 def select_item_with_index(view, index, extend=False):

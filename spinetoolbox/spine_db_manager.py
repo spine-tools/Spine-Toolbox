@@ -14,6 +14,7 @@
 from contextlib import suppress
 import json
 import os
+from threading import RLock
 from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtWidgets import QApplication, QMessageBox
 from sqlalchemy.engine.url import URL
@@ -38,6 +39,7 @@ from spinedb_api import (
     relativedelta_to_duration,
     to_database,
 )
+from spinedb_api.exception import NothingToCommit
 from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.parameter_value import (
     deep_copy_value,
@@ -50,7 +52,7 @@ from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinetoolbox.database_display_names import NameRegistry
 from .helpers import busy_effect, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
-from .parameter_type_validation import ParameterTypeValidator, ValidationKey
+from .parameter_type_validation import ParameterTypeValidator
 from .spine_db_commands import (
     AddItemsCommand,
     AddUpdateItemsCommand,
@@ -102,6 +104,12 @@ class SpineDBManager(QObject):
         object: database mapping
         bool: True if database has become clean, False if it became dirty
     """
+    database_reset = Signal(object)
+    """Emitted whenever database is reset.
+
+    Args:
+        object: database mapping
+    """
 
     def __init__(self, settings, parent, synchronous=False):
         """
@@ -115,6 +123,8 @@ class SpineDBManager(QObject):
         self._db_maps = {}
         self.name_registry = NameRegistry(self)
         self._workers = {}
+        self._lock_lock = RLock()
+        self._db_locks = {}
         self.listeners = {}
         self.undo_stack = {}
         self.undo_action = {}
@@ -179,6 +189,9 @@ class SpineDBManager(QObject):
             SpineDBWorker: worker for the db_map
         """
         return self._workers[db_map]
+
+    def get_lock(self, db_map):
+        return self._db_locks[db_map]
 
     def register_fetch_parent(self, db_map, parent):
         """Registers a fetch parent.
@@ -331,6 +344,9 @@ class SpineDBManager(QObject):
         if worker is not None:
             worker.close_db_map()  # NOTE: This calls ThreadPoolExecutor.shutdown() which waits for Futures to finish
             worker.clean_up()
+        with self._lock_lock:
+            with suppress(KeyError):
+                del self._db_locks[db_map]
         del self._validated_values["parameter_definition"][id(db_map)]
         del self._validated_values["parameter_value"][id(db_map)]
         self.undo_stack[db_map].cleanChanged.disconnect()
@@ -402,6 +418,8 @@ class SpineDBManager(QObject):
             worker.clean_up()
             raise error
         self._workers[db_map] = worker
+        with self._lock_lock:
+            self._db_locks[db_map] = RLock()
         self._db_maps[url] = db_map
         self._validated_values["parameter_definition"][id(db_map)] = {}
         self._validated_values["parameter_value"][id(db_map)] = {}
@@ -568,6 +586,7 @@ class SpineDBManager(QObject):
             worker.reset_session()
             self.undo_stack[db_map].clear()
             reset_db_maps.add(db_map)
+            self.database_reset.emit(db_map)
         return reset_db_maps
 
     def commit_session(self, commit_msg, *dirty_db_maps, cookie=None):
@@ -599,7 +618,11 @@ class SpineDBManager(QObject):
             bool
         """
         try:
-            transformations, info = db_map.commit_session(commit_msg, apply_compatibility_transforms=False)
+            try:
+                transformations, info = db_map.commit_session(commit_msg, apply_compatibility_transforms=False)
+            except NothingToCommit:
+                self.undo_stack[db_map].setClean()
+                return True
             self.undo_stack[db_map].setClean()
             if info:
                 info = "".join(f"- {x}\n" for x in info)
@@ -710,26 +733,25 @@ class SpineDBManager(QObject):
             PublicItem: the item
         """
         mapped_table = db_map.mapped_table(item_type)
-        item = mapped_table.find_item_by_id(id_)
-        if hasattr(item, "public_item"):
-            return item.public_item
-        return item
+        try:
+            return mapped_table[id_].public_item
+        except KeyError:
+            return None
 
-    def get_field(self, db_map, item_type, id_, field):
-        return self.get_item(db_map, item_type, id_).get(field)
-
-    @staticmethod
-    def get_items(db_map, item_type):
+    def get_items(self, db_map, item_type, **kwargs):
         """Returns a list of the items of the given type in the given db map.
 
         Args:
             db_map (DatabaseMapping)
             item_type (str)
+            **kwargs: extra arguments passed to database mapping
 
         Returns:
             list
         """
-        return db_map.get_items(item_type)
+        with self.get_lock(db_map):
+            table = db_map.mapped_table(item_type)
+            return db_map.find(table, **kwargs)
 
     def get_items_by_field(self, db_map, item_type, field, value):
         """Returns a list of items of the given type in the given db map that have the given value
@@ -744,7 +766,7 @@ class SpineDBManager(QObject):
         Returns:
             list
         """
-        return [x for x in self.get_items(db_map, item_type) if x.get(field) == value]
+        return [x for x in db_map.get_items(item_type) if x.get(field) == value]
 
     def get_item_by_field(self, db_map, item_type, field, value):
         """Returns the first item of the given type in the given db map
@@ -916,7 +938,7 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value or definition id
         """
         item = self.get_item(db_map, item_type, id_)
-        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+        parsed_value = item["parsed_value"]
         if isinstance(parsed_value, IndexedValue):
             return parsed_value.indexes
         return [""]
@@ -932,7 +954,7 @@ class SpineDBManager(QObject):
             role (int, optional)
         """
         item = self.get_item(db_map, item_type, id_)
-        parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+        parsed_value = item["parsed_value"]
         if isinstance(parsed_value, IndexedValue):
             parsed_value = parsed_value.get_value(index)
         if role == Qt.ItemDataRole.EditRole:
@@ -967,14 +989,19 @@ class SpineDBManager(QObject):
             id_ (int): The parameter_value_list id
             role (int, optional)
         """
-        return [
-            self.get_value(db_map, item, role=role)
-            for item in self.get_items_by_field(db_map, "list_value", "parameter_value_list_id", id_)
-        ]
+        with self.get_lock(db_map):
+            list_value_table = db_map.mapped_table("list_value")
+            return [
+                self.get_value(db_map, item, role=role)
+                for item in db_map.find(list_value_table, parameter_value_list_id=id_)
+            ]
 
     def get_scenario_alternative_id_list(self, db_map, scen_id):
-        scen = self.get_item(db_map, "scenario", scen_id)
-        return scen["alternative_id_list"] if scen else []
+        if db_map in self._db_locks:
+            with self._db_locks[db_map]:
+                scen = self.get_item(db_map, "scenario", scen_id)
+                return scen["alternative_id_list"] if scen else []
+        return []
 
     def import_data(self, db_map_data, command_text="Import data"):
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
@@ -987,21 +1014,22 @@ class SpineDBManager(QObject):
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
-            errors = []
-            try:
-                data_for_import = get_data_for_import(db_map, errors, **data)
-            except (TypeError, ValueError) as err:
-                errors.append(str(err))
-                msg = f"Failed to import data: {err}. Please check that your data source has the right format."
-                db_map_error_log.setdefault(db_map, []).append(msg)
-                continue
-            db_map_error_log.setdefault(db_map, []).extend(errors)
-            identifier = self.get_command_identifier()
-            for item_type, items in data_for_import:
-                if isinstance(items, tuple):
-                    items, errors = items
-                    db_map_error_log.setdefault(db_map, []).extend(errors)
-                self.add_update_items(item_type, {db_map: list(items)}, identifier=identifier)
+            with db_map:
+                errors = []
+                try:
+                    data_for_import = get_data_for_import(db_map, errors, **data)
+                except (TypeError, ValueError) as err:
+                    errors.append(str(err))
+                    msg = f"Failed to import data: {err}. Please check that your data source has the right format."
+                    db_map_error_log.setdefault(db_map, []).append(msg)
+                    continue
+                db_map_error_log.setdefault(db_map, []).extend(errors)
+                identifier = self.get_command_identifier()
+                for item_type, items in data_for_import:
+                    if isinstance(items, tuple):
+                        items, errors = items
+                        db_map_error_log.setdefault(db_map, []).extend(errors)
+                    self.add_update_items(item_type, {db_map: list(items)}, identifier=identifier)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1200,9 +1228,10 @@ class SpineDBManager(QObject):
             for item in expanded_data:
                 packed_data.setdefault(item["id"], {})[item["index"]] = (item["value"], item["type"])
             items = []
+            value_table = db_map.mapped_table("parameter_value")
             for id_, indexed_values in packed_data.items():
-                item = self.get_item(db_map, "parameter_value", id_)
-                parsed_value = self.get_value(db_map, item, role=PARSED_ROLE)
+                item = value_table.find_item_by_id(id_)
+                parsed_value = item["parsed_value"]
                 if isinstance(parsed_value, IndexedValue):
                     parsed_value = deep_copy_value(parsed_value)
                     for index, (val, typ) in indexed_values.items():
@@ -1298,8 +1327,7 @@ class SpineDBManager(QObject):
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    @staticmethod
-    def get_data_to_set_scenario_alternatives(db_map, scenarios):
+    def get_data_to_set_scenario_alternatives(self, db_map, scenarios):
         """Returns data to add and remove, in order to set wide scenario alternatives.
 
         Args:
@@ -1321,23 +1349,33 @@ class SpineDBManager(QObject):
         scen_alts_to_add = []
         scen_alt_ids_to_remove = {}
         errors = []
-        for scen in scenarios:
-            current_scen = db_map.get_item("scenario", id=scen["id"])
-            if current_scen is None:
-                error = f"no scenario matching {scen} to set alternatives for"
-                errors.append(error)
-                continue
-            for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
-                item_to_add = {"scenario_id": current_scen["id"], "alternative_id": alternative_id, "rank": k + 1}
-                scen_alts_to_add.append(item_to_add)
-            for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
-                item_to_add = {"scenario_id": current_scen["id"], "alternative_name": alternative_name, "rank": k + 1}
-                scen_alts_to_add.append(item_to_add)
-            for alternative_name in current_scen["alternative_name_list"]:
-                current_scen_alt = db_map.get_item(
-                    "scenario_alternative", scenario_name=current_scen["name"], alternative_name=alternative_name
-                )
-                scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
+        with self._db_locks[db_map]:
+            scenario_table = db_map.mapped_table("scenario")
+            for scen in scenarios:
+                try:
+                    current_scen = scenario_table.find_item_by_id(scen["id"])
+                except SpineDBAPIError:
+                    error = f"no scenario matching {scen} to set alternatives for"
+                    errors.append(error)
+                    continue
+                scenario_id = current_scen["id"]
+                for k, alternative_id in enumerate(scen.get("alternative_id_list", ())):
+                    item_to_add = {"scenario_id": scenario_id, "alternative_id": alternative_id, "rank": k + 1}
+                    scen_alts_to_add.append(item_to_add)
+                for k, alternative_name in enumerate(scen.get("alternative_name_list", ())):
+                    item_to_add = {
+                        "scenario_id": scenario_id,
+                        "alternative_name": alternative_name,
+                        "rank": k + 1,
+                    }
+                    scen_alts_to_add.append(item_to_add)
+                scenario_alternative_table = db_map.mapped_table("scenario_alternative")
+                scenario_name = current_scen["name"]
+                for alternative_name in current_scen["alternative_name_list"]:
+                    current_scen_alt = scenario_alternative_table.find_item(
+                        {"scenario_name": scenario_name, "alternative_name": alternative_name}
+                    )
+                    scen_alt_ids_to_remove[current_scen_alt["id"]] = current_scen_alt
         # Remove items that are both to add and to remove
         for id_, to_rm in list(scen_alt_ids_to_remove.items()):
             i = next((i for i, to_add in enumerate(scen_alts_to_add) if _is_equal(to_add, to_rm)), None)
@@ -1488,63 +1526,78 @@ class SpineDBManager(QObject):
         """Finds and returns cascading entity classes for the given dimension ids."""
         db_map_cascading_data = {}
         for db_map, dimension_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity_class"):
-                if set(item["dimension_id_list"]) & set(dimension_ids):
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            dimension_ids = set(dimension_ids)
+            with self.get_lock(db_map):
+                class_table = db_map.mapped_table("entity_class")
+                db_map.do_fetch_all(class_table)
+                for item in class_table.values():
+                    if item.is_valid() and not dimension_ids.isdisjoint(item["dimension_id_list"]):
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_entities(self, db_map_ids):
         """Finds and returns cascading entities for the given element ids."""
         db_map_cascading_data = {}
         for db_map, element_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity"):
-                if set(item["element_id_list"]) & set(element_ids):
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            element_ids = set(element_ids)
+            with self.get_lock(db_map):
+                entity_table = db_map.mapped_table("entity")
+                db_map.do_fetch_all(entity_table)
+                for item in entity_table.values():
+                    if item.is_valid() and not element_ids.isdisjoint(item["element_id_list"]):
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
-    def find_cascading_parameter_data(self, db_map_ids, item_type):
+    def find_cascading_parameter_definitions(self, db_map_ids):
         """Finds and returns cascading parameter definitions or values for the given entity_class ids."""
         db_map_cascading_data = {}
         for db_map, entity_class_ids in db_map_ids.items():
-            for item in self.get_items(db_map, item_type):
-                if item["entity_class_id"] in entity_class_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            entity_class_ids = set(entity_class_ids)
+            with self.get_lock(db_map):
+                definition_table = db_map.mapped_table("parameter_definition")
+                db_map.do_fetch_all(definition_table)
+                for item in definition_table.values():
+                    if item.is_valid() and item["entity_class_id"] in entity_class_ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_ids):
         """Finds and returns cascading parameter values for the given entity ids."""
         db_map_cascading_data = {}
         for db_map, entity_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["entity_id"] in entity_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
-        return db_map_cascading_data
-
-    def find_cascading_parameter_values_by_definition(self, db_map_ids):
-        """Finds and returns cascading parameter values for the given parameter_definition ids."""
-        db_map_cascading_data = {}
-        for db_map, param_def_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "parameter_value"):
-                if item["parameter_id"] in param_def_ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            entity_ids = set(entity_ids)
+            with self.get_lock(db_map):
+                parameter_table = db_map.mapped_table("parameter_value")
+                db_map.do_fetch_all(parameter_table)
+                for item in parameter_table.values():
+                    if item.is_valid() and item["entity_id"] in entity_ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_cascading_scenario_alternatives_by_scenario(self, db_map_ids):
         """Finds and returns cascading scenario alternatives for the given scenario ids."""
         db_map_cascading_data = {}
         for db_map, ids in db_map_ids.items():
-            for item in self.get_items(db_map, "scenario_alternative"):
-                if item["scenario_id"] in ids:
-                    db_map_cascading_data.setdefault(db_map, []).append(item)
+            ids = set(ids)
+            with self.get_lock(db_map):
+                scenario_alternative_table = db_map.mapped_table("scenario_alternative")
+                db_map.do_fetch_all(scenario_alternative_table)
+                for item in scenario_alternative_table.values():
+                    if item.is_valid() and item["scenario_id"] in ids:
+                        db_map_cascading_data.setdefault(db_map, []).append(item.public_item)
         return db_map_cascading_data
 
     def find_groups_by_entity(self, db_map_ids):
         """Finds and returns groups for the given entity ids."""
         db_map_group_data = {}
         for db_map, entity_ids in db_map_ids.items():
-            for item in self.get_items(db_map, "entity_group"):
-                if item["entity_id"] in entity_ids:
-                    db_map_group_data.setdefault(db_map, []).append(item)
+            entity_ids = set(entity_ids)
+            with self.get_lock(db_map):
+                entity_group_table = db_map.mapped_table("entity_group")
+                db_map.do_fetch_all(entity_group_table)
+                for item in entity_group_table.values():
+                    if item.is_valid() and item["entity_id"] in entity_ids:
+                        db_map_group_data.setdefault(db_map, []).append(item.public_item)
         return db_map_group_data
 
     def duplicate_scenario(self, scen_data, dup_name, db_map):
@@ -1609,8 +1662,9 @@ class SpineDBManager(QObject):
     def _get_data_for_export(self, db_map_item_ids):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
-            for key, items in export_data(db_map, parse_value=load_db_value, **item_ids).items():
-                data.setdefault(key, []).extend(items)
+            with db_map:
+                for key, items in export_data(db_map, parse_value=load_db_value, **item_ids).items():
+                    data.setdefault(key, []).extend(items)
         return data
 
     def export_data(self, caller, db_map_item_ids, file_path, file_filter):
@@ -1633,21 +1687,18 @@ class SpineDBManager(QObject):
 
     def export_to_sqlite(self, file_path, data_for_export, caller):
         """Exports given data into SQLite file."""
-        url = URL("sqlite", database=file_path)
+        url = URL.create("sqlite", database=file_path)
         if not self._is_url_available(url, caller):
             return
-        create_new_spine_database(url)
-        db_map = DatabaseMapping(url)
-        import_data(db_map, **data_for_export)
-        try:
-            db_map.commit_session("Export data from Spine Toolbox.")
-        except SpineDBAPIError as err:
-            error_msg = f"[SpineDBAPIError] Unable to export file <b>{file_path}</b>: {err.msg}"
-            caller.msg_error.emit(error_msg)
-        else:
-            caller.file_exported.emit(file_path, 1.0, True)
-        finally:
-            db_map.close()
+        with DatabaseMapping(url, create=True) as db_map:
+            import_data(db_map, **data_for_export)
+            try:
+                db_map.commit_session("Export data from Spine Toolbox.")
+            except SpineDBAPIError as err:
+                error_msg = f"[SpineDBAPIError] Unable to export file <b>{file_path}</b>: {err.msg}"
+                caller.msg_error.emit(error_msg)
+            else:
+                caller.file_exported.emit(file_path, 1.0, True)
 
     @staticmethod
     def export_to_json(file_path, data_for_export, caller):
@@ -1661,7 +1712,7 @@ class SpineDBManager(QObject):
     def export_to_excel(file_path, data_for_export, caller):
         """Exports given data into Excel file."""
         # NOTE: We import data into an in-memory Spine db and then export that to excel.
-        url = URL("sqlite", database="")
+        url = URL.create("sqlite", database="")
         with DatabaseMapping(url, create=True) as db_map:
             count, errors = import_data(db_map, **data_for_export, unparse_value=dump_db_value)
             file_name = os.path.split(file_path)[1]
@@ -1694,10 +1745,11 @@ class SpineDBManager(QObject):
             return {}
         return worker.commit_cache.get(commit_id.db_id, {})
 
-    @Slot(ValidationKey, bool)
-    def _parameter_value_validated(self, key, is_valid):
-        with suppress(KeyError):
-            self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
+    @Slot(list, list)
+    def _parameter_value_validated(self, keys, is_valid_list):
+        for key, is_valid in zip(keys, is_valid_list):
+            with suppress(KeyError):
+                self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
 
     def _clear_validated_value_ids(self, item_type, db_map_data):
         db_map_validated_values = self._validated_values[item_type]

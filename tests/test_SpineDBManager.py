@@ -254,24 +254,35 @@ class TestAddItems(TestCaseWithQApplication):
 
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
-        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value.", "id": 1}]}
+        db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
         self._db_mngr.add_items("metadata", db_map_data)
+        metadata_id = db_map.metadata(name="my_metadata", value="Metadata value.")["id"]
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "metadata", 1).resolve(),
-            {"name": "my_metadata", "value": "Metadata value.", "id": 1},
+            self._db_mngr.get_item(db_map, "metadata", metadata_id).resolve(),
+            {"name": "my_metadata", "value": "Metadata value.", "id": None},
         )
 
     def test_add_object_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, None, create=True)
-        import_functions.import_object_classes(db_map, ("my_class",))
-        import_functions.import_objects(db_map, (("my_class", "my_object"),))
-        import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
-        db_map.commit_session("Add test data.")
-        db_map.close()
-        db_map_data = {db_map: [{"entity_id": 1, "metadata_id": 1, "id": 1}]}
+        with db_map:
+            import_functions.import_entity_classes(db_map, ("my_class",))
+            import_functions.import_entities(db_map, (("my_class", "my_object"),))
+            import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
+            db_map.commit_session("Add test data.")
+            entity_id = db_map.entity(entity_class_name="my_class", name="my_object")["id"]
+            metadata_id = db_map.metadata(name="metaname", value="metavalue")["id"]
+
+        db_map_data = {db_map: [{"entity_id": entity_id, "metadata_id": metadata_id}]}
         self._db_mngr.add_items("entity_metadata", db_map_data)
+        entity_metadata_id = db_map.entity_metadata(
+            entity_class_name="my_class",
+            entity_byname=("my_object",),
+            metadata_name="metaname",
+            metadata_value="metavalue",
+        )["id"]
         self.assertEqual(
-            self._db_mngr.get_item(db_map, "entity_metadata", 1).resolve(), {"entity_id": 1, "metadata_id": 1, "id": 1}
+            self._db_mngr.get_item(db_map, "entity_metadata", entity_metadata_id)._asdict(),
+            {"entity_id": entity_id, "metadata_id": metadata_id, "id": entity_metadata_id},
         )
 
 
@@ -359,7 +370,8 @@ class TestImportExportData(TestCaseWithQApplication):
         self.assertEqual(errors, [])
         self._db_mngr.import_data({self._db_map: mapped_data})
         self._db_map.commit_session("imported items")
-        value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
+        with self._db_map:
+            value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
         time_series = from_database(value.value, value.type)
         expected_result = TimeSeriesVariableResolution(
             (
@@ -392,8 +404,8 @@ class TestImportExportData(TestCaseWithQApplication):
                 {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
             )
             waiter.wait()
-        value_lists = self._db_mngr.get_items(self._db_map, "parameter_value_list")
-        list_values = self._db_mngr.get_items(self._db_map, "list_value")
+        value_lists = self._db_map.get_items("parameter_value_list")
+        list_values = self._db_map.get_items("list_value")
         self.assertEqual(len(value_lists), 1)
         value_list = value_lists[0]
         self.assertEqual(value_list["name"], "list_1")
@@ -565,6 +577,267 @@ class TestRemoveScenarioAlternative(TestCaseWithQApplication):
         self._db_mngr.remove_items(db_map_typed_data_to_rm)
         self._db_mngr.commit_session("Remove scenario alternative", self._db_map)
         self._db_mngr.error_msg.emit.assert_not_called()
+
+
+class TestFindCascadingItems(TestCaseWithQApplication):
+    def setUp(self):
+        mock_settings = MagicMock()
+        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        self._db_mngr = SpineDBManager(mock_settings, None)
+        self._logger = MagicMock()
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "test_database")
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+    def test_find_cascading_entity_classes(self):
+        self._db_mngr.add_entity_classes(
+            {
+                self._db_map: [
+                    {"name": "O1"},
+                    {"name": "O2"},
+                    {"name": "O3"},
+                    {"name": "O4"},
+                    {"dimension_name_list": ["O1"]},
+                    {"dimension_name_list": ["O2"]},
+                    {"dimension_name_list": ["O3"]},
+                    {"dimension_name_list": ["O1", "O2"]},
+                    {"dimension_name_list": ["O1", "O3"]},
+                    {"dimension_name_list": ["O2", "O3"]},
+                    {"dimension_name_list": ["O1", "O2", "O3"]},
+                ]
+            }
+        )
+        o1_id = self._db_map.entity_class(name="O1")["id"]
+        data = {
+            db_map: [c["name"] for c in values]
+            for db_map, values in self._db_mngr.find_cascading_entity_classes({self._db_map: [o1_id]}).items()
+        }
+        self.assertEqual(len(data), 1)
+        self.assertCountEqual(data[self._db_map], ["O1__", "O1__O2", "O1__O3", "O1__O2__O3"])
+        o4_id = self._db_map.entity_class(name="O4")["id"]
+        self.assertEqual(self._db_mngr.find_cascading_entity_classes({self._db_map: [o4_id]}), {})
+        o1__o2_id = self._db_map.entity_class(name="O1__O2")["id"]
+        self.assertEqual(self._db_mngr.find_cascading_entity_classes({self._db_map: [o1__o2_id]}), {})
+        self._db_mngr.remove_items({self._db_map: {"entity_class": {o1__o2_id}}})
+        data = {
+            db_map: [c["name"] for c in values]
+            for db_map, values in self._db_mngr.find_cascading_entity_classes({self._db_map: [o1_id]}).items()
+        }
+        self.assertEqual(len(data), 1)
+        self.assertCountEqual(data[self._db_map], ["O1__", "O1__O3", "O1__O2__O3"])
+
+    def test_find_cascading_entities(self):
+        self._db_mngr.add_entity_classes(
+            {
+                self._db_map: [
+                    {"name": "O1"},
+                    {"name": "O2"},
+                    {"name": "O3"},
+                    {"name": "O4"},
+                    {"dimension_name_list": ["O1"]},
+                    {"dimension_name_list": ["O2"]},
+                    {"dimension_name_list": ["O3"]},
+                    {"dimension_name_list": ["O1", "O2"]},
+                    {"dimension_name_list": ["O1", "O3"]},
+                    {"dimension_name_list": ["O2", "O3"]},
+                    {"dimension_name_list": ["O1", "O2", "O3"]},
+                ]
+            }
+        )
+        self._db_mngr.add_entities(
+            {
+                self._db_map: [
+                    {"entity_class_name": "O1", "name": "o11"},
+                    {"entity_class_name": "O1", "name": "o12"},
+                    {"entity_class_name": "O1", "name": "o13"},
+                    {"entity_class_name": "O2", "name": "o21"},
+                    {"entity_class_name": "O3", "name": "o31"},
+                    {"entity_class_name": "O1__O2", "element_name_list": ("o11", "o21")},
+                    {"entity_class_name": "O1__O2", "element_name_list": ("o12", "o21")},
+                    {"entity_class_name": "O2__O3", "element_name_list": ("o21", "o31")},
+                ]
+            }
+        )
+        o13_id = self._db_map.entity(entity_class_name="O1", name="o13")["id"]
+        self.assertEqual(self._db_mngr.find_cascading_entities({self._db_map: [o13_id]}), {})
+        o11_id = self._db_map.entity(entity_class_name="O1", name="o11")["id"]
+        data = {
+            db_map: [c["name"] for c in values]
+            for db_map, values in self._db_mngr.find_cascading_entities({self._db_map: [o11_id]}).items()
+        }
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[self._db_map], ["o11__o21"])
+        o11__o21_id = self._db_map.entity(entity_class_name="O1__O2", entity_byname=("o11", "o21"))["id"]
+        self._db_mngr.remove_items({self._db_map: {"entity": {o11__o21_id}}})
+        self.assertEqual(self._db_mngr.find_cascading_entities({self._db_map: [o11_id]}), {})
+
+    def test_find_cascading_parameter_definitions(self):
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}, {"name": "O2"}, {"name": "O3"}]})
+        self._db_mngr.add_parameter_definitions(
+            {self._db_map: [{"entity_class_name": "O1", "name": "p11"}, {"entity_class_name": "O2", "name": "p21"}]}
+        )
+        o3_id = self._db_map.entity_class(name="O3")["id"]
+        self.assertEqual(self._db_mngr.find_cascading_parameter_definitions({self._db_map: [o3_id]}), {})
+        o1_id = self._db_map.entity_class(name="O1")["id"]
+        data = {
+            db_map: [d["name"] for d in definitions]
+            for db_map, definitions in self._db_mngr.find_cascading_parameter_definitions(
+                {self._db_map: [o1_id]}
+            ).items()
+        }
+        self.assertEqual(len(data), 1)
+        self.assertCountEqual(data[self._db_map], ["p11"])
+        p11_id = self._db_map.parameter_definition(entity_class_name="O1", name="p11")["id"]
+        self._db_mngr.remove_items({self._db_map: {"parameter_definition": [p11_id]}})
+        self.assertEqual(self._db_mngr.find_cascading_parameter_definitions({self._db_map: [o1_id]}), {})
+
+    def test_find_cascading_parameter_values_by_entity(self):
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}, {"name": "O2"}, {"name": "O3"}]})
+        self._db_mngr.add_parameter_definitions(
+            {
+                self._db_map: [
+                    {"entity_class_name": "O1", "name": "p11"},
+                    {"entity_class_name": "O2", "name": "p21"},
+                    {"entity_class_name": "O3", "name": "p31"},
+                ]
+            }
+        )
+        self._db_mngr.add_entities(
+            {
+                self._db_map: [
+                    {"entity_class_name": "O1", "name": "o11"},
+                    {"entity_class_name": "O1", "name": "o12"},
+                    {"entity_class_name": "O2", "name": "o21"},
+                    {"entity_class_name": "O3", "name": "o31"},
+                ]
+            }
+        )
+        self._db_mngr.add_parameter_values(
+            {
+                self._db_map: [
+                    {
+                        "entity_class_name": "O1",
+                        "entity_byname": ("o11",),
+                        "parameter_definition_name": "p11",
+                        "alternative_name": "Base",
+                        "parsed_value": 2.3,
+                    },
+                    {
+                        "entity_class_name": "O1",
+                        "entity_byname": ("o12",),
+                        "parameter_definition_name": "p11",
+                        "alternative_name": "Base",
+                        "parsed_value": -2.3,
+                    },
+                    {
+                        "entity_class_name": "O2",
+                        "entity_byname": ("o21",),
+                        "parameter_definition_name": "p21",
+                        "alternative_name": "Base",
+                        "parsed_value": "yes",
+                    },
+                ]
+            }
+        )
+        o31_id = self._db_map.entity(entity_class_name="O3", name="o31")["id"]
+        self.assertEqual(self._db_mngr.find_cascading_parameter_values_by_entity({self._db_map: [o31_id]}), {})
+        o11_id = self._db_map.entity(entity_class_name="O1", name="o11")["id"]
+        data = {
+            db_map: [
+                (
+                    value["entity_class_name"],
+                    value["entity_byname"],
+                    value["parameter_definition_name"],
+                    value["alternative_name"],
+                    value["parsed_value"],
+                )
+                for value in values
+            ]
+            for db_map, values in self._db_mngr.find_cascading_parameter_values_by_entity(
+                {self._db_map: [o11_id]}
+            ).items()
+        }
+        self.assertEqual(data, {self._db_map: [("O1", ("o11",), "p11", "Base", 2.3)]})
+        value_id = self._db_map.parameter_value(
+            entity_class_name="O1", entity_byname=("o11",), parameter_definition_name="p11", alternative_name="Base"
+        )["id"]
+        self._db_mngr.remove_items({self._db_map: {"parameter_value": [value_id]}})
+        self.assertEqual(self._db_mngr.find_cascading_parameter_values_by_entity({self._db_map: [o11_id]}), {})
+
+    def test_find_cascading_scenario_alternatives_by_scenario(self):
+        self._db_mngr.add_scenarios({self._db_map: [{"name": "S1"}, {"name": "S2"}]})
+        s1_id = self._db_map.scenario(name="S1")["id"]
+        self._db_mngr.add_alternatives({self._db_map: [{"name": "a1"}]})
+        a1_id = self._db_map.alternative(name="a1")["id"]
+        self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": s1_id, "alternative_id_list": [a1_id]}]})
+        s2_id = self._db_map.scenario(name="S2")["id"]
+        self.assertEqual(self._db_mngr.find_cascading_scenario_alternatives_by_scenario({self._db_map: [s2_id]}), {})
+        data = {
+            db_map: [(sa["scenario_name"], sa["alternative_name"]) for sa in sas]
+            for db_map, sas in self._db_mngr.find_cascading_scenario_alternatives_by_scenario(
+                {self._db_map: [s1_id]}
+            ).items()
+        }
+        self.assertEqual(data, {self._db_map: [("S1", "a1")]})
+        sa_id = self._db_map.scenario_alternative(scenario_name="S1", alternative_name="a1", rank=0)["id"]
+        self._db_mngr.remove_items({self._db_map: {"scenario_alternative": [sa_id]}})
+        self.assertEqual(self._db_mngr.find_cascading_scenario_alternatives_by_scenario({self._db_map: [s1_id]}), {})
+
+    def test_find_groups_by_entity(self):
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}]})
+        self._db_mngr.add_entities(
+            {
+                self._db_map: [
+                    {"entity_class_name": "O1", "name": "o1"},
+                    {"entity_class_name": "O1", "name": "o2"},
+                    {"entity_class_name": "O1", "name": "o3"},
+                ]
+            }
+        )
+        self._db_mngr.add_entity_groups(
+            {self._db_map: [{"entity_class_name": "O1", "group_name": "o1", "member_name": "o2"}]}
+        )
+        o3_id = self._db_map.entity(entity_class_name="O1", name="o3")["id"]
+        self.assertEqual(self._db_mngr.find_groups_by_entity({self._db_map: [o3_id]}), {})
+        o1_id = self._db_map.entity(entity_class_name="O1", name="o1")["id"]
+        data = {
+            db_map: [(g["group_name"], g["member_name"]) for g in groups]
+            for db_map, groups in self._db_mngr.find_groups_by_entity({self._db_map: [o1_id]}).items()
+        }
+        self.assertEqual(data, {self._db_map: [("o1", "o2")]})
+        group_id = self._db_map.entity_group(group_name="o1", member_name="o2", entity_class_name="O1")["id"]
+        self._db_mngr.remove_items({self._db_map: {"entity_group": [group_id]}})
+        self.assertEqual(self._db_mngr.find_groups_by_entity({self._db_map: [o1_id]}), {})
+
+
+class TestCommitSession(TestCaseWithQApplication):
+    def setUp(self):
+        mock_settings = MagicMock()
+        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        self._db_mngr = SpineDBManager(mock_settings, None)
+        self._logger = MagicMock()
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "test_database")
+
+    def tearDown(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+    def test_nothing_to_commit_is_not_error(self):
+        error_listener = MagicMock()
+        self._db_mngr.register_listener(error_listener, self._db_map)
+        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}]})
+        class_id = self._db_map.entity_class(name="O1")["id"]
+        self._db_mngr.remove_items({self._db_map: {"entity_class": [class_id]}})
+        self.assertEqual(self._db_mngr.commit_session("Nothing to commit.", self._db_map), [])
+        error_listener.receive_error_msg.assert_not_called()
 
 
 if __name__ == "__main__":

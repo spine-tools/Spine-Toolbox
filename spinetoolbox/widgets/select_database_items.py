@@ -14,7 +14,7 @@
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QWidget
 from spinedb_api.db_mapping import DatabaseMapping
-from spinedb_api.mapped_items import item_factory
+from spinedb_api.mapped_items import ITEM_CLASS_BY_TYPE
 
 
 def add_check_boxes(check_boxes, checked_states, select_all_button, deselect_all_button, state_changed_slot, layout):
@@ -60,6 +60,7 @@ class SelectDatabaseItems(QWidget):
         "entity_group",
         "parameter_value",
         "entity_metadata",
+        "entity_location",
         "parameter_value_metadata",
         "metadata",
     )
@@ -90,7 +91,7 @@ class SelectDatabaseItems(QWidget):
         self._ui.select_scenario_items_button.clicked.connect(self._select_scenario_items)
         self._ui.select_structural_items_button.clicked.connect(self._select_structural_items)
         checkable_item_types = tuple(
-            type_ for type_ in DatabaseMapping.item_types() if not item_factory(type_).is_protected
+            type_ for type_ in DatabaseMapping.item_types() if not ITEM_CLASS_BY_TYPE[type_].is_protected
         )
         checked_states = (
             checked_states if checked_states is not None else {item: False for item in checkable_item_types}

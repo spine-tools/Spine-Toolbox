@@ -1,24 +1,54 @@
 # Changelog
-All **notable** changes to this project are documented here.
+All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased]
+## [unreleased]
 
 ### Added 
 
 new item added 123
 
+### Removed
 
+### Fixed
+
+### Security
+
+## [0.9.5]
+
+### Fixed
+
+- Fixed a bug in Importer where CSV files in datapackage with over 100 rows could not be read.
+
+## [0.9.4]
+
+### Added
+
+- Importer now has a new Source type: Fixed.
+  When set, the data is read from a fixed cell (defined by table name, row and column) in any available source table.
+
+## [0.9.3]
+
+### Added
+
+- Support for Python 3.13.
+- You can now open a detached Basic Console with the default Python or Julia from the Consoles menu. Default 
+Python and Julia are defined in app settings (File->Settings->Tools)
+
+## [0.9.2]
+
+### Added
+
+- [Bundled App] **Embedded Python** now includes spinedb-api and pandas in addition to ipykernel and jill.
+- Support PySide 6.8.1
+- Tools now support executing programs where the main program file is not in the work directory root, but 
+in a subfolder. You can use this feature by setting a 'root directory path' for a Tool in **Tool Properties**. 
 
 ### Removed
 
 - The Filter button has been removed from Spine Database Editor's toolbar.
   The functionality was broken anyhow and has been superseded by filtering from the Scenario tree.
-
-### Fixed
-
-### Security
 
 ## [0.9.1]
 

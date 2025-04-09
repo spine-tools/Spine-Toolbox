@@ -12,6 +12,7 @@
 
 """Base classes to represent items from multiple databases in a tree."""
 from PySide6.QtCore import Qt
+from spinedb_api import DatabaseMapping
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
 from ...mvcmodels.minimal_tree_model import TreeItem
@@ -46,10 +47,12 @@ class MultiDBTreeItem(TreeItem):
             key_for_index=self._key_for_index,
             owner=self,
         )
+        if self._fetch_index is not None:
+            self._fetch_index.connect(model.db_mngr)
 
     @property
     def visible_children(self):
-        return self.children
+        return self._children
 
     def row_count(self):
         """Overriden to use visible_children."""
@@ -213,14 +216,19 @@ class MultiDBTreeItem(TreeItem):
 
     def db_map_data_field(self, db_map, field, default=None):
         """Returns field from data for this item in given db_map or None if not found."""
-        return self.db_map_data(db_map).get(field, default)
+        try:
+            lock = self.db_mngr.get_lock(db_map)
+        except KeyError:
+            return default
+        with lock:
+            return self.db_map_data(db_map).get(field, default)
 
     def _create_new_children(self, db_map, children_ids, **kwargs):
         """
         Creates new items from ids associated to a db map.
 
         Args:
-            db_map (DiffDatabaseMapping): create children for this db_map
+            db_map (DatabaseMapping): create children for this db_map
             children_ids (iter): create children from these ids
 
         Returns:
@@ -295,12 +303,9 @@ class MultiDBTreeItem(TreeItem):
         return self.child_item_class.item_type
 
     def can_fetch_more(self):
-        if self.fetch_item_type is None:
-            return False
-        result = False
-        for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
-        return result
+        return self.fetch_item_type is not None and any(
+            self.db_mngr.can_fetch_more(db_map, self._fetch_parent) for db_map in self.db_maps
+        )
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
@@ -336,7 +341,7 @@ class MultiDBTreeItem(TreeItem):
         Appends children by id.
 
         Args:
-            db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
+            db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         new_children = []
         for db_map, ids in db_map_ids.items():
@@ -348,7 +353,7 @@ class MultiDBTreeItem(TreeItem):
         Removes children by id.
 
         Args:
-            db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
+            db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         for db_map, ids in db_map_ids.items():
             for child in self.find_children_by_id(db_map, *ids, reverse=True):
@@ -372,7 +377,7 @@ class MultiDBTreeItem(TreeItem):
           another db_map --> we need to merge
 
         Args:
-            db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
+            db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         # Find rows to update and db_map ids to add
         rows_to_update = set()

@@ -707,7 +707,7 @@ def plot_db_mngr_items(items, db_maps, db_name_registry, plot_widget=None):
         raise PlottingError("Database maps don't match parameter values.")
     root_node = TreeNode("database")
     for item, db_map in zip(items, db_maps):
-        value = from_database(item["value"], item["type"])
+        value = item["parsed_value"]
         db_name = db_name_registry.display_name(db_map.sa_url)
         if value is None:
             continue

@@ -90,7 +90,7 @@ In ths example, *Data Files* has a single file reference ``data.csv``.
 Data Connections make their files visible to direct successors
 and thus the connection between *Data Files* and *Julia model* provides ``data.csv`` to the latter.
 
-Selecting the *Julia model* shows its properties in the **Properties** dock widget.
+Selecting the *Julia model* shows its properties in the **Tool Properties** dock widget.
 
 .. image:: img/execution_julia_tool_selected.png
    :align: center

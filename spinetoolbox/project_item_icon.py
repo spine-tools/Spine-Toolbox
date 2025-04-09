@@ -17,6 +17,7 @@ from PySide6.QtGui import QBrush, QColor, QFont, QPainterPath, QPen, QRadialGrad
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
+    QApplication,
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
     QGraphicsEllipseItem,
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import (
     QToolTip,
 )
 from spine_engine.spine_engine import ItemExecutionFinishState
+from .font import TOOLBOX_FONT
 from .helpers import LinkType, fix_lightness_color
 from .project_commands import MoveIconCommand
 
@@ -584,17 +586,17 @@ class ExecutionIcon(QGraphicsEllipseItem):
         self._parent = parent
         self._execution_state = "not started"
         self._text_item = QGraphicsTextItem(self)
-        font = QFont("Font Awesome 5 Free Solid")
+        font = QFont(TOOLBOX_FONT.family)
         self._text_item.setFont(font)
         parent_rect = parent.rect()
         self.setRect(0, 0, 0.5 * parent_rect.width(), 0.5 * parent_rect.height())
-        self.setPen(Qt.NoPen)
+        self.setPen(Qt.PenStyle.NoPen)
         # pylint: disable=undefined-variable
-        self.normal_brush = qApp.palette().window()
-        self.selected_brush = qApp.palette().highlight()
+        self.normal_brush = QApplication.palette().window()
+        self.selected_brush = QApplication.palette().highlight()
         self.setBrush(self.normal_brush)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.hide()
 
     def item_name(self):
@@ -659,7 +661,7 @@ class ExclamationIcon(QGraphicsTextItem):
         super().__init__(parent)
         self._parent = parent
         self._notifications = []
-        font = QFont("Font Awesome 5 Free Solid")
+        font = QFont(TOOLBOX_FONT.family)
         font.setPixelSize(self.FONT_SIZE_PIXELS)
         self.setFont(font)
         self.setDefaultTextColor(QColor("red"))
@@ -667,7 +669,7 @@ class ExclamationIcon(QGraphicsTextItem):
         doc = self.document()
         doc.setDocumentMargin(0)
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=False)
         self.hide()
 
     def clear_notifications(self):

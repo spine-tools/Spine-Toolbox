@@ -180,13 +180,14 @@ class TestParameterValuePivotTableModel(TestBase):
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", str(2.3), None], [None, None, None]]
         data = self._model_data(model)
         self.assertEqual(data, expected)
-        value_item = self._db_map.get_parameter_value_item(
-            entity_class_name="Object",
-            entity_byname=("spatula",),
-            parameter_definition_name="x",
-            alternative_name="Base",
-        )
-        value_item.remove()
+        with self._db_map:
+            value_item = self._db_map.get_parameter_value_item(
+                entity_class_name="Object",
+                entity_byname=("spatula",),
+                parameter_definition_name="x",
+                alternative_name="Base",
+            )
+            value_item.remove()
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", None, None], [None, None, None]]
         data = self._model_data(model)
         self.assertEqual(data, expected)
@@ -317,13 +318,14 @@ class TestIndexExpansionPivotTableModel(TestBase):
         ]
         data = self._model_data(model)
         self.assertEqual(data, expected)
-        value_item = self._db_map.get_parameter_value_item(
-            entity_class_name="Object",
-            entity_byname=("spatula",),
-            parameter_definition_name="x",
-            alternative_name="Base",
-        )
-        value_item.remove()
+        with self._db_map:
+            value_item = self._db_map.get_parameter_value_item(
+                entity_class_name="Object",
+                entity_byname=("spatula",),
+                parameter_definition_name="x",
+                alternative_name="Base",
+            )
+            value_item.remove()
         expected = [[None, "parameter"], ["Object", "index"]]
         data = self._model_data(model)
         self.assertEqual(data, expected)

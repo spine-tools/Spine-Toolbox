@@ -82,7 +82,7 @@ class SettingsWidgetBase(QWidget):
         Args:
             e (QKeyEvent): Received key press event.
         """
-        if e.key() == Qt.Key_Escape:
+        if e.key() == Qt.Key.Key_Escape:
             self.update_ui_and_close()
 
     def mousePressEvent(self, e):
@@ -168,14 +168,14 @@ class SpineDBEditorSettingsMixin:
         snap_entities = self._qsettings.value("appSettings/snapEntities", defaultValue="false")
         merge_dbs = self._qsettings.value("appSettings/mergeDBs", defaultValue="true")
         db_editor_show_undo = int(self._qsettings.value("appSettings/dbEditorShowUndo", defaultValue="2"))
-        max_ent_dim_count = int(self.qsettings.value("appSettings/maxEntityDimensionCount", defaultValue="5"))
-        build_iters = int(self.qsettings.value("appSettings/layoutAlgoBuildIterations", defaultValue="12"))
-        spread_factor = int(self.qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
-        neg_weight_exp = int(self.qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
+        max_ent_dim_count = int(self._qsettings.value("appSettings/maxEntityDimensionCount", defaultValue="5"))
+        build_iters = int(self._qsettings.value("appSettings/layoutAlgoBuildIterations", defaultValue="12"))
+        spread_factor = int(self._qsettings.value("appSettings/layoutAlgoSpreadFactor", defaultValue="100"))
+        neg_weight_exp = int(self._qsettings.value("appSettings/layoutAlgoNegWeightExp", defaultValue="2"))
         if commit_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Unchecked)
         elif commit_at_exit == 1:
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.CheckState.Checked)
         self.ui.checkBox_entity_tree_sticky_selection.setChecked(sticky_selection == "true")
@@ -322,10 +322,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._remote_host = ""
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
-        for item in self.ui.listWidget.findItems("*", Qt.MatchWildcard):
+        for item in self.ui.listWidget.findItems("*", Qt.MatchFlag.MatchWildcard):
             item.setSizeHint(QSize(128, 44))
         # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
         self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
@@ -335,6 +335,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
+        self.ui.toolButton_reset_all_settings.clicked.connect(self._remove_all_settings)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_button_clicked)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_button_clicked)
         self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_button_clicked)
@@ -433,6 +434,28 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_pick_secfolder.setEnabled(state)
 
     @Slot(bool)
+    def _remove_all_settings(self, _=False):
+        msg = (
+            "Do you want to reset all settings to factory defaults? <b>Spine Toolbox will be shutdown</b> "
+            "for the changes to take effect.<br/>Continue?"
+        )
+        box_title = "Close app and return to factory defaults?"
+        box = QMessageBox(
+            QMessageBox.Icon.Question,
+            box_title,
+            msg,
+            buttons=QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            parent=self,
+        )
+        box.button(QMessageBox.StandardButton.Ok).setText("Reset and Shutdown")
+        answer = box.exec()
+        if answer != QMessageBox.StandardButton.Ok:
+            return
+        self._toolbox.shutdown_and_clear_settings = True
+        self.close()
+        self._toolbox.close()
+
+    @Slot(bool)
     def _show_install_julia_wizard(self, _=False):
         """Opens Install Julia Wizard."""
         wizard = InstallJuliaWizard(self)
@@ -450,13 +473,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             "Julia project must be an existing directory, @., or empty",
         ):
             return
-        settings = QSettings("SpineProject", "AddUpSpineOptWizard")
-        settings.setValue("appSettings/useJuliaKernel", use_julia_jupyter_console)
-        settings.setValue("appSettings/juliaPath", julia_path)
-        settings.setValue("appSettings/juliaProjectPath", julia_project_path)
-        settings.setValue("appSettings/juliaKernel", julia_kernel)
-        julia_env = get_julia_env(settings)
-        settings.deleteLater()
+        use_jupyter_console = True if use_julia_jupyter_console == "2" else False
+        julia_env = get_julia_env(use_jupyter_console, julia_kernel, julia_path, julia_project_path)
         if julia_env is None:
             julia_exe = julia_project = ""
         else:
@@ -779,7 +797,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if save_spec == 0:
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Unchecked)
         elif save_spec == 1:
-            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.PartiallyChecked)
+            self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.PartiallyChecked)
         else:  # save_spec == 2:
             self.ui.checkBox_save_spec_before_closing.setCheckState(Qt.CheckState.Checked)
         if spec_show_undo == 2:

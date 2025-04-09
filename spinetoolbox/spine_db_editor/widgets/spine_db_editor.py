@@ -14,7 +14,7 @@
 import json
 import os
 from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPalette
+from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QCheckBox,
@@ -43,6 +43,7 @@ from ...helpers import (
 )
 from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
+from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ..helpers import table_name_from_item_type
@@ -115,6 +116,7 @@ class SpineDBEditorBase(QMainWindow):
         self._export_items_dialog_state = None
         self.update_commit_enabled()
         self.last_view = None
+        self.setup_focus_shortcuts()
 
     @property
     def toolbox(self):
@@ -430,7 +432,7 @@ class SpineDBEditorBase(QMainWindow):
         self.msg.emit(f"File {filename} successfully imported.")
 
     def import_from_sqlite(self, file_path):
-        url = URL("sqlite", database=file_path)
+        url = URL.create("sqlite", database=file_path)
         filename = os.path.split(file_path)[1]
         try:
             db_map = DatabaseMapping(url)
@@ -896,6 +898,37 @@ class SpineDBEditorBase(QMainWindow):
             f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
         )
         model.dock.setWindowTitle(table_name)
+
+    def setup_focus_shortcuts(self):
+        # Direct focus shortcuts for widgets in the DB editor
+        QShortcut(QKeySequence("Alt+1"), self).activated.connect(lambda: self.focus_widget(self.ui.treeView_entity))
+        QShortcut(QKeySequence("Alt+3"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.tableView_parameter_value)
+        )
+        QShortcut(QKeySequence("Alt+Shift+3"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.tableView_parameter_definition)
+        )
+        QShortcut(QKeySequence("Alt+4"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.tableView_entity_alternative)
+        )
+        QShortcut(QKeySequence("Alt+5"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.alternative_tree_view)
+        )
+        QShortcut(QKeySequence("Alt+6"), self).activated.connect(lambda: self.focus_widget(self.ui.scenario_tree_view))
+        QShortcut(QKeySequence("Alt+9"), self).activated.connect(
+            lambda: self.focus_widget(self.ui.treeView_parameter_value_list)
+        )
+
+    @Slot()
+    def focus_widget(self, widget):
+        """Focus a specific widget and make its dock visible if needed."""
+        for dock in self.findChildren(QDockWidget):
+            if widget in dock.findChildren(type(widget).__base__):
+                dock.raise_()
+                dock.setFocus()
+                widget.setFocus()
+                return True
+        return False
 
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):

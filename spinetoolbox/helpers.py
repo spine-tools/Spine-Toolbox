@@ -31,7 +31,7 @@ import time
 from typing import Sequence  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
-from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSize, Qt, QUrl, Slot
+from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSettings, QSize, Qt, QUrl, Slot
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
 from PySide6.QtGui import (
@@ -76,6 +76,7 @@ from .config import (
     PROJECT_LOCAL_DATA_FILENAME,
     SPECIFICATION_LOCAL_DATA_FILENAME,
 )
+from .font import TOOLBOX_FONT
 
 if sys.platform == "win32":
     import ctypes
@@ -241,7 +242,7 @@ def open_url(url):
     Returns:
         bool: True if successful, False otherwise
     """
-    return QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+    return QDesktopServices.openUrl(QUrl(url, QUrl.ParsingMode.TolerantMode))
 
 
 def set_taskbar_icon():
@@ -520,7 +521,7 @@ class CharIconEngine(TransparentIconEngine):
         super().__init__()
         self.char = char
         self.color = QColor(color)
-        self.font = QFont("Font Awesome 5 Free Solid")
+        self.font = QFont(TOOLBOX_FONT.family)
 
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
@@ -670,6 +671,23 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
             # logging.debug("found project dir:{0}".format(p))
             return self.spine_icon
         return super().icon(info)
+
+
+def basic_console_icon(language):
+    """Returns an SVG icon for the given language or an empty QIcon if not available.
+
+    Args:
+        language (str): Kernel language
+
+    Returns:
+        QIcon: Icon
+    """
+    if language == "python":
+        return QIcon(":/symbols/python-logo.svg")
+    elif language == "julia":
+        return QIcon(":/symbols/julia-logo.svg")
+    else:
+        return QIcon()
 
 
 def ensure_window_is_on_screen(window, size):
@@ -952,6 +970,24 @@ def select_certificate_directory(parent, line_edit):
     if not answer:
         return
     line_edit.setText(answer)
+
+
+def select_root_directory(parent, line_edit, project_path):
+    """Shows file browser and inserts selected root directory to given line edit.
+    Used in Tool Properties.
+
+    Args:
+        parent (QWidget, optional): Parent of QFileDialog
+        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        project_path (str): Project path
+    """
+    current_path = get_current_path(line_edit)
+    initial_path = current_path if current_path is not None else project_path
+    answer = QFileDialog.getExistingDirectory(parent, "Select root directory", initial_path)
+    if not answer:
+        return
+    line_edit.setText(answer)
+    return
 
 
 def get_current_path(le):
@@ -1885,3 +1921,15 @@ def add_keyboard_shortcuts_to_action_tool_tips(ui):
         if not isinstance(action, QAction):
             continue
         add_keyboard_shortcut_to_tool_tip(action)
+
+
+def clear_qsettings(settings):
+    """Clears Application Settings.
+
+    Args:
+        settings (QSettings): Settings instance that refers to
+        'Spine Toolbox' application in a 'SpineProject' organization.
+    """
+    settings.clear()
+    s1 = QSettings("SpineProject", "AddUpSpineOptWizard")
+    s1.clear()

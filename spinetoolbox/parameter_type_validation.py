@@ -11,12 +11,13 @@
 ######################################################################################################################
 """Contains utilities for validating parameter types."""
 from dataclasses import dataclass
-from multiprocessing import Pipe, Process
+from multiprocessing import Process, Queue
+import queue
 from typing import Any, Iterable, Optional, Tuple
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from spinedb_api.db_mapping_helpers import is_parameter_type_valid, type_check_args
 
-CHUNK_SIZE = 20
+CHUNK_SIZE = 100
 
 
 @dataclass(frozen=True)
@@ -35,7 +36,7 @@ class ValidatableValue:
 class ParameterTypeValidator(QObject):
     """Handles parameter type validation in a concurrent process."""
 
-    validated = Signal(ValidationKey, bool)
+    validated = Signal(list, list)
 
     def __init__(self, parent=None):
         """
@@ -43,8 +44,9 @@ class ParameterTypeValidator(QObject):
             parent (QObject, optional): parent object
         """
         super().__init__(parent)
-        self._connection, scheduler_connection = Pipe()
-        self._process = Process(target=schedule, name="Type validation worker", args=(scheduler_connection,))
+        self._sender = Queue()
+        self._receiver = Queue()
+        self._process = Process(target=schedule, name="Type validation worker", args=(self._receiver, self._sender))
         self._timer = QTimer(self)
         self._timer.setInterval(100)
         self._timer.timeout.connect(self._communicate)
@@ -69,32 +71,39 @@ class ParameterTypeValidator(QObject):
         """
         if not self._process.is_alive():
             self._process.start()
-        for item_id in value_item_ids:
-            item = db_mngr.get_item(db_map, item_id.item_type, item_id)
-            args = type_check_args(item)
-            self._task_queue.append(
-                ValidatableValue(ValidationKey(item_id.item_type, id(db_map), item_id.private_id), args)
-            )
-            self._sent_task_count += 1
+        with db_mngr.get_lock(db_map):
+            for item_id in value_item_ids:
+                mapped_table = db_map.mapped_table(item_id.item_type)
+                item = mapped_table.find_item_by_id(item_id)
+                args = type_check_args(item)
+                self._task_queue.append(
+                    ValidatableValue(ValidationKey(item_id.item_type, id(db_map), item_id.private_id), args)
+                )
         if not self._timer.isActive():
             chunk = self._task_queue[:CHUNK_SIZE]
             self._task_queue = self._task_queue[CHUNK_SIZE:]
-            self._connection.send(chunk)
+            self._sender.put(chunk)
+            self._sent_task_count += len(chunk)
             self._timer.start()
 
     @Slot()
     def _communicate(self):
         """Communicates with the validation process."""
         self._timer.stop()
-        if self._connection.poll():
-            results = self._connection.recv()
-            for key, result in results.items():
-                self.validated.emit(key, result)
-            self._sent_task_count -= len(results)
+        if not self._process.is_alive():
+            return
+        try:
+            results = self._receiver.get_nowait()
+        except queue.Empty:
+            pass
+        else:
+            self.validated.emit(*results)
+            self._sent_task_count -= len(results[0])
         if self._task_queue and self._sent_task_count < 3 * CHUNK_SIZE:
             chunk = self._task_queue[:CHUNK_SIZE]
             self._task_queue = self._task_queue[CHUNK_SIZE:]
-            self._connection.send(chunk)
+            self._sender.put(chunk)
+            self._sent_task_count += len(chunk)
         if not self._task_queue and self._sent_task_count == 0:
             return
         self._timer.start()
@@ -103,7 +112,10 @@ class ParameterTypeValidator(QObject):
         """Cleans up the validation process."""
         self._timer.stop()
         if self._process.is_alive():
-            self._connection.send("quit")
+            self._sender.put("quit")
+            finished = False
+            while not finished:
+                finished = self._receiver.get() == "finished"
             self._process.join()
 
 
@@ -122,23 +134,25 @@ def validate_chunk(validatable_values):
     return results
 
 
-def schedule(connection):
+def schedule(sender, receiver):
     """Loops over incoming messages and sends responses back.
 
     Args:
-        connection (Connection): A duplex Pipe end
+        sender (Queue): Queue for sending validation results
+        receiver (Queue): Queue for receiving tasks
     """
     validatable_values = []
     while True:
-        if connection.poll() or not validatable_values:
+        if not receiver.empty() or not validatable_values:
             while True:
-                task = connection.recv()
+                task = receiver.get()
                 if task == "quit":
+                    sender.put("finished")
                     return
                 validatable_values += task
-                if not connection.poll():
+                if receiver.empty():
                     break
         chunk = validatable_values[:CHUNK_SIZE]
         validatable_values = validatable_values[CHUNK_SIZE:]
         results = validate_chunk(chunk)
-        connection.send(results)
+        sender.put((list(results.keys()), list(results.values())))

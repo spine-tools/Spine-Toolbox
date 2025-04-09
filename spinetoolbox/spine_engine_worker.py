@@ -10,9 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains SpineEngineWorker."""
+"""Contains GUIUpdater and SpineEngineWorker classes."""
 import copy
 from PySide6.QtCore import QObject, QThread, Signal, Slot
+from .project_item.project_item import ProjectItem
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from spine_engine.utils.helpers import ExecutionDirection
@@ -20,75 +21,70 @@ from .spine_engine_manager import LocalSpineEngineManager, make_engine_manager
 from .widgets.options_dialog import OptionsDialog
 
 
-@Slot(list)
-def _handle_dag_execution_started(project_items):
-    for item in project_items:
-        item.get_icon().execution_icon.mark_execution_waiting()
+class GUIUpdater(QObject):
+    """Contains slots for updating UI widgets based on messages received from the engine worker."""
 
+    @Slot(list)
+    def handle_dag_execution_started(self, project_items):
+        for item in project_items:
+            item.get_icon().execution_icon.mark_execution_waiting()
 
-@Slot(list)
-def _handle_node_execution_ignored(project_items):
-    for item in project_items:
-        item.get_icon().execution_icon.mark_execution_ignored()
+    @Slot(list)
+    def handle_node_execution_ignored(self, project_items):
+        for item in project_items:
+            item.get_icon().execution_icon.mark_execution_ignored()
 
-
-@Slot(object, object)
-def _handle_node_execution_started(item, direction):
-    icon = item.get_icon()
-    if direction == ExecutionDirection.FORWARD:
-        icon.execution_icon.mark_execution_started()
-        if hasattr(icon, "animation_signaller"):
-            icon.animation_signaller.animation_started.emit()
-
-
-@Slot(object, object, object)
-def _handle_node_execution_finished(item, direction, item_state):
-    icon = item.get_icon()
-    if direction == ExecutionDirection.FORWARD:
-        icon.execution_icon.mark_execution_finished(item_state)
-        if hasattr(icon, "animation_signaller"):
-            icon.animation_signaller.animation_stopped.emit()
-
-
-@Slot(object, str, str, str)
-def _handle_event_message_arrived(item, filter_id, msg_type, msg_text):
-    item.add_event_message(filter_id, msg_type, msg_text)
-
-
-@Slot(object, str, str, str)
-def _handle_process_message_arrived(item, filter_id, msg_type, msg_text):
-    item.add_process_message(filter_id, msg_type, msg_text)
-
-
-@Slot(dict, object)
-def _handle_prompt_arrived(prompt, engine_mngr, logger=None):
-    prompter_id = prompt["prompter_id"]
-    title, text, option_to_answer, notes, preferred = prompt["data"]
-    answer = OptionsDialog.get_answer(logger, title, text, option_to_answer, notes=notes, preferred=preferred)
-    engine_mngr.answer_prompt(prompter_id, answer)
-
-
-@Slot(object)
-def _handle_flash_arrived(connection):
-    connection.graphics_item.run_execution_animation()
-
-
-@Slot(list)
-def _mark_all_items_failed(items):
-    """Fails all project items.
-
-    Args:
-        items (list of ProjectItem): project items
-    """
-    for item in items:
+    @Slot(object, object)
+    def handle_node_execution_started(self, item, direction):
         icon = item.get_icon()
-        icon.execution_icon.mark_execution_finished(ItemExecutionFinishState.FAILURE)
-        if hasattr(icon, "animation_signaller"):
-            icon.animation_signaller.animation_stopped.emit()
+        if direction == ExecutionDirection.FORWARD:
+            icon.execution_icon.mark_execution_started()
+            if hasattr(icon, "animation_signaller"):
+                icon.animation_signaller.animation_started.emit()
+
+    @Slot(object, object, object)
+    def handle_node_execution_finished(self, item, direction, item_state):
+        icon = item.get_icon()
+        if direction == ExecutionDirection.FORWARD:
+            icon.execution_icon.mark_execution_finished(item_state)
+            if hasattr(icon, "animation_signaller"):
+                icon.animation_signaller.animation_stopped.emit()
+
+    @Slot(object, str, str, str)
+    def handle_event_message_arrived(self, item, filter_id, msg_type, msg_text):
+        item.add_event_message(filter_id, msg_type, msg_text)
+
+    @Slot(object, str, str, str)
+    def handle_process_message_arrived(self, item, filter_id, msg_type, msg_text):
+        item.add_process_message(filter_id, msg_type, msg_text)
+
+    @Slot(dict, object)
+    def handle_prompt_arrived(self, prompt, engine_mngr, logger=None):
+        prompter_id = prompt["prompter_id"]
+        title, text, option_to_answer, notes, preferred = prompt["data"]
+        answer = OptionsDialog.get_answer(logger, title, text, option_to_answer, notes=notes, preferred=preferred)
+        engine_mngr.answer_prompt(prompter_id, answer)
+
+    @Slot(object)
+    def handle_flash_arrived(self, connection):
+        connection.graphics_item.run_execution_animation()
+
+    @Slot(list)
+    def mark_all_items_failed(self, items):
+        """Fails all project items.
+
+        Args:
+            items (list of ProjectItem): project items
+        """
+        for item in items:
+            icon = item.get_icon()
+            icon.execution_icon.mark_execution_finished(ItemExecutionFinishState.FAILURE)
+            if hasattr(icon, "animation_signaller"):
+                icon.animation_signaller.animation_stopped.emit()
 
 
 class SpineEngineWorker(QObject):
-    finished = Signal()
+    finished = Signal(object)
     _mark_items_ignored = Signal(list)
     _dag_execution_started = Signal(list)
     _node_execution_started = Signal(object, object)
@@ -128,6 +124,7 @@ class SpineEngineWorker(QObject):
         self._thread = QThread()
         self.moveToThread(self._thread)
         self._thread.started.connect(self.do_work)
+        self._gui_updater = GUIUpdater()
 
     @property
     def job_id(self):
@@ -155,11 +152,11 @@ class SpineEngineWorker(QObject):
         """
         self._engine_data = engine_data
 
-    @Slot(object, str, str)
+    @Slot(ProjectItem, str, str, str)
     def _handle_event_message_arrived_silent(self, item, filter_id, msg_type, msg_text):
         self.event_messages.setdefault(msg_type, []).append(msg_text)
 
-    @Slot(object, str, str)
+    @Slot(object, str, str, str)
     def _handle_process_message_arrived_silent(self, item, filter_id, msg_type, msg_text):
         self.process_messages.setdefault(msg_type, []).append(msg_text)
 
@@ -177,14 +174,14 @@ class SpineEngineWorker(QObject):
             self._event_message_arrived.connect(self._handle_event_message_arrived_silent)
             self._process_message_arrived.connect(self._handle_process_message_arrived_silent)
             return
-        self._mark_items_ignored.connect(_handle_node_execution_ignored)
-        self._dag_execution_started.connect(_handle_dag_execution_started)
-        self._node_execution_started.connect(_handle_node_execution_started)
-        self._node_execution_finished.connect(_handle_node_execution_finished)
-        self._event_message_arrived.connect(_handle_event_message_arrived)
-        self._process_message_arrived.connect(_handle_process_message_arrived)
-        self._prompt_arrived.connect(_handle_prompt_arrived)
-        self._flash_arrived.connect(_handle_flash_arrived)
+        self._mark_items_ignored.connect(self._gui_updater.handle_node_execution_ignored)
+        self._dag_execution_started.connect(self._gui_updater.handle_dag_execution_started)
+        self._node_execution_started.connect(self._gui_updater.handle_node_execution_started)
+        self._node_execution_finished.connect(self._gui_updater.handle_node_execution_finished)
+        self._event_message_arrived.connect(self._gui_updater.handle_event_message_arrived)
+        self._process_message_arrived.connect(self._gui_updater.handle_process_message_arrived)
+        self._prompt_arrived.connect(self._gui_updater.handle_prompt_arrived)
+        self._flash_arrived.connect(self._gui_updater.handle_flash_arrived)
 
     def start(self, silent=False):
         """Connects log signals.
@@ -194,7 +191,7 @@ class SpineEngineWorker(QObject):
                 but saved in internal dicts.
         """
         self._connect_log_signals(silent)
-        self._all_items_failed.connect(_mark_all_items_failed)
+        self._all_items_failed.connect(self._gui_updater.mark_all_items_failed)
         included_items, ignored_items = self._included_and_ignored_items()
         self._dag_execution_started.emit(included_items)
         self._mark_items_ignored.emit(ignored_items)
@@ -240,7 +237,7 @@ class SpineEngineWorker(QObject):
             self._logger.msg_error.emit(f"Failed to start engine: {error}")
             self._engine_final_state = str(SpineEngineState.FAILED)
             self._all_items_failed.emit(list(self._project_items.values()))
-            self.finished.emit()
+            self.finished.emit(self)
             return
         except RemoteEngineInitFailed as e:
             self._logger.msg_error.emit(
@@ -248,7 +245,7 @@ class SpineEngineWorker(QObject):
             )
             self._engine_final_state = str(SpineEngineState.FAILED)
             self._all_items_failed.emit(list(self._project_items.values()))
-            self.finished.emit()
+            self.finished.emit(self)
             return
         while True:
             event_type, data = self._engine_mngr.get_engine_event()
@@ -261,7 +258,7 @@ class SpineEngineWorker(QObject):
                 self._engine_final_state = str(SpineEngineState.FAILED)
                 self._all_items_failed.emit(list(self._project_items.values()))
                 break
-        self.finished.emit()
+        self.finished.emit(self)
 
     def _process_event(self, event_type, data):
         handler = {
@@ -410,6 +407,7 @@ class SpineEngineWorker(QObject):
             self._engine_mngr.stop_engine()
         else:
             self._engine_mngr.clean_up()
+        self._gui_updater = None
         self._thread.quit()
         self._thread.wait()
         self._thread.deleteLater()
