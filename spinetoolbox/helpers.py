@@ -66,6 +66,8 @@ from PySide6.QtWidgets import (
     QStyle,
 )
 from spine_engine.utils.serialization import deserialize_path
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
@@ -92,6 +94,8 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
     from pandas.plotting import register_matplotlib_converters
 
     register_matplotlib_converters()
+
+DBMapData = dict[DatabaseMapping, list[PublicItem]]
 
 
 @unique

@@ -13,11 +13,16 @@
 """Contains the GraphViewMixin class."""
 import itertools
 import json
+import math
 from time import monotonic
+from typing import Optional, Union
 from PySide6.QtCore import Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QPen
-from spinedb_api import from_database
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
+from spinedb_api.temp_id import TempId
+from spinetoolbox.helpers import DBMapData
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import busy_effect, get_open_file_name_in_last_dir, get_save_file_name_in_last_dir, remove_first
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
@@ -115,7 +120,7 @@ class GraphViewMixin:
     def _graph_fetch_more_later(self, entity=True, parameter_value=True):
         QTimer.singleShot(0, lambda: self._graph_fetch_more(entity=entity, parameter_value=parameter_value))
 
-    def _graph_fetch_more(self, entity=True, parameter_value=True):
+    def _graph_fetch_more(self, entity: bool = True, parameter_value: bool = True) -> None:
         parents = []
         if entity:
             parents.append(self._entity_fetch_parent)
@@ -144,11 +149,11 @@ class GraphViewMixin:
         self.db_mngr.items_added.connect(self._refresh_icons)
         self.db_mngr.items_updated.connect(self._refresh_icons)
 
-    def _refresh_icons(self, item_type, db_map_data):
+    def _refresh_icons(self, item_type: str, db_map_data: DBMapData) -> None:
         """Runs when entity classes are added or updated in the db. Refreshes icons of entities in graph.
 
         Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+            db_map_data: list of dictionary-items keyed by DatabaseMapping instance.
         """
         if item_type != "entity_class":
             return
@@ -160,7 +165,7 @@ class GraphViewMixin:
     def _all_pruned_db_map_entity_ids(self):
         return {db_map_id for db_map_ids in self.pruned_db_map_entity_ids.values() for db_map_id in db_map_ids}
 
-    def _accepts_entity_item(self, item, db_map):
+    def _accepts_entity_item(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         if not self._alternative_accepts(item, db_map) and not self._parameter_value_accepts(item, db_map):
             return False
         if not self._scenario_accepts(item, db_map) and not self._parameter_value_accepts(item, db_map):
@@ -169,7 +174,7 @@ class GraphViewMixin:
             return False
         return True
 
-    def _entity_class_and_entity_accept(self, item, db_map):
+    def _entity_class_and_entity_accept(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         if (db_map, item["id"]) in self.expanded_db_map_entity_ids:
             return True
         if (db_map, item["id"]) in self.collapsed_db_map_entity_ids:
@@ -193,7 +198,7 @@ class GraphViewMixin:
             return True
         return False
 
-    def _alternative_accepts(self, item, db_map):
+    def _alternative_accepts(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         selected_alternative_ids = self._filter_alternative_ids.get(db_map, set())
         selected_scen_alts = self._filter_scenario_ids.get("scenario_alternative", {}).get(db_map, set())
         if not (selected_alternative_ids or selected_scen_alts):
@@ -219,7 +224,7 @@ class GraphViewMixin:
         self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
         return False  # Not active in any selected alternatives, no go.
 
-    def _scenario_accepts(self, item, db_map):
+    def _scenario_accepts(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         scenarios = self._filter_scenario_ids.get("scenario", {}).get(db_map, {})
         if not scenarios:
             return True  # No scenarios selected
@@ -242,7 +247,7 @@ class GraphViewMixin:
         self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
         return False
 
-    def _parameter_value_accepts(self, item, db_map):
+    def _parameter_value_accepts(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         """Returns True if the entity has parameter values set with the selected alternatives"""
         if not self._filter_parameter_value_ids:
             return False
@@ -256,12 +261,12 @@ class GraphViewMixin:
             return True  # Entity is present in the parameter_value table with the current selections
         return False
 
-    def _graph_handle_entities_added(self, db_map_data):
+    def _graph_handle_entities_added(self, db_map_data: DBMapData) -> None:
         """Runs when entities are added to the db.
         Adds the new entities to the graph if needed.
 
         Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+            db_map_data: list of dictionary-items keyed by DatabaseMapping instance.
         """
         new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data)
         if not new_db_map_id_sets:
@@ -269,11 +274,11 @@ class GraphViewMixin:
             return
         self._refresh_graph()
 
-    def _graph_handle_entities_removed(self, db_map_data):
+    def _graph_handle_entities_removed(self, db_map_data: DBMapData) -> None:
         """Runs when entities are removed from the db. Rebuilds graph if needed.
 
         Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+            db_map_data: list of dictionary-items keyed by DatabaseMapping instance.
         """
         removed_db_map_ids = {(db_map, x["id"]) for db_map, items in db_map_data.items() for x in items}
         for item in self.ui.graphicsView.entity_items:
@@ -281,21 +286,32 @@ class GraphViewMixin:
             if not item.db_map_ids:
                 item.setVisible(False)
 
-    def _graph_handle_entities_updated(self, db_map_data):
-        """Runs when entities are updated in the db.
-
-        Args:
-            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
-        """
-        updated_ids = {(db_map, x["id"]) for db_map, ents in db_map_data.items() for x in ents}
+    def _graph_handle_entities_updated(self, db_map_data: DBMapData) -> None:
+        """Runs when entities are updated in the db."""
+        entities_by_db_map_id = {
+            (db_map, entity["id"]): entity for db_map, entities in db_map_data.items() for entity in entities
+        }
+        updated_ids = set(entities_by_db_map_id)
         for item in self.ui.graphicsView.items():
-            if isinstance(item, EntityItem) and set(item.db_map_ids).intersection(updated_ids):
+            if isinstance(item, EntityItem) and not updated_ids.isdisjoint(item.db_map_ids):
+                entity = entities_by_db_map_id[next(iter(item.db_map_ids))]
+                if (latitude := entity["lat"]) is not None:
+                    longitude = entity["lon"]
+                    x, y = self.ui.graphicsView.x_y(latitude, longitude)
+                    position = item.pos()
+                    if not math.isclose(position.x(), x, rel_tol=1e-10) or not math.isclose(
+                        position.y(), y, rel_tol=1e-10
+                    ):
+                        self.build_graph()
+                        break
                 if not item.has_unique_key():
                     self.build_graph(persistent=True)
                     break
                 item.set_up()
 
-    def _db_map_ids_by_key(self, db_map_data):
+    def _db_map_ids_by_key(
+        self, db_map_data: DBMapData
+    ) -> dict[tuple[Union[str, tuple[str]], ...], tuple[DatabaseMapping, TempId]]:
         added_db_map_ids_by_key = {}
         for db_map, entities in db_map_data.items():
             for entity in entities:
@@ -304,16 +320,16 @@ class GraphViewMixin:
                 added_db_map_ids_by_key.setdefault(key, set()).add(db_map_id)
         return added_db_map_ids_by_key
 
-    def add_db_map_ids_to_items(self, db_map_data):
+    def add_db_map_ids_to_items(self, db_map_data: DBMapData) -> list[tuple[DatabaseMapping, TempId]]:
         """Goes through entity items and adds the corresponding db_map ids.
         This could mean either restoring removed (db_map, id) tuples previously removed,
         or adding new (db_map, id) tuples.
 
         Args:
-            db_map_data (dict(DiffDatabaseMapping, list)): List of added items keyed by db_map
+            db_map_data: List of added items keyed by db_map
 
         Returns:
-            list: tuples (db_map, id) that didn't match any item in the view.
+            tuples (db_map, id) that didn't match any item in the view.
         """
         added_db_map_ids_by_key = self._db_map_ids_by_key(db_map_data)
         restored_items = set()
@@ -333,18 +349,14 @@ class GraphViewMixin:
             item.setVisible(True)
         return list(added_db_map_ids_by_key.values())
 
-    def _graph_handle_parameter_values_added(self, db_map_data):
+    def _graph_handle_parameter_values_added(self, db_map_data: DBMapData) -> None:
         pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
-        position_pnames = {self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter}
         property_pnames = {
             self.ui.graphicsView.name_parameter,
             self.ui.graphicsView.color_parameter,
             self.ui.graphicsView.arc_width_parameter,
             self.ui.graphicsView.vertex_radius_parameter,
         }
-        if pnames & position_pnames:
-            self._refresh_graph()
-            return
         if pnames & property_pnames:
             self.polish_items()
         self._graph_fetch_more_later(entity=False, parameter_value=True)
@@ -448,8 +460,6 @@ class GraphViewMixin:
                     for db_map_, id_ in db_map_ids
                     if db_map_ is db_map
                 ],
-                "pos_x_parameter": self.ui.graphicsView.pos_x_parameter,
-                "pos_y_parameter": self.ui.graphicsView.pos_y_parameter,
                 "name_parameter": self.ui.graphicsView.name_parameter,
                 "color_parameter": self.ui.graphicsView.color_parameter,
                 "arc_width_parameter": self.ui.graphicsView.arc_width_parameter,
@@ -506,8 +516,6 @@ class GraphViewMixin:
             (db_map, id_) for db_map, gd in db_map_graph_data.items() for id_ in gd["collapsed_entity_ids"]
         }
         graph_data = db_map_graph_data[self.first_db_map]
-        self.ui.graphicsView.pos_x_parameter = graph_data["pos_x_parameter"]
-        self.ui.graphicsView.pos_y_parameter = graph_data["pos_y_parameter"]
         self.ui.graphicsView.name_parameter = graph_data["name_parameter"]
         self.ui.graphicsView.color_parameter = graph_data["color_parameter"]
         self.ui.graphicsView.arc_width_parameter = graph_data["arc_width_parameter"]
@@ -533,18 +541,19 @@ class GraphViewMixin:
         self.collapsed_db_map_entity_ids.clear()
         self.build_graph(force=force)
 
-    def build_graph(self, persistent=False, force=False):
+    def build_graph(self, persistent: bool = False, force: bool = False) -> None:
         """Builds graph from current selection of items.
 
         Args:
-            persistent (bool, optional): If True, elements in the current graph (if any) retain their position
+            persistent: If True, elements in the current graph (if any) retain their position
                 in the new one.
-            force (bool, optional): If True, graph will be built no matter what as long as its visible.
+            force: If True, graph will be built no matter what as long as its visible.
         """
         self._persisted_positions.clear()
         if persistent:
             for item in self.entity_items:
-                x, y = self.convert_position(item.pos().x(), item.pos().y())
+                position = item.pos()
+                x, y = self.convert_position(position.x(), position.y())
                 self._persisted_positions[item.first_db_map, item.first_id] = {"x": x, "y": y}
         if (
             not (force or self.ui.graphicsView.get_property("auto_build"))
@@ -656,7 +665,7 @@ class GraphViewMixin:
         self._update_property_pvs()
         self._entity_offsets = {}
 
-    def get_entity_key(self, db_map_entity_id):
+    def get_entity_key(self, db_map_entity_id: tuple[DatabaseMapping, TempId]) -> tuple[Union[str, tuple[str]], ...]:
         db_map, entity_id = db_map_entity_id
         entity = self.db_mngr.get_item(db_map, "entity", entity_id)
         key = (entity["entity_class_name"], entity["dimension_name_list"], entity["entity_byname"])
@@ -739,27 +748,25 @@ class GraphViewMixin:
         min_val, max_val = val_range
         return min_val, val, max_val
 
-    def _get_fixed_pos(self, db_map, entity_id):
-        pos_x, pos_y = [
-            self._get_pv(db_map, entity_id, pname)
-            for pname in (self.ui.graphicsView.pos_x_parameter, self.ui.graphicsView.pos_y_parameter)
-        ]
-        if isinstance(pos_x, float) and isinstance(pos_y, float):
-            return {"x": pos_x, "y": pos_y}
-        return self._persisted_positions.get((db_map, entity_id))
+    def _get_fixed_pos(self, db_map: DatabaseMapping, entity_id: TempId) -> Optional[dict[str, float]]:
+        entity_table = db_map.mapped_table("entity")
+        entity = entity_table[entity_id]
+        latitude = entity["lat"]
+        if latitude is None:
+            return self._persisted_positions.get((db_map, entity_id))
+        longitude = entity["lon"]
+        x, y = self.convert_position(*self.ui.graphicsView.x_y(latitude, longitude))
+        return {"x": x, "y": y}
 
-    def _make_layout_generator(self):
-        """Returns a layout generator for the current graph.
-
-        Returns:
-            GraphLayoutGeneratorRunnable
-        """
-        heavy_positions = {
-            ind: pos
-            for ind, db_map_entity_ids in enumerate(self.db_map_entity_id_sets)
-            for db_map_entity_id in db_map_entity_ids
-            if (pos := self._get_fixed_pos(*db_map_entity_id))
-        }
+    def _make_layout_generator(self) -> GraphLayoutGeneratorRunnable:
+        """Returns a layout generator for the current graph."""
+        heavy_positions = {}
+        for index, db_map_entity_ids in enumerate(self.db_map_entity_id_sets):
+            for db_map, entity_id in db_map_entity_ids:
+                with self.db_mngr.get_lock(db_map):
+                    position = self._get_fixed_pos(db_map, entity_id)
+                    if position is not None:
+                        heavy_positions[index] = position
         spread_factor = self.ui.graphicsView.get_property("spread_factor") / 100
         build_iters = self.ui.graphicsView.get_property("build_iters")
         neg_weight_exp = self.ui.graphicsView.get_property("neg_weight_exp")
@@ -821,10 +828,10 @@ class GraphViewMixin:
             self.scene.addItem(item)
 
     def start_connecting_entities(self, db_map, entity_class, ent_item):
-        """Starts connecting entites with the given entity item.
+        """Starts connecting entities with the given entity item.
 
         Args:
-            db_map (DiffDatabaseMapping)
+            db_map (DatabaseMapping)
             entity_class (dict)
             ent_item (..graphics_items.EntityItem)
         """

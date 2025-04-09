@@ -9,6 +9,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- Database Editor's Graph View no longer saves the item positions into *x* and *y* parameter values.
+  Instead, the positions are converted to latitude and longitude using the Mercator projection
+  and these are store as `lat` and `lon` coordinates in `entity_location` table.
+  The old *x* and *y* values are not used anymore.
+  There is no functionality to restore old positions;
+  users are requested to readjust the positions manually and save them again
+  after which the existing *x* and *y* values can be removed.
+
 ### Removed
 
 ### Fixed
