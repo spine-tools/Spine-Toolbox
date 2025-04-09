@@ -18,6 +18,7 @@ import os
 import pathlib
 import sys
 import threading
+from typing import Optional
 from zipfile import ZipFile
 import numpy as np
 from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
@@ -48,15 +49,17 @@ from PySide6.QtWidgets import (
     QToolButton,
     QWidget,
 )
-from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.load_project_items import load_item_specification_factories
-from spine_engine.utils.helpers import resolve_python_interpreter, resolve_julia_executable, resolve_julia_project
+from spine_engine.spine_engine import _set_resource_limits
+from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
     add_keyboard_shortcuts_to_action_tool_tips,
+    basic_console_icon,
     busy_effect,
+    clear_qsettings,
     color_from_index,
     create_dir,
     ensure_window_is_on_screen,
@@ -70,8 +73,6 @@ from .helpers import (
     solve_connection_file,
     supported_img_formats,
     unique_name,
-    clear_qsettings,
-    basic_console_icon,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
@@ -106,7 +107,7 @@ from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.open_project_dialog import OpenProjectDialog
-from .widgets.persistent_console_widget import PersistentConsoleWidget, ConsoleWindow
+from .widgets.persistent_console_widget import ConsoleWindow, PersistentConsoleWidget
 from .widgets.set_description_dialog import SetDescriptionDialog
 from .widgets.settings_widget import SettingsWidget
 
@@ -437,7 +438,7 @@ class ToolboxUI(QMainWindow):
         self.setWindowTitle(f"{self._project.name} [{self._project.project_dir}][*] - Spine Toolbox")
 
     @Slot(str)
-    def init_tasks(self, project_dir_from_args):
+    def init_tasks(self, project_dir_from_args: Optional[str]) -> None:
         """Performs tasks right after the main window is shown.
 
         Args:
@@ -446,9 +447,11 @@ class ToolboxUI(QMainWindow):
         self._display_welcome_message()
         if sys.version_info < (3, 9):
             self._display_deprecated_python_warning()
+        elif sys.version_info < (3, 10):
+            self._display_python_39_deprecation_message()
         self.init_project(project_dir_from_args)
 
-    def _display_welcome_message(self):
+    def _display_welcome_message(self) -> None:
         """Shows a welcome message in the Event log."""
         p = os.path.join(f"{ONLINE_DOCUMENTATION_URL}", "getting_started.html")
         getting_started_anchor = (
@@ -459,14 +462,22 @@ class ToolboxUI(QMainWindow):
         welcome_msg = f"Welcome to Spine Toolbox! If you need help, please read the {getting_started_anchor} guide."
         self.msg.emit(welcome_msg)
 
-    def _display_deprecated_python_warning(self):
+    def _display_python_39_deprecation_message(self) -> None:
+        """Shows Python 3.9 deprecation message in the event log."""
+        self.msg_warning.emit("Please upgrade your Python.")
+        self.msg_warning.emit(
+            f"Looks like you are running Python {sys.version_info[0]}.{sys.version_info[1]}. "
+            f"Support for <b>Python older than 3.10</b> will be dropped by the end of May 2025."
+        )
+
+    def _display_deprecated_python_warning(self) -> None:
         """Shows a warning message in Event log."""
         self.msg_warning.emit("Please upgrade your Python.")
         self.msg_warning.emit(
             f"Your Python version {sys.version_info[0]}.{sys.version_info[1]} is unsupported. Expect trouble."
         )
 
-    def init_project(self, project_dir):
+    def init_project(self, project_dir: Optional[str]) -> None:
         """Initializes project at application start-up.
 
         Opens the project given on command line
