@@ -160,7 +160,7 @@ border-color: rgb(240, 240, 240);</string>
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap>../../docs/source/img/tutorials_images/say_hello_thumbnail.png</pixmap>
+                   <pixmap resource="resources/resources_icons.qrc">:/startupbox/startupbox_images/say_hello_thumbnail.png</pixmap>
                   </property>
                   <property name="scaledContents">
                    <bool>true</bool>
@@ -208,7 +208,7 @@ border-color: rgb(240, 240, 240);</string>
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap>../../docs/source/img/tutorials_images/data_structure_thumbnail.png</pixmap>
+                   <pixmap resource="resources/resources_icons.qrc">:/startupbox/startupbox_images/data_structure_thumbnail.png</pixmap>
                   </property>
                   <property name="scaledContents">
                    <bool>true</bool>
@@ -256,7 +256,7 @@ border-color: rgb(240, 240, 240);</string>
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap>../../docs/source/img/tutorials_images/advanced_material_thumbmail.png</pixmap>
+                   <pixmap resource="resources/resources_icons.qrc">:/startupbox/startupbox_images/advanced_material_thumbmail.png</pixmap>
                   </property>
                   <property name="scaledContents">
                    <bool>true</bool>
@@ -334,7 +334,7 @@ border-color: rgb(240, 240, 240);</string>
                    <string/>
                   </property>
                   <property name="pixmap">
-                   <pixmap>../../docs/source/img/tutorials_images/workflow_thumbnail.png</pixmap>
+                   <pixmap resource="resources/resources_icons.qrc">:/startupbox/startupbox_images/workflow_thumbnail.png</pixmap>
                   </property>
                   <property name="scaledContents">
                    <bool>true</bool>
@@ -638,6 +638,8 @@ border-color: rgb(240, 240, 240);</string>
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources/resources_icons.qrc"/>
+ </resources>
  <connections/>
 </ui>

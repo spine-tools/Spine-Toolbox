@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGroupBox, QHBoxLayout,
     QLabel, QListWidget, QListWidgetItem, QPushButton,
     QScrollArea, QSizePolicy, QSpacerItem, QTabWidget,
     QVBoxLayout, QWidget)
+from spinetoolbox import resources_icons_rc
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -105,7 +106,7 @@ class Ui_Form(object):
         self.label_10 = QLabel(self.groupBox_4)
         self.label_10.setObjectName(u"label_10")
         self.label_10.setMaximumSize(QSize(75, 75))
-        self.label_10.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/say_hello_thumbnail.png"))
+        self.label_10.setPixmap(QPixmap(u":/startupbox/startupbox_images/say_hello_thumbnail.png"))
         self.label_10.setScaledContents(True)
 
         self.horizontalLayout_3.addWidget(self.label_10)
@@ -132,7 +133,7 @@ class Ui_Form(object):
         self.label_11 = QLabel(self.groupBox_10)
         self.label_11.setObjectName(u"label_11")
         self.label_11.setMaximumSize(QSize(75, 75))
-        self.label_11.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/data_structure_thumbnail.png"))
+        self.label_11.setPixmap(QPixmap(u":/startupbox/startupbox_images/data_structure_thumbnail.png"))
         self.label_11.setScaledContents(True)
 
         self.horizontalLayout.addWidget(self.label_11)
@@ -159,7 +160,7 @@ class Ui_Form(object):
         self.label_16 = QLabel(self.groupBox_13)
         self.label_16.setObjectName(u"label_16")
         self.label_16.setMaximumSize(QSize(75, 75))
-        self.label_16.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/advanced_material_thumbmail.png"))
+        self.label_16.setPixmap(QPixmap(u":/startupbox/startupbox_images/advanced_material_thumbmail.png"))
         self.label_16.setScaledContents(True)
 
         self.horizontalLayout_4.addWidget(self.label_16)
@@ -197,7 +198,7 @@ class Ui_Form(object):
         self.label_15 = QLabel(self.groupBox_11)
         self.label_15.setObjectName(u"label_15")
         self.label_15.setMaximumSize(QSize(75, 75))
-        self.label_15.setPixmap(QPixmap(u"../../docs/source/img/tutorials_images/workflow_thumbnail.png"))
+        self.label_15.setPixmap(QPixmap(u":/startupbox/startupbox_images/workflow_thumbnail.png"))
         self.label_15.setScaledContents(True)
 
         self.horizontalLayout_5.addWidget(self.label_15)
