@@ -1,17 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
-# Copyright Spine Toolbox contributors
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
-######################################################################################################################
--->
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
@@ -19,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>756</width>
+    <width>879</width>
     <height>708</height>
    </rect>
   </property>
@@ -79,6 +66,9 @@ border-color: rgb(240, 240, 240);</string>
      <property name="currentIndex">
       <number>0</number>
      </property>
+     <property name="usesScrollButtons">
+      <bool>false</bool>
+     </property>
      <widget class="QWidget" name="tab_2">
       <attribute name="title">
        <string>Learning materials</string>
@@ -98,30 +88,28 @@ border-color: rgb(240, 240, 240);</string>
        </property>
        <item>
         <widget class="QScrollArea" name="scrollArea_3">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
          <widget class="QWidget" name="scrollAreaWidgetContents">
-          <property name="geometry">
-           <rect>
-            <x>0</x>
-            <y>0</y>
-            <width>450</width>
-            <height>659</height>
-           </rect>
+          <property name="autoFillBackground">
+           <bool>false</bool>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <property name="leftMargin">
-            <number>0</number>
+            <number>9</number>
            </property>
            <property name="topMargin">
-            <number>0</number>
+            <number>9</number>
            </property>
            <property name="rightMargin">
-            <number>0</number>
+            <number>9</number>
            </property>
            <property name="bottomMargin">
-            <number>0</number>
+            <number>9</number>
            </property>
            <item>
             <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -379,191 +367,144 @@ border-color: rgb(240, 240, 240);</string>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
         <widget class="QScrollArea" name="scrollArea">
-         <property name="enabled">
+         <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <property name="frameShape">
-          <enum>QFrame::Shape::NoFrame</enum>
-         </property>
-         <property name="verticalScrollBarPolicy">
-          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
-         </property>
-         <property name="horizontalScrollBarPolicy">
-          <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
-         </property>
-         <property name="widgetResizable">
-          <bool>false</bool>
-         </property>
-         <widget class="QWidget" name="scrollAreaWidgetContents_2">
+         <widget class="QWidget" name="scrollAreaWidgetContents_3">
           <property name="geometry">
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>668</width>
-            <height>642</height>
+            <width>331</width>
+            <height>641</height>
            </rect>
           </property>
-          <widget class="QLabel" name="label">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>10</y>
-             <width>670</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-             <underline>false</underline>
-            </font>
-           </property>
-           <property name="layoutDirection">
-            <enum>Qt::LayoutDirection::LeftToRight</enum>
-           </property>
-           <property name="text">
-            <string>Spine Toolbox</string>
-           </property>
-          </widget>
-          <widget class="QLabel" name="label_13">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>280</y>
-             <width>621</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="font">
-            <font>
-             <pointsize>12</pointsize>
-             <bold>true</bold>
-             <underline>false</underline>
-            </font>
-           </property>
-           <property name="layoutDirection">
-            <enum>Qt::LayoutDirection::LeftToRight</enum>
-           </property>
-           <property name="text">
-            <string>Model specific workflows</string>
-           </property>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_8">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>120</y>
-             <width>631</width>
-             <height>131</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>Basic Modelling Workflow</string>
-           </property>
-           <widget class="QLabel" name="label_5">
-            <property name="geometry">
-             <rect>
-              <x>90</x>
-              <y>20</y>
-              <width>351</width>
-              <height>71</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>https://spine-toolbox.readthedocs.io/en/latest/data_import_export.html</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::TextFormat::PlainText</enum>
-            </property>
-            <property name="scaledContents">
-             <bool>false</bool>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-           <widget class="QPushButton" name="pushButton_3">
-            <property name="geometry">
-             <rect>
-              <x>460</x>
-              <y>50</y>
-              <width>141</width>
-              <height>24</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Open</string>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QGroupBox" name="groupBox_3">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>340</y>
-             <width>631</width>
-             <height>131</height>
-            </rect>
-           </property>
-           <property name="title">
-            <string>SpineOpt - Simple Energy System</string>
-           </property>
-           <widget class="QPushButton" name="pushButton_7">
-            <property name="geometry">
-             <rect>
-              <x>450</x>
-              <y>60</y>
-              <width>121</width>
-              <height>24</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Open</string>
-            </property>
-           </widget>
-           <widget class="QLabel" name="label_12">
-            <property name="geometry">
-             <rect>
-              <x>80</x>
-              <y>20</y>
-              <width>371</width>
-              <height>91</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.</string>
-            </property>
-            <property name="textFormat">
-             <enum>Qt::TextFormat::PlainText</enum>
-            </property>
-            <property name="scaledContents">
-             <bool>false</bool>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </widget>
-          <widget class="QLabel" name="label_4">
-           <property name="geometry">
-            <rect>
-             <x>20</x>
-             <y>50</y>
-             <width>531</width>
-             <height>31</height>
-            </rect>
-           </property>
-           <property name="autoFillBackground">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Prerequisites: To run the following project templates, make sure to install both Julia and SpineOpt.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-           </property>
-           <property name="textFormat">
-            <enum>Qt::TextFormat::RichText</enum>
-           </property>
-          </widget>
+          <layout class="QHBoxLayout" name="horizontalLayout_9">
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_11">
+             <property name="sizeConstraint">
+              <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
+             </property>
+             <item>
+              <widget class="QLabel" name="label">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>true</bold>
+                 <underline>false</underline>
+                </font>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LayoutDirection::LeftToRight</enum>
+               </property>
+               <property name="text">
+                <string>Spine Toolbox</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="groupBox_8">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="title">
+                <string>Basic Modelling Workflow</string>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_7">
+                <item>
+                 <widget class="QLabel" name="label_5">
+                  <property name="text">
+                   <string>https://spine-toolbox.readthedocs.io/en/latest/data_import_export.html</string>
+                  </property>
+                  <property name="textFormat">
+                   <enum>Qt::TextFormat::PlainText</enum>
+                  </property>
+                  <property name="scaledContents">
+                   <bool>false</bool>
+                  </property>
+                  <property name="wordWrap">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_3">
+                  <property name="text">
+                   <string>Open</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Orientation::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_13">
+               <property name="font">
+                <font>
+                 <pointsize>12</pointsize>
+                 <bold>true</bold>
+                 <underline>false</underline>
+                </font>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LayoutDirection::LeftToRight</enum>
+               </property>
+               <property name="text">
+                <string>Model specific workflows</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="groupBox_3">
+               <property name="title">
+                <string>SpineOpt - Simple Energy System</string>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0,0">
+                <item>
+                 <widget class="QLabel" name="label_12">
+                  <property name="text">
+                   <string>This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.</string>
+                  </property>
+                  <property name="textFormat">
+                   <enum>Qt::TextFormat::PlainText</enum>
+                  </property>
+                  <property name="scaledContents">
+                   <bool>false</bool>
+                  </property>
+                  <property name="wordWrap">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="pushButton_7">
+                  <property name="text">
+                   <string>Open</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </widget>
         </widget>
        </item>
@@ -587,10 +528,10 @@ border-color: rgb(240, 240, 240);</string>
        <widget class="QLabel" name="label_17">
         <property name="font">
          <font>
-          <family>Courier</family>
+          <family>Artifakt Element Black</family>
           <pointsize>11</pointsize>
-          <italic>true</italic>
-          <bold>false</bold>
+          <italic>false</italic>
+          <bold>true</bold>
          </font>
         </property>
         <property name="autoFillBackground">
@@ -609,7 +550,7 @@ border-color: rgb(240, 240, 240);</string>
          <number>1</number>
         </property>
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#1a0ec1;&quot;&gt;TextLabel&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700; font-style:normal; color:#000000;&quot;&gt;TextLabel&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="scaledContents">
          <bool>false</bool>
