@@ -15,6 +15,7 @@ from contextlib import suppress
 import json
 import os
 from threading import RLock
+from typing import Optional, Union
 from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtWidgets import QApplication, QMessageBox
 from sqlalchemy.engine.url import URL
@@ -39,9 +40,11 @@ from spinedb_api import (
     relativedelta_to_duration,
     to_database,
 )
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.exception import NothingToCommit
 from spinedb_api.helpers import remove_credentials_from_url
 from spinedb_api.parameter_value import (
+    Value,
     deep_copy_value,
     dump_db_value,
     join_value_and_type,
@@ -847,16 +850,18 @@ class SpineDBManager(QObject):
             formatted_value = value_list_name + formatted_value
         return formatted_value
 
-    def get_value(self, db_map, item, role=Qt.ItemDataRole.DisplayRole):
+    def get_value(
+        self, db_map: DatabaseMapping, item: PublicItem, role: Union[int, Qt.ItemDataRole] = Qt.ItemDataRole.DisplayRole
+    ) -> Optional[Union[int, str, Value]]:
         """Returns the value or default value of a parameter.
 
         Args:
-            db_map (DatabaseMapping): database mapping
-            item (PublicItem): parameter value item, parameter definition item, or list value item
-            role (Qt.ItemDataRole): data role
+            db_map: database mapping
+            item: parameter value item, parameter definition item, or list value item
+            role: data role
 
         Returns:
-            Any:
+            value corresponding to role
         """
         if not item:
             return None
