@@ -177,7 +177,7 @@ class StartupBoxWidget(QWidget):
 
     def open_tutorial1(self):
         print("Open 1st tutorial")
-        path_to_project = "C:\\Users\ErmannoLoCascio\Desktop\eScience - Mopo\spine_projects\Simple Tutorial 4"
+        path_to_project = "spinetoolbox/ui/startupbox_templates/data_import_export"
         self.project_load_requested.emit(path_to_project)
 
     @Slot()

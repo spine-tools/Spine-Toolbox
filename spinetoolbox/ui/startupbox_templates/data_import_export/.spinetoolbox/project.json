@@ -1,0 +1,107 @@
+{
+    "project": {
+        "version": 13,
+        "description": "",
+        "settings": {
+            "enable_execute_all": true
+        },
+        "specifications": {
+            "Importer": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Importer/input.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Input files to Import inputs",
+                "from": [
+                    "Input files",
+                    "right"
+                ],
+                "to": [
+                    "Import inputs",
+                    "left"
+                ],
+                "filter_settings": {
+                    "known_filters": {},
+                    "auto_online": true,
+                    "enabled_filter_types": {
+                        "alternative_filter": false,
+                        "scenario_filter": true
+                    }
+                }
+            },
+            {
+                "name": "from Import inputs to Model",
+                "from": [
+                    "Import inputs",
+                    "right"
+                ],
+                "to": [
+                    "Model",
+                    "left"
+                ],
+                "filter_settings": {
+                    "known_filters": {},
+                    "auto_online": true,
+                    "enabled_filter_types": {
+                        "alternative_filter": false,
+                        "scenario_filter": true
+                    }
+                }
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Input files": {
+            "type": "Data Connection",
+            "description": "",
+            "x": -212.265625,
+            "y": 5.078125,
+            "file_references": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": "table.csv"
+                }
+            ],
+            "db_references": []
+        },
+        "Import inputs": {
+            "type": "Importer",
+            "description": "",
+            "x": -75.15625,
+            "y": 6.09375,
+            "specification": "Input",
+            "cancel_on_error": false,
+            "on_conflict": "merge",
+            "file_selection": [
+                [
+                    "<project>/table.csv",
+                    true
+                ]
+            ]
+        },
+        "Model": {
+            "type": "Data Store",
+            "description": "",
+            "x": 61.953125,
+            "y": 3.046875,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": "",
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/model/Model.sqlite"
+                },
+                "schema": ""
+            }
+        }
+    }
+}
