@@ -1,17 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
-# Copyright Spine Toolbox contributors
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
-######################################################################################################################
--->
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
@@ -424,6 +411,13 @@ border-color: rgb(240, 240, 240);</string>
               </widget>
              </item>
              <item>
+              <widget class="QLabel" name="label_19">
+               <property name="text">
+                <string>Prerequisites: SpineOpt</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QGroupBox" name="groupBox_8">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -436,9 +430,28 @@ border-color: rgb(240, 240, 240);</string>
                </property>
                <layout class="QHBoxLayout" name="horizontalLayout_7">
                 <item>
+                 <widget class="QLabel" name="label_18">
+                  <property name="maximumSize">
+                   <size>
+                    <width>75</width>
+                    <height>75</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="pixmap">
+                   <pixmap resource="resources/resources_icons.qrc">:/startupbox/startupbox_images/data_import_export.png</pixmap>
+                  </property>
+                  <property name="scaledContents">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <widget class="QLabel" name="label_5">
                   <property name="text">
-                   <string>https://spine-toolbox.readthedocs.io/en/latest/data_import_export.html</string>
+                   <string>This template explains the different ways of importing and exporting data to and from a Spine database</string>
                   </property>
                   <property name="textFormat">
                    <enum>Qt::TextFormat::PlainText</enum>
@@ -460,19 +473,6 @@ border-color: rgb(240, 240, 240);</string>
                 </item>
                </layout>
               </widget>
-             </item>
-             <item>
-              <spacer name="verticalSpacer_2">
-               <property name="orientation">
-                <enum>Qt::Orientation::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
              </item>
              <item>
               <widget class="QLabel" name="label_13">
@@ -519,7 +519,7 @@ border-color: rgb(240, 240, 240);</string>
                 <item>
                  <widget class="QLabel" name="label_12">
                   <property name="text">
-                   <string>This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.</string>
+                   <string>This template provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt.</string>
                   </property>
                   <property name="textFormat">
                    <enum>Qt::TextFormat::PlainText</enum>
@@ -541,6 +541,19 @@ border-color: rgb(240, 240, 240);</string>
                 </item>
                </layout>
               </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Orientation::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
              </item>
             </layout>
            </item>

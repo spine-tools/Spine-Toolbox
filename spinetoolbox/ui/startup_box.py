@@ -260,6 +260,14 @@ class Ui_Form(object):
         self.groupBox_8.setSizePolicy(sizePolicy)
         self.horizontalLayout_7 = QHBoxLayout(self.groupBox_8)
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.label_18 = QLabel(self.groupBox_8)
+        self.label_18.setObjectName(u"label_18")
+        self.label_18.setMaximumSize(QSize(75, 75))
+        self.label_18.setPixmap(QPixmap(u":/startupbox/startupbox_images/data_import_export.png"))
+        self.label_18.setScaledContents(True)
+
+        self.horizontalLayout_7.addWidget(self.label_18)
+
         self.label_5 = QLabel(self.groupBox_8)
         self.label_5.setObjectName(u"label_5")
         self.label_5.setTextFormat(Qt.TextFormat.PlainText)
@@ -275,10 +283,6 @@ class Ui_Form(object):
 
 
         self.verticalLayout_11.addWidget(self.groupBox_8)
-
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.verticalLayout_11.addItem(self.verticalSpacer_2)
 
         self.label_13 = QLabel(self.scrollAreaWidgetContents_3)
         self.label_13.setObjectName(u"label_13")
@@ -314,6 +318,10 @@ class Ui_Form(object):
 
 
         self.verticalLayout_11.addWidget(self.groupBox_3)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_11.addItem(self.verticalSpacer_2)
 
 
         self.horizontalLayout_9.addLayout(self.verticalLayout_11)
@@ -397,12 +405,13 @@ class Ui_Form(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), QCoreApplication.translate("Form", u"Learning materials", None))
         self.label.setText(QCoreApplication.translate("Form", u"Spine Toolbox", None))
         self.groupBox_8.setTitle(QCoreApplication.translate("Form", u"Basic Modelling Workflow", None))
-        self.label_5.setText(QCoreApplication.translate("Form", u"https://spine-toolbox.readthedocs.io/en/latest/data_import_export.html", None))
+        self.label_18.setText("")
+        self.label_5.setText(QCoreApplication.translate("Form", u"This template explains the different ways of importing and exporting data to and from a Spine database", None))
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"Open", None))
         self.label_13.setText(QCoreApplication.translate("Form", u"Model specific workflows", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("Form", u"SpineOpt - Simple Energy System", None))
         self.label_4.setText("")
-        self.label_12.setText(QCoreApplication.translate("Form", u"This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.", None))
+        self.label_12.setText(QCoreApplication.translate("Form", u"This template provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt.", None))
         self.pushButton_7.setText(QCoreApplication.translate("Form", u"Open", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("Form", u"Templates", None))
         self.groupBox_6.setTitle(QCoreApplication.translate("Form", u"Software Info", None))
