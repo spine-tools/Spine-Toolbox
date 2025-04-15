@@ -197,5 +197,6 @@ class StartupBoxWidget(QWidget):
 
     @Slot()
     def open_tutorial5(self):
-        path_to_project = "C:\\Users\ErmannoLoCascio\Desktop\eScience - Mopo\spine_projects\Simple Tutorial 5"
+        print("Open 2nd tutorial")
+        path_to_project = "spinetoolbox/ui/startupbox_templates/simple_energy_system"
         self.project_load_requested.emit(path_to_project)

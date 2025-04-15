@@ -238,7 +238,7 @@ class Ui_Form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents_3 = QWidget()
         self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 251, 440))
+        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 341, 641))
         self.horizontalLayout_9 = QHBoxLayout(self.scrollAreaWidgetContents_3)
         self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.verticalLayout_11 = QVBoxLayout()
@@ -291,6 +291,14 @@ class Ui_Form(object):
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.horizontalLayout_8 = QHBoxLayout(self.groupBox_3)
         self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.label_4 = QLabel(self.groupBox_3)
+        self.label_4.setObjectName(u"label_4")
+        self.label_4.setMaximumSize(QSize(75, 75))
+        self.label_4.setPixmap(QPixmap(u":/startupbox/startupbox_images/simple_system_schematic.png"))
+        self.label_4.setScaledContents(True)
+
+        self.horizontalLayout_8.addWidget(self.label_4)
+
         self.label_12 = QLabel(self.groupBox_3)
         self.label_12.setObjectName(u"label_12")
         self.label_12.setTextFormat(Qt.TextFormat.PlainText)
@@ -356,7 +364,7 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(Form)
@@ -393,6 +401,7 @@ class Ui_Form(object):
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"Open", None))
         self.label_13.setText(QCoreApplication.translate("Form", u"Model specific workflows", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("Form", u"SpineOpt - Simple Energy System", None))
+        self.label_4.setText("")
         self.label_12.setText(QCoreApplication.translate("Form", u"This tutorial provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt. Spine Toolbox is used to create a workflow with databases and tools and SpineOpt is the tool that simulates/optimizes the energy system.", None))
         self.pushButton_7.setText(QCoreApplication.translate("Form", u"Open", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("Form", u"Templates", None))

@@ -1,0 +1,18 @@
+{
+    "items": {
+        "Data Store": {
+            "url": {
+                "username": "",
+                "password": ""
+            }
+        },
+        "Run SpineOpt": {},
+        "Input": {
+            "url": {
+                "username": "",
+                "password": ""
+            }
+        },
+        "Load template": {}
+    }
+}

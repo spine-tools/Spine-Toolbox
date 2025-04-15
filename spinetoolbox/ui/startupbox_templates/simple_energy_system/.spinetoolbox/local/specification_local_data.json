@@ -1,0 +1,25 @@
+{
+    "Tool": {
+        "Run SpineOpt": {
+            "execution_settings": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": false,
+                "executable": "",
+                "project": "C:/Users/ErmannoLoCascio/spine/julia-for-spineopt"
+            }
+        },
+        "Load template": {
+            "execution_settings": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": false,
+                "executable": "",
+                "project": "C:/Users/ErmannoLoCascio/spine/julia-for-spineopt"
+            }
+        },
+        "Run SpineOpt detached": {
+            "execution_settings": {}
+        }
+    }
+}
