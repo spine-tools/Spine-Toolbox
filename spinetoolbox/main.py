@@ -36,6 +36,7 @@ from .version import __version__
 from spine_items import resources_icons_rc  # pylint: disable=unused-import  # isort: skip
 
 
+
 def main():
     """Creates main window GUI and starts main event loop."""
     multiprocessing.freeze_support()

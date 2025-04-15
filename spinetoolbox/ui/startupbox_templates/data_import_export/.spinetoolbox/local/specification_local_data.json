@@ -1,0 +1,13 @@
+{
+    "Tool": {
+        "Run SpineOpt": {
+            "execution_settings": {}
+        },
+        "Load template": {
+            "execution_settings": {}
+        },
+        "Run SpineOpt detached": {
+            "execution_settings": {}
+        }
+    }
+}

@@ -1,0 +1,18 @@
+{   
+    "objects": [
+        ["model", "simple", null],
+        ["report", "report1", null],
+        ["stochastic_scenario", "realization", null],
+        ["stochastic_structure", "deterministic", null],
+        ["temporal_block", "flat", null]
+    ],
+    "relationships": [
+        ["model__default_stochastic_structure", ["simple", "deterministic"]],
+        ["model__default_temporal_block", ["simple", "flat"]],
+        ["model__report", ["simple", "report1"]],
+        ["stochastic_structure__stochastic_scenario", ["deterministic", "realization"]]
+    ],
+    "object_parameter_values": [
+        ["temporal_block", "flat", "resolution", {"data": "1D", "type": "duration"}, "Base"]
+    ]   
+}

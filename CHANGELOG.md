@@ -5,9 +5,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ## [unreleased]
 
-### Added
+### Added 
 
-### Changed
+new item added 123
 
 - Database Editor's Graph View no longer saves the item positions into *x* and *y* parameter values.
   Instead, the positions are converted to latitude and longitude using the Mercator projection
@@ -158,6 +158,11 @@ This version of Spine Toolbox requires Python version from 3.9 to 3.12.
   for a long time.
 
 ## [0.8.0]
+
+
+### Added
+
+testing changelog feature
 
 ### Added
 
@@ -835,5 +840,3 @@ Many parts of the Spine data structure have been redesigned.
 
 ## [0.1] - 2018-08-20
 
-### Added
-- Basic functionality
