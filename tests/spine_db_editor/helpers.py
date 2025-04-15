@@ -17,8 +17,8 @@ from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
 
 
-class TestBase(TestCaseWithQApplication):
-    """Base class for Database editor's table and tree view tests."""
+class TestWithDBManager(TestCaseWithQApplication):
+    """Base class for tests using database manager."""
 
     @classmethod
     def setUpClass(cls):
@@ -32,16 +32,29 @@ class TestBase(TestCaseWithQApplication):
         self._common_tear_down()
 
     def _common_setup(self, url, create):
+        mock_settings = mock.MagicMock()
+        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        self._db_mngr = TestSpineDBManager(mock_settings, None)
+        logger = mock.MagicMock()
+        self._db_map = self._db_mngr.get_db_map(url, logger, create=create)
+        self._db_mngr.name_registry.register(url, self.db_codename)
+
+    def _common_tear_down(self):
+        self._db_mngr.close_all_sessions()
+        while not self._db_map.closed:
+            QApplication.processEvents()
+        self._db_mngr.clean_up()
+
+
+class TestBase(TestWithDBManager):
+    """Base class for tests that require a DB Editor instance."""
+
+    def _common_setup(self, url, create):
+        super()._common_setup(url, create)
         with (
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
-            mock_settings = mock.MagicMock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = TestSpineDBManager(mock_settings, None)
-            logger = mock.MagicMock()
-            self._db_map = self._db_mngr.get_db_map(url, logger, create=create)
-            self._db_mngr.name_registry.register(url, self.db_codename)
             self._db_editor = SpineDBEditor(self._db_mngr, [url])
         QApplication.processEvents()
 
@@ -51,10 +64,7 @@ class TestBase(TestCaseWithQApplication):
             mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
         ):
             self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
+        super()._common_tear_down()
         self._db_editor.deleteLater()
         self._db_editor = None  # pylint: disable=attribute-defined-outside-init
 

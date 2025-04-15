@@ -16,6 +16,8 @@ from PySide6.QtGui import QMouseEvent
 from ...spine_db_parcel import SpineDBParcel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
+from ..mvcmodels.grouped_parameter_value_model import GroupedParameterValueModel
+from ..mvcmodels.grouped_parameter_value_proxy_model import GroupedParameterValueProxyModel
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.scenario_model import ScenarioModel
 from .add_items_dialogs import (
@@ -42,6 +44,11 @@ class TreeViewMixin:
         self.alternative_model = AlternativeModel(self, self.db_mngr)
         self.scenario_model = ScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
+        self._grouped_parameter_value_model = GroupedParameterValueModel(self.db_mngr, self)
+        self._parameter_value_proxy_model = GroupedParameterValueProxyModel(self)
+        self._parameter_value_proxy_model.setSourceModel(self._grouped_parameter_value_model)
+        self.ui.grouped_parameter_value_tree.setModel(self._parameter_value_proxy_model)
+        self._parameter_value_proxy_model.modelReset.connect(self.ui.grouped_parameter_value_tree.expandAll)
         models = (self.entity_tree_model, self.alternative_model, self.scenario_model, self.parameter_value_list_model)
         views = (
             self.ui.treeView_entity,
@@ -97,6 +104,7 @@ class TreeViewMixin:
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
         self._update_filter_parameter_value_ids()
         self.build_graph()
+        self._grouped_parameter_value_model.load_data(self._filter_class_ids)
 
     @Slot(dict)
     def _handle_alternative_selection_changed(self, selected):
