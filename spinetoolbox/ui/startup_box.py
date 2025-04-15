@@ -319,6 +319,15 @@ class Ui_Form(object):
 
         self.verticalLayout_11.addWidget(self.groupBox_3)
 
+        self.label_19 = QLabel(self.scrollAreaWidgetContents_3)
+        self.label_19.setObjectName(u"label_19")
+        font1 = QFont()
+        font1.setFamilies([u"Arial"])
+        font1.setBold(True)
+        self.label_19.setFont(font1)
+
+        self.verticalLayout_11.addWidget(self.label_19)
+
         self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout_11.addItem(self.verticalSpacer_2)
@@ -341,12 +350,12 @@ class Ui_Form(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.label_17 = QLabel(self.groupBox_6)
         self.label_17.setObjectName(u"label_17")
-        font1 = QFont()
-        font1.setFamilies([u"Artifakt Element Black"])
-        font1.setPointSize(11)
-        font1.setBold(True)
-        font1.setItalic(False)
-        self.label_17.setFont(font1)
+        font2 = QFont()
+        font2.setFamilies([u"Artifakt Element Black"])
+        font2.setPointSize(11)
+        font2.setBold(True)
+        font2.setItalic(False)
+        self.label_17.setFont(font2)
         self.label_17.setAutoFillBackground(False)
         self.label_17.setStyleSheet(u"")
         self.label_17.setFrameShape(QFrame.Shape.StyledPanel)
@@ -413,6 +422,7 @@ class Ui_Form(object):
         self.label_4.setText("")
         self.label_12.setText(QCoreApplication.translate("Form", u"This template provides a step-by-step guide to setup a simple energy system with Spine Toolbox for SpineOpt.", None))
         self.pushButton_7.setText(QCoreApplication.translate("Form", u"Open", None))
+        self.label_19.setText(QCoreApplication.translate("Form", u"Prerequisite: SpineOpt", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab), QCoreApplication.translate("Form", u"Templates", None))
         self.groupBox_6.setTitle(QCoreApplication.translate("Form", u"Software Info", None))
         self.label_17.setText(QCoreApplication.translate("Form", u"<html><head/><body><p><span style=\" font-weight:700; font-style:normal; color:#000000;\">TextLabel</span></p></body></html>", None))
