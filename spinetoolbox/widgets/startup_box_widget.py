@@ -158,25 +158,25 @@ class StartupBoxWidget(QWidget):
 
 
     def open_link1(self):
-        print("Open link")
+
         webbrowser.open_new_tab("https://spine-toolbox.readthedocs.io/en/latest/getting_started.html")
 
     def open_link2(self):
-        print("Open link")
+
         webbrowser.open_new_tab("https://github.com/energy-modelling-workbench/spine-data-model#spine-data-model")
 
     def open_link3(self):
-        print("Open link")
+
         webbrowser.open_new_tab("https://spine-toolbox.readthedocs.io/en/latest/getting_started.html#adding-a-data-connection-item-to-the-project")
 
     def open_link4(self):
-        print("Open link")
+
         webbrowser.open_new_tab("https://spine-toolbox.readthedocs.io/en/latest/executing_projects.html")
 
 
 
     def open_tutorial1(self):
-        print("Open 1st tutorial")
+
         path_to_project = "spinetoolbox/ui/startupbox_templates/data_import_export"
         self.project_load_requested.emit(path_to_project)
 
@@ -197,6 +197,6 @@ class StartupBoxWidget(QWidget):
 
     @Slot()
     def open_tutorial5(self):
-        print("Open 2nd tutorial")
+
         path_to_project = "spinetoolbox/ui/startupbox_templates/simple_energy_system"
         self.project_load_requested.emit(path_to_project)
