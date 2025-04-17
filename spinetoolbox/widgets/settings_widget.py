@@ -12,7 +12,7 @@
 
 """Widget for controlling user settings."""
 import os
-from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Slot
+from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Slot, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
@@ -51,6 +51,9 @@ from .notification import Notification
 
 
 class SettingsWidgetBase(QWidget):
+
+    closing = Signal()
+
     def __init__(self, qsettings):
         """
         Args:
@@ -128,7 +131,7 @@ class SettingsWidgetBase(QWidget):
         self._mouse_move_pos = globalpos
 
     def update_ui(self):
-        """Updates UI to reflect current settings. Called when the user choses to cancel their changes.
+        """Updates UI to reflect current settings. Called when the user chooses to cancel their changes.
         Undoes all temporary UI changes that resulted from the user playing with certain settings."""
 
     def save_settings(self):
@@ -139,12 +142,14 @@ class SettingsWidgetBase(QWidget):
     def update_ui_and_close(self):
         """Updates UI to reflect current settings and close."""
         self.update_ui()
+        self.closing.emit()
         self.close()
 
     @Slot()
     def save_and_close(self):
         """Saves settings and close."""
         if self.save_settings():
+            self.closing.emit()
             self.close()
 
 
@@ -486,6 +491,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.radioButton_use_python_jupyter_console.setChecked(activate_jupyter_kernel)
         self._models.refresh_python_interpreters_model()
         ind = self._models.find_python_interpreter_index(python_exe)
+        if not ind.isValid():
+            ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
         self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected)
 
@@ -504,8 +511,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._models.refresh_julia_executables_model()
         self._models.refresh_julia_projects_model()
         ind = self._models.find_julia_executable_index(julia_exe)
+        if not ind.isValid():
+            ind = self._models.julia_executables_model.index(0, 0)
         self.ui.comboBox_julia_path.setCurrentIndex(ind.row())
         index = self._models.find_julia_project_index(julia_project)
+        if not index.isValid():
+            index = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(index.row())
         self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected)
 
@@ -718,6 +729,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_use_python_jupyter_console.setChecked(True)
         self._models.refresh_python_interpreters_model(python_interpreters)
         python_ind = self._models.find_python_interpreter_index(python_path)
+        if not python_ind.isValid():
+            python_ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(python_ind.row())
         # _saved_python_kernel is used to select the correct Python after all kernels have been loaded
         self._saved_python_kernel = python_kernel
@@ -729,9 +742,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_use_julia_jupyter_console.setChecked(True)
         self._models.refresh_julia_executables_model(julia_executables)
         julia_ind = self._models.find_julia_executable_index(julia_path)
+        if not julia_ind.isValid():
+            julia_ind = self._models.julia_executables_model.index(0, 0)
         self.ui.comboBox_julia_path.setCurrentIndex(julia_ind.row())
         self._models.refresh_julia_projects_model(julia_projects)
         project_ind = self._models.find_julia_project_index(julia_project_path)
+        if not project_ind.isValid():
+            project_ind = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(project_ind.row())
         # _saved_julia_kernel is used to select the correct Julia after all kernels have been loaded
         self._saved_julia_kernel = julia_kernel
@@ -853,7 +870,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
-        print(f"[{use_julia_jupyter_console}] julia exe:{julia_exe}, julia project:{julia_project}, kernel:{julia_kernel}")
         if use_julia_jupyter_console == "2" and not julia_kernel:
             msg = (
                 "You have selected <b>Use Jupyter kernel</b> for Julia Tools "
@@ -877,7 +893,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._qsettings.setValue("appSettings/juliaKernel", julia_kernel)
         # Python
         use_python_jupyter_console, python_exe, python_kernel = self._get_python_settings()
-        print(f"[{use_python_jupyter_console}] python exe:{python_exe}, kernel:{python_kernel}")
         if use_python_jupyter_console == "2" and not python_kernel:
             msg = (
                 "You have selected <b>Use Jupyter kernel</b> for Python Tools "
@@ -1038,7 +1053,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         fpath = select_file_path(self, "Select Julia Executable", init_dir, "julia")
         if not fpath:
             return
-        ind = self._models.add_julia_executable(fpath, self)
+        ind = self._models.add_julia_executable(fpath)
+        if not ind.isValid():
+            Notification(self, f"Adding Julia executable {fpath} failed").show()
+            ind = self._models.julia_executables_model.index(0, 0)
         self.ui.comboBox_julia_path.setCurrentIndex(ind.row())
 
     @Slot(bool)
@@ -1047,7 +1065,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         dpath = select_dir(self, "Select Julia project directory")
         if not dpath:
             return
-        ind = self._models.add_julia_project(dpath, self)
+        ind = self._models.add_julia_project(dpath)
+        if not ind.isValid():
+            Notification(self, f"Could not find Julia project {dpath}.\nActivating the default project.").show()
+            ind = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(ind.row())
 
     @Slot(bool)
@@ -1102,7 +1123,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
             # Settings widget closed while thread still running
         #     return
-        ind = self._models.find_julia_kernel_index(self._saved_julia_kernel, self)
+        ind = self._models.find_julia_kernel_index(self._saved_julia_kernel)
+        if not ind.isValid():
+            Notification(self, f"Julia kernel {self._saved_julia_kernel} not found").show()
+            ind = self._models.julia_kernel_model.index(0, 0)
         self.ui.comboBox_julia_kernel.setCurrentIndex(ind.row())
         self._saved_julia_kernel = None
 
@@ -1115,7 +1139,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         new_python = select_file_path(self, "Select Python Interpreter", init_dir, "python")
         if not new_python:
             return
-        ind = self._models.add_python_interpreter(new_python, self)
+        ind = self._models.add_python_interpreter(new_python)
+        if not ind.isValid():
+            Notification(self, f"Could not find Python {new_python}.\nActivating the current Spine Toolbox Python.").show()
+            ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
 
     @Slot()

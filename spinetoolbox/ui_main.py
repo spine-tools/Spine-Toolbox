@@ -1602,7 +1602,18 @@ class ToolboxUI(QMainWindow):
     def show_settings(self):
         """Shows the Settings widget."""
         self.settings_form = SettingsWidget(self)
+        self.settings_form.closing.connect(self.when_settings_widget_closes)
         self.settings_form.show()
+
+    @Slot()
+    def when_settings_widget_closes(self):
+        print("SettingsWidget closed")
+        # self.refresh_active_elements(None, None, set())
+        # self.exec_compound_models.load_all()
+        # TODO: Reload models
+        # TODO: Check notifications for all items
+        # TODO: Check if Python interpreter, Julia Executable, or Julia Project defaults changed and update Tools
+        # TODO: That use defaults.
 
     @Slot()
     def show_about(self):

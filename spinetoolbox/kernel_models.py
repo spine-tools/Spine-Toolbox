@@ -12,6 +12,7 @@
 
 """Contains a class for storing saved Python and Julia executables in a model."""
 
+import os
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon
 from PySide6.QtCore import QObject, Qt, Slot, QModelIndex
@@ -92,23 +93,24 @@ class ExecutableCompoundModels(QObject):
             first_item.setToolTip(f"This is the Julia from Path ({current})")
             self._julia_executables_model.appendRow(first_item)
         for path in julia_executables:
-            item = QStandardItem(path)
+            displayed_path = path.replace("/", os.sep)
+            item = QStandardItem(displayed_path)
             item.setData({"is_jupyter": False, "is_conda": False, "exe": path})
             item.setIcon(QIcon(":/symbols/julia-logo.svg"))
-            item.setToolTip(path)
+            item.setToolTip(displayed_path)
             self._julia_executables_model.appendRow(item)
         if self._julia_executables_model.rowCount() == 0:
             item = QStandardItem("Add path to Julia Executable...")
-            item.setToolTip("Add Julia into your Path environment variable or by using the add "
-                            "Julia button next to this combo box.")
+            item.setToolTip("Add Julia into your Path environment variable or click 'Add Julia executable' button.")
             self._julia_executables_model.appendRow(item)
 
-    def add_julia_executable(self, path_to_add, notification_parent):
+    def add_julia_executable(self, path_to_add):
         """Adds given path to the model and returns the index of the new item in the model."""
         key = "appSettings/juliaExecutables"
+        path_to_add = path_to_add.replace(os.sep, "/")
         updated_julia_executables = save_path_to_qsettings(self._qsettings, key, path_to_add)
         self.refresh_julia_executables_model(updated_julia_executables)
-        return self.find_julia_executable_index(path_to_add, notification_parent)
+        return self.find_julia_executable_index(path_to_add)
 
     def remove_julia_executable(self, path_to_remove):
         """Removes given path from the model."""
@@ -116,23 +118,19 @@ class ExecutableCompoundModels(QObject):
         updated_julia_exes = remove_path_from_qsettings(self._qsettings, key, path_to_remove)
         self.refresh_julia_executables_model(updated_julia_exes)
 
-    def find_julia_executable_index(self, path, notification_parent=None):
+    def find_julia_executable_index(self, path):
         """Returns the index of the given Julia executable.
 
         Args:
             path (str): Path to Julia executable
-            notification_parent (QWidget): Parent widget for an error notification
         """
+        if not path:
+            return self.julia_executables_model.index(0, 0)
         for row in range(self.julia_executables_model.rowCount()):
             item = self.julia_executables_model.item(row, 0)
-            if not item.data():  # The model only contains the 'No Julias found' item
-                return self.julia_executables_model.index(0, 0)
             if item.data()["exe"] == path:
                 return item.index()
-        # TODO: Fix when path == "" and model is empty
-        if notification_parent is not None:
-            Notification(notification_parent, f"Could not find Julia {path}.\nActivating the default Julia.").show()
-        return self.julia_executables_model.index(0, 0)
+        return QModelIndex()
 
     def load_julia_projects(self, julia_projects, show_select_item=False):
         """Adds Julia projects to a model.
@@ -155,18 +153,20 @@ class ExecutableCompoundModels(QObject):
         self._julia_projects_model.appendRow(first_item)
         self._julia_projects_model.appendRow(second_item)
         for path in julia_projects:
-            item = QStandardItem(path)
+            displayed_path = path.replace("/", os.sep)
+            item = QStandardItem(displayed_path)
             item.setData({"is_project": True, "path": path})
             item.setIcon(QIcon(":/icons/folder.svg"))
-            item.setToolTip(path)
+            item.setToolTip(displayed_path)
             self._julia_projects_model.appendRow(item)
 
-    def add_julia_project(self, path_to_add, notification_parent):
+    def add_julia_project(self, path_to_add):
         """Adds given path to the model and returns the index of the new item in the model."""
         key = "appSettings/juliaProjects"
+        path_to_add = path_to_add.replace(os.sep, "/")
         updated_julia_projects = save_path_to_qsettings(self._qsettings, key, path_to_add)
         self.refresh_julia_projects_model(updated_julia_projects)
-        return self.find_julia_project_index(path_to_add, notification_parent)
+        return self.find_julia_project_index(path_to_add)
 
     def remove_julia_project(self, path_to_remove):
         """Removes given path from the model."""
@@ -174,20 +174,17 @@ class ExecutableCompoundModels(QObject):
         updated_julia_projects = remove_path_from_qsettings(self._qsettings, key, path_to_remove)
         self.refresh_julia_projects_model(updated_julia_projects)
 
-    def find_julia_project_index(self, path, notification_parent=None):
+    def find_julia_project_index(self, path):
         """Returns the index of the given Julia project.
 
         Args:
             path (str): Path to Julia project directory
-            notification_parent (QWidget): Parent widget for an error notification
         """
         for row in range(self.julia_projects_model.rowCount()):
             item = self.julia_projects_model.item(row, 0)
             if item.data()["path"] == path:
                 return item.index()
-        if notification_parent is not None:
-            Notification(notification_parent, f"Could not find Julia project {path}.\nActivating the default project.").show()
-        return self.julia_projects_model.index(0, 0)
+        return QModelIndex()
 
     def start_fetching_julia_kernels(self, finalize_slot=None, conda=""):
         """Starts a thread for fetching Julia kernels."""
@@ -234,17 +231,13 @@ class ExecutableCompoundModels(QObject):
         item.setData(deats)
         self.julia_kernel_model.appendRow(item)
 
-    def find_julia_kernel_index(self, kname, notification_parent=None):
+    def find_julia_kernel_index(self, kname):
         """Finds and returns the index of given kernel name item."""
         if not kname:
             return self.julia_kernel_model.index(0, 0)
         items = self.julia_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
-        if not items and notification_parent is not None:
-            Notification(
-                notification_parent,
-                f"Could not activate Julia kernel {kname}.\nIt may have been removed."
-            ).show()
-            return self.julia_kernel_model.index(0, 0)
+        if not items:
+            return QModelIndex()
         return items[0].index()
 
     def refresh_python_interpreters_model(self, python_interpreters=None, show_select_item=False):
@@ -271,18 +264,20 @@ class ExecutableCompoundModels(QObject):
         first_item.setToolTip("This is the current Python Interpreter")
         self._python_interpreters_model.appendRow(first_item)
         for path in python_interpreters:
-            item = QStandardItem(path)
+            displayed_path = path.replace("/", os.sep)
+            item = QStandardItem(displayed_path)
             item.setData({"is_jupyter": False, "is_conda": False, "exe": path})
             item.setIcon(QIcon(":/symbols/python-logo.svg"))
-            item.setToolTip(path)
+            item.setToolTip(displayed_path)
             self._python_interpreters_model.appendRow(item)
 
-    def add_python_interpreter(self, path_to_add, notification_parent):
+    def add_python_interpreter(self, path_to_add):
         """Adds given path to the model and returns the index of the new item in the model."""
         key = "appSettings/pythonInterpreters"
+        path_to_add = path_to_add.replace(os.sep, "/")
         updated_python_interpreters = save_path_to_qsettings(self._qsettings, key, path_to_add)
         self.refresh_python_interpreters_model(updated_python_interpreters)
-        return self.find_python_interpreter_index(path_to_add, notification_parent)
+        return self.find_python_interpreter_index(path_to_add)
 
     def remove_python_interpreter(self, path_to_remove):
         """Removes given path from the model."""
@@ -290,12 +285,11 @@ class ExecutableCompoundModels(QObject):
         updated_python_interpreters = remove_path_from_qsettings(self._qsettings, key, path_to_remove)
         self.refresh_python_interpreters_model(updated_python_interpreters)
 
-    def find_python_interpreter_index(self, path, notification_parent=None):
+    def find_python_interpreter_index(self, path):
         """Returns the index of the given Python interpreter.
 
         Args:
             path (str): Path to Python interpreter
-            notification_parent (QWidget): Parent widget for an error notification
         """
         if not path:
             return self.python_interpreters_model.index(0, 0)
@@ -303,10 +297,7 @@ class ExecutableCompoundModels(QObject):
             item = self.python_interpreters_model.item(row, 0)
             if item.data()["exe"] == path:
                 return item.index()
-        if notification_parent is not None:
-            Notification(notification_parent, f"Could not find Python {path}.\nActivating "
-                                              f"the current Spine Toolbox Python.").show()
-        return self.python_interpreters_model.index(0, 0)
+        return QModelIndex()
 
     def find_python_kernel_index(self, kname):
         """Returns the index of the item with the given kernel name
@@ -378,12 +369,11 @@ class ExecutableCompoundModels(QObject):
         if use_jupyter_cons:
             # Find kernel from model and check its data to see if it's a Conda kernel
             index = self.find_python_kernel_index(k_name)
-            if index is not None:
+            if index.isValid():
                 item = self.python_kernel_model.itemFromIndex(index)
-                print(f"item.data():{item.data()}")
-                if item.data()["is_conda"]:
-                    env = "conda"
-                print(f"Found Python kernel with env:{env}")
+                if item.data() is not None:
+                    if item.data()["is_conda"]:
+                        env = "conda"
         d = dict()
         d["kernel_spec_name"] = k_name
         d["env"] = env
@@ -398,12 +388,12 @@ class ExecutableCompoundModels(QObject):
         env = ""
         if use_jupyter_cons:
             # Find kernel from model and check its data to see if it's a Conda kernel
-            item = self.find_julia_kernel_index(k_name)
-            if item is not None:
-                print(f"item.data():{item.data()}")
-                if item.data()["is_conda"]:
-                    env = "conda"
-                print(f"Found Julia kernel with env:{env}")
+            index = self.find_julia_kernel_index(k_name)
+            if index.isValid():
+                item = self.julia_kernel_model.itemFromIndex(index)
+                if item.data() is not None:
+                    if item.data()["is_conda"]:
+                        env = "conda"
         d = dict()
         d["kernel_spec_name"] = k_name
         d["env"] = env
