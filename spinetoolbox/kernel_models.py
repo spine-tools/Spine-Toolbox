@@ -239,7 +239,7 @@ class ExecutableCompoundModels(QObject):
         if not kname:
             return self.julia_kernel_model.index(0, 0)
         items = self.julia_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
-        if not items:
+        if not items and notification_parent is not None:
             Notification(
                 notification_parent,
                 f"Could not activate Julia kernel {kname}.\nIt may have been removed."
@@ -303,16 +303,16 @@ class ExecutableCompoundModels(QObject):
             item = self.python_interpreters_model.item(row, 0)
             if item.data()["exe"] == path:
                 return item.index()
-        Notification(notification_parent, f"Could not find Python {path}.\nActivating "
-                                          f"the current Spine Toolbox Python.").show()
+        if notification_parent is not None:
+            Notification(notification_parent, f"Could not find Python {path}.\nActivating "
+                                              f"the current Spine Toolbox Python.").show()
         return self.python_interpreters_model.index(0, 0)
 
     def find_python_kernel_index(self, kname):
         """Returns the index of the item with the given kernel name
         in Python kernel model or an invalid index if not found."""
         if not kname:
-            print(f"FIXME: kname is None '{kname}'")
-            return None
+            return self.python_kernel_model.index(0, 0)
         items = self.python_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
         if not items:
             return QModelIndex()

@@ -13,6 +13,7 @@
 """Unit tests for ProjectUpgrader class."""
 import json
 import os
+import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
@@ -45,9 +46,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(1, p))
         # Test that an invalid v1 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["objects"] = {}
+        p = {"project": {}, "objects": {}}
         self.assertFalse(project_upgrader.is_valid(1, p))
 
     def test_is_valid_v2(self):
@@ -56,9 +55,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(2, p))
         # Test that an invalid v2 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["items"] = {}
+        p = {"project": {}, "items": {}}
         self.assertFalse(project_upgrader.is_valid(2, p))
 
     def test_is_valid_v3(self):
@@ -67,9 +64,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(3, p))
         # Test that an invalid v3 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["items"] = {}
+        p = {"project": {}, "items": {}}
         self.assertFalse(project_upgrader.is_valid(3, p))
 
     def test_is_valid_v4(self):
@@ -78,9 +73,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(4, p))
         # Test that an invalid v4 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["items"] = {}
+        p = {"project": {}, "items": {}}
         self.assertFalse(project_upgrader.is_valid(4, p))
 
     def test_is_valid_v5(self):
@@ -89,9 +82,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(5, p))
         # Test that an invalid v5 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["items"] = {}
+        p = {"project": {}, "items": {}}
         self.assertFalse(project_upgrader.is_valid(5, p))
 
     def test_is_valid_v9(self):
@@ -99,9 +90,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(9, p))
         # Test that an invalid v9 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["items"] = {}
+        p = {"project": {}, "items": {}}
         self.assertFalse(project_upgrader.is_valid(9, p))
 
     def test_is_valid_v10(self):
@@ -109,10 +98,16 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         project_upgrader = ProjectUpgrader(self.toolbox)
         self.assertTrue(project_upgrader.is_valid(10, p))
         # Test that an invalid v10 project dict is not valid
-        p = {}
-        p["project"] = {}
-        p["items"] = {}
+        p = {"project": {}, "items": {}}
         self.assertFalse(project_upgrader.is_valid(10, p))
+
+    def test_is_valid_v11_v14(self):
+        p = make_v13_project_dict()
+        project_upgrader = ProjectUpgrader(self.toolbox)
+        self.assertTrue(project_upgrader.is_valid(13, p))
+        # Test that an invalid v13 project dict is not valid
+        p = {"project": {}, "items": {}}
+        self.assertFalse(project_upgrader.is_valid(13, p))
 
     def test_upgrade_v1_to_v2(self):
         pu = ProjectUpgrader(self.toolbox)
@@ -331,6 +326,78 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 self.assertEqual(proj_v12["project"]["version"], 12)
                 self.assertIn("settings", proj_v12["project"])
 
+    def test_upgrade_v12_to_v13(self):
+        pu = ProjectUpgrader(self.toolbox)
+        proj_v12 = make_v12_project_dict()
+        self.assertTrue(pu.is_valid(12, proj_v12))
+        with TemporaryDirectory() as project_dir:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 13),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
+                os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
+                proj_v13 = pu.upgrade(proj_v12, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
+                self.assertTrue(pu.is_valid(13, proj_v13))
+                self.assertEqual(proj_v13["project"]["version"], 13)
+                self.assertIn("settings", proj_v13["project"])
+
+    def test_upgrade_v13_to_v14(self):
+        pu = ProjectUpgrader(self.toolbox)
+        proj_v13 = make_v13_project_dict()
+        self.assertTrue(pu.is_valid(13, proj_v13))
+        with TemporaryDirectory() as project_dir:
+            with (
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 14),
+                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
+            ):
+                mock_mb.return_value = QMessageBox.StandardButton.Yes
+                local_folder = os.path.join(project_dir, ".spinetoolbox", "local")
+                os.makedirs(local_folder)  # Make dir for specification_local_data.json and project_local_data.json
+                spec_f, project_f = self.copy_test_files_to_tempdir(local_folder)
+                proj_v14 = pu.upgrade(proj_v13, project_dir)
+                mock_backup.assert_called_once()
+                mock_force_save.assert_called_once()
+                mock_mb.assert_called_once()
+                # Open updated local project data .json file and check that everything went smoothly.
+                # There should be no changes in the local specification data .json file
+                with open(project_f) as project_fp:
+                    local_project_data = json.load(project_fp)
+                for key, value in local_project_data["items"].items():
+                    if key == "Python Tool Jupyter Console":
+                        expected = {"options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}}
+                        self.assertDictEqual(expected, value)
+                    elif key == "Run SpineOpt":
+                        expected = {"options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe", "project": "C:/data/JuliaProjects/SpineOptProject"}}
+                        self.assertDictEqual(expected, value)
+                    elif key == "Julia Tool":
+                        expected = {'options': {"env": "", "kernel_spec_name": "", "use_jupyter_console": False, "executable": "some/julia.exe", "project": "", "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}}
+                        self.assertDictEqual(expected, value)
+                    elif key == "Python Tool Basic Console":
+                        expected = {"root_directory": {"type": "path", "relative": True, "path": "."}, "options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "some/python.exe"}}
+                        self.assertDictEqual(expected, value)
+                self.assertTrue(pu.is_valid(14, proj_v14))
+                self.assertEqual(proj_v14["project"]["version"], 14)
+                self.assertIn("settings", proj_v14["project"])
+
+    @staticmethod
+    def copy_test_files_to_tempdir(local_folder):
+        """Copies test local spec and tool files to a given folder."""
+        src_file1 = os.path.join(str(Path(__file__).parent), "test_resources", "test_specification_local_data.json")
+        dst_file1 = os.path.join(local_folder, "specification_local_data.json")
+        shutil.copyfile(src_file1, dst_file1)
+        src_file2 = os.path.join(str(Path(__file__).parent), "test_resources", "test_project_local_data.json")
+        dst_file2 = os.path.join(local_folder, "project_local_data.json")
+        shutil.copyfile(src_file2, dst_file2)
+        return dst_file1, dst_file2
+
     def test_upgrade_v1_to_latest(self):
         pu = ProjectUpgrader(self.toolbox)
         proj_v1 = make_v1_project_dict()
@@ -367,7 +434,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
 
     def test_upgrade_with_too_recent_project_version(self):
         """Tests that projects with too recent versions are not opened."""
-        project_dict = make_v12_project_dict()
+        project_dict = make_v13_project_dict()
         project_dict["project"]["version"] = LATEST_PROJECT_VERSION + 1
         pu = ProjectUpgrader(self.toolbox)
         self.assertFalse(pu.upgrade(project_dict, project_dir=""))
@@ -409,6 +476,10 @@ def make_v12_project_dict():
     v12_proj_dict = make_v11_project_dict()
     v12_proj_dict["project"]["version"] = 12
     return v12_proj_dict
+
+
+def make_v13_project_dict():
+    return _get_project_dict(13)
 
 
 def _get_project_dict(v):

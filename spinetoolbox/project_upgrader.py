@@ -584,12 +584,13 @@ class ProjectUpgrader:
 
         Changes:
             - Update version to 14 in project.json
-            - Move execution settings from <project_dir>.spinetoolbox/local/specification_local_data.json to
-            <project_dir>/.spinetoolbox/local/project_local_data.json because they are not Tool settings
+            - Copy execution settings from <project_dir>.spinetoolbox/local/specification_local_data.json to
+            <project_dir>/.spinetoolbox/local/project_local_data.json because they are from now on Tool settings
             instead of Tool Specification settings.
-            - Make a backup copy of specification_local_data.json
-            - Move 'options' from project.json Tool item dicts to local project data. This option only
-            contains a 'julia_sysimage' key, which contains an abs. path to a Julia sys image.
+            - Execution settings are now found in the 'options' dictionary.
+            - Move 'options' from project.json's Tool item dicts to local project data. In version 13, the Tool
+            'options' only has the 'julia_sysimage' key. This 'julia_sysimage' key-value is moved to the same local
+            project data 'options' dict than the execution settings.
 
         Args:
             old (dict): Version 13 project dictionary
@@ -599,71 +600,58 @@ class ProjectUpgrader:
             dict: Version 14 project dictionary
         """
         new = copy.deepcopy(old)
-        new["project"]["version"] = 13  # TODO: Update to 14 when ready
-        spec_data, tool_data = self.get_local_data_dicts(project_dir)
-        if not spec_data:  # Nothing to upgrade
-            # TODO: Check "julia_sysimage" though
-            return new
-
-        spec_tool_dict = spec_data.get("Tool")
-        if not spec_tool_dict:  # Nothing to upgrade
-            # TODO: Check "julia_sysimage" though
-            return new
+        new["project"]["version"] = 14
+        spec_data, project_data = self.get_local_data_dicts(project_dir)
+        spec_tool_dict = spec_data.get("Tool", {})
+        spec_name_by_exec_settings = dict()
+        # Make Spec name to execution settings mapping
         for spec_name in spec_tool_dict.keys():
-            exec_settings = spec_tool_dict[spec_name].get("execution_settings")
-            if not exec_settings:
-                continue
-            print(f"[{spec_name}] exec_settings:{exec_settings}")
+            exec_settings = spec_tool_dict[spec_name].get("execution_settings", {})
+            spec_name_by_exec_settings[spec_name] = exec_settings
         # Make Tool name to Spec name mapping
         item_dict = new["items"]
         item_name_to_spec_name = dict()
         for item_name in item_dict.keys():
             if item_dict[item_name]["type"] == "Tool":
                 item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
-        print(f"mapping: {item_name_to_spec_name}")
-        # Find local Tool data items and insert exec options to options
-        tool_items_dict = tool_data.pop("items", {})
+        # Insert execution settings to local Tool data
         for item_name, spec_name in item_name_to_spec_name.items():
-            item_dict = tool_items_dict.pop(item_name, None)
-            if not item_dict:
-                tool_items_dict[item_name] = {"options": spec_tool_dict[spec_name]}
+            if not project_data["items"][item_name].get("options", None):
+                project_data["items"][item_name]["options"] = dict()
+            if spec_name in spec_name_by_exec_settings.keys():
+                project_data["items"][item_name]["options"].update(spec_name_by_exec_settings[spec_name])
+        # Move "options": {"julia_sysimage": "C:\some\some.dll"} from project.json to project_local_data.json
+        for item_name in item_dict.keys():
+            if item_dict[item_name]["type"] != "Tool":
                 continue
-            item_dict["options"] = spec_tool_dict[spec_name]
-        tool_data["items"] = tool_items_dict
-        print(f"tool_data:{tool_data}")
-
-        # TODO: Move "options": {"julia_sysimage": "C:\something\something.dll"} from project.json to project_local_data.json
-        # TODO: Make "julia_sysimage" as a local option
+            opt = item_dict[item_name].pop("options", None)
+            if opt is not None:
+                sysimg_path = opt.get("julia_sysimage", "")
+                project_data["items"][item_name]["options"].update({"julia_sysimage": sysimg_path})
         # Save updated project_local_data.json
-        # try:
-        #     with open(local_tool_data_fpath, "w") as fp:
-        #         json.dump(local_tool_data, fp, indent=4)
-        # except OSError:
-        #     self._toolbox.msg_error.emit("Saving project_local_data.json file failed. Check permissions.")
-
+        try:
+            local_project_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+            with open(local_project_data_fpath, "w") as fp:
+                json.dump(project_data, fp, indent=4)
+        except OSError:
+            self._toolbox.msg_error.emit("Saving project_local_data.json file failed. Check permissions.")
         return new
 
     def get_local_data_dicts(self, project_dir):
-        """Makes a backup of local spec data file and returns local
-        spec data and local tool data dicts from project folder."""
+        """Returns local spec data and local project data dicts from project folder."""
         local_spec_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "specification_local_data.json")
         if not os.path.exists(local_spec_data_fpath):
             self._toolbox.msg.emit(f"Local specification data not found [{local_spec_data_fpath}]")
-            return False, False
-        backup_filename = "specification_local_data.json.bak" + str(13)
-        dst = os.path.join(project_dir, ".spinetoolbox", "local", backup_filename)
-        try:
-            shutil.copyfile(local_spec_data_fpath, dst)
-        except OSError:
-            self._toolbox.msg_error.emit(f"Backing up '{local_spec_data_fpath}' failed. Check permissions.")
-        else:
-            self._toolbox.msg_warning.emit(f"Backed up specification_local_data.json -> {backup_filename}")
-        local_tool_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+            return {}, {}
         with open(local_spec_data_fpath) as local_spec_data_fp:
             local_spec_data = json.load(local_spec_data_fp)
-        with open(local_tool_data_fpath) as local_tool_data_fp:
-            local_tool_data = json.load(local_tool_data_fp)
-        return local_spec_data, local_tool_data
+        local_project_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+        if not os.path.exists(local_project_data_fpath):
+            self._toolbox.msg.emit(f"Local project data not found [{local_project_data_fpath}]")
+            return local_spec_data, {}
+        with open(local_project_data_fpath) as local_project_data_fp:
+            local_project_data = json.load(local_project_data_fp)
+        return local_spec_data, local_project_data
 
     @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):

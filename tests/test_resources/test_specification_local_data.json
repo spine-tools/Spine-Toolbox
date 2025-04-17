@@ -1,0 +1,50 @@
+{
+    "Tool": {
+        "Run SpineOpt": {
+            "execution_settings": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": false,
+                "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe",
+                "project": "C:/data/JuliaProjects/SpineOptProject"
+            }
+        },
+        "Load template": {
+            "execution_settings": {}
+        },
+        "Run SpineOpt detached": {
+            "execution_settings": {}
+        },
+        "python_basic_console_spec": {
+            "execution_settings": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": false,
+                "executable": "some/python.exe"
+            }
+        },
+        "julia_basic_console_spec": {
+            "execution_settings": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": false,
+                "executable": "some/julia.exe",
+                "project": ""
+            }
+        },
+        "python_jupyter_console_spec": {
+            "execution_settings": {
+                "env": "",
+                "kernel_spec_name": "python312",
+                "use_jupyter_console": true,
+                "executable": ""
+            }
+        },
+        "batch": {
+            "execution_settings": {
+                "cmd": "",
+                "shell": "cmd.exe"
+            }
+        }
+    }
+}

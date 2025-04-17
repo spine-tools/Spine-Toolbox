@@ -1,0 +1,14 @@
+{
+    "items": {
+        "Python Tool Jupyter Console": {},
+        "Run SpineOpt": {},
+        "Julia Tool": {},
+        "Python Tool Basic Console": {
+            "root_directory": {
+                "type": "path",
+                "relative": true,
+                "path": "."
+            }
+        }
+    }
+}
