@@ -362,44 +362,22 @@ class ExecutableCompoundModels(QObject):
             QApplication.restoreOverrideCursor()
 
     def default_python_execution_settings(self):
-        """Returns a dictionary with the Python execution settings stored into QSettings."""
-        use_jupyter_cons = bool(int(self._qsettings.value("appSettings/usePythonKernel", defaultValue="0")))
-        k_name = self._qsettings.value("appSettings/pythonKernel", defaultValue="")
-        env = ""
-        if use_jupyter_cons:
-            # Find kernel from model and check its data to see if it's a Conda kernel
-            index = self.find_python_kernel_index(k_name)
-            if index.isValid():
-                item = self.python_kernel_model.itemFromIndex(index)
-                if item.data() is not None:
-                    if item.data()["is_conda"]:
-                        env = "conda"
+        """Returns default Python Tool execution settings."""
         d = dict()
-        d["kernel_spec_name"] = k_name
-        d["env"] = env
-        d["use_jupyter_console"] = use_jupyter_cons
-        d["executable"] = self._qsettings.value("appSettings/pythonPath", defaultValue="")
+        d["kernel_spec_name"] = ""
+        d["env"] = ""
+        d["use_jupyter_console"] = False
+        d["executable"] = ""
         return d
 
     def default_julia_execution_settings(self):
-        """Returns a dictionary with the Julia execution settings stored into QSettings."""
-        use_jupyter_cons = bool(int(self._qsettings.value("appSettings/useJuliaKernel", defaultValue="0")))
-        k_name = self._qsettings.value("appSettings/juliaKernel", defaultValue="")
-        env = ""
-        if use_jupyter_cons:
-            # Find kernel from model and check its data to see if it's a Conda kernel
-            index = self.find_julia_kernel_index(k_name)
-            if index.isValid():
-                item = self.julia_kernel_model.itemFromIndex(index)
-                if item.data() is not None:
-                    if item.data()["is_conda"]:
-                        env = "conda"
+        """Returns default Julia Tool execution settings."""
         d = dict()
-        d["kernel_spec_name"] = k_name
-        d["env"] = env
-        d["use_jupyter_console"] = use_jupyter_cons
-        d["executable"] = self._qsettings.value("appSettings/juliaPath", defaultValue="")
-        d["project"] = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
+        d["kernel_spec_name"] = ""
+        d["env"] = ""
+        d["use_jupyter_console"] = False
+        d["executable"] = ""
+        d["project"] = ""
         return d
 
     def load_all(self):

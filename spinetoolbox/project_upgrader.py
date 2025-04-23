@@ -634,7 +634,7 @@ class ProjectUpgrader:
             with open(local_project_data_fpath, "w") as fp:
                 json.dump(project_data, fp, indent=4)
         except OSError:
-            self._toolbox.msg_error.emit("Saving project_local_data.json file failed. Check permissions.")
+            self._toolbox.msg_error.emit("Saving project_local_data.json file failed. Permission error, perhaps?")
         return new
 
     def get_local_data_dicts(self, project_dir):

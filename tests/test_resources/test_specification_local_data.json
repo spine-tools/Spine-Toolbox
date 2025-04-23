@@ -9,11 +9,14 @@
                 "project": "C:/data/JuliaProjects/SpineOptProject"
             }
         },
-        "Load template": {
-            "execution_settings": {}
-        },
-        "Run SpineOpt detached": {
-            "execution_settings": {}
+        "julia_jupyter_console_spec": {
+            "execution_settings": {
+                "kernel_spec_name": "julia-1.10",
+                "env": "",
+                "use_jupyter_console": true,
+                "executable": "",
+                "project": ""
+            }
         },
         "python_basic_console_spec": {
             "execution_settings": {
@@ -21,15 +24,6 @@
                 "env": "",
                 "use_jupyter_console": false,
                 "executable": "some/python.exe"
-            }
-        },
-        "julia_basic_console_spec": {
-            "execution_settings": {
-                "kernel_spec_name": "",
-                "env": "",
-                "use_jupyter_console": false,
-                "executable": "some/julia.exe",
-                "project": ""
             }
         },
         "python_jupyter_console_spec": {
@@ -40,7 +34,13 @@
                 "executable": ""
             }
         },
-        "batch": {
+        "executable_run_dir_command": {
+            "execution_settings": {
+                "cmd": "dir",
+                "shell": "cmd.exe"
+            }
+        },
+        "executable_run_batch_file": {
             "execution_settings": {
                 "cmd": "",
                 "shell": "cmd.exe"

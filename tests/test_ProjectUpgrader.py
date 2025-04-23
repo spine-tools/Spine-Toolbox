@@ -362,27 +362,56 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 local_folder = os.path.join(project_dir, ".spinetoolbox", "local")
                 os.makedirs(local_folder)  # Make dir for specification_local_data.json and project_local_data.json
                 spec_f, project_f = self.copy_test_files_to_tempdir(local_folder)
+                # Check project_local_data.json before upgrade
+                with open(project_f) as project_fp:
+                    pld_before_upgrade = json.load(project_fp)
+                self.assertEqual(6, len(pld_before_upgrade['items'].keys()))
+                a = pld_before_upgrade["items"]["Run SpineOpt"]
+                expected = {}
+                self.assertDictEqual(expected, a)
+                b = pld_before_upgrade["items"]["Julia Tool Jupyter Console"]
+                expected = {}
+                self.assertDictEqual(expected, b)
+                c = pld_before_upgrade["items"]["Python Tool Basic Console"]
+                expected = {"root_directory": {"type": "path", "relative": True, "path": "."}}
+                self.assertDictEqual(expected, c)
+                d = pld_before_upgrade["items"]["Python Tool Jupyter Console"]
+                expected = {}
+                self.assertDictEqual(expected, d)
+                e = pld_before_upgrade["items"]["Run dir command"]
+                expected = {"root_directory": {"type": "path", "relative": False, "path": "C:/data"}}
+                self.assertDictEqual(expected, e)
+                f = pld_before_upgrade["items"]["Run Batch File"]
+                expected = {"root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"}}
+                self.assertDictEqual(expected, f)
+                # Do upgrade
                 proj_v14 = pu.upgrade(proj_v13, project_dir)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
                 mock_mb.assert_called_once()
-                # Open updated local project data .json file and check that everything went smoothly.
+                # Check project_local_data.json after upgrade
                 # There should be no changes in the local specification data .json file
                 with open(project_f) as project_fp:
-                    local_project_data = json.load(project_fp)
-                for key, value in local_project_data["items"].items():
-                    if key == "Python Tool Jupyter Console":
-                        expected = {"options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}}
-                        self.assertDictEqual(expected, value)
-                    elif key == "Run SpineOpt":
-                        expected = {"options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe", "project": "C:/data/JuliaProjects/SpineOptProject"}}
-                        self.assertDictEqual(expected, value)
-                    elif key == "Julia Tool":
-                        expected = {'options': {"env": "", "kernel_spec_name": "", "use_jupyter_console": False, "executable": "some/julia.exe", "project": "", "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}}
-                        self.assertDictEqual(expected, value)
-                    elif key == "Python Tool Basic Console":
-                        expected = {"root_directory": {"type": "path", "relative": True, "path": "."}, "options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "some/python.exe"}}
-                        self.assertDictEqual(expected, value)
+                    pld_after_upgrade = json.load(project_fp)
+                self.assertEqual(6, len(pld_after_upgrade['items'].keys()))
+                a = pld_after_upgrade["items"]["Run SpineOpt"]
+                expected = {"options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe", "project": "C:/data/JuliaProjects/SpineOptProject"}}
+                self.assertDictEqual(expected, a)
+                b = pld_after_upgrade["items"]["Julia Tool Jupyter Console"]
+                expected = {'options': {"env": "", "kernel_spec_name": "julia-1.10", "use_jupyter_console": True, "executable": "", "project": "", "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}}
+                self.assertDictEqual(expected, b)
+                c = pld_after_upgrade["items"]["Python Tool Basic Console"]
+                expected = {"root_directory": {"type": "path", "relative": True, "path": "."}, "options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "some/python.exe"}}
+                self.assertDictEqual(expected, c)
+                d = pld_after_upgrade["items"]["Python Tool Jupyter Console"]
+                expected = {"options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}}
+                self.assertDictEqual(expected, d)
+                e = pld_after_upgrade["items"]["Run dir command"]
+                expected = {"root_directory": {"type": "path", "relative": False, "path": "C:/data"}, "options": {"cmd": "dir", "shell": "cmd.exe"}}
+                self.assertDictEqual(expected, e)
+                f = pld_after_upgrade["items"]["Run Batch File"]
+                expected = {"root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"}, "options": {"cmd": "", "shell": "cmd.exe"}}
+                self.assertDictEqual(expected, f)
                 self.assertTrue(pu.is_valid(14, proj_v14))
                 self.assertEqual(proj_v14["project"]["version"], 14)
                 self.assertIn("settings", proj_v14["project"])

@@ -10,17 +10,27 @@
                 {
                     "type": "path",
                     "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/julia_jupyter_console_spec.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
                     "path": ".spinetoolbox/specifications/Tool/python_basic_console_spec.json"
                 },
                 {
                     "type": "path",
                     "relative": true,
-                    "path": ".spinetoolbox/specifications/Tool/julia_basic_console_spec.json"
+                    "path": ".spinetoolbox/specifications/Tool/python_jupyter_console_spec.json"
                 },
                 {
                     "type": "path",
                     "relative": true,
-                    "path": ".spinetoolbox/specifications/Tool/python_jupyter_console_spec.json"
+                    "path": ".spinetoolbox/specifications/Tool/executable_run_dir_command.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/executable_run_batch_file.json"
                 }
             ]
         },
@@ -67,17 +77,6 @@
         "jumps": []
     },
     "items": {
-        "Python Tool Jupyter Console": {
-            "type": "Tool",
-            "description": "",
-            "x": 58.83501588118793,
-            "y": -239.39765082690263,
-            "specification": "python_jupyter_console_spec",
-            "execute_in_work": true,
-            "cmd_line_args": [],
-            "kill_completed_processes": false,
-            "log_process_output": false
-        },
         "Run SpineOpt": {
             "type": "Tool",
             "description": "",
@@ -89,12 +88,12 @@
             "kill_completed_processes": false,
             "log_process_output": false
         },
-        "Julia Tool": {
+        "Julia Tool Jupyter Console": {
             "type": "Tool",
             "description": "",
             "x": 59.84941270672569,
             "y": -91.29571429839505,
-            "specification": "julia_basic_console_spec",
+            "specification": "julia_jupyter_console_spec",
             "execute_in_work": true,
             "cmd_line_args": [],
             "options": {
@@ -110,6 +109,39 @@
             "y": -145.05874605189433,
             "specification": "python_basic_console_spec",
             "execute_in_work": true,
+            "cmd_line_args": [],
+            "kill_completed_processes": false,
+            "log_process_output": false
+        },
+        "Python Tool Jupyter Console": {
+            "type": "Tool",
+            "description": "",
+            "x": 58.83501588118793,
+            "y": -239.39765082690263,
+            "specification": "python_jupyter_console_spec",
+            "execute_in_work": true,
+            "cmd_line_args": [],
+            "kill_completed_processes": false,
+            "log_process_output": false
+        },
+        "Run dir command": {
+            "type": "Tool",
+            "description": "",
+            "x": 118.96322069461877,
+            "y": -64.72912396378945,
+            "specification": "executable_run_dir_command",
+            "execute_in_work": false,
+            "cmd_line_args": [],
+            "kill_completed_processes": false,
+            "log_process_output": false
+        },
+        "Run Batch File": {
+            "type": "Tool",
+            "description": "",
+            "x": -109.32910225372486,
+            "y": 23.52651567485218,
+            "specification": "executable_run_batch_file",
+            "execute_in_work": false,
             "cmd_line_args": [],
             "kill_completed_processes": false,
             "log_process_output": false
