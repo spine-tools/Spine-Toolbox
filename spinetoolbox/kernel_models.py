@@ -361,25 +361,6 @@ class ExecutableCompoundModels(QObject):
         while QApplication.overrideCursor() is not None:
             QApplication.restoreOverrideCursor()
 
-    def default_python_execution_settings(self):
-        """Returns default Python Tool execution settings."""
-        d = dict()
-        d["kernel_spec_name"] = ""
-        d["env"] = ""
-        d["use_jupyter_console"] = False
-        d["executable"] = ""
-        return d
-
-    def default_julia_execution_settings(self):
-        """Returns default Julia Tool execution settings."""
-        d = dict()
-        d["kernel_spec_name"] = ""
-        d["env"] = ""
-        d["use_jupyter_console"] = False
-        d["executable"] = ""
-        d["project"] = ""
-        return d
-
     def load_all(self):
         self.refresh_python_interpreters_model()
         self.refresh_julia_executables_model()
