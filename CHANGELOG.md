@@ -3,6 +3,16 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
+## [unreleased]
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Security
+
 ## [0.9.6]
 
 ### Changed
