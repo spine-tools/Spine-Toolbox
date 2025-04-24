@@ -3,9 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
-
-### Added
+## [0.9.6]
 
 ### Changed
 
@@ -16,12 +14,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   There is no functionality to restore old positions;
   users are requested to readjust the positions manually and save them again
   after which the existing *x* and *y* values can be removed.
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.9.5]
 
