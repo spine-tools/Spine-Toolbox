@@ -36,9 +36,9 @@ from PySide6.QtWidgets import (
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_dimensions, name_from_elements
 from ...helpers import DB_ITEM_SEPARATOR
-from ...mvcmodels.compound_table_model import CompoundTableModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..helpers import string_to_bool, string_to_display_icon
+from ..mvcmodels.compound_table_model import CompoundTableModel
 from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
 from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate
 from .manage_items_dialogs import (

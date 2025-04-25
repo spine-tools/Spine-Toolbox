@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -27,14 +27,15 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QDockWidget, QFrame,
-    QGraphicsView, QHBoxLayout, QHeaderView, QMainWindow,
-    QMenu, QMenuBar, QSizePolicy, QSpacerItem,
-    QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QDockWidget,
+    QFrame, QGraphicsView, QHBoxLayout, QHeaderView,
+    QMainWindow, QMenu, QMenuBar, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EntityAlternativeTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
-    ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterValueTableView, EntityAlternativeTableView,
+    FrozenTableView, ItemMetadataTableView, MetadataTableView, ParameterDefinitionTableView,
+    ParameterValueTableView, PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
 from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, TimeLineWidget)
 from spinetoolbox import resources_icons_rc
@@ -44,8 +45,8 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(965, 1159)
-        MainWindow.setLayoutDirection(Qt.LeftToRight)
-        MainWindow.setDockOptions(QMainWindow.AllowNestedDocks|QMainWindow.AllowTabbedDocks|QMainWindow.AnimatedDocks|QMainWindow.GroupedDragging)
+        MainWindow.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        MainWindow.setDockOptions(QMainWindow.DockOption.AllowNestedDocks|QMainWindow.DockOption.AllowTabbedDocks|QMainWindow.DockOption.AnimatedDocks|QMainWindow.DockOption.GroupedDragging)
         self.actionCommit = QAction(MainWindow)
         self.actionCommit.setObjectName(u"actionCommit")
         self.actionCommit.setEnabled(True)
@@ -198,7 +199,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.alternative_dock_widget = QDockWidget(MainWindow)
         self.alternative_dock_widget.setObjectName(u"alternative_dock_widget")
-        self.alternative_dock_widget.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.alternative_dock_widget.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas)
         self.dockWidgetContents_15 = QWidget()
         self.dockWidgetContents_15.setObjectName(u"dockWidgetContents_15")
         self.verticalLayout_18 = QVBoxLayout(self.dockWidgetContents_15)
@@ -207,10 +208,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
         self.alternative_tree_view = AlternativeTreeView(self.dockWidgetContents_15)
         self.alternative_tree_view.setObjectName(u"alternative_tree_view")
-        self.alternative_tree_view.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
+        self.alternative_tree_view.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
         self.alternative_tree_view.setDragEnabled(True)
-        self.alternative_tree_view.setDragDropMode(QAbstractItemView.DragOnly)
-        self.alternative_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.alternative_tree_view.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
+        self.alternative_tree_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.alternative_tree_view.setUniformRowHeights(False)
 
         self.verticalLayout_18.addWidget(self.alternative_tree_view)
@@ -227,8 +228,8 @@ class Ui_MainWindow(object):
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
-        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
-        self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
+        self.treeView_parameter_value_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.treeView_parameter_value_list.header().setVisible(True)
 
         self.verticalLayout.addWidget(self.treeView_parameter_value_list)
@@ -245,19 +246,33 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.tableView_parameter_value = ParameterValueTableView(self.dockWidgetContents_2)
         self.tableView_parameter_value.setObjectName(u"tableView_parameter_value")
-        self.tableView_parameter_value.setMouseTracking(True)
-        self.tableView_parameter_value.setContextMenuPolicy(Qt.DefaultContextMenu)
-        self.tableView_parameter_value.setLayoutDirection(Qt.LeftToRight)
+        self.tableView_parameter_value.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.tableView_parameter_value.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tableView_parameter_value.setTabKeyNavigation(False)
-        self.tableView_parameter_value.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.tableView_parameter_value.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
-        self.tableView_parameter_value.setSortingEnabled(False)
+        self.tableView_parameter_value.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.tableView_parameter_value.setWordWrap(False)
         self.tableView_parameter_value.horizontalHeader().setHighlightSections(False)
         self.tableView_parameter_value.verticalHeader().setVisible(False)
         self.tableView_parameter_value.verticalHeader().setHighlightSections(False)
 
         self.verticalLayout_5.addWidget(self.tableView_parameter_value)
+
+        self.empty_parameter_value_table_view = EmptyParameterValueTableView(self.dockWidgetContents_2)
+        self.empty_parameter_value_table_view.setObjectName(u"empty_parameter_value_table_view")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.empty_parameter_value_table_view.sizePolicy().hasHeightForWidth())
+        self.empty_parameter_value_table_view.setSizePolicy(sizePolicy1)
+        self.empty_parameter_value_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.empty_parameter_value_table_view.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.empty_parameter_value_table_view.setTabKeyNavigation(False)
+        self.empty_parameter_value_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.empty_parameter_value_table_view.setWordWrap(False)
+        self.empty_parameter_value_table_view.horizontalHeader().setVisible(False)
+        self.empty_parameter_value_table_view.verticalHeader().setVisible(False)
+
+        self.verticalLayout_5.addWidget(self.empty_parameter_value_table_view)
 
         self.dockWidget_parameter_value.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_value)
@@ -271,10 +286,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.tableView_parameter_definition = ParameterDefinitionTableView(self.dockWidgetContents_5)
         self.tableView_parameter_definition.setObjectName(u"tableView_parameter_definition")
-        self.tableView_parameter_definition.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.tableView_parameter_definition.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.tableView_parameter_definition.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tableView_parameter_definition.setTabKeyNavigation(False)
-        self.tableView_parameter_definition.setSelectionBehavior(QAbstractItemView.SelectItems)
-        self.tableView_parameter_definition.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.tableView_parameter_definition.setTextElideMode(Qt.TextElideMode.ElideLeft)
+        self.tableView_parameter_definition.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.tableView_parameter_definition.setSortingEnabled(False)
         self.tableView_parameter_definition.setWordWrap(False)
         self.tableView_parameter_definition.horizontalHeader().setHighlightSections(False)
@@ -283,11 +299,24 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_10.addWidget(self.tableView_parameter_definition)
 
+        self.empty_parameter_definition_table_view = EmptyParameterDefinitionTableView(self.dockWidgetContents_5)
+        self.empty_parameter_definition_table_view.setObjectName(u"empty_parameter_definition_table_view")
+        sizePolicy1.setHeightForWidth(self.empty_parameter_definition_table_view.sizePolicy().hasHeightForWidth())
+        self.empty_parameter_definition_table_view.setSizePolicy(sizePolicy1)
+        self.empty_parameter_definition_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.empty_parameter_definition_table_view.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.empty_parameter_definition_table_view.setTabKeyNavigation(False)
+        self.empty_parameter_definition_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.empty_parameter_definition_table_view.horizontalHeader().setVisible(False)
+        self.empty_parameter_definition_table_view.verticalHeader().setVisible(False)
+
+        self.verticalLayout_10.addWidget(self.empty_parameter_definition_table_view)
+
         self.dockWidget_parameter_definition.setWidget(self.dockWidgetContents_5)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_definition)
         self.dockWidget_entity_tree = QDockWidget(MainWindow)
         self.dockWidget_entity_tree.setObjectName(u"dockWidget_entity_tree")
-        self.dockWidget_entity_tree.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self.dockWidget_entity_tree.setAllowedAreas(Qt.DockWidgetArea.AllDockWidgetAreas)
         self.dockWidgetContents_6 = QWidget()
         self.dockWidgetContents_6.setObjectName(u"dockWidgetContents_6")
         self.verticalLayout_4 = QVBoxLayout(self.dockWidgetContents_6)
@@ -296,14 +325,14 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy1.setHorizontalStretch(1)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
-        self.treeView_entity.setSizePolicy(sizePolicy1)
-        self.treeView_entity.setEditTriggers(QAbstractItemView.EditKeyPressed)
-        self.treeView_entity.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectItems)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy2.setHorizontalStretch(1)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.treeView_entity.sizePolicy().hasHeightForWidth())
+        self.treeView_entity.setSizePolicy(sizePolicy2)
+        self.treeView_entity.setEditTriggers(QAbstractItemView.EditTrigger.EditKeyPressed)
+        self.treeView_entity.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
         self.treeView_entity.setIconSize(QSize(20, 20))
         self.treeView_entity.setUniformRowHeights(False)
 
@@ -321,14 +350,14 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = EntityQGraphicsView(self.dockWidgetContents_8)
         self.graphicsView.setObjectName(u"graphicsView")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy2.setHorizontalStretch(2)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
-        self.graphicsView.setSizePolicy(sizePolicy2)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        sizePolicy3.setHorizontalStretch(2)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
+        self.graphicsView.setSizePolicy(sizePolicy3)
         self.graphicsView.setMouseTracking(True)
-        self.graphicsView.setFrameShape(QFrame.NoFrame)
-        self.graphicsView.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.graphicsView.setFrameShape(QFrame.Shape.NoFrame)
+        self.graphicsView.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
 
         self.verticalLayout_7.addWidget(self.graphicsView)
 
@@ -359,9 +388,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.setContentsMargins(0, 0, 0, 0)
         self.pivot_table = PivotTableView(self.dockWidgetContents_10)
         self.pivot_table.setObjectName(u"pivot_table")
-        self.pivot_table.setContextMenuPolicy(Qt.DefaultContextMenu)
+        self.pivot_table.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
         self.pivot_table.setTabKeyNavigation(False)
-        self.pivot_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.pivot_table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
 
         self.verticalLayout_13.addWidget(self.pivot_table)
 
@@ -379,8 +408,8 @@ class Ui_MainWindow(object):
         self.frozen_table.setObjectName(u"frozen_table")
         self.frozen_table.setAcceptDrops(True)
         self.frozen_table.setTabKeyNavigation(False)
-        self.frozen_table.setSelectionMode(QAbstractItemView.NoSelection)
-        self.frozen_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.frozen_table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.frozen_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.frozen_table.horizontalHeader().setVisible(False)
         self.frozen_table.verticalHeader().setVisible(False)
 
@@ -391,8 +420,8 @@ class Ui_MainWindow(object):
         self.dockWidget_exports = QDockWidget(MainWindow)
         self.dockWidget_exports.setObjectName(u"dockWidget_exports")
         self.dockWidget_exports.setMaximumSize(QSize(524287, 64))
-        self.dockWidget_exports.setFeatures(QDockWidget.DockWidgetClosable)
-        self.dockWidget_exports.setAllowedAreas(Qt.BottomDockWidgetArea)
+        self.dockWidget_exports.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
+        self.dockWidget_exports.setAllowedAreas(Qt.DockWidgetArea.BottomDockWidgetArea)
         self.dockWidgetContents_12 = QWidget()
         self.dockWidgetContents_12.setObjectName(u"dockWidgetContents_12")
         self.horizontalLayout_3 = QHBoxLayout(self.dockWidgetContents_12)
@@ -421,6 +450,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_11.setContentsMargins(0, 0, 0, 0)
         self.metadata_table_view = MetadataTableView(self.metadata_dock_contents)
         self.metadata_table_view.setObjectName(u"metadata_table_view")
+        self.metadata_table_view.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.metadata_table_view.setSortingEnabled(True)
         self.metadata_table_view.verticalHeader().setVisible(False)
 
@@ -457,11 +487,11 @@ class Ui_MainWindow(object):
         self.scenario_tree_view = ScenarioTreeView(self.dockWidgetContents_9)
         self.scenario_tree_view.setObjectName(u"scenario_tree_view")
         self.scenario_tree_view.setAcceptDrops(True)
-        self.scenario_tree_view.setEditTriggers(QAbstractItemView.AnyKeyPressed|QAbstractItemView.DoubleClicked|QAbstractItemView.EditKeyPressed)
+        self.scenario_tree_view.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
         self.scenario_tree_view.setDragEnabled(True)
-        self.scenario_tree_view.setDragDropMode(QAbstractItemView.DragDrop)
-        self.scenario_tree_view.setDefaultDropAction(Qt.MoveAction)
-        self.scenario_tree_view.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.scenario_tree_view.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.scenario_tree_view.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.scenario_tree_view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.scenario_tree_view.setUniformRowHeights(False)
 
         self.verticalLayout_12.addWidget(self.scenario_tree_view)
@@ -478,8 +508,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.tableView_entity_alternative = EntityAlternativeTableView(self.dockWidgetContents_3)
         self.tableView_entity_alternative.setObjectName(u"tableView_entity_alternative")
+        self.tableView_entity_alternative.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.tableView_entity_alternative.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tableView_entity_alternative.setTabKeyNavigation(False)
-        self.tableView_entity_alternative.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.tableView_entity_alternative.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.tableView_entity_alternative.setWordWrap(False)
         self.tableView_entity_alternative.horizontalHeader().setHighlightSections(False)
         self.tableView_entity_alternative.verticalHeader().setVisible(False)
@@ -487,11 +519,25 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addWidget(self.tableView_entity_alternative)
 
+        self.empty_entity_alternative_table_view = EmptyEntityAlternativeTableView(self.dockWidgetContents_3)
+        self.empty_entity_alternative_table_view.setObjectName(u"empty_entity_alternative_table_view")
+        sizePolicy1.setHeightForWidth(self.empty_entity_alternative_table_view.sizePolicy().hasHeightForWidth())
+        self.empty_entity_alternative_table_view.setSizePolicy(sizePolicy1)
+        self.empty_entity_alternative_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.empty_entity_alternative_table_view.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.empty_entity_alternative_table_view.setTabKeyNavigation(False)
+        self.empty_entity_alternative_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.empty_entity_alternative_table_view.setWordWrap(False)
+        self.empty_entity_alternative_table_view.horizontalHeader().setVisible(False)
+        self.empty_entity_alternative_table_view.verticalHeader().setVisible(False)
+
+        self.verticalLayout_2.addWidget(self.empty_entity_alternative_table_view)
+
         self.dockWidget_entity_alternative.setWidget(self.dockWidgetContents_3)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_entity_alternative)
         self.menuBar = QMenuBar(MainWindow)
         self.menuBar.setObjectName(u"menuBar")
-        self.menuBar.setGeometry(QRect(0, 0, 965, 22))
+        self.menuBar.setGeometry(QRect(0, 0, 965, 33))
         self.menuHelp = QMenu(self.menuBar)
         self.menuHelp.setObjectName(u"menuHelp")
         self.menuEdit = QMenu(self.menuBar)

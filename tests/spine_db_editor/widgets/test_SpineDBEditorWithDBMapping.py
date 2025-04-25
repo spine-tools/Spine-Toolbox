@@ -92,14 +92,13 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
         self.spine_db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
             root_index, QItemSelectionModel.SelectionFlags.ClearAndSelect
         )
-        while self.spine_db_editor.parameter_value_model.rowCount() != 3:
+        while self.spine_db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         expected = [
             ["fish", "nemo", "color", "Base", "orange", "db"],
             ["fish", "nemo (1)", "color", "Base", "orange", "db"],
-            [None, None, None, None, None, "db"],
         ]
-        for row in range(3):
+        for row in range(2):
             for column in range(self.spine_db_editor.parameter_value_model.columnCount()):
                 with self.subTest(row=row, column=column):
                     self.assertEqual(

@@ -959,13 +959,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self.load_db_urls(db_urls)
 
     def set_db_column_visibility(self, visible):
-        """Set the visibility of the database -column in all the views it is present"""
-        for view in [
+        """Sets the visibility of the database column in all the views it is present."""
+        for view in (
             self.ui.tableView_entity_alternative,
+            self.ui.empty_entity_alternative_table_view,
             self.ui.tableView_parameter_value,
+            self.ui.empty_parameter_value_table_view,
             self.ui.tableView_parameter_definition,
+            self.ui.empty_parameter_definition_table_view,
             self.ui.treeView_entity,
-        ]:
+        ):
             view.set_db_column_visibility(visible)
 
     def emit_pinned_values_updated(self):

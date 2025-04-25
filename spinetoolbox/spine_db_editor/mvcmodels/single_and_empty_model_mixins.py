@@ -11,41 +11,37 @@
 ######################################################################################################################
 
 """Miscellaneous mixins for parameter models."""
-
+from typing import Optional
+from spinedb_api import DatabaseMapping
 from spinedb_api.parameter_value import split_value_and_type
 
 
 class ConvertToDBMixin:
     """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
 
-    def _convert_to_db(self, item):
+    def _convert_to_db(self, item: dict) -> tuple[dict, list[str]]:
         """Returns a db item (id-based) from the given model item (name-based).
 
         Args:
-            item (dict): the model item
+            item: the model item
 
         Returns:
-            dict: the db item
-            list: error log
+            the db item and error log
         """
         item = item.copy()
         for field, real_field in self.field_map.items():
             if field in item:
                 item[real_field] = item.pop(field)
-        return item.copy(), []
+        return item, []
 
 
 class SplitValueAndTypeMixin(ConvertToDBMixin):
     def _convert_to_db(self, item):
         item, err = super()._convert_to_db(item)
-        value_field, type_field = {
-            "parameter_value": ("value", "type"),
-            "parameter_definition": ("default_value", "default_type"),
-        }[self.item_type]
-        if value_field in item:
-            value, value_type = split_value_and_type(item[value_field])
-            item[value_field] = value
-            item[type_field] = value_type
+        if self.value_field in item:
+            value, value_type = split_value_and_type(item[self.value_field])
+            item[self.value_field] = value
+            item[self.type_field] = value_type
         return item, err
 
 
@@ -53,16 +49,15 @@ class MakeEntityOnTheFlyMixin(ConvertToDBMixin):
     """Makes relationships on the fly."""
 
     @staticmethod
-    def _make_entity_on_the_fly(item, db_map):
+    def _make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optional[dict], list[str]]:
         """Returns a database entity item (id-based) from the given model parameter_value item (name-based).
 
         Args:
-            item (dict): the model parameter_value item
-            db_map (DiffDatabaseMapping): the database where the resulting item belongs
+            item: the model parameter_value item
+            db_map: the database where the resulting item belongs
 
         Returns:
-            dict: the db entity item
-            list: error log
+            the db entity item and error log
         """
         entity_class_name = item.get("entity_class_name")
         entity_class = db_map.get_item("entity_class", name=entity_class_name)

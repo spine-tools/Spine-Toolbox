@@ -16,12 +16,12 @@ import pyperf
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 from benchmarks.utils import StdOutLogger
-from spinetoolbox.spine_db_editor.mvcmodels.compound_models import CompoundModelBase, CompoundParameterValueModel
+from spinetoolbox.spine_db_editor.mvcmodels.compound_models import CompoundParameterValueModel, CompoundStackedModel
 from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleModelBase
 from spinetoolbox.spine_db_manager import SpineDBManager
 
 
-def call_filter_accepts_model(loops: int, compound_model: CompoundModelBase, single_model: SingleModelBase) -> float:
+def call_filter_accepts_model(loops: int, compound_model: CompoundStackedModel, single_model: SingleModelBase) -> float:
     duration = 0.0
     for _ in range(loops):
         start = time.perf_counter()

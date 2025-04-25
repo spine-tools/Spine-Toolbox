@@ -191,8 +191,8 @@ class SingleModelBase(HalfSortedTableModel):
         if ref is None:
             return {}
         src_id_key, ref_type = ref
-        ref_if = db_item.get(src_id_key)
-        return self.db_mngr.get_item(self.db_map, ref_type, ref_if)
+        ref_id = db_item.get(src_id_key)
+        return self.db_mngr.get_item(self.db_map, ref_type, ref_id)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         field = self.header[index.column()]
@@ -295,6 +295,7 @@ class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
     value_field: ClassVar[str] = NotImplemented
+    type_field: ClassVar[str] = NotImplemented
     parameter_definition_id_key: ClassVar[str] = NotImplemented
 
     def __init__(self, *args, **kwargs):
@@ -441,6 +442,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
 
     item_type = "parameter_definition"
     value_field = "default_value"
+    type_field = "default_type"
     parameter_definition_id_key = "id"
     group_fields = ("valid types",)
 
@@ -464,6 +466,7 @@ class SingleParameterValueModel(
 
     item_type = "parameter_value"
     value_field = "value"
+    type_field = "type"
     parameter_definition_id_key = "parameter_id"
 
     def _sort_key(self, element):

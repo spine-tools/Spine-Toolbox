@@ -11,26 +11,28 @@
 ######################################################################################################################
 
 """Models that vertically concatenate two or more table models."""
-import bisect
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
-from ..helpers import rows_to_row_count_tuples
-from ..mvcmodels.minimal_table_model import MinimalTableModel
+from typing import Optional
+from PySide6.QtCore import QModelIndex, QObject, Qt, QTimer, Slot
+from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
+from .single_models import SingleModelBase
 
 
 class CompoundTableModel(MinimalTableModel):
     """A model that concatenates several sub table models vertically."""
 
-    def __init__(self, parent=None, header=None):
+    def __init__(self, parent: Optional[QObject] = None, header: Optional[list[str]] = None):
         """
         Args:
-            parent (QObject, optional): the parent object
-            header (list of str, optional): header labels
+            parent: the parent object
+            header: header labels
         """
         super().__init__(parent=parent, header=header)
-        self.sub_models = []
-        self._row_map = []  # Maps compound row to tuple (sub_model, sub_row)
-        self._inv_row_map = {}  # Maps tuple (sub_model, sub_row) to compound row
-        self._next_sub_model = None
+        self.sub_models: list[SingleModelBase] = []
+        self._row_map: list[tuple[SingleModelBase, int]] = []  # Maps compound row to tuple (sub_model, sub_row)
+        self._inv_row_map: dict[tuple[SingleModelBase, int], int] = (
+            {}
+        )  # Maps tuple (sub_model, sub_row) to compound row
+        self._next_sub_model: Optional[SingleModelBase] = None
 
     def map_to_sub(self, index):
         """Returns an equivalent submodel index.
@@ -49,12 +51,12 @@ class CompoundTableModel(MinimalTableModel):
             return QModelIndex()
         return sub_model.index(sub_row, index.column())
 
-    def map_from_sub(self, sub_model, sub_index):
+    def map_from_sub(self, sub_model: SingleModelBase, sub_index: QModelIndex) -> QModelIndex:
         """Returns an equivalent compound model index.
 
         Args:
-            sub_model (MinimalTableModel): the submodel
-            sub_index (QModelIndex): the submodel index.
+            sub_model: the submodel
+            sub_index: the submodel index.
 
         Returns:
             QModelIndex: the equivalent index in the compound model
@@ -254,155 +256,3 @@ class CompoundTableModel(MinimalTableModel):
         self.endRemoveRows()
         self.refresh()
         return True
-
-
-class CompoundWithEmptyTableModel(CompoundTableModel):
-    """A compound parameter table model where the last model is an empty row model."""
-
-    @property
-    def single_models(self):
-        return self.sub_models[:-1]
-
-    @property
-    def empty_model(self):
-        return self.sub_models[-1]
-
-    def _create_empty_model(self):
-        """Creates and returns an empty model.
-
-        Returns:
-            EmptyRowModel: model
-        """
-        raise NotImplementedError()
-
-    def init_model(self):
-        """Initializes the compound model.
-
-        Basically populates the sub_models list attribute with the result of _create_empty_model.
-        """
-        self.clear_model()
-        self.sub_models.append(self._create_empty_model())
-        self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
-        self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-
-    def _connect_single_model(self, model):
-        """Connects signals so changes in the submodels are acknowledged by the compound."""
-        model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
-        model.modelAboutToBeReset.connect(lambda model=model: self._handle_single_model_about_to_be_reset(model))
-        model.dataChanged.connect(
-            lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
-                self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
-            )
-        )
-
-    def _recompute_empty_row_map(self):
-        """Recomputes the part of the row map corresponding to the empty model."""
-        empty_row_map = self._row_map_for_model(self.empty_model)
-        try:
-            row = self._inv_row_map[self.empty_model, 0]
-            self._row_map = self._row_map[:row]
-        except KeyError:
-            pass
-        self._append_row_map(empty_row_map)
-
-    @Slot(QModelIndex, int, int)
-    def _handle_empty_rows_removed(self, parent, empty_first, empty_last):
-        """Updates row_map when rows are removed from the empty model."""
-        first = self._inv_row_map[self.empty_model, empty_first]
-        last = self._inv_row_map[self.empty_model, empty_last]
-        self.beginRemoveRows(QModelIndex(), first, last)
-        self._recompute_empty_row_map()
-        self.endRemoveRows()
-
-    @Slot(QModelIndex, int, int)
-    def _handle_empty_rows_inserted(self, parent, empty_first, empty_last):
-        """Runs when rows are inserted to the empty model.
-        Updates row_map, then emits rowsInserted so the new rows become visible.
-        """
-        self._recompute_empty_row_map()
-        first = self._inv_row_map[self.empty_model, empty_first]
-        last = self._inv_row_map[self.empty_model, empty_last]
-        self.rowsInserted.emit(QModelIndex(), first, last)
-
-    def _handle_single_model_about_to_be_reset(self, model):
-        """Runs when given model is about to reset."""
-        if model not in self.single_models:
-            return
-        row_map = self._row_map_for_model(model)
-        if not row_map:
-            return
-        removed_rows = []
-        for mapped_row in row_map:
-            try:
-                removed_rows.append(self._inv_row_map[mapped_row])
-            except KeyError:
-                pass
-        for first, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-            last = first + count - 1
-            tail_row_map = self._row_map[last + 1 :]
-            self.beginRemoveRows(QModelIndex(), first, last)
-            for key in self._row_map[first:]:
-                del self._inv_row_map[key]
-            del self._row_map[first:]
-            self._append_row_map(tail_row_map)
-            self.endRemoveRows()
-
-    def _handle_single_model_reset(self, model):
-        """Runs when given model is reset."""
-        if model in self.single_models:
-            self._refresh_single_model(model)
-        else:
-            self._insert_single_model(model)
-
-    def _refresh_single_model(self, model):
-        single_row_map = self._row_map_for_model(model)
-        pos = self.single_models.index(model) + 1
-        self._insert_row_map(pos, single_row_map)
-
-    def _get_insert_position(self, model):
-        return bisect.bisect_left(self.single_models, model)
-
-    def _insert_single_model(self, model):
-        single_row_map = self._row_map_for_model(model)
-        pos = self._get_insert_position(model)
-        self._insert_row_map(pos, single_row_map)
-        self.sub_models.insert(pos, model)
-
-    def _get_row_for_insertion(self, pos):
-        for model in self.sub_models[pos:]:
-            first_row_map_item = next(self._row_map_iterator_for_model(model), None)
-            if first_row_map_item is not None:
-                try:
-                    return self._inv_row_map[first_row_map_item]
-                except KeyError:
-                    # Sometimes the submodel is not yet in the inverted row map.
-                    # In this case we just skip it and try another insertion point.
-                    pass
-        return self.rowCount()
-
-    def _insert_row_map(self, pos, single_row_map):
-        if not single_row_map:
-            # Emit layoutChanged to trigger fetching.
-            # The QTimer is to avoid funny situations where the user enters new data via the empty row model,
-            # and those rows need to be removed at the same time as we fetch the added data.
-            # Doing it in the same loop cycle was causing bugs.
-            QTimer.singleShot(0, self.layoutChanged.emit)
-            return
-        row = self._get_row_for_insertion(pos)
-        last = row + len(single_row_map) - 1
-        self.beginInsertRows(QModelIndex(), row, last)
-        self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
-        self._append_row_map(single_row_map)
-        self._append_row_map(tail_row_map)
-        self.endInsertRows()
-
-    def clear_model(self):
-        """Clears the model."""
-        if self._row_map:
-            self.beginResetModel()
-            self._row_map.clear()
-            self.endResetModel()
-        for m in self.sub_models:
-            m.deleteLater()
-        self.sub_models.clear()
-        self._inv_row_map.clear()

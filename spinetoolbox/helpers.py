@@ -113,7 +113,8 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
 
     register_matplotlib_converters()
 
-DBMapData = dict[DatabaseMapping, list[PublicItem]]
+DBMapPublicItems = dict[DatabaseMapping, list[PublicItem]]
+DBMapDictItems = dict[DatabaseMapping, list[dict]]
 
 
 @unique

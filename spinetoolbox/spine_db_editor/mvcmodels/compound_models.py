@@ -11,22 +11,36 @@
 ######################################################################################################################
 
 """Compound models. These models concatenate several 'single' models and one 'empty' model."""
+import bisect
+from collections.abc import Iterable
 from typing import ClassVar
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import parameter_identifier, rows_to_row_count_tuples
-from ...mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from ..widgets.custom_menus import AutoFilterMenu
-from .empty_models import EmptyEntityAlternativeModel, EmptyParameterDefinitionModel, EmptyParameterValueModel
-from .single_models import SingleEntityAlternativeModel, SingleParameterDefinitionModel, SingleParameterValueModel
+from .compound_table_model import CompoundTableModel
+from .single_models import (
+    SingleEntityAlternativeModel,
+    SingleModelBase,
+    SingleParameterDefinitionModel,
+    SingleParameterValueModel,
+)
+from .utils import (
+    ENTITY_ALTERNATIVE_MODEL_HEADER,
+    PARAMETER_DEFINITION_FIELD_MAP,
+    PARAMETER_DEFINITION_MODEL_HEADER,
+    PARAMETER_VALUE_FIELD_MAP,
+    PARAMETER_VALUE_MODEL_HEADER,
+)
 
 
-class CompoundModelBase(CompoundWithEmptyTableModel):
+class CompoundStackedModel(CompoundTableModel):
     """A base model for all models that show data in stacked format."""
 
     item_type: ClassVar[str] = NotImplemented
+    field_map: ClassVar[dict[str, str]] = {}
 
     def __init__(self, parent, db_mngr, *db_maps):
         """
@@ -57,16 +71,13 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         self.dock = None
         self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
 
-    def _make_header(self):
+    @staticmethod
+    def _make_header() -> list[str]:
         raise NotImplementedError()
 
     @property
     def column_filters(self):
         return self._column_filters
-
-    @property
-    def field_map(self):
-        return {}
 
     @property
     def _single_model_type(self):
@@ -75,16 +86,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
 
         Returns:
             SingleParameterModel
-        """
-        raise NotImplementedError()
-
-    @property
-    def _empty_model_type(self):
-        """
-        Returns a constructor for the empty model.
-
-        Returns:
-            EmptyParameterModel
         """
         raise NotImplementedError()
 
@@ -108,12 +109,63 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
 
-    def init_model(self):
+    def _connect_single_model(self, model: SingleModelBase) -> None:
+        """Connects signals so changes in the submodels are acknowledged by the compound."""
+        model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
+        model.modelAboutToBeReset.connect(lambda model=model: self._handle_single_model_about_to_be_reset(model))
+        model.dataChanged.connect(
+            lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
+                self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
+            )
+        )
+
+    def _handle_single_model_about_to_be_reset(self, model: SingleModelBase) -> None:
+        """Runs when given model is about to reset."""
+        if model not in self.sub_models:
+            return
+        row_map = self._row_map_for_model(model)
+        if not row_map:
+            return
+        removed_rows = []
+        for mapped_row in row_map:
+            try:
+                removed_rows.append(self._inv_row_map[mapped_row])
+            except KeyError:
+                pass
+        for first, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
+            last = first + count - 1
+            tail_row_map = self._row_map[last + 1 :]
+            self.beginRemoveRows(QModelIndex(), first, last)
+            for key in self._row_map[first:]:
+                del self._inv_row_map[key]
+            del self._row_map[first:]
+            self._append_row_map(tail_row_map)
+            self.endRemoveRows()
+
+    def _handle_single_model_reset(self, model: SingleModelBase) -> None:
+        """Runs when given model is reset."""
+        if model in self.sub_models:
+            self._refresh_single_model(model)
+        else:
+            self._insert_single_model(model)
+
+    def _refresh_single_model(self, model: SingleModelBase) -> None:
+        single_row_map = self._row_map_for_model(model)
+        pos = self.sub_models.index(model) + 1
+        self._insert_row_map(pos, single_row_map)
+
+    def init_model(self) -> None:
         """Initializes the model."""
-        super().init_model()
+        if self._row_map:
+            self.beginResetModel()
+            self._row_map.clear()
+            self.endResetModel()
+        for m in self.sub_models:
+            m.deleteLater()
+        self.sub_models.clear()
+        self._inv_row_map.clear()
         self._filter_class_ids = {}
         self._auto_filter = {}
-        self.empty_model.fetchMore(QModelIndex())
         while self._auto_filter_menus:
             _, menu = self._auto_filter_menus.popitem()
             menu.deleteLater()
@@ -151,14 +203,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         ):
             return italic_font
         return super().headerData(section, orientation, role)
-
-    def _create_empty_model(self):
-        """Returns the empty model for this compound model.
-
-        Returns:
-            EmptyParameterModel
-        """
-        return self._empty_model_type(self)
 
     def filter_accepts_model(self, model):
         """Returns a boolean indicating whether the given model passes the filter for compound model.
@@ -203,7 +247,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Returns:
             list
         """
-        return [m for m in self.single_models if self.filter_accepts_model(m)]
+        return [m for m in self.sub_models if self.filter_accepts_model(m)]
 
     def _invalidate_filter(self):
         """Sets the filter invalid."""
@@ -289,7 +333,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         Returns:
             list
         """
-        return [m for m in self.single_models if m.db_map == db_map]
+        return [m for m in self.sub_models if m.db_map == db_map]
 
     @staticmethod
     def _items_per_class(items):
@@ -320,7 +364,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         for db_map, items in db_map_data.items():
             if db_map not in self.db_maps:
                 continue
-            db_map_single_models = [m for m in self.single_models if m.db_map is db_map]
+            db_map_single_models = [m for m in self.sub_models if m.db_map is db_map]
             existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
             items_per_class = self._items_per_class(items)
             for entity_class_id, class_items in items_per_class.items():
@@ -336,12 +380,11 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
                         ids_uncommitted.append(item_id)
                 self._add_items(db_map, entity_class_id, ids_committed, committed=True)
                 self._add_items(db_map, entity_class_id, ids_uncommitted, committed=False)
-        self.empty_model.handle_items_added(db_map_data)
 
     def _get_insert_position(self, model):
         if model.committed:
-            return super()._get_insert_position(model)
-        return len(self.single_models)
+            return bisect.bisect_left(self.sub_models, model)
+        return len(self.sub_models)
 
     def _create_single_model(self, db_map, entity_class_id, committed):
         model = self._single_model_type(self, db_map, entity_class_id, committed)
@@ -349,6 +392,50 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
         for field in self._auto_filter:
             self._set_single_auto_filter(model, field)
         return model
+
+    def _insert_single_model(self, model: SingleModelBase) -> None:
+        single_row_map = self._row_map_for_model(model)
+        pos = self._get_insert_position(model)
+        self._insert_row_map(pos, single_row_map)
+        self.sub_models.insert(pos, model)
+
+    def _get_row_for_insertion(self, pos: int) -> int:
+        for model in self.sub_models[pos:]:
+            first_row_map_item = next(self._row_map_iterator_for_model(model), None)
+            if first_row_map_item is not None:
+                try:
+                    return self._inv_row_map[first_row_map_item]
+                except KeyError:
+                    # Sometimes the submodel is not yet in the inverted row map.
+                    # In this case we just skip it and try another insertion point.
+                    pass
+        return self.rowCount()
+
+    def _insert_row_map(self, pos: int, single_row_map: list[tuple[SingleModelBase, int]]) -> None:
+        if not single_row_map:
+            # Emit layoutChanged to trigger fetching.
+            # The QTimer is to avoid funny situations where the user enters new data via the empty row model,
+            # and those rows need to be removed at the same time as we fetch the added data.
+            # Doing it in the same loop cycle was causing bugs.
+            QTimer.singleShot(0, self.layoutChanged.emit)
+            return
+        row = self._get_row_for_insertion(pos)
+        last = row + len(single_row_map) - 1
+        self.beginInsertRows(QModelIndex(), row, last)
+        self._row_map, tail_row_map = self._row_map[:row], self._row_map[row:]
+        self._append_row_map(single_row_map)
+        self._append_row_map(tail_row_map)
+        self.endInsertRows()
+
+    def remove_rows(self, rows: Iterable[int]) -> None:
+        """Removes given rows by removing the corresponding items from the db map."""
+        db_map_typed_data = {}
+        for row in sorted(rows, reverse=True):
+            sub_model = self.sub_model_at_row(row)
+            db_map = sub_model.db_map
+            id_ = self.item_at_row(row)
+            db_map_typed_data.setdefault(db_map, {}).setdefault(self.item_type, []).append(id_)
+        self.db_mngr.remove_items(db_map_typed_data)
 
     def _add_items(self, db_map, entity_class_id, ids, committed):
         """Creates new single model and resets it with the given parameter ids.
@@ -363,7 +450,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             return
         if committed:
             existing = next(
-                (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+                (m for m in self.sub_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
             )
             if existing is not None:
                 existing.add_rows(ids)
@@ -396,7 +483,7 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
                 continue
             items_per_class = self._items_per_class(items)
             emptied_single_model_indexes = []
-            for model_index, model in enumerate(self.single_models):
+            for model_index, model in enumerate(self.sub_models):
                 if model.db_map != db_map:
                     continue
                 removed_ids = {x["id"] for x in items_per_class.get(model.entity_class_id, {})}
@@ -485,11 +572,6 @@ class CompoundModelBase(CompoundWithEmptyTableModel):
             return None, None
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
-    def get_entity_class_id(self, index, db_map):
-        entity_class_name = index.sibling(index.row(), self.header.index("entity_class_name")).data()
-        entity_class = db_map.get_item("entity_class", name=entity_class_name)
-        return entity_class.get("id")
-
     def filter_by(self, rows_per_column):
         for column, rows in rows_per_column.items():
             field = self.headerData(column)
@@ -520,13 +602,13 @@ class FilterEntityAlternativeMixin:
 
     def set_filter_entity_ids(self, entity_ids):
         self._filter_entity_ids = entity_ids
-        for model in self.single_models:
+        for model in self.sub_models:
             if model.set_filter_entity_ids(entity_ids):
                 self._invalidate_filter()
 
     def set_filter_alternative_ids(self, alternative_ids):
         self._filter_alternative_ids = alternative_ids
-        for model in self.single_models:
+        for model in self.sub_models:
             if model.set_filter_alternative_ids(alternative_ids):
                 self._invalidate_filter()
 
@@ -548,7 +630,7 @@ class EditParameterValueMixin:
             items_by_class = self._items_per_class(items)
             for entity_class_id, class_items in items_by_class.items():
                 single_model = next(
-                    (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+                    (m for m in self.sub_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
                 )
                 if single_model is not None:
                     single_model.revalidate_item_types(class_items)
@@ -592,8 +674,6 @@ class EditParameterValueMixin:
             function
         """
         sub_model = self.sub_model_at_row(index.row())
-        if sub_model == self.empty_model:
-            return lambda value_and_type, index=index: self.setData(index, join_value_and_type(*value_and_type))
         id_ = self.item_at_row(index.row())
         value_field = {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
         return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
@@ -601,43 +681,26 @@ class EditParameterValueMixin:
         )
 
 
-class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundModelBase):
+class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedModel):
     """A model that concatenates several single parameter_definition models and one empty parameter_definition model."""
 
     item_type = "parameter_definition"
+    field_map = PARAMETER_DEFINITION_FIELD_MAP
 
-    def _make_header(self):
-        return [
-            "entity_class_name",
-            "parameter_name",
-            "valid types",
-            "value_list_name",
-            "default_value",
-            "description",
-            "database",
-        ]
-
-    @property
-    def field_map(self):
-        return {
-            "parameter_name": "name",
-            "valid types": "parameter_type_list",
-            "value_list_name": "parameter_value_list_name",
-        }
+    @staticmethod
+    def _make_header():
+        return PARAMETER_DEFINITION_MODEL_HEADER
 
     @property
     def _single_model_type(self):
         return SingleParameterDefinitionModel
 
-    @property
-    def _empty_model_type(self):
-        return EmptyParameterDefinitionModel
 
-
-class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundModelBase):
+class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundStackedModel):
     """A model that concatenates several single parameter_value models and one empty parameter_value model."""
 
     item_type = "parameter_value"
+    field_map = PARAMETER_VALUE_FIELD_MAP
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -648,27 +711,13 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
             owner=self,
         )
 
-    def _make_header(self):
-        return [
-            "entity_class_name",
-            "entity_byname",
-            "parameter_name",
-            "alternative_name",
-            "value",
-            "database",
-        ]
-
-    @property
-    def field_map(self):
-        return {"parameter_name": "parameter_definition_name"}
+    @staticmethod
+    def _make_header():
+        return PARAMETER_VALUE_MODEL_HEADER
 
     @property
     def _single_model_type(self):
         return SingleParameterValueModel
-
-    @property
-    def _empty_model_type(self):
-        return EmptyParameterValueModel
 
     def reset_db_map(self, db_maps):
         super().reset_db_maps(db_maps)
@@ -682,29 +731,20 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
             items_by_class = self._items_per_class(items)
             for entity_class_id, class_items in items_by_class.items():
                 single_model = next(
-                    (m for m in self.single_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
+                    (m for m in self.sub_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
                 )
                 if single_model is not None:
                     single_model.revalidate_item_typs(class_items)
 
 
-class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundModelBase):
+class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundStackedModel):
 
     item_type = "entity_alternative"
 
-    def _make_header(self):
-        return [
-            "entity_class_name",
-            "entity_byname",
-            "alternative_name",
-            "active",
-            "database",
-        ]
+    @staticmethod
+    def _make_header():
+        return ENTITY_ALTERNATIVE_MODEL_HEADER
 
     @property
     def _single_model_type(self):
         return SingleEntityAlternativeModel
-
-    @property
-    def _empty_model_type(self):
-        return EmptyEntityAlternativeModel

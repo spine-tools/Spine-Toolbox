@@ -101,11 +101,20 @@ The *Julia Model Specification* tool specification has been selected for *Julia 
 Below the drop-down menu, you can choose a precompiled sysimage
 and edit Tool's command line arguments.
 Note that the command line argument editor already 'sees' the ``data.csv`` file provided by `Data Files`.
-The `Execute in` radio buttons control, whether this Tool is first copied to a work directory and executed
+The `Execute in` radio buttons control whether this Tool is first copied to a work directory and executed
 there, or if the execution should happen in the source directory where the main program file is located.
-In Group id, an execution group identifier can be given. Below that, there is a checkbox with the choice
-to kill consoles after execution.
-*Results...* button opens the Tool's result archive directory in system's file browser
+**Source code root directory** lets you specify an alternative source directory
+which is useful e.g. if the Tool is a software package that should be run from the package root
+instead of the location of the main program file.
+In **Reuse console id**, a free console name can be given.
+This makes multiple Tools in a workflow to use the same console for execution
+which may be useful for debugging.
+The currently used console is listed below the console id.
+Below that, there is a checkbox with the choice
+to kill consoles after execution
+which might be useful to constraint memory usage.
+**Log process output to a file** redirects the Tool's output to a file in ``<project dir>/.spinetoolbox/<Tool name>/logs/``
+**Results...** button opens the Tool's result archive directory in system's file browser
 (all Tools have their own result directory).
 
 When you click on the |play-all| button, the execution starts from the *Data Files* Data Connection

@@ -11,15 +11,15 @@
 ######################################################################################################################
 
 """ Contains a table model with an empty last row. """
-from PySide6.QtCore import QModelIndex, Qt, Slot
+from typing import Optional
+from PySide6.QtCore import QModelIndex, QObject, Qt, Slot
 from .minimal_table_model import MinimalTableModel
 
 
 class EmptyRowModel(MinimalTableModel):
     """A table model with a last empty row."""
 
-    def __init__(self, parent=None, header=None):
-        """Init class."""
+    def __init__(self, parent: Optional[QObject] = None, header: Optional[list[str]] = None):
         super().__init__(parent, header=header)
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
@@ -35,18 +35,18 @@ class EmptyRowModel(MinimalTableModel):
         self._fetched = True
 
     def flags(self, index):
-        """Return default flags except if forcing defaults."""
+        """Returns default flags except if forcing defaults."""
         if self.force_default:
             try:
                 name = self.header[index.column()]
                 if name in self.default_row:
-                    return super().flags(index) & ~Qt.ItemIsEditable
+                    return super().flags(index) & ~Qt.ItemFlag.ItemIsEditable
             except IndexError:
                 pass
         return super().flags(index)
 
-    def set_default_row(self, **kwargs):
-        """Set default row data."""
+    def set_default_row(self, **kwargs) -> None:
+        """Sets default row data."""
         self.default_row = kwargs
 
     def clear(self):
@@ -59,7 +59,7 @@ class EmptyRowModel(MinimalTableModel):
 
     @Slot(QModelIndex, QModelIndex, list)
     def _handle_data_changed(self, top_left, bottom_right, roles=None):
-        """Insert a new last empty row in case the previous one has been filled
+        """Inserts a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
         if roles is None:
             roles = []
@@ -78,24 +78,25 @@ class EmptyRowModel(MinimalTableModel):
                 break
 
     def removeRows(self, row, count, parent=QModelIndex()):
-        """Don't remove the last empty row."""
+        """Prevents removing the last row."""
         if row + count == self.rowCount():
             count -= 1
         return super().removeRows(row, count, parent)
 
     @Slot(QModelIndex, int, int)
     def _handle_rows_inserted(self, parent, first, last):
-        """Handle rowsInserted signal."""
+        """Handles rowsInserted signal."""
         self.set_rows_to_default(first, last)
 
-    def set_rows_to_default(self, first, last=None):
-        """Set default data in newly inserted rows."""
+    def set_rows_to_default(self, first: int, last: Optional[int] = None) -> None:
+        """Sets default data in newly inserted rows."""
         if last is None:
             last = first
         if first >= self.rowCount() or last < 0:
             return
+        column_count = self.columnCount()
         default_row = []
-        for column in range(self.columnCount()):
+        for column in range(column_count):
             try:
                 field = self.header[column]
             except IndexError:
@@ -105,5 +106,5 @@ class EmptyRowModel(MinimalTableModel):
         for row in range(first, last + 1):
             self._main_data[row] = default_row.copy()
         top_left = self.index(first, 0)
-        bottom_right = self.index(last, self.columnCount() - 1)
+        bottom_right = self.index(last, column_count - 1)
         self.dataChanged.emit(top_left, bottom_right)

@@ -11,11 +11,16 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
+from collections.abc import Iterable
 from dataclasses import replace
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
+from typing import ClassVar
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
+from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
+from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...plotting import (
     ParameterTableHeaderSection,
     PlottingError,
@@ -34,6 +39,7 @@ from ..mvcmodels.pivot_table_models import (
     ParameterValuePivotTableModel,
     ScenarioAlternativePivotTableModel,
 )
+from ..mvcmodels.utils import height_limited_size_hint
 from .custom_delegates import (
     AlternativeNameDelegate,
     BooleanValueDelegate,
@@ -67,14 +73,10 @@ def _set_data(index, new_value):
 class StackedTableView(AutoFilterCopyPasteTableView):
     """Base stacked view."""
 
-    _COLUMN_SIZE_HINTS = {}
-    _EXPECTED_COLUMN_COUNT: int = NotImplemented
+    _COLUMN_SIZE_HINTS: ClassVar[dict[str, int]] = {}
+    _EXPECTED_COLUMN_COUNT: ClassVar[int] = NotImplemented
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): parent widget
-        """
+    def __init__(self, parent: QWidget):
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
@@ -191,20 +193,9 @@ class StackedTableView(AutoFilterCopyPasteTableView):
             bottom = current.bottom()
             rows += range(top, bottom + 1)
         # Get data grouped by db_map
-        db_map_typed_data = {}
-        model = self.model()
-        empty_model = model.empty_model
-        for row in sorted(rows, reverse=True):
-            sub_model = model.sub_model_at_row(row)
-            if sub_model is empty_model:
-                sub_row = model.sub_model_row(row)
-                sub_model.removeRow(sub_row)
-                continue
-            db_map = sub_model.db_map
-            id_ = model.item_at_row(row)
-            db_map_typed_data.setdefault(db_map, {}).setdefault(model.item_type, []).append(id_)
-        model.db_mngr.remove_items(db_map_typed_data)
         self.selectionModel().clearSelection()
+        model = self.model()
+        model.remove_rows(rows)
 
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self, _, __):
@@ -231,14 +222,10 @@ class StackedTableView(AutoFilterCopyPasteTableView):
 
 
 class ParameterTableView(StackedTableView):
-    value_column_header: str = NotImplemented
+    value_column_header: ClassVar[str] = NotImplemented
     """Either "default_value" or "value". Used to identify the value column for advanced editing and plotting."""
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QWidget): parent widget
-        """
+    def __init__(self, parent: QWidget):
         super().__init__(parent=parent)
         self._open_in_editor_action = None
         self._plot_action = None
@@ -317,9 +304,8 @@ class ParameterTableView(StackedTableView):
             report_plotting_failure(error, self._spine_db_editor)
 
 
-class ParameterDefinitionTableView(ParameterTableView):
+class ParameterDefinitionTableViewBase(ParameterTableView):
     value_column_header = "default_value"
-
     _EXPECTED_COLUMN_COUNT = 7
     _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "parameter_name": 125, "list_value_name": 125, "description": 250}
 
@@ -332,6 +318,17 @@ class ParameterDefinitionTableView(ParameterTableView):
         delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
+
+class EmptyParameterDefinitionTableView(ParameterDefinitionTableViewBase):
+    def sizeHint(self, /):
+        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+
+    def _plot_selection(self, selection, plot_widget=None):
+        return
+
+
+class ParameterDefinitionTableView(ParameterDefinitionTableViewBase):
+
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
         header_sections = [
@@ -342,9 +339,8 @@ class ParameterDefinitionTableView(ParameterTableView):
         )
 
 
-class ParameterValueTableView(ParameterTableView):
+class ParameterValueTableViewBase(ParameterTableView):
     value_column_header = "value"
-
     _COLUMN_SIZE_HINTS = {
         "entity_class_name": 200,
         "entity_byname": 200,
@@ -352,10 +348,6 @@ class ParameterValueTableView(ParameterTableView):
         "alternative_name": 125,
     }
     _EXPECTED_COLUMN_COUNT = 6
-
-    def connect_spine_db_editor(self, spine_db_editor):
-        super().connect_spine_db_editor(spine_db_editor)
-        self.selectionModel().selectionChanged.connect(self._update_pinned_values)
 
     def create_delegates(self):
         super().create_delegates()
@@ -365,6 +357,27 @@ class ParameterValueTableView(ParameterTableView):
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
         delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
+
+
+class EmptyParameterValueTableView(ParameterValueTableViewBase):
+    def sizeHint(self, /):
+        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+
+    def _plot_selection(self, selection, plot_widget=None):
+        return
+
+
+class ParameterValueTableView(ParameterValueTableViewBase):
+    _private_key_fields: ClassVar[tuple[str, str, str, str]] = (
+        "entity_class_name",
+        "entity_byname",
+        "parameter_name",
+        "alternative_name",
+    )
+
+    def connect_spine_db_editor(self, spine_db_editor):
+        super().connect_spine_db_editor(spine_db_editor)
+        self.selectionModel().selectionChanged.connect(self._update_pinned_values)
 
     def _update_pinned_values(self, _selected, _deselected):
         row_pinned_value_iter = ((index.row(), self._make_pinned_value(index)) for index in self.selectedIndexes())
@@ -380,15 +393,11 @@ class ParameterValueTableView(ParameterTableView):
         db_item = self.model().db_item(index)
         if db_item is None:
             return None
-        return (db_map.db_url, {f: db_item[f] for f in self._pk_fields})
-
-    @property
-    def _pk_fields(self):
-        return "entity_class_name", "entity_byname", "parameter_name", "alternative_name"
+        return (db_map.db_url, {f: db_item[f] for f in self._private_key_fields})
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class."""
-        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._pk_fields]
+        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._private_key_fields]
         for i, section in enumerate(header_sections):
             if section.label == "entity_byname":
                 header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
@@ -398,15 +407,9 @@ class ParameterValueTableView(ParameterTableView):
         )
 
 
-class EntityAlternativeTableView(StackedTableView):
-    """Visualize entities and their alternatives."""
-
+class EntityAlternativeTableViewBase(StackedTableView):
     _EXPECTED_COLUMN_COUNT = 5
     _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "entity_byname": 200, "alternative_name": 125}
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.set_column_converter_for_pasting("active", string_to_bool)
 
     def create_delegates(self):
         super().create_delegates()
@@ -414,6 +417,26 @@ class EntityAlternativeTableView(StackedTableView):
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         self._make_delegate("active", BooleanValueDelegate)
+
+
+class EmptyEntityAlternativeTableView(EntityAlternativeTableViewBase):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.set_column_converter_for_pasting("active", string_to_bool)
+
+    def sizeHint(self, /):
+        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+
+    def _plot_selection(self, selection, plot_widget=None):
+        return
+
+
+class EntityAlternativeTableView(EntityAlternativeTableViewBase):
+    """Visualize entities and their alternatives."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.set_column_converter_for_pasting("active", string_to_bool)
 
 
 class PivotTableView(CopyPasteTableView):

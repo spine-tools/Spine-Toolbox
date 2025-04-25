@@ -1,6 +1,8 @@
-.. |reload| image:: ../../../spinetoolbox/ui/resources/menu_icons/sync.svg
-   :width: 16
+.. |black-plus| image:: ../../../spinetoolbox/ui/resources/black_plus.svg
+          :width: 16
 .. |database| image:: ../../../spinetoolbox/ui/resources/database.svg
+   :width: 16
+.. |reload| image:: ../../../spinetoolbox/ui/resources/menu_icons/sync.svg
    :width: 16
 
 ***************
@@ -71,13 +73,13 @@ open in the same configuration when it is opened the next time. The dock configu
 the configurations for the URL can be restored back to default from the **Menu bar->View->Docks...->Reset docks**,
 or from the button in the **Toolbar** with the same name.
 
-There are keyboard shortcuts to activate most of the widgets. For example Entity tree is activated with Alt+1.
+There are keyboard shortcuts to activate most of the widgets. For example Entity tree is activated with **Alt+1**.
 
 Tab bar
 =======
 
 The uppermost UI element is the **Tab bar**. One editor window can have multiple tabs. New tabs can be added by
-pressing the plus-sign (**+**) in the **Tab bar**. In the newly created tab, databases can be opened once again
+pressing the plus-sign (|black-plus|) in the **Tab bar**. In the newly created tab, databases can be opened once again
 with the instructions given above. Tabs can be deleted from the editor by pressing the cross (**X**) inside
 a tab. The tabs can be dragged from the **Tab bar** to create new editor windows. Tabs from different windows
 can also be dragged into others, fusing them into the same editor window.
@@ -152,29 +154,16 @@ The last button on the left side is **Reset docs**. When pressed, the dock widge
 in all views and Toolbox will forget the previous modifications. These modifications are database specific, so pressing
 this button will only reset the editor to factory state for the currently open database.
 
-The right side of the **Toolbar** houses three buttons. **Show URLs** opens up a popup window, which houses the names and
-URLs of the currently open databases. From there they can be copied, if one needs the URL for some purpose. Next button
-is the **Filter** (more about this later). After that there is the Spine-Toolbox logo which when clicked brings up the
-Spine-Toolbox main window.
-
-Filter
-======
-
-The filter can be used to select which items are allowed to be shown in the editor. The filter is based on scenarios.
-By pressing the filter image in the right end of the **Toolbar**, the filter selector widget opens up. There the desired
-scenario can be selected. When a selection is made and the **Update filters** button is pressed, the changes will be
-applied to the editor. Now all entities, parameters etc. will be filtered out if they don't belong to the scenario
-specified in the filter.
-
-.. tip:: Note that after applying the filter, the URL gets updated with some additional information about the filters.
+The right side of the **Toolbar** houses tow buttons. **Show URLs** opens up a popup window, which houses the names and
+URLs of the currently open databases. From there they can be copied, if one needs the URL for some purpose.
+After that there is the Spine-Toolbox logo which, when clicked, brings up the Spine Toolbox main window.
 
 Undo and redo
 =============
 
 Whenever changes are made to the data in the Spine Database Editor, the changes get stored into memory. This
 allows undoing and redoing the operations made in the editor. Buttons for these operations can be found in the
-**Toolbar** and the usual shortcuts **Ctrl+Z** and **Ctrl+Y** work also. However if the changes are committed,
-the memory for the changes gets cleared meaning that the changes before the commit can't be undone anymore.
+**Toolbar** and the usual shortcuts **Ctrl+Z** and **Ctrl+Y** work also.
 
 Views and trees
 ===============

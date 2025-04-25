@@ -166,7 +166,7 @@ Adding parameter definitions
 From **Table View**
 ~~~~~~~~~~~~~~~~~~~~
 
-To add new parameter definitions for an entity class, just fill the last empty row of *Parameter definition*.
+To add new parameter definitions for an entity class, just fill the empty row of *Parameter definition*.
 Only two of the fields are required when creating a new parameter definition: *entity_class_name* and
 *parameter_name*. Enter the name of the class under *entity_class_name*. To display a list of available
 entity classes, start typing in the empty cell or double click it. For the name of the parameter choose
@@ -212,7 +212,7 @@ Adding parameter values
 From **Table View**
 ~~~~~~~~~~~~~~~~~~~
 
-To add new parameter values for an entity, just fill the last empty row of the *Parameter value* -table.
+To add new parameter values for an entity, just fill the empty row of the *Parameter value* table.
 Enter the name of the class under *entity_class_name*, the name of the entity under *entity_byname*,
 the name of the parameter under *parameter_name*, and the name of the alternative under *alternative_name*.
 Optionally, you can also specify the parameter value right away under the *value* column. The database where
@@ -244,7 +244,7 @@ Then, enter the parameter value in the corresponding cell in the table body.
 Adding entity alternatives
 ==========================
 
-To add an entity alternative, open the **Entity Alternative** -**Table View**. There under *entity_class_name* select
+To add an entity alternative, open the **Entity Alternative** **Table View**. There under *entity_class_name* select
 the class. Under *entity_byname* select the specific entity from that class and from *alternative_name* select the
 alternative. Then set the value of the *active* -column to either true or false by double clicking it. The background
 of the cells under *entity_class_name* and *database* should become gray, indicating that the entity alternative has
