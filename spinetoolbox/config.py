@@ -32,6 +32,7 @@ _frozen = getattr(sys, "frozen", False)
 _path_to_executable = os.path.dirname(sys.executable if _frozen else __file__)
 APPLICATION_PATH = os.path.realpath(_path_to_executable)
 _program_root = APPLICATION_PATH if _frozen else os.path.join(APPLICATION_PATH, os.path.pardir)
+CHANGELOG_PATH = os.path.join(_program_root, "CHANGELOG.md")
 DEFAULT_WORK_DIR = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "work"))
 if _frozen:
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))

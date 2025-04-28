@@ -1,0 +1,13 @@
+{
+    "items": {
+        "Input files": {
+            "db_credentials": {}
+        },
+        "Model": {
+            "url": {
+                "username": "",
+                "password": ""
+            }
+        }
+    }
+}

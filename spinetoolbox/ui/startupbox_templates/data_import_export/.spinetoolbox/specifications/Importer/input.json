@@ -1,0 +1,49 @@
+{
+    "name": "Input",
+    "item_type": "Importer",
+    "mapping": {
+        "table_mappings": {
+            "data": [
+                {
+                    "Mapping 1": {
+                        "mapping": [
+                            {
+                                "map_type": "EntityClass",
+                                "position": "hidden"
+                            },
+                            {
+                                "map_type": "Entity",
+                                "position": "hidden"
+                            },
+                            {
+                                "map_type": "EntityMetadata",
+                                "position": "hidden"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        "selected_tables": [
+            "data"
+        ],
+        "table_options": {
+            "data": {
+                "skip": 0,
+                "encoding": "ascii",
+                "delimiter": ",",
+                "quotechar": "\"",
+                "has_header": false
+            }
+        },
+        "table_types": {
+            "data": {
+                "0": "string"
+            }
+        },
+        "table_default_column_type": {},
+        "table_row_types": {},
+        "source_type": "CSVReader"
+    },
+    "description": "Description"
+}

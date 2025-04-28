@@ -1,0 +1,7 @@
+"Energy System,Energy Source,Efficiency (%),Initial Cost,Typical Use Cases"
+"Solar Panels,Solar (Sunlight),20,High,Homes and businesses"
+"Gas Boiler,Natural Gas,90,Medium,Heating and hot water"
+"Electric Boiler,Electricity,99,Medium,Residential heating"
+"Wind Turbine,Wind,40,High,Grid energy and farms"
+"Biomass Boiler,Organic material,80,Medium-High,Rural and industrial use"
+"Heat Pump,Air/Ground (thermal),350,High,Heating and cooling"

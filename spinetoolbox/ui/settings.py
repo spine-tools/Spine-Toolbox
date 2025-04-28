@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -91,14 +91,14 @@ class Ui_SettingsForm(object):
         self.listWidget.setSizePolicy(sizePolicy1)
         self.listWidget.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustIgnored)
         self.listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.listWidget.setProperty("showDropIndicator", True)
+        self.listWidget.setProperty(u"showDropIndicator", True)
         self.listWidget.setDragDropMode(QAbstractItemView.DragDropMode.NoDragDrop)
         self.listWidget.setDefaultDropAction(Qt.DropAction.CopyAction)
         self.listWidget.setAlternatingRowColors(False)
         self.listWidget.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.listWidget.setMovement(QListView.Movement.Static)
         self.listWidget.setFlow(QListView.Flow.TopToBottom)
-        self.listWidget.setProperty("isWrapping", False)
+        self.listWidget.setProperty(u"isWrapping", False)
         self.listWidget.setResizeMode(QListView.ResizeMode.Fixed)
         self.listWidget.setLayoutMode(QListView.LayoutMode.SinglePass)
         self.listWidget.setSpacing(0)
@@ -974,7 +974,7 @@ class Ui_SettingsForm(object):
         self.spinBox_port.setFrame(True)
         self.spinBox_port.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.UpDownArrows)
         self.spinBox_port.setAccelerated(True)
-        self.spinBox_port.setProperty("showGroupSeparator", False)
+        self.spinBox_port.setProperty(u"showGroupSeparator", False)
         self.spinBox_port.setMinimum(49152)
         self.spinBox_port.setMaximum(65535)
 
