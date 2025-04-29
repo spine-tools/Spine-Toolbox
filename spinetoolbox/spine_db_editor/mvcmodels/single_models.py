@@ -204,8 +204,8 @@ class SingleModelBase(HalfSortedTableModel):
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ItemDataRole.ToolTipRole:
-                description = self._get_ref(item, field).get("description")
-                if description:
+                ref_item = self._get_ref(item, field)
+                if ref_item is not None and (description := ref_item.get("description")):
                     return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
