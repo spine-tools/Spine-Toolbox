@@ -14,6 +14,7 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "PySide6 >= 6.5.0, != 6.5.3, != 6.6.3, != 6.7.0, != 6.8.0",
+    "bokeh",
     "jupyter_client >=6.0",
     "qtconsole >=5.1",
     "spinedb_api>=0.36.0",
