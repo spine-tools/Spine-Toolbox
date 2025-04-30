@@ -50,7 +50,7 @@ class ProjectItem(LogMixin, MetaObject):
         self._active = False
         self._actions = []
         # Make project directory for this Item
-        self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+        self.data_dir: str = str(os.path.join(self._project.items_dir, self.short_name))
         self._specification = None
 
     def create_data_dir(self):
@@ -373,7 +373,7 @@ class ProjectItem(LogMixin, MetaObject):
         """
         return self._actions
 
-    def rename(self, new_name, rename_data_dir_message):
+    def rename(self, new_name: str, rename_data_dir_message: str) -> bool:
         """
         Renames this item.
 
@@ -381,17 +381,18 @@ class ProjectItem(LogMixin, MetaObject):
         method in subclass. See e.g. rename() method in DataStore class.
 
         Args:
-            new_name (str): New name
-            rename_data_dir_message (str): Message to show when renaming item's data directory
+            new_name: New name
+            rename_data_dir_message: Message to show when renaming item's data directory
 
         Returns:
             bool: True if item was renamed successfully, False otherwise
         """
-        new_data_dir = os.path.join(self._toolbox.project().items_dir, shorten(new_name))
-        if not rename_dir(self.data_dir, new_data_dir, self._toolbox, rename_data_dir_message):
-            return False
+        if shorten(new_name) != self.short_name:
+            new_data_dir = str(os.path.join(self._project.items_dir, shorten(new_name)))
+            if not rename_dir(self.data_dir, new_data_dir, self._toolbox, rename_data_dir_message):
+                return False
+            self.data_dir = new_data_dir
         self.set_name(new_name)
-        self.data_dir = new_data_dir
         self.get_icon().update_name_item(new_name)
         if self._active:
             self.update_name_label()
