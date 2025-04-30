@@ -16,7 +16,13 @@ from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import (
+    DB_MAP_ROLE,
+    ITEM_ID_ROLE,
+    PARAMETER_TYPE_VALIDATION_ROLE,
+    PARAMETER_VALUE_ROLE,
+    PARSED_ROLE,
+)
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
 from .utils import make_entity_on_the_fly
@@ -331,6 +337,7 @@ class ParameterMixin:
         Paint the object_class icon next to the name.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
         field = self.header[index.column()]
+        id_ = self._main_data[index.row()]
         # Display, edit, tool tip, alignment role of 'value fields'
         if field == self.value_field and role in {
             Qt.ItemDataRole.DisplayRole,
@@ -340,10 +347,12 @@ class ParameterMixin:
             PARSED_ROLE,
             PARAMETER_TYPE_VALIDATION_ROLE,
         }:
-            id_ = self._main_data[index.row()]
             with self.db_mngr.get_lock(self.db_map):
                 item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
                 return self.db_mngr.get_value(self.db_map, item, role)
+        elif role == PARAMETER_VALUE_ROLE:
+            mapped_table = self.db_map.mapped_table(self.item_type)
+            return mapped_table[id_].public_item
         return super().data(index, role)
 
     def add_rows(self, ids):
