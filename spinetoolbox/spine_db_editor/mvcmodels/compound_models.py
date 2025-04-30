@@ -623,7 +623,7 @@ class EditParameterValueMixin:
     """Provides the interface to edit values via ParameterValueEditor."""
 
     def handle_items_updated(self, db_map_data):
-        super().handle_items_updated(db_map_data)
+        changed_rows = []
         for db_map, items in db_map_data.items():
             if db_map not in self.db_maps:
                 continue
@@ -634,6 +634,15 @@ class EditParameterValueMixin:
                 )
                 if single_model is not None:
                     single_model.revalidate_item_types(class_items)
+                    changed_rows = [
+                        self._inv_row_map[(single_model, single_row)] for single_row in range(single_model.rowCount())
+                    ]
+        if changed_rows:
+            column_count = self.columnCount()
+            for first_row, count in rows_to_row_count_tuples(changed_rows):
+                top_left = self.index(first_row, 0)
+                bottom_right = self.index(first_row + count - 1, column_count - 1)
+                self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
 
     def index_name(self, index):
         """Generates a name for data at given index.
