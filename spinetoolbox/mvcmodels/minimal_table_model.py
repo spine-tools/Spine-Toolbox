@@ -11,54 +11,60 @@
 ######################################################################################################################
 
 """ Contains a minimal table model. """
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from collections.abc import Iterable, Sequence
+from copy import copy
+from typing import Any, Generic, Optional, TypeVar
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
+
+T = TypeVar("T")
+TableData = list[T]
 
 
-class MinimalTableModel(QAbstractTableModel):
+class MinimalTableModel(QAbstractTableModel, Generic[T]):
     """Table model for outlining simple tabular data."""
 
-    def __init__(self, parent=None, header=None, lazy=True):
+    def __init__(self, parent: Optional[QObject] = None, header: Optional[list[str]] = None, lazy: bool = True):
         """
         Args:
-            parent (QObject, optional): the parent object
-            header (list of str): header labels
-            lazy (boolean): if True, fetches data lazily
+            parent: the parent object
+            header: header labels
+            lazy: if True, fetches data lazily
         """
         super().__init__(parent)
         if header is None:
             header = []
         self._parent = parent
         self.header = header
-        self._main_data = []
+        self._main_data: TableData = []
         self._fetched = not lazy
         self._paste = False
 
     def clear(self):
-        """Clear all data in model."""
+        """Clears all data in model."""
         self.beginResetModel()
         self._main_data.clear()
         self.endResetModel()
 
     def flags(self, index):
-        """Return index flags."""
+        """Returns index flags."""
         if not index.isValid():
-            return Qt.NoItemFlags
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemFlag.NoItemFlags
+        return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
     def canFetchMore(self, parent):
-        """Return True if the model hasn't been fetched."""
+        """Returns True if the model hasn't been fetched."""
         return not self._fetched
 
     def fetchMore(self, parent):
-        """Fetch data and use it to reset the model."""
+        """Fetches data and uses it to reset the model."""
         self._fetched = True
 
     def rowCount(self, parent=QModelIndex()):
-        """Number of rows in the model."""
+        """Returns the number of rows in the model."""
         return len(self._main_data)
 
     def columnCount(self, parent=QModelIndex()):
-        """Number of columns in the model."""
+        """Returns the number of columns in the model."""
         return len(self.header) or len(next(iter(self._main_data), []))
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
@@ -73,15 +79,15 @@ class MinimalTableModel(QAbstractTableModel):
         if orientation == Qt.Orientation.Vertical:
             return section + 1
 
-    def set_horizontal_header_labels(self, labels):
-        """Set horizontal header labels."""
+    def set_horizontal_header_labels(self, labels: list[str]) -> None:
+        """Sets horizontal header labels."""
         if not labels:
             return
         self.header = labels
         self.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(labels) - 1)
 
-    def insert_horizontal_header_labels(self, section, labels):
-        """Insert horizontal header labels at the given section."""
+    def insert_horizontal_header_labels(self, section: int, labels: Sequence[str]) -> None:
+        """Inserts horizontal header labels at the given section."""
         if not labels:
             return
         for j, value in enumerate(labels):
@@ -91,7 +97,7 @@ class MinimalTableModel(QAbstractTableModel):
                 self.header.insert(section + j, value)
         self.headerDataChanged.emit(Qt.Orientation.Horizontal, section, section + len(labels) - 1)
 
-    def horizontal_header_labels(self):
+    def horizontal_header_labels(self) -> list[str]:
         return self.header
 
     def setHeaderData(self, section, orientation, value, role=Qt.ItemDataRole.EditRole):
@@ -126,12 +132,12 @@ class MinimalTableModel(QAbstractTableModel):
         except IndexError:
             return None
 
-    def row_data(self, row, role=Qt.ItemDataRole.DisplayRole):
+    def row_data(self, row: int, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole) -> Optional[Any]:
         """Returns the data stored under the given role for the given row.
 
         Args:
-            row (int): Item row
-            role (int): Data role
+            row: Item row
+            role: Data role
 
         Returns:
             Row data for given role.
@@ -143,22 +149,22 @@ class MinimalTableModel(QAbstractTableModel):
         return self._main_data[row]
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
-        """Set data in model."""
+        """Sets data in model."""
         if not index.isValid():
             return False
         if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.UserRole):
             return False
         return self.batch_set_data([index], [value])
 
-    def batch_set_data(self, indexes, data):
-        """Batch set data for indexes.
+    def batch_set_data(self, indexes: Iterable[QModelIndex], data: Iterable) -> bool:
+        """Batch sets data for given indexes.
 
         Args:
-            indexes (Iterable of QModelIndex): model indexes
-            data (Iterable): data at each index
+            indexes: model indexes
+            data: data at each index
 
         Returns:
-            boolean: True if data was set successfully, False otherwise
+            True if data was set successfully, False otherwise
         """
         if not indexes or not data:
             return False
@@ -195,17 +201,13 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were inserted successfully, False otherwise
         """
-        if row < 0 or row > self.rowCount():
-            return False
-        if count < 1:
+        if row < 0 or row > self.rowCount() or count < 1:
             return False
         self.beginInsertRows(parent, row, row + count - 1)
-        for i in range(count):
-            if self.columnCount() == 0:
-                new_main_row = [None]
-            else:
-                new_main_row = [None for j in range(self.columnCount())]
-            self._main_data.insert(row + i, new_main_row)
+        template_row = max(self.columnCount(), 1) * [None]
+        self._main_data.insert(row, template_row)
+        for i in range(1, count):
+            self._main_data.insert(row + i, template_row.copy())
         self.endInsertRows()
         return True
 
@@ -271,18 +273,18 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, main_data=None):
-        """Reset model."""
+    def reset_model(self, main_data: Optional[TableData] = None) -> None:
+        """Resets model."""
         if main_data is None:
             main_data = []
         self.beginResetModel()
         self._main_data = main_data
         self.endResetModel()
 
-    def begin_paste(self):
+    def begin_paste(self) -> None:
         """Marks that data pasting has begun."""
         self._paste = True
 
-    def end_paste(self):
+    def end_paste(self) -> None:
         """Marks that data pasting has ended."""
         self._paste = False

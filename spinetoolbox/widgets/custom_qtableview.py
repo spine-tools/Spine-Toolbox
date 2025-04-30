@@ -295,7 +295,8 @@ class CopyPasteTableView(QTableView):
         model = self.model()
         row_count = model.rowCount()
         if last_row >= row_count:
-            model.insertRows(row_count, last_row - row_count + 1)
+            if not model.insertRows(row_count, last_row - row_count + 1):
+                rows, data = self._cull_rows(row_count, rows, data)
         # Insert extra columns if needed:
         last_column = max(columns)
         column_count = model.columnCount()
@@ -314,7 +315,7 @@ class CopyPasteTableView(QTableView):
                 except IndexError:
                     break
                 index = model_index(row, column)
-                if index.flags() & Qt.ItemIsEditable:
+                if index.flags() & Qt.ItemFlag.ItemIsEditable:
                     indexes.append(index)
                     if converters:
                         convert = converters.get(column)
@@ -322,12 +323,21 @@ class CopyPasteTableView(QTableView):
                             values.append(convert(value))
                             continue
                     values.append(value)
-        begin_paste = model.empty_model.begin_paste if hasattr(model, "empty_model") else model.begin_paste
-        end_paste = model.empty_model.end_paste if hasattr(model, "empty_model") else model.end_paste
-        begin_paste()
+        model.begin_paste()
         model.batch_set_data(indexes, values)
-        end_paste()
+        model.end_paste()
         return True
+
+    @staticmethod
+    def _cull_rows(model_row_count: int, rows: list[int], data: list) -> tuple[list[int], list]:
+        culled_rows = []
+        culled_data = []
+        for i, row in enumerate(rows):
+            if row >= model_row_count:
+                continue
+            culled_rows.append(row)
+            culled_data.append(data[i])
+        return culled_rows, culled_data
 
     def set_column_converter_for_pasting(self, header, converter):
         self._pasted_data_converters[header] = converter

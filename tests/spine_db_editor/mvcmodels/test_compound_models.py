@@ -44,7 +44,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         fetch_model(model)
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["oc", "p", (), None, "None", None, self.db_codename]
@@ -58,36 +58,34 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
         self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
         self._db_map.fetch_all()
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["rc", "p", (), None, "None", None, self.db_codename]
         self.assertEqual(row, expected)
 
     def test_model_updates_when_entity_class_is_removed(self):
-        self._db_map.add_entity_class_item(name="oc1")
-        self._db_map.add_parameter_definition_item(entity_class_name="oc1", name="x")
-        entity_class_2 = self.assert_success(self._db_map.add_entity_class_item(name="oc2"))
-        self._db_map.add_parameter_definition_item(entity_class_name="oc2", name="x")
-        self._db_map.add_entity_class_item(name="rc", dimension_name_list=("oc1", "oc2"))
-        self._db_map.add_parameter_definition_item(entity_class_name="rc", name="x")
+        self._db_map.add_entity_class(name="oc1")
+        self._db_map.add_parameter_definition(entity_class_name="oc1", name="x")
+        entity_class_2 = self._db_map.add_entity_class(name="oc2")
+        self._db_map.add_parameter_definition(entity_class_name="oc2", name="x")
+        self._db_map.add_entity_class(name="rc", dimension_name_list=("oc1", "oc2"))
+        self._db_map.add_parameter_definition(entity_class_name="rc", name="x")
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
-        self.assertEqual(model.rowCount(), 4)
+        self.assertEqual(model.rowCount(), 3)
         model.set_filter_class_ids({self._db_map: {entity_class_2["id"]}})
         model.refresh()
-        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.rowCount(), 2)
         self._db_mngr.remove_items({self._db_map: {"entity_class": [entity_class_2["id"]]}})
-        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.rowCount(), 0)
 
     def test_index_name_returns_sane_label(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
+        self._db_map.add_entity_class(name="Object")
         value, value_type = to_database(Array([2.3]))
-        self.assert_success(
-            self._db_map.add_parameter_definition_item(
-                name="x", entity_class_name="Object", default_value=value, default_type=value_type
-            )
+        self._db_map.add_parameter_definition(
+            name="x", entity_class_name="Object", default_value=value, default_type=value_type
         )
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
@@ -134,7 +132,7 @@ class TestCompoundParameterValueModel(TestBase):
                 ]
             }
         )
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["oc", "o", "p", "Base", "23.0", self.db_codename]
@@ -165,26 +163,24 @@ class TestCompoundParameterValueModel(TestBase):
                 ]
             }
         )
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 6)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
         expected = ["rc", "o", "p", "Base", "23.0", self.db_codename]
         self.assertEqual(row, expected)
 
     def test_index_name_returns_sane_label(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="x", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_entity_item(name="mysterious cube", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="x", entity_class_name="Object")
+        self._db_map.add_entity(name="mysterious cube", entity_class_name="Object")
         value, value_type = to_database(Array([2.3]))
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("mysterious cube",),
-                parameter_definition_name="x",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("mysterious cube",),
+            parameter_definition_name="x",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
@@ -193,31 +189,27 @@ class TestCompoundParameterValueModel(TestBase):
         self.assertEqual(model.index_name(index), "TestCompoundParameterValueModel_db - x - Base - mysterious cube")
 
     def test_removing_first_of_two_rows(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_alternative_item(name="not-Base"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        self._db_map.add_alternative(name="not-Base")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        value_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        value_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        value_not_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="not-Base",
-                value=value,
-                type=value_type,
-            )
+        value_not_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="not-Base",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -226,7 +218,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -235,9 +226,7 @@ class TestCompoundParameterValueModel(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         value_in_base.remove()
         value_not_in_base.remove()
-        expected = [
-            [None, None, None, None, None, None],
-        ]
+        expected = []
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
@@ -247,7 +236,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
@@ -255,31 +243,27 @@ class TestCompoundParameterValueModel(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_removing_second_of_two_uncommitted_rows(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_alternative_item(name="not-Base"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        self._db_map.add_alternative(name="not-Base")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        value_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        value_not_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="not-Base",
-                value=value,
-                type=value_type,
-            )
+        value_not_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="not-Base",
+            value=value,
+            type=value_type,
         )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
@@ -287,7 +271,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -297,7 +280,6 @@ class TestCompoundParameterValueModel(TestBase):
         value_not_in_base.remove()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
@@ -305,31 +287,27 @@ class TestCompoundParameterValueModel(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_restoring_removed_item_keeps_empty_row_last(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_alternative_item(name="not-Base"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        self._db_map.add_alternative(name="not-Base")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        value_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        value_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        value_not_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="not-Base",
-                value=value,
-                type=value_type,
-            )
+        value_not_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="not-Base",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -338,7 +316,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -348,105 +325,88 @@ class TestCompoundParameterValueModel(TestBase):
         value_in_base.remove()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         value_not_in_base.remove()
-        expected = [
-            [None, None, None, None, None, None],
-        ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
-        self.assertEqual(model.single_models, [])
+        self.assertEqual(model.rowCount(), 0)
+        self.assertEqual(model.sub_models, [])
 
     def test_removing_value_from_another_alternative_that_is_selected_for_filtering_works(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        not_base_alternative = self.assert_success(self._db_map.add_alternative_item(name="not-Base"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        not_base_alternative = self._db_map.add_alternative(name="not-Base")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        value_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        value_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="not-Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="not-Base",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
-        self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.columnCount(), 6)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
+        self.assertEqual(model.rowCount(), len(expected))
+        self.assertEqual(model.columnCount(), 6)
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         model.set_filter_alternative_ids({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
-        self.assertEqual(model.rowCount(), 2)
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
+        self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         value_in_base.remove()
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_restoring_removed_value_from_another_alternative_that_is_selected_for_filtering_works(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        not_base_alternative = self.assert_success(self._db_map.add_alternative_item(name="not-Base"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        not_base_alternative = self._db_map.add_alternative(name="not-Base")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        value_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        value_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="not-Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="not-Base",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -455,7 +415,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -464,75 +423,66 @@ class TestCompoundParameterValueModel(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         model.set_filter_alternative_ids({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
-        self.assertEqual(model.rowCount(), 2)
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
+        self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         value_in_base.remove()
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
         value_in_base.restore()
-        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_remove_every_other_row(self):
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_alternative_item(name="ctrl"))
-        self.assert_success(self._db_map.add_alternative_item(name="alt"))
-        self.assert_success(self._db_map.add_alternative_item(name="del"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        self._db_map.add_alternative(name="ctrl")
+        self._db_map.add_alternative(name="alt")
+        self._db_map.add_alternative(name="del")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="ctrl",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="ctrl",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(23.0)
-        alt_value = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="alt",
-                value=value,
-                type=value_type,
-            )
+        alt_value = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="alt",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-23.0)
-        del_value = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="del",
-                value=value,
-                type=value_type,
-            )
+        del_value = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="del",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -543,7 +493,6 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "alt", "23.0", self.db_codename],
             ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
             ["Object", "curious sphere", "X", "del", "-23.0", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -554,7 +503,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
@@ -562,45 +510,39 @@ class TestCompoundParameterValueModel(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_remove_item_from_another_entity_class_than_selected(self):
-        object_class = self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        object_class = self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
-        self.assert_success(self._db_map.add_entity_class_item(name="Immaterial"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="Y", entity_class_name="Immaterial"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="Z", entity_class_name="Immaterial"))
-        self.assert_success(self._db_map.add_entity_item(name="ghost", entity_class_name="Immaterial"))
+        self._db_map.add_entity_class(name="Immaterial")
+        self._db_map.add_parameter_definition(name="Y", entity_class_name="Immaterial")
+        self._db_map.add_parameter_definition(name="Z", entity_class_name="Immaterial")
+        self._db_map.add_entity(name="ghost", entity_class_name="Immaterial")
         value, value_type = to_database(-2.3)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Immaterial",
-                entity_byname=("ghost",),
-                parameter_definition_name="Y",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Immaterial",
+            entity_byname=("ghost",),
+            parameter_definition_name="Y",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(23.0)
-        z_value = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Immaterial",
-                entity_byname=("ghost",),
-                parameter_definition_name="Z",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        z_value = self._db_map.add_parameter_value(
+            entity_class_name="Immaterial",
+            entity_byname=("ghost",),
+            parameter_definition_name="Z",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -610,7 +552,6 @@ class TestCompoundParameterValueModel(TestBase):
             ["Immaterial", "ghost", "Y", "Base", "-2.3", self.db_codename],
             ["Immaterial", "ghost", "Z", "Base", "23.0", self.db_codename],
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -621,7 +562,6 @@ class TestCompoundParameterValueModel(TestBase):
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -631,7 +571,6 @@ class TestCompoundParameterValueModel(TestBase):
         z_value.remove()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
@@ -639,54 +578,46 @@ class TestCompoundParameterValueModel(TestBase):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
 
     def test_remove_visible_and_hidden_items(self):
-        alternative = self.assert_success(self._db_map.add_alternative_item(name="alt"))
-        self.assert_success(self._db_map.add_entity_class_item(name="Object"))
-        self.assert_success(self._db_map.add_parameter_definition_item(name="X", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_entity_item(name="mystic cube", entity_class_name="Object"))
-        self.assert_success(self._db_map.add_entity_item(name="curious sphere", entity_class_name="Object"))
+        alternative = self._db_map.add_alternative(name="alt")
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+        self._db_map.add_entity(name="mystic cube", entity_class_name="Object")
+        self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
         value, value_type = to_database(2.3)
-        spherical_value_in_base = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        spherical_value_in_base = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-2.3)
-        spherical_value_in_alt = self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("curious sphere",),
-                parameter_definition_name="X",
-                alternative_name="alt",
-                value=value,
-                type=value_type,
-            )
+        spherical_value_in_alt = self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("curious sphere",),
+            parameter_definition_name="X",
+            alternative_name="alt",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(23.0)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("mystic cube",),
-                parameter_definition_name="X",
-                alternative_name="Base",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("mystic cube",),
+            parameter_definition_name="X",
+            alternative_name="Base",
+            value=value,
+            type=value_type,
         )
         value, value_type = to_database(-23.0)
-        self.assert_success(
-            self._db_map.add_parameter_value_item(
-                entity_class_name="Object",
-                entity_byname=("mystic cube",),
-                parameter_definition_name="X",
-                alternative_name="alt",
-                value=value,
-                type=value_type,
-            )
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("mystic cube",),
+            parameter_definition_name="X",
+            alternative_name="alt",
+            value=value,
+            type=value_type,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -697,7 +628,6 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
             ["Object", "mystic cube", "X", "Base", "23.0", self.db_codename],
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -709,7 +639,6 @@ class TestCompoundParameterValueModel(TestBase):
         expected = [
             ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -720,7 +649,6 @@ class TestCompoundParameterValueModel(TestBase):
         spherical_value_in_alt.remove()
         expected = [
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
-            [None, None, None, None, None, None],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         for row, column in product(range(model.rowCount()), range(model.columnCount())):

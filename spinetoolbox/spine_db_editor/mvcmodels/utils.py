@@ -11,8 +11,45 @@
 ######################################################################################################################
 
 """General helper functions and classes for DB editor's models."""
+from collections.abc import Callable
 import csv
 from io import StringIO
+from typing import Any, Optional
+from PySide6.QtCore import QModelIndex, QSize
+from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api.temp_id import TempId
+from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
+
+PARAMETER_DEFINITION_MODEL_HEADER = [
+    "entity_class_name",
+    "parameter_name",
+    "valid types",
+    "value_list_name",
+    "default_value",
+    "description",
+    "database",
+]
+PARAMETER_DEFINITION_FIELD_MAP = {
+    "parameter_name": "name",
+    "valid types": "parameter_type_list",
+    "value_list_name": "parameter_value_list_name",
+}
+PARAMETER_VALUE_MODEL_HEADER = [
+    "entity_class_name",
+    "entity_byname",
+    "parameter_name",
+    "alternative_name",
+    "value",
+    "database",
+]
+PARAMETER_VALUE_FIELD_MAP = {"parameter_name": "parameter_definition_name"}
+ENTITY_ALTERNATIVE_MODEL_HEADER = [
+    "entity_class_name",
+    "entity_byname",
+    "alternative_name",
+    "active",
+    "database",
+]
 
 
 def two_column_as_csv(indexes):
@@ -40,3 +77,30 @@ def two_column_as_csv(indexes):
             content = rows[row]
             writer.writerow(content)
         return out.getvalue()
+
+
+def entity_class_id_for_row(index: QModelIndex, db_map: DatabaseMapping) -> Optional[TempId]:
+    model: MinimalTableModel = index.model()
+    entity_class_name = index.sibling(index.row(), model.header.index("entity_class_name")).data()
+    try:
+        entity_class = db_map.entity_class(name=entity_class_name)
+    except SpineDBAPIError:
+        return None
+    return entity_class["id"]
+
+
+def cull_equal_rows_at_end(data: list[list], remove_row: Callable[[int], Any]) -> None:
+    last_row = data[-1]
+    while (row_count := len(data)) > 1:
+        row = row_count - 2
+        if data[row] == last_row:
+            remove_row(row)
+        else:
+            break
+
+
+def height_limited_size_hint(size_hint: QSize, parent_size: QSize) -> QSize:
+    max_height = parent_size.height() // 2
+    if size_hint.height() > max_height:
+        size_hint.setHeight(max_height)
+    return size_hint

@@ -177,6 +177,11 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         data = [model.index(1, column).data() for column in range(3)]
         self.assertEqual(data, ["G", "H", 3.14])
 
+    def test_cull_rows(self):
+        self.assertEqual(
+            CopyPasteTableView._cull_rows(2, [3, 0, 2, 1], [[33], [100], [22], [11]]), ([0, 1], [[100], [11]])
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

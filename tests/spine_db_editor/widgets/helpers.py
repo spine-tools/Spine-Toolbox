@@ -42,7 +42,6 @@ class EditorDelegateMocking:
         view.edit(index)
         if self._cell_editor is None:
             # Native editor widget is being used, fall back to setting value directly in model.
-            view.closeEditor()
             view.model().setData(index, value)
             return
         if isinstance(self._cell_editor, SearchBarEditor):

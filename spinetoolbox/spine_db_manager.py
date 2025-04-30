@@ -52,6 +52,7 @@ from spinedb_api.parameter_value import (
     split_value_and_type,
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
+from spinedb_api.temp_id import TempId
 from spinetoolbox.database_display_names import NameRegistry
 from .helpers import busy_effect, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
@@ -723,17 +724,9 @@ class SpineDBManager(QObject):
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     @staticmethod
-    def get_item(db_map, item_type, id_):
+    def get_item(db_map: DatabaseMapping, item_type: str, id_: TempId) -> Optional[PublicItem]:
         """Returns the item of the given type in the given db map that has the given id,
         or an empty dict if not found.
-
-        Args:
-            db_map (DatabaseMapping)
-            item_type (str)
-            id_ (TempId)
-
-        Returns:
-            PublicItem: the item
         """
         mapped_table = db_map.mapped_table(item_type)
         try:

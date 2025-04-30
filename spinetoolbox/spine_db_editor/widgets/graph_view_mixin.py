@@ -22,7 +22,7 @@ from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from spinedb_api.temp_id import TempId
-from spinetoolbox.helpers import DBMapData
+from spinetoolbox.helpers import DBMapPublicItems
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import busy_effect, get_open_file_name_in_last_dir, get_save_file_name_in_last_dir, remove_first
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
@@ -149,7 +149,7 @@ class GraphViewMixin:
         self.db_mngr.items_added.connect(self._refresh_icons)
         self.db_mngr.items_updated.connect(self._refresh_icons)
 
-    def _refresh_icons(self, item_type: str, db_map_data: DBMapData) -> None:
+    def _refresh_icons(self, item_type: str, db_map_data: DBMapPublicItems) -> None:
         """Runs when entity classes are added or updated in the db. Refreshes icons of entities in graph.
 
         Args:
@@ -261,7 +261,7 @@ class GraphViewMixin:
             return True  # Entity is present in the parameter_value table with the current selections
         return False
 
-    def _graph_handle_entities_added(self, db_map_data: DBMapData) -> None:
+    def _graph_handle_entities_added(self, db_map_data: DBMapPublicItems) -> None:
         """Runs when entities are added to the db.
         Adds the new entities to the graph if needed.
 
@@ -274,7 +274,7 @@ class GraphViewMixin:
             return
         self._refresh_graph()
 
-    def _graph_handle_entities_removed(self, db_map_data: DBMapData) -> None:
+    def _graph_handle_entities_removed(self, db_map_data: DBMapPublicItems) -> None:
         """Runs when entities are removed from the db. Rebuilds graph if needed.
 
         Args:
@@ -286,7 +286,7 @@ class GraphViewMixin:
             if not item.db_map_ids:
                 item.setVisible(False)
 
-    def _graph_handle_entities_updated(self, db_map_data: DBMapData) -> None:
+    def _graph_handle_entities_updated(self, db_map_data: DBMapPublicItems) -> None:
         """Runs when entities are updated in the db."""
         entities_by_db_map_id = {
             (db_map, entity["id"]): entity for db_map, entities in db_map_data.items() for entity in entities
@@ -310,7 +310,7 @@ class GraphViewMixin:
                 item.set_up()
 
     def _db_map_ids_by_key(
-        self, db_map_data: DBMapData
+        self, db_map_data: DBMapPublicItems
     ) -> dict[tuple[Union[str, tuple[str]], ...], tuple[DatabaseMapping, TempId]]:
         added_db_map_ids_by_key = {}
         for db_map, entities in db_map_data.items():
@@ -320,7 +320,7 @@ class GraphViewMixin:
                 added_db_map_ids_by_key.setdefault(key, set()).add(db_map_id)
         return added_db_map_ids_by_key
 
-    def add_db_map_ids_to_items(self, db_map_data: DBMapData) -> list[tuple[DatabaseMapping, TempId]]:
+    def add_db_map_ids_to_items(self, db_map_data: DBMapPublicItems) -> list[tuple[DatabaseMapping, TempId]]:
         """Goes through entity items and adds the corresponding db_map ids.
         This could mean either restoring removed (db_map, id) tuples previously removed,
         or adding new (db_map, id) tuples.
@@ -349,7 +349,7 @@ class GraphViewMixin:
             item.setVisible(True)
         return list(added_db_map_ids_by_key.values())
 
-    def _graph_handle_parameter_values_added(self, db_map_data: DBMapData) -> None:
+    def _graph_handle_parameter_values_added(self, db_map_data: DBMapPublicItems) -> None:
         pnames = {x["parameter_definition_name"] for db_map in self.db_maps for x in db_map_data.get(db_map, ())}
         property_pnames = {
             self.ui.graphicsView.name_parameter,

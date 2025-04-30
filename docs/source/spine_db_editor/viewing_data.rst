@@ -253,8 +253,8 @@ and **Scenario tree**. This filter is orthogonal to the entity/class filter and 
 To remove all these filters, simply select the root item in **Entity Tree** or deselect all items from
 **Alternative** and **Scenario tree**.
 
-All the filters described above can be cleared with the *Clear all filters* item available in the right-click
-context menu of the **Table View**.
+All the filters described above can also be cleared with the *Clear all filters* item available in the right-click
+context menu of the **Parameter value** table.
 
 To apply a custom filter on a **Table View**, click on any horizontal header.
 A menu will pop up listing the items in the corresponding column:

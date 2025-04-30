@@ -62,8 +62,3 @@ class TestBase(TestCaseWithQApplication):
         with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
             commit_msg.return_value = commit_message
             self._db_editor.ui.actionCommit.trigger()
-
-    def assert_success(self, result):
-        item, error = result
-        self.assertIsNone(error)
-        return item

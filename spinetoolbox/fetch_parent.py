@@ -191,14 +191,14 @@ class FetchParent(QObject):
         return True
 
     @property
-    def is_obsolete(self):
+    def is_obsolete(self) -> bool:
         return self._obsolete
 
-    def set_obsolete(self, obsolete):
+    def set_obsolete(self, obsolete: bool) -> None:
         """Sets the obsolete status.
 
         Args:
-            obsolete (bool): whether parent has become obsolete
+            obsolete: whether parent has become obsolete
         """
         if obsolete:
             self.set_busy(False)

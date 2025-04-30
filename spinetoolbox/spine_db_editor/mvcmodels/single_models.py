@@ -12,7 +12,8 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from typing import ClassVar, Iterable
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QModelIndex, Qt, Slot
+from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
@@ -20,7 +21,7 @@ from ..mvcmodels.single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, S
 from .colors import FIXED_FIELD_COLOR
 
 
-class HalfSortedTableModel(MinimalTableModel):
+class HalfSortedTableModel(MinimalTableModel[TempId]):
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
@@ -154,7 +155,7 @@ class SingleModelBase(HalfSortedTableModel):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
         if self.header[index.column()] in self.fixed_fields:
-            return flags & ~Qt.ItemIsEditable
+            return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
     def _filter_accepts_row(self, row):
@@ -191,8 +192,11 @@ class SingleModelBase(HalfSortedTableModel):
         if ref is None:
             return {}
         src_id_key, ref_type = ref
-        ref_if = db_item.get(src_id_key)
-        return self.db_mngr.get_item(self.db_map, ref_type, ref_if)
+        ref_id = db_item.get(src_id_key)
+        return self.db_mngr.get_item(self.db_map, ref_type, ref_id)
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        return False
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         field = self.header[index.column()]
@@ -204,8 +208,8 @@ class SingleModelBase(HalfSortedTableModel):
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ItemDataRole.ToolTipRole:
-                description = self._get_ref(item, field).get("description")
-                if description:
+                ref_item = self._get_ref(item, field)
+                if ref_item is not None and (description := ref_item.get("description")):
                     return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
@@ -295,6 +299,7 @@ class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
     value_field: ClassVar[str] = NotImplemented
+    type_field: ClassVar[str] = NotImplemented
     parameter_definition_id_key: ClassVar[str] = NotImplemented
 
     def __init__(self, *args, **kwargs):
@@ -441,6 +446,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
 
     item_type = "parameter_definition"
     value_field = "default_value"
+    type_field = "default_type"
     parameter_definition_id_key = "id"
     group_fields = ("valid types",)
 
@@ -464,6 +470,7 @@ class SingleParameterValueModel(
 
     item_type = "parameter_value"
     value_field = "value"
+    type_field = "type"
     parameter_definition_id_key = "parameter_id"
 
     def _sort_key(self, element):
