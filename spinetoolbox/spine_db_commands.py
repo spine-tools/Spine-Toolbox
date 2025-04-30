@@ -144,8 +144,6 @@ class UpdateItemsCommand(SpineDBCommand):
         self.redo_data = data
         table = db_map.mapped_table(item_type)
         self.undo_data = [table[item["id"]]._asdict() for item in data]
-        if self.redo_data == self.undo_data:
-            self.setObsolete(True)
         self._check = check
         self.setText(f"update {item_type} items in {self.db_mngr.name_registry.display_name(db_map.sa_url)}")
 
