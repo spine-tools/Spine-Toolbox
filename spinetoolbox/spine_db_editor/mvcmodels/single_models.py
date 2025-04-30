@@ -12,7 +12,8 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from typing import ClassVar, Iterable
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QModelIndex, Qt, Slot
+from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
@@ -20,7 +21,7 @@ from ..mvcmodels.single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, S
 from .colors import FIXED_FIELD_COLOR
 
 
-class HalfSortedTableModel(MinimalTableModel):
+class HalfSortedTableModel(MinimalTableModel[TempId]):
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
@@ -154,7 +155,7 @@ class SingleModelBase(HalfSortedTableModel):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
         if self.header[index.column()] in self.fixed_fields:
-            return flags & ~Qt.ItemIsEditable
+            return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
     def _filter_accepts_row(self, row):
@@ -193,6 +194,9 @@ class SingleModelBase(HalfSortedTableModel):
         src_id_key, ref_type = ref
         ref_id = db_item.get(src_id_key)
         return self.db_mngr.get_item(self.db_map, ref_type, ref_id)
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        return False
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         field = self.header[index.column()]

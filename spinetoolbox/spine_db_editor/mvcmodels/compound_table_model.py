@@ -211,23 +211,8 @@ class CompoundTableModel(MinimalTableModel):
         return successful
 
     def insertRows(self, row, count, parent=QModelIndex()):
-        """Inserts count rows after the given row under the given parent.
-        Localizes the appropriate submodel and calls insertRows on it.
-        """
-        if row < 0 or row > self.rowCount():
-            return False
-        if count < 1:
-            return False
-        if row < self.rowCount():
-            sub_model, sub_row = self._row_map[row]
-        else:
-            sub_model, sub_row = self._row_map[-1]
-            sub_row += 1
-        self.beginInsertRows(parent, row, row + count - 1)
-        sub_model.insertRows(sub_row, count, self.map_to_sub(parent))
-        self.endInsertRows()
-        self.refresh()
-        return True
+        """Does not insert any rows as single models do not support such operation."""
+        return False
 
     def removeRows(self, row, count, parent=QModelIndex()):
         """Removes count rows starting with the given row under parent.

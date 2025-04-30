@@ -295,7 +295,8 @@ class CopyPasteTableView(QTableView):
         model = self.model()
         row_count = model.rowCount()
         if last_row >= row_count:
-            model.insertRows(row_count, last_row - row_count + 1)
+            if not model.insertRows(row_count, last_row - row_count + 1):
+                rows, data = self._cull_rows(row_count, rows, data)
         # Insert extra columns if needed:
         last_column = max(columns)
         column_count = model.columnCount()
@@ -326,6 +327,17 @@ class CopyPasteTableView(QTableView):
         model.batch_set_data(indexes, values)
         model.end_paste()
         return True
+
+    @staticmethod
+    def _cull_rows(model_row_count: int, rows: list[int], data: list) -> tuple[list[int], list]:
+        culled_rows = []
+        culled_data = []
+        for i, row in enumerate(rows):
+            if row >= model_row_count:
+                continue
+            culled_rows.append(row)
+            culled_data.append(data[i])
+        return culled_rows, culled_data
 
     def set_column_converter_for_pasting(self, header, converter):
         self._pasted_data_converters[header] = converter

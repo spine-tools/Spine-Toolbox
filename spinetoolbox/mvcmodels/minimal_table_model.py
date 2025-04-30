@@ -12,11 +12,15 @@
 
 """ Contains a minimal table model. """
 from collections.abc import Iterable, Sequence
-from typing import Any, Optional
+from copy import copy
+from typing import Any, Generic, Optional, TypeVar
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
 
+T = TypeVar("T")
+TableData = list[T]
 
-class MinimalTableModel(QAbstractTableModel):
+
+class MinimalTableModel(QAbstractTableModel, Generic[T]):
     """Table model for outlining simple tabular data."""
 
     def __init__(self, parent: Optional[QObject] = None, header: Optional[list[str]] = None, lazy: bool = True):
@@ -31,7 +35,7 @@ class MinimalTableModel(QAbstractTableModel):
             header = []
         self._parent = parent
         self.header = header
-        self._main_data = []
+        self._main_data: TableData = []
         self._fetched = not lazy
         self._paste = False
 
@@ -44,8 +48,8 @@ class MinimalTableModel(QAbstractTableModel):
     def flags(self, index):
         """Returns index flags."""
         if not index.isValid():
-            return Qt.NoItemFlags
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemFlag.NoItemFlags
+        return Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
 
     def canFetchMore(self, parent):
         """Returns True if the model hasn't been fetched."""
@@ -197,17 +201,13 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were inserted successfully, False otherwise
         """
-        if row < 0 or row > self.rowCount():
-            return False
-        if count < 1:
+        if row < 0 or row > self.rowCount() or count < 1:
             return False
         self.beginInsertRows(parent, row, row + count - 1)
-        for i in range(count):
-            if self.columnCount() == 0:
-                new_main_row = [None]
-            else:
-                new_main_row = [None for j in range(self.columnCount())]
-            self._main_data.insert(row + i, new_main_row)
+        template_row = max(self.columnCount(), 1) * [None]
+        self._main_data.insert(row, template_row)
+        for i in range(1, count):
+            self._main_data.insert(row + i, template_row.copy())
         self.endInsertRows()
         return True
 
@@ -273,7 +273,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, main_data: Optional[list] = None) -> None:
+    def reset_model(self, main_data: Optional[TableData] = None) -> None:
         """Resets model."""
         if main_data is None:
             main_data = []
