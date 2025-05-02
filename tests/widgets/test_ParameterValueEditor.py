@@ -14,7 +14,7 @@
 import unittest
 import dateutil.parser
 import numpy as np
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
 from spinedb_api import (
     DateTime,
     Duration,
@@ -25,14 +25,14 @@ from spinedb_api import (
     to_database,
 )
 from spinetoolbox.widgets.parameter_value_editor import ParameterValueEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class _MockParentModel(QAbstractTableModel):
     """A mock model for testing purposes."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        super().__init__(parent)
         self._table = [[None, None], [None, None]]
 
     def rowCount(self, parent=QModelIndex()):
@@ -62,15 +62,16 @@ class _MockParentModel(QAbstractTableModel):
 
 class TestParameterValueEditor(TestCaseWithQApplication):
     def _check_parent_model_updated_when_closed(self, value):
-        model = _MockParentModel()
-        model_index = model.index(1, 1)
-        model.setData(model_index, value)
-        editor = ParameterValueEditor(model_index)
-        # Reset model data to check that the value is written back from the editor
-        model.setData(model_index, None)
-        editor.accept()
-        editor.deleteLater()
-        self.assertEqual(model.data(model_index), to_database(value))
+        with q_object(QObject()) as parent:
+            model = _MockParentModel(parent)
+            model_index = model.index(1, 1)
+            model.setData(model_index, value)
+            editor = ParameterValueEditor(model_index)
+            # Reset model data to check that the value is written back from the editor
+            model.setData(model_index, None)
+            editor.accept()
+            editor.deleteLater()
+            self.assertEqual(model.data(model_index), to_database(value))
 
     def test_editor_sets_plain_value_in_parent_model(self):
         self._check_parent_model_updated_when_closed(23.0)

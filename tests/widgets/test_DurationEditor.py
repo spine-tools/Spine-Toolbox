@@ -12,21 +12,24 @@
 
 """Unit tests for the DuratonEditor widget."""
 import unittest
+from PySide6.QtWidgets import QWidget
 from spinedb_api import Duration
 from spinetoolbox.widgets.duration_editor import DurationEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestDurationEditor(TestCaseWithQApplication):
     def test_initial_value(self):
-        editor = DurationEditor()
-        value = editor.value()
-        self.assertEqual(value, Duration("1h"))
+        with q_object(QWidget()) as parent:
+            editor = DurationEditor(parent)
+            value = editor.value()
+            self.assertEqual(value, Duration("1h"))
 
     def test_value_access_single_duration(self):
-        editor = DurationEditor()
-        editor.set_value(Duration("3 months"))
-        self.assertEqual(editor.value(), Duration("3M"))
+        with q_object(QWidget()) as parent:
+            editor = DurationEditor(parent)
+            editor.set_value(Duration("3 months"))
+            self.assertEqual(editor.value(), Duration("3M"))
 
 
 if __name__ == "__main__":

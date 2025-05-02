@@ -54,7 +54,7 @@ class FetchParent(QObject):
 
     def apply_changes_immediately(self):
         # For tests
-        self._changes_pending.connect(self._apply_pending_changes, Qt.UniqueConnection)
+        self._changes_pending.connect(self._apply_pending_changes, Qt.ConnectionType.UniqueConnection)
 
     @property
     def index(self):

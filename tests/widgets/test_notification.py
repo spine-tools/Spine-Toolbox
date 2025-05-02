@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains unit tests for the ``notification`` module."""
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QAbstractAnimation
@@ -20,7 +21,7 @@ from spinetoolbox.widgets.notification import ChangeNotifier, Notification
 from tests.mock_helpers import TestCaseWithQApplication
 
 
-@unittest.skip("Test hangs on Windows when running all tests.")
+@unittest.skipIf(sys.platform == "win32", "Test hangs on Windows when running all tests.")
 class TestChangeNotifier(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QWidget()

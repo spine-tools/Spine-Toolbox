@@ -12,21 +12,24 @@
 
 """Unit tests for the MapEditor widget."""
 import unittest
+from PySide6.QtWidgets import QWidget
 from spinedb_api import Map
 from spinetoolbox.widgets.map_editor import MapEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestDictionaryEditor(TestCaseWithQApplication):
     def test_initial_value(self):
-        editor = MapEditor()
-        value = editor.value()
-        self.assertEqual(value, Map(["key"], [0.0]))
+        with q_object(QWidget()) as parent:
+            editor = MapEditor(parent)
+            value = editor.value()
+            self.assertEqual(value, Map(["key"], [0.0]))
 
     def test_value_access(self):
-        editor = MapEditor()
-        editor.set_value(Map(["A", "B"], [2.2, 2.1]))
-        self.assertEqual(editor.value(), Map(["A", "B"], [2.2, 2.1]))
+        with q_object(QWidget()) as parent:
+            editor = MapEditor(parent)
+            editor.set_value(Map(["A", "B"], [2.2, 2.1]))
+            self.assertEqual(editor.value(), Map(["A", "B"], [2.2, 2.1]))
 
 
 if __name__ == "__main__":

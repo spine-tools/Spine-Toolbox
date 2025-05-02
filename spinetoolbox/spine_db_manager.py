@@ -127,7 +127,7 @@ class SpineDBManager(QObject):
         self.qsettings = settings
         self._db_maps = {}
         self.name_registry = NameRegistry(self)
-        self._workers = {}
+        self._workers: dict[DatabaseMapping, SpineDBWorker] = {}
         self._lock_lock = RLock()
         self._db_locks = {}
         self.listeners = {}
@@ -335,18 +335,18 @@ class SpineDBManager(QObject):
         except SpineDBAPIError as e:
             logger.msg_error.emit(f"Unable to create new Spine db at '{url}': {e}.")
 
-    def close_session(self, url):
-        """Pops any db map on the given url and closes its connection.
-
-        Args:
-            url (str)
-        """
+    def close_session(self, url: str) -> None:
+        """Pops any db map on the given url and closes its connection."""
         self._no_prompt_urls.discard(url)
-        db_map = self._db_maps.pop(url, None)
-        if db_map is None:
+        try:
+            db_map = self._db_maps.pop(url)
+        except KeyError:
             return
-        worker = self._workers.pop(db_map, None)
-        if worker is not None:
+        try:
+            worker = self._workers.pop(db_map)
+        except KeyError:
+            pass
+        else:
             worker.close_db_map()  # NOTE: This calls ThreadPoolExecutor.shutdown() which waits for Futures to finish
             worker.clean_up()
         with self._lock_lock:
@@ -1447,10 +1447,9 @@ class SpineDBManager(QObject):
                 )
 
     def get_command_identifier(self) -> int:
-        try:
-            return self._cmd_id
-        finally:
-            self._cmd_id += 1
+        id_ = self._cmd_id
+        self._cmd_id += 1
+        return id_
 
     @busy_effect
     def do_add_items(self, db_map, item_type, data, check=True):

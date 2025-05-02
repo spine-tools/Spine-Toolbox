@@ -87,7 +87,7 @@ class TestSuggestDisplayName(unittest.TestCase):
         self.assertEqual(suggest_display_name(sa_url), "my_lovely_db")
 
     def test_sqlite_url_returns_file_name_without_extension(self):
-        path = "c:\path\to\my_lovely_db.sqlite" if sys.platform == "win32" else "/path/to/my_lovely_db.sqlite"
+        path = r"c:\path\to\my_lovely_db.sqlite" if sys.platform == "win32" else "/path/to/my_lovely_db.sqlite"
         sa_url = make_url(r"sqlite:///" + path)
         self.assertEqual(suggest_display_name(sa_url), "my_lovely_db")
 
