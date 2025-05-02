@@ -11,44 +11,52 @@
 ######################################################################################################################
 
 """QUndoCommand subclasses for modifying the db."""
+from __future__ import annotations
+from collections.abc import Iterable
 from contextlib import suppress
 import time
+from typing import TYPE_CHECKING, Optional
 from PySide6.QtGui import QUndoCommand, QUndoStack
-from spinedb_api import SpineDBAPIError
+from spinedb_api import DatabaseMapping
 from spinedb_api.exception import SpineDBAPIError
+from spinedb_api.temp_id import TempId
+
+if TYPE_CHECKING:
+    from .spine_db_manager import SpineDBManager
 
 
 class AgedUndoStack(QUndoStack):
     @property
-    def redo_age(self):
+    def redo_age(self) -> int:
         if self.canRedo():
             return self.command(self.index()).age
         return -1
 
     @property
-    def undo_age(self):
+    def undo_age(self) -> int:
         if self.canUndo():
             return self.command(self.index() - 1).age
         return -1
 
 
 class AgedUndoCommand(QUndoCommand):
-    def __init__(self, parent=None, identifier=-1):
+    def __init__(self, parent: Optional[QUndoCommand] = None, identifier: int = -1):
         """
         Args:
-            parent (QUndoCommand, optional): The parent command, used for defining macros.
+            parent: The parent command, used for defining macros.
+            identifier: Command identifier, to identify whether succeeding commands can be merged.
         """
         super().__init__(parent=parent)
         self._age = -1
         self._id = identifier
-        self._buddies = []
+        self._buddies: list[AgedUndoCommand] = []
         self.merged = False
 
     def id(self):
         """override"""
         return self._id
 
-    def ours(self):
+    def ours(self) -> Iterable[AgedUndoCommand]:
         yield self
         yield from self._buddies
 
@@ -76,18 +84,19 @@ class AgedUndoCommand(QUndoCommand):
         self._age = time.time()
 
     @property
-    def age(self):
+    def age(self) -> int:
         return self._age
 
 
 class SpineDBCommand(AgedUndoCommand):
     """Base class for all commands that modify a Spine DB."""
 
-    def __init__(self, db_mngr, db_map, **kwargs):
+    def __init__(self, db_mngr: SpineDBManager, db_map: DatabaseMapping, **kwargs):
         """
         Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DatabaseMapping): DatabaseMapping instance
+            db_mngr: SpineDBManager instance
+            db_map: DatabaseMapping instance
+            **kwargs: Arguments passed to the parent class.
         """
         super().__init__(**kwargs)
         self.db_mngr = db_mngr
@@ -95,13 +104,22 @@ class SpineDBCommand(AgedUndoCommand):
 
 
 class AddItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, data, check=True, **kwargs):
+    def __init__(
+        self,
+        db_mngr: SpineDBManager,
+        db_map: DatabaseMapping,
+        item_type: str,
+        data: list[dict],
+        check: bool = True,
+        **kwargs,
+    ):
         """
         Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DatabaseMapping): DatabaseMapping instance
-            data (list): list of dict-items to add
-            item_type (str): the item type
+            db_mngr: SpineDBManager instance
+            db_map: DatabaseMapping instance
+            data: list of dict-items to add
+            item_type: the item type
+            check: Whether to check data integrity.
         """
         super().__init__(db_mngr, db_map, **kwargs)
         if not data:
@@ -129,13 +147,23 @@ class AddItemsCommand(SpineDBCommand):
 
 
 class UpdateItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, data, check=True, **kwargs):
+    def __init__(
+        self,
+        db_mngr: SpineDBManager,
+        db_map: DatabaseMapping,
+        item_type: str,
+        data: list[dict],
+        check: bool = True,
+        **kwargs,
+    ):
         """
         Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DatabaseMapping): DatabaseMapping instance
-            item_type (str): the item type
-            data (list): list of dict-items to update
+            db_mngr: SpineDBManager instance
+            db_map: DatabaseMapping instance
+            item_type: the item type
+            data: list of dict-items to update
+            check: Whether to check data integrity.
+            **kwargs: Arguments passed to the parent class.
         """
         super().__init__(db_mngr, db_map, **kwargs)
         if not data:
@@ -164,13 +192,17 @@ class UpdateItemsCommand(SpineDBCommand):
 
 
 class AddUpdateItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, data, check=True, **kwargs):
+    def __init__(
+        self, db_mngr: SpineDBManager, db_map: DatabaseMapping, item_type: str, data: list[dict], text: str, **kwargs
+    ):
         """
         Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DatabaseMapping): DatabaseMapping instance
-            item_type (str): the item type
-            data (list): list of dict-items to add-update
+            db_mngr: SpineDBManager instance
+            db_map: DatabaseMapping instance
+            item_type: the item type
+            data: list of dict-items to add-update
+            text: command text
+            **kwargs: arguments passed to parent class
         """
         super().__init__(db_mngr, db_map, **kwargs)
         if not data:
@@ -189,7 +221,8 @@ class AddUpdateItemsCommand(SpineDBCommand):
         self.redo_update_data = None
         self.undo_remove_ids = None
         self.undo_update_data = None
-        self.setText(f"update {item_type} items in {self.db_mngr.name_registry.display_name(db_map.sa_url)}")
+        self.setText(text)
+        # self.setText(f"update {item_type} items in {self.db_mngr.name_registry.display_name(db_map.sa_url)}")
 
     def redo(self):
         super().redo()
@@ -217,13 +250,23 @@ class AddUpdateItemsCommand(SpineDBCommand):
 
 
 class RemoveItemsCommand(SpineDBCommand):
-    def __init__(self, db_mngr, db_map, item_type, ids, check=True, **kwargs):
+    def __init__(
+        self,
+        db_mngr: SpineDBManager,
+        db_map: DatabaseMapping,
+        item_type: str,
+        ids: set[TempId],
+        check: bool = True,
+        **kwargs,
+    ):
         """
         Args:
-            db_mngr (SpineDBManager): SpineDBManager instance
-            db_map (DatabaseMapping): DatabaseMapping instance
-            item_type (str): the item type
-            ids (set): set of ids to remove
+            db_mngr: SpineDBManager instance
+            db_map: DatabaseMapping instance
+            item_type: the item type
+            ids: set of ids to remove
+            check: Whether to check data integrity.
+            **kwargs: Arguments passed to the parent class.
         """
         super().__init__(db_mngr, db_map, **kwargs)
         if not ids:

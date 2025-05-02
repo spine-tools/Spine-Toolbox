@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The SpineDBManager class."""
+from collections.abc import Iterable
 from contextlib import suppress
 import json
 import os
@@ -54,7 +55,7 @@ from spinedb_api.parameter_value import (
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
 from spinetoolbox.database_display_names import NameRegistry
-from .helpers import busy_effect, plain_to_tool_tip
+from .helpers import DBMapDictItems, DBMapTypedDictItems, busy_effect, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
 from .parameter_type_validation import ParameterTypeValidator
 from .spine_db_commands import (
@@ -1001,14 +1002,13 @@ class SpineDBManager(QObject):
                 return scen["alternative_id_list"] if scen else []
         return []
 
-    def import_data(self, db_map_data, command_text="Import data"):
+    def import_data(self, db_map_data: dict[DatabaseMapping, dict[str, list[tuple]]], command_text: str) -> None:
         """Imports the given data into given db maps using the dedicated import functions from spinedb_api.
         Condenses all in a single command for undo/redo.
 
         Args:
-            db_map_data (dict(DatabaseMapping, dict())): Maps dbs to data to be passed as keyword arguments
-                to `get_data_for_import`
-            command_text (str, optional): What to call the command that condenses the operation.
+            db_map_data: Maps dbs to data to be passed as keyword arguments to ``get_data_for_import``
+            command_text: What to call the command that condenses the operation.
         """
         db_map_error_log = {}
         for db_map, data in db_map_data.items():
@@ -1027,7 +1027,7 @@ class SpineDBManager(QObject):
                     if isinstance(items, tuple):
                         items, errors = items
                         db_map_error_log.setdefault(db_map, []).extend(errors)
-                    self.add_update_items(item_type, {db_map: list(items)}, identifier=identifier)
+                    self.add_update_items(item_type, {db_map: list(items)}, command_text, identifier=identifier)
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
@@ -1415,7 +1415,9 @@ class SpineDBManager(QObject):
                 UpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
             )
 
-    def add_update_items(self, item_type, db_map_data, identifier=None, **kwargs):
+    def add_update_items(
+        self, item_type: str, db_map_data: DBMapDictItems, command_text: str, identifier=None, **kwargs
+    ) -> None:
         """Pushes commands to add_update items to undo stack."""
         if identifier is None:
             identifier = self.get_command_identifier()
@@ -1423,7 +1425,7 @@ class SpineDBManager(QObject):
             self._clear_validated_value_ids(item_type, db_map_data)
         for db_map, data in db_map_data.items():
             self.undo_stack[db_map].push(
-                AddUpdateItemsCommand(self, db_map, item_type, data, identifier=identifier, **kwargs)
+                AddUpdateItemsCommand(self, db_map, item_type, data, command_text, identifier=identifier, **kwargs)
             )
 
     def remove_items(self, db_map_typed_ids, identifier=None, **kwargs):
@@ -1444,7 +1446,7 @@ class SpineDBManager(QObject):
                     RemoveItemsCommand(self, db_map, item_type, ids, identifier=identifier, **kwargs)
                 )
 
-    def get_command_identifier(self):
+    def get_command_identifier(self) -> int:
         try:
             return self._cmd_id
         finally:
@@ -1610,25 +1612,28 @@ class SpineDBManager(QObject):
         }
         self.import_data({db_map: data}, command_text="Duplicate scenario")
 
-    def duplicate_entity(self, orig_name, dup_name, class_name, db_maps):
+    def duplicate_entity(
+        self, orig_name: str, dup_name: str, class_name: str, db_maps: Iterable[DatabaseMapping]
+    ) -> None:
         """Duplicates entity, its parameter values and related multidimensional entities.
 
         Args:
-            orig_name (str): original entity's name
-            dup_name (str): duplicate's name
-            class_name (str): entity class name
-            db_maps (Iterable of DatabaseMapping): database mappings where duplication should take place
+            orig_name: original entity's name
+            dup_name: duplicate's name
+            class_name: entity class name
+            db_maps: database mappings where duplication should take place
         """
         dup_import_data = {}
         for db_map in db_maps:
-            entity = db_map.get_entity_item(entity_class_name=class_name, name=orig_name)
+            entity_table = db_map.mapped_table("entity")
+            entity = db_map.item(entity_table, entity_class_name=class_name, name=orig_name)
             element_name_list = entity["element_name_list"]
             if element_name_list:
                 first_import_entry = (class_name, dup_name, element_name_list, entity["description"])
             else:
                 first_import_entry = (class_name, dup_name, entity["description"])
             dup_entity_import_data = [first_import_entry]
-            for item in db_map.get_entity_items():
+            for item in db_map.find(entity_table):
                 element_name_list = item["element_name_list"]
                 item_class_name = item["entity_class_name"]
                 if orig_name in element_name_list and item_class_name != class_name:
@@ -1638,7 +1643,7 @@ class SpineDBManager(QObject):
                     dup_entity_import_data.append((item_class_name, dup_name_list, item["description"]))
             dup_import_data[db_map] = {"entities": dup_entity_import_data}
             dup_value_import_data = []
-            for item in db_map.get_parameter_value_items(entity_class_name=class_name, entity_name=orig_name):
+            for item in db_map.find_parameter_values(entity_class_name=class_name, entity_name=orig_name):
                 dup_value_import_data.append(
                     (
                         class_name,
@@ -1650,7 +1655,7 @@ class SpineDBManager(QObject):
                 )
             dup_import_data[db_map].update(parameter_values=dup_value_import_data)
             dup_entity_alternative_import_data = []
-            for item in db_map.get_entity_alternative_items(entity_class_name=class_name, entity_name=orig_name):
+            for item in db_map.find_entity_alternatives(entity_class_name=class_name, entity_name=orig_name):
                 dup_entity_alternative_import_data.append(
                     (class_name, dup_name, item["alternative_name"], item["active"])
                 )

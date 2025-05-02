@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """General helper functions and classes."""
+from __future__ import annotations
 import bisect
 from collections.abc import Callable, Iterable
 from contextlib import contextmanager
@@ -29,7 +30,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import Any, Optional, Sequence, Union  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -98,6 +99,9 @@ from .config import (
 from .font import TOOLBOX_FONT
 from .logger_interface import LoggerInterface
 
+if TYPE_CHECKING:
+    from .ui_main import ToolboxUI
+
 if sys.platform == "win32":
     import ctypes
     import pywintypes
@@ -115,6 +119,7 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
 
 DBMapPublicItems = dict[DatabaseMapping, list[PublicItem]]
 DBMapDictItems = dict[DatabaseMapping, list[dict]]
+DBMapTypedDictItems = dict[DatabaseMapping, dict[str, list[dict]]]
 
 
 @unique
@@ -187,7 +192,7 @@ def create_dir(base_path: str, folder: str = "", verbosity: bool = False) -> Non
             logging.debug("Directory created: %s", directory)
 
 
-def rename_dir(old_dir: str, new_dir: str, toolbox: "ToolboxUI", box_title: str) -> bool:
+def rename_dir(old_dir: str, new_dir: str, toolbox: ToolboxUI, box_title: str) -> bool:
     """Renames directory.
 
     Args:

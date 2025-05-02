@@ -375,13 +375,14 @@ class SpineDBEditorBase(QMainWindow):
         """Pastes data from clipboard."""
         call_on_focused_widget(self, "paste")
 
-    def import_data(self, data):
+    def import_data(self, data: dict[str, list[tuple]], command_text: str) -> None:
         """Imports data to all database mappings open in the editor.
 
         Args:
-            data (dict): data to import
+            data: data to import
+            command_text: Undo command text.
         """
-        self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
+        self.db_mngr.import_data({db_map: data for db_map in self.db_maps}, command_text)
 
     @Slot(bool)
     def import_file(self, checked=False):
@@ -427,7 +428,7 @@ class SpineDBEditorBase(QMainWindow):
                 self.msg_error.emit(f"Data in {file_path} is not valid for importing.")
                 return
             sanitized_data[item_type] = sanitized_items
-        self.import_data(sanitized_data)
+        self.import_data(sanitized_data, "Import data from JSON.")
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
 
@@ -440,7 +441,7 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(f"Couldn't import file {filename}: {str(err)}")
             return
         data = export_data(db_map)
-        self.import_data(data)
+        self.import_data(data, "Import data from SQL database.")
         self.msg.emit(f"File {filename} successfully imported.")
 
     def import_from_excel(self, file_path):
@@ -453,7 +454,7 @@ class SpineDBEditorBase(QMainWindow):
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
             self.msg_error.emit(msg)
-        self.import_data(mapped_data)
+        self.import_data(mapped_data, "Import data from Excel.")
         self.msg.emit(f"File {filename} successfully imported.")
 
     @Slot(bool)
