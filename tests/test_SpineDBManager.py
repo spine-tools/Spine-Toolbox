@@ -368,7 +368,7 @@ class TestImportExportData(TestCaseWithQApplication):
         self._db_mngr.export_to_excel(file_path, data, self.editor)
         mapped_data, errors = get_mapped_data_from_xlsx(file_path)
         self.assertEqual(errors, [])
-        self._db_mngr.import_data({self._db_map: mapped_data})
+        self._db_mngr.import_data({self._db_map: mapped_data}, command_text="Import Excel data")
         self._db_map.commit_session("imported items")
         with self._db_map:
             value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
@@ -401,7 +401,8 @@ class TestImportExportData(TestCaseWithQApplication):
             self._db_mngr.items_added, condition=lambda item_type, _: item_type == "list_value"
         ) as waiter:
             self._db_mngr.import_data(
-                {self._db_map: {"parameter_value_lists": [["list_1", "first value"], ["list_1", "second value"]]}}
+                {self._db_map: {"parameter_value_lists": [("list_1", "first value"), ("list_1", "second value")]}},
+                "import value lists",
             )
             waiter.wait()
         value_lists = self._db_map.get_items("parameter_value_list")

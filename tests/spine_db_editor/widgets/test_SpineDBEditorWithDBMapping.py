@@ -72,7 +72,7 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
             "parameter_definitions": [("fish", "color")],
             "parameter_values": [("fish", "nemo", "color", "orange")],
         }
-        self.db_mngr.import_data({self.db_map: data})
+        self.db_mngr.import_data({self.db_map: data}, "Import test data.")
         self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
