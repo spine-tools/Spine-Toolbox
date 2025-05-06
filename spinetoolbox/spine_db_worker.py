@@ -189,7 +189,7 @@ class SpineDBWorker(QObject):
             if commit_id is not None:
                 self.commit_cache.setdefault(commit_id, {}).setdefault(item_type, []).append(item["id"])
 
-    def close_db_map(self):
+    def close_db_map(self) -> None:
         with self._db_mngr.get_lock(self._db_map):
             self._db_map.close()
             self._do_fetch_more = lambda worker, *args, **kwargs: None

@@ -12,21 +12,24 @@
 
 """Unit tests for the TimePatternEditor widget."""
 import unittest
+from PySide6.QtWidgets import QWidget
 from spinedb_api import TimePattern
 from spinetoolbox.widgets.time_pattern_editor import TimePatternEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestTimePatternEditor(TestCaseWithQApplication):
     def test_initial_value(self):
-        editor = TimePatternEditor()
-        value = editor.value()
-        self.assertEqual(value, TimePattern(["D1-7"], [0.0]))
+        with q_object(QWidget()) as parent:
+            editor = TimePatternEditor(parent)
+            value = editor.value()
+            self.assertEqual(value, TimePattern(["D1-7"], [0.0]))
 
     def test_value_access(self):
-        editor = TimePatternEditor()
-        editor.set_value(TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
-        self.assertEqual(editor.value(), TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
+        with q_object(QWidget()) as parent:
+            editor = TimePatternEditor(parent)
+            editor.set_value(TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
+            self.assertEqual(editor.value(), TimePattern(["D1-5", "D6-10"], [2.2, 2.1]))
 
 
 if __name__ == "__main__":

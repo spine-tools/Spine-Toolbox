@@ -12,21 +12,24 @@
 
 """Unit tests for the DatetimeEditor widget."""
 import unittest
+from PySide6.QtWidgets import QWidget
 from spinedb_api import DateTime
 from spinetoolbox.widgets.datetime_editor import DatetimeEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestDatetimeEditor(TestCaseWithQApplication):
     def test_initial_value(self):
-        editor = DatetimeEditor()
-        value = editor.value()
-        self.assertEqual(value, DateTime("2000-01-01T00:00:00"))
+        with q_object(QWidget()) as parent:
+            editor = DatetimeEditor(parent)
+            value = editor.value()
+            self.assertEqual(value, DateTime("2000-01-01T00:00:00"))
 
     def test_value_access(self):
-        editor = DatetimeEditor()
-        editor.set_value(DateTime("2000-02-02T20:02"))
-        self.assertEqual(editor.value(), DateTime("2000-02-02T20:02"))
+        with q_object(QWidget()) as parent:
+            editor = DatetimeEditor(parent)
+            editor.set_value(DateTime("2000-02-02T20:02"))
+            self.assertEqual(editor.value(), DateTime("2000-02-02T20:02"))
 
 
 if __name__ == "__main__":

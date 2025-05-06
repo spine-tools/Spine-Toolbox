@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for Database editor's ``graphics_items`` module."""
-import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF
 from PySide6.QtGui import QKeySequence, QShortcut
@@ -57,8 +56,8 @@ class TestEntityItem(TestCaseWithQApplication):
 
     @classmethod
     def tearDownClass(cls):
-        super().tearDownClass()
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
+        super().tearDownClass()
 
     def tearDown(self):
         with (

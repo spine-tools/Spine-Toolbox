@@ -20,7 +20,7 @@ from spinetoolbox.multi_tab_windows import MultiTabWindowRegistry
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor, open_db_editor
 from spinetoolbox.spine_db_manager import SpineDBManager
 from tests.mock_helpers import FakeDataStore, TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
-from .spine_db_editor_test_base import DBEditorTestBase
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
 class TestMultiSpineDBEditor(DBEditorTestBase):

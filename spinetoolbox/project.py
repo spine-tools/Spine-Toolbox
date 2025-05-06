@@ -722,14 +722,14 @@ class SpineToolboxProject(MetaObject):
             (c for c in self._connections if c.source == source_name and c.destination == destination_name), None
         )
 
-    def connections_for_item(self, item_name):
+    def connections_for_item(self, item_name: str) -> list[LoggingConnection]:
         """Returns connections that have given item as source or destination.
 
         Args:
-            item_name (str): item's name
+            item_name: item's name
 
         Returns:
-            list of Connection: connections connected to item
+            connections connected to item
         """
         return [c for c in self._connections if item_name in (c.source, c.destination)]
 

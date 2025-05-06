@@ -20,19 +20,12 @@ from ..project import ItemNameStatus
 
 
 class AddProjectItemWidget(QWidget):
-    """A widget to query user's preferences for a new item.
-
-    Attributes:
-        toolbox (ToolboxUI): Parent widget
-        x (int): X coordinate of new item
-        y (int): Y coordinate of new item
-    """
+    """A widget to query user's preferences for a new item."""
 
     def __init__(self, toolbox, x, y, class_, spec=""):
-        """Initialize class."""
         from ..ui.add_project_item import Ui_Form  # pylint: disable=import-outside-toplevel
 
-        super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
+        super().__init__(parent=toolbox, f=Qt.WindowType.Window)  # Setting parent inherits stylesheet
         self._toolbox = toolbox
         self._x = x
         self._y = y
@@ -65,7 +58,7 @@ class AddProjectItemWidget(QWidget):
         self.ui.lineEdit_name.selectAll()
         self.ui.lineEdit_name.setFocus()
         # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle(f"Add {class_.item_type()}")
 
     def connect_signals(self):

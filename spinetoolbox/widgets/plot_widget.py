@@ -126,7 +126,7 @@ class PlotWidget(QWidget):
         """
         self.setParent(parent_window)
         self.setWindowFlag(Qt.WindowType.Window, True)
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
         title = "Plot"
         if document_name:
             title += f"    -- {document_name} --"
@@ -169,7 +169,7 @@ class _PlotDataWidget(QWidget):
         self._view.horizontalHeader().hide()
         self._view.verticalHeader().hide()
         layout.addWidget(self._view)
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.table_view_width = (
             self._view.frameWidth() + self._view.verticalHeader().width() + self._view.horizontalHeader().length()
         )
