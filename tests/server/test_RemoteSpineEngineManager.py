@@ -69,7 +69,6 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
                 {
                     "item_name": "Data Connection 1",
                     "direction": ExecutionDirection.BACKWARD,
-                    "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.SUCCESS,
                 },
             ),
@@ -88,7 +87,6 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
                 {
                     "item_name": "Data Connection 1",
                     "direction": ExecutionDirection.FORWARD,
-                    "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.SUCCESS,
                 },
             ),
@@ -110,7 +108,6 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
                 {
                     "item_name": "Data Connection 1",
                     "direction": ExecutionDirection.BACKWARD,
-                    "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.FAILURE,
                 },
             ),
@@ -129,7 +126,6 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
                 {
                     "item_name": "Data Connection 1",
                     "direction": ExecutionDirection.FORWARD,
-                    "state": "RUNNING",
                     "item_state": ItemExecutionFinishState.FAILURE,
                 },
             ),

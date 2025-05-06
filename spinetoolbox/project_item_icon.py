@@ -140,13 +140,13 @@ class ProjectItemIcon(QGraphicsPathItem):
         selection_pen.setWidthF(pen_width)
         self._selection_halo.setPen(selection_pen)
 
-    def finalize(self, name, x, y):
+    def finalize(self, name: str, x: float, y: float):
         """Names the icon and moves it by a given amount.
 
         Args:
-            name (str): icon's name
-            x (int): horizontal offset
-            y (int): vertical offset
+            name: icon's name
+            x: horizontal offset
+            y: vertical offset
         """
         self.moveBy(x, y)
         self.update_name_item(name)
