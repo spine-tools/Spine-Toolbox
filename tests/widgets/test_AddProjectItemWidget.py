@@ -81,10 +81,6 @@ class TestProjectItem(ProjectItem):
     def item_type():
         return "TestItemType"
 
-    @property
-    def executable_class(self):
-        raise NotImplementedError()
-
     @staticmethod
     def from_dict(name, item_dict, toolbox, project):
         return TestProjectItem(project)

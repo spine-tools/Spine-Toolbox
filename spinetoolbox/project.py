@@ -1117,8 +1117,8 @@ class SpineToolboxProject(MetaObject):
         # being acquired by threads from different processes or maybe even different QThreads.
         # Can't say I really understand the whole extent of it.
         for finished_worker in self._engine_workers:
-            for item, direction, state in finished_worker.successful_executions:
-                item.handle_execution_successful(direction, state)
+            for item, direction in finished_worker.successful_executions:
+                item.handle_execution_successful(direction)
             finished_worker.clean_up()
         self.finalize_remote_execution(worker.job_id)
         self._engine_workers.clear()
