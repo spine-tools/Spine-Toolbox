@@ -57,7 +57,7 @@ class EmptyModelBase(EmptyRowModel):
         """
         db_map_items, db_map_error_log = self._data_to_items(db_map_data)
         if any(db_map_items.values()):
-            self._do_add_items_to_db(db_map_items)
+            self.db_mngr.add_items(self.item_type, db_map_items)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
 
@@ -181,9 +181,6 @@ class EmptyModelBase(EmptyRowModel):
         """Checks if a db item is ready to be inserted."""
         raise NotImplementedError()
 
-    def _do_add_items_to_db(self, db_map_items: DBMapDictItems) -> None:
-        raise NotImplementedError()
-
     def reset_db_maps(self, db_maps: Iterable[DatabaseMapping]):
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
@@ -217,9 +214,6 @@ class ParameterMixin:
 class EntityMixin:
     entities_added = Signal(object)
 
-    def _do_add_items_to_db(self, db_map_items):
-        raise NotImplementedError()
-
     def add_items_to_db(self, db_map_data):
         """Overridden to add entities on the fly first."""
         db_map_entities = {}
@@ -241,9 +235,9 @@ class EntityMixin:
         if any(db_map_items.values()):
             db_map_entities_to_add = self._clean_to_be_added_entities(db_map_entities, db_map_items)
             if any(db_map_entities_to_add.values()):
-                self.db_mngr.add_entities(db_map_entities_to_add)
+                self.db_mngr.add_items("entity", db_map_entities_to_add)
                 self.entities_added.emit(db_map_entities_to_add)
-            self._do_add_items_to_db(db_map_items)
+            self.db_mngr.add_items(self.item_type, db_map_items)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
 
@@ -294,9 +288,6 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     def _entity_class_name_candidates(self, db_map, item):
         return []
 
-    def _do_add_items_to_db(self, db_map_items):
-        self.db_mngr.add_parameter_definitions(db_map_items)
-
 
 class EmptyParameterValueModel(
     MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin, ParameterMixin, EntityMixin, EmptyModelBase
@@ -331,9 +322,6 @@ class EmptyParameterValueModel(
             item.get(x) for x in ("entity_class_name", "entity_byname", "parameter_definition_name", "alternative_name")
         )
 
-    def _do_add_items_to_db(self, db_map_items):
-        self.db_mngr.add_parameter_values(db_map_items)
-
     def _entity_class_name_candidates(self, db_map, item):
         candidates_by_parameter = self._entity_class_name_candidates_by_parameter(db_map, item)
         candidates_by_entity = self._entity_class_name_candidates_by_entity(db_map, item)
@@ -360,9 +348,6 @@ class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyMod
 
     def _make_unique_id(self, item):
         return tuple(item.get(x) for x in ("entity_class_name", "entity_byname", "alternative_name"))
-
-    def _do_add_items_to_db(self, db_map_items):
-        self.db_mngr.add_entity_alternatives(db_map_items)
 
     def _entity_class_name_candidates(self, db_map, item):
         return self._entity_class_name_candidates_by_entity(db_map, item)

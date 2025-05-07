@@ -199,24 +199,18 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
             self.assertEqual(data[0].name, "an_entity")
 
     def test_add_entity_with_alternative(self):
-        """Tests that adding a new entity with the alternative -column filled
+        """Tests that adding a new entity with the alternative column filled
         will actually add the alternative"""
         view = self._db_editor.ui.treeView_entity
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "Alt1"}]})
         add_zero_dimension_entity_class(view, "an_entity_class")
-        with mock.patch.object(self._db_mngr, "add_entity_alternatives") as mock_add_entity_alternatives:
-            add_entity(view, "an_entity", alternative="Alt1")
-            mock_add_entity_alternatives.assert_called_once_with(
-                {
-                    self._db_map: [
-                        {
-                            "active": True,
-                            "alternative_name": "Alt1",
-                            "entity_byname": ("an_entity",),
-                            "entity_class_name": "an_entity_class",
-                        }
-                    ]
-                }
-            )
+        entity_class_id = self._db_map.entity_class(name="an_entity_class")["id"]
+        add_entity(view, "an_entity", alternative="Alt1")
+        entity = self._db_map.entity(class_id=entity_class_id, name="an_entity")
+        entity_alternative = self._db_map.entity_alternative(
+            alternative_name="Alt1", entity_class_id=entity_class_id, entity_id=entity["id"]
+        )
+        self.assertTrue(entity_alternative["active"])
         model = view.model()
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)

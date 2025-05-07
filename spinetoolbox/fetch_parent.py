@@ -11,10 +11,14 @@
 ######################################################################################################################
 
 """The FetchParent and FlexibleFetchParent classes."""
+from __future__ import annotations
 from contextlib import suppress
+from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from .helpers import busy_effect
-from .spine_db_manager import SpineDBManager
+
+if TYPE_CHECKING:
+    from .spine_db_manager import SpineDBManager
 
 
 class FetchParent(QObject):

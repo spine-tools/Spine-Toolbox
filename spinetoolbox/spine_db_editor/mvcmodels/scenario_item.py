@@ -59,12 +59,6 @@ class ScenarioItem(GrayIfLastMixin, EditableMixin, EmptyChildMixin, FetchMoreMix
             return
         super()._do_set_up()
 
-    def add_item_to_db(self, db_item):
-        self.db_mngr.add_scenarios({self.db_map: [db_item]})
-
-    def update_item_in_db(self, db_item):
-        self.db_mngr.update_scenarios({self.db_map: [db_item]})
-
     def handle_updated_in_db(self):
         super().handle_updated_in_db()
         self.update_alternative_id_list()
@@ -138,12 +132,6 @@ class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
             return self.parent_item.alternative_id_list[self.child_number()]
         except IndexError:
             return None
-
-    def add_item_to_db(self, db_item):
-        raise NotImplementedError()
-
-    def update_item_in_db(self, db_item):
-        raise NotImplementedError()
 
     def flags(self, column):
         flags = super().flags(column) | Qt.ItemFlag.ItemNeverHasChildren

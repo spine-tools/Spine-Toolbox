@@ -118,7 +118,9 @@ class ScenarioGenerator(QWidget):
             with signal_waiter(
                 self._db_editor.db_mngr.items_added, condition=lambda item_type, _: item_type == "scenario"
             ) as waiter:
-                self._db_editor.db_mngr.add_scenarios({self._db_map: [{"name": name} for name in new_scenarios]})
+                self._db_editor.db_mngr.add_items(
+                    "scenario", {self._db_map: [{"name": name} for name in new_scenarios]}
+                )
                 waiter.wait()
         searchable_scenario_names = set(scenarios_to_modify)
         scenario_definitions_by_id = {}

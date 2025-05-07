@@ -48,13 +48,14 @@ from tests.spine_db_editor.helpers import TestBase
 
 class TestPlotPivotTableSelection(TestBase):
     def _add_object_parameter_values(self, values):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "class", "id": 1}]})
-        self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_id": 1, "name": name, "id": i + 1} for i, name in enumerate(values)]}
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "class", "id": 1}]})
+        self._db_mngr.add_items(
+            "parameter_definition",
+            {self._db_map: [{"entity_class_id": 1, "name": name, "id": i + 1} for i, name in enumerate(values)]},
         )
         object_count = max(len(x) for x in values.values())
-        self._db_mngr.add_entities(
-            {self._db_map: [{"class_id": 1, "name": f"o{i + 1}", "id": i + 1} for i in range(object_count)]}
+        self._db_mngr.add_items(
+            "entity", {self._db_map: [{"class_id": 1, "name": f"o{i + 1}", "id": i + 1} for i in range(object_count)]}
         )
         db_values = {name: list(map(to_database, value_list)) for name, value_list in values.items()}
         value_items = [
@@ -69,7 +70,7 @@ class TestPlotPivotTableSelection(TestBase):
             for param_i, values_and_types in enumerate(db_values.values())
             for i, (db_value, type_) in enumerate(values_and_types)
         ]
-        self._db_mngr.add_parameter_values({self._db_map: value_items})
+        self._db_mngr.add_items("parameter_value", {self._db_map: value_items})
 
     def _select_object_class_in_tree_view(self):
         object_tree_model = self._db_editor.ui.treeView_entity.model()

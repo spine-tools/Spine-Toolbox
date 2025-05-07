@@ -201,17 +201,19 @@ class TestAddItemsDialog(TestCaseWithQApplication):
 
     def test_add_entities_dialog_autofill(self):
         """Test that the autofill also works for the add entities dialog."""
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "first_class"}, {"name": "second_class"}]})
-        self._db_mngr.add_entity_classes(
-            {self._db_map: [{"name": "entity_class", "dimension_name_list": ["first_class", "second_class"]}]}
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "first_class"}, {"name": "second_class"}]})
+        self._db_mngr.add_items(
+            "entity_class",
+            {self._db_map: [{"name": "entity_class", "dimension_name_list": ["first_class", "second_class"]}]},
         )
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"entity_class_name": "first_class", "name": "entity_1"},
                     {"entity_class_name": "second_class", "name": "entity_2"},
                 ]
-            }
+            },
         )
         for item in self._db_editor.entity_tree_model.visit_all():
             while item.can_fetch_more():
@@ -260,21 +262,23 @@ class TestAddItemsDialog(TestCaseWithQApplication):
 
 class TestManageElementsDialog(TestBase):
     def test_add_relationship_among_existing_ones(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"entity_class_name": "Object_1", "name": "object_11"},
                     {"entity_class_name": "Object_1", "name": "object_12"},
                     {"entity_class_name": "Object_2", "name": "object_21"},
                 ]
-            }
+            },
         )
-        self._db_mngr.add_entity_classes(
-            {self._db_map: [{"name": "rc", "dimension_name_list": ["Object_1", "Object_2"]}]}
+        self._db_mngr.add_items(
+            "entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["Object_1", "Object_2"]}]}
         )
-        self._db_mngr.add_entities(
-            {self._db_map: [{"name": "r", "entity_class_name": "rc", "element_name_list": ["object_11", "object_21"]}]}
+        self._db_mngr.add_items(
+            "entity",
+            {self._db_map: [{"name": "r", "entity_class_name": "rc", "element_name_list": ["object_11", "object_21"]}]},
         )
         root_index = self._db_editor.entity_tree_model.index(0, 0)
         class_index = self._db_editor.entity_tree_model.index(2, 0, root_index)
@@ -297,26 +301,28 @@ class TestManageElementsDialog(TestBase):
         self.assertEqual(dialog.new_items_model.index(0, 2).data(), "object_12__object_21")
 
     def test_accept_relationship_removal(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1"}, {"name": "Object_2"}]})
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"entity_class_name": "Object_1", "name": "object_11"},
                     {"entity_class_name": "Object_1", "name": "object_12"},
                     {"entity_class_name": "Object_2", "name": "object_21"},
                 ]
-            }
+            },
         )
-        self._db_mngr.add_entity_classes(
-            {self._db_map: [{"name": "rc", "dimension_name_list": ["Object_1", "Object_2"]}]}
+        self._db_mngr.add_items(
+            "entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["Object_1", "Object_2"]}]}
         )
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"name": "r11", "entity_class_name": "rc", "element_name_list": ["object_11", "object_21"]},
                     {"name": "r21", "entity_class_name": "rc", "element_name_list": ["object_12", "object_21"]},
                 ]
-            }
+            },
         )
         root_index = self._db_editor.entity_tree_model.index(0, 0)
         class_index = self._db_editor.entity_tree_model.index(2, 0, root_index)
@@ -363,7 +369,7 @@ class TestManageElementsDialog(TestBase):
 
 class TestAddEntitiesDialog(TestBase):
     def test_default_alternative_skips_add_alternatives_row(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1", "active_by_default": False}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1", "active_by_default": False}]})
         alternative_model = self._db_editor.ui.alternative_tree_view.model()
         alternative_tree_root = alternative_model.index(0, 0)
         add_alternative_index = alternative_model.index(1, 0, alternative_tree_root)
@@ -391,7 +397,7 @@ class TestAddEntitiesDialog(TestBase):
         self.assertEqual(model.index(0, 3).data(), self.db_codename)
 
     def test_default_alternative_is_empty_if_class_is_active_by_default(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "Object_1"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1"}]})
         alternative_model = self._db_editor.ui.alternative_tree_view.model()
         alternative_tree_root = alternative_model.index(0, 0)
         add_alternative_index = alternative_model.index(1, 0, alternative_tree_root)

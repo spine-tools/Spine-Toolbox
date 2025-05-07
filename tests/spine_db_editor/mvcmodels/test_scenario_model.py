@@ -70,7 +70,7 @@ class TestScenarioModel(_TestBase):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
         data = model_data_to_dict(model)
         expected = [
             [
@@ -89,10 +89,11 @@ class TestScenarioModel(_TestBase):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
         scenario_id = self._db_map.scenario(name="scenario_1")["id"]
-        self._db_mngr.update_scenarios(
-            {self._db_map: [{"name": "scenario_2.0", "description": "More than just a test.", "id": scenario_id}]}
+        self._db_mngr.update_items(
+            "scenario",
+            {self._db_map: [{"name": "scenario_2.0", "description": "More than just a test.", "id": scenario_id}]},
         )
         data = model_data_to_dict(model)
         expected = [
@@ -112,7 +113,7 @@ class TestScenarioModel(_TestBase):
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
         scenario_id = self._db_map.scenario(name="scenario_1")["id"]
         self._db_mngr.remove_items({self._db_map: {"scenario": {scenario_id}}})
         data = model_data_to_dict(model)
@@ -197,7 +198,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_dropMimeData_reorders_alternatives(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
@@ -286,7 +287,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_paste_alternative_mime_data(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
@@ -317,7 +318,7 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_paste_alternative_mime_data_ranks_alternatives(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         self._fetch_recursively(model)
@@ -383,8 +384,10 @@ class TestScenarioModel(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_duplicate_scenario(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "my_scenario", "description": "My test scenario"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items(
+            "scenario", {self._db_map: [{"name": "my_scenario", "description": "My test scenario"}]}
+        )
         scenario_id = self._db_map.scenario(name="my_scenario")["id"]
         base_alternative_id = self._db_map.alternative(name="Base")["id"]
         alternative_1_id = self._db_map.alternative(name="alternative_1")["id"]
@@ -461,7 +464,7 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self._temp_dir.cleanup()
 
     def test_paste_alternative_mime_data_doesnt_paste_across_databases(self):
-        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map1: [{"name": "alternative_1"}]})
         model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
         model.build_tree()
         self._fetch_recursively(model)
@@ -493,8 +496,8 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self.assertEqual(model_data, expected)
 
     def test_paste_scenario_mime_data(self):
-        self._db_mngr.add_scenarios({self._db_map1: [{"name": "my_scenario"}]})
-        self._db_mngr.add_alternatives({self._db_map1: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("scenario", {self._db_map1: [{"name": "my_scenario"}]})
+        self._db_mngr.add_items("alternative", {self._db_map1: [{"name": "alternative_1"}]})
         scenario_id = self._db_map1.scenario(name="my_scenario")["id"]
         self._db_mngr.set_scenario_alternatives(
             {self._db_map1: [{"id": scenario_id, "alternative_name_list": ["alternative_1", "Base"]}]}

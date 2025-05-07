@@ -253,9 +253,9 @@ class MetadataTableModelBase(QAbstractTableModel):
             else:
                 metadata_to_add.setdefault(db_map, []).append({"name": name, "value": value})
         if metadata_to_add:
-            self._db_mngr.add_metadata(metadata_to_add)
+            self._db_mngr.add_items("metadata", metadata_to_add)
         if metadata_to_update:
-            self._db_mngr.update_metadata(metadata_to_update)
+            self._db_mngr.update_items("metadata", metadata_to_update)
         if rows:
             top_left = self.index(min(rows), min(columns))
             bottom_right = self.index(max(rows), max(columns))

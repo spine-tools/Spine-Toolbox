@@ -432,13 +432,13 @@ class EntityMixin:
             if errors:
                 error_log.extend(errors)
         if entities:
-            self.db_mngr.add_entities({self.db_map: entities})
+            self.db_mngr.add_items("entity", {self.db_map: entities})
         if error_log:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
         super().update_items_in_db(items)
 
     def _do_update_items_in_db(self, db_map_data):
-        raise NotImplementedError()
+        self.db_mngr.update_items(self.item_type, db_map_data)
 
 
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
@@ -455,7 +455,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
         return order_key(item.get("name", ""))
 
     def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_parameter_definitions(db_map_data)
+        self.db_mngr.update_items("parameter_definition", db_map_data)
 
 
 class SingleParameterValueModel(
@@ -480,9 +480,6 @@ class SingleParameterValueModel(
         alt_name = order_key(item.get("alternative_name", ""))
         return byname, parameter_name, alt_name
 
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_parameter_values(db_map_data)
-
 
 class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
@@ -503,6 +500,3 @@ class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterE
             "alternative_name": ("alternative_id", "alternative"),
             "database": ("database", None),
         }
-
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_entity_alternatives(db_map_data)

@@ -52,11 +52,11 @@ class MetadataTableModel(MetadataTableModelBase):
 
     def _add_data_to_db_mngr(self, name, value, db_map):
         """See base class."""
-        self._db_mngr.add_metadata({db_map: [{"name": name, "value": value}]})
+        self._db_mngr.add_items("metadata", {db_map: [{"name": name, "value": value}]})
 
     def _update_data_in_db_mngr(self, id_, name, value, db_map):
         """See base class"""
-        self._db_mngr.update_metadata({db_map: [{"id": id_, "name": name, "value": value}]})
+        self._db_mngr.update_items("metadata", {db_map: [{"id": id_, "name": name, "value": value}]})
 
     def _database_table_name(self):
         """See base class"""

@@ -13,6 +13,7 @@
 """The SpineDBWorker class."""
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from spinedb_api import Asterisk, DatabaseMapping
+from spinedb_api.temp_id import TempId
 from .helpers import busy_effect
 from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 
@@ -31,7 +32,7 @@ class SpineDBWorker(QObject):
         self._db_map = None
         self._executor = (SynchronousExecutor if synchronous else QtBasedThreadPoolExecutor)()
         self._parents_by_type = {}
-        self.commit_cache = {}
+        self.commit_cache: dict[int, dict[str, list[TempId]]] = {}
         self._parents_fetching = {}
         self._offsets = {}
         self._fetched_item_types = set()

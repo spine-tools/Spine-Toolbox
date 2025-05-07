@@ -474,7 +474,7 @@ class GraphViewMixin:
     def save_graph_data(self, name):
         db_map_graph_data = self._get_db_map_graph_data()
         db_map_data = {db_map: [{"name": name, "value": gd}] for db_map, gd in db_map_graph_data.items()}
-        self.db_mngr.add_metadata(db_map_data)
+        self.db_mngr.add_items("metadata", db_map_data)
         # TODO: also add entity_metadata so it sticks
 
     def overwrite_graph_data(self, db_map_graph_data):
@@ -482,7 +482,7 @@ class GraphViewMixin:
         db_map_data = {
             db_map: [{"id": db_map_graph_data[db_map]["id"], "value": gd}] for db_map, gd in db_map_graph_data_.items()
         }
-        self.db_mngr.update_metadata(db_map_data)
+        self.db_mngr.update_items("metadata", db_map_data)
 
     def get_db_map_graph_data_by_name(self):
         db_map_graph_data_by_name = {}
@@ -912,7 +912,7 @@ class GraphViewMixin:
     def _add_entities_from_dialog(self, dialog):
         db_map_data = dialog.get_db_map_data()
         self._entity_fetch_parent.set_busy(True)
-        self.db_mngr.add_entities(db_map_data)
+        self.db_mngr.add_items("entity", db_map_data)
         self._entity_fetch_parent.set_busy(False)
         added_db_map_data = {
             db_map: [db_map.get_item("entity", **item) for item in items] for db_map, items in db_map_data.items()

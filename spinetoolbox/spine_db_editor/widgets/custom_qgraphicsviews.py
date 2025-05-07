@@ -589,7 +589,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             for db_map, entity_id in item.db_map_ids:
                 db_map_update_data[db_map].append({"id": entity_id, "lat": latitude, "lon": longitude})
         if db_map_update_data:
-            self.db_mngr.update_entities(db_map_update_data)
+            self.db_mngr.update_items("entity", db_map_update_data)
         else:
             self._spine_db_editor.msg.emit("No 0-dimensional entities selected - no positions to saved.")
 
@@ -622,7 +622,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         for item in items:
             for db_map, entity_id in item.db_map_ids:
                 db_map_update_data[db_map].append({"id": entity_id, "lat": None, "lon": None, "alt": None})
-        self.db_mngr.update_entities(db_map_update_data)
+        self.db_mngr.update_items("entity", db_map_update_data)
         self._spine_db_editor.build_graph()
 
     @Slot(bool)

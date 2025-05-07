@@ -280,7 +280,7 @@ class TestClosingDBEditors(TestCaseWithQApplication):
     def test_first_editor_to_close_does_not_ask_for_confirmation_on_dirty_database(self):
         editor_1 = self._make_db_editor()
         editor_2 = self._make_db_editor()
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         with (
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
@@ -297,7 +297,7 @@ class TestClosingDBEditors(TestCaseWithQApplication):
 
     def test_editor_asks_for_confirmation_even_when_non_editor_listeners_are_connected(self):
         editor = self._make_db_editor()
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         non_editor_listener = object()
         self._db_mngr.register_listener(non_editor_listener, self._db_map)
