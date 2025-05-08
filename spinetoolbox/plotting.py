@@ -13,13 +13,14 @@
 """Functions for plotting on PlotWidget."""
 
 from contextlib import contextmanager
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 import datetime
 from enum import auto, Enum, unique
 import functools
 from itertools import starmap
 import math
-from operator import itemgetter, methodcaller
+from operator import attrgetter, methodcaller
+import re
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot, column
 from bokeh.resources import INLINE
@@ -115,12 +116,15 @@ compat_types = {
     np.object_: "string",
 }
 
+# Regex pattern to indentify numerical sequences encoded as string
+SEQ_PAT = re.compile(r"^(t|p)([0-9]+)$")
+
 
 def parse_time(df: pd.DataFrame) -> pd.DataFrame:
     """Parse 'time' or 'period' columns to integers for plotting."""
     for col, _type in df.dtypes.items():
-        if col in ("time", "period") and _type in (object, pd.StringDtype()):
-            df[col] = df[col].str.lstrip("pt").astype("Int64")
+        if _type in (object, pd.StringDtype()) and (groups := df[col].str.extract(SEQ_PAT)).notna().all(axis=None):
+            df[col] = groups[1].astype(int)
     return df
 
 
