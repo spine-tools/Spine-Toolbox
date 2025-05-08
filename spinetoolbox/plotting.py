@@ -26,6 +26,7 @@ from enum import auto, Enum, unique
 import functools
 import math
 from operator import attrgetter, eq, itemgetter, methodcaller
+import re
 import pandas as pd
 from typing import Any, Dict, Hashable, Iterable, List, Optional, TypeAlias, TypeVar, Union, cast
 import numpy as np
@@ -115,12 +116,15 @@ compat_types = {
     np.object_: "string",
 }
 
+# Regex pattern to indentify numerical sequences encoded as string
+SEQ_PAT = re.compile(r"^(t|p)([0-9]+)$")
+
 
 def parse_time(df: pd.DataFrame) -> pd.DataFrame:
     """Parse 'time' or 'period' columns to integers for plotting."""
     for col, _type in df.dtypes.items():
-        if col in ("time", "period") and _type in (object, pd.StringDtype()):
-            df[col] = df[col].str.lstrip("pt").astype("Int64")
+        if _type in (object, pd.StringDtype()) and (groups := df[col].str.extract(SEQ_PAT)).notna().all(axis=None):
+            df[col] = groups[1].astype(int)
     return df
 
 
