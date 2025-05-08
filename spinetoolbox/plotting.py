@@ -297,47 +297,44 @@ class Palette:
         return self._palette[num % self._len]
 
 
-def get_ranges(sdf: pd.DataFrame, nplots: pd.DataFrame, col_index: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    col: str = sdf.columns[col_index]
-    ranges: pd.DataFrame = sdf.groupby(nplots.columns.tolist()).agg({col: ["min", "max"]})[col]
-    # FIXME: estimate tolerance based on range values
-    empty = (ranges["max"] - ranges["min"]).abs().lt(1e-6)
-    return ranges, empty
+def pad_num(num: float | int, frac: float = 0.05) -> float:
+    return num * ((1 + frac) if num > 0 else (1 - frac))
 
 
-def min_max_range(ranges: pd.DataFrame, *, scale: int = 1, order: int = 100):
+def get_yrange(sdf: pd.DataFrame, idxcols: list) -> tuple:
     """Calculate a common range that includes all ranges.
 
-    `ranges` is a DataFrame as returned by `get_ranges`, it indicates
-    the boundaries in the columns "min" & "max".
+    `sdf` is a DataFrame with the data.
 
-    `scale` reduces the range by this factor using integer division
-
-    `order` determines order (in power of 10) to which the range is
-    rounded up/down (default: 100).
+    `idxcols` is a list of column names that are treated as categorical indices.
 
     """
-    lo = np.floor_divide(ranges["min"].min(), order) * order
-    if lo == 0:
-        lo -= order
-    hi = (np.floor_divide(ranges["max"].max(), order) + 1) * order
-    if scale == 1:
-        return lo, hi
-    else:
-        return lo, lo + (hi - lo) // 10
+    col: str = sdf.columns[-1]
+    ranges = sdf.groupby(idxcols).agg({col: ["min", "max"]})[col]
+    # tolerance = 0.01% of min
+    empty = (ranges["max"] - ranges["min"]).abs().lt(1e-4 * ranges["min"])
+    ranges = ranges[~empty]
 
+    lo = pad_num(ranges["min"].min(), -0.05)
+    if (_hi := ranges["max"].max()) < 1:
+        hi = 1
+    else:
+        hi = pad_num(_hi, 0.05) + 1
+
+    return np.floor_divide(lo, 1), np.floor_divide(hi, 1)
 
 def fmt_query(names: pd.Series) -> str:
     return "&&".join([f"{k}=={v!r}" for k, v in names.items()])
 
 
-def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
-    palette = Palette(len(nplots))
-    x_ranges, x_empty = get_ranges(sdf, nplots, -2)
-    y_ranges, y_empty = get_ranges(sdf, nplots, -1)
-    # TODO: split ranges by low end and size
-    x_range = min_max_range(x_ranges[~x_empty], scale=10)
-    y_range = min_max_range(y_ranges[~y_empty])
+
+def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 10_000):
+    x_range = (0, max_points // len(nplots))
+    y_range = get_yrange(sdf, nplots.columns.to_list())
+
+    print("ranges:")
+    print(x_range)
+    print(y_range)
 
     # TODO:
     # - x_axis_type="datetime"/...
@@ -348,8 +345,6 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
         print(f"extra sequence columns: {seq_cols.tolist()}")
     x_label, y_label = sdf.columns[-2:]
 
-    sources = []
-    legend_items = {}
     fig_options = {
         "title": title,
         "width": 800,
@@ -360,20 +355,25 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
         "y_range": y_range,
     }
     fig = figure(**fig_options)
+
+    palette = Palette(len(nplots))
+    sources = []
+    legend_items = {}
     for idx, (_, row) in enumerate(nplots.iterrows()):
-        query = fmt_query(row)
-        cds = ColumnDataSource(data=sdf.query(query))
+        _df = sdf.query(fmt_query(row)).drop(row.index, axis=1)
+        cds = ColumnDataSource(data=_df)
         line = fig.line(x_label, y_label, source=cds, color=palette[idx])
         point = fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
         sources.append(cds)
         # TODO: derive key robustly
-        legend_items[query] = [line, point]
+        legend_items[fmt_query(row, sep="\n")] = [line, point]
 
     legend = Legend(items=list(legend_items.items()))
     fig.add_layout(legend, "right")
     fig.legend.click_policy = "hide"
 
-    select = get_window_selector(fig, x_label, y_label, sources[0])
+    longest: ColumnDataSource = functools.reduce(lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources)
+    select = get_window_selector(fig, x_label, y_label, longest)
     return column(fig, select)
 
 
