@@ -25,10 +25,10 @@ from bokeh.embed import file_html
 from bokeh.layouts import gridplot, column
 from bokeh.resources import INLINE
 from bokeh.models import ColumnDataSource, HoverTool, Legend, RangeTool
-from bokeh.palettes import Colorblind, TolRainbow
+from bokeh.palettes import TolRainbow
 from bokeh.plotting import figure
 import pandas as pd
-from typing import Any, Dict, Hashable, Iterable, List, Optional, TypeAlias, TypeVar, Union, cast
+from typing import Dict, Iterable, List, Optional, TypeAlias, TypeVar, Union, cast
 import numpy as np
 from PySide6.QtCore import QSize, Qt, QUrl
 from spinedb_api import DateTime, IndexedValue
@@ -228,13 +228,6 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
     # combine all dfs to determine type of plot we need
     df_combined = pd.concat(dfs, axis=0)
     sdf, common = squeeze_df(df_combined)
-    sdf.info()
-
-    # debug
-    print("DF:")
-    pprint(sdf, max_length=8)
-    print("common idcs:")
-    pprint(common)
 
     if sdf.empty:
         return plot_widget
@@ -242,9 +235,8 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
     nplots, seq_cols = get_variants(sdf)
 
     # debug
-    print("df_combined")
-    pprint(df_combined, max_length=3)
     print("sdf")
+    sdf.info()
     pprint(sdf, max_length=3)
     print("nplots")
     pprint(nplots)
