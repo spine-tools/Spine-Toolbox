@@ -28,8 +28,6 @@ import math
 from operator import attrgetter, eq, itemgetter, methodcaller
 import pandas as pd
 from typing import Any, Dict, Hashable, Iterable, List, Optional, TypeAlias, TypeVar, Union, cast
-from matplotlib.patches import Patch
-from matplotlib.ticker import MaxNLocator
 import numpy as np
 from PySide6.QtCore import QSize, Qt, QUrl
 from spinedb_api import DateTime, IndexedValue
@@ -56,9 +54,7 @@ class PlotType(Enum):
 
 
 _BASE_SETTINGS = {"alpha": 0.7}
-_SCATTER_PLOT_SETTINGS = {"linestyle": "", "marker": "o"}
 _LINE_PLOT_SETTINGS = {"linestyle": "solid"}
-_SCATTER_LINE_PLOT_SETTINGS = dict(_SCATTER_PLOT_SETTINGS, **_LINE_PLOT_SETTINGS)
 
 
 class PlottingError(Exception):
@@ -255,7 +251,7 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
         plot_widget = PlotWidget()
     else:
         # FIXME: redo for bokeh
-        _clear_plot(plot_widget)
+        plot_widget.canvas.setContent(b"")
 
     plot_title = "|".join(starmap(lambda k, v: f"{k}={v}", common.items()))
 
@@ -460,68 +456,6 @@ def plot_barchart(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
     # major_label_orientation: "vertical" or angle in radians
     fig.xaxis.major_label_orientation = np.pi / 3
     return fig
-
-
-def _bar(x, y, axes, **kwargs):
-    """Plots bar chart on axes but returns patches instead of bar container.
-
-    Args:
-        x (Any): x data
-        y (Any): y data
-        axes (Axes): plot axes
-        **kwargs: keyword arguments passed to bar()
-
-    Returns:
-        list of Patch: patches
-    """
-    bar_container = axes.bar(x, y, **kwargs)
-    return [Patch(color=bar_container.patches[0].get_facecolor(), label=kwargs["label"])]
-
-
-def _group_bars(data_list):
-    """Gives data with same x small offsets to prevent bar stacking.
-
-    Args:
-        data_list (List of XYData): squeezed data
-
-    Returns:
-        tuple: grouped data, bar width and x ticks
-    """
-    if len(data_list) < 2:
-        return data_list, None, None
-    ticks = np.arange(len(data_list[0].x))
-    bar_width = 1 / (len(data_list) + 1)
-    offset = bar_width * (len(data_list) - 1) / 2
-    shifted_data = []
-    for step, xy_data in enumerate(data_list):
-        x = list(ticks + (step * bar_width - offset))
-        shifted_data.append(replace(xy_data, x=x))
-    return shifted_data, bar_width, (ticks, data_list[0].x)
-
-
-def _clear_plot(plot_widget):
-    """Removes plots and legend from plot widget.
-
-    Args:
-        plot_widget (PlotWidget): plot widget
-    """
-    plot_widget.canvas.setContent(b"")
-
-
-def _limit_string_x_tick_labels(data, plot_widget):
-    """Limits the number of x tick labels in case x-axis consists of strings.
-
-    Matplotlib tries to plot every single x tick label if they are strings.
-    This can become very slow if the labels are numerous.
-
-    Args:
-        data (list of XYData): plot data
-        plot_widget (PlotWidget): plot widget
-    """
-    if data:
-        x = data[0].x
-        if len(x) > 10 and isinstance(x[0], str):
-            plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
 
 
 def _table_display_row(row):
