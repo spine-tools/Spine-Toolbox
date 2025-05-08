@@ -323,9 +323,9 @@ def get_yrange(sdf: pd.DataFrame, idxcols: list) -> tuple:
 
     return np.floor_divide(lo, 1), np.floor_divide(hi, 1)
 
-def fmt_query(names: pd.Series) -> str:
-    return "&&".join([f"{k}=={v!r}" for k, v in names.items()])
 
+def fmt_query(names: pd.Series, *, sep: str = "&&") -> str:
+    return sep.join([f"{k}=={v!r}" for k, v in names.items()])
 
 
 def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 10_000):
