@@ -343,6 +343,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
         "y_axis_label": y_label,
         "x_range": x_range,
         "y_range": y_range,
+        "x_axis_type": "datetime" if sdf[x_label].dtype.kind == "M" else "linear",
     }
     fig = figure(**fig_options)
 
