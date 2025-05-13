@@ -141,6 +141,7 @@ def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
 
     """
 
+    # check if column types match
     def _get_type(i) -> str:
         if isinstance(i, pd.CategoricalDtype):
             return compat_types[i.categories.dtype.type]
@@ -154,21 +155,20 @@ def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
     stringified = col_types.loc[type_count != 1].astype(str)
     # type_counts = stringified.agg(Counter, axis=1).apply(pd.Series).astype("Int64").fillna(0)
 
-    # check x-axis column names
-    cols = col_types.notna()  # DF of booleans
-    # penultimate valid label is x-axis
-    # FIXME: do we need to check len(columns) > 1?
-    x_labels = [cast(str, cols.index[cols[i]][-2]) for i in range(col_types.shape[1])]
-    x_matches = functools.reduce(lambda i, j: i if i == j else False, x_labels)
+    # check if all column names match
+    cols = np.array([df.columns.values for df in dfs])
+    cols_neq = cols[:-1] != cols[1:]
+    mismatched_cols = cols[:, cols_neq.any(axis=0)].T
 
     if not _raise:
-        return (type_count == 1).all() and bool(x_matches)
+        return (type_count == 1).all() and bool(mismatched_cols.any())
 
     if (type_count != 1).any():
         msgs = stringified.apply(lambda r: f"{r.name}: " + ", ".join([i for i in r if i != "nan"]), axis=1)
-        raise ValueError("\n".join(["Incompatible columns:", *msgs]))
-    elif not x_matches:
-        raise ValueError("mismatching x-label: " + ", ".join(x_labels))
+        raise PlottingError("\n".join(["incompatible column types:", *msgs]))
+    elif mismatched_cols.any():
+        msgs = [", ".join(col) for col in mismatched_cols]
+        raise PlottingError("\n".join(["mismatched column names:", *msgs]))
     return True
 
 
