@@ -7,12 +7,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Tool Properties has a new line edit where you change the Tool Results directory.
+
 ### Changed
 
 - The "empty row" at the bottom of Parameter definition, Parameter value and Entity alternative
   tables in Database editor is not always visible.
 
 ### Fixed
+
+- Tools do not make empty results directories anymore if the Tool Specification does not define
+any output files.
 
 ### Security
 
