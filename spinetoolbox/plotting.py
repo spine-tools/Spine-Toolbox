@@ -159,6 +159,9 @@ def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
     cols = np.array([df.columns.values for df in dfs])
     cols_neq = cols[:-1] != cols[1:]
     mismatched_cols = cols[:, cols_neq.any(axis=0)].T
+    # NOTE: when column names mismatch, in the resulting concatenated
+    # DF, any differing column from the 2nd DF onwards are appended
+    # after the set of columns from the 1st DF.
 
     if not _raise:
         return (type_count == 1).all() and bool(mismatched_cols.any())
