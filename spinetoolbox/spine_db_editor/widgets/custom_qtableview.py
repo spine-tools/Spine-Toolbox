@@ -14,13 +14,10 @@
 from collections.abc import Iterable
 from dataclasses import replace
 from typing import ClassVar
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
+from PySide6.QtGui import QAction, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
-from spinedb_api import DatabaseMapping
-from spinedb_api.temp_id import TempId
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
-from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...plotting import (
     ParameterTableHeaderSection,
     PlottingError,
@@ -186,16 +183,17 @@ class StackedTableView(AutoFilterCopyPasteTableView):
     def remove_selected(self):
         """Removes selected indexes."""
         selection = self.selectionModel().selection()
-        rows = []
+        row_counts = []
         while not selection.isEmpty():
             current = selection.takeAt(0)
             top = current.top()
             bottom = current.bottom()
-            rows += range(top, bottom + 1)
+            row_counts.append((top, bottom - top + 1))
         # Get data grouped by db_map
         self.selectionModel().clearSelection()
         model = self.model()
-        model.remove_rows(rows)
+        for row, count in row_counts:
+            model.removeRows(row, count)
 
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self, _, __):
@@ -319,7 +317,30 @@ class ParameterDefinitionTableViewBase(ParameterTableView):
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
 
-class EmptyParameterDefinitionTableView(ParameterDefinitionTableViewBase):
+class WithUndoStack:
+    request_replace_undo_redo_actions = Signal(QAction, QAction)
+    request_reset_undo_redo_actions = Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._undo_stack = QUndoStack(self)
+        self._undo_action = self._undo_stack.createUndoAction(self)
+        self._redo_action = self._undo_stack.createRedoAction(self)
+
+    def setModel(self, model):
+        model.set_undo_stack(self._undo_stack)
+        super().setModel(model)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.request_replace_undo_redo_actions.emit(self._undo_action, self._redo_action)
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.request_reset_undo_redo_actions.emit()
+
+
+class EmptyParameterDefinitionTableView(WithUndoStack, ParameterDefinitionTableViewBase):
     def sizeHint(self, /):
         return height_limited_size_hint(super().sizeHint(), self.parent().size())
 
@@ -359,7 +380,7 @@ class ParameterValueTableViewBase(ParameterTableView):
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
 
 
-class EmptyParameterValueTableView(ParameterValueTableViewBase):
+class EmptyParameterValueTableView(WithUndoStack, ParameterValueTableViewBase):
     def sizeHint(self, /):
         return height_limited_size_hint(super().sizeHint(), self.parent().size())
 
@@ -419,7 +440,7 @@ class EntityAlternativeTableViewBase(StackedTableView):
         self._make_delegate("active", BooleanValueDelegate)
 
 
-class EmptyEntityAlternativeTableView(EntityAlternativeTableViewBase):
+class EmptyEntityAlternativeTableView(WithUndoStack, EntityAlternativeTableViewBase):
     def __init__(self, parent):
         super().__init__(parent)
         self.set_column_converter_for_pasting("active", string_to_bool)

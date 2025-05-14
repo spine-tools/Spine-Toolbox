@@ -218,7 +218,7 @@ class SpineDBWorker(QObject):
         return items
 
     def _wake_up_parents(self, item_type, items):
-        for parent in list(self._get_parents(item_type)):
+        for parent in self._get_parents(item_type):
             for item in items:
                 if parent.accepts_item(item, self._db_map):
                     self._do_fetch_more(parent)

@@ -20,7 +20,7 @@ from typing import Any, Optional, Union
 import numpy as np
 import numpy.typing as nptyping
 from PySide6.QtCore import QObject, QSettings, Qt, Signal, Slot
-from PySide6.QtGui import QAction, QColor, QIcon, QUndoStack
+from PySide6.QtGui import QAction, QColor, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QMessageBox
 from sqlalchemy.engine.url import URL
@@ -140,7 +140,7 @@ class SpineDBManager(QObject):
         self._lock_lock = RLock()
         self._db_locks: dict[DatabaseMapping, RLock] = {}
         self.listeners: dict[DatabaseMapping, set[object]] = {}
-        self.undo_stack: dict[DatabaseMapping, QUndoStack] = {}
+        self.undo_stack: dict[DatabaseMapping, AgedUndoStack] = {}
         self.undo_action: dict[DatabaseMapping, QAction] = {}
         self.redo_action: dict[DatabaseMapping, QAction] = {}
         self._icon_mngr: dict[DatabaseMapping, SpineDBIconManager] = {}
@@ -422,13 +422,6 @@ class SpineDBManager(QObject):
         """Register given listener for all given db_map's signals."""
         for db_map in db_maps:
             self.add_db_map_listener(db_map, listener)
-            stack = self.undo_stack[db_map]
-            try:
-                stack.canRedoChanged.connect(listener.update_undo_redo_actions)
-                stack.canUndoChanged.connect(listener.update_undo_redo_actions)
-                stack.cleanChanged.connect(listener.update_commit_enabled)
-            except AttributeError:
-                pass
 
     def unregister_listener(
         self,
@@ -454,17 +447,6 @@ class SpineDBManager(QObject):
         failed_db_maps = []
         for db_map in db_maps:
             self.remove_db_map_listener(db_map, listener)
-            try:
-                self.undo_stack[db_map].canRedoChanged.disconnect(listener.update_undo_redo_actions)
-                self.undo_stack[db_map].canUndoChanged.disconnect(listener.update_undo_redo_actions)
-                self.undo_stack[db_map].cleanChanged.disconnect(listener.update_commit_enabled)
-                if not self.db_map_listeners(db_map) == 1:
-                    # Unregister the dirty listeners for every data store ONLY when the last editor
-                    # for that db map is closed. This way the dirtiness state of a data store that is
-                    # not open in a db editor can still be affected.
-                    continue
-            except AttributeError:
-                pass
         if dirty_db_maps:
             if commit_dirty:
                 failed_db_maps += self.commit_session(commit_msg, *dirty_db_maps)
@@ -473,12 +455,6 @@ class SpineDBManager(QObject):
         # If some db maps failed to commit, reinstate their listeners
         for db_map in failed_db_maps:
             self.add_db_map_listener(db_map, listener)
-            try:
-                self.undo_stack[db_map].canRedoChanged.connect(listener.update_undo_redo_actions)
-                self.undo_stack[db_map].canUndoChanged.connect(listener.update_undo_redo_actions)
-                self.undo_stack[db_map].cleanChanged.connect(listener.update_commit_enabled)
-            except AttributeError:
-                pass
         for db_map in db_maps:
             if not self.db_map_listeners(db_map):
                 self.close_session(db_map.db_url)

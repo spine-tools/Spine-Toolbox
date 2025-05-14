@@ -12,7 +12,6 @@
 
 """ Contains a minimal table model. """
 from collections.abc import Iterable, Sequence
-from copy import copy
 from typing import Any, Generic, Optional, TypeVar
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
 
