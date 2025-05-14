@@ -12,7 +12,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 ### Changed
 
 - The "empty row" at the bottom of Parameter definition, Parameter value and Entity alternative
-  tables in Database editor is not always visible.
+  tables in Database editor is now always visible.
 
 ### Fixed
 
