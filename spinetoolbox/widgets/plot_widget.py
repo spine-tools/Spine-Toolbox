@@ -14,14 +14,14 @@
 import csv
 import io
 import itertools
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
-import numpy
-from PySide6.QtCore import QMetaObject, Qt
-from PySide6.QtWidgets import QApplication, QMenu, QVBoxLayout, QWidget
+import tempfile
+import numpy as np
+from PySide6.QtCore import QMetaObject, Qt, QUrl, QSize
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QMenu, QApplication
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from .custom_qtableview import CopyPasteTableView
 from ..helpers import busy_effect
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from .custom_qtableview import CopyPasteTableView
-from .plot_canvas import LegendPosition, PlotCanvas
 
 
 class PlotWidget(QWidget):
@@ -36,18 +36,18 @@ class PlotWidget(QWidget):
     plot_windows = {}
     """A global list of plot windows."""
 
-    def __init__(self, parent=None, legend_axes_position=LegendPosition.BOTTOM):
+    def __init__(self, parent=None):
         """
         Args:
             parent (QWidget, optional): parent widget
-            legend_axes_position (LegendPosition): legend axes position relative to plot axes
         """
         super().__init__(parent)
         self._layout = QVBoxLayout(self)
-        self.canvas = PlotCanvas(self, legend_axes_position)
-        self._toolbar = NavigationToolBar(self.canvas, self)
-        self._layout.addWidget(self._toolbar)
+        self.canvas = QWebEngineView()
+        self.html_path = tempfile.NamedTemporaryFile(mode="wt", suffix=".html")
+        self.canvas.setUrl(QUrl.fromLocalFile(self.html_path.name))
         self._layout.addWidget(self.canvas)
+        self.resize(QSize(900, 600))
         self.original_xy_data = []
         QMetaObject.connectSlotsByName(self)
 
@@ -80,7 +80,7 @@ class PlotWidget(QWidget):
             indexes.append(xy_data.x)
             data_dict = dict(zip(xy_data.x, xy_data.y))
             data_dicts.append(data_dict)
-        all_indexes = numpy.unique(numpy.concatenate(indexes))
+        all_indexes = np.unique(np.concatenate(indexes))
         rows = [header]
         for index in all_indexes:
             row = [str(index)] + [str(data_dict.get(index, "")) for data_dict in data_dicts]

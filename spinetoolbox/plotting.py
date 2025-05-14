@@ -11,23 +11,33 @@
 ######################################################################################################################
 
 """Functions for plotting on PlotWidget."""
+from itertools import starmap
+from bokeh.embed import file_html
+from bokeh.layouts import gridplot, column
+from bokeh.resources import INLINE
+from bokeh.models import ColumnDataSource, HoverTool, Legend, RangeTool
+from bokeh.palettes import TolRainbow
+from bokeh.plotting import figure
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 import datetime
-from enum import Enum, auto, unique
+from enum import auto, Enum, unique
 import functools
-import math
-from operator import itemgetter, methodcaller
-from typing import Dict, List, Optional, Union
-from matplotlib.patches import Patch
-from matplotlib.ticker import MaxNLocator
+from operator import attrgetter, methodcaller
+import re
+import pandas as pd
+from typing import Dict, Iterable, List, Optional, TypeAlias, TypeVar, Union, cast
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt, QUrl
 from spinedb_api import DateTime, IndexedValue
-from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT, from_database
-from .mvcmodels.shared import PARSED_ROLE
-from .widgets.plot_canvas import LegendPosition
+from spinedb_api.dataframes import to_dataframe
+from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT
+from .mvcmodels.shared import PARAMETER_VALUE_ROLE, PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
+
+import inspect
+from rich.pretty import pprint
+
 
 LEGEND_PLACEMENT_THRESHOLD = 8
 
@@ -43,9 +53,7 @@ class PlotType(Enum):
 
 
 _BASE_SETTINGS = {"alpha": 0.7}
-_SCATTER_PLOT_SETTINGS = {"linestyle": "", "marker": "o"}
 _LINE_PLOT_SETTINGS = {"linestyle": "solid"}
-_SCATTER_LINE_PLOT_SETTINGS = dict(_SCATTER_PLOT_SETTINGS, **_LINE_PLOT_SETTINGS)
 
 
 class PlottingError(Exception):
@@ -86,167 +94,127 @@ class ParameterTableHeaderSection:
     separator: Optional[str] = None
 
 
-def convert_indexed_value_to_tree(value):
-    """Converts indexed values to tree nodes recursively.
+# NOTE: POD types like int, float, & str covers extension
+# ExtensionDtypes like Int64Dtype, Float64Dtype, or StringDtype,
+# since: Int64Dtype().type == int
+compat_types = {
+    int: "integer",
+    np.int32: "integer",
+    np.int64: "integer",
+    float: "number",
+    np.float32: "number",
+    np.float64: "number",
+    datetime.datetime: "timestamp",
+    datetime.date: "timestamp",
+    datetime.time: "timestamp",
+    np.datetime64: "timestamp",
+    pd.Timestamp: "timestamp",
+    str: "string",
+    object: "string",
+    np.object_: "string",
+}
 
-    Args:
-        value (IndexedValue): value to convert
+# Regex pattern to indentify numerical sequences encoded as string
+SEQ_PAT = re.compile(r"^(t|p)([0-9]+)$")
 
-    Returns:
-        TreeNode: root node of the converted tree
 
-    Raises:
-        ValueError: raised when leaf value couldn't be converted to float
+def parse_time(df: pd.DataFrame) -> pd.DataFrame:
+    """Parse 'time' or 'period' columns to integers for plotting."""
+    for col, _type in df.dtypes.items():
+        if _type in (object, pd.StringDtype()) and (groups := df[col].str.extract(SEQ_PAT)).notna().all(axis=None):
+            df[col] = groups[1].astype(int)
+    return df
+
+
+def squeeze_df(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Remove dataframe columns that have a single value, and return name, value as dict."""
+    counts = df.nunique(axis=0, dropna=True)
+    common_idxs = {c: df[c].iloc[0] for c, v in counts.items() if v == 1}
+    cols = [c for c in df.columns if c not in common_idxs]
+    return df.loc[:, cols], common_idxs
+
+
+def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
+    """Check if list of dataframes have matching x-label and compatible column types.
+
+    If `_raise` is `True`, `ValueError` is raised on failure.
+
     """
-    d = TreeNode(value.index_name)
-    for index, x in zip(value.indexes, value.values):
-        if isinstance(x, IndexedValue):
-            x = convert_indexed_value_to_tree(x)
+
+    # check if shapes match
+    shapes = [d.shape for d in dfs]
+    if not functools.reduce(lambda i, j: i if i == j else False, shapes):
+        raise PlottingError(f"incompatible shapes: {shapes}")
+
+    # check if column types match
+    def _get_type(i) -> str:
+        if isinstance(i, pd.CategoricalDtype):
+            return compat_types[i.categories.dtype.type]
         else:
-            try:
-                x = float(x)
-            except TypeError as error:
-                raise ValueError("cannot plot null values") from error
-        d.content[index] = x
-    return d
+            return compat_types[i.type]
+
+    col_types = pd.concat(map(attrgetter("dtypes"), dfs), axis=1).map(_get_type, na_action="ignore")
+    type_count = col_types.nunique(axis=1, dropna=True)
+
+    # TODO: fallback, try dropping DFs to find a working set
+    stringified = col_types.loc[type_count != 1].astype(str)
+    # type_counts = stringified.agg(Counter, axis=1).apply(pd.Series).astype("Int64").fillna(0)
+
+    # check if all column names match
+    cols = np.array([df.columns.values for df in dfs])
+    cols_neq = cols[:-1] != cols[1:]
+    mismatched_cols = cols[:, cols_neq.any(axis=0)].T
+    # NOTE: when column names mismatch, in the resulting concatenated
+    # DF, any differing column from the 2nd DF onwards are appended
+    # after the set of columns from the 1st DF.
+
+    if not _raise:
+        return (type_count == 1).all() and bool(mismatched_cols.any())
+
+    if (type_count != 1).any():
+        msgs = stringified.apply(lambda r: f"{r.name}: " + ", ".join([i for i in r if i != "nan"]), axis=1)
+        raise PlottingError("\n".join(["incompatible column types:", *msgs]))
+    elif mismatched_cols.any():
+        msgs = [", ".join(col) for col in mismatched_cols]
+        raise PlottingError("\n".join(["mismatched column names:", *msgs]))
+    return True
 
 
-def turn_node_to_xy_data(root_node, y_label_position, index_names=None, indexes=None):
-    """Constructs plottable data and indexes recursively.
+def is_sequence(col_dtype: np.dtype) -> bool:
+    if col_dtype.kind in ("i", "f", "M"):  # sequence, raw timestamp, timestamp
+        return True
 
-    Args:
-        root_node (TreeNode): root node
-        y_label_position (int, optional): position of y label in indexes
-        index_names (list of IndexName, optional): list of current index names
-        indexes (list): list of current indexes
+    # FIXME: for some mad reason `True` for string `object` type!
+    # if col_dtype.kind == "O":
+    #     return col_dtype == datetime.datetime
 
-    Yields:
-        XYData: plot data
+    return False
+
+
+def get_variants(sdf: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Determine all possible plots that are possible.
+
+    The different plot variants are determined by looking at the
+    intersection of the columns present in the squeezed dataframe and
+    the complete list of index columns.  This comparison identifies
+    the number of index columns that have more than one unique values.
+
+    TODO: do more fine grained plot types based on data types
+
     """
-    if index_names is None:
-        index_names = []
-    if indexes is None:
-        indexes = []
-    index_name = (
-        root_node.label if isinstance(root_node.label, IndexName) else IndexName(root_node.label, len(index_names))
-    )
-    current_index_names = index_names + [index_name]
-    x = []
-    y = []
-    for index, sub_node in root_node.content.items():
-        if isinstance(sub_node, TreeNode):
-            current_indexes = indexes + [index]
-            yield from turn_node_to_xy_data(sub_node, y_label_position, current_index_names, current_indexes)
-        else:
-            x.append(index)
-            y.append(sub_node)
-    if x:
-        x_label = current_index_names[-1]
-        y_label = indexes[y_label_position] if y_label_position is not None else ""
-        yield XYData(x, y, x_label, y_label, indexes, current_index_names[:-1])
+    # last column has values (y axis)
+    idx_cols = sdf.columns[:-1]
+    idx_cols_df = sdf.loc[:, idx_cols].drop_duplicates()
+    # TODO: check for implicit sequence: no explicit sequential
+    # x-axis; in this case len(sdf) != len(idx_cols_df)
+    seq_col_indexer = idx_cols_df.dtypes.apply(is_sequence)
+    nplots = idx_cols_df.loc[:, idx_cols_df.columns[~seq_col_indexer]].drop_duplicates().reset_index(drop=True)
+    # NOTE: seq_cols will be as long as the longest seq for any non-seq index value
+    seq_cols = idx_cols_df.loc[:, seq_col_indexer].drop_duplicates().reset_index(drop=True)
+    return nplots, seq_cols
 
 
-def raise_if_not_common_x_labels(data_list):
-    """Raises an exception if data has different x axis labels.
-
-    Args:
-        data_list (list of XYData): data to check
-
-    Raises:
-        PlottingError: raised if x axis labels don't match.
-    """
-    if len(data_list) < 2:
-        return
-    first_label = data_list[0].x_label
-    if any(data.x_label.label != first_label.label for data in data_list[1:]):
-        raise PlottingError("X axis labels don't match.")
-
-
-def raise_if_incompatible_x(data_list):
-    """Raises an exception if the types of x data don't match.
-
-    Args:
-        data_list (list of XYData): data to check
-
-    Raises:
-        PlottingError: raised if x data types don't match.
-    """
-    if not data_list:
-        return
-    data = data_list[0]
-    if not data.x:
-        return
-    first_type = type(data.x[0])
-    if any(not isinstance(x, first_type) for data in data_list for x in data.x):
-        raise PlottingError("Incompatible x axes.")
-
-
-def reduce_indexes(data_list):
-    """Removes redundant indexes from given XYData.
-
-    Args:
-        data_list (list of XYData): data to reduce
-
-    Returns:
-        tuple: reduced data list and list of common data indexes
-    """
-    unique_indexes = {}
-    min_indexes = math.inf
-    for data in data_list:
-        min_indexes = min(min_indexes, len(data.data_index))
-    for data in data_list:
-        for i, index in enumerate(data.data_index[:min_indexes]):
-            unique_indexes.setdefault(i, set()).add(index)
-    non_redundant_i = [i for i, indexes in unique_indexes.items() if len(indexes) > 1]
-    common_indexes = [next(iter(indexes)) for i, indexes in unique_indexes.items() if len(indexes) == 1]
-    new_data_list = []
-    for data in data_list:
-        reduced_index = [data.data_index[i] for i in non_redundant_i] + data.data_index[min_indexes:]
-        reduced_names = [data.index_names[i] for i in non_redundant_i] + data.index_names[min_indexes:]
-        new_data_list.append(replace(data, data_index=reduced_index, index_names=reduced_names))
-    return new_data_list, common_indexes
-
-
-def combine_data_with_same_indexes(data_list):
-    """Combines data with same data indexes into the same x axis.
-
-    Args:
-        data_list (list of XYData): data to combine
-
-    Returns:
-        list of XYData: combined data
-    """
-    combined_data = []
-    unique_indexes = {}
-    for i, data in enumerate(data_list):
-        unique_indexes.setdefault(tuple(data.data_index) + (data.x_label,), []).append(i)
-    for list_is in unique_indexes.values():
-        if len(list_is) == 1:
-            combined_data.append(data_list[list_is[0]])
-            continue
-        combined_xy = []
-        for i in list_is:
-            combined_xy += list(zip(data_list[i].x, data_list[i].y))
-        combined_xy.sort(key=itemgetter(0))
-        x, y = zip(*combined_xy)
-        model_data = data_list[list_is[0]]
-        combined_data.append(replace(model_data, x=list(x), y=list(y)))
-    return combined_data
-
-
-def _always_single_y_axis(plot_type):
-    """Returns True if a single y-axis should be used.
-
-    Args:
-        plot_type (PlotType): plot type
-
-    Returns:
-        bool: True if single y-axis is required, False otherwise
-    """
-    return plot_type in (PlotType.STACKED_LINE,)
-
-
-def plot_data(data_list, plot_widget=None, plot_type=None):
+def plot_data(dfs, plot_widget=None, plot_type=None):
     """
     Returns a plot widget with plots of the given data.
 
@@ -258,310 +226,238 @@ def plot_data(data_list, plot_widget=None, plot_type=None):
     Returns:
         a PlotWidget object
     """
-    if plot_widget is None:
-        plot_widget = PlotWidget(
-            legend_axes_position=(
-                LegendPosition.BOTTOM if len(data_list) < LEGEND_PLACEMENT_THRESHOLD else LegendPosition.RIGHT
-            )
-        )
-        needs_redraw = False
-    else:
-        needs_redraw = True
-    all_data = plot_widget.original_xy_data + data_list
-    squeezed_data, common_indexes = reduce_indexes(all_data)
-    squeezed_data = combine_data_with_same_indexes(squeezed_data)
-    if len(squeezed_data) > 1 and any(not data.data_index for data in squeezed_data):
-        unsqueezed_index = common_indexes.pop(-1) if common_indexes else "<root>"
-        for data in squeezed_data:
-            data.data_index.insert(0, unsqueezed_index)
-    if not squeezed_data:
+    dfs = [parse_time(df) for df in dfs]
+    check_dimensions(dfs, _raise=True)
+
+    pprint(dfs, max_length=5)
+    # combine all dfs to determine type of plot we need
+    df_combined = pd.concat(dfs, axis=0)
+    sdf, common = squeeze_df(df_combined)
+
+    if sdf.empty:
         return plot_widget
-    raise_if_not_common_x_labels(squeezed_data)
-    raise_if_incompatible_x(squeezed_data)
-    if needs_redraw:
-        _clear_plot(plot_widget)
-    if plot_type is None:
-        plot_type = PlotType.SCATTER_LINE if not isinstance(squeezed_data[0].x[0], np.datetime64) else PlotType.LINE
-    _limit_string_x_tick_labels(squeezed_data, plot_widget)
-    y_labels = sorted({xy_data.y_label for xy_data in data_list})
-    if len(y_labels) == 1 or _always_single_y_axis(plot_type):
-        legend_handles = _plot_single_y_axis(squeezed_data, y_labels[0], plot_widget.canvas.axes, plot_type)
-    elif len(y_labels) == 2:
-        legend_handles = _plot_double_y_axis(squeezed_data, y_labels, plot_widget, plot_type)
+
+    nplots, seq_cols = get_variants(sdf)
+
+    # debug
+    print("sdf")
+    sdf.info()
+    pprint(sdf, max_length=3)
+    print("nplots")
+    pprint(nplots)
+    print("common_indexes")
+    pprint(common)
+
+    if plot_widget is None:
+        plot_widget = PlotWidget()
     else:
-        legend_handles = _plot_single_y_axis(squeezed_data, "", plot_widget.canvas.axes, plot_type)
-    plot_widget.canvas.axes.set_xlabel(squeezed_data[0].x_label.label)
-    plot_title = " | ".join(map(str, common_indexes))
-    plot_widget.canvas.axes.set_title(plot_title)
-    for data in data_list:
-        if type(data.x[0]) not in (float, np.float64, int):
-            plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
-    if len(squeezed_data) > 1:
-        plot_widget.add_legend(legend_handles)
-    if needs_redraw:
-        plot_widget.canvas.draw()
-    plot_widget.original_xy_data = all_data
+        # FIXME: redo for bokeh
+        plot_widget.canvas.setContent(b"")
+
+    plot_title = "|".join(starmap(lambda k, v: f"{k}={v}", common.items()))
+
+    if seq_cols.empty:
+        plot = plot_barchart(sdf, nplots, plot_title)
+    else:
+        # plot = plot_faceted(sdf, nplots, plot_title)
+        plot = plot_overlayed(sdf, nplots, plot_title)
+
+    html = file_html(plot, INLINE, plot_title)
+    print(html, file=plot_widget.html_path)
+    if plot.width and plot.height:
+        plot_widget.resize(QSize(plot.width + 50, plot.height + 50))
+
+    # # TODO: tick orientation
+    # for data in data_list:
+    #     if type(data.x[0]) not in (float, np.float64, int):
+    #         plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
+
+    # if needs_redraw:
+    #     plot_widget.canvas.draw()
     return plot_widget
 
 
-def _plot_single_y_axis(data_list, y_label, axes, plot_type):
-    """Plots all data on single y-axis.
+class Palette:
+    """A palette that cycles through colours."""
 
-    Args:
-        data_list (list of XYData): data to plot
-        y_label (str): y-axis label
-        axes (Axes): plot axes
-        plot_type (PlotType): plot type
-
-    Returns:
-        list: legend handles
-    """
-    if plot_type == PlotType.STACKED_LINE:
-        return _plot_stacked_line(data_list, y_label, axes)
-    if plot_type == PlotType.BAR:
-        return _plot_bar(data_list, y_label, axes)
-    legend_handles = []
-    plot = _make_plot_function(plot_type, type(data_list[0].x[0]), axes)
-    for data in data_list:
-        plot_label = " | ".join(map(str, data.data_index))
-        x = _make_x_plottable(data.x)
-        handles = plot(x, data.y, label=plot_label)
-        legend_handles += handles
-    axes.set_ylabel(y_label)
-    return legend_handles
-
-
-def _plot_stacked_line(data_list, y_label, axes):
-    """Plots all data as stacked lines.
-
-    Args:
-        data_list (list of XYData): data to plot
-        y_label (str): y-axis label
-        axes (Axes): plot axes
-
-    Returns:
-        list: legend handles
-    """
-    if any(data.x != data_list[0].x for data in data_list[1:]):
-        raise PlottingError("Cannot stack plots when x-axes don't match.")
-    x = _make_x_plottable(data_list[0].x)
-    y = [data.y for data in data_list]
-    labels = [" | ".join(map(str, data.data_index)) for data in data_list]
-    handles = axes.stackplot(x, y, labels=labels, **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
-    axes.set_ylabel(y_label)
-    return handles
-
-
-def _plot_bar(data_list, y_label, axes):
-    """Plots all data as bars.
-
-    Args:
-        data_list (list of XYData): data to plot
-        y_label (str): y-axis label
-        axes (Axes): plot axes
-
-    Returns:
-        list: legend handles
-    """
-    legend_handles = []
-    plot_kwargs = {"axes": axes, **_BASE_SETTINGS}
-    data_list, bar_width, x_ticks = _group_bars(data_list)
-    if bar_width is not None:
-        plot_kwargs["width"] = bar_width
-    for data in data_list:
-        plot_kwargs["label"] = " | ".join(map(str, data.data_index))
-        x = _make_x_plottable(data.x)
-        handles = _bar(x, data.y, **plot_kwargs)
-        legend_handles += handles
-    if x_ticks is not None:
-        axes.set_xticks(*x_ticks)
-    if axes.get_ylim()[0] < 0:
-        axes.axhline(linewidth=1, color="black")
-    axes.set_ylabel(y_label)
-    return legend_handles
-
-
-def _plot_double_y_axis(data_list, y_labels, plot_widget, plot_type):
-    """Plots all data on two y-axes.
-
-    Args:
-        data_list (list of XYData): data to plot
-        y_labels (list of str): y-axis labels
-        plot_widget (PlotWidget): plot widget
-        plot_type (PlotType): plot type
-
-    Returns:
-        list: legend handles
-    """
-    legend_handles = []
-    left_label = y_labels[0]
-    right_label = y_labels[1]
-    x_data_type = type(data_list[0].x[0])
-    plot_left = _make_plot_function(plot_type, x_data_type, plot_widget.canvas.axes)
-    right_axes = plot_widget.canvas.axes.twinx()
-    plot_right = _make_plot_function(plot_type, x_data_type, right_axes)
-    for data in data_list:
-        plot_label = " | ".join(map(str, data.data_index))
-        x = _make_x_plottable(data.x)
-        if data.y_label == left_label:
-            plot = plot_left
-            color = "crimson"
-            marker = "s"
+    def __init__(self, nplots: int):
+        if nplots < 3:
+            palette: tuple[str, ...] = TolRainbow[3]
+        elif nplots <= 23:
+            palette: tuple[str, ...] = TolRainbow[nplots]
         else:
-            plot = plot_right
-            color = None
-            marker = "o"
-        handles = plot(x, data.y, label=plot_label, color=color, marker=marker)
-        legend_handles += handles
-    plot_widget.canvas.axes.set_ylabel(left_label)
-    right_axes.set_ylabel(right_label)
-    return legend_handles
+            palette: tuple[str, ...] = TolRainbow[23]
+        self._palette = palette
+        self._len = len(palette)
+
+    def __getitem__(self, num: int) -> str:
+        return self._palette[num % self._len]
 
 
-def _make_x_plottable(xs):
-    """Converts x-axis values to something matplotlib can handle.
+def pad_num(num: float | int, frac: float = 0.05) -> float:
+    return num * ((1 + frac) if num > 0 else (1 - frac))
 
-    Args:
-        xs (list): x values
 
-    Returns:
-        list: x values
+def get_yrange(sdf: pd.DataFrame, idxcols: list) -> tuple:
+    """Calculate a common range that includes all ranges.
+
+    `sdf` is a DataFrame with the data.
+
+    `idxcols` is a list of column names that are treated as categorical indices.
+
     """
-    if xs and isinstance(xs[0], DateTime):
-        return [np.datetime64(x.value, NUMPY_DATETIME64_UNIT) for x in xs]
-    return xs
+    col: str = sdf.columns[-1]
+    ranges = sdf.groupby(idxcols).agg({col: ["min", "max"]})[col]
+    # tolerance = 0.01% of min
+    empty = (ranges["max"] - ranges["min"]).abs().lt(1e-4 * ranges["min"])
+    ranges = ranges[~empty]
 
-
-class _PlotStackedBars:
-    def __init__(self, axes):
-        self._axes = axes
-        self._cumulative_height = {}
-
-    def __call__(self, x, height, **kwargs):
-        bottom = [self._cumulative_height.get(key, 0.0) for key in x]
-        for key, h in zip(x, height):
-            cumulative = self._cumulative_height.get(key, 0.0)
-            self._cumulative_height[key] = cumulative + h
-        return _bar(x, height, self._axes, bottom=bottom, **_BASE_SETTINGS, **kwargs)
-
-
-def _make_time_series_settings(plot_settings):
-    """Creates plot settings suitable for time series step plots.
-
-    Args:
-        plot_settings (dict): base plot settings
-
-    Returns:
-        dict: time series step plot settings
-    """
-    settings = dict(plot_settings)
-    settings.update(where="post")
-    return settings
-
-
-def _make_plot_function(plot_type, x_data_type, axes):
-    """Decides plot method and default keyword arguments based on XYData.
-
-    Args:
-        plot_type (PlotType): plot type
-        x_data_type (Type): data type of x-axis
-        axes (Axes): plot axes
-
-    Returns:
-        Callable: plot method
-    """
-    if plot_type == PlotType.STACKED_BAR:
-        return _PlotStackedBars(axes)
-    is_time_series = _is_time_stamp_type(x_data_type)
-    plot_method = axes.step if is_time_series else axes.plot
-    if plot_type == PlotType.SCATTER:
-        plot_settings = _SCATTER_PLOT_SETTINGS
-    elif plot_type == PlotType.SCATTER_LINE:
-        plot_settings = _SCATTER_LINE_PLOT_SETTINGS
-    elif plot_type == PlotType.LINE:
-        plot_settings = _LINE_PLOT_SETTINGS
+    lo = pad_num(ranges["min"].min(), -0.05)
+    if (_hi := ranges["max"].max()) < 1:
+        hi = 1
     else:
-        raise RuntimeError(f"Unknown plot type '{plot_type}'")
-    if is_time_series:
-        plot_settings = _make_time_series_settings(plot_settings)
-    return functools.partial(plot_method, **plot_settings, **_BASE_SETTINGS)
+        hi = pad_num(_hi, 0.05) + 1
+
+    return np.floor_divide(lo, 1), np.floor_divide(hi, 1)
 
 
-def _is_time_stamp_type(data_type):
-    """Tests if a type looks like time stamp.
-
-    Args:
-        data_type (Type): data type to test
-
-    Returns:
-        bool: True if type is a time stamp type, False otherwise
-    """
-    return data_type in (np.datetime64, datetime.datetime, datetime.date, datetime.time)
+def fmt_query(names: pd.Series, *, sep: str = "&&") -> str:
+    return sep.join([f"{k}=={v!r}" for k, v in names.items()])
 
 
-def _bar(x, y, axes, **kwargs):
-    """Plots bar chart on axes but returns patches instead of bar container.
+def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 10_000):
+    x_range = (0, max_points // len(nplots))
+    y_range = get_yrange(sdf, nplots.columns.to_list())
 
-    Args:
-        x (Any): x data
-        y (Any): y data
-        axes (Axes): plot axes
-        **kwargs: keyword arguments passed to bar()
+    print("ranges:")
+    print(x_range)
+    print(y_range)
 
-    Returns:
-        list of Patch: patches
-    """
-    bar_container = axes.bar(x, y, **kwargs)
-    return [Patch(color=bar_container.patches[0].get_facecolor(), label=kwargs["label"])]
+    # TODO:
+    # - x_axis_type="datetime"/...
+    # - flexible plot dimensions
+    # - tooltips
+    seq_cols = sdf.columns.difference(nplots.columns)
+    if len(seq_cols) > 2:
+        print(f"extra sequence columns: {seq_cols.tolist()}")
+    x_label, y_label = sdf.columns[-2:]
+
+    fig_options = {
+        "title": title,
+        "width": 800,
+        "height": 400,
+        "x_axis_label": x_label,
+        "y_axis_label": y_label,
+        "x_range": x_range,
+        "y_range": y_range,
+        "x_axis_type": "datetime" if sdf[x_label].dtype.kind == "M" else "linear",
+    }
+    fig = figure(**fig_options)
+
+    palette = Palette(len(nplots))
+    sources = []
+    legend_items = {}
+    for idx, (_, row) in enumerate(nplots.iterrows()):
+        _df = sdf.query(fmt_query(row)).drop(row.index, axis=1)
+        cds = ColumnDataSource(data=_df)
+        line = fig.line(x_label, y_label, source=cds, color=palette[idx])
+        point = fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
+        sources.append(cds)
+        # TODO: derive key robustly
+        legend_items[fmt_query(row, sep="\n")] = [line, point]
+
+    legend = Legend(items=list(legend_items.items()))
+    fig.add_layout(legend, "right")
+    fig.legend.click_policy = "hide"
+
+    longest: ColumnDataSource = functools.reduce(lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources)
+    select = get_window_selector(fig, x_label, y_label, longest)
+    return column(fig, select)
 
 
-def _group_bars(data_list):
-    """Gives data with same x small offsets to prevent bar stacking.
-
-    Args:
-        data_list (List of XYData): squeezed data
-
-    Returns:
-        tuple: grouped data, bar width and x ticks
-    """
-    if len(data_list) < 2:
-        return data_list, None, None
-    ticks = np.arange(len(data_list[0].x))
-    bar_width = 1 / (len(data_list) + 1)
-    offset = bar_width * (len(data_list) - 1) / 2
-    shifted_data = []
-    for step, xy_data in enumerate(data_list):
-        x = list(ticks + (step * bar_width - offset))
-        shifted_data.append(replace(xy_data, x=x))
-    return shifted_data, bar_width, (ticks, data_list[0].x)
-
-
-def _clear_plot(plot_widget):
-    """Removes plots and legend from plot widget.
-
-    Args:
-        plot_widget (PlotWidget): plot widget
-    """
-    plot_widget.canvas.axes.clear()
-    legend = plot_widget.canvas.legend_axes.get_legend()
-    if legend is not None:
-        legend.remove()
+def get_window_selector(fig: figure, x_label: str, y_label: str, cds: ColumnDataSource) -> figure:
+    # TODO: get width from `fig`
+    select = figure(
+        title="Select time range",
+        y_axis_type=None,
+        height=100,
+        width=800,
+        tools="",
+        toolbar_location=None,
+        y_range=(0, 100),
+    )
+    range_tool = RangeTool(x_range=fig.x_range, start_gesture="pan")
+    range_tool.overlay.fill_color = "navy"
+    range_tool.overlay.fill_alpha = 0.2
+    select.line(x_label, y_label, source=cds)
+    select.ygrid.grid_line_color = None
+    select.add_tools(range_tool)
+    return select
 
 
-def _limit_string_x_tick_labels(data, plot_widget):
-    """Limits the number of x tick labels in case x-axis consists of strings.
+def plot_faceted(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
+    palette = Palette(len(nplots))
+    # TODO:
+    # - resolve x_label & y_label if they don't match
+    # - x_axis_type="datetime"/...
+    # - flexible plot dimensions
+    # - tooltips
+    x_label, y_label = sdf.columns[-2:]
+    tooltips = [(col.capitalize(), f"@{col}") for col in sdf.columns]
 
-    Matplotlib tries to plot every single x tick label if they are strings.
-    This can become very slow if the labels are numerous.
+    figs, sources = [], []
+    for idx, (_, row) in enumerate(nplots.iterrows()):
+        query = fmt_query(row)
+        cds = ColumnDataSource(data=sdf.query(query))
+        sources.append(cds)
+        if idx == 0:
+            x_range = (0, len(cds.data["index"]) // 10)
+        else:
+            x_range = figs[0].x_range
+        fig = figure(
+            x_axis_label=x_label,
+            y_axis_label=y_label,
+            title=query,
+            height=200,
+            width=400,
+            x_range=x_range,
+            tooltips=tooltips,
+        )
+        fig.line(x_label, y_label, source=cds, color=palette[idx])
+        fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
+        # TODO: derive key robustly
+        figs.append(fig)
 
-    Args:
-        data (list of XYData): plot data
-        plot_widget (PlotWidget): plot widget
-    """
-    if data:
-        x = data[0].x
-        if len(x) > 10 and isinstance(x[0], str):
-            plot_widget.canvas.axes.xaxis.set_major_locator(MaxNLocator(10))
+    select = get_window_selector(figs[0], x_label, y_label, sources[0])
+    # grid_size = math.ceil(math.sqrt(nplots))
+    # plots = gridplot([figs[i : i + grid_size] for i in range(0, nplots, grid_size)])
+    plots = gridplot([figs[i : i + 2] for i in range(0, len(nplots), 2)])
+    return column(select, plots)
+
+
+def plot_barchart(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
+    # TODO:
+    # - resolve x_label & y_label if they don't match
+    # - x_axis_type="datetime"/...
+    # - flexible plot dimensions
+    # - tooltips
+    x_label, y_label = sdf.columns[-2:]
+    tooltips = [(col.capitalize(), f"@{col}") for col in sdf.columns]
+
+    fig = figure(
+        x_axis_label=x_label,
+        y_axis_label=y_label,
+        title=title,
+        height=600,
+        width=800,
+        x_range=sdf[x_label].to_list(),
+        tooltips=tooltips,
+    )
+    fig.vbar(x=x_label, top=y_label, source=sdf)
+    fig.y_range.start = -100
+    # major_label_orientation: "vertical" or angle in radians
+    fig.xaxis.major_label_orientation = np.pi / 3
+    return fig
 
 
 def _table_display_row(row):
@@ -590,29 +486,22 @@ def plot_parameter_table_selection(model, model_indexes, table_header_sections, 
     Returns:
         PlotWidget: a PlotWidget object
     """
+    pprint(inspect.currentframe().f_code.co_name)
+    pprint(model_indexes, max_length=3)
+    pprint(type(model).mro())
     header_columns = {model.headerData(column): column for column in range(model.columnCount())}
     data_column = header_columns[value_section_label]
     index_columns = [header_columns[section.label] for section in table_header_sections]
     model_indexes = [i for i in model_indexes if i.column() == data_column]
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
-    root_node = TreeNode(table_header_sections[0].label)
-    header_data = model.headerData
-    for model_index in sorted(model_indexes, key=methodcaller("row")):
-        value = _get_parsed_value(model_index, _table_display_row)
-        if value is None:
-            continue
-        row = model_index.row()
-        with add_row_to_exception(row, _table_display_row):
-            leaf_content = _convert_to_leaf(value)
-        node = root_node
-        for i, index_column in enumerate(index_columns[:-1]):
-            index = model.index(row, index_column).data()
-            node = _set_default_node(node, index, header_data(index_columns[i + 1]))
-        node.content[model.index(row, index_columns[-1]).data()] = leaf_content
-    y_label_position = index_columns.index(header_columns["parameter_name"])
-    data_list = list(turn_node_to_xy_data(root_node, y_label_position))
-    return plot_data(data_list, plot_widget)
+    pprint(header_columns)
+    pprint(table_header_sections)
+    dfs = [
+        to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
+        for i in sorted(model_indexes, key=methodcaller("row"))
+    ]
+    return plot_data(dfs, plot_widget)
 
 
 def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
@@ -627,7 +516,11 @@ def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
     Returns:
         PlotWidget: a PlotWidget object
     """
+    pprint(inspect.currentframe().f_code.co_name)
+    pprint(model_indexes, max_length=3)
+    pprint(type(model).mro())
     model_indexes = [i for i in model_indexes if model.is_leaf_value(i)]
+    pprint(model_indexes, max_length=3)
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
     header_columns = [model.headerData(column, Qt.Orientation.Horizontal) for column in range(model.columnCount())]
@@ -660,6 +553,9 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
     Returns:
         PlotWidget: a PlotWidget object
     """
+    pprint(inspect.currentframe().f_code.co_name)
+    pprint(model_indexes, max_length=3)
+    pprint(type(model).mro())
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
     source_model = model.sourceModel()
@@ -701,6 +597,8 @@ def plot_db_mngr_items(items, db_maps, db_name_registry, plot_widget=None):
         db_name_registry (NameRegistry): database display name registry
         plot_widget (PlotWidget, optional): widget to add plots to
     """
+    pprint(inspect.currentframe().f_code.co_name)
+    pprint(items, max_length=3)
     if not items:
         raise PlottingError("Nothing to plot.")
     if len(items) != len(db_maps):
