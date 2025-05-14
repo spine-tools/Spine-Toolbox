@@ -141,6 +141,11 @@ def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
 
     """
 
+    # check if shapes match
+    shapes = [d.shape for d in dfs]
+    if not functools.reduce(lambda i, j: i if i == j else False, shapes):
+        raise PlottingError(f"incompatible shapes: {shapes}")
+
     # check if column types match
     def _get_type(i) -> str:
         if isinstance(i, pd.CategoricalDtype):
