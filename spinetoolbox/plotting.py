@@ -222,8 +222,7 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
         a PlotWidget object
     """
     dfs = [parse_time(df) for df in dfs]
-    if not check_dimensions(dfs):
-        raise PlottingError
+    check_dimensions(dfs, _raise=True)
 
     pprint(dfs, max_length=5)
     # combine all dfs to determine type of plot we need
