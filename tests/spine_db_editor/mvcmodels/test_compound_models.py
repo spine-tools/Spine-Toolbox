@@ -42,8 +42,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
@@ -54,9 +54,9 @@ class TestCompoundParameterDefinitionModel(TestBase):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
         self._db_map.fetch_all()
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 7)
@@ -113,11 +113,12 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
         value, value_type = to_database(23.0)
-        self._db_mngr.add_parameter_values(
+        self._db_mngr.add_items(
+            "parameter_value",
             {
                 self._db_map: [
                     {
@@ -130,7 +131,7 @@ class TestCompoundParameterValueModel(TestBase):
                         "id": 1,
                     }
                 ]
-            }
+            },
         )
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 6)
@@ -142,13 +143,16 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
-        self._db_mngr.add_parameter_definitions({self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "r", "class_id": 2, "element_id_list": [1], "id": 2}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
+        self._db_mngr.add_items(
+            "entity", {self._db_map: [{"name": "r", "class_id": 2, "element_id_list": [1], "id": 2}]}
+        )
         value, value_type = to_database(23.0)
-        self._db_mngr.add_parameter_values(
+        self._db_mngr.add_items(
+            "parameter_value",
             {
                 self._db_map: [
                     {
@@ -161,7 +165,7 @@ class TestCompoundParameterValueModel(TestBase):
                         "id": 1,
                     }
                 ]
-            }
+            },
         )
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 6)

@@ -87,17 +87,18 @@ class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
         self._db_mngr.deleteLater()
 
     def test_data_db_map_role(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_class"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "my_class"}]})
         entity_class = self._db_map.get_entity_class_item(name="my_class")
-        self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_id": entity_class["id"], "name": "my_parameter"}]}
+        self._db_mngr.add_items(
+            "parameter_definition", {self._db_map: [{"entity_class_id": entity_class["id"], "name": "my_parameter"}]}
         )
         definition = self._db_map.get_parameter_definition_item(entity_class_id=entity_class["id"], name="my_parameter")
-        self._db_mngr.add_entities({self._db_map: [{"class_id": entity_class["id"], "name": "my_object"}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"class_id": entity_class["id"], "name": "my_object"}]})
         entity = self._db_map.get_entity_item(class_id=entity_class["id"], name="my_object")
         alternative = self._db_map.get_alternative_item(name="Base")
         value, type_ = to_database(2.3)
-        self._db_mngr.add_parameter_values(
+        self._db_mngr.add_items(
+            "parameter_value",
             {
                 self._db_map: [
                     {
@@ -109,7 +110,7 @@ class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
                         "alternative_id": alternative["id"],
                     }
                 ]
-            }
+            },
         )
         parameter_value = self._db_map.get_parameter_value_item(
             entity_class_id=entity_class["id"],

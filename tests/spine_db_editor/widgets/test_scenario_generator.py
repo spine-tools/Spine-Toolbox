@@ -19,7 +19,7 @@ from tests.spine_db_editor.helpers import TestBase
 
 class TestScenarioGenerator(TestBase):
     def test_alternative_list_contains_alternatives(self):
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alt1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alt1"}]})
         alternatives = self._db_map.get_items("alternative")
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         list_widget = scenario_generator._ui.alternative_list
@@ -30,7 +30,7 @@ class TestScenarioGenerator(TestBase):
 
     def test_zero_padding_in_generated_scenario_names(self):
         db_map_items = [{"name": f"alt{n}"} for n in range(13)]
-        self._db_mngr.add_alternatives({self._db_map: db_map_items})
+        self._db_mngr.add_items("alternative", {self._db_map: db_map_items})
         alternatives = self._db_map.get_items("alternative")
         scenario_generator = ScenarioGenerator(self._db_editor, self._db_map, alternatives, self._db_editor)
         scenario_generator._ui.scenario_prefix_edit.setText("S_")

@@ -11,9 +11,12 @@
 ######################################################################################################################
 
 """Empty models for dialogs as well as parameter definitions and values."""
+from collections import defaultdict
 from collections.abc import Iterable, Iterator
+from itertools import chain
 from typing import ClassVar, Optional
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
+from PySide6.QtGui import QUndoStack
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
@@ -21,14 +24,15 @@ from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems, rows_to_row_count_tupl
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
 from ...spine_db_manager import SpineDBManager
-from .single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin
+from ..commands import AppendEmptyRow, InsertEmptyModelRow, RemoveEmptyModelRow, UpdateEmptyModel
+from .single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .utils import (
     ENTITY_ALTERNATIVE_MODEL_HEADER,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_DEFINITION_MODEL_HEADER,
     PARAMETER_VALUE_FIELD_MAP,
     PARAMETER_VALUE_MODEL_HEADER,
-    cull_equal_rows_at_end,
+    make_entity_on_the_fly,
 )
 
 
@@ -42,6 +46,9 @@ class EmptyModelBase(EmptyRowModel):
     def __init__(self, header: list[str], db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(parent, header)
         self.db_mngr = db_mngr
+        self._undo_stack: Optional[QUndoStack] = None
+        self._entity_class_column = header.index("entity_class_name")
+        self._database_column = header.index("database")
         self.entity_class_id: Optional[TempId] = None
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
@@ -49,40 +56,79 @@ class EmptyModelBase(EmptyRowModel):
             owner=self,
         )
 
+    def set_undo_stack(self, undo_stack: QUndoStack) -> None:
+        self._undo_stack = undo_stack
+        self.modelReset.connect(self._clear_undo_stack)
+
+    @Slot()
+    def _clear_undo_stack(self):
+        self._undo_stack.clear()
+
+    def fetchMore(self, parent):
+        self.append_empty_row()
+        self._fetched = True
+
     def add_items_to_db(self, db_map_data: DBMapDictItems) -> None:
         """Adds items to db.
 
         Args:
             db_map_data: mapping DatabaseMapping instance to list of items
         """
-        db_map_items, db_map_error_log = self._data_to_items(db_map_data)
+        db_map_items = self._data_to_items(db_map_data)
         if any(db_map_items.values()):
-            self._do_add_items_to_db(db_map_items)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
+            self.db_mngr.add_items(self.item_type, db_map_items)
 
-    def _data_to_items(self, db_map_data: DBMapDictItems) -> tuple[DBMapDictItems, dict[DatabaseMapping, list[str]]]:
+    def _data_to_items(self, db_map_data: DBMapDictItems) -> DBMapDictItems:
         db_map_items = {}
-        db_map_error_log = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                item_to_add, errors = self._convert_to_db(item)
-                self._autocomplete_row(db_map, item_to_add)
+                item_to_add = self._convert_to_db(item)
                 if self._check_item(item_to_add):
                     db_map_items.setdefault(db_map, []).append(item_to_add)
-                if errors:
-                    db_map_error_log.setdefault(db_map, []).extend(errors)
-        return db_map_items, db_map_error_log
+        return db_map_items
 
     def _make_unique_id(self, item: dict) -> tuple:
         """Returns a unique id for the given model item (name-based). Used by handle_items_added to identify
         which rows have been added and thus need to be removed."""
         raise NotImplementedError()
 
+    def append_empty_row(self) -> None:
+        last = len(self._main_data)
+        self.beginInsertRows(QModelIndex(), last, last)
+        self._main_data.append([self.default_row.get(self.header[column]) for column in range(len(self.header))])
+        self.endInsertRows()
+
+    def remove_empty_row(self) -> None:
+        last = len(self._main_data) - 1
+        self.beginRemoveRows(QModelIndex(), last, last)
+        self._main_data = self._main_data[:-1]
+        self.endRemoveRows()
+
     def remove_rows(self, rows: Iterable[int]) -> None:
-        """Removes given rows by removing the corresponding items from the db map."""
-        for row in sorted(rows, reverse=True):
-            self.removeRow(row)
+        self._undo_stack.beginMacro("remove rows")
+        for row in rows:
+            self._undo_stack.push(RemoveEmptyModelRow(self, row))
+        self._undo_stack.endMacro()
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        self._undo_stack.beginMacro("remove rows")
+        for _ in range(count):
+            self._undo_stack.push(RemoveEmptyModelRow(self, row))
+        self._undo_stack.endMacro()
+        return self._undo_stack.command(self._undo_stack.count() - 1).isObsolete()
+
+    def do_remove_rows(self, row: int, count: int) -> None:
+        super().removeRows(row, count)
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        self._undo_stack.beginMacro("insert rows")
+        for _ in range(count):
+            self._undo_stack.push(InsertEmptyModelRow(self, row))
+        self._undo_stack.endMacro()
+        return self._undo_stack.command(self._undo_stack.count() - 1).isObsolete()
+
+    def do_insert_rows(self, row: int, count: int) -> None:
+        super().insertRows(row, count)
 
     def accepted_rows(self) -> Iterator[int]:
         yield from range(self.rowCount())
@@ -99,16 +145,70 @@ class EmptyModelBase(EmptyRowModel):
         for row in range(len(self._main_data)):
             item = self._make_item(row)
             database = item.get("database")
-            unique_id = (database, *self._make_unique_id(self._convert_to_db(item)[0]))
+            unique_id = (database, *self._make_unique_id(self._convert_to_db(item)))
             if unique_id in added_ids:
                 removed_rows.append(row)
         for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-            self.removeRows(row, count)
-        if len(self._main_data) > 1:
-            cull_equal_rows_at_end(self._main_data, self.removeRow)
+            self.do_remove_rows(row, count)
+        clean_index = self._undo_stack.cleanIndex()
+        removed_row_set = set(removed_rows)
+        new_clean_index = -1
+        for command_index in range(self._undo_stack.count()):
+            command = self._undo_stack.command(command_index)
+            if command_index > clean_index:
+                command.setObsolete(True)
+            else:
+                if hasattr(command, "rows_dropped"):
+                    command.rows_dropped(removed_row_set)
+                    if not command.isObsolete():
+                        new_clean_index = command_index
+                else:
+                    children_obsolete = True
+                    for child_index in range(command.childCount()):
+                        child_command = command.child(child_index)
+                        if hasattr(child_command, "rows_dropped"):
+                            child_command.rows_dropped(removed_row_set)
+                            if not child_command.isObsolete():
+                                new_clean_index = command_index
+                                children_obsolete = False
+                    if children_obsolete:
+                        command.setObsolete(True)
+        self._undo_stack.setIndex(new_clean_index)
 
     def batch_set_data(self, indexes, data):
         """Sets data for indexes in batch. If successful, add items to db."""
+        modified_indexes = []
+        modified_data = []
+        data_by_row = defaultdict(dict)
+        for index, cell_data in zip(indexes, data):
+            if index.data() == cell_data:
+                continue
+            modified_indexes.append(index)
+            modified_data.append(cell_data)
+            data_by_row[index.row()][index.column()] = cell_data
+        db_map_cache = _TempDBMapCache(self.db_mngr)
+        for row, row_data in data_by_row.items():
+            main_data_row = self._main_data[row]
+            if (self._paste and self._entity_class_column in row_data) or main_data_row[self._entity_class_column]:
+                continue
+            combined_row = [row_data.get(column, main_data_row[column]) for column in range(len(main_data_row))]
+            db_name = combined_row[self._database_column]
+            db_map = db_map_cache.get(db_name)
+            if db_map is None:
+                continue
+            candidates = self._entity_class_name_candidates(db_map, combined_row)
+            if len(candidates) == 1:
+                modified_indexes.append(self.index(row, self._entity_class_column))
+                modified_data.extend(candidates)
+        if not modified_indexes:
+            return False
+        command = UpdateEmptyModel(self, modified_indexes, modified_data)
+        self._undo_stack.beginMacro(f"update unfinished {self.item_type}")
+        self._undo_stack.push(command)
+        self._undo_stack.endMacro()
+        return not command.isObsolete()
+
+    def do_batch_set_data(self, indexes: Iterable[QModelIndex], data: Iterable) -> bool:
         if not super().batch_set_data(indexes, data):
             return False
         rows = {ind.row() for ind in indexes}
@@ -116,26 +216,28 @@ class EmptyModelBase(EmptyRowModel):
         self.add_items_to_db(db_map_data)
         return True
 
-    def _autocomplete_row(self, db_map: DatabaseMapping, item: dict) -> None:
-        """Fills in entity_class_name whenever other selections make it obvious."""
-        if self._paste and item.get("entity_class_name"):
-            # If the data is pasted and the entity class column is already filled,
-            # trust that the user knows what they are doing. This makes pasting large
-            # amounts of data significantly faster.
-            del item["row"]
+    @Slot(QModelIndex, QModelIndex, list)
+    def _handle_data_changed(self, top_left, bottom_right, roles=None):
+        """Inserts a new last empty row in case the previous one has been filled
+        with any data other than the defaults."""
+        if roles and Qt.ItemDataRole.EditRole not in roles:
             return
-        candidates = self._entity_class_name_candidates(db_map, item)
-        row = item.pop("row", None)
-        if len(candidates) == 1:
-            entity_class_name = candidates[0]
-            item["entity_class_name"] = entity_class_name
-            self._main_data[row][self.header.index("entity_class_name")] = entity_class_name
+        last_row = self._main_data[-1]
+        for column, data in enumerate(last_row):
+            try:
+                field = self.header[column]
+            except IndexError:
+                field = None
+            default = self.default_row.get(field)
+            if (data or default) and data != default:
+                self._undo_stack.push(AppendEmptyRow(self))
+                break
 
-    def _entity_class_name_candidates(self, db_map: DatabaseMapping, item: dict) -> list[str]:
+    def _entity_class_name_candidates(self, db_map: DatabaseMapping, item: list) -> list[str]:
         raise NotImplementedError()
 
     def _make_item(self, row: int) -> dict:
-        return dict(zip(self.header, self._main_data[row]), row=row)
+        return dict(zip(self.header, self._main_data[row]))
 
     def _make_db_map_data(self, rows: Iterable[int]) -> DBMapDictItems:
         """
@@ -148,16 +250,12 @@ class EmptyModelBase(EmptyRowModel):
             mapping DatabaseMapping instance to list of items
         """
         db_map_data = {}
+        db_map_cache = _TempDBMapCache(self.db_mngr)
         for row in rows:
             item = self._make_item(row)
             database = item.pop("database")
-            try:
-                db_map = next(
-                    iter(
-                        x for x in self.db_mngr.db_maps if self.db_mngr.name_registry.display_name(x.sa_url) == database
-                    )
-                )
-            except StopIteration:
+            db_map = db_map_cache.get(database)
+            if db_map is None:
                 continue
             item = {k: v for k, v in item.items() if v is not None}
             db_map_data.setdefault(db_map, []).append(item)
@@ -174,15 +272,18 @@ class EmptyModelBase(EmptyRowModel):
 
     def _convert_to_db(self, item: dict) -> dict:
         """Returns a db item (id-based) from the given model item (name-based)."""
-        raise NotImplementedError()
+        return item.copy()
 
     @staticmethod
     def _check_item(item: dict) -> bool:
         """Checks if a db item is ready to be inserted."""
         raise NotImplementedError()
 
-    def _do_add_items_to_db(self, db_map_items: DBMapDictItems) -> None:
-        raise NotImplementedError()
+    def set_default_row(self, **kwargs) -> None:
+        """Sets default row data."""
+        if self.default_row != kwargs:
+            super().set_default_row(**kwargs)
+            self._undo_stack.clear()
 
     def reset_db_maps(self, db_maps: Iterable[DatabaseMapping]):
         self._fetch_parent.set_obsolete(False)
@@ -191,9 +292,29 @@ class EmptyModelBase(EmptyRowModel):
             self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
 
 
+class _TempDBMapCache:
+    def __init__(self, db_mngr: SpineDBManager):
+        self._db_mngr = db_mngr
+        self._db_maps: dict[str, DatabaseMapping] = {}
+
+    def get(self, name: str) -> Optional[DatabaseMapping]:
+        try:
+            return self._db_maps[name]
+        except KeyError:
+            try:
+                db_map = next(
+                    iter(x for x in self._db_mngr.db_maps if self._db_mngr.name_registry.display_name(x.sa_url) == name)
+                )
+            except StopIteration:
+                return None
+        self._db_maps[name] = db_map
+        return db_map
+
+
 class ParameterMixin:
     value_field: ClassVar[str] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
+    parameter_name_column: ClassVar[int] = NotImplemented
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if self.header[index.column()] == self.value_field and role in {
@@ -206,19 +327,17 @@ class ParameterMixin:
             return self.db_mngr.get_value_from_data(data, role)
         return super().data(index, role)
 
-    @staticmethod
-    def _entity_class_name_candidates_by_parameter(db_map, item):
-        return [
-            x["entity_class_name"]
-            for x in db_map.get_items("parameter_definition", name=item.get("parameter_definition_name"))
-        ]
+    @classmethod
+    def _entity_class_name_candidates_by_parameter(cls, db_map: DatabaseMapping, row_data: list) -> list[str]:
+        name = row_data[cls.parameter_name_column]
+        if not name:
+            return []
+        return [x["entity_class_name"] for x in db_map.get_items("parameter_definition", name=name)]
 
 
 class EntityMixin:
     entities_added = Signal(object)
-
-    def _do_add_items_to_db(self, db_map_items):
-        raise NotImplementedError()
+    entity_byname_column: ClassVar[int] = NotImplemented
 
     def add_items_to_db(self, db_map_data):
         """Overridden to add entities on the fly first."""
@@ -226,9 +345,8 @@ class EntityMixin:
         db_map_error_log = {}
         for db_map, items in db_map_data.items():
             for item in items:
-                item_to_add, _ = self._convert_to_db(item)
-                self._autocomplete_row(db_map, item_to_add)
-                entity, errors = self._make_entity_on_the_fly(item, db_map)
+                item_to_add = self._convert_to_db(item)
+                entity, errors = make_entity_on_the_fly(item_to_add, db_map)
                 if entity:
                     entities = db_map_entities.setdefault(db_map, [])
                     if entity not in entities:
@@ -237,15 +355,13 @@ class EntityMixin:
                     db_map_error_log.setdefault(db_map, []).extend(errors)
         if db_map_error_log:
             self.db_mngr.error_msg.emit(db_map_error_log)
-        db_map_items, db_map_error_log = self._data_to_items(db_map_data)
+        db_map_items = self._data_to_items(db_map_data)
         if any(db_map_items.values()):
             db_map_entities_to_add = self._clean_to_be_added_entities(db_map_entities, db_map_items)
             if any(db_map_entities_to_add.values()):
-                self.db_mngr.add_entities(db_map_entities_to_add)
+                self.db_mngr.add_items("entity", db_map_entities_to_add)
                 self.entities_added.emit(db_map_entities_to_add)
-            self._do_add_items_to_db(db_map_items)
-        if db_map_error_log:
-            self.db_mngr.error_msg.emit(db_map_error_log)
+            self.db_mngr.add_items(self.item_type, db_map_items)
 
     @staticmethod
     def _clean_to_be_added_entities(db_map_entities: DBMapDictItems, db_map_items: DBMapDictItems) -> DBMapDictItems:
@@ -267,9 +383,14 @@ class EntityMixin:
         item["entity_byname"] = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
         return item
 
-    @staticmethod
-    def _entity_class_name_candidates_by_entity(db_map, item):
-        return [x["entity_class_name"] for x in db_map.get_items("entity", entity_byname=item.get("entity_byname"))]
+    @classmethod
+    def _entity_class_name_candidates_by_entity(cls, db_map: DatabaseMapping, row_data: list) -> list[str]:
+        byname = row_data[cls.entity_byname_column]
+        if not byname:
+            return []
+        return [
+            x["entity_class_name"] for x in db_map.find_entities(entity_byname=tuple(byname.split(DB_ITEM_SEPARATOR)))
+        ]
 
 
 class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelBase):
@@ -279,6 +400,7 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     field_map = PARAMETER_DEFINITION_FIELD_MAP
     value_field = "default_value"
     type_field = "default_type"
+    parameter_name_column = PARAMETER_DEFINITION_MODEL_HEADER.index("parameter_name")
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_DEFINITION_MODEL_HEADER, db_mngr, parent)
@@ -291,22 +413,19 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
         """Checks if a db item is ready to be inserted."""
         return item.get("entity_class_name") and item.get("name")
 
-    def _entity_class_name_candidates(self, db_map, item):
-        return []
-
-    def _do_add_items_to_db(self, db_map_items):
-        self.db_mngr.add_parameter_definitions(db_map_items)
+    def _entity_class_name_candidates(self, db_map, row_data):
+        return self._entity_class_name_candidates_by_parameter(db_map, row_data)
 
 
-class EmptyParameterValueModel(
-    MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin, ParameterMixin, EntityMixin, EmptyModelBase
-):
+class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMixin, EmptyModelBase):
     """A self-contained empty parameter_value model."""
 
     item_type = "parameter_value"
     field_map = PARAMETER_VALUE_FIELD_MAP
     value_field = "value"
     type_field = "type"
+    entity_byname_column = PARAMETER_VALUE_MODEL_HEADER.index("entity_byname")
+    parameter_name_column = PARAMETER_VALUE_MODEL_HEADER.index("parameter_name")
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_VALUE_MODEL_HEADER, db_mngr, parent)
@@ -331,24 +450,19 @@ class EmptyParameterValueModel(
             item.get(x) for x in ("entity_class_name", "entity_byname", "parameter_definition_name", "alternative_name")
         )
 
-    def _do_add_items_to_db(self, db_map_items):
-        self.db_mngr.add_parameter_values(db_map_items)
-
-    def _entity_class_name_candidates(self, db_map, item):
-        candidates_by_parameter = self._entity_class_name_candidates_by_parameter(db_map, item)
-        candidates_by_entity = self._entity_class_name_candidates_by_entity(db_map, item)
+    def _entity_class_name_candidates(self, db_map, row_data):
+        candidates_by_parameter = self._entity_class_name_candidates_by_parameter(db_map, row_data)
+        candidates_by_entity = self._entity_class_name_candidates_by_entity(db_map, row_data)
         if not candidates_by_parameter:
             return candidates_by_entity
         if not candidates_by_entity:
             return candidates_by_parameter
-        return list(
-            set(self._entity_class_name_candidates_by_parameter(db_map, item))
-            & set(self._entity_class_name_candidates_by_entity(db_map, item))
-        )
+        return list(set(candidates_by_parameter) & set(candidates_by_entity))
 
 
-class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyModelBase):
+class EmptyEntityAlternativeModel(EntityMixin, EmptyModelBase):
     item_type = "entity_alternative"
+    entity_byname_column = ENTITY_ALTERNATIVE_MODEL_HEADER.index("entity_byname")
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(ENTITY_ALTERNATIVE_MODEL_HEADER, db_mngr, parent)
@@ -361,11 +475,8 @@ class EmptyEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, EmptyMod
     def _make_unique_id(self, item):
         return tuple(item.get(x) for x in ("entity_class_name", "entity_byname", "alternative_name"))
 
-    def _do_add_items_to_db(self, db_map_items):
-        self.db_mngr.add_entity_alternatives(db_map_items)
-
-    def _entity_class_name_candidates(self, db_map, item):
-        return self._entity_class_name_candidates_by_entity(db_map, item)
+    def _entity_class_name_candidates(self, db_map, row_data):
+        return self._entity_class_name_candidates_by_entity(db_map, row_data)
 
 
 class EmptyAddEntityOrClassRowModel(EmptyRowModel):

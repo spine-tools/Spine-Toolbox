@@ -355,7 +355,7 @@ class TestParameterValueTableWithExistingData(TestBase):
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         self.assertEqual(model.rowCount(), 0)
-        self._db_editor.undo_action.trigger()
+        self._db_mngr.undo_stack[self._db_map].undo()
         while model.rowCount() != self._whole_model_rowcount():
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())

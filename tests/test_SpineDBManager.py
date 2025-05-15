@@ -596,7 +596,8 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         self._db_mngr.clean_up()
 
     def test_find_cascading_entity_classes(self):
-        self._db_mngr.add_entity_classes(
+        self._db_mngr.add_items(
+            "entity_class",
             {
                 self._db_map: [
                     {"name": "O1"},
@@ -611,7 +612,7 @@ class TestFindCascadingItems(TestCaseWithQApplication):
                     {"dimension_name_list": ["O2", "O3"]},
                     {"dimension_name_list": ["O1", "O2", "O3"]},
                 ]
-            }
+            },
         )
         o1_id = self._db_map.entity_class(name="O1")["id"]
         data = {
@@ -633,7 +634,8 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         self.assertCountEqual(data[self._db_map], ["O1__", "O1__O3", "O1__O2__O3"])
 
     def test_find_cascading_entities(self):
-        self._db_mngr.add_entity_classes(
+        self._db_mngr.add_items(
+            "entity_class",
             {
                 self._db_map: [
                     {"name": "O1"},
@@ -648,9 +650,10 @@ class TestFindCascadingItems(TestCaseWithQApplication):
                     {"dimension_name_list": ["O2", "O3"]},
                     {"dimension_name_list": ["O1", "O2", "O3"]},
                 ]
-            }
+            },
         )
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"entity_class_name": "O1", "name": "o11"},
@@ -662,7 +665,7 @@ class TestFindCascadingItems(TestCaseWithQApplication):
                     {"entity_class_name": "O1__O2", "element_name_list": ("o12", "o21")},
                     {"entity_class_name": "O2__O3", "element_name_list": ("o21", "o31")},
                 ]
-            }
+            },
         )
         o13_id = self._db_map.entity(entity_class_name="O1", name="o13")["id"]
         self.assertEqual(self._db_mngr.find_cascading_entities({self._db_map: [o13_id]}), {})
@@ -678,9 +681,10 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         self.assertEqual(self._db_mngr.find_cascading_entities({self._db_map: [o11_id]}), {})
 
     def test_find_cascading_parameter_definitions(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}, {"name": "O2"}, {"name": "O3"}]})
-        self._db_mngr.add_parameter_definitions(
-            {self._db_map: [{"entity_class_name": "O1", "name": "p11"}, {"entity_class_name": "O2", "name": "p21"}]}
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "O1"}, {"name": "O2"}, {"name": "O3"}]})
+        self._db_mngr.add_items(
+            "parameter_definition",
+            {self._db_map: [{"entity_class_name": "O1", "name": "p11"}, {"entity_class_name": "O2", "name": "p21"}]},
         )
         o3_id = self._db_map.entity_class(name="O3")["id"]
         self.assertEqual(self._db_mngr.find_cascading_parameter_definitions({self._db_map: [o3_id]}), {})
@@ -698,17 +702,19 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         self.assertEqual(self._db_mngr.find_cascading_parameter_definitions({self._db_map: [o1_id]}), {})
 
     def test_find_cascading_parameter_values_by_entity(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}, {"name": "O2"}, {"name": "O3"}]})
-        self._db_mngr.add_parameter_definitions(
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "O1"}, {"name": "O2"}, {"name": "O3"}]})
+        self._db_mngr.add_items(
+            "parameter_definition",
             {
                 self._db_map: [
                     {"entity_class_name": "O1", "name": "p11"},
                     {"entity_class_name": "O2", "name": "p21"},
                     {"entity_class_name": "O3", "name": "p31"},
                 ]
-            }
+            },
         )
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"entity_class_name": "O1", "name": "o11"},
@@ -716,9 +722,10 @@ class TestFindCascadingItems(TestCaseWithQApplication):
                     {"entity_class_name": "O2", "name": "o21"},
                     {"entity_class_name": "O3", "name": "o31"},
                 ]
-            }
+            },
         )
-        self._db_mngr.add_parameter_values(
+        self._db_mngr.add_items(
+            "parameter_value",
             {
                 self._db_map: [
                     {
@@ -743,7 +750,7 @@ class TestFindCascadingItems(TestCaseWithQApplication):
                         "parsed_value": "yes",
                     },
                 ]
-            }
+            },
         )
         o31_id = self._db_map.entity(entity_class_name="O3", name="o31")["id"]
         self.assertEqual(self._db_mngr.find_cascading_parameter_values_by_entity({self._db_map: [o31_id]}), {})
@@ -771,9 +778,9 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         self.assertEqual(self._db_mngr.find_cascading_parameter_values_by_entity({self._db_map: [o11_id]}), {})
 
     def test_find_cascading_scenario_alternatives_by_scenario(self):
-        self._db_mngr.add_scenarios({self._db_map: [{"name": "S1"}, {"name": "S2"}]})
+        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "S1"}, {"name": "S2"}]})
         s1_id = self._db_map.scenario(name="S1")["id"]
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "a1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "a1"}]})
         a1_id = self._db_map.alternative(name="a1")["id"]
         self._db_mngr.set_scenario_alternatives({self._db_map: [{"id": s1_id, "alternative_id_list": [a1_id]}]})
         s2_id = self._db_map.scenario(name="S2")["id"]
@@ -786,22 +793,23 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         }
         self.assertEqual(data, {self._db_map: [("S1", "a1")]})
         sa_id = self._db_map.scenario_alternative(scenario_name="S1", alternative_name="a1", rank=0)["id"]
-        self._db_mngr.remove_items({self._db_map: {"scenario_alternative": [sa_id]}})
+        self._db_mngr.remove_items({self._db_map: {"scenario_alternative": {sa_id}}})
         self.assertEqual(self._db_mngr.find_cascading_scenario_alternatives_by_scenario({self._db_map: [s1_id]}), {})
 
     def test_find_groups_by_entity(self):
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}]})
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "O1"}]})
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {"entity_class_name": "O1", "name": "o1"},
                     {"entity_class_name": "O1", "name": "o2"},
                     {"entity_class_name": "O1", "name": "o3"},
                 ]
-            }
+            },
         )
-        self._db_mngr.add_entity_groups(
-            {self._db_map: [{"entity_class_name": "O1", "group_name": "o1", "member_name": "o2"}]}
+        self._db_mngr.add_items(
+            "entity_group", {self._db_map: [{"entity_class_name": "O1", "group_name": "o1", "member_name": "o2"}]}
         )
         o3_id = self._db_map.entity(entity_class_name="O1", name="o3")["id"]
         self.assertEqual(self._db_mngr.find_groups_by_entity({self._db_map: [o3_id]}), {})
@@ -812,7 +820,7 @@ class TestFindCascadingItems(TestCaseWithQApplication):
         }
         self.assertEqual(data, {self._db_map: [("o1", "o2")]})
         group_id = self._db_map.entity_group(group_name="o1", member_name="o2", entity_class_name="O1")["id"]
-        self._db_mngr.remove_items({self._db_map: {"entity_group": [group_id]}})
+        self._db_mngr.remove_items({self._db_map: {"entity_group": {group_id}}})
         self.assertEqual(self._db_mngr.find_groups_by_entity({self._db_map: [o1_id]}), {})
 
 
@@ -834,7 +842,7 @@ class TestCommitSession(TestCaseWithQApplication):
     def test_nothing_to_commit_is_not_error(self):
         error_listener = MagicMock()
         self._db_mngr.register_listener(error_listener, self._db_map)
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "O1"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "O1"}]})
         class_id = self._db_map.entity_class(name="O1")["id"]
         self._db_mngr.remove_items({self._db_map: {"entity_class": [class_id]}})
         self.assertEqual(self._db_mngr.commit_session("Nothing to commit.", self._db_map), [])

@@ -53,7 +53,6 @@ class AgedUndoCommand(QUndoCommand):
         self.merged = False
 
     def id(self):
-        """override"""
         return self._id
 
     def ours(self) -> Iterable[AgedUndoCommand]:

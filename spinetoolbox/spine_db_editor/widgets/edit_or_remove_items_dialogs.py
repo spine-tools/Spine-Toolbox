@@ -120,7 +120,7 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")
             return
-        self.db_mngr.update_entity_classes(db_map_data)
+        self.db_mngr.update_items("entity_class", db_map_data)
         super().accept()
 
 
@@ -221,7 +221,7 @@ class EditEntitiesDialog(GetEntityClassesMixin, GetEntitiesMixin, EditOrRemoveIt
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to update")
             return
-        self.db_mngr.update_entities(db_map_data)
+        self.db_mngr.update_items("entity", db_map_data)
         super().accept()
 
 

@@ -11,10 +11,9 @@
 ######################################################################################################################
 
 """General helper functions and classes for DB editor's models."""
-from collections.abc import Callable
 import csv
 from io import StringIO
-from typing import Any, Optional
+from typing import Optional
 from PySide6.QtCore import QModelIndex, QSize
 from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinedb_api.temp_id import TempId
@@ -89,18 +88,29 @@ def entity_class_id_for_row(index: QModelIndex, db_map: DatabaseMapping) -> Opti
     return entity_class["id"]
 
 
-def cull_equal_rows_at_end(data: list[list], remove_row: Callable[[int], Any]) -> None:
-    last_row = data[-1]
-    while (row_count := len(data)) > 1:
-        row = row_count - 2
-        if data[row] == last_row:
-            remove_row(row)
-        else:
-            break
-
-
 def height_limited_size_hint(size_hint: QSize, parent_size: QSize) -> QSize:
     max_height = parent_size.height() // 2
     if size_hint.height() > max_height:
         size_hint.setHeight(max_height)
     return size_hint
+
+
+def make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optional[dict], list[str]]:
+    """Returns a database entity item (id-based) from the given model parameter_value item (name-based).
+
+    Args:
+        item: the model parameter_value item
+        db_map: the database where the resulting item belongs
+
+    Returns:
+        the db entity item and error log
+    """
+    entity_class_name = item.get("entity_class_name")
+    entity_class = db_map.get_item("entity_class", name=entity_class_name)
+    if not entity_class:
+        return None, [f"Unknown entity_class {entity_class_name}"] if entity_class_name else []
+    entity_byname = item.get("entity_byname")
+    if not entity_byname:
+        return None, []
+    item = {"entity_class_name": entity_class_name, "entity_byname": entity_byname}
+    return None if db_map.get_item("entity", **item) else item, []

@@ -17,8 +17,9 @@ from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
-from ..mvcmodels.single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin
+from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
+from .utils import make_entity_on_the_fly
 
 
 class HalfSortedTableModel(MinimalTableModel[TempId]):
@@ -88,17 +89,15 @@ class SingleModelBase(HalfSortedTableModel):
     def update_items_in_db(self, items):
         """Update items in db. Required by batch_set_data"""
         items_to_upd = []
-        error_log = []
         for item in items:
-            item_to_upd, errors = self._convert_to_db(item)
+            item_to_upd = self._convert_to_db(item)
             if tuple(item_to_upd.keys()) != ("id",):
                 items_to_upd.append(item_to_upd)
-            if errors:
-                error_log += errors
         if items_to_upd:
             self._do_update_items_in_db({self.db_map: items_to_upd})
-        if error_log:
-            self.db_mngr.error_msg.emit({self.db_map: error_log})
+
+    def _convert_to_db(self, item: dict) -> dict:
+        return item.copy()
 
     @property
     def _references(self):
@@ -426,19 +425,19 @@ class EntityMixin:
         entities = []
         error_log = []
         for item in items:
-            entity, errors = self._make_entity_on_the_fly(item, self.db_map)
+            entity, errors = make_entity_on_the_fly(item, self.db_map)
             if entity:
                 entities.append(entity)
             if errors:
                 error_log.extend(errors)
         if entities:
-            self.db_mngr.add_entities({self.db_map: entities})
+            self.db_mngr.add_items("entity", {self.db_map: entities})
         if error_log:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
         super().update_items_in_db(items)
 
     def _do_update_items_in_db(self, db_map_data):
-        raise NotImplementedError()
+        self.db_mngr.update_items(self.item_type, db_map_data)
 
 
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
@@ -455,11 +454,10 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
         return order_key(item.get("name", ""))
 
     def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_parameter_definitions(db_map_data)
+        self.db_mngr.update_items("parameter_definition", db_map_data)
 
 
 class SingleParameterValueModel(
-    MakeEntityOnTheFlyMixin,
     SplitValueAndTypeMixin,
     ParameterMixin,
     EntityMixin,
@@ -480,11 +478,8 @@ class SingleParameterValueModel(
         alt_name = order_key(item.get("alternative_name", ""))
         return byname, parameter_name, alt_name
 
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_parameter_values(db_map_data)
 
-
-class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
     item_type = "entity_alternative"
@@ -503,6 +498,3 @@ class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterE
             "alternative_name": ("alternative_id", "alternative"),
             "database": ("database", None),
         }
-
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_entity_alternatives(db_map_data)

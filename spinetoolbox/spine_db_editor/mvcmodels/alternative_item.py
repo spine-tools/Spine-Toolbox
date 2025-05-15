@@ -42,12 +42,6 @@ class AlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
             return "<p>Drag this item on a <b>scenario</b> item in Scenario tree to add it to that scenario.</p>"
         return super().tool_tip(column)
 
-    def add_item_to_db(self, db_item):
-        self.db_mngr.add_alternatives({self.db_map: [db_item]})
-
-    def update_item_in_db(self, db_item):
-        self.db_mngr.update_alternatives({self.db_map: [db_item]})
-
     def flags(self, column):
         flags = super().flags(column)
         if self.id is None:

@@ -124,7 +124,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
             return
-        self.db_mngr.add_entities(db_map_data)
+        self.db_mngr.add_items("entity", db_map_data)
         super().accept()
 
     def get_db_map_data(self):
@@ -331,7 +331,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
             return
-        self.db_mngr.add_entity_classes(db_map_data)
+        self.db_mngr.add_items("entity_class", db_map_data)
         super().accept()
 
     def construct_composite_name(self, row):
@@ -617,15 +617,15 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
             return
-        self.db_mngr.add_entities(db_map_data)
+        self.db_mngr.add_items("entity", db_map_data)
         created_entities = {}
         for db_map, data in db_map_data.items():
             for item in data:
                 entity_name = item["name"]
-                created_entities[entity_name] = db_map.get_entity_item(class_id=item["class_id"], name=entity_name)
+                created_entities[entity_name] = db_map.entity(class_id=item["class_id"], name=entity_name)
         entity_alternatives = self.make_entity_alternatives(created_entities)
         if entity_alternatives:  # If alternatives have been defined
-            self.db_mngr.add_entity_alternatives(entity_alternatives)
+            self.db_mngr.add_items("entity_alternative", entity_alternatives)
         entity_groups = self.make_entity_groups(created_entities)
         if entity_groups:  # If entity groups have been defined
             self.db_mngr.import_data(entity_groups, command_text="Add entity group")
@@ -634,9 +634,10 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     def make_entity_alternatives(self, entities):
         """Creates a mapping from db_map to entity alternatives that are to be created"""
         entity_alternatives = {}
-        name_column = self.model.horizontal_header_labels().index("entity name")
-        alternative_column = self.model.horizontal_header_labels().index("alternative")
-        db_column = self.model.horizontal_header_labels().index("databases")
+        header = self.model.horizontal_header_labels()
+        name_column = header.index("entity name")
+        alternative_column = header.index("alternative")
+        db_column = header.index("databases")
         for i in range(self.model.rowCount() - 1):
             row_data = self.model.row_data(i)
             alternative = row_data[alternative_column]

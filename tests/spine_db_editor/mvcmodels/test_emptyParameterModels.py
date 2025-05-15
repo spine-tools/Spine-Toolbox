@@ -13,8 +13,8 @@
 """Unit tests for the EmptyParameterModel subclasses."""
 from unittest import mock
 from PySide6.QtCore import QObject
+from PySide6.QtGui import QUndoStack
 from spinedb_api import (
-    DatabaseMapping,
     import_object_classes,
     import_object_parameters,
     import_objects,
@@ -47,16 +47,19 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         import_relationship_parameters(self._db_map, (("dog__fish", "relative_speed"),))
         import_relationships(self._db_map, (("dog__fish", ("pluto", "nemo")),))
         self._db_map.commit_session("Add test data")
+        self._undo_stack = QUndoStack()
 
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
         self._db_mngr.deleteLater()
+        self._undo_stack.deleteLater()
 
     def test_add_object_parameter_values_to_db(self):
         """Test that object parameter values are added to the db when editing the table."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             value, value_type = to_database("bloodhound")
             self.assertTrue(
@@ -76,6 +79,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that object parameter values aren't added to the db if data is incomplete."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "Base", "salty", "mock_db"])
@@ -87,6 +91,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that object classes are inferred from the object and parameter if possible."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             indexes = _empty_indexes(model)
             value, value_type = to_database("bloodhound")
@@ -107,6 +112,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that relationship parameter values are added to the db when editing the table."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             value, value_type = to_database(-1)
             self.assertTrue(
@@ -133,6 +139,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that relationship parameter values aren't added to the db if data is incomplete."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(
@@ -146,6 +153,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that object parameter definitions are added to the db when editing the table."""
         with q_object(QObject()) as parent:
             model = EmptyParameterDefinitionModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(_empty_indexes(model), ["dog", "color", (), None, None, None, "mock_db"])
@@ -159,6 +167,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that object parameter definitions are added to the db when editing the table."""
         with q_object(QObject()) as parent:
             model = EmptyParameterDefinitionModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(
@@ -174,6 +183,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that object parameter definitions aren't added to the db if data is incomplete."""
         with q_object(QObject()) as parent:
             model = EmptyParameterDefinitionModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(model.batch_set_data(_empty_indexes(model), ["cat", "color", None, None, None, "mock_db"]))
             definitions = [x for x in self._db_map.get_items("parameter_definition") if not x["dimension_id_list"]]
@@ -184,6 +194,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that relationship parameter definitions are added to the db when editing the table."""
         with q_object(QObject()) as parent:
             model = EmptyParameterDefinitionModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(
@@ -199,6 +210,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that relationship parameter definitions aren't added to the db if data is incomplete."""
         with q_object(QObject()) as parent:
             model = EmptyParameterDefinitionModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(
@@ -213,6 +225,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Test that adding parameter a value for a nonexistent entity creates the entity."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             value, value_type = to_database("dog-human")
             with signal_waiter(model.entities_added) as waiter:
@@ -242,6 +255,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
         """Tests that the model is not too keen on making entities on the fly."""
         with q_object(QObject()) as parent:
             model = EmptyParameterValueModel(self._db_mngr, parent)
+            model.set_undo_stack(self._undo_stack)
             db_map_entities = {self._db_map: [{"entity_class_name": "dog", "entity_byname": ("plato",)}]}
             value = join_value_and_type(*to_database("dog-human"))
             db_map_items = {

@@ -139,7 +139,7 @@ class TopLeftEntityHeaderItem(TopLeftHeaderItem):
         """See base class."""
         if not db_map_data:
             return False
-        self.db_mngr.update_entities(db_map_data)
+        self.db_mngr.update_items("entity", db_map_data)
         return True
 
     def add_data(self, names, db_map):
@@ -148,7 +148,7 @@ class TopLeftEntityHeaderItem(TopLeftHeaderItem):
             return False
         class_id = self._class_id[db_map]
         db_map_data = {db_map: [{"name": name, "class_id": class_id} for name in names]}
-        self.db_mngr.add_entities(db_map_data)
+        self.db_mngr.add_items("entity", db_map_data)
         return True
 
 
@@ -171,7 +171,7 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
         """See base class."""
         if not db_map_data:
             return False
-        self.db_mngr.update_parameter_definitions(db_map_data)
+        self.db_mngr.update_items("parameter_definition", db_map_data)
         return True
 
     def add_data(self, names, db_map):
@@ -180,7 +180,7 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
             return False
         class_id = self.model._parent.current_class_id[db_map]
         db_map_data = {db_map: [{"name": name, "entity_class_id": class_id} for name in names]}
-        self.db_mngr.add_parameter_definitions(db_map_data)
+        self.db_mngr.add_items("parameter_definition", db_map_data)
         return True
 
 
@@ -230,7 +230,7 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
         """See base class."""
         if not db_map_data:
             return False
-        self.db_mngr.update_alternatives(db_map_data)
+        self.db_mngr.update_items("alternative", db_map_data)
         return True
 
     def add_data(self, names, db_map):
@@ -238,7 +238,7 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
         if not names:
             return False
         db_map_data = {db_map: [{"name": name} for name in names]}
-        self.db_mngr.add_alternatives(db_map_data)
+        self.db_mngr.add_items("alternative", db_map_data)
         return True
 
 
@@ -261,7 +261,7 @@ class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
         """See base class."""
         if not db_map_data:
             return False
-        self.db_mngr.update_scenarios(db_map_data)
+        self.db_mngr.update_items("scenario", db_map_data)
         return True
 
     def add_data(self, names, db_map):
@@ -269,7 +269,7 @@ class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
         if not names:
             return False
         db_map_data = {db_map: [{"name": name} for name in names]}
-        self.db_mngr.add_scenarios(db_map_data)
+        self.db_mngr.add_items("scenario", db_map_data)
         return True
 
 
@@ -1344,10 +1344,10 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         return True
 
     def _add_parameter_values(self, db_map_data):
-        self.db_mngr.add_parameter_values(db_map_data)
+        self.db_mngr.add_items("parameter_value", db_map_data)
 
     def _update_parameter_values(self, db_map_data):
-        self.db_mngr.update_parameter_values(db_map_data)
+        self.db_mngr.update_items("parameter_value", db_map_data)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
@@ -1716,7 +1716,7 @@ class ElementPivotTableModel(PivotTableModelBase):
         if not to_add and not to_remove:
             return False
         if to_add:
-            self.db_mngr.add_entities(to_add)
+            self.db_mngr.add_items("entity", to_add)
         if to_remove:
             self.db_mngr.remove_items(to_remove)
         return True

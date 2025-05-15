@@ -61,17 +61,14 @@ class EmptyRowModel(MinimalTableModel):
     def _handle_data_changed(self, top_left, bottom_right, roles=None):
         """Inserts a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
-        if roles is None:
-            roles = []
         if roles and Qt.ItemDataRole.EditRole not in roles:
             return
-        last_row = self.rowCount() - 1
-        for column in range(self.columnCount()):
+        last_row = self._main_data[-1]
+        for column, data in enumerate(last_row):
             try:
                 field = self.header[column]
             except IndexError:
                 field = None
-            data = self._main_data[last_row][column]
             default = self.default_row.get(field)
             if (data or default) and data != default:
                 self.insertRows(self.rowCount(), 1)
@@ -86,7 +83,9 @@ class EmptyRowModel(MinimalTableModel):
     @Slot(QModelIndex, int, int)
     def _handle_rows_inserted(self, parent, first, last):
         """Handles rowsInserted signal."""
+        self.dataChanged.disconnect(self._handle_data_changed)
         self.set_rows_to_default(first, last)
+        self.dataChanged.connect(self._handle_data_changed)
 
     def set_rows_to_default(self, first: int, last: Optional[int] = None) -> None:
         """Sets default data in newly inserted rows."""

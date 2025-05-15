@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
+from typing import Optional
 from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height
 from ..mvcmodels.compound_models import (
@@ -60,6 +61,8 @@ class StackedViewMixin:
             view.setModel(model)
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             view.connect_spine_db_editor(self)
+            view.request_replace_undo_redo_actions.connect(self._replace_undo_redo_actions)
+            view.request_reset_undo_redo_actions.connect(self.update_undo_redo_actions)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -249,3 +252,10 @@ class StackedViewMixin:
         for model in self._all_stacked_models:
             model.stop_invalidating_filter()
         return True
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if event.isAccepted():
+            for view in self._all_empty_models.values():
+                view.request_replace_undo_redo_actions.disconnect(self._replace_undo_redo_actions)
+                view.request_reset_undo_redo_actions.disconnect(self.update_undo_redo_actions)

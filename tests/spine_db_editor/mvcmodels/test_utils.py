@@ -17,9 +17,9 @@ from PySide6.QtGui import QStandardItem, QStandardItemModel
 from spinedb_api import DatabaseMapping
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.utils import (
-    cull_equal_rows_at_end,
     entity_class_id_for_row,
     height_limited_size_hint,
+    make_entity_on_the_fly,
     two_column_as_csv,
 )
 from tests.mock_helpers import TestCaseWithQApplication, q_object
@@ -86,30 +86,6 @@ class TestEntityClassIdForRow(TestCaseWithQApplication):
                     self.assertIsNone(entity_class_id_for_row(index, db_map), entity_class["id"])
 
 
-class TestCullEqualRowsAtEnd(unittest.TestCase):
-    class Data:
-        def __init__(self, data):
-            self.data = data
-
-        def remove_data(self, row):
-            del self.data[row]
-
-    def test_doesnt_cull_single_row(self):
-        data = self.Data([[11]])
-        cull_equal_rows_at_end(data.data, data.remove_data)
-        self.assertEqual(data.data, [[11]])
-
-    def test_culls_equal_rows_leaving_last_row(self):
-        data = self.Data([[11], [11], [11]])
-        cull_equal_rows_at_end(data.data, data.remove_data)
-        self.assertEqual(data.data, [[11]])
-
-    def test_stops_culling_at_unequal_row(self):
-        data = self.Data([[11], [12], [11], [11]])
-        cull_equal_rows_at_end(data.data, data.remove_data)
-        self.assertEqual(data.data, [[11], [12], [11]])
-
-
 class TestHeightLimitedSizeHint(unittest.TestCase):
     def test_height_less_than_limit_is_ok(self):
         size_hint = height_limited_size_hint(QSize(23, 49), QSize(23, 100))
@@ -120,6 +96,46 @@ class TestHeightLimitedSizeHint(unittest.TestCase):
         size_hint = height_limited_size_hint(QSize(23, 51), QSize(23, 100))
         self.assertEqual(size_hint.width(), 23)
         self.assertEqual(size_hint.height(), 50)
+
+
+class TestMakeEntityOnTheFly(unittest.TestCase):
+    def test_empty_item(self):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            entity, errors = make_entity_on_the_fly({}, db_map)
+            self.assertEqual(errors, [])
+            self.assertIsNone(entity)
+
+    def test_nonexistent_entity_class(self):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            entity, errors = make_entity_on_the_fly({"entity_class_name": "not-in-db"}, db_map)
+            self.assertEqual(errors, ["Unknown entity_class not-in-db"])
+            self.assertIsNone(entity)
+
+    def test_entity_byname_missing(self):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            db_map.add_entity_class(name="Object")
+            entity, errors = make_entity_on_the_fly({"entity_class_name": "Object"}, db_map)
+            self.assertEqual(errors, [])
+            self.assertIsNone(entity)
+
+    def test_normal_operation(self):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            db_map.add_entity_class(name="Object")
+            entity, errors = make_entity_on_the_fly(
+                {"entity_class_name": "Object", "entity_byname": ("gadget",)}, db_map
+            )
+            self.assertEqual(errors, [])
+            self.assertEqual(entity, {"entity_class_name": "Object", "entity_byname": ("gadget",)})
+
+    def test_entity_exists_in_db_map(self):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            db_map.add_entity_class(name="Object")
+            db_map.add_entity(entity_class_name="Object", name="gadget")
+            entity, errors = make_entity_on_the_fly(
+                {"entity_class_name": "Object", "entity_byname": ("gadget",)}, db_map
+            )
+            self.assertEqual(errors, [])
+            self.assertIsNone(entity)
 
 
 if __name__ == "__main__":
