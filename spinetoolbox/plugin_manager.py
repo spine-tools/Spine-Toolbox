@@ -198,9 +198,7 @@ class PluginManager:
         plugin = self._registry_plugins[plugin_name]
         plugin_local_dir = os.path.join(PLUGINS_PATH, plugin_name)
         worker = self._create_worker()
-        worker.succeeded.connect(
-            lambda plugin_local_d=plugin_local_dir: self._load_installed_plugin(plugin_local_d)
-        )
+        worker.succeeded.connect(lambda plugin_local_d=plugin_local_dir: self._load_installed_plugin(plugin_local_d))
         worker.failed.connect(self._toolbox.msg_error)
         worker.start(_download_plugin, plugin, plugin_local_dir)
 
