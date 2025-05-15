@@ -31,6 +31,7 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.MagicMock()
+            mock_settings.value = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
