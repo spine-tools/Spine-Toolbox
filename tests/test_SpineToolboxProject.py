@@ -250,9 +250,7 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         """
         waiter = SignalWaiter()
         self.toolbox.project().project_execution_finished.connect(waiter.trigger)
-        with (
-            mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_settings_dict,
-        ):
+        with (mock.patch("spinetoolbox.project.make_settings_dict_for_engine") as mock_settings_dict,):
             # This mocks the call to make_settings_dict_for_engine in SpineToolboxProject._execute_dags()
             mock_settings_dict.return_value = {}
             if not names:

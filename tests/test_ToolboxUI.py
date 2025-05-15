@@ -163,9 +163,7 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_new_project(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         self.assertIsNotNone(self.toolbox.project())
@@ -173,9 +171,7 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_save_project(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc_trough_undo_stack(self.toolbox, "DC")
@@ -195,9 +191,7 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_prevent_project_closing_with_unsaved_changes(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc_trough_undo_stack(self.toolbox, "DC1")
@@ -239,9 +233,7 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_show_project_or_item_context_menu(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
             mock_dir_getter.assert_called()
@@ -267,9 +259,7 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertFalse(self.toolbox.ui.actionRemove_all.isEnabled())
         # Make project
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
             mock_dir_getter.assert_called()

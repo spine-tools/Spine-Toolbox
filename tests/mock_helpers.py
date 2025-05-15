@@ -50,9 +50,7 @@ def create_toolboxui():
 
 def create_project(toolbox, project_dir):
     """Creates a project for the given ToolboxUI."""
-    with (
-        mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
-    ):
+    with (mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),):
         toolbox.create_project(project_dir)
 
 
