@@ -319,7 +319,6 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
                 self.q.put(("server_status_msg", {"msg_type": "fail", "text": f"{event[0]: {event[1]}}"}))
                 break
             self.q.put(event)
-        self.engine_client.close()
 
     def answer_prompt(self, prompter_id, answer):
         """See base class."""
@@ -348,7 +347,8 @@ class RemoteSpineEngineManager(SpineEngineManagerBase):
 
     def kill_persistent(self, persistent_key):
         """See base class."""
-        return self.engine_client.send_kill_persistent(persistent_key)
+        if self.engine_client is not None:
+            return self.engine_client.send_kill_persistent(persistent_key)
 
     def get_persistent_completions(self, persistent_key, text):
         """See base class."""
