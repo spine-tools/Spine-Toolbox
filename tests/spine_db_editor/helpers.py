@@ -14,7 +14,7 @@
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 
 
 class TestBase(TestCaseWithQApplication):
@@ -38,7 +38,7 @@ class TestBase(TestCaseWithQApplication):
         ):
             mock_settings = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = TestSpineDBManager(mock_settings, None)
+            self._db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map(url, logger, create=create)
             self._db_mngr.name_registry.register(url, self.db_codename)
