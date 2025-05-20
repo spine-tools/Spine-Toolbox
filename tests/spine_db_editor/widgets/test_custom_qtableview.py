@@ -11,6 +11,8 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
+import csv
+import io
 import itertools
 import os
 from tempfile import TemporaryDirectory
@@ -19,6 +21,8 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import convert_pasted_group_fields
 from tests.mock_helpers import fetch_model, mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
@@ -51,6 +55,69 @@ class TestParameterDefinitionTableView(TestBase):
         self.assertTrue(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
         self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
         self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+
+    def test_copy_empty_valid_values_column(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="X")
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        valid_types_column = model.header.index("valid types")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        self.assertTrue(table_view.currentIndex().isValid())
+        with mock_clipboard_patch("", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            self.assertTrue(table_view.copy())
+            out_stream = io.StringIO()
+            writer = csv.writer(out_stream, delimiter="\t", quotechar="'")
+            writer.writerow([None])
+            clipboard.setText.assert_called_once_with(out_stream.getvalue())
+
+    def test_copy_valid_values_column(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="X", parameter_type_list=("str", "bool"))
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        valid_types_column = model.header.index("valid types")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        self.assertTrue(table_view.currentIndex().isValid())
+        with mock_clipboard_patch("", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            self.assertTrue(table_view.copy())
+            out_stream = io.StringIO()
+            writer = csv.writer(out_stream, delimiter="\t", quotechar="'")
+            writer.writerow(["bool" + DB_ITEM_SEPARATOR + "str"])
+            clipboard.setText.assert_called_once_with(out_stream.getvalue())
+
+    def test_paste_db_separator_data_to_valid_type_column(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="X", parameter_type_list=("str", "bool"))
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        valid_types_column = model.header.index("valid types")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        self.assertTrue(table_view.currentIndex().isValid())
+        out_stream = io.StringIO()
+        writer = csv.writer(out_stream, delimiter="\t", quotechar="'")
+        writer.writerow(["str" + DB_ITEM_SEPARATOR + "bool"])
+        with mock_clipboard_patch(
+            out_stream.getvalue(), "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
+        ):
+            self.assertTrue(table_view.paste())
+        expected = [
+            ["Object", "X", "bool" + DB_ITEM_SEPARATOR + "str", None, "None", None, self.db_codename],
+        ]
+        self.assertEqual(model.rowCount(), len(expected))
+        self.assertEqual(model.columnCount(), len(expected[0]))
+        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
+            with self.subTest(row=row, column=column):
+                self.assertEqual(model.index(row, column).data(), expected[row][column])
 
 
 class TestParameterValueTableView(TestBase):
@@ -578,7 +645,7 @@ class TestEmptyParameterValueTableView(TestBase):
         with mock_clipboard_patch("''", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(table_view.paste())
         expected = [
-            [None, "", None, None, None, "TestEmptyParameterValueTableView_db"],
+            [None, (), None, None, None, "TestEmptyParameterValueTableView_db"],
         ]
         self.assertEqual(model.rowCount(), len(expected))
         self.assertEqual(model.columnCount(), 6)
@@ -646,6 +713,14 @@ def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
+
+
+class TestConvertPastedGroupFields(unittest.TestCase):
+    def test_functionality(self):
+        self.assertEqual(convert_pasted_group_fields(""), ())
+        self.assertEqual(convert_pasted_group_fields("item"), ("item",))
+        self.assertEqual(convert_pasted_group_fields("item1, item2"), ("item1", "item2"))
+        self.assertEqual(convert_pasted_group_fields("item1" + DB_ITEM_SEPARATOR + "item2"), ("item1", "item2"))
 
 
 if __name__ == "__main__":

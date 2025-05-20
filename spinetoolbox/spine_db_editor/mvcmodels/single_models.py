@@ -212,8 +212,8 @@ class SingleModelBase(HalfSortedTableModel):
                     return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
-            if data and field in self.group_fields:
-                data = DB_ITEM_SEPARATOR.join(data)
+            if field in self.group_fields:
+                data = DB_ITEM_SEPARATOR.join(data) if data else None
             return data
         if role == Qt.ItemDataRole.DecorationRole and field == "entity_class_name":
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_id)
@@ -226,17 +226,11 @@ class SingleModelBase(HalfSortedTableModel):
         Sets data directly in database using db mngr. If successful, updated data will be
         automatically seen by the data method.
         """
-
-        def split_value(value, column):
-            if self.header[column] in self.group_fields:
-                return tuple(value.split(DB_ITEM_SEPARATOR)) if value else ()
-            return value
-
         if not indexes or not data:
             return False
         row_data = {}
         for index, value in zip(indexes, data):
-            row_data.setdefault(index.row(), {})[self.header[index.column()]] = split_value(value, index.column())
+            row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
         items = [{"id": self._main_data[row], **data} for row, data in row_data.items()]
         self.update_items_in_db(items)
         return True

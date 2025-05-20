@@ -13,7 +13,6 @@
 """Empty models for dialogs as well as parameter definitions and values."""
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
-from itertools import chain
 from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
@@ -42,6 +41,7 @@ class EmptyModelBase(EmptyRowModel):
     item_type: ClassVar[str] = NotImplemented
     can_be_filtered: ClassVar[bool] = False
     field_map: ClassVar[dict[str, str]] = {}
+    group_fields: ClassVar[Iterable[str]] = ()
 
     def __init__(self, header: list[str], db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(parent, header)
@@ -125,7 +125,7 @@ class EmptyModelBase(EmptyRowModel):
         for _ in range(count):
             self._undo_stack.push(InsertEmptyModelRow(self, row))
         self._undo_stack.endMacro()
-        return self._undo_stack.command(self._undo_stack.count() - 1).isObsolete()
+        return not self._undo_stack.command(self._undo_stack.count() - 1).isObsolete()
 
     def do_insert_rows(self, row: int, count: int) -> None:
         super().insertRows(row, count)
@@ -336,6 +336,7 @@ class ParameterMixin:
 
 
 class EntityMixin:
+    group_fields = ("entity_byname",)
     entities_added = Signal(object)
     entity_byname_column: ClassVar[int] = NotImplemented
 
@@ -380,7 +381,9 @@ class EntityMixin:
     def _make_item(self, row):
         item = super()._make_item(row)
         byname = item["entity_byname"]
-        item["entity_byname"] = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
+        if not isinstance(byname, tuple):
+            byname = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
+        item["entity_byname"] = byname
         return item
 
     @classmethod
@@ -401,6 +404,7 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     value_field = "default_value"
     type_field = "default_type"
     parameter_name_column = PARAMETER_DEFINITION_MODEL_HEADER.index("parameter_name")
+    group_fields = ("valid types",)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_DEFINITION_MODEL_HEADER, db_mngr, parent)

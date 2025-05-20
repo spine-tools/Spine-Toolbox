@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helpers and utilities for Spine Database editor."""
+from typing import Union
 from PySide6.QtGui import QColor
 from spinedb_api.helpers import string_to_bool as base_string_to_bool
 
@@ -34,15 +35,17 @@ TRUE_STRING = "true"
 FALSE_STRING = "false"
 
 
-def string_to_bool(x):
+def string_to_bool(x: Union[str, bytes]) -> bool:
     """Converts a 'foreign' string (from e.g. Excel) to boolean.
 
     Args:
-        x (str): string to convert
+        string to convert
 
     Returns:
-        bool: boolean value
+        boolean value
     """
+    if isinstance(x, bytes):
+        x = x.decode()
     try:
         return base_string_to_bool(x)
     except ValueError:
