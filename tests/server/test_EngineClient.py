@@ -16,6 +16,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
+import time
 import zmq
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
@@ -161,6 +162,24 @@ class TestEngineClient(TestCaseWithQApplication):
         self.assertTrue(len(job_id) == 32)
         client.remove_project_from_server(job_id)
         client.close()
+
+    def test_get_elapsed_time(self):
+        client = EngineClient("localhost", 5601, ClientSecurityModel.NONE, "")
+        time_now = time.time()
+        client.start_time = round(time_now * 1000.0)
+        with mock.patch("time.time") as mock_t:
+            mock_t.return_value = time_now + 0.1
+            elapsed_t1 = client.get_elapsed_time()
+            mock_t.assert_called()
+            self.assertEqual("100 ms", elapsed_t1)
+            mock_t.return_value = time_now + 12.5
+            elapsed_t2 = client.get_elapsed_time()
+            mock_t.assert_called()
+            self.assertEqual("12.5 s", elapsed_t2)
+            mock_t.return_value = time_now + 1000
+            elapsed_t3 = client.get_elapsed_time()
+            mock_t.assert_called()
+            self.assertEqual("16 min 40.0 s", elapsed_t3)
 
 
 if __name__ == "__main__":
