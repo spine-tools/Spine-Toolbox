@@ -343,7 +343,7 @@ class EngineClient:
             return str(t) + " ms"
         if 1000 < t < 60000:  # 1 < t < 60 s
             return str(t / 1000) + " s"
-        m = (t / 1000) / 60
+        m = int((t / 1000) / 60)
         s = (t / 1000) % 60
         return str(m) + " min " + str(s) + " s"
 
