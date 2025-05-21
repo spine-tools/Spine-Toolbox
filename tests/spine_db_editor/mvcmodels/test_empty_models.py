@@ -223,6 +223,50 @@ class TestEmptyModelBase(TestCaseWithQApplication):
             self.assertFalse(model.batch_set_data([model.index(0, 1)], ["gadget"]))
         self.assertEqual(self._undo_stack.count(), 1)
 
+    def test_batch_setting_complete_rows_results_in_single_empty_row(self):
+        self._db_map.add_entity_class(name="Widget")
+        model = EmptyModelBase(
+            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
+        )
+        model.item_type = "entity"
+        model.set_undo_stack(self._undo_stack)
+        model._fetch_parent.fetch_item_type = model.item_type
+        model.set_default_row(database="mock_db")
+        model.reset_db_maps([self._db_map])
+        fetch_model(model)
+        with (
+            mock.patch.object(model, "_convert_to_db") as convert_to_db,
+            mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
+            mock.patch.object(model, "_check_item") as check_item,
+            mock.patch.object(model, "_make_unique_id") as make_unique_id,
+        ):
+            convert_to_db.side_effect = lambda item: item
+            entity_class_name_candidates.return_value = ["Widget"]
+            check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
+            make_unique_id.side_effect = lambda item: (item["entity_class_name"], item["name"])
+            self.assertTrue(model.insertRows(1, 1))
+            self.assertTrue(
+                model.batch_set_data(
+                    [
+                        model.index(0, 0),
+                        model.index(0, 1),
+                        model.index(0, 2),
+                        model.index(1, 0),
+                        model.index(1, 1),
+                        model.index(1, 2),
+                    ],
+                    ["Widget", "gadget1", "First widget.", "Widget", "gadget2", "Second widget."],
+                )
+            )
+            while model.rowCount() != 1:
+                QApplication.processEvents()
+        self.assertEqual(self._undo_stack.count(), 0)
+        expected = [[None, None, None, "mock_db"]]
+        self.assertEqual(model.rowCount(), len(expected))
+        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
+            with self.subTest(row=row, column=column):
+                self.assertEqual(model.index(row, column).data(), expected[row][column])
+
 
 if __name__ == "__main__":
     unittest.main()

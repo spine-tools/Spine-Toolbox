@@ -150,30 +150,7 @@ class EmptyModelBase(EmptyRowModel):
                 removed_rows.append(row)
         for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
             self.do_remove_rows(row, count)
-        clean_index = self._undo_stack.cleanIndex()
-        removed_row_set = set(removed_rows)
-        new_clean_index = -1
-        for command_index in range(self._undo_stack.count()):
-            command = self._undo_stack.command(command_index)
-            if command_index > clean_index:
-                command.setObsolete(True)
-            else:
-                if hasattr(command, "rows_dropped"):
-                    command.rows_dropped(removed_row_set)
-                    if not command.isObsolete():
-                        new_clean_index = command_index
-                else:
-                    children_obsolete = True
-                    for child_index in range(command.childCount()):
-                        child_command = command.child(child_index)
-                        if hasattr(child_command, "rows_dropped"):
-                            child_command.rows_dropped(removed_row_set)
-                            if not child_command.isObsolete():
-                                new_clean_index = command_index
-                                children_obsolete = False
-                    if children_obsolete:
-                        command.setObsolete(True)
-        self._undo_stack.setIndex(new_clean_index)
+        self._undo_stack.clear()
 
     def batch_set_data(self, indexes, data):
         """Sets data for indexes in batch. If successful, add items to db."""
