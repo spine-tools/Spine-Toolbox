@@ -33,7 +33,7 @@ class TestParameterValuePivotTableModel(TestBase):
                 ("class1", "object2", "parameter2", 7.0),
             ),
         }
-        self._db_mngr.import_data({self._db_map: data})
+        self._db_mngr.import_data({self._db_map: data}, "Import initial test data.")
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
 
@@ -126,7 +126,7 @@ class TestParameterValuePivotTableModel(TestBase):
         data = {
             "entity_classes": (("class1",),),
         }
-        self._db_mngr.import_data({self._db_map: data})
+        self._db_mngr.import_data({self._db_map: data}, "Import entity class.")
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
         model = self._start()
@@ -144,7 +144,7 @@ class TestParameterValuePivotTableModel(TestBase):
             "entity_classes": (("Object",),),
             "entities": (("Object", "spatula"),),
         }
-        self._db_mngr.import_data({self._db_map: initial_data})
+        self._db_mngr.import_data({self._db_map: initial_data}, "Import test data")
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
         model = self._start()
@@ -158,7 +158,7 @@ class TestParameterValuePivotTableModel(TestBase):
             "parameter_definitions": (("Object", "x"),),
             "entities": (("Object", "spatula"),),
         }
-        self._db_mngr.import_data({self._db_map: initial_data})
+        self._db_mngr.import_data({self._db_map: initial_data}, "Import test data.")
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
         model = self._start()
@@ -173,7 +173,7 @@ class TestParameterValuePivotTableModel(TestBase):
             "parameter_definitions": (("Object", "x"),),
             "parameter_values": (("Object", "spatula", "x", 2.3),),
         }
-        self._db_mngr.import_data({self._db_map: initial_data})
+        self._db_mngr.import_data({self._db_map: initial_data}, "Import test data.")
         while self._db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
         model = self._start()
@@ -231,7 +231,7 @@ class TestParameterValuePivotTableModel(TestBase):
 
 class TestIndexExpansionPivotTableModel(TestBase):
     def _start(self, initial_data):
-        self._db_mngr.import_data({self._db_map: initial_data})
+        self._db_mngr.import_data({self._db_map: initial_data}, "Import initial test data.")
         object_class_index = self._db_editor.entity_tree_model.index(0, 0)
         fetch_model(self._db_editor.entity_tree_model)
         index = self._db_editor.entity_tree_model.index(0, 0, object_class_index)

@@ -73,4 +73,4 @@ class AlternativeModel(TreeModelBase):
                 continue
             alternative_db_items.append({"name": name, "description": description})
         if alternative_db_items:
-            self.db_mngr.add_alternatives({database_item.db_map: alternative_db_items})
+            self.db_mngr.add_items("alternative", {database_item.db_map: alternative_db_items})

@@ -3,20 +3,48 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [Unreleased]
+## [unreleased]
+
+### Added
+
+- Tool Properties has a new line edit where you change the Tool Results directory.
+
+### Changed
+
+- The "empty row" at the bottom of Parameter definition, Parameter value and Entity alternative
+  tables in Database editor is now always visible.
+
+### Fixed
+
+- Tools do not make empty results directories anymore if the Tool Specification does not define
+any output files.
+
+### Security
+
+## [0.9.6]
+
+### Changed
+
+- Database Editor's Graph View no longer saves the item positions into *x* and *y* parameter values.
+  Instead, the positions are converted to latitude and longitude using the Mercator projection
+  and these are store as `lat` and `lon` coordinates in `entity_location` table.
+  The old *x* and *y* values are not used anymore.
+  There is no functionality to restore old positions;
+  users are requested to readjust the positions manually and save them again
+  after which the existing *x* and *y* values can be removed.
+
+## [0.9.5]
+
+### Fixed
+
+- Fixed a bug in Importer where CSV files in datapackage with over 100 rows could not be read.
+
+## [0.9.4]
 
 ### Added
 
 - Importer now has a new Source type: Fixed.
   When set, the data is read from a fixed cell (defined by table name, row and column) in any available source table.
-
-### Changed
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.9.3]
 

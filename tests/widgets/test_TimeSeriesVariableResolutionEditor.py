@@ -12,33 +12,35 @@
 
 """Unit tests for the TimeSeriesVariableResolutionEditor widget."""
 import unittest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from spinetoolbox.widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestTimeSeriesVariableResolutionEditor(TestCaseWithQApplication):
     def test_initial_value(self):
-        editor = TimeSeriesVariableResolutionEditor()
-        value = editor.value()
-        self.assertEqual(
-            value, TimeSeriesVariableResolution(["2000-01-01T00:00", "2000-01-01T01:00"], [0.0, 0.0], False, False)
-        )
+        with q_object(QWidget()) as parent:
+            editor = TimeSeriesVariableResolutionEditor(parent)
+            value = editor.value()
+            self.assertEqual(
+                value, TimeSeriesVariableResolution(["2000-01-01T00:00", "2000-01-01T01:00"], [0.0, 0.0], False, False)
+            )
 
     def test_value_access(self):
-        editor = TimeSeriesVariableResolutionEditor()
-        editor.set_value(
-            TimeSeriesVariableResolution(
-                ["1996-04-06T16:06", "1996-04-07T16:06", "1996-04-08T16:06"], [4.0, 3.5, 3.0], True, True
+        with q_object(QWidget()) as parent:
+            editor = TimeSeriesVariableResolutionEditor(parent)
+            editor.set_value(
+                TimeSeriesVariableResolution(
+                    ["1996-04-06T16:06", "1996-04-07T16:06", "1996-04-08T16:06"], [4.0, 3.5, 3.0], True, True
+                )
             )
-        )
-        self.assertEqual(
-            editor.value(),
-            TimeSeriesVariableResolution(
-                ["1996-04-06T16:06", "1996-04-07T16:06", "1996-04-08T16:06"], [4.0, 3.5, 3.0], True, True
-            ),
-        )
+            self.assertEqual(
+                editor.value(),
+                TimeSeriesVariableResolution(
+                    ["1996-04-06T16:06", "1996-04-07T16:06", "1996-04-08T16:06"], [4.0, 3.5, 3.0], True, True
+                ),
+            )
 
 
 if __name__ == "__main__":

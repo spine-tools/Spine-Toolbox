@@ -13,8 +13,9 @@
 """Contains the SpineDBEditor class."""
 import json
 import os
+from typing import Optional
 from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
+from PySide6.QtGui import QAction, QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QCheckBox,
@@ -41,9 +42,9 @@ from ...helpers import (
     preferred_row_height,
     unique_name,
 )
+from ...spine_db_manager import SpineDBManager
 from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
-from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ..helpers import table_name_from_item_type
@@ -67,11 +68,7 @@ class SpineDBEditorBase(QMainWindow):
     file_exported = Signal(str, float, bool)
     """filepath, progress between 0 and 1, True if sqlite file"""
 
-    def __init__(self, db_mngr):
-        """
-        Args:
-            db_mngr (SpineDBManager): The manager to use
-        """
+    def __init__(self, db_mngr: SpineDBManager):
         super().__init__()
         from ..ui.spine_db_editor_window import Ui_MainWindow  # pylint: disable=import-outside-toplevel
 
@@ -94,7 +91,7 @@ class SpineDBEditorBase(QMainWindow):
             self.toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
         else:
             self.toolbar.show_toolbox_action.deleteLater()
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle("")
         self.qsettings = self.db_mngr.qsettings
         self.err_msg = QErrorMessage(self)
@@ -104,10 +101,10 @@ class SpineDBEditorBase(QMainWindow):
         max_screen_height = max(s.availableSize().height() for s in QGuiApplication.screens())
         self.visible_rows = int(max_screen_height / preferred_row_height(self))
         self.settings_group = "spineDBEditor"
-        self.undo_action = None
-        self.redo_action = None
-        self.ui.actionUndo.setShortcuts(QKeySequence.Undo)
-        self.ui.actionRedo.setShortcuts(QKeySequence.Redo)
+        self.undo_action: Optional[QAction] = None
+        self.redo_action: Optional[QAction] = None
+        self.ui.actionUndo.setShortcuts(QKeySequence.StandardKey.Undo)
+        self.ui.actionRedo.setShortcuts(QKeySequence.StandardKey.Redo)
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self._torn_down = False
         self._purge_items_dialog = None
@@ -183,6 +180,7 @@ class SpineDBEditorBase(QMainWindow):
             for db_map in self.db_maps
         ]
         self.db_mngr.register_listener(self, *self.db_maps)
+        self._connect_db_map_undo_stacks(self.db_maps)
         self.init_models()
         self.init_add_undo_redo_actions()
         self._reset_window_title()
@@ -309,31 +307,43 @@ class SpineDBEditorBase(QMainWindow):
         msg += "</ul>"
         self.msg.emit(msg)
 
-    @Slot(bool)
-    def update_undo_redo_actions(self, _):
+    def _connect_db_map_undo_stacks(self, db_maps: list[DatabaseMapping]) -> None:
+        for db_map in db_maps:
+            undo_stack = self.db_mngr.undo_stack[db_map]
+            undo_stack.indexChanged.connect(self.update_undo_redo_actions)
+            undo_stack.cleanChanged.connect(self.update_commit_enabled)
+
+    def _disconnect_db_map_undo_stacks(self) -> None:
+        for db_map in self.db_maps:
+            undo_stack = self.db_mngr.undo_stack[db_map]
+            undo_stack.indexChanged.disconnect(self.update_undo_redo_actions)
+            undo_stack.cleanChanged.disconnect(self.update_commit_enabled)
+
+    @Slot(int)
+    def update_undo_redo_actions(self, _=0):
         undo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].undo_age)
         redo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].redo_age)
         new_undo_action = self.db_mngr.undo_action[undo_db_map]
         new_redo_action = self.db_mngr.redo_action[redo_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
-    def _replace_undo_redo_actions(self, new_undo_action, new_redo_action):
-        if new_undo_action != self.undo_action:
+    def _replace_undo_redo_actions(self, new_undo_action: QAction, new_redo_action: QAction) -> None:
+        if new_undo_action is not self.undo_action:
             if self.undo_action:
+                self.undo_action.enabledChanged.disconnect(self.ui.actionUndo.setEnabled)
                 self.ui.actionUndo.triggered.disconnect(self.undo_action.triggered)
             self.ui.actionUndo.triggered.connect(new_undo_action.triggered)
             self.undo_action = new_undo_action
-        if new_redo_action != self.redo_action:
+            self.undo_action.enabledChanged.connect(self.ui.actionUndo.setEnabled)
+            self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
+        if new_redo_action is not self.redo_action:
             if self.redo_action:
+                self.redo_action.enabledChanged.disconnect(self.ui.actionRedo.setEnabled)
                 self.ui.actionRedo.triggered.disconnect(self.redo_action.triggered)
             self.ui.actionRedo.triggered.connect(new_redo_action.triggered)
             self.redo_action = new_redo_action
-        self._refresh_undo_redo_actions()
-
-    @Slot()
-    def _refresh_undo_redo_actions(self):
-        self.ui.actionUndo.setEnabled(self.undo_action.isEnabled())
-        self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
+            self.redo_action.enabledChanged.connect(self.ui.actionRedo.setEnabled)
+            self.ui.actionRedo.setEnabled(self.redo_action.isEnabled())
 
     @Slot(bool)
     def update_commit_enabled(self, _clean=False):
@@ -375,13 +385,14 @@ class SpineDBEditorBase(QMainWindow):
         """Pastes data from clipboard."""
         call_on_focused_widget(self, "paste")
 
-    def import_data(self, data):
+    def import_data(self, data: dict[str, list[tuple]], command_text: str) -> None:
         """Imports data to all database mappings open in the editor.
 
         Args:
-            data (dict): data to import
+            data: data to import
+            command_text: Undo command text.
         """
-        self.db_mngr.import_data({db_map: data for db_map in self.db_maps})
+        self.db_mngr.import_data({db_map: data for db_map in self.db_maps}, command_text)
 
     @Slot(bool)
     def import_file(self, checked=False):
@@ -427,7 +438,7 @@ class SpineDBEditorBase(QMainWindow):
                 self.msg_error.emit(f"Data in {file_path} is not valid for importing.")
                 return
             sanitized_data[item_type] = sanitized_items
-        self.import_data(sanitized_data)
+        self.import_data(sanitized_data, "Import data from JSON.")
         filename = os.path.split(file_path)[1]
         self.msg.emit(f"File {filename} successfully imported.")
 
@@ -440,7 +451,7 @@ class SpineDBEditorBase(QMainWindow):
             self.msg.emit(f"Couldn't import file {filename}: {str(err)}")
             return
         data = export_data(db_map)
-        self.import_data(data)
+        self.import_data(data, "Import data from SQL database.")
         self.msg.emit(f"File {filename} successfully imported.")
 
     def import_from_excel(self, file_path):
@@ -453,7 +464,7 @@ class SpineDBEditorBase(QMainWindow):
         if errors:
             msg = f"The following errors where found parsing {filename}:" + format_string_list(errors)
             self.msg_error.emit(msg)
-        self.import_data(mapped_data)
+        self.import_data(mapped_data, "Import data from Excel.")
         self.msg.emit(f"File {filename} successfully imported.")
 
     @Slot(bool)
@@ -774,12 +785,15 @@ class SpineDBEditorBase(QMainWindow):
                     return False
         self._purge_change_notifiers()
         self._torn_down = True
+        self._disconnect_db_map_undo_stacks()
         failed_db_maps = self.db_mngr.unregister_listener(
             self, *self.db_maps, dirty_db_maps=dirty_db_maps, commit_dirty=commit_dirty, commit_msg=commit_msg
         )
         if failed_db_maps:
-            msg = f"Failed to commit {list(self.db_mngr.name_registry.display_name_iter(failed_db_maps))}"
-            self.db_mngr.receive_error_msg({i: [msg] for i in failed_db_maps})
+            self.db_mngr.receive_error_msg(
+                {i: [f"Failed to commit {self.db_mngr.name_registry.display_name(i.db_url)}"] for i in failed_db_maps}
+            )
+            self._connect_db_map_undo_stacks(failed_db_maps)
             return False
         return True
 
@@ -959,13 +973,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self.load_db_urls(db_urls)
 
     def set_db_column_visibility(self, visible):
-        """Set the visibility of the database -column in all the views it is present"""
-        for view in [
+        """Sets the visibility of the database column in all the views it is present."""
+        for view in (
             self.ui.tableView_entity_alternative,
+            self.ui.empty_entity_alternative_table_view,
             self.ui.tableView_parameter_value,
+            self.ui.empty_parameter_value_table_view,
             self.ui.tableView_parameter_definition,
+            self.ui.empty_parameter_definition_table_view,
             self.ui.treeView_entity,
-        ]:
+        ):
             view.set_db_column_visibility(visible)
 
     def emit_pinned_values_updated(self):

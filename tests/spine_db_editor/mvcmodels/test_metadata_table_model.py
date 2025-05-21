@@ -52,7 +52,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_add_metadata_from_database_to_empty_model(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -61,7 +61,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_updating_metadata_in_database_updates_existing_row(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         index = self._model.index(0, Column.VALUE)
         self.assertTrue(self._model.setData(index, "Prof. T. Est"))
         self.assertEqual(self._model.rowCount(), 2)
@@ -73,7 +73,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
     def test_remove_metadata_removes_the_row(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
         db_map_typed_ids = {self._db_map: {"metadata": {1}}}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self._db_mngr.remove_items(db_map_typed_ids)
         self.assertEqual(self._model.rowCount(), 1)
@@ -89,7 +89,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_adding_data_to_another_database(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         logger = mock.MagicMock()
         with TemporaryDirectory() as temp_dir:
             database_path = Path(temp_dir, "db.sqlite")
@@ -120,11 +120,11 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_add_and_update_via_adding_entity_metadata(self):
         db_map_data = {self._db_map: [{"name": "object class", "id": 1}]}
-        self._db_mngr.add_entity_classes(db_map_data)
+        self._db_mngr.add_items("entity_class", db_map_data)
         db_map_data = {self._db_map: [{"class_id": 1, "name": "object"}]}
-        self._db_mngr.add_entities(db_map_data)
+        self._db_mngr.add_items("entity", db_map_data)
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -136,7 +136,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
                 {"entity_name": "object", "metadata_name": "source", "metadata_value": "The Internet"},
             ]
         }
-        self._db_mngr.add_ext_entity_metadata(db_map_data)
+        self._db_mngr.add_ext_item_metadata("entity_metadata", db_map_data)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")
@@ -155,13 +155,14 @@ class TestMetadataTableModel(TestCaseWithQApplication):
         self._assert_empty_last_row()
 
     def test_insert_rows_to_beginning_and_middle_and_end(self):
-        self._db_mngr.add_metadata(
+        self._db_mngr.add_items(
+            "metadata",
             {
                 self._db_map: [
                     {"name": "name_1", "value": "value_1", "id": 1},
                     {"name": "name_2", "value": "value_2", "id": 2},
                 ]
-            }
+            },
         )
         self._model.insertRows(0, 1)
         self._model.insertRows(2, 1)
@@ -182,7 +183,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_insert_rows_after_adder_row_extends_normal_rows_instead(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self._model.insertRows(2, 1)
         self.assertEqual(self._model.rowCount(), 3)
@@ -200,7 +201,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_remove_rows_also_from_database(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self.assertTrue(self._model.removeRows(0, 1))
         self.assertEqual(self._model.rowCount(), 1)
         self._assert_empty_last_row()
@@ -220,7 +221,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_update_metadata_using_batch_set_data(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous", "id": 1}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         indexes = [self._model.index(0, Column.NAME), self._model.index(0, Column.VALUE)]
         data = ["title", "My precious."]
         self._model.batch_set_data(indexes, data)
@@ -245,7 +246,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
 
     def test_roll_back(self):
         db_map_data = {self._db_map: [{"name": "author", "value": "Anonymous"}]}
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self._db_mngr.commit_session("Add test data.", self._db_map)
         index = self._model.index(1, Column.NAME)
         self.assertTrue(self._model.setData(index, "title"))
@@ -260,7 +261,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
         self.assertEqual(self._model.index(1, Column.DB_MAP).data(), "database")
         self._assert_empty_last_row()
         self._db_mngr.rollback_session(self._db_map)
-        self._db_mngr.add_metadata(db_map_data)
+        self._db_mngr.add_items("metadata", db_map_data)
         self.assertEqual(self._model.rowCount(), 2)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "author")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Anonymous")

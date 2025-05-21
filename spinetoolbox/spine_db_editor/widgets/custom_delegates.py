@@ -33,6 +33,7 @@ from ...helpers import object_icon
 from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
+from ..mvcmodels.utils import entity_class_id_for_row
 
 
 class PivotTableDelegateMixin:
@@ -409,7 +410,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         h = index.model().header.index
         parameter_name = index.sibling(index.row(), h("parameter_name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "name", parameter_name)
-        entity_class_id = index.model().get_entity_class_id(index, db_map)
+        entity_class_id = entity_class_id_for_row(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
         value_list_ids = {
             self.db_mngr.get_item(db_map, "parameter_definition", id_).get("value_list_id") for id_ in parameter_ids
@@ -457,7 +458,7 @@ class ParameterNameDelegate(TableDelegate):
         if not db_map:
             return None
         editor = SearchBarEditor(self.parent(), parent)
-        entity_class_id = index.model().get_entity_class_id(index, db_map)
+        entity_class_id = entity_class_id_for_row(index, db_map)
         if entity_class_id is not None:
             parameter_definitions = self.db_mngr.get_items_by_field(
                 db_map, "parameter_definition", "entity_class_id", entity_class_id
@@ -480,7 +481,7 @@ class EntityBynameDelegate(TableDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        entity_class_id = index.model().get_entity_class_id(index, db_map)
+        entity_class_id = entity_class_id_for_row(index, db_map)
         if entity_class_id is not None:
             entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
             if entity_class["dimension_id_list"]:

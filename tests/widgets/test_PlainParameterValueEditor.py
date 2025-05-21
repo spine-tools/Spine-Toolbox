@@ -12,30 +12,35 @@
 
 """Unit tests for the PlainParameterValueEditor widget."""
 import unittest
+from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.plain_parameter_value_editor import PlainParameterValueEditor
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestPlainParameterValueEditor(TestCaseWithQApplication):
     def test_initial_value(self):
-        editor = PlainParameterValueEditor()
-        value = editor.value()
-        self.assertEqual(value, "")
+        with q_object(QWidget()) as parent:
+            editor = PlainParameterValueEditor(parent)
+            value = editor.value()
+            self.assertEqual(value, "")
 
     def test_boolean_value_access(self):
-        editor = PlainParameterValueEditor()
-        editor.set_value(True)
-        self.assertEqual(editor.value(), True)
+        with q_object(QWidget()) as parent:
+            editor = PlainParameterValueEditor(parent)
+            editor.set_value(True)
+            self.assertEqual(editor.value(), True)
 
     def test_numeric_value_access(self):
-        editor = PlainParameterValueEditor()
-        editor.set_value(2.3)
-        self.assertEqual(editor.value(), 2.3)
+        with q_object(QWidget()) as parent:
+            editor = PlainParameterValueEditor(parent)
+            editor.set_value(2.3)
+            self.assertEqual(editor.value(), 2.3)
 
     def test_string_value_access(self):
-        editor = PlainParameterValueEditor()
-        editor.set_value("2022")
-        self.assertEqual(editor.value(), "2022")
+        with q_object(QWidget()) as parent:
+            editor = PlainParameterValueEditor(parent)
+            editor.set_value("2022")
+            self.assertEqual(editor.value(), "2022")
 
 
 if __name__ == "__main__":

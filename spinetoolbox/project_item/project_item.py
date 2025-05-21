@@ -11,14 +11,28 @@
 ######################################################################################################################
 
 """Contains base classes for project items and item factories."""
+from __future__ import annotations
+from collections.abc import Callable
 import logging
 import os
-from PySide6.QtCore import Slot
-from spine_engine.utils.helpers import shorten
+from typing import TYPE_CHECKING, Optional
+from PySide6.QtCore import Signal, Slot
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QWidget
+from spine_engine.project_item.project_item_resource import ProjectItemResource
+from spine_engine.project_item.project_item_specification import ProjectItemSpecification
+from spine_engine.utils.helpers import ExecutionDirection, shorten
 from ..helpers import create_dir, open_url, rename_dir
 from ..log_mixin import LogMixin
+from ..logger_interface import LoggerInterface
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
+from ..project_item_icon import ProjectItemIcon
+from ..project_upgrader import ProjectUpgrader
+
+if TYPE_CHECKING:
+    from ..project import SpineToolboxProject
+    from ..ui_main import ToolboxUI
 
 
 class ProjectItem(LogMixin, MetaObject):
@@ -26,23 +40,23 @@ class ProjectItem(LogMixin, MetaObject):
     These items can be executed, refreshed, and so on.
 
     Attributes:
-        x (float): horizontal position in the screen
-        y (float): vertical position in the screen
+        x: horizontal position in the screen
+        y: vertical position in the screen
     """
 
-    def __init__(self, name, description, x, y, project):
+    def __init__(self, name: str, description: str, x: float, y: float, project: SpineToolboxProject):
         """
         Args:
-            name (str): item name
-            description (str): item description
-            x (float): horizontal position on the scene
-            y (float): vertical position on the scene
-            project (SpineToolboxProject): project item's project
+            name: item name
+            description: item description
+            x: horizontal position on the scene
+            y: vertical position on the scene
+            project: project item's project
         """
         super().__init__(name, description)
         self._project = project
-        self.x = x
-        self.y = y
+        self.x: float = x
+        self.y: float = y
         self._logger = project.toolbox()
         self._properties_ui = None
         self._icon = None
@@ -50,16 +64,16 @@ class ProjectItem(LogMixin, MetaObject):
         self._active = False
         self._actions = []
         # Make project directory for this Item
-        self.data_dir = os.path.join(self._project.items_dir, self.short_name)
+        self.data_dir: str = str(os.path.join(self._project.items_dir, self.short_name))
         self._specification = None
 
-    def create_data_dir(self):
+    def create_data_dir(self) -> None:
         try:
             create_dir(self.data_dir)
         except OSError:
             self._logger.msg_error.emit(f"[OSError] Creating directory {self.data_dir} failed. Check permissions.")
 
-    def data_files(self):
+    def data_files(self) -> list[str]:
         """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
             return []
@@ -67,37 +81,33 @@ class ProjectItem(LogMixin, MetaObject):
             return [entry.path for entry in scan_iterator if entry.is_file()]
 
     @staticmethod
-    def item_type():
-        """Item's type identifier string.
-
-        Returns:
-            str: type string
-        """
+    def item_type() -> str:
+        """Item's type identifier string."""
         raise NotImplementedError()
 
     @property
-    def project(self):
+    def project(self) -> SpineToolboxProject:
         return self._project
 
     @property
-    def logger(self):
+    def logger(self) -> LoggerInterface:
         return self._logger
 
-    def make_signal_handler_dict(self):
+    def make_signal_handler_dict(self) -> dict[Signal, Callable]:
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting.
         Must be implemented in subclasses.
         """
         return {}
 
-    def activate(self):
+    def activate(self) -> None:
         """Restore selections and connect signals."""
         self._active = True
         self.update_name_label()
         self.restore_selections()  # Do this before connecting signals or funny things happen
         self._connect_signals()
 
-    def deactivate(self):
+    def deactivate(self) -> bool:
         """Save selections and disconnect signals."""
         self.save_selections()
         if not self._disconnect_signals():
@@ -106,19 +116,19 @@ class ProjectItem(LogMixin, MetaObject):
         self._active = False
         return True
 
-    def restore_selections(self):
+    def restore_selections(self) -> None:
         """Restore selections into shared widgets when this project item is selected."""
 
-    def save_selections(self):
+    def save_selections(self) -> None:
         """Save selections in shared widgets for this project item into instance variables."""
 
-    def _connect_signals(self):
+    def _connect_signals(self) -> None:
         """Connect signals to handlers."""
         self._sigs = self.make_signal_handler_dict()
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 
-    def _disconnect_signals(self):
+    def _disconnect_signals(self) -> bool:
         """Disconnect signals from handlers and check for errors."""
         for signal, handler in self._sigs.items():
             try:
@@ -133,7 +143,7 @@ class ProjectItem(LogMixin, MetaObject):
                 return False
         return True
 
-    def set_properties_ui(self, properties_ui):
+    def set_properties_ui(self, properties_ui: QWidget) -> None:
         """
         Sets the properties tab widget for the item.
 
@@ -141,18 +151,18 @@ class ProjectItem(LogMixin, MetaObject):
         and initialized with the setupUi() method rather than the entire properties tab widget.
 
         Args:
-            properties_ui (QWidget): item's properties UI
+            properties_ui: item's properties UI
         """
         self._properties_ui = properties_ui
 
-    def specification(self):
+    def specification(self) -> Optional[ProjectItemSpecification]:
         """Returns the specification for this item."""
         return self._specification
 
-    def undo_specification(self):
+    def undo_specification(self) -> Optional[ProjectItemSpecification]:
         return self._specification
 
-    def set_specification(self, specification):
+    def set_specification(self, specification: Optional[ProjectItemSpecification]) -> None:
         """Pushes a new SetItemSpecificationCommand to the undo stack."""
         if specification == self._specification:
             return
@@ -160,70 +170,60 @@ class ProjectItem(LogMixin, MetaObject):
             SetItemSpecificationCommand(self.name, specification, self.undo_specification(), self._project)
         )
 
-    def do_set_specification(self, specification):
+    def do_set_specification(self, specification: Optional[ProjectItemSpecification]) -> bool:
         """Sets specification for this item. Removes specification if None given as argument.
 
         Args:
-            specification (ProjectItemSpecification): specification of this item. None removes the specification.
+            specification: specification of this item. None removes the specification.
         """
         if specification and specification.item_type != self.item_type():
             return False
         self._specification = specification
         return True
 
-    def set_icon(self, icon):
-        """
-        Sets the icon for the item.
-
-        Args:
-            icon (ProjectItemIcon): item's icon
-        """
+    def set_icon(self, icon: ProjectItemIcon) -> None:
+        """Sets the icon for the item."""
         self._icon = icon
         self._icon.finalize(self.name, self.x, self.y)
 
-    def get_icon(self):
+    def get_icon(self) -> ProjectItemIcon:
         """Returns the graphics item representing this item in the scene."""
         return self._icon
 
-    def _check_notifications(self):
+    def _check_notifications(self) -> None:
         """Checks if exclamation icon notifications need to be set or cleared."""
 
-    def clear_notifications(self):
+    def clear_notifications(self) -> None:
         """Clear all notifications from the exclamation icon."""
         self.get_icon().exclamation_icon.clear_notifications()
 
-    def add_notification(self, text):
+    def add_notification(self, text: str) -> None:
         """Add a notification to the exclamation icon."""
         self.get_icon().exclamation_icon.add_notification(text)
 
-    def remove_notification(self, text):
+    def remove_notification(self, text: str) -> None:
         """Remove the first notification that includes given subtext."""
         self.get_icon().exclamation_icon.remove_notification(text)
 
-    def clear_other_notifications(self, text):
+    def clear_other_notifications(self, text: str) -> None:
         """Remove notifications that don't include the given subtext."""
         self.get_icon().exclamation_icon.clear_other_notifications(text)
 
-    def set_rank(self, rank):
+    def set_rank(self, rank: int) -> None:
         """Set rank of this item for displaying in the design view."""
         if rank is not None:
             self.get_icon().rank_icon.set_rank(rank + 1)
         else:
             self.get_icon().rank_icon.set_rank("X")
 
-    @property
-    def executable_class(self):
-        raise NotImplementedError()
-
-    def handle_execution_successful(self, execution_direction, engine_state):
+    def handle_execution_successful(self, execution_direction: ExecutionDirection) -> None:
         """Performs item dependent actions after the execution item has finished successfully.
 
         Args:
-            execution_direction (ExecutionDirection): ExecutionDirection.FORWARD or ExecutionDirection.BACKWARD
-            engine_state: engine state after item's execution
+            execution_direction: current execution direction
         """
 
-    def resources_for_direct_successors(self):
+    def resources_for_direct_successors(self) -> list[ProjectItemResource]:
         """
         Returns resources for direct successors.
 
@@ -231,11 +231,11 @@ class ProjectItem(LogMixin, MetaObject):
         The default implementation returns an empty list.
 
         Returns:
-            list: a list of ProjectItemResources
+            a list of ProjectItemResources
         """
         return []
 
-    def resources_for_direct_predecessors(self):
+    def resources_for_direct_predecessors(self) -> list[ProjectItemResource]:
         """
         Returns resources for direct predecessors.
 
@@ -243,67 +243,69 @@ class ProjectItem(LogMixin, MetaObject):
         The default implementation returns an empty list.
 
         Returns:
-            list: a list of ProjectItemResources
+            a list of ProjectItemResources
         """
         return []
 
-    def _resources_to_predecessors_changed(self):
+    def _resources_to_predecessors_changed(self) -> None:
         """Notifies direct predecessors that item's resources have changed."""
         self._project.notify_resource_changes_to_predecessors(self)
 
-    def _resources_to_predecessors_replaced(self, old, new):
+    def _resources_to_predecessors_replaced(
+        self, old: list[ProjectItemResource], new: list[ProjectItemResource]
+    ) -> None:
         """Notifies direct predecessors that item's resources have been replaced.
 
         Args:
-            old (list of ProjectItemResource): old resources
-            new (list of ProjectItemResource): new resources
+            old: old resources
+            new: new resources
         """
         self._project.notify_resource_replacement_to_predecessors(self, old, new)
 
-    def upstream_resources_updated(self, resources):
+    def upstream_resources_updated(self, resources: list[ProjectItemResource]) -> None:
         """Notifies item that resources from direct predecessors have changed.
 
         Args:
-            resources (list of ProjectItemResource): new resources from upstream
+            resources: new resources from upstream
         """
 
-    def replace_resources_from_upstream(self, old, new):
+    def replace_resources_from_upstream(self, old: list[ProjectItemResource], new: list[ProjectItemResource]) -> None:
         """Replaces existing resources from direct predecessor by a new ones.
 
         Args:
-            old (list of ProjectItemResource): old resources
-            new (list of ProjectItemResource): new resources
+            old: old resources
+            new: new resources
         """
 
-    def _resources_to_successors_changed(self):
+    def _resources_to_successors_changed(self) -> None:
         """Notifies direct successors that item's resources have changed."""
         self._project.notify_resource_changes_to_successors(self)
 
-    def _resources_to_successors_replaced(self, old, new):
+    def _resources_to_successors_replaced(self, old: list[ProjectItemResource], new: list[ProjectItemResource]) -> None:
         """Notifies direct successors that one of item's resources has been replaced.
 
         Args:
-            old (list of ProjectItemResource): old resources
-            new (list of ProjectItemResource): new resources
+            old: old resources
+            new: new resources
         """
         self._project.notify_resource_replacement_to_successors(self, old, new)
 
-    def downstream_resources_updated(self, resources):
+    def downstream_resources_updated(self, resources: list[ProjectItemResource]) -> None:
         """Notifies item that resources from direct successors have changed.
 
         Args:
-            resources (list of ProjectItemResource): new resources from downstream
+            resources: new resources from downstream
         """
 
-    def replace_resources_from_downstream(self, old, new):
+    def replace_resources_from_downstream(self, old: list[ProjectItemResource], new: list[ProjectItemResource]) -> None:
         """Replaces existing resources from direct successor by a new ones.
 
         Args:
-            old (list of ProjectItemResource): old resources
-            new (list of ProjectItemResource): new resources
+            old: old resources
+            new: new resources
         """
 
-    def item_dict(self):
+    def item_dict(self) -> dict:
         """Returns a dictionary corresponding to this item.
 
         Returns:
@@ -317,7 +319,7 @@ class ProjectItem(LogMixin, MetaObject):
         }
 
     @staticmethod
-    def item_dict_local_entries():
+    def item_dict_local_entries() -> list[tuple[str, ...]]:
         """Returns entries or 'paths' in item dict that should be stored in project's local data directory.
 
         Returns:
@@ -326,12 +328,12 @@ class ProjectItem(LogMixin, MetaObject):
         return []
 
     @staticmethod
-    def parse_item_dict(item_dict):
+    def parse_item_dict(item_dict: dict) -> tuple[str, float, float]:
         """
         Reads the information needed to construct the base ProjectItem class from an item dict.
 
         Args:
-            item_dict (dict): an item dict
+            item_dict: an item dict
         Returns:
             tuple: item's name, description as well as x and y coordinates
         """
@@ -340,40 +342,40 @@ class ProjectItem(LogMixin, MetaObject):
         y = item_dict["y"]
         return description, x, y
 
-    def copy_local_data(self, item_dict):
+    def copy_local_data(self, item_dict: dict) -> None:
         """
         Copies local data linked to a duplicated project item.
 
         Args:
-            item_dict (dict): serialized item
+            item_dict: serialized item
         """
 
     @staticmethod
-    def from_dict(name, item_dict, toolbox, project):
+    def from_dict(name: str, item_dict: dict, toolbox: ToolboxUI, project: SpineToolboxProject) -> ProjectItem:
         """
         Deserialized an item from item dict.
 
         Args:
-            name (str): item's name
-            item_dict (dict): serialized item
-            toolbox (ToolboxUI): the main window
-            project (SpineToolboxProject): a project
+            name: item's name
+            item_dict: serialized item
+            toolbox: the main window
+            project: a project
 
         Returns:
-            ProjectItem: deserialized item
+            deserialized item
         """
         raise NotImplementedError()
 
-    def actions(self):
+    def actions(self) -> list[QAction]:
         """
         Item specific actions.
 
         Returns:
-            list of QAction: item's actions
+            item's actions
         """
         return self._actions
 
-    def rename(self, new_name, rename_data_dir_message):
+    def rename(self, new_name: str, rename_data_dir_message: str) -> bool:
         """
         Renames this item.
 
@@ -381,17 +383,18 @@ class ProjectItem(LogMixin, MetaObject):
         method in subclass. See e.g. rename() method in DataStore class.
 
         Args:
-            new_name (str): New name
-            rename_data_dir_message (str): Message to show when renaming item's data directory
+            new_name: New name
+            rename_data_dir_message: Message to show when renaming item's data directory
 
         Returns:
-            bool: True if item was renamed successfully, False otherwise
+            True if item was renamed successfully, False otherwise
         """
-        new_data_dir = os.path.join(self._toolbox.project().items_dir, shorten(new_name))
-        if not rename_dir(self.data_dir, new_data_dir, self._toolbox, rename_data_dir_message):
-            return False
+        if shorten(new_name) != self.short_name:
+            new_data_dir = str(os.path.join(self._project.items_dir, shorten(new_name)))
+            if not rename_dir(self.data_dir, new_data_dir, self._toolbox, rename_data_dir_message):
+                return False
+            self.data_dir = new_data_dir
         self.set_name(new_name)
-        self.data_dir = new_data_dir
         self.get_icon().update_name_item(new_name)
         if self._active:
             self.update_name_label()
@@ -407,30 +410,30 @@ class ProjectItem(LogMixin, MetaObject):
         if not res:
             self._logger.msg_error.emit(f"Failed to open directory: {self.data_dir}")
 
-    def tear_down(self):
+    def tear_down(self) -> None:
         """Tears down this item. Called both before closing the app and when removing the item from the project.
-        Implement in subclasses to eg close all QMainWindows opened by this item.
+        Implement in subclasses to e.g. close all QMainWindows opened by this item.
         """
         for action in self._actions:
             action.deleteLater()
         self.deleteLater()
 
-    def set_up(self):
+    def set_up(self) -> None:
         """Sets up this item. Called when adding the item to the project.
-        Implement in subclasses to eg recreate attributes destroyed by tear_down.
+        Implement in subclasses to e.g. recreate attributes destroyed by tear_down.
         """
         self.set_rank(0)
         self._check_notifications()
         self.create_data_dir()
         self.do_set_specification(self._specification)
 
-    def update_name_label(self):
+    def update_name_label(self) -> None:
         """
         Updates the name label on the properties widget, used when selecting an item and renaming the selected one.
         """
         self._project.toolbox().label_item_name.setText(f"<b>{self.name}</b>")
 
-    def notify_destination(self, source_item):
+    def notify_destination(self, source_item: ProjectItem) -> None:
         """
         Informs an item that it has become the destination of a connection between two items.
 
@@ -438,7 +441,7 @@ class ProjectItem(LogMixin, MetaObject):
         more specific behavior.
 
         Args:
-            source_item (ProjectItem): connection source item
+            source_item: connection source item
         """
         self._logger.msg_warning.emit(
             "Link established. Interaction between a "
@@ -447,34 +450,34 @@ class ProjectItem(LogMixin, MetaObject):
         )
 
     @staticmethod
-    def upgrade_v1_to_v2(item_name, item_dict):
+    def upgrade_v1_to_v2(item_name: str, item_dict: dict) -> dict:
         """
         Upgrades item's dictionary from v1 to v2.
 
         Subclasses should reimplement this method if there are changes between version 1 and version 2.
 
         Args:
-            item_name (str): item's name
-            item_dict (dict): Version 1 item dictionary
+            item_name: item's name
+            item_dict: Version 1 item dictionary
 
         Returns:
-            dict: Version 2 item dictionary
+            Version 2 item dictionary
         """
         return item_dict
 
     @staticmethod
-    def upgrade_v2_to_v3(item_name, item_dict, project_upgrader):
+    def upgrade_v2_to_v3(item_name: str, item_dict: dict, project_upgrader: ProjectUpgrader) -> dict:
         """
         Upgrades item's dictionary from v2 to v3.
 
         Subclasses should reimplement this method if there are changes between version 2 and version 3.
 
         Args:
-            item_name (str): item's name
-            item_dict (dict): Version 2 item dictionary
-            project_upgrader (ProjectUpgrader): Project upgrader class instance
+            item_name: item's name
+            item_dict: Version 2 item dictionary
+            project_upgrader: Project upgrader class instance
 
         Returns:
-            dict: Version 3 item dictionary
+            Version 3 item dictionary
         """
         return item_dict

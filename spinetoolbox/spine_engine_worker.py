@@ -13,10 +13,10 @@
 """Contains GUIUpdater and SpineEngineWorker classes."""
 import copy
 from PySide6.QtCore import QObject, QThread, Signal, Slot
-from .project_item.project_item import ProjectItem
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
 from spine_engine.spine_engine import ItemExecutionFinishState, SpineEngineState
 from spine_engine.utils.helpers import ExecutionDirection
+from .project_item.project_item import ProjectItem
 from .spine_engine_manager import LocalSpineEngineManager, make_engine_manager
 from .widgets.options_dialog import OptionsDialog
 
@@ -383,7 +383,7 @@ class SpineEngineWorker(QObject):
         item = self._project_items[data["item_name"]]
         direction = data["direction"]
         if data["item_state"] == ItemExecutionFinishState.SUCCESS:
-            self.successful_executions.append((item, direction, data["state"]))
+            self.successful_executions.append((item, direction))
         self._executing_items.discard(item)
         # NOTE: A single item may seemingly finish multiple times
         # when the execution is stopped by user during filtered execution.

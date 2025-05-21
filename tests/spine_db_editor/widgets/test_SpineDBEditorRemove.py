@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for database item removal functionality in Database editor."""
-from .spine_db_editor_test_base import DBEditorTestBase
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
 class TestSpineDBEditorRemove(DBEditorTestBase):

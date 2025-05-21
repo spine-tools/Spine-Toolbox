@@ -11,7 +11,9 @@
 ######################################################################################################################
 
 """General helper functions and classes."""
+from __future__ import annotations
 import bisect
+from collections.abc import Callable, Iterable
 from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
@@ -28,10 +30,23 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import Sequence  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
-from PySide6.QtCore import QEvent, QFile, QIODevice, QObject, QPoint, QRect, QSettings, QSize, Qt, QUrl, Slot
+from PySide6.QtCore import (
+    QEvent,
+    QFile,
+    QIODevice,
+    QModelIndex,
+    QObject,
+    QPoint,
+    QRect,
+    QSettings,
+    QSize,
+    Qt,
+    QUrl,
+    Slot,
+)
 from PySide6.QtCore import __version__ as qt_version
 from PySide6.QtCore import __version_info__ as qt_version_info
 from PySide6.QtGui import (
@@ -45,6 +60,7 @@ from PySide6.QtGui import (
     QIcon,
     QIconEngine,
     QImageReader,
+    QKeyEvent,
     QKeySequence,
     QPainter,
     QPalette,
@@ -60,12 +76,16 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QFileIconProvider,
     QInputDialog,
+    QLineEdit,
     QMenu,
     QMessageBox,
     QSplitter,
     QStyle,
+    QWidget,
 )
 from spine_engine.utils.serialization import deserialize_path
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
@@ -77,6 +97,10 @@ from .config import (
     SPECIFICATION_LOCAL_DATA_FILENAME,
 )
 from .font import TOOLBOX_FONT
+from .logger_interface import LoggerInterface
+
+if TYPE_CHECKING:
+    from .ui_main import ToolboxUI
 
 if sys.platform == "win32":
     import ctypes
@@ -93,6 +117,10 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
 
     register_matplotlib_converters()
 
+DBMapPublicItems = dict[DatabaseMapping, list[PublicItem]]
+DBMapDictItems = dict[DatabaseMapping, list[dict]]
+DBMapTypedDictItems = dict[DatabaseMapping, dict[str, list[dict]]]
+
 
 @unique
 class LinkType(Enum):
@@ -102,21 +130,21 @@ class LinkType(Enum):
     JUMP = "jump"
 
 
-def home_dir():
+def home_dir() -> str:
     """Returns user's home dir"""
     return str(pathlib.Path.home())
 
 
-def format_log_message(msg_type, message, show_datetime=True):
+def format_log_message(msg_type: str, message: str, show_datetime: bool = True) -> str:
     """Adds color tags and optional time stamp to message.
 
     Args:
-        msg_type (str): message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
-        message (str): message to format
-        show_datetime (bool): True to add time stamp, False to omit it
+        msg_type: message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
+        message: message to format
+        show_datetime: True to add time stamp, False to omit it
 
     Returns:
-        str: formatted message
+        formatted message
     """
     color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
     open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
@@ -124,7 +152,7 @@ def format_log_message(msg_type, message, show_datetime=True):
     return open_tag + date_str + message + "</span>"
 
 
-def busy_effect(func):
+def busy_effect(func: Callable) -> Any:
     """Decorator to change the mouse cursor to 'busy' while a function is processed.
 
     Args:
@@ -134,7 +162,7 @@ def busy_effect(func):
     @functools.wraps(func)
     def new_function(*args, **kwargs):
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))
         try:
             return func(*args, **kwargs)
         finally:
@@ -144,13 +172,13 @@ def busy_effect(func):
     return new_function
 
 
-def create_dir(base_path, folder="", verbosity=False):
+def create_dir(base_path: str, folder: str = "", verbosity: bool = False) -> None:
     """Create (input/output) directories recursively.
 
     Args:
-        base_path (str): Absolute path to wanted dir
-        folder (str): (Optional) Folder name. Usually short name of item.
-        verbosity (bool): True prints a message that tells if the directory already existed or if it was created.
+        base_path: Absolute path to wanted dir
+        folder: (Optional) Folder name. Usually short name of item.
+        verbosity: True prints a message that tells if the directory already existed or if it was created.
 
     Raises:
         OSError if operation failed.
@@ -164,17 +192,17 @@ def create_dir(base_path, folder="", verbosity=False):
             logging.debug("Directory created: %s", directory)
 
 
-def rename_dir(old_dir, new_dir, toolbox, box_title):
+def rename_dir(old_dir: str, new_dir: str, toolbox: ToolboxUI, box_title: str) -> bool:
     """Renames directory.
 
     Args:
-        old_dir (str): Absolute path to directory that will be renamed
-        new_dir (str): Absolute path to new directory
-        toolbox (ToolboxUI): A toolbox to log messages and ask questions.
-        box_title (str): The title of the message boxes, (e.g. "Undoing 'rename DC1 to DC2'")
+        old_dir: Absolute path to directory that will be renamed
+        new_dir: Absolute path to new directory
+        toolbox: A toolbox to log messages and ask questions.
+        box_title: The title of the message boxes, (e.g. "Undoing 'rename DC1 to DC2'")
 
     Returns:
-        bool: True if operation was successful, False otherwise
+        True if operation was successful, False otherwise
     """
     if os.path.exists(new_dir):
         msg = f"Directory <b>{new_dir}</b> already exists.<br/><br/>Would you like to overwrite its contents?"
@@ -227,7 +255,7 @@ def rename_dir(old_dir, new_dir, toolbox, box_title):
     return True
 
 
-def open_url(url):
+def open_url(url: str) -> bool:
     """Opens the given url in the appropriate Web browser for the user's desktop environment,
     and returns true if successful; otherwise returns false.
 
@@ -237,15 +265,15 @@ def open_url(url):
     Handle return value on caller side.
 
     Args:
-        url(str): URL to open
+        url: URL to open
 
     Returns:
-        bool: True if successful, False otherwise
+        True if successful, False otherwise
     """
     return QDesktopServices.openUrl(QUrl(url, QUrl.ParsingMode.TolerantMode))
 
 
-def set_taskbar_icon():
+def set_taskbar_icon() -> None:
     """Set application icon to Windows taskbar."""
     if sys.platform == "win32":
         myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
@@ -253,14 +281,14 @@ def set_taskbar_icon():
 
 
 @Slot()
-def supported_img_formats():
+def supported_img_formats() -> None:
     """Checks if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
     img_formats_str = "\n".join(str(x) for x in img_formats)
     logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
-def pyside6_version_check():
+def pyside6_version_check() -> bool:
     """Check that PySide6 version is at least 6.4.
 
     qt_version (str) is the Qt version used to compile PySide6. E.g. "6.4.1"
@@ -284,15 +312,15 @@ def pyside6_version_check():
     return True
 
 
-def get_datetime(show, date=True):
+def get_datetime(show: bool, date: bool = True) -> str:
     """Returns date and time string for appending into Event Log messages.
 
     Args:
-        show (bool): True returns date and time string. False returns empty string.
-        date (bool): Whether or not the date should be included in the result
+        show: True returns date and time string. False returns empty string.
+        date: Whether the date should be included in the result
 
     Returns:
-        str: datetime string or empty string if show is False
+        : datetime string or empty string if show is False
     """
     if not show:
         return ""
@@ -305,17 +333,19 @@ def get_datetime(show, date=True):
 
 
 @busy_effect
-def copy_files(src_dir, dst_dir, includes=None, excludes=None):
+def copy_files(
+    src_dir: str, dst_dir: str, includes: Optional[list[str]] = None, excludes: Optional[list[str]] = None
+) -> int:
     """Function for copying files. Does not copy folders.
 
     Args:
-        src_dir (str): Source directory
-        dst_dir (str): Destination directory
-        includes (list, optional): Included files (wildcards accepted)
-        excludes (list, optional): Excluded files (wildcards accepted)
+        src_dir: Source directory
+        dst_dir: Destination directory
+        includes: Included files (wildcards accepted)
+        excludes: Excluded files (wildcards accepted)
 
     Returns:
-        count (int): Number of files copied
+        Number of files copied
     """
     if includes is None:
         includes = ["*"]
@@ -338,15 +368,15 @@ def copy_files(src_dir, dst_dir, includes=None, excludes=None):
 
 
 @busy_effect
-def erase_dir(path, verbosity=False):
+def erase_dir(path: str, verbosity: bool = False) -> bool:
     """Deletes a directory and all its contents without prompt.
 
     Args:
-        path (str): Path to directory
-        verbosity (bool): Print logging messages or not
+        path: Path to directory
+        verbosity: Print logging messages or not
 
     Returns:
-        bool: True if operation was successful, False otherwise
+        True if operation was successful, False otherwise
     """
     if not os.path.exists(path):
         if verbosity:
@@ -359,7 +389,7 @@ def erase_dir(path, verbosity=False):
 
 
 @busy_effect
-def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
+def recursive_overwrite(logger: LoggerInterface, src: str, dst: str, silent: bool = True) -> None:
     """Copies everything from source directory to destination directory recursively.
     Overwrites existing files.
 
@@ -367,7 +397,6 @@ def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
         logger (LoggerInterface): Enables e.g. printing to Event Log
         src (str): Source directory
         dst (str): Destination directory
-        ignore (Callable, optional): Ignore function
         silent (bool): If False, messages are sent to Event Log, If True, copying is done in silence
     """
     if os.path.isdir(src):
@@ -382,13 +411,8 @@ def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
             if os.path.samefile(os.path.commonpath((file_path, dst)), file_path):
                 files.remove(file_name)
                 break
-        if ignore is not None:
-            ignored = ignore(src, files)
-        else:
-            ignored = set()
         for f in files:
-            if f not in ignored:
-                recursive_overwrite(logger, os.path.join(src, f), os.path.join(dst, f), ignore, silent)
+            recursive_overwrite(logger, os.path.join(src, f), os.path.join(dst, f), silent)
     else:
         if not silent:
             _, src_filename = os.path.split(src)
@@ -397,64 +421,53 @@ def recursive_overwrite(logger, src, dst, ignore=None, silent=True):
         shutil.copyfile(src, dst)
 
 
-def tuple_itemgetter(itemgetter_func, num_indexes):
+def tuple_itemgetter(itemgetter_func: Callable[..., Any], num_indexes: int) -> Callable[..., tuple]:
     """Change output of itemgetter to always be a tuple even for a single index.
 
     Args:
-        itemgetter_func (Callable): item getter function
-        num_indexes (int): number of indexes
+        itemgetter_func: item getter function
+        num_indexes: number of indexes
 
     Returns:
-        Callable: getter function that works with a single index
+        getter function that works with a single index
     """
     return (lambda item: (itemgetter_func(item),)) if num_indexes == 1 else itemgetter_func
 
 
-def format_string_list(str_list):
+def format_string_list(str_list: list[str]) -> str:
     """Returns a html unordered list from the given list of strings.
     Intended to print error logs as returned by spinedb_api.
 
     Args:
-        str_list (list of str): list of strings to format
+        str_list: list of strings to format
 
     Returns:
-        str: formatted list
+        formatted list
     """
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def rows_to_row_count_tuples(rows):
-    """Breaks a list of rows into a list of (row, count) tuples corresponding to chunks of successive rows.
-
-    Args:
-        rows (Iterable of int): rows
-
-    Returns:
-        list of tuple: row count tuples
-    """
+def rows_to_row_count_tuples(rows: Iterable[int]) -> list[tuple[int, int]]:
+    """Breaks a list of rows into a list of (row, count) tuples corresponding to chunks of successive rows."""
     return [(first, last - first + 1) for first, last in group_consecutive(rows)]
 
 
 class IconListManager:
     """A class to manage icons for icon list widgets."""
 
-    def __init__(self, icon_size):
-        """
-        Args:
-            icon_size (QSize): icon's size
-        """
+    def __init__(self, icon_size: QSize):
         self._icon_size = icon_size
         self.searchterms = {}
         self.model = QStandardItemModel()
         self.model.data = self._model_data
 
     @busy_effect
-    def init_model(self):
+    def init_model(self) -> None:
         """Init model that can be used to display all icons in a list."""
         if self.searchterms:
             return
         qfile = QFile(":/fonts/fontawesome5-searchterms.json")
-        qfile.open(QIODevice.ReadOnly | QIODevice.Text)
+        qfile.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text)
         data = str(qfile.readAll().data(), "utf-8")
         qfile.close()
         self.searchterms = json.loads(data)
@@ -467,15 +480,15 @@ class IconListManager:
             items.append(item)
         self.model.invisibleRootItem().appendRows(items)
 
-    def _model_data(self, index, role):
-        """Creates pixmaps as they're requested by the data() method, to reduce loading time.
+    def _model_data(self, index: QModelIndex, role: Qt.ItemDataRole) -> Optional[Any]:
+        """Creates icons as they're requested by the data() method, to reduce loading time.
 
         Args:
-            index (QModelIndex): index to the model
-            role (int): data role
+            index: index to the model
+            role: data role
 
         Returns:
-            Any: role-dependent model data
+            role-dependent model data
         """
         if role == Qt.ItemDataRole.DisplayRole:
             return None
@@ -485,14 +498,14 @@ class IconListManager:
         return object_icon(display_icon)
 
 
-def object_icon(display_icon):
+def object_icon(display_icon: int) -> QIcon:
     """Creates and returns a QIcon corresponding to display_icon.
 
     Args:
-        display_icon (int): icon id
+        display_icon: icon id
 
     Returns:
-        QIcon: requested icon
+        requested icon
     """
     icon_code, color_code = interpret_icon_id(display_icon)
     engine = CharIconEngine(chr(icon_code), color_code)
@@ -504,7 +517,7 @@ class TransparentIconEngine(QIconEngine):
 
     def pixmap(self, size=QSize(512, 512), mode=None, state=None):
         pm = QPixmap(size)
-        pm.fill(Qt.transparent)
+        pm.fill(Qt.GlobalColor.transparent)
         self.paint(QPainter(pm), QRect(QPoint(0, 0), size), mode, state)
         return pm
 
@@ -512,11 +525,11 @@ class TransparentIconEngine(QIconEngine):
 class CharIconEngine(TransparentIconEngine):
     """Specialization of QIconEngine used to draw font-based icons."""
 
-    def __init__(self, char, color=None):
+    def __init__(self, char: str, color: Optional[int] = None):
         """
         Args:
-            char (str): character to use as the icon
-            color (QColor, optional):
+            char: character to use as the icon
+            color: icon color
         """
         super().__init__()
         self.char = char
@@ -525,75 +538,72 @@ class CharIconEngine(TransparentIconEngine):
 
     def paint(self, painter, rect, mode=None, state=None):
         painter.save()
-        size = 0.875 * round(min(rect.width(), rect.height()))
+        size = int(0.875 * round(min(rect.width(), rect.height())))
         self.font.setPixelSize(max(1, size))
         painter.setFont(self.font)
         if self.color:
             color = self.color
         else:
             palette = QPalette(QApplication.palette())
-            if mode == QIcon.Disabled:
-                palette.setCurrentColorGroup(QPalette.Disabled)
-            elif mode == QIcon.Active:
-                palette.setCurrentColorGroup(QPalette.Active)
+            if mode == QIcon.Mode.Disabled:
+                palette.setCurrentColorGroup(QPalette.ColorGroup.Disabled)
+            elif mode == QIcon.Mode.Active:
+                palette.setCurrentColorGroup(QPalette.ColorGroup.Active)
             color = palette.buttonText().color()
         painter.setPen(color)
-        painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter, self.char)
         painter.restore()
 
 
 class ColoredIcon(QIcon):
-    def __init__(self, icon_file_name, icon_color, icon_size, colored=None):
+    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size, colored: bool = False):
         self._engine = ColoredIconEngine(icon_file_name, icon_color, icon_size, colored=colored)
         super().__init__(self._engine)
 
-    def set_colored(self, colored):
+    def set_colored(self, colored: bool) -> None:
         self._engine.set_colored(colored)
 
-    def color(self, mode=QIcon.Normal):
+    def color(self, mode=QIcon.Mode.Normal) -> QColor:
         return self._engine.color(mode=mode)
 
 
 class ColoredIconEngine(QIconEngine):
-    def __init__(self, icon_file_name, icon_color, icon_size, colored=None):
+    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size: QSize, colored: bool = False):
         super().__init__()
         self._icon = QIcon(icon_file_name)
         self._icon_color = icon_color
         self._base_pixmap = self._icon.pixmap(icon_size)
-        self._colored = None
-        self._pixmaps = {}
+        self._colored = False
+        self._pixmaps: dict[tuple[QIcon.Mode, QIcon.State], QPixmap] = {}
         self.set_colored(colored)
 
-    def color(self, mode=QIcon.Normal):
+    def color(self, mode: QIcon.Mode = QIcon.Mode.Normal) -> QColor:
         color = self._icon_color if self._colored else QColor("black")
-        if mode == QIcon.Disabled:
+        if mode == QIcon.Mode.Disabled:
             r, g, b, a = color.getRgbF()
             tint = 0.37255
             color = QColor.fromRgbF(r + (1.0 - r) * tint, g + (1.0 - g) * tint, b + (1.0 - b) * tint, a)
         return color
 
-    def set_colored(self, colored):
+    def set_colored(self, colored: bool) -> None:
         if self._colored == colored:
             return
         self._colored = colored
         self._pixmaps.clear()
 
-    def _do_make_pixmap(self, mode, state):
-        color = self.color(mode)
-        return color_pixmap(self._base_pixmap, color)
-
-    def _make_pixmap(self, mode, state):
+    def _make_pixmap(self, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
         if (mode, state) not in self._pixmaps:
-            self._pixmaps[mode, state] = self._do_make_pixmap(mode, state)
+            color = self.color(mode)
+            self._pixmaps[mode, state] = color_pixmap(self._base_pixmap, color)
         return self._pixmaps[mode, state]
 
-    def pixmap(self, size, mode, state):
+    def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
         return self._make_pixmap(mode, state).scaled(
-            self._icon.actualSize(size), Qt.KeepAspectRatio, Qt.SmoothTransformation
+            self._icon.actualSize(size), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
         )
 
 
-def color_pixmap(pixmap, color):
+def color_pixmap(pixmap: QPixmap, color: QColor) -> QPixmap:
     img = pixmap.toImage()
     for y in range(img.height()):
         for x in range(img.width()):
@@ -602,27 +612,27 @@ def color_pixmap(pixmap, color):
     return QPixmap.fromImage(img)
 
 
-def make_icon_id(icon_code, color_code):
+def make_icon_id(icon_code: int, color_code: int) -> int:
     """Takes icon and color codes, and return equivalent integer.
 
     Args:
-        icon_code (int):icon's code
-        color_code (int): color code
+        icon_code: icon's code
+        color_code: color code
 
     Returns:
-        int: icon id
+        icon id
     """
     return icon_code + (color_code << 16)
 
 
-def interpret_icon_id(display_icon):
+def interpret_icon_id(display_icon: Optional[int]) -> tuple[int, int]:
     """Takes a display icon id and returns an equivalent tuple of icon and color code.
 
     Args:
-        display_icon (int, optional): icon id
+        display_icon: icon id
 
     Returns:
-        tuple: icon's code, color code
+        icon's code, color code
     """
     if not isinstance(display_icon, int) or display_icon < 0:
         return 0xF1B2, 0xFF000000
@@ -634,12 +644,8 @@ def interpret_icon_id(display_icon):
     return icon_code, color_code
 
 
-def default_icon_id():
-    """Creates a default icon id.
-
-    Returns:
-        int: default icon's id
-    """
+def default_icon_id() -> int:
+    """Creates a default icon id."""
     return make_icon_id(*interpret_icon_id(None))
 
 
@@ -673,15 +679,8 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         return super().icon(info)
 
 
-def basic_console_icon(language):
-    """Returns an SVG icon for the given language or an empty QIcon if not available.
-
-    Args:
-        language (str): Kernel language
-
-    Returns:
-        QIcon: Icon
-    """
+def basic_console_icon(language: str) -> QIcon:
+    """Returns an SVG icon for the given language or an empty QIcon if not available."""
     if language == "python":
         return QIcon(":/symbols/python-logo.svg")
     elif language == "julia":
@@ -690,13 +689,13 @@ def basic_console_icon(language):
         return QIcon()
 
 
-def ensure_window_is_on_screen(window, size):
+def ensure_window_is_on_screen(window: QWidget, size: QSize) -> None:
     """
     Checks if window is on screen and if not, moves and resizes it to make it visible on the primary screen.
 
     Args:
-        window (QWidget): a window to check
-        size (QSize): desired window size if the window is moved
+        window: a window to check
+        size: desired window size if the window is moved
     """
     window_geometry = window.frameGeometry()
     widget_center = window_geometry.center()
@@ -710,10 +709,12 @@ def ensure_window_is_on_screen(window, size):
     if not widget_inside_screen:
         primary_screen = QApplication.primaryScreen()
         screen_geometry = primary_screen.availableGeometry()
-        window.setGeometry(QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, size, screen_geometry))
+        window.setGeometry(
+            QStyle.alignedRect(Qt.LayoutDirection.LeftToRight, Qt.AlignmentFlag.AlignCenter, size, screen_geometry)
+        )
 
 
-def first_non_null(s):
+def first_non_null(s: Iterable) -> Optional[Any]:
     """Returns the first element in Iterable s that is not None."""
     try:
         return next(itertools.dropwhile(lambda x: x is None, s))
@@ -721,17 +722,19 @@ def first_non_null(s):
         return None
 
 
-def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
+def get_save_file_name_in_last_dir(
+    qsettings: QSettings, key: str, parent: QWidget, caption: str, given_dir: str, filter_: str = ""
+) -> tuple[str, str]:
     """Calls QFileDialog.getSaveFileName in the directory that was selected last time the dialog was accepted.
 
     Args:
-        qsettings (QSettings): A QSettings object where the last directory is stored
-        key (string): The name of the entry in the above QSettings
+        qsettings: A QSettings object where the last directory is stored
+        key: The name of the entry in the above QSettings
+        parent: parent widget
         parent, caption, given_dir, filter_: Args passed to QFileDialog.getSaveFileName
 
     Returns:
-        str: filename
-        str: selected filter
+        filename and selected filter
     """
     dir_ = qsettings.value(key, defaultValue=given_dir)
     filename, selected_filter = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
@@ -740,7 +743,9 @@ def get_save_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
     return filename, selected_filter
 
 
-def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, filter_=""):
+def get_open_file_name_in_last_dir(
+    qsettings: QSettings, key: str, parent: QWidget, caption: str, given_dir: str, filter_: str = ""
+) -> tuple[str, str]:
     dir_ = qsettings.value(key, defaultValue=given_dir)
     filename, selected_filter = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
     if filename:
@@ -748,14 +753,14 @@ def get_open_file_name_in_last_dir(qsettings, key, parent, caption, given_dir, f
     return filename, selected_filter
 
 
-def try_number_from_string(text):
+def try_number_from_string(text: str) -> Union[float, int, str]:
     """Tries to convert a string to integer or float.
 
     Args:
-        text (str): string to convert
+        text: string to convert
 
     Returns:
-        int or float or str: converted value or text if conversion failed
+        converted value or text if conversion failed
     """
     try:
         return int(text)
@@ -765,10 +770,10 @@ def try_number_from_string(text):
         except ValueError:
             return text
     except TypeError:
-        return None
+        return text
 
 
-def focused_widget_has_callable(parent, callable_name):
+def focused_widget_has_callable(parent: QWidget, callable_name: str) -> bool:
     """Returns True if the currently focused widget or one of its ancestors has the given callable."""
     focus_widget = parent.focusWidget()
     while focus_widget is not None and focus_widget is not parent:
@@ -780,7 +785,7 @@ def focused_widget_has_callable(parent, callable_name):
     return False
 
 
-def call_on_focused_widget(parent, callable_name):
+def call_on_focused_widget(parent: QWidget, callable_name: str) -> Any:
     """Calls the given callable on the currently focused widget or one of its ancestors."""
     focus_widget = parent.focusWidget()
     while focus_widget is not None and focus_widget is not parent:
@@ -796,19 +801,21 @@ class ChildCyclingKeyPressFilter(QObject):
     Used in filtering the Ctrl+Tab and Ctrl+Shift+Tab key presses in the
     Item Properties tab widget."""
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.KeyPress:
-            if event.matches(QKeySequence.NextChild) or event.matches(QKeySequence.PreviousChild):
+    def eventFilter(self, obj: QObject, event: QKeyEvent) -> bool:
+        if event.type() == QEvent.Type.KeyPress:
+            if event.matches(QKeySequence.StandardKey.NextChild) or event.matches(
+                QKeySequence.StandardKey.PreviousChild
+            ):
                 return True
-        return QObject.eventFilter(self, obj, event)  # Pass event further
+        return QObject.eventFilter(self, obj, event)
 
 
-def select_work_directory(parent, line_edit):
+def select_work_directory(parent: Optional[QWidget], line_edit: QLineEdit) -> None:
     """Shows file browser and inserts selected directory path to given line_edit.
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     current_path = get_current_path(line_edit)
     initial_path = current_path if current_path is not None else home_dir()

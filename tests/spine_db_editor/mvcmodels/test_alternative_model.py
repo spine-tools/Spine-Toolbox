@@ -58,7 +58,7 @@ class TestAlternativeModel(TestCaseWithQApplication):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
         data = model_data_to_dict(model)
         expected = [
             [
@@ -78,9 +78,9 @@ class TestAlternativeModel(TestCaseWithQApplication):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
         alternative_id = self._db_map.alternative(name="alternative_1")["id"]
-        self._db_mngr.update_alternatives({self._db_map: [{"id": alternative_id, "name": "renamed"}]})
+        self._db_mngr.update_items("alternative", {self._db_map: [{"id": alternative_id, "name": "renamed"}]})
         data = model_data_to_dict(model)
         expected = [
             [
@@ -100,7 +100,7 @@ class TestAlternativeModel(TestCaseWithQApplication):
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map)
         model.build_tree()
         _fetch_all_recursively(model)
-        self._db_mngr.add_alternatives({self._db_map: [{"name": "alternative_1"}]})
+        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
         alternative_id = self._db_map.alternative(name="alternative_1")["id"]
         self._db_mngr.remove_items({self._db_map: {"alternative": {alternative_id}}})
         data = model_data_to_dict(model)
@@ -154,8 +154,8 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
         self._temp_dir.cleanup()
 
     def test_paste_alternative_mime_data(self):
-        self._db_mngr.add_alternatives(
-            {self._db_map1: [{"name": "my_alternative", "description": "My test alternative"}]}
+        self._db_mngr.add_items(
+            "alternative", {self._db_map1: [{"name": "my_alternative", "description": "My test alternative"}]}
         )
         model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
         model.build_tree()

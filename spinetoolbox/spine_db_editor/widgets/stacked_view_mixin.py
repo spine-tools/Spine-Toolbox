@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
+from typing import Optional
 from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height
 from ..mvcmodels.compound_models import (
@@ -18,6 +19,12 @@ from ..mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
+from ..mvcmodels.empty_models import (
+    EmptyEntityAlternativeModel,
+    EmptyParameterDefinitionModel,
+    EmptyParameterValueModel,
+)
+from .custom_qwidgets import AddedEntitiesPopup
 from .element_name_list_editor import ElementNameListEditor
 
 
@@ -42,12 +49,40 @@ class StackedViewMixin:
             horizontal_header = view.horizontalHeader()
             horizontal_header.setSectionsMovable(True)
             view.connect_spine_db_editor(self)
+        self.empty_parameter_definition_model = EmptyParameterDefinitionModel(self.db_mngr, self)
+        self.empty_parameter_value_model = EmptyParameterValueModel(self.db_mngr, self)
+        self.empty_entity_alternative_model = EmptyEntityAlternativeModel(self.db_mngr, self)
+        self._all_empty_models = {
+            self.empty_parameter_definition_model: self.ui.empty_parameter_definition_table_view,
+            self.empty_parameter_value_model: self.ui.empty_parameter_value_table_view,
+            self.empty_entity_alternative_model: self.ui.empty_entity_alternative_table_view,
+        }
+        for model, view in self._all_empty_models.items():
+            view.setModel(model)
+            view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+            view.connect_spine_db_editor(self)
+            view.request_replace_undo_redo_actions.connect(self._replace_undo_redo_actions)
+            view.request_reset_undo_redo_actions.connect(self.update_undo_redo_actions)
 
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
         self.ui.treeView_entity.model().dataChanged.connect(self._update_empty_rows)
         self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
+        empty_model_item_types = ("parameter_definition", "parameter_value", "entity_alternative")
+        for item_type in empty_model_item_types:
+            table_view = getattr(self.ui, "tableView_" + item_type)
+            visible_header = table_view.horizontalHeader()
+            update_slot = getattr(self, "_update_empty_" + item_type + "_header_section_size")
+            visible_header.sectionResized.connect(update_slot)
+            move_slot = getattr(self, "_move_empty_" + item_type + "_header_section")
+            visible_header.sectionMoved.connect(move_slot)
+            visible_scroll_bar = getattr(self.ui, "empty_" + item_type + "_table_view").horizontalScrollBar()
+            invisible_scroll_bar = table_view.horizontalScrollBar()
+            visible_scroll_bar.valueChanged.connect(invisible_scroll_bar.setValue)
+            invisible_scroll_bar.valueChanged.connect(visible_scroll_bar.setValue)
+        self.empty_parameter_value_model.entities_added.connect(self._notify_about_added_entities)
+        self.empty_entity_alternative_model.entities_added.connect(self._notify_about_added_entities)
 
     def init_models(self):
         """Initializes models."""
@@ -55,6 +90,8 @@ class StackedViewMixin:
         for model in self._all_stacked_models:
             model.reset_db_maps(self.db_maps)
             model.init_model()
+        for model in self._all_empty_models:
+            model.reset_db_maps(self.db_maps)
         self._set_default_parameter_data()
 
     @Slot(QModelIndex, object, object)
@@ -108,10 +145,10 @@ class StackedViewMixin:
         self.set_default_parameter_data(default_data, default_db_map)
 
     def set_default_parameter_data(self, default_data, default_db_map):
-        for model in self._all_stacked_models:
-            model.empty_model.db_map = default_db_map
-            model.empty_model.set_default_row(**default_data)
-            model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
+        for model in self._all_empty_models:
+            model.db_map = default_db_map
+            model.set_default_row(**default_data)
+            model.set_rows_to_default(model.rowCount() - 1)
 
     @Slot(QModelIndex, QModelIndex, list)
     def _update_empty_rows(self, top_left, bottom_right, roles):
@@ -174,9 +211,51 @@ class StackedViewMixin:
         self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
 
+    @Slot(int, int, int)
+    def _update_empty_parameter_definition_header_section_size(self, logical_index, old_size, new_size):
+        header = self.ui.empty_parameter_definition_table_view.horizontalHeader()
+        header.resizeSection(logical_index, new_size)
+
+    @Slot(int, int, int)
+    def _move_empty_parameter_definition_header_section(self, logical_index, old_visual_index, new_visual_index):
+        header = self.ui.empty_parameter_definition_table_view.horizontalHeader()
+        header.moveSection(old_visual_index, new_visual_index)
+
+    @Slot(int, int, int)
+    def _update_empty_parameter_value_header_section_size(self, logical_index, old_size, new_size):
+        header = self.ui.empty_parameter_value_table_view.horizontalHeader()
+        header.resizeSection(logical_index, new_size)
+
+    @Slot(int, int, int)
+    def _move_empty_parameter_value_header_section(self, logical_index, old_visual_index, new_visual_index):
+        header = self.ui.empty_parameter_value_table_view.horizontalHeader()
+        header.moveSection(old_visual_index, new_visual_index)
+
+    @Slot(int, int, int)
+    def _update_empty_entity_alternative_header_section_size(self, logical_index, old_size, new_size):
+        header = self.ui.empty_entity_alternative_table_view.horizontalHeader()
+        header.resizeSection(logical_index, new_size)
+
+    @Slot(int, int, int)
+    def _move_empty_entity_alternative_header_section(self, logical_index, old_visual_index, new_visual_index):
+        header = self.ui.empty_entity_alternative_table_view.horizontalHeader()
+        header.moveSection(old_visual_index, new_visual_index)
+
+    @Slot(object)
+    def _notify_about_added_entities(self, added_entities) -> None:
+        popup = AddedEntitiesPopup(self, self.db_mngr.name_registry, added_entities)
+        popup.show()
+
     def tear_down(self):
         if not super().tear_down():
             return False
         for model in self._all_stacked_models:
             model.stop_invalidating_filter()
         return True
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if event.isAccepted():
+            for view in self._all_empty_models.values():
+                view.request_replace_undo_redo_actions.disconnect(self._replace_undo_redo_actions)
+                view.request_reset_undo_redo_actions.disconnect(self.update_undo_redo_actions)

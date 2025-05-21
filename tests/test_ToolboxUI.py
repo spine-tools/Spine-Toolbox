@@ -24,6 +24,7 @@ from PySide6.QtCore import QMimeData, QPoint, QPointF, QSettings, Qt
 from PySide6.QtGui import QDropEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox
+from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.link import Link
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.project_item.project_item import ProjectItem
@@ -39,7 +40,6 @@ from .mock_helpers import (
     clean_up_toolbox,
     create_project,
     create_toolboxui,
-    qsettings_value_side_effect,
 )
 
 
@@ -163,11 +163,7 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_new_project(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
-            mock.patch("spinetoolbox.ui_main.QSettings.sync"),
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         self.assertIsNotNone(self.toolbox.project())
@@ -175,22 +171,14 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_save_project(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
-            mock.patch("spinetoolbox.ui_main.QSettings.sync"),
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc_trough_undo_stack(self.toolbox, "DC")
         self.assertFalse(self.toolbox.undo_stack.isClean())
         self.toolbox.save_project()
         self.assertTrue(self.toolbox.undo_stack.isClean())
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Make sure that the test uses LocalSpineEngineManager
-            mock_qsettings_value.side_effect = qsettings_value_side_effect
-            self.assertTrue(self.toolbox.close_project())
-            mock_qsettings_value.assert_called()
+        self.assertTrue(self.toolbox.close_project())
         with (
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
             mock.patch("spinetoolbox.project.create_dir"),
@@ -203,11 +191,7 @@ class TestToolboxUI(TestCaseWithQApplication):
 
     def test_prevent_project_closing_with_unsaved_changes(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
-            mock.patch("spinetoolbox.ui_main.QSettings.sync"),
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
         add_dc_trough_undo_stack(self.toolbox, "DC1")
@@ -216,13 +200,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
         add_dc_trough_undo_stack(self.toolbox, "DC2")
         self.assertFalse(self.toolbox.undo_stack.isClean())
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Make sure that the test uses LocalSpineEngineManager
-            mock_qsettings_value.side_effect = qsettings_value_side_effect
-            # Selecting cancel on the project close confirmation
-            with mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):
-                self.assertFalse(self.toolbox.close_project())
-            mock_qsettings_value.assert_called()
+        # Selecting cancel on the project close confirmation
+        with mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel):
+            self.assertFalse(self.toolbox.close_project())
         with (
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
             mock.patch("spinetoolbox.project.create_dir"),
@@ -248,24 +228,14 @@ class TestToolboxUI(TestCaseWithQApplication):
         with TemporaryDirectory() as project_dir:
             create_project(self.toolbox, project_dir)
             self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
-            with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-                # Make sure that the test uses LocalSpineEngineManager
-                mock_qsettings_value.side_effect = qsettings_value_side_effect
-                self.assertTrue(self.toolbox.close_project())
-                mock_qsettings_value.assert_called()
+            self.assertTrue(self.toolbox.close_project())
         self.assertIsNone(self.toolbox.project())
 
     def test_show_project_or_item_context_menu(self):
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value,
-            mock.patch("spinetoolbox.ui_main.QSettings.sync") as mock_sync,
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
-            mock_set_value.assert_called()
-            mock_sync.assert_called()
             mock_dir_getter.assert_called()
         add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         # mocking "PySide6.QtWidgets.QMenu.exec directly doesn't work because QMenu.exec is overloaded!
@@ -289,15 +259,9 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertFalse(self.toolbox.ui.actionRemove_all.isEnabled())
         # Make project
         self._temp_dir = TemporaryDirectory()
-        with (
-            mock.patch("spinetoolbox.ui_main.QSettings.setValue") as mock_set_value,
-            mock.patch("spinetoolbox.ui_main.QSettings.sync") as mock_sync,
-            mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,
-        ):
+        with (mock.patch("PySide6.QtWidgets.QFileDialog.getExistingDirectory") as mock_dir_getter,):
             mock_dir_getter.return_value = self._temp_dir.name
             self.toolbox.new_project()
-            mock_set_value.assert_called()
-            mock_sync.assert_called()
             mock_dir_getter.assert_called()
         add_dc(self.toolbox.project(), self.toolbox.item_factories, "DC")
         dc = self.toolbox.project().get_item("DC")
@@ -603,29 +567,21 @@ class TestToolboxUI(TestCaseWithQApplication):
         This test is done without a project so MUT only calls QSettings.value() once.
         This can probably be simplified but at least it does not edit user's Settings, while doing the test."""
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
-            tasks = self.toolbox._tasks_before_exit()
-            mock_qsettings_value.assert_called_once()
-            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_1
+        tasks = self.toolbox._tasks_before_exit()
+        self.toolbox._qsettings.value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, [])
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_2
-            tasks = self.toolbox._tasks_before_exit()
-            mock_qsettings_value.assert_called_once()
-            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_2
+        tasks = self.toolbox._tasks_before_exit()
+        self.toolbox._qsettings.value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, ["prompt exit"])
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_5
-            tasks = self.toolbox._tasks_before_exit()
-            mock_qsettings_value.assert_called_once()
-            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_5
+        tasks = self.toolbox._tasks_before_exit()
+        self.toolbox._qsettings.value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, [])
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_6
-            tasks = self.toolbox._tasks_before_exit()
-            mock_qsettings_value.assert_called_once()
-            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_6
+        tasks = self.toolbox._tasks_before_exit()
+        self.toolbox._qsettings.value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, ["prompt exit"])
 
     def test_tasks_before_exit_with_open_dirty_project(self):
@@ -634,25 +590,24 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.toolbox._project = 1  # Just make sure project is not None
         self.toolbox.undo_stack = mock.Mock()
         self.toolbox.undo_stack.isClean.return_value = False
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
-            tasks = self.toolbox._tasks_before_exit()
-            self.assertEqual(1, mock_qsettings_value.call_count)
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_1
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(1, self.toolbox._qsettings.value.call_count)
         self.assertEqual(tasks, ["prompt save"])
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_2
-            tasks = self.toolbox._tasks_before_exit()
-            self.assertEqual(1, mock_qsettings_value.call_count)
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_2
+        self.toolbox._qsettings.value.call_count = 0
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(1, self.toolbox._qsettings.value.call_count)
         self.assertEqual(tasks, ["prompt save"])
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_5
-            tasks = self.toolbox._tasks_before_exit()
-            self.assertEqual(2, mock_qsettings_value.call_count)
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_5
+        self.toolbox._qsettings.value.call_count = 0
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(2, self.toolbox._qsettings.value.call_count)
         self.assertEqual(tasks, ["save"])
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_6
-            tasks = self.toolbox._tasks_before_exit()
-            self.assertEqual(2, mock_qsettings_value.call_count)
+        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_6
+        self.toolbox._qsettings.value.call_count = 0
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(2, self.toolbox._qsettings.value.call_count)
         self.assertEqual(tasks, ["prompt exit", "save"])
         self.toolbox._project = None
 
@@ -850,9 +805,7 @@ class TestToolboxUI(TestCaseWithQApplication):
             (QPoint): Center point of the Link in graphics view viewport coordinates.
         """
         # Make sure the boundingRect's center point is *on* the link
-        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            mock_qsettings_value.side_effect = "false"
-            link.update_geometry()
+        link.update_geometry()
         path = link.guide_path()
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get link center
@@ -930,9 +883,14 @@ def toolbox_with_settings(settings_dict):
     settings = QSettings("SpineProject", "Spine Toolbox tests")
     for key, value in settings_dict.items():
         settings.setValue(key, value)
-    with mock.patch("spinetoolbox.ui_main.QSettings") as settings_constructor:
+    with (
+        mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
+        mock.patch("spinetoolbox.ui_main.QSettings") as settings_constructor,
+        mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
+    ):
+        mock_set_app_style.return_value = True
         settings_constructor.return_value = settings
-        toolbox = create_toolboxui()
+        toolbox = ToolboxUI()
     try:
         yield toolbox
     finally:

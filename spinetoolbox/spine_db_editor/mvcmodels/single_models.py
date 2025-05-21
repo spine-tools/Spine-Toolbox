@@ -12,15 +12,17 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from typing import ClassVar, Iterable
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import QModelIndex, Qt, Slot
+from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
-from ..mvcmodels.single_and_empty_model_mixins import MakeEntityOnTheFlyMixin, SplitValueAndTypeMixin
+from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
+from .utils import make_entity_on_the_fly
 
 
-class HalfSortedTableModel(MinimalTableModel):
+class HalfSortedTableModel(MinimalTableModel[TempId]):
     def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
@@ -87,17 +89,15 @@ class SingleModelBase(HalfSortedTableModel):
     def update_items_in_db(self, items):
         """Update items in db. Required by batch_set_data"""
         items_to_upd = []
-        error_log = []
         for item in items:
-            item_to_upd, errors = self._convert_to_db(item)
+            item_to_upd = self._convert_to_db(item)
             if tuple(item_to_upd.keys()) != ("id",):
                 items_to_upd.append(item_to_upd)
-            if errors:
-                error_log += errors
         if items_to_upd:
             self._do_update_items_in_db({self.db_map: items_to_upd})
-        if error_log:
-            self.db_mngr.error_msg.emit({self.db_map: error_log})
+
+    def _convert_to_db(self, item: dict) -> dict:
+        return item.copy()
 
     @property
     def _references(self):
@@ -154,7 +154,7 @@ class SingleModelBase(HalfSortedTableModel):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
         if self.header[index.column()] in self.fixed_fields:
-            return flags & ~Qt.ItemIsEditable
+            return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
     def _filter_accepts_row(self, row):
@@ -191,8 +191,11 @@ class SingleModelBase(HalfSortedTableModel):
         if ref is None:
             return {}
         src_id_key, ref_type = ref
-        ref_if = db_item.get(src_id_key)
-        return self.db_mngr.get_item(self.db_map, ref_type, ref_if)
+        ref_id = db_item.get(src_id_key)
+        return self.db_mngr.get_item(self.db_map, ref_type, ref_id)
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        return False
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         field = self.header[index.column()]
@@ -204,8 +207,8 @@ class SingleModelBase(HalfSortedTableModel):
             id_ = self._main_data[index.row()]
             item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
             if role == Qt.ItemDataRole.ToolTipRole:
-                description = self._get_ref(item, field).get("description")
-                if description:
+                ref_item = self._get_ref(item, field)
+                if ref_item is not None and (description := ref_item.get("description")):
                     return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
@@ -295,6 +298,7 @@ class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
     value_field: ClassVar[str] = NotImplemented
+    type_field: ClassVar[str] = NotImplemented
     parameter_definition_id_key: ClassVar[str] = NotImplemented
 
     def __init__(self, *args, **kwargs):
@@ -421,19 +425,19 @@ class EntityMixin:
         entities = []
         error_log = []
         for item in items:
-            entity, errors = self._make_entity_on_the_fly(item, self.db_map)
+            entity, errors = make_entity_on_the_fly(item, self.db_map)
             if entity:
                 entities.append(entity)
             if errors:
                 error_log.extend(errors)
         if entities:
-            self.db_mngr.add_entities({self.db_map: entities})
+            self.db_mngr.add_items("entity", {self.db_map: entities})
         if error_log:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
         super().update_items_in_db(items)
 
     def _do_update_items_in_db(self, db_map_data):
-        raise NotImplementedError()
+        self.db_mngr.update_items(self.item_type, db_map_data)
 
 
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
@@ -441,6 +445,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
 
     item_type = "parameter_definition"
     value_field = "default_value"
+    type_field = "default_type"
     parameter_definition_id_key = "id"
     group_fields = ("valid types",)
 
@@ -449,11 +454,10 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
         return order_key(item.get("name", ""))
 
     def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_parameter_definitions(db_map_data)
+        self.db_mngr.update_items("parameter_definition", db_map_data)
 
 
 class SingleParameterValueModel(
-    MakeEntityOnTheFlyMixin,
     SplitValueAndTypeMixin,
     ParameterMixin,
     EntityMixin,
@@ -464,6 +468,7 @@ class SingleParameterValueModel(
 
     item_type = "parameter_value"
     value_field = "value"
+    type_field = "type"
     parameter_definition_id_key = "parameter_id"
 
     def _sort_key(self, element):
@@ -473,11 +478,8 @@ class SingleParameterValueModel(
         alt_name = order_key(item.get("alternative_name", ""))
         return byname, parameter_name, alt_name
 
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_parameter_values(db_map_data)
 
-
-class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
     item_type = "entity_alternative"
@@ -496,6 +498,3 @@ class SingleEntityAlternativeModel(MakeEntityOnTheFlyMixin, EntityMixin, FilterE
             "alternative_name": ("alternative_id", "alternative"),
             "database": ("database", None),
         }
-
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_entity_alternatives(db_map_data)

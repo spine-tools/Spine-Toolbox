@@ -10,6 +10,8 @@
    :width: 16
 .. |play-selected| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-regular.svg
    :width: 16
+.. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
+          :width: 16
 
 .. _Tool specification editor:
 
@@ -27,13 +29,12 @@ General
 
 To execute a Julia, Python, GAMS, or an executable script in Spine Toolbox, you must first create a Tool
 specification for your project. You can open the Tool specification editor in several ways.
-One way is to press the arrow next to the Tool icon in the toolbar to expand the Tool specifications,
-and then press the **New...** button.
+One way is to press |plus| on the *Specifications* Toolbar and then press the **Tool** button from the popup menu.
 
 .. image:: img/open_tool_specification_editor.png
    :align: center
 
-When you press **New...** the following form pops up;
+When you press **Tool** the following window pops up;
 
 .. image:: img/edit_tool_specification_blank.png
    :align: center
@@ -57,7 +58,7 @@ of running the batch file in command prompt with the command ``do_things.bat a b
 
    Unlike the arguments set in Tool Specification Editor, the arguments in **Properties** are *Tool specific*.
 
-**Additional source files** is a list of files that the main program requires in order to run. You can add
+**Additional program files** is a list of files that the main program requires in order to run. You can add
 individual files the same way as with the main program file or whole directories at once by pressing the
 |folder_open_solid| button.
 
@@ -172,4 +173,4 @@ Now, the Python script can access the files using something like::
     file_path1 = sys.argv[1]
     file_path2 = sys.argv[2]
 
-Of course, more serious scripts would use the `argparse` module.
+Of course, more serious scripts would use the ``argparse`` module.

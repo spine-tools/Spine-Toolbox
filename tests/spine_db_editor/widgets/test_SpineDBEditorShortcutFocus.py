@@ -14,7 +14,7 @@
 import unittest
 from unittest.mock import patch
 from PySide6.QtCore import QEvent
-from .spine_db_editor_test_base import DBEditorTestBase
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
 class TestSetupFocusWidgets(DBEditorTestBase):
@@ -22,9 +22,6 @@ class TestSetupFocusWidgets(DBEditorTestBase):
         """Test that the eventFilter method handles focus events."""
         focus_event = QEvent(QEvent.Type.FocusIn)
         filter_callback = self.spine_db_editor
-        with patch.object(filter_callback, 'eventFilter') as mock_event_filter:
+        with patch.object(filter_callback, "eventFilter") as mock_event_filter:
             filter_callback.eventFilter(self.spine_db_editor.ui.tableView_parameter_value, focus_event)
-            mock_event_filter.assert_called_once_with(
-                self.spine_db_editor.ui.tableView_parameter_value,
-                focus_event
-            )
+            mock_event_filter.assert_called_once_with(self.spine_db_editor.ui.tableView_parameter_value, focus_event)

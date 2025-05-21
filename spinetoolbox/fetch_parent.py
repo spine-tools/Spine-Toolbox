@@ -11,10 +11,14 @@
 ######################################################################################################################
 
 """The FetchParent and FlexibleFetchParent classes."""
+from __future__ import annotations
 from contextlib import suppress
+from typing import TYPE_CHECKING
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from .helpers import busy_effect
-from .spine_db_manager import SpineDBManager
+
+if TYPE_CHECKING:
+    from .spine_db_manager import SpineDBManager
 
 
 class FetchParent(QObject):
@@ -54,7 +58,7 @@ class FetchParent(QObject):
 
     def apply_changes_immediately(self):
         # For tests
-        self._changes_pending.connect(self._apply_pending_changes, Qt.UniqueConnection)
+        self._changes_pending.connect(self._apply_pending_changes, Qt.ConnectionType.UniqueConnection)
 
     @property
     def index(self):
@@ -191,14 +195,14 @@ class FetchParent(QObject):
         return True
 
     @property
-    def is_obsolete(self):
+    def is_obsolete(self) -> bool:
         return self._obsolete
 
-    def set_obsolete(self, obsolete):
+    def set_obsolete(self, obsolete: bool) -> None:
         """Sets the obsolete status.
 
         Args:
-            obsolete (bool): whether parent has become obsolete
+            obsolete: whether parent has become obsolete
         """
         if obsolete:
             self.set_busy(False)

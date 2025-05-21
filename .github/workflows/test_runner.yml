@@ -19,6 +19,9 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         os: [windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            python-version: "3.13"
     uses: ./.github/workflows/unit_tests.yml
     with:
       host-os: ${{ matrix.os }}
@@ -31,6 +34,9 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
         os: [windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            python-version: "3.13"
     uses: ./.github/workflows/execution_tests.yml
     with:
       host-os: ${{ matrix.os }}

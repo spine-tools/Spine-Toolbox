@@ -12,7 +12,6 @@
 
 """Unit tests for TimeSeriesFixedResolutionTableView class."""
 import locale
-import os
 import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
@@ -35,7 +34,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_copy_single_cell(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.Select)
         with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard_getter:
             mock_clipboard = mock.MagicMock()
             clipboard_getter.return_value = mock_clipboard
@@ -45,7 +44,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_paste_single_value(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = locale.str(-1.1)
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())
@@ -55,7 +54,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_paste_value_when_time_stamp_is_selected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.Select)
         copied_data = locale.str(-1.1)
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())
@@ -65,7 +64,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_pasting_to_last_row_expands_model(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(3, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(3, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = locale.str(-4.4) + "\n" + locale.str(-5.5)
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())
@@ -75,8 +74,8 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_paste_to_multirow_selection_limits_pasted_data(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
-        selection_model.select(model.index(1, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
+        selection_model.select(model.index(1, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2) + "\n" + locale.str(-3.3)
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())
@@ -86,8 +85,8 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_paste_to_larger_selection_cycles_data(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
-        selection_model.select(model.index(1, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
+        selection_model.select(model.index(1, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = locale.str(-1.1)
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())
@@ -97,7 +96,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_pasted_gibberish_is_rejected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = "Totoro"
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertFalse(self._table_view.paste())
@@ -107,7 +106,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_pasted_gibberish_in_the_middle_gets_rejected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = "-1.1\nTotoro\n-2.2\n-3.3\n-4.4\n-5.5\n"
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())
@@ -117,7 +116,7 @@ class TestTimeSeriesFixedResolutionTableView(TestCaseWithQApplication):
     def test_pasted_cells_are_selected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
-        selection_model.select(model.index(0, 1), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
         copied_data = locale.str(-1.1) + "\n" + locale.str(-2.2)
         with mock_clipboard_patch(copied_data, "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(self._table_view.paste())

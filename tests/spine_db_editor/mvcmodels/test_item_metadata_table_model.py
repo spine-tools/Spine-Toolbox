@@ -182,7 +182,7 @@ class TestItemMetadataTableModelWithExistingData(TestCaseWithQApplication):
                 {"metadata_name": "author", "metadata_value": "Anonymous", "parameter_value_id": 2, "commit_id": None}
             ]
         }
-        self._db_mngr.add_parameter_value_metadata(db_map_item_metadata)
+        self._db_mngr.add_items("parameter_value_metadata", db_map_item_metadata)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of relationship values")
@@ -206,7 +206,7 @@ class TestItemMetadataTableModelWithExistingData(TestCaseWithQApplication):
                 }
             ]
         }
-        self._db_mngr.add_entity_metadata(db_map_item_metadata)
+        self._db_mngr.add_items("entity_metadata", db_map_item_metadata)
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(0, Column.NAME).data(), "source")
         self.assertEqual(self._model.index(0, Column.VALUE).data(), "Fountain of relationships")

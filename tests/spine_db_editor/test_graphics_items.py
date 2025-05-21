@@ -11,11 +11,10 @@
 ######################################################################################################################
 
 """Unit tests for Database editor's ``graphics_items`` module."""
-import unittest
 from unittest import mock
 from PySide6.QtCore import QPointF
-from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.graphics_items import EntityItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
@@ -37,10 +36,11 @@ class TestEntityItem(TestCaseWithQApplication):
             self._db_mngr.name_registry.register(self._db_map.sa_url, "database")
             self._spine_db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "database"})
             self._spine_db_editor.pivot_table_model = mock.MagicMock()
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_entities({self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
-        self._db_mngr.add_entities(
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
+        self._db_mngr.add_items(
+            "entity",
             {
                 self._db_map: [
                     {
@@ -49,7 +49,7 @@ class TestEntityItem(TestCaseWithQApplication):
                         "element_name_list": ["o"],
                     }
                 ]
-            }
+            },
         )
         entity_id = self._db_map.entity(entity_class_name="rc", name="r")["id"]
         with mock.patch.object(EntityItem, "refresh_icon"):
@@ -57,8 +57,8 @@ class TestEntityItem(TestCaseWithQApplication):
 
     @classmethod
     def tearDownClass(cls):
-        super().tearDownClass()
         QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
+        super().tearDownClass()
 
     def tearDown(self):
         with (
@@ -105,7 +105,7 @@ class TestEntityItem(TestCaseWithQApplication):
 
     def test_db_map_data(self):
         self.assertEqual(
-            self._item.db_map_data(self._db_map)._asdict(),
+            self._item.db_map_data(self._db_map),
             self._db_map.entity(entity_class_name="rc", name="r"),
         )
 

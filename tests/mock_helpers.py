@@ -35,25 +35,22 @@ class TestCaseWithQApplication(unittest.TestCase):
 
 
 def create_toolboxui():
-    """Returns ToolboxUI, where QSettings among others has been mocked."""
+    """Returns ToolboxUI for tests."""
     with (
-        mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value,
         mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
         mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
     ):
-        mock_qsettings_value.side_effect = qsettings_value_side_effect
         mock_set_app_style.return_value = True
         toolbox = ToolboxUI()
+        toolbox._qsettings = mock.MagicMock()
+        toolbox._qsettings.value = mock.MagicMock()
+        toolbox._qsettings.value.side_effect = return_default_value
     return toolbox
 
 
 def create_project(toolbox, project_dir):
     """Creates a project for the given ToolboxUI."""
-    with (
-        mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
-        mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
-        mock.patch("spinetoolbox.ui_main.QSettings.sync"),
-    ):
+    with (mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),):
         toolbox.create_project(project_dir)
 
 
@@ -61,52 +58,35 @@ def create_toolboxui_with_project(project_dir):
     """Returns ToolboxUI with a project instance where
     QSettings among others has been mocked."""
     with (
-        mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value,
         mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
         mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
-        mock.patch("spinetoolbox.ui_main.QSettings.setValue"),
-        mock.patch("spinetoolbox.ui_main.QSettings.sync"),
         mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
     ):
-        mock_qsettings_value.side_effect = qsettings_value_side_effect
         mock_set_app_style.return_value = True
         toolbox = ToolboxUI()
+        toolbox._qsettings = mock.MagicMock()
+        toolbox._qsettings.value = mock.MagicMock()
+        toolbox._qsettings.value.side_effect = return_default_value
         toolbox.create_project(project_dir)
     return toolbox
 
 
+def return_default_value(key, defaultValue=None):
+    """Side effect function for QSettings.value() which returns defaultValue."""
+    return defaultValue
+
+
 def clean_up_toolbox(toolbox):
     """Cleans up toolbox and project."""
-    with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-        mock_qsettings_value.side_effect = qsettings_value_side_effect
-        if toolbox.project():
-            toolbox.close_project(ask_confirmation=False)
-            QApplication.processEvents()  # Makes sure Design view animations finish properly.
-            mock_qsettings_value.assert_called()  # The call in _shutdown_engine_kernels()
+    if toolbox.project():
+        toolbox.close_project(ask_confirmation=False)
+        QApplication.processEvents()  # Makes sure Design view animations finish properly.
     toolbox.db_mngr.close_all_sessions()
     toolbox.db_mngr.clean_up()
     toolbox.db_mngr = None
     # Delete undo stack explicitly to prevent emitting certain signals well after ToolboxUI has been destroyed.
     toolbox.undo_stack.deleteLater()
     toolbox.deleteLater()
-
-
-# noinspection PyMethodMayBeStatic, PyPep8Naming,SpellCheckingInspection
-def qsettings_value_side_effect(key, defaultValue="0"):
-    """Side effect for calling QSettings.value() method. Used to
-    override default value for key 'appSettings/openPreviousProject'
-    so that previous project is not opened in background when
-    ToolboxUI is instantiated.
-
-    Args:
-        key (str): Key to read
-        defaultValue (QVariant): Default value if key is missing
-    """
-    if key == "appSettings/openPreviousProject":
-        return "0"  # Do not open previous project when instantiating ToolboxUI
-    if key == "engineSettings/remoteExecutionEnabled":
-        return "false"
-    return defaultValue
 
 
 def add_ds(project, item_factories, name, x=0.0, y=0.0):

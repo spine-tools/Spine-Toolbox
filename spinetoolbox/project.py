@@ -16,6 +16,7 @@ from itertools import chain
 import json
 import os
 from pathlib import Path
+from typing import Optional
 import networkx as nx
 from PySide6.QtCore import QCoreApplication, Signal, Slot
 from PySide6.QtGui import QColor
@@ -132,11 +133,11 @@ class SpineToolboxProject(MetaObject):
         self._settings = settings
         self._engine_workers = []
         self._execution_in_progress = False
-        self.project_dir = None  # Full path to project directory
-        self.config_dir = None  # Full path to .spinetoolbox directory
-        self.items_dir = None  # Full path to items directory
-        self.specs_dir = None  # Full path to specs directory
-        self.config_file = None  # Full path to .spinetoolbox/project.json file
+        self.project_dir: Optional[str] = None  # Full path to project directory
+        self.config_dir: Optional[str] = None  # Full path to .spinetoolbox directory
+        self.items_dir: Optional[str] = None  # Full path to items directory
+        self.specs_dir: Optional[str] = None  # Full path to specs directory
+        self.config_file: Optional[str] = None  # Full path to .spinetoolbox/project.json file
         p_dir = os.path.abspath(p_dir)
         if not self._create_project_structure(p_dir):
             self._logger.msg_error.emit(f"Creating project directory structure in <b>{p_dir}</b> failed")
@@ -629,16 +630,16 @@ class SpineToolboxProject(MetaObject):
         self.item_added.emit(name)
         item.set_up()
 
-    def rename_item(self, previous_name, new_name, rename_data_dir_message):
+    def rename_item(self, previous_name: str, new_name: str, rename_data_dir_message: str) -> bool:
         """Renames a project item
 
         Args:
-            previous_name (str): item's current name
-            new_name (str): item's new name
-            rename_data_dir_message (str): message to show when renaming item's data directory
+            previous_name: item's current name
+            new_name: item's new name
+            rename_data_dir_message: message to show when renaming item's data directory
 
         Returns:
-            bool: True if item was renamed successfully, False otherwise
+            True if item was renamed successfully, False otherwise
         """
         if not new_name.strip() or new_name == previous_name:
             return False
@@ -651,14 +652,15 @@ class SpineToolboxProject(MetaObject):
             msg = f"Project item <b>{new_name}</b> already exists"
             self._logger.error_box.emit("Invalid name", msg)
             return False
-        if name_status == ItemNameStatus.SHORT_NAME_EXISTS:
+        if name_status == ItemNameStatus.SHORT_NAME_EXISTS and shorten(previous_name) != shorten(new_name):
             msg = f"Project item using directory <b>{shorten(new_name)}</b> already exists"
             self._logger.error_box.emit("Invalid name", msg)
             return False
-        item = self._project_items.pop(previous_name, None)
-        if item is None:
+        try:
+            item = self._project_items.pop(previous_name)
+        except KeyError:
             # Happens when renaming an item, removing, and then closing the project.
-            # We try to undo the renaming because it's critical, but the item doesn't exist anymore so it's fine.
+            # We try to undo the renaming because it's critical, but the item doesn't exist anymore, so it's fine.
             return True
         resources_to_predecessors = item.resources_for_direct_predecessors()
         resources_to_successors = item.resources_for_direct_successors()
@@ -684,14 +686,14 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg_success.emit(f"Project item <b>{previous_name}</b> renamed to <b>{new_name}</b>.")
         return True
 
-    def validate_project_item_name(self, name):
+    def validate_project_item_name(self, name: str) -> ItemNameStatus:
         """Validates item name.
 
         Args:
-            name (str): proposed project item's name
+            name: proposed project item's name
 
         Returns:
-            ItemNameStatus: validation result
+            validation result
         """
         if any(x in INVALID_CHARS for x in name):
             return ItemNameStatus.INVALID
@@ -720,14 +722,14 @@ class SpineToolboxProject(MetaObject):
             (c for c in self._connections if c.source == source_name and c.destination == destination_name), None
         )
 
-    def connections_for_item(self, item_name):
+    def connections_for_item(self, item_name: str) -> list[LoggingConnection]:
         """Returns connections that have given item as source or destination.
 
         Args:
-            item_name (str): item's name
+            item_name: item's name
 
         Returns:
-            list of Connection: connections connected to item
+            connections connected to item
         """
         return [c for c in self._connections if item_name in (c.source, c.destination)]
 
@@ -1115,8 +1117,8 @@ class SpineToolboxProject(MetaObject):
         # being acquired by threads from different processes or maybe even different QThreads.
         # Can't say I really understand the whole extent of it.
         for finished_worker in self._engine_workers:
-            for item, direction, state in finished_worker.successful_executions:
-                item.handle_execution_successful(direction, state)
+            for item, direction in finished_worker.successful_executions:
+                item.handle_execution_successful(direction)
             finished_worker.clean_up()
         self.finalize_remote_execution(worker.job_id)
         self._engine_workers.clear()

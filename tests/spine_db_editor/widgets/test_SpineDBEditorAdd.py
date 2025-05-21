@@ -14,7 +14,7 @@
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleParameterDefinitionModel
-from .spine_db_editor_test_base import DBEditorTestBase
+from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
 class TestSpineDBEditorAdd(DBEditorTestBase):

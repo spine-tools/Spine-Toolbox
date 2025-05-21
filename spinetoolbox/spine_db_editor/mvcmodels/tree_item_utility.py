@@ -278,12 +278,6 @@ class LeafItem(StandardTreeItem):
             return plain_to_tool_tip(self.item_data.get(header_data))
         return super().tool_tip(column)
 
-    def add_item_to_db(self, db_item):
-        raise NotImplementedError()
-
-    def update_item_in_db(self, db_item):
-        raise NotImplementedError()
-
     def header_data(self, column):
         return self.model.headerData(column, Qt.Orientation.Horizontal)
 
@@ -300,11 +294,11 @@ class LeafItem(StandardTreeItem):
             return False
         if self.id:
             db_item = self._make_item_to_update(column, value)
-            self.update_item_in_db(db_item)
+            self.db_mngr.update_items(self.item_type, {self.db_map: [db_item]})
             return True
         if column == 0:
             db_item = self._make_item_to_add(value)
-            self.add_item_to_db(db_item)
+            self.db_mngr.add_items(self.item_type, {self.db_map: [db_item]})
         return True
 
     def _make_item_to_add(self, value):

@@ -613,7 +613,7 @@ class ParameterTypeEditor(QWidget):
             if not check_box.isChecked():
                 continue
             type_ = check_box.objectName()[: -len("_check_box")]
-            if type_ == Map.type_():
+            if type_ == Map.TYPE:
                 rank_texts = self._ui.map_rank_line_edit.text().split(",")
                 ranks = []
                 for token in rank_texts:
@@ -639,7 +639,7 @@ class ParameterTypeEditor(QWidget):
             map_ranks = []
             for fancy_type in type_list.split(DB_ITEM_SEPARATOR):
                 type_, rank = fancy_type_to_type_and_rank(fancy_type)
-                if type_ == Map.type_():
+                if type_ == Map.TYPE:
                     map_ranks.append(str(rank))
                 check_box = getattr(self._ui, f"{type_}_check_box")
                 check_box.setChecked(True)

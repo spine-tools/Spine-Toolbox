@@ -37,8 +37,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         self.spine_db_editor.ui.treeView_entity.setCurrentIndex(fish_index)
         self.spine_db_editor.ui.treeView_entity.selectionModel().select(fish_index, QItemSelectionModel.Select)
         # Check default in object parameter_definition
-        model = self.spine_db_editor.parameter_definition_model
-        model.empty_model.fetchMore(QModelIndex())
+        model = self.spine_db_editor.empty_parameter_definition_model
         h = model.header.index
         row_data = []
         for row in range(model.rowCount()):
@@ -66,7 +65,7 @@ class TestSpineDBEditor(DBEditorTestBase):
         class_index = entity_model.index(3, 0, entity_tree_root)
         self.assertEqual(class_index.data(), "fish__dog")
         self.spine_db_editor.ui.treeView_entity.setCurrentIndex(class_index)
-        while self.spine_db_editor.parameter_value_model.rowCount() != 3:
+        while self.spine_db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         model = self.spine_db_editor.parameter_value_model
         index = model.index(0, 1)
@@ -135,9 +134,9 @@ class TestSpineDBEditor(DBEditorTestBase):
         self.assertEqual(class_index.data(), "dog")
         self.spine_db_editor.ui.treeView_entity.setCurrentIndex(class_index)
         models = [
-            self.spine_db_editor.parameter_definition_model,
-            self.spine_db_editor.parameter_value_model,
-            self.spine_db_editor.entity_alternative_model,
+            self.spine_db_editor.empty_parameter_definition_model,
+            self.spine_db_editor.empty_parameter_value_model,
+            self.spine_db_editor.empty_entity_alternative_model,
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
@@ -165,9 +164,9 @@ class TestSpineDBEditor(DBEditorTestBase):
             self.mock_db_map.get_entity_class_item(name="dog").update(name="wolf")
             waiter.wait()
         models = [
-            self.spine_db_editor.parameter_definition_model,
-            self.spine_db_editor.parameter_value_model,
-            self.spine_db_editor.entity_alternative_model,
+            self.spine_db_editor.empty_parameter_definition_model,
+            self.spine_db_editor.empty_parameter_value_model,
+            self.spine_db_editor.empty_entity_alternative_model,
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
@@ -198,9 +197,9 @@ class TestSpineDBEditor(DBEditorTestBase):
             self.spine_db_editor.ui.treeView_entity.setCurrentIndex(entity_index)
             waiter.wait()
         models = [
-            self.spine_db_editor.parameter_definition_model,
-            self.spine_db_editor.parameter_value_model,
-            self.spine_db_editor.entity_alternative_model,
+            self.spine_db_editor.empty_parameter_definition_model,
+            self.spine_db_editor.empty_parameter_value_model,
+            self.spine_db_editor.empty_entity_alternative_model,
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
@@ -234,9 +233,9 @@ class TestSpineDBEditor(DBEditorTestBase):
             self.mock_db_map.get_entity_item(name="nemo", entity_class_name="fish").update(name="emon")
             waiter.wait()
         models = [
-            self.spine_db_editor.parameter_definition_model,
-            self.spine_db_editor.parameter_value_model,
-            self.spine_db_editor.entity_alternative_model,
+            self.spine_db_editor.empty_parameter_definition_model,
+            self.spine_db_editor.empty_parameter_value_model,
+            self.spine_db_editor.empty_entity_alternative_model,
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
@@ -281,7 +280,7 @@ class TestClosingDBEditors(TestCaseWithQApplication):
     def test_first_editor_to_close_does_not_ask_for_confirmation_on_dirty_database(self):
         editor_1 = self._make_db_editor()
         editor_2 = self._make_db_editor()
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         with (
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
@@ -298,7 +297,7 @@ class TestClosingDBEditors(TestCaseWithQApplication):
 
     def test_editor_asks_for_confirmation_even_when_non_editor_listeners_are_connected(self):
         editor = self._make_db_editor()
-        self._db_mngr.add_entity_classes({self._db_map: [{"name": "my_object_class"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "my_object_class"}]})
         self.assertTrue(self._db_mngr.dirty(self._db_map))
         non_editor_listener = object()
         self._db_mngr.register_listener(non_editor_listener, self._db_map)

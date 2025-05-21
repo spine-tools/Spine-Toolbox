@@ -3,26 +3,16 @@
 
 .. |dc_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/data_connection.svg
             :width: 16
-.. |file| image:: ../../spinetoolbox/ui/resources/file.svg
-          :width: 16
 .. |file_regular| image:: ../../spinetoolbox/ui/resources/file-regular.svg
-          :width: 16
-.. |file_link| image:: ../../spinetoolbox/ui/resources/file-link.svg
           :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
              :width: 16
 .. |execute| image:: ../../spinetoolbox/ui/resources/menu_icons/play-circle-solid.svg
              :width: 16
-.. |add_tool_specification| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
-              :width: 16
-.. |tool_specification_options| image:: ../../spinetoolbox/ui/resources/wrench.svg
-             :width: 16
 .. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
           :width: 16
 .. |black_plus| image:: ../../spinetoolbox/ui/resources/black_plus.svg
              :width: 16
-.. |downward_triangle| image:: ../../spinetoolbox/ui/resources/downward_triangle.svg
-             :width: 8
 .. |wrench| image:: ../../spinetoolbox/ui/resources/wrench.svg
              :width: 16
 .. _Getting Started:
@@ -56,13 +46,15 @@ In addition to the **Design View** there are a few `dock widgets` that provide a
   interact with the aforementioned programming languages. Also shows a list of parallel executions available in the
   project.
 
-In addition to the **Design View** and the dock widgets, the main window contains a **Toolbar** split into
-two sections. The **Items** section contains the project items that you can drag-and-drop onto the **Design
-View** while the **Execute** section has buttons related to executing the project.
+In addition to the **Design View** and the dock widgets, the main window contains three *Toolbars*.
+The **Generic Items** Toolbar contains the project items that you can drag-and-drop
+onto the **Design View**. These items are generic in the sense that that they need to be fully configured
+for their task. The **Specifications** Toolbar, on the other hand, holds specific configurations for project items.
+The third Toolbar, **Execute**, has buttons related to executing the project.
 
 .. tip:: You can drag-and-drop the dock widgets around the screen, customizing the interface at your will.
    Also, you can select which ones are shown/hidden using either the **View -> Dock Widgets** menu,
-   or the main menu **Toolbar**'s context menu.
+   or the right-click context menu of any of the Toolbars.
    Spine Toolbox remembers your configuration between sessions. Selecting **Restore Dock Widgets**
    from the **View -> Dock Widgets** menu restores the widgets back to their default location.
 
@@ -79,7 +71,7 @@ To create a new project, please do one of the following:
 
 The *Select project directory (New project...)* dialog will show up.
 Browse to a folder of your choice and create a new directory called 'hello world' there.
-Then select the 'hello world' directory and click Select Folder.
+Then select the 'hello world' directory and click **Select Folder**.
 Spine Toolbox will populate the selected directory with some files and directories it needs to store
 the project's data.
 
@@ -96,11 +88,11 @@ Creating a Tool Specification
 .. note:: Just like the main window, the **Tool specification editor** consists of dock widgets that you can reorganize
    however you like.
 
-In the **Toolbar**, click on the |downward_triangle| icon next to the Tool icon |tool_icon|, to reveal the Tool
-specification list. Since there are none in the project yet, click on the |black_plus| button to open the
-**Tool specification editor**. Follow the instructions below to create a minimal Tool specification:
+Since there are no Tool specifications in the project yet, click on the |black_plus| button
+in **Specifications** Toolbar and select **Tool** from the popup menu to open the **Tool specification editor**.
+Follow the instructions below to create a minimal Tool specification:
 
-* Type 'hello_world' into the *Name:* field.
+* Type 'hello_world' into the *Name* field.
 * Select 'Python' from the *Tool type* dropdown list,
 * Click on the |file_regular| button next to the *Main program file* text in the **Program files** dock widget. A
   *Create new main program file* file browser dialog opens. Name the file ``hello_world.py`` and save it e.g. directly
@@ -129,10 +121,11 @@ This is indicated by the star (*) character next to hello_world.py* and the Tool
 
 * Save changes to both by either pressing **Ctrl+S** or by mouse clicking on **Save** in the hamburger menu in
   the upper right hand corner.
-* Close **Tool specification editor** by pressing **Alt+F4** or by clicking on 'X' in the top right hand corner of the
+* Close **Tool specification editor** by pressing **Alt+F4** or by clicking on 'X' in the top right corner of the
   window.
 
-Your main window should look similar to this now.
+The new 'hello_world' tool has now been added to the **Specifications** Toolbar
+and your main window should look similar to this:
 
 .. image:: img/getting_started_first_tool_spec_created.png
   :align: center
@@ -146,9 +139,10 @@ to worry about *the contents* of the JSON Tool specification files. Editing thes
 If you want to save ``hello_world.json`` somewhere else, you can do this by clicking the white [change] link
 after the path in the Event Log.
 
-.. tip:: Saving the Tool specification into a file allows you to add and use the same Tool specification in
-   another project. To do this, you just need to click the *From file...* button
-   (|plus|) in the **Toolbar** and select the Tool specification file (.json) from your system.
+.. tip:: A Tool specification (and any other specification) can be reused in another project.
+   To do this, you just need to click the |plus| button in the **Specifications** Toolbar
+   and select **From specification file...** from the popup menu.
+   This opens a file browser dialog that lets you select the specification file (.json) from your system.
 
 Congratulations, you have just created your first Tool specification.
 
@@ -159,9 +153,9 @@ Adding a Tool Item to the Project
 .. note:: The Tool project item is used to run Tool specifications.
 
 Let's add a Tool item to our project, so that we're able to run the Tool specification we created above.
-To add a Tool item drag-and-drop the Tool icon |tool_icon| from the **Toolbar** onto the **Design View**.
+To add a Tool item, drag-and-drop the Tool icon |tool_icon| from the **Generic items** Toolbar onto the **Design View**.
 
-The **Add Tool** form will popup. Change name of the Tool to 'say hello world', and select 'hello_world' from the
+The **Add Tool** dialog will popup. Change name of the Tool to 'say hello world', and select 'hello_world' from the
 dropdown list just below, and click **Ok**. Now you should see the newly added Tool item as an icon in the
 **Design View**. It should look similar to this:
 
@@ -170,8 +164,9 @@ dropdown list just below, and click **Ok**. Now you should see the newly added T
    
 |
 
-Another way to do the same thing is to drag the |tool_icon| with the 'hello world' text from the **Toolbar** onto
-the **Design View**. Similarly, the **Add Tool** form will popup but the 'hello world' tool specification is already
+Another way to do the same thing is to drag the |tool_icon| with the 'hello world' text
+from the **Specifications** Toolbar onto the **Design View**.
+Similarly, the **Add Tool** form will popup but the 'hello world' tool specification is already
 selected from the dropdown list.
 
 .. note:: The Tool specification is now saved to disk but the project itself is not. Remember to save the project
@@ -191,7 +186,8 @@ widget. It looks similar to this:
    
 |
 
-Press **execute project** |execute| button on the **Toolbar**. This will execute the 'say hello world' Tool project item
+Press **execute project** |execute| button on the **Execute** Toolbar.
+This will execute the 'say hello world' Tool project item
 which now has the 'hello world' Tool specification associated to it. In actuality, this will run the main program
 file ``hello_world.py`` in a dedicated process.
 
@@ -215,9 +211,9 @@ To make things more interesting, we will now specify an *input file* for our 'he
 
 .. note:: Input files specified in the Tool specification can be used by the program source files, to obtain
    input data for the Tool's execution. When executed, a Tool item looks for input files in **Data Connection**,
-   **Data Store**, **Exporter**, and **Data Transformer** project items connected to its input.
+   and **Exporter** project items connected to its input.
 
-Open the Tool specification editor for the 'hello world' Tool spec. You can do this for example, by double-clicking
+Open the Tool specification editor for the 'hello world' Tool spec. You can do this, for example, by double-clicking
 the 'say hello world' Tool in **Design View**, or from the **Tool Properties** by clicking the
 Tool specification options button (|wrench|) next to the specification and selecting **Edit specification**.
 
@@ -246,8 +242,8 @@ Save the specification and close the editor by pressing **Ctrl+S** and then **Al
 
 Back in the main window, note the exclamation mark on the Tool icon in **Design View**, if you hover the mouse over
 this mark, you will see a tooltip telling you in detail what is wrong. If you want you can try and execute the
-Tool anyway by pressing |execute| in the **Toolbar**. *The execution will fail* because the file ``input.txt`` is not
-made available for the Tool:
+Tool anyway by pressing |execute| in the **Execute** Toolbar.
+*The execution will fail* because the file ``input.txt`` is not made available for the Tool:
 
 .. image:: img/getting_started_say_hello_world_failed.png
   :align: center
@@ -261,8 +257,8 @@ Adding a Data Connection Item to the Project
    so that other items, notably Importer and Tool, can make use of that data.
 
 Let's add a Data Connection item to our project, so that we're able to pass the file ``input.txt`` to
-'say hello world'. To add a Data Connection item, drag-and-drop the Data Connection icon (|dc_icon|) from the **Toolbar**
-onto the **Design View**.
+'say hello world'. To add a Data Connection item, drag-and-drop the Data Connection icon (|dc_icon|)
+from the **Generic items** Toolbar onto the **Design View**.
 
 The *Add Data Connection* form will show up. Type 'pass input txt' in the name field and click **Ok**. The newly
 added Data Connection item is now in the **Design View**.
@@ -317,11 +313,6 @@ Press |execute| once again. The project will be executed successfully this time:
 That's all for now. I hope you've enjoyed following this guide as much as I enjoyed writing it. See you next time.
 
 Where to next: If you need help on how to set up and run **SpineOpt.jl** using Spine Toolbox, see chapter
-:ref:`How to Set up SpineOpt.jl`. After setting up SpineOpt, there are three tutorials over on **SpineOpt.jl**'s
-documentation that will help you get started on using SpineOpt in Spine Toolbox:
-`Simple system
-<https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/simple_system/>`_,
-`Two hydro plants
-<https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/tutorialTwoHydro/>`_, and
-`Case study A5
-<https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/case_study_a5/>`_.
+:ref:`How to Set up SpineOpt.jl`. After setting up SpineOpt, you can follow the
+`Simple system <https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/simple_system/>`_
+tutorial over on **SpineOpt.jl**'s documentation that will help you get started on using SpineOpt in Spine Toolbox.

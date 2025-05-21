@@ -11,10 +11,12 @@
 ######################################################################################################################
 
 """Provides SpineDBIconManager."""
+from collections.abc import Iterable
 from PySide6.QtCore import QBuffer, QPointF, QRectF, Qt
 from PySide6.QtGui import QFont, QIcon, QPainter, QTextOption
 from PySide6.QtSvg import QSvgGenerator, QSvgRenderer
 from PySide6.QtWidgets import QGraphicsScene
+from spinedb_api.db_mapping_base import PublicItem
 from .font import TOOLBOX_FONT
 from .helpers import TransparentIconEngine, default_icon_id, interpret_icon_id
 
@@ -72,13 +74,13 @@ class SpineDBIconManager:
         self._group_renderers = {}  # A mapping from class name to associated group renderer
         self.icon_renderers = {}
 
-    def update_icon_caches(self, classes):
+    def update_icon_caches(self, classes: Iterable[PublicItem]):
         """Called after adding or updating entity classes.
         Stores display_icons and clears obsolete entries
         from the relationship class and entity group renderer caches.
 
         Args:
-            classes (list): List of entity classes that were updated.
+            classes: iterable of entity classes that were updated.
         """
         for class_ in classes:
             self.display_icons[class_["name"]] = class_["display_icon"]

@@ -13,16 +13,17 @@
 """Unit tests for ``spine_db_fetcher`` module."""
 import unittest
 from unittest.mock import MagicMock
+from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon
 from spinedb_api import DatabaseMapping, to_database
 from spinedb_api.import_functions import import_data
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, q_object
 
 
 class TestItemTypeFetchParent(ItemTypeFetchParent):
-    def __init__(self, item_type):
-        super().__init__(item_type)
+    def __init__(self, item_type, parent):
+        super().__init__(item_type, owner=parent)
         self.handle_items_added = MagicMock()
 
 
@@ -39,16 +40,17 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         self._db_mngr.clean_up()
 
     def test_fetch_empty_database(self):
-        for item_type in DatabaseMapping.item_types():
-            fetcher = TestItemTypeFetchParent(item_type)
-            while self._db_mngr.can_fetch_more(self._db_map, fetcher):
-                self._db_mngr.fetch_more(self._db_map, fetcher)
-                qApp.processEvents()  # pylint: disable=undefined-variable
-            if item_type in ("alternative", "commit"):
-                fetcher.handle_items_added.assert_called_once()
-            else:
-                fetcher.handle_items_added.assert_not_called()
-            fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            for item_type in DatabaseMapping.item_types():
+                fetcher = TestItemTypeFetchParent(item_type, parent)
+                while self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                    self._db_mngr.fetch_more(self._db_map, fetcher)
+                    qApp.processEvents()  # pylint: disable=undefined-variable
+                if item_type in ("alternative", "commit"):
+                    fetcher.handle_items_added.assert_called_once()
+                else:
+                    fetcher.handle_items_added.assert_not_called()
+                fetcher.set_obsolete(True)
 
     def _import_data(self, **data):
         import_data(self._db_map, **data)
@@ -56,39 +58,45 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
 
     def test_fetch_alternatives(self):
         self._import_data(alternatives=("alt",))
-        fetcher = TestItemTypeFetchParent("alternative")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        "id": self._db_map.get_alternative_item(id=1)["id"],
-                        "name": "Base",
-                        "description": "Base alternative",
-                        "commit_id": 1,
-                    }
-                ]
-            }
-        )
-        fetcher.handle_items_added.assert_any_call(
-            {
-                self._db_map: [
-                    {
-                        "id": self._db_map.get_alternative_item(id=2)["id"],
-                        "name": "alt",
-                        "description": None,
-                        "commit_id": 2,
-                    }
-                ]
-            }
-        )
-        alternative_id = self._db_map.alternative(name="alt")["id"]
-        self.assertEqual(
-            self._db_mngr.get_item(self._db_map, "alternative", alternative_id),
-            {"commit_id": 2, "description": None, "id": self._db_map.get_alternative_item(id=2)["id"], "name": "alt"},
-        )
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            fetcher = TestItemTypeFetchParent("alternative", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call(
+                {
+                    self._db_map: [
+                        {
+                            "id": self._db_map.get_alternative_item(id=1)["id"],
+                            "name": "Base",
+                            "description": "Base alternative",
+                            "commit_id": 1,
+                        }
+                    ]
+                }
+            )
+            fetcher.handle_items_added.assert_any_call(
+                {
+                    self._db_map: [
+                        {
+                            "id": self._db_map.get_alternative_item(id=2)["id"],
+                            "name": "alt",
+                            "description": None,
+                            "commit_id": 2,
+                        }
+                    ]
+                }
+            )
+            alternative_id = self._db_map.alternative(name="alt")["id"]
+            self.assertEqual(
+                self._db_mngr.get_item(self._db_map, "alternative", alternative_id),
+                {
+                    "commit_id": 2,
+                    "description": None,
+                    "id": self._db_map.get_alternative_item(id=2)["id"],
+                    "name": "alt",
+                },
+            )
+            fetcher.set_obsolete(True)
 
     def test_fetch_scenarios(self):
         self._import_data(scenarios=("scenario",))
@@ -100,12 +108,13 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "active": False,
             "commit_id": 2,
         }
-        fetcher = TestItemTypeFetchParent("scenario")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario", scenario_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            fetcher = TestItemTypeFetchParent("scenario", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario", scenario_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_scenario_alternatives(self):
         self._import_data(alternatives=("alt",), scenarios=("scenario",), scenario_alternatives=(("scenario", "alt"),))
@@ -119,16 +128,20 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "rank": 1,
             "commit_id": 2,
         }
-        for item_type in ("scenario", "alternative"):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("scenario_alternative")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "scenario_alternative", scenario_alternative_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            for item_type in ("scenario", "alternative"):
+                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+                dep_fetcher.set_obsolete(True)
+                dep_fetcher.deleteLater()
+            fetcher = TestItemTypeFetchParent("scenario_alternative", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(
+                self._db_mngr.get_item(self._db_map, "scenario_alternative", scenario_alternative_id), item
+            )
+            fetcher.set_obsolete(True)
 
     def test_fetch_object_classes(self):
         self._import_data(entity_classes=(("oc",),))
@@ -143,13 +156,14 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "active_by_default": True,
             "dimension_id_list": (),
         }
-        fetcher = TestItemTypeFetchParent("entity_class")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertIsInstance(self._db_mngr.entity_class_icon(self._db_map, entity_class_id), QIcon)
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_class", entity_class_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            fetcher = TestItemTypeFetchParent("entity_class", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertIsInstance(self._db_mngr.entity_class_icon(self._db_map, entity_class_id), QIcon)
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_class", entity_class_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_objects(self):
         self._import_data(entity_classes=(("oc",),), entities=(("oc", "obj"),))
@@ -162,17 +176,18 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "description": None,
             "commit_id": 2,
         }
-        self._db_mngr.fetch_more(self._db_map, TestItemTypeFetchParent("entity_class"))
-        for item_type in ("entity",):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("entity")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "entity", entity_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            self._db_mngr.fetch_more(self._db_map, TestItemTypeFetchParent("entity_class", parent))
+            for item_type in ("entity",):
+                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+                dep_fetcher.set_obsolete(True)
+            fetcher = TestItemTypeFetchParent("entity", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "entity", entity_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_relationship_classes(self):
         self._import_data(
@@ -192,16 +207,17 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "active_by_default": True,
             "dimension_id_list": (self._db_map.entity_class(name="oc")["id"],),
         }
-        for item_type in ("entity_class",):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("entity_class")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_class", entity_class_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            for item_type in ("entity_class",):
+                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+                dep_fetcher.set_obsolete(True)
+            fetcher = TestItemTypeFetchParent("entity_class", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_class", entity_class_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_relationships(self):
         self._import_data(entity_classes=(("oc",), ("rc", ("oc",))), entities=(("oc", "obj"), ("rc", ("obj",))))
@@ -214,16 +230,17 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "description": None,
             "commit_id": 2,
         }
-        for item_type in ("entity_class", "entity"):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("entity")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "entity", relationship_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            for item_type in ("entity_class", "entity"):
+                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+                dep_fetcher.set_obsolete(True)
+            fetcher = TestItemTypeFetchParent("entity", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "entity", relationship_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_object_groups(self):
         self._import_data(
@@ -236,12 +253,13 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "entity_id": self._db_map.entity(entity_class_name="oc", name="group")["id"],
             "member_id": self._db_map.entity(entity_class_name="oc", name="obj")["id"],
         }
-        fetcher = TestItemTypeFetchParent("entity_group")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_group", group_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            fetcher = TestItemTypeFetchParent("entity_group", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "entity_group", group_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_parameter_definitions(self):
         self._import_data(entity_classes=("oc",), parameter_definitions=(("oc", "param"),))
@@ -257,16 +275,17 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "commit_id": 2,
             "list_value_id": None,
         }
-        for item_type in ("entity_class",):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("parameter_definition")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", definition_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            for item_type in ("entity_class",):
+                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+                dep_fetcher.set_obsolete(True)
+            fetcher = TestItemTypeFetchParent("parameter_definition", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_definition", definition_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_parameter_values(self):
         self._import_data(
@@ -290,42 +309,44 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "commit_id": 2,
             "list_value_id": None,
         }
-        for item_type in ("entity_class", "entity", "parameter_definition", "alternative"):
-            dep_fetcher = TestItemTypeFetchParent(item_type)
-            self._db_mngr.fetch_more(self._db_map, dep_fetcher)
-            dep_fetcher.set_obsolete(True)
-        fetcher = TestItemTypeFetchParent("parameter_value")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", value_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            for item_type in ("entity_class", "entity", "parameter_definition", "alternative"):
+                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                self._db_mngr.fetch_more(self._db_map, dep_fetcher)
+                dep_fetcher.set_obsolete(True)
+            fetcher = TestItemTypeFetchParent("parameter_value", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value", value_id), item)
+            fetcher.set_obsolete(True)
 
     def test_fetch_parameter_value_lists(self):
         self._import_data(parameter_value_lists=(("value_list", 2.3),))
         value_list_id = self._db_map.parameter_value_list(name="value_list")["id"]
         item = {"id": value_list_id, "name": "value_list", "commit_id": 2}
-        fetcher = TestItemTypeFetchParent("parameter_value_list")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", value_list_id), item)
-        list_value_id = self._db_map.list_value(parameter_value_list_name="value_list", index=0)["id"]
-        value, value_type = to_database(2.3)
-        item = {
-            "id": list_value_id,
-            "parameter_value_list_id": value_list_id,
-            "index": 0,
-            "value": value,
-            "type": value_type,
-            "commit_id": 2,
-        }
-        fetcher = TestItemTypeFetchParent("list_value")
-        if self._db_mngr.can_fetch_more(self._db_map, fetcher):
-            self._db_mngr.fetch_more(self._db_map, fetcher)
-        fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
-        self.assertEqual(self._db_mngr.get_item(self._db_map, "list_value", list_value_id), item)
-        fetcher.set_obsolete(True)
+        with q_object(QObject()) as parent:
+            fetcher = TestItemTypeFetchParent("parameter_value_list", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "parameter_value_list", value_list_id), item)
+            list_value_id = self._db_map.list_value(parameter_value_list_name="value_list", index=0)["id"]
+            value, value_type = to_database(2.3)
+            item = {
+                "id": list_value_id,
+                "parameter_value_list_id": value_list_id,
+                "index": 0,
+                "value": value,
+                "type": value_type,
+                "commit_id": 2,
+            }
+            fetcher = TestItemTypeFetchParent("list_value", parent)
+            if self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+            fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
+            self.assertEqual(self._db_mngr.get_item(self._db_map, "list_value", list_value_id), item)
+            fetcher.set_obsolete(True)
 
 
 if __name__ == "__main__":

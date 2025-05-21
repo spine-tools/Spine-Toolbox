@@ -30,7 +30,8 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
-            mock_settings = mock.Mock()
+            mock_settings = mock.MagicMock()
+            mock_settings.value = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
             self.db_mngr = TestSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
@@ -72,7 +73,7 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
             "parameter_definitions": [("fish", "color")],
             "parameter_values": [("fish", "nemo", "color", "orange")],
         }
-        self.db_mngr.import_data({self.db_map: data})
+        self.db_mngr.import_data({self.db_map: data}, "Import test data.")
         self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
@@ -92,14 +93,13 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
         self.spine_db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
             root_index, QItemSelectionModel.SelectionFlags.ClearAndSelect
         )
-        while self.spine_db_editor.parameter_value_model.rowCount() != 3:
+        while self.spine_db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         expected = [
             ["fish", "nemo", "color", "Base", "orange", "db"],
             ["fish", "nemo (1)", "color", "Base", "orange", "db"],
-            [None, None, None, None, None, "db"],
         ]
-        for row in range(3):
+        for row in range(2):
             for column in range(self.spine_db_editor.parameter_value_model.columnCount()):
                 with self.subTest(row=row, column=column):
                     self.assertEqual(

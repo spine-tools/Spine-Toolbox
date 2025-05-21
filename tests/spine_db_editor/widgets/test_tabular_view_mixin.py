@@ -34,7 +34,7 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
                 ("class1", "object2", "parameter2", 7.0),
             ),
         }
-        self._db_mngr.import_data({self._db_map: data})
+        self._db_mngr.import_data({self._db_map: data}, "Import entity class dta.")
 
     def _add_entity_class_data_with_indexes_values(self):
         data = {
@@ -56,7 +56,7 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
                 ),
             ),
         }
-        self._db_mngr.import_data({self._db_map: data})
+        self._db_mngr.import_data({self._db_map: data}, "Import indexed value data.")
 
     def _start(self):
         get_item_exceptions = []

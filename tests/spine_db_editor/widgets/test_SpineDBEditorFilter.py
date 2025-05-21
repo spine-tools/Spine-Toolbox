@@ -291,7 +291,7 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         cls.sanitized_data = sanitized_data
 
     def _import_data(self):
-        self.spine_db_editor.import_data(self.sanitized_data)
+        self.spine_db_editor.import_data(self.sanitized_data, "Import test data.")
         models = (
             self.spine_db_editor.parameter_value_model,
             self.spine_db_editor.parameter_definition_model,

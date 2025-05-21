@@ -111,7 +111,7 @@ class TestLoggingConnectionWithDatabaseManager(TestCaseWithQApplication):
 
     def test_has_filters_when_database_has_an_unknown_scenario(self):
         with signal_waiter(self._toolbox.db_mngr.items_added) as waiter:
-            self._toolbox.db_mngr.add_scenarios({self._db_map: [{"name": "Base", "id": 1}]})
+            self._toolbox.db_mngr.add_items("scenario", {self._db_map: [{"name": "Base", "id": 1}]})
             waiter.wait()
         connection = LoggingConnection("Store 1", "right", "Store 2", "left", toolbox=self._toolbox)
         connection.link = MagicMock()
@@ -123,7 +123,7 @@ class TestLoggingConnectionWithDatabaseManager(TestCaseWithQApplication):
 
     def test_set_online(self):
         with signal_waiter(self._toolbox.db_mngr.items_added) as waiter:
-            self._toolbox.db_mngr.add_scenarios({self._db_map: [{"name": "Base", "id": 1}]})
+            self._toolbox.db_mngr.add_items("scenario", {self._db_map: [{"name": "Base", "id": 1}]})
             waiter.wait()
         filter_settings = FilterSettings({"database@Store 1": {"scenario_filter": {"Base": False}}})
         connection = LoggingConnection(
