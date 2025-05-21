@@ -13,7 +13,6 @@
 """Empty models for dialogs as well as parameter definitions and values."""
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
-from itertools import chain
 from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
@@ -42,6 +41,7 @@ class EmptyModelBase(EmptyRowModel):
     item_type: ClassVar[str] = NotImplemented
     can_be_filtered: ClassVar[bool] = False
     field_map: ClassVar[dict[str, str]] = {}
+    group_fields: ClassVar[Iterable[str]] = ()
 
     def __init__(self, header: list[str], db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(parent, header)
@@ -125,7 +125,7 @@ class EmptyModelBase(EmptyRowModel):
         for _ in range(count):
             self._undo_stack.push(InsertEmptyModelRow(self, row))
         self._undo_stack.endMacro()
-        return self._undo_stack.command(self._undo_stack.count() - 1).isObsolete()
+        return not self._undo_stack.command(self._undo_stack.count() - 1).isObsolete()
 
     def do_insert_rows(self, row: int, count: int) -> None:
         super().insertRows(row, count)
@@ -150,30 +150,7 @@ class EmptyModelBase(EmptyRowModel):
                 removed_rows.append(row)
         for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
             self.do_remove_rows(row, count)
-        clean_index = self._undo_stack.cleanIndex()
-        removed_row_set = set(removed_rows)
-        new_clean_index = -1
-        for command_index in range(self._undo_stack.count()):
-            command = self._undo_stack.command(command_index)
-            if command_index > clean_index:
-                command.setObsolete(True)
-            else:
-                if hasattr(command, "rows_dropped"):
-                    command.rows_dropped(removed_row_set)
-                    if not command.isObsolete():
-                        new_clean_index = command_index
-                else:
-                    children_obsolete = True
-                    for child_index in range(command.childCount()):
-                        child_command = command.child(child_index)
-                        if hasattr(child_command, "rows_dropped"):
-                            child_command.rows_dropped(removed_row_set)
-                            if not child_command.isObsolete():
-                                new_clean_index = command_index
-                                children_obsolete = False
-                    if children_obsolete:
-                        command.setObsolete(True)
-        self._undo_stack.setIndex(new_clean_index)
+        self._undo_stack.clear()
 
     def batch_set_data(self, indexes, data):
         """Sets data for indexes in batch. If successful, add items to db."""
@@ -336,6 +313,7 @@ class ParameterMixin:
 
 
 class EntityMixin:
+    group_fields = ("entity_byname",)
     entities_added = Signal(object)
     entity_byname_column: ClassVar[int] = NotImplemented
 
@@ -380,7 +358,9 @@ class EntityMixin:
     def _make_item(self, row):
         item = super()._make_item(row)
         byname = item["entity_byname"]
-        item["entity_byname"] = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
+        if not isinstance(byname, tuple):
+            byname = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
+        item["entity_byname"] = byname
         return item
 
     @classmethod
@@ -401,6 +381,7 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     value_field = "default_value"
     type_field = "default_type"
     parameter_name_column = PARAMETER_DEFINITION_MODEL_HEADER.index("parameter_name")
+    group_fields = ("valid types",)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_DEFINITION_MODEL_HEADER, db_mngr, parent)

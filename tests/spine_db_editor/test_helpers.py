@@ -28,6 +28,8 @@ class TestStringToBool(unittest.TestCase):
         self.assertTrue(string_to_bool("TRUE"))
         self.assertFalse(string_to_bool("false"))
         self.assertFalse(string_to_bool(""))
+        self.assertTrue(string_to_bool(b"true"))
+        self.assertFalse(string_to_bool(b"false"))
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["oc", "p", (), None, "None", None, self.db_codename]
+        expected = ["oc", "p", None, None, "None", None, self.db_codename]
         self.assertEqual(row, expected)
 
     def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
@@ -61,7 +61,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 7)
         row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["rc", "p", (), None, "None", None, self.db_codename]
+        expected = ["rc", "p", None, None, "None", None, self.db_codename]
         self.assertEqual(row, expected)
 
     def test_model_updates_when_entity_class_is_removed(self):

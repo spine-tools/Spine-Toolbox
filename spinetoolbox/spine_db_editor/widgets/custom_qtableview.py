@@ -13,7 +13,7 @@
 """Custom QTableView classes that support copy-paste and the like."""
 from collections.abc import Iterable
 from dataclasses import replace
-from typing import ClassVar
+from typing import ClassVar, Optional
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
@@ -91,6 +91,11 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.populate_context_menu()
         self.create_delegates()
         self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
+
+    def setModel(self, model):
+        super().setModel(model)
+        for field in model.group_fields:
+            self.set_column_converter_for_pasting(field, convert_pasted_group_fields)
 
     def _make_delegate(self, column_name, delegate_class):
         """Creates a delegate for the given column and returns it.
@@ -217,6 +222,13 @@ class StackedTableView(AutoFilterCopyPasteTableView):
     def set_db_column_visibility(self, visible):
         """Sets the visibility of the db column"""
         self.setColumnHidden(self._EXPECTED_COLUMN_COUNT - 1, not visible)
+
+
+def convert_pasted_group_fields(types: Optional[str]) -> tuple[str, ...]:
+    if not types:
+        return ()
+    separator = DB_ITEM_SEPARATOR if DB_ITEM_SEPARATOR in types else ","
+    return tuple(t.strip() for t in types.split(separator))
 
 
 class ParameterTableView(StackedTableView):

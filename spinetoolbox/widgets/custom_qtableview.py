@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
+from collections.abc import Callable, Iterable
 from contextlib import contextmanager, suppress
 import csv
 import ctypes
@@ -20,6 +21,7 @@ import locale
 from numbers import Number
 from operator import methodcaller
 import re
+from typing import Any, Optional
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView
@@ -48,7 +50,7 @@ class CopyPasteTableView(QTableView):
         self._copy_action = None
         self._paste_action = None
         self._delete_action = QAction("Delete", self)
-        self._delete_action.setShortcut(QKeySequence.Delete)
+        self._delete_action.setShortcut(QKeySequence.StandardKey.Delete)
         self.addAction(self._delete_action)
         self._pasted_data_converters = {}
         self._delete_action.triggered.connect(self.delete_content)
@@ -70,12 +72,12 @@ class CopyPasteTableView(QTableView):
             raise RuntimeError("Copy and paste actions have already been set.")
         copy_icon = QIcon(":/icons/menu_icons/copy.svg")
         self._copy_action = QAction(copy_icon, "Copy", self)
-        self._copy_action.setShortcut(QKeySequence.Copy)
+        self._copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         self.addAction(self._copy_action)
         self._copy_action.triggered.connect(self.copy)
         paste_icon = QIcon(":/icons/menu_icons/paste.svg")
         self._paste_action = QAction(paste_icon, "Paste", self)
-        self._paste_action.setShortcut(QKeySequence.Paste)
+        self._paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.addAction(self._paste_action)
         self._paste_action.triggered.connect(self.paste)
 
@@ -139,15 +141,14 @@ class CopyPasteTableView(QTableView):
                         if data is not None:
                             if isinstance(data, bool):
                                 str_data = "true" if data else "false"
+                            elif isinstance(data, int):
+                                str_data = str(data)
                             else:
-                                if isinstance(data, int):
+                                try:
+                                    number = float(data)
+                                    str_data = locale.str(number)
+                                except ValueError:
                                     str_data = str(data)
-                                else:
-                                    try:
-                                        number = float(data)
-                                        str_data = locale.str(number)
-                                    except ValueError:
-                                        str_data = str(data)
                         else:
                             str_data = ""
                         row.append(str_data)
@@ -291,7 +292,7 @@ class CopyPasteTableView(QTableView):
             columns_append(h.logicalIndex(visual_column))
             visual_column += 1
         # Insert extra rows if needed:
-        last_row = max(rows)
+        last_row = rows[-1]
         model = self.model()
         row_count = model.rowCount()
         if last_row >= row_count:
@@ -339,10 +340,10 @@ class CopyPasteTableView(QTableView):
             culled_data.append(data[i])
         return culled_rows, culled_data
 
-    def set_column_converter_for_pasting(self, header, converter):
+    def set_column_converter_for_pasting(self, header: str, converter: Callable[[Optional[str]], Any]) -> None:
         self._pasted_data_converters[header] = converter
 
-    def _converters(self):
+    def _converters(self) -> dict[str, Callable[[Optional[str]], Any]]:
         converters = {}
         model = self.model()
         for column in range(model.columnCount()):
