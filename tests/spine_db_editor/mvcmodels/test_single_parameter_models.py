@@ -23,7 +23,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
     SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model, q_object
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, fetch_model, q_object
 
 ENTITY_PARAMETER_VALUE_HEADER = [
     "entity_class_name",
@@ -35,12 +35,12 @@ ENTITY_PARAMETER_VALUE_HEADER = [
 ]
 
 
-class TestSingleParameterDefinitionModel(SingleParameterDefinitionModel):
+class ExampleSingleParameterDefinitionModel(SingleParameterDefinitionModel):
     def __init__(self, db_mngr, db_map, entity_class_id, committed):
         super().__init__(CompoundParameterDefinitionModel(None, db_mngr), db_map, entity_class_id, committed)
 
 
-class TestSingleParameterValueModel(SingleParameterValueModel):
+class ExampleSingleParameterValueModel(SingleParameterValueModel):
     def __init__(self, db_mngr, db_map, entity_class_id, committed):
         super().__init__(CompoundParameterValueModel(None, db_mngr), db_map, entity_class_id, committed)
 
@@ -57,11 +57,11 @@ class TestEmptySingleParameterDefinitionModel(TestCaseWithQApplication):
     ]
 
     def test_rowCount_is_zero(self):
-        with q_object(TestSingleParameterDefinitionModel(None, None, 1, False)) as model:
+        with q_object(ExampleSingleParameterDefinitionModel(None, None, 1, False)) as model:
             self.assertEqual(model.rowCount(), 0)
 
     def test_columnCount_is_header_length(self):
-        with q_object(TestSingleParameterDefinitionModel(None, None, 1, False)) as model:
+        with q_object(ExampleSingleParameterDefinitionModel(None, None, 1, False)) as model:
             self.assertEqual(model.columnCount(), len(self.HEADER))
 
 
@@ -76,7 +76,7 @@ class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
     ]
 
     def setUp(self):
-        self._db_mngr = TestSpineDBManager(None, None)
+        self._db_mngr = MockSpineDBManager(None, None)
         self._logger = MagicMock()
         self._db_map = self._db_mngr.get_db_map("sqlite:///", self._logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.db_url, "Test database")
@@ -118,7 +118,9 @@ class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
             parameter_definition_id=definition["id"],
             alternative_id=alternative["id"],
         )
-        with q_object(TestSingleParameterValueModel(self._db_mngr, self._db_map, parameter_value["id"], True)) as model:
+        with q_object(
+            ExampleSingleParameterValueModel(self._db_mngr, self._db_map, parameter_value["id"], True)
+        ) as model:
             fetch_model(model)
             model.add_rows([parameter_value["id"]])
             self.assertEqual(model.index(0, 0).data(DB_MAP_ROLE), self._db_map)

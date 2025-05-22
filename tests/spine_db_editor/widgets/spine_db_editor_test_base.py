@@ -15,7 +15,7 @@ from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 
 
 class DBEditorTestBase(TestCaseWithQApplication):
@@ -29,7 +29,7 @@ class DBEditorTestBase(TestCaseWithQApplication):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self.db_mngr = TestSpineDBManager(mock_settings, None)
+            self.db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, create=True)
             self.db_mngr.name_registry.register("sqlite://", self.db_codename)

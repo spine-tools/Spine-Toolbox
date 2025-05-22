@@ -20,14 +20,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, fetch_model
 
 
 class TestMetadataTableModel(TestCaseWithQApplication):
     def setUp(self):
         mock_settings = mock.Mock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
-        self._db_mngr = TestSpineDBManager(mock_settings, None)
+        self._db_mngr = MockSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.sa_url, "database")

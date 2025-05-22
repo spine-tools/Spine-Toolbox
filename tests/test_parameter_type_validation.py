@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 
 
 class TestTypeValidator(TestCaseWithQApplication):
@@ -27,7 +27,7 @@ class TestTypeValidator(TestCaseWithQApplication):
     def setUp(self):
         mock_settings = mock.MagicMock()
         mock_settings.value.side_effect = lambda *args, **kwargs: 0
-        self._db_mngr = TestSpineDBManager(mock_settings, None)
+        self._db_mngr = MockSpineDBManager(mock_settings, None)
         logger = mock.MagicMock()
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)

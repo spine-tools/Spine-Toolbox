@@ -18,7 +18,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 
 
 class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
@@ -33,7 +33,7 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
             mock_settings = mock.MagicMock()
             mock_settings.value = mock.MagicMock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = TestSpineDBManager(mock_settings, None)
+            self.db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.db_map = self.db_mngr.get_db_map(url, logger, create=True)
             self.spine_db_editor = SpineDBEditor(self.db_mngr, [url])
