@@ -6,15 +6,18 @@ Unit Testing Guidelines
 Test modules, directories
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Spine project uses Python standard `unittest <https://docs.python.org/3/library/unittest.html>`_ framework for testing.
+Spine project uses the `pytest <https://docs.pytest.org/en/stable/index.html>`_ framework for testing.
 The tests are organized into Python modules starting with the prefix :literal:`test_`
 under :literal:`<project root>/tests/`.
 The structure of :literal:`tests/` mirrors that of the package being tested.
-Note that all subdirectories containing test modules under :literal:`tests/` must have an (empty) :literal:`__init__.py`
-which makes them part of the project's test package.
 
-While there are no strict rules on how to name the individual test modules except for the :literal:`test_` prefix,
-:literal:`test_<module_name>.py` is preferred.
+The naming convention for modules is :literal:`test_<module_name>.py`.
+Within those files, :literal:`pytest` will run `test` prefixed functions or methods
+outside of classes, and `test` prefixed functions or methods inside `Test` prefixed
+test classes (without an :literal:`__init__` method). Methods decorated with
+:literal:`@staticmethod` and :literal:`@classmethods` are also considered.
+
+Please consult the `conventions for python test discovery https://docs.pytest.org/en/stable/explanation/goodpractices.html#conventions-for-python-test-discovery` for further details.
 
 Running the tests
 ~~~~~~~~~~~~~~~~~
@@ -22,7 +25,7 @@ Running the tests
 Tests are run as a GitHub action whenever a branch is pushed to GitHub.
 This process is configured by :literal:`<project root>/.github/workflows/unittest_runner.yml`
 
-To execute the tests manually, run :literal:`python -munittest discover` in project's root.
+To execute the tests manually, run :literal:`pytest tests/` in project's root.
 
 Helpers
 ~~~~~~~
