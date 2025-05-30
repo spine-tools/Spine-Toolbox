@@ -268,7 +268,7 @@ class EntityItem(MultiDBTreeItem):
             return {"database": db_name}
         return {
             "entity_class_name": item["entity_class_name"],
-            "entity_byname": DB_ITEM_SEPARATOR.join(item["entity_byname"]),
+            "entity_byname": item["entity_byname"],
             "database": db_name,
         }
 

@@ -36,7 +36,7 @@ class EntityTreeModel(MultiDBTreeModel):
         # Get all ancestors
         el_item = ent_item.parent_item
         if el_item.item_type != "entity":
-            return
+            return None
         for db_map in ent_item.db_maps:
             # Get data from ancestors
             ent_data = ent_item.db_map_data(db_map)
@@ -54,6 +54,7 @@ class EntityTreeModel(MultiDBTreeModel):
             for parent_item in self.find_items(db_map, (dimension_id, element_id), fetch=True):
                 for item in parent_item.find_children(lambda child: child.display_id == ent_item.display_id):
                     return self.index_from_item(item)
+        return None
 
     def save_hide_empty_classes(self):
         hide_empty_classes = "true" if self.hide_empty_classes else "false"

@@ -212,7 +212,7 @@ class SingleModelBase(HalfSortedTableModel):
                     return plain_to_rich(description)
             mapped_field = self._mapped_field(field)
             data = item.get(mapped_field)
-            if field in self.group_fields:
+            if field in self.group_fields and role != Qt.ItemDataRole.EditRole:
                 data = DB_ITEM_SEPARATOR.join(data) if data else None
             return data
         if role == Qt.ItemDataRole.DecorationRole and field == "entity_class_name":

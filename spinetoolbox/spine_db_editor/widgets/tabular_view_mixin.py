@@ -14,16 +14,20 @@
 from collections import namedtuple
 from contextlib import contextmanager
 from itertools import chain
+from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QWidget
+from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import fix_name_ambiguity
+from spinedb_api.temp_id import TempId
 from ...helpers import busy_effect, disconnect, preferred_row_height
 from ..mvcmodels.frozen_table_model import FrozenTableModel
 from ..mvcmodels.pivot_table_models import (
     ElementPivotTableModel,
     IndexExpansionPivotTableModel,
     ParameterValuePivotTableModel,
+    PivotTableModelBase,
     PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
@@ -34,14 +38,14 @@ from .tabular_view_header_widget import TabularViewHeaderWidget
 class TabularViewMixin:
     """Provides the pivot table and its frozen table for the Database editor."""
 
-    _PARAMETER_VALUE = "&Value"
-    _INDEX_EXPANSION = "&Index"
-    _ELEMENT = "E&lement"
-    _SCENARIO_ALTERNATIVE = "&Scenario"
+    _PARAMETER_VALUE: ClassVar[str] = "&Value"
+    _INDEX_EXPANSION: ClassVar[str] = "&Index"
+    _ELEMENT: ClassVar[str] = "E&lement"
+    _SCENARIO_ALTERNATIVE: ClassVar[str] = "&Scenario"
 
-    _PARAMETER = "parameter"
-    _ALTERNATIVE = "alternative"
-    _INDEX = "index"
+    _PARAMETER: ClassVar[str] = "parameter"
+    _ALTERNATIVE: ClassVar[str] = "alternative"
+    _INDEX: ClassVar[str] = "index"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -52,8 +56,8 @@ class TabularViewMixin:
             self._SCENARIO_ALTERNATIVE: ScenarioAlternativePivotTableModel(self),
         }
         self._pending_reload = False
-        self.current_class_id = {}  # Mapping from db_map to class_id
-        self.current_class_name = None
+        self.current_class_id: dict[DatabaseMapping, TempId] = {}  # Mapping from db_map to class_id
+        self.current_class_name: Optional[str] = None
         self.current_input_type = self._PARAMETER_VALUE
         self.filter_menus = {}
         self.class_pivot_preferences = {}
@@ -62,7 +66,7 @@ class TabularViewMixin:
         self.pivot_actions = {}
         self.populate_pivot_action_group()
         self.pivot_table_proxy = PivotTableSortFilterProxy()
-        self.pivot_table_model = None
+        self.pivot_table_model: Optional[PivotTableModelBase] = None
         self.frozen_table_model = FrozenTableModel(self.db_mngr, self)
         self._disable_frozen_table_reload = False
         self.ui.pivot_table.setModel(self.pivot_table_proxy)

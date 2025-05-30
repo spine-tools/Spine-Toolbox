@@ -15,14 +15,16 @@ from collections import defaultdict
 from contextlib import suppress
 from functools import partial
 from itertools import product
-from typing import Iterable
+from operator import itemgetter
+from typing import Iterable, Union
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import IndexedValue, join_value_and_type, split_value_and_type
+from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, DBMapTypedDictItems, parameter_identifier, plain_to_tool_tip
 from ...mvcmodels.shared import PARSED_ROLE
 from ..widgets.custom_delegates import (
     ParameterPivotTableDelegate,
@@ -97,7 +99,9 @@ class TopLeftHeaderItem:
         """
         raise NotImplementedError()
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(
+        self, names: Iterable[str], db_map: DatabaseMapping
+    ) -> dict[str, dict[DatabaseMapping, list[dict]]]:
         """Adds more data to database.
 
         Args:
@@ -142,14 +146,10 @@ class TopLeftEntityHeaderItem(TopLeftHeaderItem):
         self.db_mngr.update_items("entity", db_map_data)
         return True
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(self, names, db_map):
         """See base class."""
-        if not names:
-            return False
         class_id = self._class_id[db_map]
-        db_map_data = {db_map: [{"name": name, "class_id": class_id} for name in names]}
-        self.db_mngr.add_items("entity", db_map_data)
-        return True
+        return {"entity": {db_map: [{"name": name, "class_id": class_id} for name in names]}}
 
 
 class TopLeftParameterHeaderItem(TopLeftHeaderItem):
@@ -174,14 +174,10 @@ class TopLeftParameterHeaderItem(TopLeftHeaderItem):
         self.db_mngr.update_items("parameter_definition", db_map_data)
         return True
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(self, names, db_map):
         """See base class."""
-        if not names:
-            return False
         class_id = self.model._parent.current_class_id[db_map]
-        db_map_data = {db_map: [{"name": name, "entity_class_id": class_id} for name in names]}
-        self.db_mngr.add_items("parameter_definition", db_map_data)
-        return True
+        return {"parameter_definition": {db_map: [{"name": name, "entity_class_id": class_id} for name in names]}}
 
 
 class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
@@ -206,9 +202,9 @@ class TopLeftParameterIndexHeaderItem(TopLeftHeaderItem):
         """See base class."""
         return False
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(self, names, db_map):
         """See base class."""
-        return False
+        return {}
 
 
 class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
@@ -233,13 +229,9 @@ class TopLeftAlternativeHeaderItem(TopLeftHeaderItem):
         self.db_mngr.update_items("alternative", db_map_data)
         return True
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(self, names, db_map):
         """See base class."""
-        if not names:
-            return False
-        db_map_data = {db_map: [{"name": name} for name in names]}
-        self.db_mngr.add_items("alternative", db_map_data)
-        return True
+        return {"alternative": {db_map: [{"name": name} for name in names]}}
 
 
 class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
@@ -264,13 +256,9 @@ class TopLeftScenarioHeaderItem(TopLeftHeaderItem):
         self.db_mngr.update_items("scenario", db_map_data)
         return True
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(self, names, db_map):
         """See base class."""
-        if not names:
-            return False
-        db_map_data = {db_map: [{"name": name} for name in names]}
-        self.db_mngr.add_items("scenario", db_map_data)
-        return True
+        return {"scenario": {db_map: [{"name": name} for name in names]}}
 
 
 class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
@@ -296,9 +284,9 @@ class TopLeftDatabaseHeaderItem(TopLeftHeaderItem):
         """See base class."""
         return False
 
-    def add_data(self, names, db_map):
+    def get_db_map_data_to_add(self, names, db_map):
         """See base class."""
-        return False
+        return {}
 
     def set_data(self, name):
         """Sets database mapping's name.
@@ -703,6 +691,9 @@ class PivotTableModelBase(QAbstractTableModel):
             and self.headerColumnCount() <= index.column() < self.columnCount() - self.emptyColumnCount()
         )
 
+    def index_in_data_or_empty_data(self, index: QModelIndex) -> bool:
+        return self.headerRowCount() <= index.row() and self.headerColumnCount() <= index.column()
+
     def column_is_index_column(self, column):
         """Returns True if column is the column containing expanded parameter_value indexes."""
         return False
@@ -758,16 +749,8 @@ class PivotTableModelBase(QAbstractTableModel):
             return self.model._column_data_header[column][index.row()]
         return None
 
-    def _header_ids(self, row, column):
-        """Returns the ids for the headers at given row *and* column.
-
-        Args:
-            row (int)
-            column (int)
-
-        Returns:
-            tuple(int)
-        """
+    def _header_ids(self, row: int, column: int) -> tuple:
+        """Returns the ids for the headers at given row *and* column."""
         row_key = self.model.row_key(max(0, row))
         column_key = self.model.column_key(max(0, column))
         return self.model._key_getter(row_key + column_key + self.model.frozen_value)
@@ -934,16 +917,23 @@ class PivotTableModelBase(QAbstractTableModel):
         for index, value in header_data:
             top_left_id = get_top_left_id(index)
             names_by_top_left_id[top_left_id].add(value)
-        success = False
+        to_add = {}
         for id_, names in names_by_top_left_id.items():
+            if not names:
+                continue
             header_item = self.top_left_headers[id_]
-            if db_map is None:
-                db_map = self.top_left_headers["database"].take_suggested_db_map()
             if isinstance(header_item, TopLeftDatabaseHeaderItem):
                 header_item.set_data(next(iter(names)))
             else:
-                success = success or header_item.add_data(names, db_map)
-        return success
+                if db_map is None:
+                    db_map = self.top_left_headers["database"].take_suggested_db_map()
+                items = header_item.get_db_map_data_to_add(names, db_map)
+                for item_type, db_map_data in items.items():
+                    for db_map, data in db_map_data.items():
+                        to_add.setdefault(item_type, {}).setdefault(db_map, []).extend(data)
+        for item_type, db_map_data in to_add.items():
+            self.db_mngr.add_items(item_type, db_map_data)
+        return bool(to_add)
 
     def tear_down(self):
         """Sets fetch parents obsolete preventing further updates."""
@@ -1274,7 +1264,31 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         return self.db_mngr.get_value(db_map, item, role)
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
-        return self._batch_set_parameter_value_data(row_map, column_map, data, values)
+        """Sets parameter values in batch."""
+        to_add = {}
+        to_update = {}
+        parameter_value_to_add = self._make_parameter_value_to_add()
+        for i, row in enumerate(row_map):
+            for j, column in enumerate(column_map):
+                if (row, column) not in values:
+                    continue
+                header_ids = list(self._header_ids(row, column))
+                db_map = header_ids.pop()
+                header_ids = [id_ for _db_map, id_ in header_ids]
+                if data[i][j] is None:
+                    item = parameter_value_to_add(db_map, header_ids, values[row, column])
+                    to_add.setdefault(db_map, []).append(item)
+                else:
+                    _db_map, id_ = data[i][j]
+                    item = self._parameter_value_to_update(id_, header_ids, values[row, column])
+                    to_update.setdefault(db_map, []).append(item)
+        if not to_add and not to_update:
+            return False
+        if to_add:
+            self._add_parameter_values(to_add)
+        if to_update:
+            self._update_parameter_values(to_update)
+        return True
 
     def _entity_parameter_value_to_add(self, db_map, header_ids, value_and_type, ent_id_lookup=None):
         entity_id = (
@@ -1315,33 +1329,6 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             "parameter_definition_id": header_ids[-2],
             "alternative_id": header_ids[-1],
         }
-
-    def _batch_set_parameter_value_data(self, row_map, column_map, data, values):
-        """Sets parameter values in batch."""
-        to_add = {}
-        to_update = {}
-        parameter_value_to_add = self._make_parameter_value_to_add()
-        for i, row in enumerate(row_map):
-            for j, column in enumerate(column_map):
-                if (row, column) not in values:
-                    continue
-                header_ids = list(self._header_ids(row, column))
-                db_map = header_ids.pop()
-                header_ids = [id_ for _db_map, id_ in header_ids]
-                if data[i][j] is None:
-                    item = parameter_value_to_add(db_map, header_ids, values[row, column])
-                    to_add.setdefault(db_map, []).append(item)
-                else:
-                    _db_map, id_ = data[i][j]
-                    item = self._parameter_value_to_update(id_, header_ids, values[row, column])
-                    to_update.setdefault(db_map, []).append(item)
-        if not to_add and not to_update:
-            return False
-        if to_add:
-            self._add_parameter_values(to_add)
-        if to_update:
-            self._update_parameter_values(to_update)
-        return True
 
     def _add_parameter_values(self, db_map_data):
         self.db_mngr.add_items("parameter_value", db_map_data)
@@ -1688,9 +1675,6 @@ class ElementPivotTableModel(PivotTableModelBase):
         return bool(data[0][0])
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
-        return self._batch_set_entity_data(row_map, column_map, data, values)
-
-    def _batch_set_entity_data(self, row_map, column_map, data, values):
         def entity_to_add(db_map, header_ids):
             element_names = [self.db_mngr.get_item(db_map, "entity", id_)["name"] for id_ in header_ids]
             name = name_from_elements(element_names)
@@ -1843,40 +1827,50 @@ class ScenarioAlternativePivotTableModel(PivotTableModelBase):
         return data[0][0]
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
-        return self._batch_set_scenario_alternative_data(row_map, column_map, data, values)
-
-    def _batch_set_scenario_alternative_data(self, row_map, column_map, data, values):
-        to_add = {}
-        to_remove = {}
+        touched_scenarios = set()
+        modified_scenario_alternatives: dict[tuple[DatabaseMapping, TempId], dict[TempId, Union[int, bool]]] = {}
+        appended_scenario_alternatives: dict[tuple[DatabaseMapping, TempId], list[TempId]] = {}
+        removed_scenario_alternatives: dict[tuple[DatabaseMapping, TempId], list[TempId]] = {}
         for i, row in enumerate(row_map):
             for j, column in enumerate(column_map):
-                header_ids = list(self._header_ids(row, column))
-                db_map = header_ids.pop()
-                scen_id, alt_id = [id_ for _, id_ in header_ids]
-                if data[i][j] is None and values[row, column]:
-                    to_add.setdefault((db_map, scen_id), []).append(alt_id)
-                elif data[i][j] is not None and not values[row, column]:
-                    to_remove.setdefault((db_map, scen_id), []).append(alt_id)
-        if not to_add and not to_remove:
+                header_ids = self._header_ids(row, column)
+                scenario_id = header_ids[0][1]
+                alternative_id = header_ids[1][1]
+                db_map = header_ids[2]
+                value = values[row, column]
+                key = (db_map, scenario_id)
+                touched_scenarios.add(key)
+                if not value:
+                    removed_scenario_alternatives.setdefault(key, []).append(alternative_id)
+                elif value is True:
+                    appended_scenario_alternatives.setdefault(key, []).append(alternative_id)
+                else:
+                    modified_scenario_alternatives.setdefault(key, {})[alternative_id] = value
+        if not touched_scenarios:
             return False
+        unsorted_scenario_alternatives = {}
+        for db_map, scenario_id in touched_scenarios:
+            scenario_alternatives = {}
+            for scenario_alternative in db_map.find_scenario_alternatives(scenario_id=scenario_id):
+                scenario_alternatives[scenario_alternative["alternative_id"]] = scenario_alternative["rank"]
+            if (db_map, scenario_id) in removed_scenario_alternatives:
+                for removed_alternative_id in removed_scenario_alternatives[db_map, scenario_id]:
+                    with suppress(KeyError):
+                        del scenario_alternatives[removed_alternative_id]
+            if (db_map, scenario_id) in modified_scenario_alternatives:
+                for modified_alternative_id, new_rank in modified_scenario_alternatives[db_map, scenario_id].items():
+                    scenario_alternatives[modified_alternative_id] = new_rank
+            unsorted_alternatives = list(scenario_alternatives.items())
+            if (db_map, scenario_id) in appended_scenario_alternatives:
+                next_rank = max((x[1] for x in unsorted_alternatives), default=0) + 1
+                for appended_alternative_id in appended_scenario_alternatives[db_map, scenario_id]:
+                    unsorted_alternatives.append((appended_alternative_id, next_rank))
+                    next_rank += 1
+            unsorted_scenario_alternatives[db_map, scenario_id] = unsorted_alternatives
         db_map_items = {}
-        for (db_map, scen_id), alt_ids_to_add in to_add.items():
-            alt_ids_to_remove = to_remove.pop((db_map, scen_id), [])
-            alternative_id_list = [
-                id_
-                for id_ in list(self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)) + alt_ids_to_add
-                if id_ not in alt_ids_to_remove
-            ]
-            db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
-            db_map_items.setdefault(db_map, []).append(db_item)
-        for (db_map, scen_id), alt_ids_to_remove in to_remove.items():
-            alternative_id_list = [
-                id_
-                for id_ in self.db_mngr.get_scenario_alternative_id_list(db_map, scen_id)
-                if id_ not in alt_ids_to_remove
-            ]
-            db_item = {"id": scen_id, "alternative_id_list": alternative_id_list}
-            db_map_items.setdefault(db_map, []).append(db_item)
+        for (db_map, scenario_id), unsorted_alternatives in unsorted_scenario_alternatives.items():
+            alternative_ids = [x[0] for x in sorted(unsorted_alternatives, key=itemgetter(1))]
+            db_map_items.setdefault(db_map, []).append({"id": scenario_id, "alternative_id_list": alternative_ids})
         self.db_mngr.set_scenario_alternatives(db_map_items)
         return True
 
@@ -1976,6 +1970,12 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
     def batch_set_data(self, indexes, values):
         indexes = [self.mapToSource(index) for index in indexes]
         return self.sourceModel().batch_set_data(indexes, values)
+
+    def begin_paste(self):
+        pass
+
+    def end_paste(self):
+        pass
 
 
 def _make_get_id(action):

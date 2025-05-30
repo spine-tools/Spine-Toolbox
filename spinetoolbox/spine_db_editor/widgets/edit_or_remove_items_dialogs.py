@@ -15,8 +15,9 @@ from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QComboBox, QTabWidget, QVBoxLayout
 from ...helpers import DB_ITEM_SEPARATOR, default_icon_id
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ..helpers import string_to_bool, string_to_display_icon
+from ..helpers import bool_to_string, optional_to_string, string_to_bool, string_to_display_icon
 from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate, RemoveEntitiesDelegate
+from .custom_qtableview import ManageEntityClassesTable
 from .manage_items_dialogs import (
     DialogWithButtons,
     GetEntitiesMixin,
@@ -49,8 +50,6 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
         """
         super().__init__(parent, db_mngr)
         self.setWindowTitle("Edit entity classes")
-        self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
-        self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageEntityClassesDelegate(self))
@@ -69,6 +68,11 @@ class EditEntityClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog)
             model_data.append(row_data)
             self.items.append(item)
         self.model.reset_model(model_data)
+
+    def make_table_view(self):
+        table_view = ManageEntityClassesTable(self)
+        table_view.init_copy_and_paste_actions()
+        return table_view
 
     def connect_signals(self):
         super().connect_signals()
