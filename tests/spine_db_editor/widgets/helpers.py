@@ -45,7 +45,7 @@ class EditorDelegateMocking:
             view.model().setData(index, value)
             return
         if isinstance(self._cell_editor, SearchBarEditor):
-            key_press_event = QKeyEvent(QEvent.KeyPress, Qt.Key_Down, Qt.NoModifier, 0, 0, 0)
+            key_press_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Down, Qt.KeyboardModifier.NoModifier, 0, 0, 0)
             i = 0
             while self._cell_editor.data() != value:
                 if i == self._cell_editor._model.rowCount():
@@ -53,7 +53,7 @@ class EditorDelegateMocking:
                 self._cell_editor.keyPressEvent(key_press_event)
                 i += 1
         else:
-            self._cell_editor.setText(str(value))
+            self._cell_editor.setText(str(value) if not isinstance(value, tuple) else ",".join(value))
         delegate.commitData.emit(self._cell_editor)
         delegate.closeEditor.emit(self._cell_editor)
 

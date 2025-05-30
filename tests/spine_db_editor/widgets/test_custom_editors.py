@@ -159,19 +159,19 @@ class TestParameterTypeEditor(TestCaseWithQApplication):
             with self.subTest(check_box_text=check_box.text()):
                 self.assertTrue(check_box.isChecked())
         self.assertEqual(self._editor._ui.map_rank_line_edit.text(), "1")
-        self.assertEqual(self._editor.data(), "")
+        self.assertEqual(self._editor.data(), ())
 
     def test_select_single_type(self):
         expected_data = {
-            "a&rray": "array",
-            "&bool": "bool",
-            "&date_time": "date_time",
-            "d&uration": "duration",
-            "&float": "float",
-            "&map": DB_ITEM_SEPARATOR.join(("2d_map", "3d_map")),
-            "&str": "str",
-            "time_&pattern": "time_pattern",
-            "&time_series": "time_series",
+            "a&rray": ("array",),
+            "&bool": ("bool",),
+            "&date_time": ("date_time",),
+            "d&uration": ("duration",),
+            "&float": ("float",),
+            "&map": ("2d_map", "3d_map"),
+            "&str": ("str",),
+            "time_&pattern": ("time_pattern",),
+            "&time_series": ("time_series",),
         }
         for check_box in self._editor._check_box_iter():
             self._editor._clear_all()

@@ -13,7 +13,7 @@
 """Unit tests for CopyPasteTableView class."""
 import locale
 import unittest
-from unittest.mock import patch
+from unittest import mock
 from PySide6.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
@@ -39,7 +39,7 @@ class _MockModel(QAbstractTableModel):
         return self._data[index.row()][index.column()]
 
     def flags(self, index):
-        return Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsEnabled
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
         if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
@@ -77,44 +77,32 @@ class _MockModel(QAbstractTableModel):
         pass
 
 
-def delocalize_comma_decimal_separator(x):
-    return x.replace(",", ".")
-
-
-def str_with_comma_decimal_separator(x):
-    string = str(x)
-    return string.replace(".", ",")
-
-
 class TestCopyPasteTableView(TestCaseWithQApplication):
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
     def test_copy_single_number(self):
         view = CopyPasteTableView()
         model = _MockModel()
         view.setModel(model)
         selection_model = view.selectionModel()
-        selection_model.select(model.index(0, 2), QItemSelectionModel.Select)
+        selection_model.select(model.index(0, 2), QItemSelectionModel.SelectionFlag.Select)
         self.assertTrue(view.copy())
         clipboard = QApplication.clipboard()
         copied = clipboard.text()
-        self.assertEqual(copied, "1,1\r\n")
+        self.assertEqual(copied, f"{str(1.1)}\r\n")
 
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
     def test_copy_row_with_hidden_column(self):
         view = CopyPasteTableView()
         model = _MockModel()
         view.setModel(model)
         view.setColumnHidden(1, True)
         selection_model = view.selectionModel()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.Rows | QItemSelectionModel.Select)
+        selection_model.select(
+            model.index(0, 0), QItemSelectionModel.SelectionFlag.Rows | QItemSelectionModel.SelectionFlag.Select
+        )
         self.assertTrue(view.copy())
         clipboard = QApplication.clipboard()
         copied = clipboard.text()
-        self.assertEqual(copied, "a\t1,1\r\n")
+        self.assertEqual(copied, f"a\t{str(1.1)}\r\n")
 
-    @patch("locale.str", str_with_comma_decimal_separator)
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.delocalize", delocalize_comma_decimal_separator)
     def test_paste_single_localized_number(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -124,24 +112,20 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 2).data(), "-1.1")
 
-    @patch("locale.str", str_with_comma_decimal_separator)
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.delocalize", delocalize_comma_decimal_separator)
     def test_paste_single_localized_row(self):
         view = CopyPasteTableView()
         model = _MockModel()
         view.setModel(model)
         selection_model = view.selectionModel()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.Rows | QItemSelectionModel.Select)
+        selection_model.select(
+            model.index(0, 0), QItemSelectionModel.SelectionFlag.Rows | QItemSelectionModel.SelectionFlag.Select
+        )
         QApplication.clipboard().setText(f"A\tB\t{locale.str(-1.1)}")
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 0).data(), "A")
         self.assertEqual(model.index(0, 1).data(), "B")
         self.assertEqual(model.index(0, 2).data(), "-1.1")
 
-    @patch("locale.str", str_with_comma_decimal_separator)
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.str", str_with_comma_decimal_separator)
-    @patch("spinetoolbox.widgets.custom_qtableview.locale.delocalize", delocalize_comma_decimal_separator)
     def test_paste_single_comma_separated_string(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -151,29 +135,33 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 2).data(), "unit,node")
 
-    def test_pasting_normal_with_column_converter(self):
+    def test_pasting_normal_with_converter(self):
         view = CopyPasteTableView()
-        view.set_column_converter_for_pasting("Column 2", float)
         model = _MockModel()
         view.setModel(model)
         selection_model = view.selectionModel()
-        selection_model.setCurrentIndex(model.index(0, 2), QItemSelectionModel.ClearAndSelect)
+        selection_model.setCurrentIndex(model.index(0, 2), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with mock_clipboard_patch("3.14", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
-            self.assertTrue(view.paste())
+            with mock.patch.object(view, "_convert_pasted") as convert_pasted:
+                convert_pasted.side_effect = lambda row, column, value, model: float(value)
+                self.assertTrue(view.paste())
+                convert_pasted.assert_called_once_with(0, 2, "3.14", model)
         data = model.index(0, 2).data()
         self.assertIsInstance(data, float)
         self.assertEqual(data, 3.14)
 
-    def test_pasting_selection_with_column_converter(self):
+    def test_pasting_selection_with_converter(self):
         view = CopyPasteTableView()
-        view.set_column_converter_for_pasting("Column 2", float)
         model = _MockModel()
         view.setModel(model)
         selection = QItemSelection(model.index(1, 0), model.index(1, 2))
         selection_model = view.selectionModel()
-        selection_model.select(selection, QItemSelectionModel.ClearAndSelect)
+        selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with mock_clipboard_patch("G\tH\t3.14", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
-            self.assertTrue(view.paste())
+            with mock.patch.object(view, "_convert_pasted") as convert_pasted:
+                convert_pasted.side_effect = lambda row, column, value, model: float(value) if column == 2 else value
+                self.assertTrue(view.paste())
+                convert_pasted.assert_called()
         data = [model.index(1, column).data() for column in range(3)]
         self.assertEqual(data, ["G", "H", 3.14])
 

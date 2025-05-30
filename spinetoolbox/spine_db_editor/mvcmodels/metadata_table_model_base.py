@@ -124,7 +124,7 @@ class MetadataTableModelBase(QAbstractTableModel):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         column = index.column()
         row = index.row()
-        if role == Qt.ItemDataRole.DisplayRole:
+        if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
             if column == Column.DB_MAP:
                 db_map = self._data[row][column] if row < len(self._data) else self._adder_row[column]
                 return self._db_mngr.name_registry.display_name(db_map.sa_url) if db_map is not None else ""
@@ -487,3 +487,9 @@ class MetadataTableModelBase(QAbstractTableModel):
                 continue
             reserved.setdefault(db_map, {})[name] = value
         return reserved
+
+    def begin_paste(self):
+        pass
+
+    def end_paste(self):
+        pass

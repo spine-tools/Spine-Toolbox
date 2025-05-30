@@ -22,7 +22,7 @@ class EmptyRowModel(MinimalTableModel):
     def __init__(self, parent: Optional[QObject] = None, header: Optional[list[str]] = None):
         super().__init__(parent, header=header)
         self.default_row = {}  # A row of default values to put in any newly inserted row
-        self.force_default = False  # Whether or not default values are editable
+        self.force_default = False  # Whether default values are editable
         self._fetched = False
         self.dataChanged.connect(self._handle_data_changed)
         self.rowsInserted.connect(self._handle_rows_inserted)

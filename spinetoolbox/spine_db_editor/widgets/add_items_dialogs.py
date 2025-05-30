@@ -37,10 +37,10 @@ from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_dimensions, name_from_elements
 from ...helpers import DB_ITEM_SEPARATOR
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ..helpers import string_to_bool, string_to_display_icon
 from ..mvcmodels.compound_table_model import CompoundTableModel
 from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
 from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate
+from .custom_qtableview import ManageEntityClassesTable
 from .manage_items_dialogs import (
     DialogWithTableAndButtons,
     GetEntitiesMixin,
@@ -90,12 +90,12 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
         self.table_view.verticalHeader().hide()
         for row, entity in enumerate(self.entities):
             item = QTableWidgetItem()
-            item.setFlags(Qt.ItemIsEnabled)
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled)
             item.setCheckState(Qt.CheckState.Checked)
             self.table_view.setItem(row, 0, item)
             for column, element_byname in enumerate(entity):
                 item = QTableWidgetItem(DB_ITEM_SEPARATOR.join(element_byname))
-                item.setFlags(Qt.ItemIsEnabled)
+                item.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 self.table_view.setItem(row, column + 1, item)
         self.table_view.resizeColumnsToContents()
         self.resize_window_to_columns()
@@ -152,7 +152,7 @@ class AddItemsDialog(ManageItemsDialog):
         self.db_maps = db_maps
         self.keyed_db_maps = db_mngr.name_registry.map_display_names_to_db_maps(db_maps)
         self.remove_rows_button = QToolButton(self)
-        self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.remove_rows_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.remove_rows_button.setText("Remove selected rows")
 
     def _populate_layout(self):
@@ -189,8 +189,6 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add entity classes")
-        self.table_view.set_column_converter_for_pasting("display icon", string_to_display_icon)
-        self.table_view.set_column_converter_for_pasting("active by default", string_to_bool)
         self.model = EmptyAddEntityOrClassRowModel(self)
         self.model.force_default = force_default
         self.table_view.setModel(self.model)
@@ -221,6 +219,11 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
             }
         )
         self.model.clear()
+
+    def make_table_view(self):
+        table_view = ManageEntityClassesTable(self)
+        table_view.init_copy_and_paste_actions()
+        return table_view
 
     def _populate_layout(self):
         self.layout().addWidget(self.dimension_count_widget, 0, 0, 1, -1)

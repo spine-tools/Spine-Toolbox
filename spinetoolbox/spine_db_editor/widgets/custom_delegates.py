@@ -12,7 +12,7 @@
 
 """Custom item delegates."""
 from numbers import Number
-from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
@@ -22,6 +22,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     CheckListEditor,
     CustomComboBoxEditor,
     CustomLineEditor,
+    GroupEditor,
     ParameterTypeEditor,
     ParameterValueLineEditor,
     PivotHeaderTableLineEditor,
@@ -31,6 +32,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
 from ...font import TOOLBOX_FONT
 from ...helpers import object_icon
 from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ..mvcmodels.utils import entity_class_id_for_row
@@ -490,7 +492,7 @@ class EntityBynameDelegate(TableDelegate):
             entities = self.db_mngr.get_items_by_field(db_map, "entity", "class_id", entity_class_id)
         else:
             entities = self.db_mngr.get_items(db_map, "entity")
-        editor = SearchBarEditorWithCreation(self.parent(), parent)
+        editor = GroupEditor(self.parent(), parent)
         name_list = list({x["name"]: None for x in entities})
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
@@ -758,19 +760,21 @@ class ManageItemsDelegate(QStyledItemDelegate):
         Returns:
             QWidget: editor
         """
-        editor = SearchBarEditor(self.parent(), parent)
+        dialog = self.parent()
+        editor = SearchBarEditor(dialog, parent)
         name_list = set()
         dbs_by_alternative_name = {}
-        database_column = self.parent().model.horizontal_header_labels().index("databases")
+        database_column = dialog.model.horizontal_header_labels().index("databases")
         database_index = index.model().index(index.row(), database_column)
         databases = database_index.data(Qt.ItemDataRole.DisplayRole).split(", ")
+        db_mngr = dialog.db_mngr
         for db_map_codename in databases:  # Filter possible alternatives based on selected databases
-            db_map = self.parent().keyed_db_maps[db_map_codename]
-            alternatives = self.parent().db_mngr.get_items(db_map, "alternative")
+            db_map = dialog.keyed_db_maps[db_map_codename]
+            alternatives = db_mngr.get_items(db_map, "alternative")
             for alternative in alternatives:
                 dbs_by_alternative_name.setdefault(alternative["name"], set()).add(db_map)
         for alternative, db_maps in dbs_by_alternative_name.items():
-            name_list.add(self.parent().append_db_codenames(alternative, db_maps))
+            name_list.add(dialog.append_db_codenames(alternative, db_maps))
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         return editor
 
@@ -791,7 +795,7 @@ class ManageItemsDelegate(QStyledItemDelegate):
         dbs_by_entity_group = {}
         db_mngr = self.parent().db_mngr
         for db_map in entity_class.db_maps:
-            if parent.db_mngr.name_registry.display_name(db_map.sa_url) not in databases:
+            if db_mngr.name_registry.display_name(db_map.sa_url) not in databases:
                 # Allow groups that are in selected DBs under "databases" column.
                 continue
             class_item = db_mngr.get_item_by_field(db_map, "entity_class", "name", entity_class.name)

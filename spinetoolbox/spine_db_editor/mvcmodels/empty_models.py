@@ -245,6 +245,11 @@ class EmptyModelBase(EmptyRowModel):
                 iter(x for x in self.db_mngr.db_maps if self.db_mngr.name_registry.display_name(x.sa_url) == database),
                 None,
             )
+        if (role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.ToolTipRole) and self.header[
+            index.column()
+        ] in self.group_fields:
+            data = super().data(index, role)
+            return DB_ITEM_SEPARATOR.join(data) if data else None
         return super().data(index, role)
 
     def _convert_to_db(self, item: dict) -> dict:
