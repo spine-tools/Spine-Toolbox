@@ -13,7 +13,7 @@
 """Compound models. These models concatenate several 'single' models and one 'empty' model."""
 import bisect
 from collections.abc import Iterable
-from typing import ClassVar
+from typing import ClassVar, Type
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
@@ -80,13 +80,12 @@ class CompoundStackedModel(CompoundTableModel):
         return self._column_filters
 
     @property
-    def _single_model_type(self):
-        """
-        Returns a constructor for the single models.
+    def group_fields(self) -> Iterable[str]:
+        return self._single_model_type.group_fields
 
-        Returns:
-            SingleParameterModel
-        """
+    @property
+    def _single_model_type(self) -> Type[SingleModelBase]:
+        """Returns a constructor for the single models."""
         raise NotImplementedError()
 
     def canFetchMore(self, _parent):

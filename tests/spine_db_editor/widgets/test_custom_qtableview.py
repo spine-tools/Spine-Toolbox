@@ -11,15 +11,18 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
+import csv
+import io
 import itertools
 import os
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, QModelIndex
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions
-from tests.mock_helpers import fetch_model, mock_clipboard_patch
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from tests.mock_helpers import assert_table_model_data, fetch_model, mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
 
@@ -52,6 +55,65 @@ class TestParameterDefinitionTableView(TestBase):
         self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
         self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
 
+    def test_copy_empty_valid_values_column(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="X")
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        valid_types_column = model.header.index("valid types")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        self.assertTrue(table_view.currentIndex().isValid())
+        with mock_clipboard_patch("", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            self.assertTrue(table_view.copy())
+            out_stream = io.StringIO()
+            writer = csv.writer(out_stream, delimiter="\t", quotechar="'")
+            writer.writerow([None])
+            clipboard.setText.assert_called_once_with(out_stream.getvalue())
+
+    def test_copy_valid_values_column(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="X", parameter_type_list=("str", "bool"))
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        valid_types_column = model.header.index("valid types")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        self.assertTrue(table_view.currentIndex().isValid())
+        with mock_clipboard_patch("", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as clipboard:
+            self.assertTrue(table_view.copy())
+            out_stream = io.StringIO()
+            writer = csv.writer(out_stream, delimiter="\t", quotechar="'")
+            writer.writerow(["bool" + DB_ITEM_SEPARATOR + "str"])
+            clipboard.setText.assert_called_once_with(out_stream.getvalue())
+
+    def test_paste_db_separator_data_to_valid_type_column(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="X", parameter_type_list=("str", "bool"))
+        table_view = self._db_editor.ui.tableView_parameter_definition
+        model = table_view.model()
+        fetch_model(model)
+        valid_types_column = model.header.index("valid types")
+        table_view.selectionModel().setCurrentIndex(
+            model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        self.assertTrue(table_view.currentIndex().isValid())
+        out_stream = io.StringIO()
+        writer = csv.writer(out_stream, delimiter="\t", quotechar="'")
+        writer.writerow(["str" + DB_ITEM_SEPARATOR + "bool"])
+        with mock_clipboard_patch(
+            out_stream.getvalue(), "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
+        ):
+            self.assertTrue(table_view.paste())
+        expected = [
+            ["Object", "X", "bool" + DB_ITEM_SEPARATOR + "str", None, "None", None, self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+
 
 class TestParameterValueTableView(TestBase):
     def test_paste_empty_string_to_entity_byname_column(self):
@@ -75,15 +137,19 @@ class TestParameterValueTableView(TestBase):
         self.assertTrue(table_view.currentIndex().isValid())
         with mock_clipboard_patch("''", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(table_view.paste())
-        expected = [
-            ["Object", "my_object", "X", "Base", "2.3", "TestParameterValueTableView_db"],
-        ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row in range(model.rowCount()):
-            for column in range(model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+        expected = {
+            Qt.ItemDataRole.DisplayRole: [
+                ["Object", "my_object", "X", "Base", "2.3", self.db_codename],
+            ],
+            Qt.ItemDataRole.ToolTipRole: [
+                ["Object", "my_object", "X", "<qt>Base alternative</qt>", None, self.db_codename],
+            ],
+            Qt.ItemDataRole.EditRole: [
+                ["Object", ("my_object",), "X", "Base", "2.3", self.db_codename],
+            ],
+        }
+        for role, expected_for_role in expected.items():
+            assert_table_model_data(model, expected_for_role, self, role)
 
     def test_removing_row_does_not_allow_fetching_more_data(self):
         tree_view = self._db_editor.ui.treeView_entity
@@ -100,12 +166,12 @@ class TestParameterValueTableView(TestBase):
         empty_model = empty_table_view.model()
         self.assertEqual(empty_model.rowCount(), 1)
         _set_row_data(
-            empty_table_view, empty_model, 0, ["an_object_class", "object_1", "a_parameter", "Base"], delegate_mock
+            empty_table_view, empty_model, 0, ["an_object_class", ("object_1",), "a_parameter", "Base"], delegate_mock
         )
         delegate_mock.reset()
         delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
         _set_row_data(
-            empty_table_view, empty_model, 1, ["an_object_class", "object_2", "a_parameter", "Base"], delegate_mock
+            empty_table_view, empty_model, 1, ["an_object_class", ("object_2",), "a_parameter", "Base"], delegate_mock
         )
         delegate_mock.reset()
         delegate_mock.write_to_index(empty_table_view, empty_model.index(1, 4), "value_2")
@@ -115,10 +181,7 @@ class TestParameterValueTableView(TestBase):
             ["an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
             ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
         selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
@@ -126,10 +189,7 @@ class TestParameterValueTableView(TestBase):
         expected = [
             ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_receiving_uncommitted_but_existing_value_does_not_create_duplicate_entry(self):
         tree_view = self._db_editor.ui.treeView_entity
@@ -145,7 +205,7 @@ class TestParameterValueTableView(TestBase):
         empty_model = empty_table_view.model()
         self.assertEqual(empty_model.rowCount(), 1)
         _set_row_data(
-            empty_table_view, empty_model, 0, ["an_object_class", "an_object", "a_parameter", "Base"], delegate_mock
+            empty_table_view, empty_model, 0, ["an_object_class", ("an_object",), "a_parameter", "Base"], delegate_mock
         )
         delegate_mock.reset()
         delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
@@ -154,10 +214,7 @@ class TestParameterValueTableView(TestBase):
         expected = [
             ["an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=1)
     def test_incremental_fetching_groups_values_by_entity_class(self):
@@ -179,21 +236,21 @@ class TestParameterValueTableView(TestBase):
             empty_table_view,
             empty_model,
             0,
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value"],
+            ["object_1_class", ("an_object_1",), "parameter_1", "Base", "a_value"],
             delegate_mock,
         )
         _set_row_data(
             empty_table_view,
             empty_model,
             1,
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value"],
+            ["object_2_class", ("an_object_2",), "parameter_2", "Base", "b_value"],
             delegate_mock,
         )
         _set_row_data(
             empty_table_view,
             empty_model,
             2,
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value"],
+            ["object_1_class", ("another_object_1",), "parameter_1", "Base", "c_value"],
             delegate_mock,
         )
         table_view = self._db_editor.ui.tableView_parameter_value
@@ -371,10 +428,8 @@ class TestParameterValueTableWithExistingData(TestBase):
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        expected.append([None, None, None, None, None, self.db_codename])
         self.assertEqual(model.rowCount(), self._whole_model_rowcount())
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_rolling_back_purge(self):
         table_view = self._db_editor.ui.tableView_parameter_value
@@ -404,10 +459,8 @@ class TestParameterValueTableWithExistingData(TestBase):
             ]
         )
         QApplication.processEvents()
-        expected.append([None, None, None, None, None, self.db_codename])
         self.assertEqual(model.rowCount(), self._whole_model_rowcount())
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_sorting(self):
         """Test that the parameter value table sorts in an expected order."""
@@ -459,11 +512,8 @@ class TestParameterValueTableWithExistingData(TestBase):
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
         self.assertEqual(model.rowCount(), self._whole_model_rowcount() + 4)
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
 
 class TestEntityAlternativeTableView(TestBase):
@@ -484,12 +534,7 @@ class TestEntityAlternativeTableView(TestBase):
         expected = [
             ["Object", "spoon", "Base", False, "TestEntityAlternativeTableView_db"],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 5)
-        for row in range(model.rowCount()):
-            for column in range(model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_pasting_sane_date_to_the_active_column_converts_to_boolean_correctly(self):
         self._db_map.add_entity_class(name="Object")
@@ -508,12 +553,7 @@ class TestEntityAlternativeTableView(TestBase):
         expected = [
             ["Object", "spoon", "Base", True, "TestEntityAlternativeTableView_db"],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 5)
-        for row in range(model.rowCount()):
-            for column in range(model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_set_db_column_visible(self):
         table_view = self._db_editor.ui.tableView_parameter_definition
@@ -577,15 +617,19 @@ class TestEmptyParameterValueTableView(TestBase):
         )
         with mock_clipboard_patch("''", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             self.assertTrue(table_view.paste())
-        expected = [
-            [None, "", None, None, None, "TestEmptyParameterValueTableView_db"],
-        ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row in range(model.rowCount()):
-            for column in range(model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+        expected = {
+            Qt.ItemDataRole.DisplayRole: [
+                [None, None, None, None, None, self.db_codename],
+            ],
+            Qt.ItemDataRole.ToolTipRole: [
+                [None, None, None, None, None, None],
+            ],
+            Qt.ItemDataRole.EditRole: [
+                [None, (), None, None, None, self.db_codename],
+            ],
+        }
+        for role, expected_for_role in expected.items():
+            assert_table_model_data(model, expected_for_role, self, role)
 
     def test_purging_value_data_leaves_empty_rows_intact(self):
         self._db_map.add_entity_class(name="object_class")
@@ -596,16 +640,29 @@ class TestEmptyParameterValueTableView(TestBase):
         self.assertEqual(model.rowCount(), 1)
         delegate_mock = EditorDelegateMocking()
         _set_row_data(
-            table_view, model, model.rowCount() - 1, ["object_class", "object_1", "parameter_1", "Base"], delegate_mock
+            table_view,
+            model,
+            model.rowCount() - 1,
+            ["object_class", ("object_1",), "parameter_1", "Base"],
+            delegate_mock,
         )
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-        expected = [
-            ["object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
-            [None, None, None, None, None, self.db_codename],
-        ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        expected = {
+            Qt.ItemDataRole.DisplayRole: [
+                ["object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
+                [None, None, None, None, None, self.db_codename],
+            ],
+            Qt.ItemDataRole.ToolTipRole: [
+                [None, None, None, None, None, None],
+                [None, None, None, None, None, None],
+            ],
+            Qt.ItemDataRole.EditRole: [
+                ["object_class", ("object_1",), "parameter_1", "Base", None, self.db_codename],
+                [None, None, None, None, None, self.db_codename],
+            ],
+        }
+        for role, expected_for_role in expected.items():
+            assert_table_model_data(model, expected_for_role, self, role)
 
 
 class TestEmptyEntityAlternativeTableView(TestBase):
@@ -621,31 +678,403 @@ class TestEmptyEntityAlternativeTableView(TestBase):
             "Object\tspoon\tBase\tGIBBERISH", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
         ):
             self.assertTrue(empty_table_view.paste())
-        expected = [
-            [None, None, None, None, "TestEmptyEntityAlternativeTableView_db"],
-        ]
-        while empty_model.rowCount() != len(expected):
+        expected = {
+            Qt.ItemDataRole.DisplayRole: [
+                [None, None, None, None, self.db_codename],
+            ],
+            Qt.ItemDataRole.ToolTipRole: [
+                [None, None, None, None, None],
+            ],
+            Qt.ItemDataRole.EditRole: [
+                [None, None, None, None, self.db_codename],
+            ],
+        }
+        while empty_model.rowCount() != len(expected[Qt.ItemDataRole.DisplayRole]):
             QApplication.processEvents()
-        self.assertEqual(empty_model.columnCount(), 5)
-        for row in range(empty_model.rowCount()):
-            for column in range(empty_model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(empty_model.index(row, column).data(), expected[row][column])
+        for role, expected_for_role in expected.items():
+            assert_table_model_data(empty_model, expected_for_role, self, role)
         table_view = self._db_editor.ui.tableView_entity_alternative
         model = table_view.model()
+        expected = {
+            Qt.ItemDataRole.DisplayRole: [
+                ["Object", "spoon", "Base", False, self.db_codename],
+            ],
+            Qt.ItemDataRole.ToolTipRole: [
+                ["Object", "spoon", "<qt>Base alternative</qt>", False, self.db_codename],
+            ],
+            Qt.ItemDataRole.EditRole: [
+                ["Object", ("spoon",), "Base", False, self.db_codename],
+            ],
+        }
+        for role, expected_for_role in expected.items():
+            assert_table_model_data(model, expected_for_role, self, role)
+
+
+class TestMetadataTableView(TestBase):
+    def test_copy_name_and_value_from_single_row(self):
+        self._db_map.add_metadata(name="Title", value="Catalogue of things")
+        metadata_table_view = self._db_editor.ui.metadata_table_view
+        metadata_model = metadata_table_view.model()
+        fetch_model(metadata_model)
         expected = [
-            ["Object", "spoon", "Base", False, "TestEmptyEntityAlternativeTableView_db"],
+            ["Title", "Catalogue of things", self.db_codename],
+            ["", "", self.db_codename],
         ]
-        for row in range(model.rowCount()):
-            for column in range(model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(metadata_model, expected, self)
+        selection_model = metadata_table_view.selectionModel()
+        selection_model.select(metadata_model.index(0, 0), QItemSelectionModel.SelectionFlag.Select)
+        selection_model.select(metadata_model.index(0, 1), QItemSelectionModel.SelectionFlag.Select)
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as get_clipboard:
+            clipboard = mock.MagicMock()
+            get_clipboard.return_value = clipboard
+            self.assertTrue(metadata_table_view.copy())
+            clipboard.setText.assert_called_once_with("Title\tCatalogue of things\r\n")
+
+    def test_copy_name_and_value_to_single_row(self):
+        metadata_table_view = self._db_editor.ui.metadata_table_view
+        metadata_model = metadata_table_view.model()
+        fetch_model(metadata_model)
+        self.assertEqual(metadata_model.rowCount(), 1)
+        metadata_table_view.setCurrentIndex(metadata_model.index(0, 0))
+        selection_model = metadata_table_view.selectionModel()
+        selection_model.select(metadata_model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock_clipboard_patch(
+            "Title\tA catalogue of things that should be",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(metadata_table_view.paste())
+        expected = [
+            ["Title", "A catalogue of things that should be", self.db_codename],
+            ["", "", self.db_codename],
+        ]
+        assert_table_model_data(metadata_model, expected, self)
 
 
 def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
+
+
+class TestPivotTableView(TestBase):
+    def test_copy_element_data(self):
+        self._db_map.add_entity_class(name="A")
+        self._db_map.add_entity(entity_class_name="A", name="a1")
+        self._db_map.add_entity(entity_class_name="A", name="a2")
+        self._db_map.add_entity_class(name="B")
+        self._db_map.add_entity(entity_class_name="B", name="b1")
+        self._db_map.add_entity(entity_class_name="B", name="b2")
+        self._db_map.add_entity_class(dimension_name_list=("B", "A"))
+        self._db_editor.current_input_type = self._db_editor._ELEMENT
+        entity_tree_view = self._db_editor.ui.treeView_entity
+        entity_tree_model = entity_tree_view.model()
+        entity_tree_root_index = entity_tree_model.index(0, 0)
+        while entity_tree_model.rowCount(entity_tree_root_index) != 3:
+            entity_tree_model.fetchMore(entity_tree_root_index)
+            QApplication.processEvents()
+        relationship_index = entity_tree_model.index(2, 0, entity_tree_root_index)
+        self.assertEqual(relationship_index.data(), "B__A")
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            entity_tree_view.setCurrentIndex(relationship_index)
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            ["b1", "a2", False],
+            ["b2", "a1", False],
+            ["b2", "a2", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        selection = QItemSelection(
+            pivot_model.index(0, 0), pivot_model.index(pivot_model.rowCount() - 1, pivot_model.columnCount() - 1)
+        )
+        pivot_table_view.selectionModel().select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as get_clipboard:
+            clipboard = mock.MagicMock()
+            get_clipboard.return_value = clipboard
+            self.assertTrue(pivot_table_view.copy())
+            expected = [
+                ["B", "A", ""],
+                ["b1", "a1", "false"],
+                ["b1", "a2", "false"],
+                ["b2", "a1", "false"],
+                ["b2", "a2", "false"],
+                ["", "", ""],
+            ]
+            str_out = io.StringIO()
+            writer = csv.writer(str_out, delimiter="\t")
+            writer.writerows(expected)
+            clipboard.setText.assert_called_once_with(str_out.getvalue())
+
+    def test_create_relationship_by_pasting(self):
+        self._db_map.add_entity_class(name="A")
+        self._db_map.add_entity(entity_class_name="A", name="a1")
+        self._db_map.add_entity(entity_class_name="A", name="a2")
+        self._db_map.add_entity_class(name="B")
+        self._db_map.add_entity(entity_class_name="B", name="b1")
+        self._db_map.add_entity(entity_class_name="B", name="b2")
+        self._db_map.add_entity_class(dimension_name_list=("B", "A"))
+        self._db_editor.current_input_type = self._db_editor._ELEMENT
+        entity_tree_view = self._db_editor.ui.treeView_entity
+        entity_tree_model = entity_tree_view.model()
+        entity_tree_root_index = entity_tree_model.index(0, 0)
+        while entity_tree_model.rowCount(entity_tree_root_index) != 3:
+            entity_tree_model.fetchMore(entity_tree_root_index)
+            QApplication.processEvents()
+        relationship_index = entity_tree_model.index(2, 0, entity_tree_root_index)
+        self.assertEqual(relationship_index.data(), "B__A")
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            entity_tree_view.setCurrentIndex(relationship_index)
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            ["b1", "a2", False],
+            ["b2", "a1", False],
+            ["b2", "a2", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        pivot_table_view.setCurrentIndex(pivot_model.index(3, 2))
+        with mock_clipboard_patch(
+            "yes",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(pivot_table_view.paste())
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            ["b1", "a2", False],
+            ["b2", "a1", True],
+            ["b2", "a2", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+
+    def test_destroy_relationship_by_pasting(self):
+        self._db_map.add_entity_class(name="A")
+        self._db_map.add_entity(entity_class_name="A", name="a1")
+        self._db_map.add_entity(entity_class_name="A", name="a2")
+        self._db_map.add_entity_class(name="B")
+        self._db_map.add_entity(entity_class_name="B", name="b1")
+        self._db_map.add_entity(entity_class_name="B", name="b2")
+        self._db_map.add_entity_class(dimension_name_list=("B", "A"))
+        self._db_map.add_entity(entity_class_name="B__A", entity_byname=("b2", "a1"))
+        self._db_editor.current_input_type = self._db_editor._ELEMENT
+        entity_tree_view = self._db_editor.ui.treeView_entity
+        entity_tree_model = entity_tree_view.model()
+        entity_tree_root_index = entity_tree_model.index(0, 0)
+        while entity_tree_model.rowCount(entity_tree_root_index) != 3:
+            entity_tree_model.fetchMore(entity_tree_root_index)
+            QApplication.processEvents()
+        relationship_index = entity_tree_model.index(2, 0, entity_tree_root_index)
+        self.assertEqual(relationship_index.data(), "B__A")
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            entity_tree_view.setCurrentIndex(relationship_index)
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            ["b1", "a2", False],
+            ["b2", "a1", True],
+            ["b2", "a2", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        pivot_table_view.setCurrentIndex(pivot_model.index(3, 2))
+        with mock_clipboard_patch(
+            "no",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(pivot_table_view.paste())
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            ["b1", "a2", False],
+            ["b2", "a1", False],
+            ["b2", "a2", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+
+    def test_create_entities_by_pasting(self):
+        self._db_map.add_entity_class(name="A")
+        self._db_map.add_entity(entity_class_name="A", name="a1")
+        self._db_map.add_entity_class(name="B")
+        self._db_map.add_entity(entity_class_name="B", name="b1")
+        self._db_map.add_entity_class(dimension_name_list=("B", "A"))
+        self._db_editor.current_input_type = self._db_editor._ELEMENT
+        entity_tree_view = self._db_editor.ui.treeView_entity
+        entity_tree_model = entity_tree_view.model()
+        entity_tree_root_index = entity_tree_model.index(0, 0)
+        while entity_tree_model.rowCount(entity_tree_root_index) != 3:
+            entity_tree_model.fetchMore(entity_tree_root_index)
+            QApplication.processEvents()
+        relationship_index = entity_tree_model.index(2, 0, entity_tree_root_index)
+        self.assertEqual(relationship_index.data(), "B__A")
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            entity_tree_view.setCurrentIndex(relationship_index)
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        selection = QItemSelection(pivot_model.index(2, 0), pivot_model.index(2, 2))
+        pivot_table_view.selectionModel().select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock_clipboard_patch(
+            "b2\ta2\t\r\n",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(pivot_table_view.paste())
+        expected = [
+            ["B", "A", None],
+            ["b1", "a1", False],
+            ["b1", "a2", False],
+            ["b2", "a1", False],
+            ["b2", "a2", False],
+            [None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+
+    def test_copy_scenario_data(self):
+        self._db_map.add_scenario(name="Scen1")
+        self._db_map.add_alternatives([{"name": "alt1"}, {"name": "alt2"}, {"name": "alt3"}, {"name": "alt4"}])
+        self._db_map.add_scenario_alternative(scenario_name="Scen1", alternative_name="alt3", rank=1)
+        self._db_map.add_scenario_alternative(scenario_name="Scen1", alternative_name="alt1", rank=2)
+        self._db_editor.current_input_type = self._db_editor._SCENARIO_ALTERNATIVE
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            self._db_editor.do_reload_pivot_table()
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, 2, False, 1, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        selection_model = pivot_table_view.selectionModel()
+        selection = QItemSelection(pivot_model.index(2, 1), pivot_model.index(2, 5))
+        selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock.patch("spinetoolbox.widgets.custom_qtableview.QApplication.clipboard") as get_clipboard:
+            clipboard = mock.MagicMock()
+            get_clipboard.return_value = clipboard
+            self.assertTrue(pivot_table_view.copy())
+            clipboard.setText.assert_called_once_with("false\t2\tfalse\t1\tfalse\r\n")
+
+    def test_paste_new_scenario_alternative_data(self):
+        self._db_map.add_scenario(name="Scen1")
+        self._db_map.add_alternatives([{"name": "alt1"}, {"name": "alt2"}, {"name": "alt3"}, {"name": "alt4"}])
+        self._db_editor.current_input_type = self._db_editor._SCENARIO_ALTERNATIVE
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            self._db_editor.do_reload_pivot_table()
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, False, False, False, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        pivot_table_view.setCurrentIndex(pivot_model.index(2, 1))
+        with mock_clipboard_patch(
+            "false\t2\tfalse\t1",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(pivot_table_view.paste())
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, 2, False, 1, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+
+    def test_remove_alternative_from_scenario_by_pasting(self):
+        self._db_map.add_scenario(name="Scen1")
+        self._db_map.add_alternatives([{"name": "alt1"}, {"name": "alt2"}, {"name": "alt3"}, {"name": "alt4"}])
+        self._db_map.add_scenario_alternative(scenario_name="Scen1", alternative_name="alt3", rank=1)
+        self._db_map.add_scenario_alternative(scenario_name="Scen1", alternative_name="alt2", rank=2)
+        self._db_editor.current_input_type = self._db_editor._SCENARIO_ALTERNATIVE
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            self._db_editor.do_reload_pivot_table()
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, False, 2, 1, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        pivot_table_view.setCurrentIndex(pivot_model.index(2, 4))
+        with mock_clipboard_patch(
+            "false",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(pivot_table_view.paste())
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, False, 1, False, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+
+    def test_modify_scenario_alternatives_by_pasting(self):
+        self._db_map.add_scenario(name="Scen1")
+        self._db_map.add_alternatives([{"name": "alt1"}, {"name": "alt2"}, {"name": "alt3"}, {"name": "alt4"}])
+        self._db_map.add_scenario_alternative(scenario_name="Scen1", alternative_name="alt3", rank=1)
+        self._db_map.add_scenario_alternative(scenario_name="Scen1", alternative_name="alt2", rank=2)
+        self._db_editor.current_input_type = self._db_editor._SCENARIO_ALTERNATIVE
+        with mock.patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as is_pivot_visible:
+            is_pivot_visible.return_value = True
+            self._db_editor.do_reload_pivot_table()
+        fetch_model(self._db_editor.pivot_table_model)
+        pivot_table_view = self._db_editor.ui.pivot_table
+        pivot_model = pivot_table_view.model()
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, False, 2, 1, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
+        pivot_table_view.setCurrentIndex(pivot_model.index(2, 1))
+        with mock_clipboard_patch(
+            "false\tfalse\t1\t2\tFalse",
+            "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard",
+        ):
+            self.assertTrue(pivot_table_view.paste())
+        expected = [
+            ["alternative", "Base", "alt1", "alt2", "alt3", "alt4", None],
+            ["scenario", None, None, None, None, None, None],
+            ["Scen1", False, False, 1, 2, False, None],
+            [None, None, None, None, None, None, None],
+        ]
+        assert_table_model_data(pivot_model, expected, self)
 
 
 if __name__ == "__main__":

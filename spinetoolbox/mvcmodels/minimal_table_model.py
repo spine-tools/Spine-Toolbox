@@ -77,6 +77,7 @@ class MinimalTableModel(QAbstractTableModel, Generic[T]):
                 return None
         if orientation == Qt.Orientation.Vertical:
             return section + 1
+        raise RuntimeError(f"logic error: unknown orientation {orientation}")
 
     def set_horizontal_header_labels(self, labels: list[str]) -> None:
         """Sets horizontal header labels."""

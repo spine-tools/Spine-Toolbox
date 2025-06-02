@@ -13,7 +13,8 @@
 """General helper functions and classes."""
 from __future__ import annotations
 import bisect
-from collections.abc import Callable, Iterable
+import collections
+from collections.abc import Callable, Iterable, Mapping
 from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
@@ -421,7 +422,9 @@ def recursive_overwrite(logger: LoggerInterface, src: str, dst: str, silent: boo
         shutil.copyfile(src, dst)
 
 
-def tuple_itemgetter(itemgetter_func: Callable[..., Any], num_indexes: int) -> Callable[..., tuple]:
+def tuple_itemgetter(
+    itemgetter_func: Callable[[Union[Sequence, Mapping]], Any], num_indexes: int
+) -> Callable[[Union[Sequence, Mapping]], tuple]:
     """Change output of itemgetter to always be a tuple even for a single index.
 
     Args:
@@ -1503,6 +1506,7 @@ def disconnect(signal, *slots):
     try:
         yield
     finally:
+        # PyCharm thinks this code is unreachable; however, unit tests show that it works just fine.
         for slot in slots:
             signal.connect(slot)
 
@@ -1522,6 +1526,10 @@ class SignalWaiter(QObject):
         self._condition = condition
         self._timeout = timeout
         self._start = time.monotonic() if self._timeout is not None else None
+
+    @property
+    def triggered(self) -> bool:
+        return self._triggered
 
     def trigger(self, *args):
         """Signal receiving slot."""
@@ -1588,7 +1596,7 @@ class CustomSyntaxHighlighter(QSyntaxHighlighter):
 
     def yield_formats(self, text):
         if self.lexer is None:
-            return ()
+            return
         for start, ttype, subtext in self.lexer.get_tokens_unprocessed(text):
             while True:
                 text_format = self._formats.get(ttype)

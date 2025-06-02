@@ -28,7 +28,7 @@ class MetadataEditor:
         self._db_editor = db_editor
         self._metadata_table_view = metadata_table_view
         self._metadata_table_model = MetadataTableModel(db_mngr, db_editor.db_maps, db_editor)
-        self._metadata_table_view.sortByColumn(-1, Qt.AscendingOrder)
+        self._metadata_table_view.sortByColumn(-1, Qt.SortOrder.AscendingOrder)
         self._metadata_table_view.setModel(self._metadata_table_model)
         self._metadata_table_view.connect_spine_db_editor(db_editor)
 

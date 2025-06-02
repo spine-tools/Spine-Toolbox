@@ -12,6 +12,7 @@
 
 """Custom editors for model/view programming."""
 from contextlib import suppress
+from typing import Optional
 from PySide6.QtCore import (
     QCoreApplication,
     QEvent,
@@ -49,7 +50,7 @@ from spinetoolbox.helpers import (
     order_key,
     try_number_from_string,
 )
-from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING
+from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING, string_to_group
 
 
 class EventFilterForCatchingRollbackShortcut(QObject):
@@ -356,6 +357,14 @@ class SearchBarEditorWithCreation(SearchBarEditor):
         return data if data else self.first_index.data(Qt.ItemDataRole.EditRole)
 
 
+class GroupEditor(SearchBarEditorWithCreation):
+    """Converts data to tuple."""
+
+    def data(self):
+        data = super().data()
+        return string_to_group(data)
+
+
 class CheckListEditor(QTableView):
     """A check list editor."""
 
@@ -582,10 +591,10 @@ class IconColorEditor(QDialog):
 class ParameterTypeEditor(QWidget):
     """Editor to select valid parameter types."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: Optional[QWidget]):
         """
         Args:
-            parent (QWidget, optional): parent widget
+            parent: parent widget
         """
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.Popup)
@@ -598,16 +607,16 @@ class ParameterTypeEditor(QWidget):
         self._ui.map_rank_line_edit.textEdited.connect(self._ensure_map_selected)
         self._ui.map_check_box.clicked.connect(self._edit_rank)
 
-    def data(self):
+    def data(self) -> tuple[str, ...]:
         """Returns editor's data.
 
-        Return:
-            str: parameter type list separated by DB_ITEM_SEPARATOR
+        Returns:
+            parameter types
         """
         check_boxes = list(self._check_box_iter())
         first_checked = check_boxes[0].isChecked()
         if all(box.isChecked() == first_checked for box in check_boxes[1:]):
-            return ""
+            return ()
         types = []
         for check_box in check_boxes:
             if not check_box.isChecked():
@@ -624,7 +633,7 @@ class ParameterTypeEditor(QWidget):
                 types += [type_and_rank_to_fancy_type(type_, rank) for rank in ranks]
             else:
                 types.append(type_)
-        return DB_ITEM_SEPARATOR.join(types)
+        return tuple(types)
 
     def set_data(self, type_list):
         """Sets editor's data.

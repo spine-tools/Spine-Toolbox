@@ -20,9 +20,10 @@ import locale
 from numbers import Number
 from operator import methodcaller
 import re
+from typing import Any, Optional
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
-from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView
+from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView, QWidget
 from spinedb_api import (
     DateTime,
     Duration,
@@ -33,8 +34,8 @@ from spinedb_api import (
     to_database,
 )
 from spinedb_api.parameter_value import FLOAT_VALUE_TYPE, join_value_and_type, split_value_and_type
-from ..helpers import busy_effect
 from ..mvcmodels.empty_row_model import EmptyRowModel
+from ..mvcmodels.minimal_table_model import MinimalTableModel
 from .paste_excel import EXCEL_CLIPBOARD_MIME_TYPE, clipboard_excel_as_table
 
 _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -43,14 +44,13 @@ _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 class CopyPasteTableView(QTableView):
     """Custom QTableView class with copy and paste methods."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self._copy_action = None
         self._paste_action = None
         self._delete_action = QAction("Delete", self)
-        self._delete_action.setShortcut(QKeySequence.Delete)
+        self._delete_action.setShortcut(QKeySequence.StandardKey.Delete)
         self.addAction(self._delete_action)
-        self._pasted_data_converters = {}
         self._delete_action.triggered.connect(self.delete_content)
 
     def moveCursor(self, cursor_action, modifiers):
@@ -70,12 +70,12 @@ class CopyPasteTableView(QTableView):
             raise RuntimeError("Copy and paste actions have already been set.")
         copy_icon = QIcon(":/icons/menu_icons/copy.svg")
         self._copy_action = QAction(copy_icon, "Copy", self)
-        self._copy_action.setShortcut(QKeySequence.Copy)
+        self._copy_action.setShortcut(QKeySequence.StandardKey.Copy)
         self.addAction(self._copy_action)
         self._copy_action.triggered.connect(self.copy)
         paste_icon = QIcon(":/icons/menu_icons/paste.svg")
         self._paste_action = QAction(paste_icon, "Paste", self)
-        self._paste_action.setShortcut(QKeySequence.Paste)
+        self._paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         self.addAction(self._paste_action)
         self._paste_action.triggered.connect(self.paste)
 
@@ -95,11 +95,11 @@ class CopyPasteTableView(QTableView):
         self._paste_action = paste_action
 
     @property
-    def copy_action(self):
+    def copy_action(self) -> QAction:
         return self._copy_action
 
     @property
-    def paste_action(self):
+    def paste_action(self) -> QAction:
         return self._paste_action
 
     @Slot(bool)
@@ -116,10 +116,9 @@ class CopyPasteTableView(QTableView):
     def can_copy(self):
         return not self.selectionModel().selection().isEmpty()
 
-    @busy_effect
     @Slot(bool)
     def copy(self, _=False):
-        """Copies current selection to clipboard in excel format."""
+        """Copies current selection to clipboard in Excel format."""
         selection = self.selectionModel().selection()
         if not selection:
             return False
@@ -127,6 +126,7 @@ class CopyPasteTableView(QTableView):
         h_header = self.horizontalHeader()
         row_dict = {}
         with system_lc_numeric():
+            model = self.model()
             for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
                 for i in range(rng.top(), rng.bottom() + 1):
                     if v_header.isSectionHidden(i):
@@ -136,21 +136,7 @@ class CopyPasteTableView(QTableView):
                         if h_header.isSectionHidden(j):
                             continue
                         data = self.model().index(i, j).data(Qt.ItemDataRole.EditRole)
-                        if data is not None:
-                            if isinstance(data, bool):
-                                str_data = "true" if data else "false"
-                            else:
-                                if isinstance(data, int):
-                                    str_data = str(data)
-                                else:
-                                    try:
-                                        number = float(data)
-                                        str_data = locale.str(number)
-                                    except ValueError:
-                                        str_data = str(data)
-                        else:
-                            str_data = ""
-                        row.append(str_data)
+                        row.append(self._convert_copied(i, j, data, model))
         with io.StringIO() as output:
             writer = csv.writer(output, delimiter="\t", quotechar="'")
             for key in sorted(row_dict):
@@ -163,7 +149,9 @@ class CopyPasteTableView(QTableView):
             not self.selectionModel().selection().isEmpty() or self.currentIndex().isValid()
         )
 
-    @busy_effect
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+        return value if value is not None else ""
+
     @Slot(bool)
     def paste(self, _=False):
         """Paste data from clipboard."""
@@ -173,41 +161,11 @@ class CopyPasteTableView(QTableView):
         return self.paste_normal()
 
     @staticmethod
-    def _read_pasted_text(text):
-        """Parses a tab separated CSV text table.
-
-        Args:
-            text (str): a CSV formatted table
-
-        Returns:
-            list: a list of rows
-        """
-
-        def _process_value(value):
-            """Delocalizes value, except when it's one of our 'complex' value types.
-
-            We need this exception because our complex values are json strings, so they have commas,
-            and ``locale.delocalize`` might remove those commas.
-            """
-            new_value = locale.delocalize(value)
-            try:
-                float(new_value)
-                return new_value
-            except ValueError:
-                # The new delocalized value is not even a number, so ignore it
-                # This prevents comma separated strings to become dot separated strings
-                return value
-
-        with io.StringIO(text) as input_stream:
-            reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
-            with system_lc_numeric():
-                return [[_process_value(element) for element in row] for row in reader]
-
-    def _get_data_from_clipboard(self):
+    def _get_data_from_clipboard() -> list[list[Any]]:
         """Gets data from clipboard converting it to Python table.
 
         Returns:
-            list of list: data table
+            data table
         """
         clipboard = QApplication.clipboard()
         mime_data = clipboard.mimeData()
@@ -217,10 +175,12 @@ class CopyPasteTableView(QTableView):
             with suppress(Exception):
                 data = clipboard_excel_as_table(bytes(mime_data.data(EXCEL_CLIPBOARD_MIME_TYPE)))
         if data is None and "text/plain" in data_formats:
-            text = clipboard.text().strip()
+            text = clipboard.text()
             if text:
                 with suppress(ValueError):
-                    data = self._read_pasted_text(text)
+                    with io.StringIO(text) as input_stream:
+                        reader = csv.reader(input_stream, delimiter="\t", quotechar="'")
+                        data = list(reader)
         return data
 
     def paste_on_selection(self):
@@ -238,23 +198,19 @@ class CopyPasteTableView(QTableView):
         rows = [x for r in selection for x in range(r.top(), r.bottom() + 1) if not is_row_hidden(x)]
         is_column_hidden = self.horizontalHeader().isSectionHidden
         columns = [x for r in selection for x in range(r.left(), r.right() + 1) if not is_column_hidden(x)]
-        converters = self._converters() if self._pasted_data_converters else {}
-        model_index = self.model().index
-        for row in rows:
-            for column in columns:
-                index = model_index(row, column)
-                if index.flags() & Qt.ItemIsEditable:
-                    i = (row - rows[0]) % len(data)
-                    j = (column - columns[0]) % len(data[i])
-                    value = data[i][j]
-                    indexes.append(index)
-                    if converters:
-                        convert = converters.get(column)
-                        if convert is not None:
-                            values.append(convert(value))
-                            continue
-                    values.append(value)
-        self.model().batch_set_data(indexes, values)
+        model = self.model()
+        model_index = model.index
+        with system_lc_numeric():
+            for row in rows:
+                for column in columns:
+                    index = model_index(row, column)
+                    if index.flags() & Qt.ItemFlag.ItemIsEditable:
+                        i = (row - rows[0]) % len(data)
+                        j = (column - columns[0]) % len(data[i])
+                        value = data[i][j]
+                        indexes.append(index)
+                        values.append(self._convert_pasted(row, column, value, model))
+        model.batch_set_data(indexes, values)
         return True
 
     def paste_normal(self):
@@ -291,7 +247,7 @@ class CopyPasteTableView(QTableView):
             columns_append(h.logicalIndex(visual_column))
             visual_column += 1
         # Insert extra rows if needed:
-        last_row = max(rows)
+        last_row = rows[-1]
         model = self.model()
         row_count = model.rowCount()
         if last_row >= row_count:
@@ -302,31 +258,29 @@ class CopyPasteTableView(QTableView):
         column_count = model.columnCount()
         if last_column >= column_count:
             model.insertColumns(column_count, last_column - column_count + 1)
-        converters = self._converters() if self._pasted_data_converters else {}
         model_index = model.index
-        for i, row in enumerate(rows):
-            try:
-                line = data[i]
-            except IndexError:
-                break
-            for j, column in enumerate(columns):
+        with system_lc_numeric():
+            for i, row in enumerate(rows):
                 try:
-                    value = line[j]
+                    line = data[i]
                 except IndexError:
                     break
-                index = model_index(row, column)
-                if index.flags() & Qt.ItemFlag.ItemIsEditable:
-                    indexes.append(index)
-                    if converters:
-                        convert = converters.get(column)
-                        if convert is not None:
-                            values.append(convert(value))
-                            continue
-                    values.append(value)
+                for j, column in enumerate(columns):
+                    try:
+                        value = line[j]
+                    except IndexError:
+                        break
+                    index = model_index(row, column)
+                    if index.flags() & Qt.ItemFlag.ItemIsEditable:
+                        indexes.append(index)
+                        values.append(self._convert_pasted(row, column, value, model))
         model.begin_paste()
         model.batch_set_data(indexes, values)
         model.end_paste()
         return True
+
+    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+        return str_value
 
     @staticmethod
     def _cull_rows(model_row_count: int, rows: list[int], data: list) -> tuple[list[int], list]:
@@ -339,32 +293,15 @@ class CopyPasteTableView(QTableView):
             culled_data.append(data[i])
         return culled_rows, culled_data
 
-    def set_column_converter_for_pasting(self, header, converter):
-        self._pasted_data_converters[header] = converter
-
-    def _converters(self):
-        converters = {}
-        model = self.model()
-        for column in range(model.columnCount()):
-            label = model.headerData(column, Qt.Orientation.Horizontal)
-            converter = self._pasted_data_converters.get(label)
-            if converter is not None:
-                converters[column] = converter
-        return converters
-
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality."""
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (QObject)
-        """
+    def __init__(self, parent: Optional[QWidget]):
         super().__init__(parent=parent)
         self._show_filter_menu_action = QAction(self)
         self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
-        self._show_filter_menu_action.setShortcutContext(Qt.WidgetShortcut)
+        self._show_filter_menu_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
         self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
         self.addAction(self._show_filter_menu_action)
         self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)

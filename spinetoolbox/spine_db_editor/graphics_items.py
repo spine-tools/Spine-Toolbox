@@ -370,7 +370,7 @@ class EntityItem(QGraphicsRectItem):
             return {}
         return {
             "entity_class_name": self.entity_class_name,
-            "entity_byname": DB_ITEM_SEPARATOR.join(self.byname),
+            "entity_byname": self.byname,
             "database": self.db_mngr.name_registry.display_name(self.first_db_map.sa_url),
         }
 

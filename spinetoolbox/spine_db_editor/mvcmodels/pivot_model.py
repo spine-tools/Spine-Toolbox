@@ -11,7 +11,9 @@
 ######################################################################################################################
 
 """Provides PivotModel."""
+from collections.abc import Callable, Mapping, Sequence
 import operator
+from typing import Optional, Union
 from ...helpers import tuple_itemgetter
 
 
@@ -25,7 +27,8 @@ class PivotModel:
         self.pivot_columns = ()  # current selected columns indexes
         self.pivot_frozen = ()  # current filtered frozen indexes
         self.frozen_value = ()  # current selected value of index_frozen
-        self._key_getter = None  # operator.itemgetter placeholder used to translate pivot to keys in _data
+        # operator.itemgetter placeholder used to translate pivot to keys in _data
+        self._key_getter: Optional[Callable[[Union[Mapping, Sequence]], tuple]] = None
         self._row_data_header = []  # header values for row data
         self._column_data_header = []  # header values for column data
 

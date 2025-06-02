@@ -15,7 +15,6 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtGui import QColor, QPen
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from tests.spine_db_editor.widgets.helpers import select_item_with_index
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
@@ -66,11 +65,11 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
-        selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(fish_index, QItemSelectionModel.Select)
+        selection_model.setCurrentIndex(fish_index, QItemSelectionModel.SelectionFlag.NoUpdate)
+        selection_model.select(fish_index, QItemSelectionModel.SelectionFlag.Select)
         filtered_values = {
             self.spine_db_editor.parameter_definition_model: [("dog",)],
-            self.spine_db_editor.parameter_value_model: [("dog", "pluto"), ("dog", "scooby")],
+            self.spine_db_editor.parameter_value_model: [("dog", ("pluto",)), ("dog", ("scooby",))],
         }
         self._assert_filter(filtered_values)
 
@@ -85,15 +84,15 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
         fish_dog_item = next(x for x in root_item.children if x.display_data == "fish__dog")
         fish_dog_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_dog_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
-        selection_model.setCurrentIndex(fish_dog_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(fish_dog_index, QItemSelectionModel.Select)
+        selection_model.setCurrentIndex(fish_dog_index, QItemSelectionModel.SelectionFlag.NoUpdate)
+        selection_model.select(fish_dog_index, QItemSelectionModel.SelectionFlag.Select)
         filtered_values = {
             self.spine_db_editor.parameter_definition_model: [("dog",), ("fish",), ("dog__fish",)],
             self.spine_db_editor.parameter_value_model: [
-                ("dog__fish", DB_ITEM_SEPARATOR.join(["pluto", "nemo"])),
-                ("fish", "nemo"),
-                ("dog", "pluto"),
-                ("dog", "scooby"),
+                ("dog__fish", ("pluto", "nemo")),
+                ("fish", ("nemo",)),
+                ("dog", ("pluto",)),
+                ("dog", ("scooby",)),
             ],
         }
         self._assert_filter(filtered_values)
@@ -111,22 +110,22 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
         dog_item = next(x for x in root_item.children if x.display_data == "dog")
         scooby_item = next(x for x in dog_item.children if x.display_data == "scooby")
         scooby_index = self.spine_db_editor.entity_tree_model.index_from_item(scooby_item)
-        selection_model.setCurrentIndex(fish_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(fish_index, QItemSelectionModel.Select)
-        selection_model.setCurrentIndex(scooby_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(scooby_index, QItemSelectionModel.Select)
+        selection_model.setCurrentIndex(fish_index, QItemSelectionModel.SelectionFlag.NoUpdate)
+        selection_model.select(fish_index, QItemSelectionModel.SelectionFlag.Select)
+        selection_model.setCurrentIndex(scooby_index, QItemSelectionModel.SelectionFlag.NoUpdate)
+        selection_model.select(scooby_index, QItemSelectionModel.SelectionFlag.Select)
         filtered_values = {
             self.spine_db_editor.parameter_definition_model: [],
             self.spine_db_editor.parameter_value_model: [
-                ("dog", "pluto"),
-                ("fish__dog", "nemo ǀ pluto"),
-                ("dog__fish", "pluto ǀ nemo"),
+                ("dog", ("pluto",)),
+                ("fish__dog", ("nemo", "pluto")),
+                ("dog__fish", ("pluto", "nemo")),
             ],
         }
         self._assert_filter(filtered_values)
 
     def test_filter_parameter_tables_per_entity(self):
-        """Test that parameter tables are filtered when selecting objects in the object tree."""
+        """Test that parameter tables are filtered when selecting entities in the entity tree."""
         for model in self._filtered_fields:
             if model.canFetchMore(None):
                 model.fetchMore(None)
@@ -137,14 +136,14 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
         pluto_item = next(x for x in dog_item.children if x.display_data == "pluto")
         pluto_index = self.spine_db_editor.entity_tree_model.index_from_item(pluto_item)
         selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
-        selection_model.setCurrentIndex(pluto_index, QItemSelectionModel.NoUpdate)
-        selection_model.select(pluto_index, QItemSelectionModel.Select)
+        selection_model.setCurrentIndex(pluto_index, QItemSelectionModel.SelectionFlag.NoUpdate)
+        selection_model.select(pluto_index, QItemSelectionModel.SelectionFlag.Select)
         filtered_values = {
             self.spine_db_editor.parameter_definition_model: [("fish",)],
             self.spine_db_editor.parameter_value_model: [
-                ("fish__dog", DB_ITEM_SEPARATOR.join(["nemo", "scooby"])),
-                ("fish", "nemo"),
-                ("dog", "scooby"),
+                ("fish__dog", ("nemo", "scooby")),
+                ("fish", ("nemo",)),
+                ("dog", ("scooby",)),
             ],
         }
         self._assert_filter(filtered_values)
@@ -162,16 +161,16 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
 
     @classmethod
     def _create_highlights(cls):
-        pen = QPen(Qt.SolidLine)
+        pen = QPen(Qt.PenStyle.SolidLine)
         pen.setColor(QColor.fromRgbF(0, 0, 0, 0))
         cls.ACTIVE = pen
-        pen = QPen(Qt.SolidLine)
+        pen = QPen(Qt.PenStyle.SolidLine)
         pen.setColor(QColor.fromRgbF(0, 0, 0, 1))
         cls.INACTIVE = pen
-        pen = QPen(Qt.DashLine)
+        pen = QPen(Qt.PenStyle.DashLine)
         pen.setColor(QColor.fromRgbF(0, 0, 0, 1))
         cls.CONFLICTED = pen
-        pen = QPen(Qt.DotLine)
+        pen = QPen(Qt.PenStyle.DotLine)
         pen.setColor(QColor.fromRgbF(0, 0, 0, 1))
         cls.PARAMETER = pen
 

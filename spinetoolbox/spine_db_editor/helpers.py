@@ -11,18 +11,21 @@
 ######################################################################################################################
 
 """Helpers and utilities for Spine Database editor."""
+import locale
+from typing import Any, Optional, Union
 from PySide6.QtGui import QColor
 from spinedb_api.helpers import string_to_bool as base_string_to_bool
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 
 
-def string_to_display_icon(x):
+def string_to_display_icon(x: str) -> Optional[int]:
     """Converts a 'foreign' string (from e.g. Excel) to entity class display icon.
 
     Args:
-        x (str): string to convert
+        x: string to convert
 
     Returns:
-        int: display icon or None if conversion failed
+        display icon or None if conversion failed
     """
     try:
         return int(x)
@@ -34,22 +37,82 @@ TRUE_STRING = "true"
 FALSE_STRING = "false"
 
 
-def string_to_bool(x):
+def string_to_bool(x: Union[str, bytes]) -> bool:
     """Converts a 'foreign' string (from e.g. Excel) to boolean.
 
     Args:
-        x (str): string to convert
+        string to convert
 
     Returns:
-        bool: boolean value
+        boolean value
     """
+    if isinstance(x, bytes):
+        x = x.decode()
     try:
         return base_string_to_bool(x)
     except ValueError:
         return False
 
 
-def table_name_from_item_type(item_type):
+def bool_to_string(x: bool) -> str:
+    return TRUE_STRING if x else FALSE_STRING
+
+
+def optional_to_string(x: Optional[Any]) -> Optional[str]:
+    return str(x) if x is not None else None
+
+
+def group_to_string(types: Union[str, tuple[str, ...]]) -> Optional[str]:
+    if not types:
+        return None
+    if isinstance(types, str):
+        return types
+    return DB_ITEM_SEPARATOR.join(types)
+
+
+def string_to_group(types: Optional[str]) -> Union[str, tuple[str, ...]]:
+    if not types:
+        return ()
+    separator = DB_ITEM_SEPARATOR if DB_ITEM_SEPARATOR in types else ","
+    return tuple(stripped for t in types.split(separator) if (stripped := t.strip()))
+
+
+def parameter_value_to_string(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    try:
+        number = float(value)
+        return locale.str(number)
+    except ValueError:
+        return str(value)
+
+
+def string_to_parameter_value(str_value: str) -> Any:
+    try:
+        return float(str_value)
+    except ValueError:
+        try:
+            return locale.atof(str_value)
+        except ValueError:
+            pass
+    if str_value == TRUE_STRING:
+        return True
+    if str_value == FALSE_STRING:
+        return False
+    return str_value
+
+
+def input_string_to_int(str_value: str) -> int:
+    try:
+        x = float(str_value)
+    except ValueError:
+        x = locale.atof(str_value)
+    return int(round(x))
+
+
+def table_name_from_item_type(item_type: str) -> str:
     """Returns the dock widgets headers text for the given item type"""
     return {
         "parameter_value": "Parameter value",

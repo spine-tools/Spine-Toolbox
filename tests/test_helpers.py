@@ -18,7 +18,7 @@ import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QSettings
+from PySide6.QtCore import QObject, QSettings, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
@@ -30,6 +30,7 @@ from spinetoolbox.helpers import (
     copy_files,
     create_dir,
     dir_is_valid,
+    disconnect,
     erase_dir,
     file_is_valid,
     first_non_null,
@@ -53,6 +54,7 @@ from spinetoolbox.helpers import (
     select_julia_executable,
     select_julia_project,
     select_python_interpreter,
+    signal_waiter,
     try_number_from_string,
     tuple_itemgetter,
     unique_name,
@@ -532,6 +534,29 @@ class TestAddKeyboardShortcutsToActionToolTips(TestCaseWithQApplication):
             ui.action = action
             add_keyboard_shortcuts_to_action_tool_tips(ui)
             self.assertEqual(action.toolTip(), "<qt><p>A highly useful thing</p><p><em>W</em></p></qt>")
+
+
+class TestDisconnect(TestCaseWithQApplication):
+    def test_disconnects_signal(self):
+        class Signaller(QObject):
+            trigger = Signal()
+
+        with q_object(Signaller()) as signaller:
+            with signal_waiter(signaller.trigger, timeout=1) as receiver:
+                signaller.trigger.emit()
+                receiver.wait()
+                self.assertTrue(receiver.triggered)
+
+        with q_object(Signaller()) as signaller:
+            with signal_waiter(signaller.trigger, timeout=0.1) as receiver:
+                with disconnect(signaller.trigger, receiver.trigger):
+                    signaller.trigger.emit()
+                    with self.assertRaisesRegex(RuntimeError, "timeout exceeded"):
+                        receiver.wait()
+                self.assertFalse(receiver.triggered)
+                signaller.trigger.emit()
+                receiver.wait()
+                self.assertTrue(receiver.triggered)
 
 
 if __name__ == "__main__":

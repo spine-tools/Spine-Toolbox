@@ -41,25 +41,6 @@ class UpdateEmptyModel(QUndoCommand):
         if not self.isObsolete():
             self._apply(self._undo_values)
 
-    def rows_dropped(self, dropped_rows: set[int]) -> None:
-        new_rows = []
-        new_columns = []
-        new_undo_values = []
-        new_redo_values = []
-        for row, column, redo_value, undo_value in zip(self._rows, self._columns, self._redo_values, self._undo_values):
-            if row not in dropped_rows:
-                new_rows.append(row)
-                new_columns.append(column)
-                new_redo_values.append(redo_value)
-                new_undo_values.append(undo_value)
-        if not new_rows:
-            self.setObsolete(True)
-        else:
-            self._rows = new_rows
-            self._columns = new_columns
-            self._redo_values = new_redo_values
-            self._undo_values = new_undo_values
-
     def _apply(self, values: list[bytes]) -> None:
         indexes = [self._model.index(row, column) for row, column in zip(self._rows, self._columns)]
         values = [pickle.loads(x) for x in values]
@@ -79,10 +60,6 @@ class AppendEmptyRow(QUndoCommand):
         if not self.isObsolete():
             self._model.remove_empty_row()
 
-    def rows_dropped(self, dropped_rows: set[int]) -> None:
-        if self._model.rowCount() < 2:
-            self.setObsolete(True)
-
 
 class InsertEmptyModelRow(QUndoCommand):
     def __init__(self, model: EmptyModelBase, row: int):
@@ -98,12 +75,6 @@ class InsertEmptyModelRow(QUndoCommand):
             self._model.remove_empty_row()
         else:
             self._model.do_remove_rows(self._row, 1)
-
-    def rows_dropped(self, dropped_rows: set[int]) -> None:
-        if self._row in dropped_rows:
-            self.setObsolete(True)
-        else:
-            self._row -= len([row for row in dropped_rows if row < self._row])
 
 
 class RemoveEmptyModelRow(QUndoCommand):
@@ -123,9 +94,3 @@ class RemoveEmptyModelRow(QUndoCommand):
         indexes = [self._model.index(self._row, column) for column in range(self._model.columnCount())]
         values = [pickle.loads(value) for value in self._undo_data]
         self._model.do_batch_set_data(indexes, values)
-
-    def rows_dropped(self, dropped_rows: set[int]) -> None:
-        if self._row in dropped_rows:
-            self.setObsolete(True)
-        else:
-            self._row -= len([row for row in dropped_rows if row < self._row])

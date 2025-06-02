@@ -12,9 +12,10 @@
 
 """Classes and functions that can be shared among unit test modules."""
 from contextlib import contextmanager
+from typing import Any
 import unittest
 from unittest import mock
-from PySide6.QtCore import QMimeData, QModelIndex, Qt, QTimer
+from PySide6.QtCore import QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QApplication
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -355,6 +356,20 @@ def model_data_to_table(model, parent=QModelIndex(), role=Qt.ItemDataRole.Displa
     for row in range(model.rowCount()):
         data.append([model.index(row, column, parent).data(role) for column in range(model.columnCount())])
     return data
+
+
+def assert_table_model_data(
+    model: QAbstractTableModel,
+    expected: list[list[Any]],
+    test_case: unittest.TestCase,
+    role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+) -> None:
+    test_case.assertEqual(model.rowCount(), len(expected))
+    for row in range(model.rowCount()):
+        test_case.assertEqual(model.columnCount(), len(expected[row]))
+        for column in range(model.columnCount()):
+            with test_case.subTest(row=row, column=column, role=role):
+                test_case.assertEqual(model.index(row, column).data(role), expected[row][column])
 
 
 def fetch_model(model):

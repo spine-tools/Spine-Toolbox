@@ -13,11 +13,12 @@
 """Custom QTableView classes that support copy-paste and the like."""
 from collections.abc import Iterable
 from dataclasses import replace
-from typing import ClassVar
+from typing import Any, ClassVar, Optional, Union
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
+from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...plotting import (
     ParameterTableHeaderSection,
     PlottingError,
@@ -28,14 +29,27 @@ from ...widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPaste
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
-from ..helpers import string_to_bool
+from ..helpers import (
+    bool_to_string,
+    group_to_string,
+    input_string_to_int,
+    optional_to_string,
+    parameter_value_to_string,
+    string_to_bool,
+    string_to_display_icon,
+    string_to_group,
+    string_to_parameter_value,
+)
+from ..mvcmodels.empty_models import EmptyModelBase
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ..mvcmodels.pivot_table_models import (
     ElementPivotTableModel,
     IndexExpansionPivotTableModel,
     ParameterValuePivotTableModel,
+    PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
+from ..mvcmodels.single_models import SingleModelBase
 from ..mvcmodels.utils import height_limited_size_hint
 from .custom_delegates import (
     AlternativeNameDelegate,
@@ -91,6 +105,13 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.populate_context_menu()
         self.create_delegates()
         self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
+
+    def _convert_copied(
+        self, row: int, column: int, value: Any, model: Union[SingleModelBase, EmptyModelBase]
+    ) -> Optional[str]:
+        if model.header[column] in model.group_fields:
+            return group_to_string(value)
+        return super()._convert_copied(row, column, value, model)
 
     def _make_delegate(self, column_name, delegate_class):
         """Creates a delegate for the given column and returns it.
@@ -229,6 +250,22 @@ class ParameterTableView(StackedTableView):
         self._plot_action = None
         self._plot_separator = None
         self.pinned_values = []
+
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+        header = model.header[column]
+        if header == self.value_column_header:
+            return parameter_value_to_string(value)
+        if header == "entity_byname":
+            return group_to_string(value)
+        return super()._convert_copied(row, column, value, model)
+
+    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+        header = model.header[column]
+        if header == self.value_column_header:
+            return string_to_parameter_value(str_value)
+        if header == "entity_byname":
+            return string_to_group(str_value)
+        return super()._convert_pasted(row, column, str_value, model)
 
     def populate_context_menu(self):
         """Creates a context menu for this view."""
@@ -439,12 +476,24 @@ class EntityAlternativeTableViewBase(StackedTableView):
         self._make_delegate("alternative_name", AlternativeNameDelegate)
         self._make_delegate("active", BooleanValueDelegate)
 
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+        header = model.header[column]
+        if header == "entity_byname":
+            return group_to_string(value)
+        if header == "active":
+            return bool_to_string(value) if value is not None else None
+        return super()._convert_copied(row, column, value, model)
+
+    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+        header = model.header[column]
+        if header == "entity_byname":
+            return string_to_group(str_value)
+        if header == "active":
+            return string_to_bool(str_value)
+        return super()._convert_pasted(row, column, str_value, model)
+
 
 class EmptyEntityAlternativeTableView(WithUndoStack, EntityAlternativeTableViewBase):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.set_column_converter_for_pasting("active", string_to_bool)
-
     def sizeHint(self, /):
         return height_limited_size_hint(super().sizeHint(), self.parent().size())
 
@@ -454,10 +503,6 @@ class EmptyEntityAlternativeTableView(WithUndoStack, EntityAlternativeTableViewB
 
 class EntityAlternativeTableView(EntityAlternativeTableViewBase):
     """Visualize entities and their alternatives."""
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.set_column_converter_for_pasting("active", string_to_bool)
 
 
 class PivotTableView(CopyPasteTableView):
@@ -547,6 +592,14 @@ class PivotTableView(CopyPasteTableView):
             """Enables/disables context menu entries before the menu is shown."""
             raise NotImplementedError()
 
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+            return value if value is not None else ""
+
+        def convert_pasted(
+            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
+        ) -> Any:
+            return str_value
+
     class _EntityContextBase(_ContextBase):
         """Base class for contexts that contain entities and entity classes."""
 
@@ -584,6 +637,22 @@ class PivotTableView(CopyPasteTableView):
         def _update_actions_availability(self):
             """See base class."""
             raise NotImplementedError()
+
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+            if value is None:
+                return None
+            pivot_model = model.sourceModel()
+            if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
+                return bool_to_string(value)
+            return super().convert_copied(row, column, value, model)
+
+        def convert_pasted(
+            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
+        ) -> Any:
+            pivot_model = model.sourceModel()
+            if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
+                return string_to_bool(str_value)
+            return super().convert_pasted(row, column, str_value, model)
 
     class _ParameterValueContext(_EntityContextBase):
         """Context for showing parameter values in the pivot table."""
@@ -722,6 +791,20 @@ class PivotTableView(CopyPasteTableView):
             self._remove_entities_action.setEnabled(has_selection)
             self._remove_alternatives_action.setEnabled(has_selection)
 
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+            pivot_model = model.sourceModel()
+            if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
+                return parameter_value_to_string(value)
+            return super().convert_copied(row, column, value, model)
+
+        def convert_pasted(
+            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
+        ) -> Any:
+            pivot_model = model.sourceModel()
+            if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
+                return string_to_parameter_value(str_value)
+            return super().convert_pasted(row, column, str_value, model)
+
     class _IndexExpansionContext(_ParameterValueContext):
         """Context for expanded parameter values"""
 
@@ -847,6 +930,27 @@ class PivotTableView(CopyPasteTableView):
             checked = len(selected) * [not all(selected)]
             source_model.batch_set_data(self._selected_scenario_alternative_indexes, checked)
 
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+            if value is None:
+                return None
+            pivot_model = model.sourceModel()
+            if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
+                if isinstance(value, bool):
+                    return bool_to_string(value)
+                return str(value)
+            return super().convert_copied(row, column, value, model)
+
+        def convert_pasted(
+            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
+        ) -> Any:
+            pivot_model = model.sourceModel()
+            if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
+                try:
+                    return input_string_to_int(str_value)
+                except ValueError:
+                    return False
+            return super().convert_pasted(row, column, str_value, model)
+
     def __init__(self, parent=None):
         """
         Args:
@@ -861,7 +965,7 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setObjectName("top")
         self._top_left_header_table.setObjectName("top-left")
         self._spine_db_editor = None
-        self._context = None
+        self._context: Optional[PivotTableView._ContextBase] = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
         self._fetch_more_timer.setInterval(100)
@@ -872,10 +976,10 @@ class PivotTableView(CopyPasteTableView):
         self.horizontalScrollBar().valueChanged.connect(self._top_header_table.horizontalScrollBar().setValue)
         # NOTE: order of the iteration below is important for calls to stackUnder
         for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
-            header_table.setFocusPolicy(Qt.NoFocus)
+            header_table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
             header_table.setStyleSheet(self.styleSheet())
-            header_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            header_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            header_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            header_table.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             header_table.show()
             header_table.verticalHeader().hide()
             header_table.horizontalHeader().hide()
@@ -884,7 +988,7 @@ class PivotTableView(CopyPasteTableView):
             header_table.setStyleSheet("QTableView { border: none;}")
             self.viewport().stackUnder(header_table)
         for header_table in (self._top_header_table, self._left_header_table):
-            header_table.setAttribute(Qt.WA_TransparentForMouseEvents)
+            header_table.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         header = self.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 
@@ -1048,14 +1152,20 @@ class PivotTableView(CopyPasteTableView):
     def _refresh_copy_paste_actions(self, _, __):
         self._spine_db_editor.refresh_copy_paste_actions()
 
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+        return self._context.convert_copied(row, column, value, model)
+
+    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+        return self._context.convert_pasted(row, column, str_value, model)
+
 
 class FrozenTableView(QTableView):
     header_dropped = Signal(QWidget, QWidget)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Optional[QWidget] = None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
@@ -1079,10 +1189,10 @@ class FrozenTableView(QTableView):
 class MetadataTableViewBase(CopyPasteTableView):
     """Base for metadata and item metadata table views."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: Optional[QWidget]):
         """
         Args:
-            parent (QWidget, optional): parent widget
+            parent: parent widget
         """
         super().__init__(parent)
         horizontal_header = self.horizontalHeader()
@@ -1201,3 +1311,21 @@ class ItemMetadataTableView(MetadataTableViewBase):
         database_column_delegate = DatabaseNameDelegate(self, db_editor.db_mngr)
         self.setItemDelegateForColumn(MetadataColumn.DB_MAP, database_column_delegate)
         database_column_delegate.data_committed.connect(self._set_model_data)
+
+
+class ManageEntityClassesTable(CopyPasteTableView):
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+        header = model.header[column]
+        if header == "display icon":
+            return optional_to_string(value)
+        if header == "active by default":
+            return bool_to_string(value) if value is not None else None
+        return super()._convert_copied(row, column, value, model)
+
+    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+        header = model.header[column]
+        if header == "display icon":
+            return string_to_display_icon(str_value)
+        if header == "active by default":
+            return string_to_bool(str_value)
+        return super()._convert_pasted(row, column, str_value, model)
