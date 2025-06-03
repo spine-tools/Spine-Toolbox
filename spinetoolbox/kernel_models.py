@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Contains a class for storing saved Python and Julia executables in a model."""
-
 import os
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon
@@ -23,7 +22,6 @@ from .helpers import (
     load_list_of_paths_from_qsettings,
     restore_override_cursor,
 )
-from widgets.notification import Notification
 from spine_engine.utils.helpers import resolve_default_julia_executable, resolve_current_python_interpreter
 
 
