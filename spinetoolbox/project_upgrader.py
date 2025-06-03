@@ -613,7 +613,8 @@ class ProjectUpgrader:
         item_name_to_spec_name = dict()
         for item_name in item_dict.keys():
             if item_dict[item_name]["type"] == "Tool":
-                item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
+                if item_dict[item_name].get("specification", "") != "":  # Skip Tools with no Tool Spec
+                    item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
         # Insert execution settings to local Tool data
         for item_name, spec_name in item_name_to_spec_name.items():
             if not project_data["items"][item_name].get("options", None):
@@ -640,17 +641,17 @@ class ProjectUpgrader:
     def get_local_data_dicts(self, project_dir):
         """Returns local spec data and local project data dicts from project folder."""
         local_spec_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "specification_local_data.json")
-        if not os.path.exists(local_spec_data_fpath):
-            self._toolbox.msg.emit(f"Local specification data not found [{local_spec_data_fpath}]")
-            return {}, {}
-        with open(local_spec_data_fpath) as local_spec_data_fp:
-            local_spec_data = json.load(local_spec_data_fp)
         local_project_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+        if not os.path.exists(local_spec_data_fpath):
+            local_spec_data = {}
+        else:
+            with open(local_spec_data_fpath) as local_spec_data_fp:
+                local_spec_data = json.load(local_spec_data_fp)
         if not os.path.exists(local_project_data_fpath):
-            self._toolbox.msg.emit(f"Local project data not found [{local_project_data_fpath}]")
-            return local_spec_data, {}
-        with open(local_project_data_fpath) as local_project_data_fp:
-            local_project_data = json.load(local_project_data_fp)
+            local_project_data = {}
+        else:
+            with open(local_project_data_fpath) as local_project_data_fp:
+                local_project_data = json.load(local_project_data_fp)
         return local_spec_data, local_project_data
 
     @staticmethod
