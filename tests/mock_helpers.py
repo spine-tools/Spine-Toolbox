@@ -304,7 +304,7 @@ class MockInstantQProcess(mock.Mock):
             slot(*self._finished_args)
 
 
-class TestSpineDBManager(SpineDBManager):
+class MockSpineDBManager(SpineDBManager):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, synchronous=True)
 

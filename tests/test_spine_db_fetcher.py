@@ -18,10 +18,10 @@ from PySide6.QtGui import QIcon
 from spinedb_api import DatabaseMapping, to_database
 from spinedb_api.import_functions import import_data
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, q_object
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, q_object
 
 
-class TestItemTypeFetchParent(ItemTypeFetchParent):
+class ExampleItemTypeFetchParent(ItemTypeFetchParent):
     def __init__(self, item_type, parent):
         super().__init__(item_type, owner=parent)
         self.handle_items_added = MagicMock()
@@ -31,7 +31,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
     def setUp(self):
         app_settings = MagicMock()
         self._logger = MagicMock()  # Collects error messages therefore handy for debugging.
-        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_mngr = MockSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.sa_url, "db_fetcher_test_db")
 
@@ -42,7 +42,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
     def test_fetch_empty_database(self):
         with q_object(QObject()) as parent:
             for item_type in DatabaseMapping.item_types():
-                fetcher = TestItemTypeFetchParent(item_type, parent)
+                fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 while self._db_mngr.can_fetch_more(self._db_map, fetcher):
                     self._db_mngr.fetch_more(self._db_map, fetcher)
                     qApp.processEvents()  # pylint: disable=undefined-variable
@@ -59,7 +59,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
     def test_fetch_alternatives(self):
         self._import_data(alternatives=("alt",))
         with q_object(QObject()) as parent:
-            fetcher = TestItemTypeFetchParent("alternative", parent)
+            fetcher = ExampleItemTypeFetchParent("alternative", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call(
@@ -109,7 +109,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "commit_id": 2,
         }
         with q_object(QObject()) as parent:
-            fetcher = TestItemTypeFetchParent("scenario", parent)
+            fetcher = ExampleItemTypeFetchParent("scenario", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -130,11 +130,11 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         }
         with q_object(QObject()) as parent:
             for item_type in ("scenario", "alternative"):
-                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                dep_fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 self._db_mngr.fetch_more(self._db_map, dep_fetcher)
                 dep_fetcher.set_obsolete(True)
                 dep_fetcher.deleteLater()
-            fetcher = TestItemTypeFetchParent("scenario_alternative", parent)
+            fetcher = ExampleItemTypeFetchParent("scenario_alternative", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -157,7 +157,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "dimension_id_list": (),
         }
         with q_object(QObject()) as parent:
-            fetcher = TestItemTypeFetchParent("entity_class", parent)
+            fetcher = ExampleItemTypeFetchParent("entity_class", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -177,12 +177,12 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "commit_id": 2,
         }
         with q_object(QObject()) as parent:
-            self._db_mngr.fetch_more(self._db_map, TestItemTypeFetchParent("entity_class", parent))
+            self._db_mngr.fetch_more(self._db_map, ExampleItemTypeFetchParent("entity_class", parent))
             for item_type in ("entity",):
-                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                dep_fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 self._db_mngr.fetch_more(self._db_map, dep_fetcher)
                 dep_fetcher.set_obsolete(True)
-            fetcher = TestItemTypeFetchParent("entity", parent)
+            fetcher = ExampleItemTypeFetchParent("entity", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -209,10 +209,10 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         }
         with q_object(QObject()) as parent:
             for item_type in ("entity_class",):
-                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                dep_fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 self._db_mngr.fetch_more(self._db_map, dep_fetcher)
                 dep_fetcher.set_obsolete(True)
-            fetcher = TestItemTypeFetchParent("entity_class", parent)
+            fetcher = ExampleItemTypeFetchParent("entity_class", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -232,10 +232,10 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         }
         with q_object(QObject()) as parent:
             for item_type in ("entity_class", "entity"):
-                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                dep_fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 self._db_mngr.fetch_more(self._db_map, dep_fetcher)
                 dep_fetcher.set_obsolete(True)
-            fetcher = TestItemTypeFetchParent("entity", parent)
+            fetcher = ExampleItemTypeFetchParent("entity", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -254,7 +254,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "member_id": self._db_map.entity(entity_class_name="oc", name="obj")["id"],
         }
         with q_object(QObject()) as parent:
-            fetcher = TestItemTypeFetchParent("entity_group", parent)
+            fetcher = ExampleItemTypeFetchParent("entity_group", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -277,10 +277,10 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         }
         with q_object(QObject()) as parent:
             for item_type in ("entity_class",):
-                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                dep_fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 self._db_mngr.fetch_more(self._db_map, dep_fetcher)
                 dep_fetcher.set_obsolete(True)
-            fetcher = TestItemTypeFetchParent("parameter_definition", parent)
+            fetcher = ExampleItemTypeFetchParent("parameter_definition", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
@@ -311,10 +311,10 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         }
         with q_object(QObject()) as parent:
             for item_type in ("entity_class", "entity", "parameter_definition", "alternative"):
-                dep_fetcher = TestItemTypeFetchParent(item_type, parent)
+                dep_fetcher = ExampleItemTypeFetchParent(item_type, parent)
                 self._db_mngr.fetch_more(self._db_map, dep_fetcher)
                 dep_fetcher.set_obsolete(True)
-            fetcher = TestItemTypeFetchParent("parameter_value", parent)
+            fetcher = ExampleItemTypeFetchParent("parameter_value", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_called_once_with({self._db_map: [item]})
@@ -326,7 +326,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
         value_list_id = self._db_map.parameter_value_list(name="value_list")["id"]
         item = {"id": value_list_id, "name": "value_list", "commit_id": 2}
         with q_object(QObject()) as parent:
-            fetcher = TestItemTypeFetchParent("parameter_value_list", parent)
+            fetcher = ExampleItemTypeFetchParent("parameter_value_list", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})
@@ -341,7 +341,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
                 "type": value_type,
                 "commit_id": 2,
             }
-            fetcher = TestItemTypeFetchParent("list_value", parent)
+            fetcher = ExampleItemTypeFetchParent("list_value", parent)
             if self._db_mngr.can_fetch_more(self._db_map, fetcher):
                 self._db_mngr.fetch_more(self._db_map, fetcher)
             fetcher.handle_items_added.assert_any_call({self._db_map: [item]})

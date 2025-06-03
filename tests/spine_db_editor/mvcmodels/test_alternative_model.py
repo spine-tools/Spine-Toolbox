@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_model import AlternativeModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, model_data_to_dict
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, model_data_to_dict
 
 
 class TestAlternativeModel(TestCaseWithQApplication):
@@ -29,7 +29,7 @@ class TestAlternativeModel(TestCaseWithQApplication):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_mngr = MockSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
@@ -131,7 +131,7 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
         self._temp_dir = TemporaryDirectory()
         app_settings = MagicMock()
         logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_mngr = MockSpineDBManager(app_settings, None)
         self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db2.sqlite"))
         self._db_map2 = self._db_mngr.get_db_map(url2, logger, create=True)

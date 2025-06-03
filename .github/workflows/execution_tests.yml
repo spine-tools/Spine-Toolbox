@@ -56,4 +56,4 @@ jobs:
           ${{ inputs.post-installation-command }}
       - name: Run tests
         run:
-          python -m unittest discover --pattern execution_test.py --verbose
+          pytest execution_tests/ --cov --verbose
