@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``kernel_editor`` module."""
+import os
 import json
 import pathlib
 import subprocess
@@ -71,12 +72,22 @@ class TestKernelEditorBase(TestCaseWithQApplication):
                 [str(python_path), "-m", "jupyter", "kernelspec", "remove", "-f", kernel_name],
                 capture_output=True,
                 check=False,
+                env=dict(os.environ, **{"JUPYTER_PLATFORM_DIRS": "1"})
             )
             self.assertEqual(completion.returncode, 0)
 
     def test_make_julia_kernel(self):
         """Makes a new Julia kernel if Julia is in PATH and the base project (@.) has
-        IJulia installed. Test Julia kernel is removed in the end if available."""
+        IJulia installed. Test Julia kernel is removed in the end if available.
+
+        ### README
+
+        IJulia.installkernel still installs kernels into the legacy path.
+        If a newer version of IJulia someday uses updated paths (from platformdirs),
+        uncomment the two (2) lines env=dict(os.environ, **{"JUPYTER_PLATFORM_DIRS": "1"})
+
+        ###
+        """
         julia_exec = resolve_default_julia_executable()
         if not julia_exec:
             self.skipTest("Julia not found in PATH.")
@@ -103,9 +114,10 @@ class TestKernelEditorBase(TestCaseWithQApplication):
                 QApplication.processEvents()
             editor.close()
         completion = subprocess.run(
-            [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json", kernel_name],
+            [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json"],
             capture_output=True,
             check=False,
+            # env=dict(os.environ, **{"JUPYTER_PLATFORM_DIRS": "1"})
         )
         real_kernel_name = None
         kernel_info = json.loads(completion.stdout)
@@ -124,5 +136,6 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             [sys.executable, "-m", "jupyter", "kernelspec", "remove", "-f", real_kernel_name],
             capture_output=True,
             check=False,
+            # env=dict(os.environ, **{"JUPYTER_PLATFORM_DIRS": "1"})
         )
         self.assertEqual(completion.returncode, 0)

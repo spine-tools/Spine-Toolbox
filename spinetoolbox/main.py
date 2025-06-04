@@ -19,6 +19,7 @@ import PySide6
 dirname = os.path.dirname(PySide6.__file__)
 plugin_path = os.path.join(dirname, "plugins", "platforms")
 os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plugin_path
+os.environ["JUPYTER_PLATFORM_DIRS"] = "1"
 
 # pylint: disable=wrong-import-position, wrong-import-order
 from argparse import ArgumentParser
