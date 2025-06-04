@@ -258,11 +258,13 @@ class KernelEditorBase(QDialog):
         self._install_kernel_process.execution_finished.disconnect()
         self._install_kernel_process.deleteLater()
         self._install_kernel_process = None
+        self._show_close_button(failed=retval != 0)
         if retval != 0:
             self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
-            self._logger.msg_error.emit("Failed")
             return
         self._logger.msg_success.emit("New kernel installed")
+        self._solve_new_kernel_name()  # TODO: This is probably not necessary for Python kernels
+        self.ui.label_python_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
 
     @Slot(bool)
     def make_julia_kernel(self, _=False):
@@ -418,6 +420,8 @@ class KernelEditorBase(QDialog):
             f"{self._julia_kernel_name_prefix}",
             f"--project={self._julia_project}",
         ]
+        # TODO: IJulia.installkernel() should return new kernel path. If we can get
+        #  it, there's no need for _solve_new_kernel_name()
         self._install_julia_kernel_process = QProcessExecutionManager(self._logger, self._julia_exe, args, semisilent=True)
         self._install_julia_kernel_process.execution_finished.connect(self.handle_installkernel_process_finished)
         self._install_julia_kernel_process.start_execution()
@@ -430,15 +434,17 @@ class KernelEditorBase(QDialog):
         Args:
             retval (int): Process return value. 0: success, !0: failure
         """
-        print(f"retval:{retval}")  # IJulia.installkernel() should return kernel path
         self._install_julia_kernel_process.execution_finished.disconnect()
         self._install_julia_kernel_process.deleteLater()
         self._install_julia_kernel_process = None
         self._ready_to_install_kernel = False
+        self._show_close_button(failed=retval != 0)
         if retval != 0:
-            self._logger.msg_error.emit("Installing kernel failed")
-        else:
-            self._logger.msg_success.emit("New kernel installed")
+            self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
+            return
+        self._logger.msg_success.emit("New kernel installed")
+        self._solve_new_kernel_name()
+        self.ui.label_julia_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
 
     def make_kernel_name(self, exe, prefix):
         """Retrieves Python or Julia version in a subprocess and makes a kernel name based on it."""
@@ -634,14 +640,6 @@ class MiniPythonKernelEditor(KernelEditorBase):
         if not self.make_python_kernel():
             self._show_close_button(failed=True)
 
-    @busy_effect
-    @Slot(int)
-    def handle_kernelspec_install_process_finished(self, retval):
-        super().handle_kernelspec_install_process_finished(retval)
-        self._solve_new_kernel_name()
-        self.ui.label_julia_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
-        self._show_close_button(failed=retval != 0)
-
 
 class MiniJuliaKernelEditor(KernelEditorBase):
     """A Simple Julia Kernel maker."""
@@ -796,14 +794,6 @@ class MiniJuliaKernelEditor(KernelEditorBase):
     def _do_make_kernel(self):
         if not self.make_julia_kernel():
             self._show_close_button(failed=True)
-
-    @busy_effect
-    @Slot(int)
-    def handle_installkernel_process_finished(self, retval):
-        super().handle_installkernel_process_finished(retval)
-        self._solve_new_kernel_name()
-        self.ui.label_julia_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
-        self._show_close_button(failed=retval != 0)
 
 
 def format_event_message(msg_type, message, show_datetime=True):
