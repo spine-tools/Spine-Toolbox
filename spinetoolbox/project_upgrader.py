@@ -602,25 +602,7 @@ class ProjectUpgrader:
         new = copy.deepcopy(old)
         new["project"]["version"] = 14
         spec_data, project_data = self.get_local_data_dicts(project_dir)
-        spec_tool_dict = spec_data.get("Tool", {})
-        spec_name_by_exec_settings = dict()
-        # Make Spec name to execution settings mapping
-        for spec_name in spec_tool_dict.keys():
-            exec_settings = spec_tool_dict[spec_name].get("execution_settings", {})
-            spec_name_by_exec_settings[spec_name] = exec_settings
-        # Make Tool name to Spec name mapping
         item_dict = new["items"]
-        item_name_to_spec_name = dict()
-        for item_name in item_dict.keys():
-            if item_dict[item_name]["type"] == "Tool":
-                if item_dict[item_name].get("specification", "") != "":  # Skip Tools with no Tool Spec
-                    item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
-        # Insert execution settings to local Tool data
-        for item_name, spec_name in item_name_to_spec_name.items():
-            if not project_data["items"][item_name].get("options", None):
-                project_data["items"][item_name]["options"] = dict()
-            if spec_name in spec_name_by_exec_settings.keys():
-                project_data["items"][item_name]["options"].update(spec_name_by_exec_settings[spec_name])
         # Move "options": {"julia_sysimage": "C:\some\some.dll"} from project.json to project_local_data.json
         for item_name in item_dict.keys():
             if item_dict[item_name]["type"] != "Tool":
@@ -628,10 +610,43 @@ class ProjectUpgrader:
             opt = item_dict[item_name].pop("options", None)
             if opt is not None:
                 sysimg_path = opt.get("julia_sysimage", "")
+                if not project_data:
+                    project_data = {"items": {item_name: {"options": {}}}}
+                if not project_data["items"][item_name].get("options", None):
+                    project_data["items"][item_name]["options"] = dict()
                 project_data["items"][item_name]["options"].update({"julia_sysimage": sysimg_path})
+        if not spec_data and not project_data:
+            return new
+        if spec_data:
+            # Move execution settings from local spec data to local project data
+            spec_tool_dict = spec_data.get("Tool", {})
+            spec_name_by_exec_settings = dict()
+            # Make Spec name to execution settings mapping
+            for spec_name in spec_tool_dict.keys():
+                exec_settings = spec_tool_dict[spec_name].get("execution_settings", {})
+                spec_name_by_exec_settings[spec_name] = exec_settings
+            # Make Tool name to Spec name mapping
+            item_name_to_spec_name = dict()
+            for item_name in item_dict.keys():
+                if item_dict[item_name]["type"] == "Tool":
+                    if item_dict[item_name].get("specification", "") != "":  # Skip Tools with no Tool Spec
+                        item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
+            # Insert execution settings to local Tool data
+            for item_name, spec_name in item_name_to_spec_name.items():
+                if not project_data:
+                    project_data = {"items": {}}
+                if item_name not in project_data["items"].keys():
+                    project_data["items"].update({item_name: {}})
+                if not project_data["items"][item_name].get("options", None):
+                    project_data["items"][item_name]["options"] = dict()
+                if spec_name in spec_name_by_exec_settings.keys():
+                    project_data["items"][item_name]["options"].update(spec_name_by_exec_settings[spec_name])
         # Save updated project_local_data.json
+        local_dir = os.path.join(project_dir, ".spinetoolbox", "local")
+        if not os.path.exists(local_dir):
+            os.makedirs(local_dir)
         try:
-            local_project_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+            local_project_data_fpath = os.path.join(local_dir, "project_local_data.json")
             with open(local_project_data_fpath, "w") as fp:
                 json.dump(project_data, fp, indent=4)
         except OSError:
