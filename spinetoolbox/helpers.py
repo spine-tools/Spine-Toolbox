@@ -2153,32 +2153,3 @@ def issamefile(a, b):
         return os.path.samefile(os.path.realpath(a), os.path.realpath(b))
     except FileNotFoundError:
         return False
-
-
-def default_python_execution_settings():
-    """Returns default Python Tool execution settings."""
-    d = dict()
-    d["kernel_spec_name"] = ""
-    d["env"] = ""
-    d["use_jupyter_console"] = False
-    d["executable"] = ""
-    return d
-
-
-def default_julia_execution_settings():
-    """Returns default Julia Tool execution settings."""
-    d = dict()
-    d["kernel_spec_name"] = ""
-    d["env"] = ""
-    d["use_jupyter_console"] = False
-    d["executable"] = ""
-    d["project"] = ""
-    return d
-
-
-def default_executable_execution_settings():
-    """Returns default Executable Tool execution settings."""
-    d = dict()
-    d["cmd"] = ""
-    d["shell"] = ""
-    return d
