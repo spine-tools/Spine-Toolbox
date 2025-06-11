@@ -196,7 +196,7 @@ class ExecutableCompoundModels(QObject):
         if not conda:
             conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
         self.julia_kernel_fetcher = KernelFetcher(conda, fetch_mode=4)
-        self.julia_kernel_fetcher.kernel_found.connect(self.add_julia_kernel)
+        self.julia_kernel_fetcher.kernel_found.connect(self._add_julia_kernel)
         if finalize_slot is not None:
             self.julia_kernel_fetcher.finished.connect(finalize_slot)
         self.julia_kernel_fetcher.finished.connect(restore_override_cursor)
@@ -216,7 +216,7 @@ class ExecutableCompoundModels(QObject):
             self.julia_kernel_fetcher.stop_fetcher.emit()
 
     @Slot(str, str, bool, QIcon, dict)
-    def add_julia_kernel(self, kernel_name, resource_dir, conda, icon, deats):
+    def _add_julia_kernel(self, kernel_name, resource_dir, conda, icon, deats):
         """Adds a kernel entry as an item to Julia kernels comboBox."""
         if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
             # Settings widget closed while thread still running
@@ -349,7 +349,6 @@ class ExecutableCompoundModels(QObject):
         item.setToolTip(resource_dir)
         deats["is_jupyter"] = True
         deats["is_conda"] = conda
-        deats["kernel_name"] = kernel_name
         item.setData(deats)
         self._python_kernel_model.appendRow(item)
 
