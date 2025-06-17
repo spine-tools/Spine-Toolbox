@@ -72,7 +72,7 @@ class TestKernelEditorBase(TestCaseWithQApplication):
                 [str(python_path), "-m", "jupyter", "kernelspec", "remove", "-f", kernel_name],
                 capture_output=True,
                 check=False,
-                env=dict(os.environ, **{"JUPYTER_PLATFORM_DIRS": "1"})
+                env=dict(os.environ, **{"JUPYTER_PLATFORM_DIRS": "1"}),
             )
             self.assertEqual(completion.returncode, 0)
 
