@@ -3,7 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.9.7]
 
 ### Added
 
@@ -18,8 +18,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - Tools do not make empty results directories anymore if the Tool Specification does not define
 any output files.
-
-### Security
 
 ## [0.9.6]
 
