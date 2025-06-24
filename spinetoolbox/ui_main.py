@@ -467,7 +467,7 @@ class ToolboxUI(QMainWindow):
         self.msg_warning.emit("Please upgrade your Python.")
         self.msg_warning.emit(
             f"Looks like you are running Python {sys.version_info[0]}.{sys.version_info[1]}. "
-            f"Support for <b>Python older than 3.10</b> will be dropped by the end of May 2025."
+            f"Support for <b>Python older than 3.10</b> has been dropped at the end of May 2025."
         )
 
     def _display_deprecated_python_warning(self) -> None:
