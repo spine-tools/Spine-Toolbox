@@ -204,17 +204,16 @@ class StackedTableView(AutoFilterCopyPasteTableView):
     def remove_selected(self):
         """Removes selected indexes."""
         selection = self.selectionModel().selection()
-        row_counts = []
+        rows = []
         while not selection.isEmpty():
             current = selection.takeAt(0)
             top = current.top()
             bottom = current.bottom()
-            row_counts.append((top, bottom - top + 1))
+            rows += range(top, bottom + 1)
         # Get data grouped by db_map
         self.selectionModel().clearSelection()
         model = self.model()
-        for row, count in row_counts:
-            model.removeRows(row, count)
+        model.remove_rows(rows)
 
     @Slot(QModelIndex, QModelIndex)
     def _refresh_copy_paste_actions(self, _, __):
