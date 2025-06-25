@@ -29,7 +29,6 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install "numpy<2"  # See issue #2852. Remove when PyInstaller supports numpy 2.0+
           python -m pip install -r requirements.txt
       - name: Run tests
         run: |
@@ -44,7 +43,7 @@ jobs:
         run: |
           mkdir embedded-python
           cd embedded-python
-          curl -o python.zip https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip
+          curl -o python.zip https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip
           tar xf python.zip
           del python.zip
       - name: Edit embedded Python search paths
@@ -65,7 +64,7 @@ jobs:
         run: |
           cd embedded-python/Scripts
           ./pip.exe --version
-          ./pip.exe install spinedb-api pandas ipykernel jill
+          ./pip.exe install spinedb-api ipykernel jill
       - name: List packages in embedded Python
         run: |
           cd embedded-python/Scripts
