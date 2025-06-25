@@ -22,7 +22,7 @@ from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, model_data_to_dict
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, model_data_to_dict
 
 
 class _TestBase(TestCaseWithQApplication):
@@ -41,7 +41,7 @@ class TestScenarioModel(_TestBase):
     def setUp(self):
         app_settings = MagicMock()
         logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_mngr = MockSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.db_url, self.db_codename)
         with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
@@ -441,7 +441,7 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
         self._temp_dir = TemporaryDirectory()
         app_settings = MagicMock()
         logger = MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_mngr = MockSpineDBManager(app_settings, None)
         self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         self._db_mngr.name_registry.register(self._db_map1.sa_url, "test_db_1")
         url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db_2.sqlite"))

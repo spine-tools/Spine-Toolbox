@@ -20,7 +20,7 @@ from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
@@ -260,7 +260,7 @@ class TestClosingDBEditors(TestCaseWithQApplication):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = TestSpineDBManager(mock_settings, None)
+            self._db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
 
