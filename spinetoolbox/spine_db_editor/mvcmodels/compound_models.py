@@ -643,14 +643,14 @@ class EditParameterValueMixin:
                 bottom_right = self.index(first_row + count - 1, column_count - 1)
                 self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
 
-    def index_name(self, index):
+    def index_name(self, index: QModelIndex) -> str:
         """Generates a name for data at given index.
 
         Args:
-            index (QModelIndex): index to model
+            index to model
 
         Returns:
-            str: label identifying the data
+            label identifying the data
         """
         item = self.db_item(index)
         if item is None:
@@ -659,16 +659,15 @@ class EditParameterValueMixin:
         if self.item_type == "parameter_definition":
             parameter_name = item["name"]
             names = [item["entity_class_name"]]
+            alternative_name = None
         elif self.item_type == "parameter_value":
             parameter_name = item["parameter_name"]
             names = list(item["entity_byname"])
+            alternative_name = item["alternative_name"]
         else:
             raise ValueError(
                 f"invalid item_type: expected parameter_definition or parameter_value, got {self.item_type}"
             )
-        alternative_name = {"parameter_definition": lambda x: None, "parameter_value": lambda x: x["alternative_name"]}[
-            self.item_type
-        ](item)
         return parameter_identifier(database, parameter_name, names, alternative_name)
 
     def get_set_data_delayed(self, index):
@@ -683,9 +682,8 @@ class EditParameterValueMixin:
         """
         sub_model = self.sub_model_at_row(index.row())
         id_ = self.item_at_row(index.row())
-        value_field = {"parameter_value": "value", "parameter_definition": "default_value"}[self.item_type]
         return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
-            [{"id": id_, value_field: join_value_and_type(*value_and_type)}]
+            [{"id": id_, sub_model.value_field: join_value_and_type(*value_and_type)}]
         )
 
 
