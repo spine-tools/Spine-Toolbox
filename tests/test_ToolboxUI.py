@@ -697,9 +697,7 @@ class TestToolboxUI(TestCaseWithQApplication):
             self.assertEqual(console.owners, {item})
 
     def test_detached_python_basic_console(self):
-        with (
-            mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,
-        ):
+        with (mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,):
             self.toolbox.start_detached_python_basic_console(sys.executable)
             mock_show.assert_called()
         self.assertEqual(len(self.toolbox._persistent_consoles), 1)

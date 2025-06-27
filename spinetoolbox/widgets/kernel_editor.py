@@ -169,15 +169,19 @@ class KernelEditorBase(QDialog):
             (bool): True if installed, False if not
         """
         try:
-            response = subprocess.check_output([self._python_exe, "-m", "pip", "freeze", "-q"], stderr=subprocess.STDOUT)
+            response = subprocess.check_output(
+                [self._python_exe, "-m", "pip", "freeze", "-q"], stderr=subprocess.STDOUT
+            )
         except subprocess.CalledProcessError as exc:
             err_msg = exc.output.decode("utf-8")
             err_msgs = err_msg.split("\n")
             for i in range(len(err_msgs)):
                 self._logger.msg_error.emit(err_msgs[i].strip("\r"))
-            self._logger.msg_warning.emit(f"It seems that running the command <b>{self._python_exe} -m pip "
-                                          f"freeze -q</b> failed for some reason. Please try "
-                                          f"installing the Jupyter kernel manually.")
+            self._logger.msg_warning.emit(
+                f"It seems that running the command <b>{self._python_exe} -m pip "
+                f"freeze -q</b> failed for some reason. Please try "
+                f"installing the Jupyter kernel manually."
+            )
             raise
         installed_packages = [r.decode().split("==")[0] for r in response.split()]
         return package_name in installed_packages
@@ -274,7 +278,9 @@ class KernelEditorBase(QDialog):
         if not self._julia_exe:
             self._logger.msg.emit("Please select a Julia executable")
             return False
-        if self._julia_project != "@." and not dir_is_valid(self, self._julia_project, "Invalid Julia Project directory"):
+        if self._julia_project != "@." and not dir_is_valid(
+            self, self._julia_project, "Invalid Julia Project directory"
+        ):
             return False
         if self._ready_to_install_kernel:
             self.start_ijulia_installkernel_process()
@@ -422,7 +428,9 @@ class KernelEditorBase(QDialog):
         ]
         # TODO: IJulia.installkernel() should return new kernel path. If we can get
         #  it, there's no need for _solve_new_kernel_name()
-        self._install_julia_kernel_process = QProcessExecutionManager(self._logger, self._julia_exe, args, semisilent=True)
+        self._install_julia_kernel_process = QProcessExecutionManager(
+            self._logger, self._julia_exe, args, semisilent=True
+        )
         self._install_julia_kernel_process.execution_finished.connect(self.handle_installkernel_process_finished)
         self._install_julia_kernel_process.start_execution()
 
@@ -554,12 +562,15 @@ class KernelEditorBase(QDialog):
     def _save_ui(self):
         self._app_settings.setValue("kernelEditor/windowSize", self.size())
         self._app_settings.setValue("kernelEditor/windowPosition", self.pos())
-        self._app_settings.setValue("kernelEditor/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized)
+        self._app_settings.setValue(
+            "kernelEditor/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized
+        )
         self._app_settings.setValue("kernelEditor/splitterState", self.ui.splitter.saveState())
 
 
 class MiniPythonKernelEditor(KernelEditorBase):
     """A Simple Python kernel maker."""
+
     def __init__(self, parent, models):
         super().__init__(parent, models)
         self.setWindowTitle("Python Jupyter Kernel Creator")
@@ -599,9 +610,11 @@ class MiniPythonKernelEditor(KernelEditorBase):
             self._python_exe = resolve_current_python_interpreter()
         python_kernel_found = _get_python_kernel_name_by_exe(self._python_exe, self._models.python_kernel_model)
         if python_kernel_found:
-            self._logger.msg.emit(f"Python kernel <b>{python_kernel_found}</b> using Python "
-                                  f"<b>{self._python_exe}</b> already exists. Click Close to activate it or edit "
-                                  f"kernel name below to make a new one.")
+            self._logger.msg.emit(
+                f"Python kernel <b>{python_kernel_found}</b> using Python "
+                f"<b>{self._python_exe}</b> already exists. Click Close to activate it or edit "
+                f"kernel name below to make a new one."
+            )
             self._new_kernel_name = python_kernel_found
             self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
             self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
@@ -613,7 +626,8 @@ class MiniPythonKernelEditor(KernelEditorBase):
         if not self._python_kernel_name:
             self._logger.msg_error.emit(
                 f"Something went wrong. Retrieving version of python {self._python_exe} failed. "
-                f"Please select another Python or try reinstalling")
+                f"Please select another Python or try reinstalling"
+            )
             self.ui.label_python_kernel_name.setText("Kernel name unavailable")
             return False
         self.ui.label_python_kernel_name.setText(f"New kernel name will be {self._python_kernel_name}")
@@ -643,6 +657,7 @@ class MiniPythonKernelEditor(KernelEditorBase):
 
 class MiniJuliaKernelEditor(KernelEditorBase):
     """A Simple Julia Kernel maker."""
+
     def __init__(self, parent, models):
         super().__init__(parent, models)
         self._julia_kernel_name_prefix = "julia"
@@ -690,7 +705,8 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         if not kernel_name:
             self._logger.msg_error.emit(
                 f"Something went wrong. Retrieving version of Julia {self._julia_exe} failed. "
-                f"Please select another Julia or try reinstalling")
+                f"Please select another Julia or try reinstalling"
+            )
             self.ui.label_julia_kernel_name.setText("Kernel name unavailable")
             return False
         if self._check_existing_kernels():
@@ -711,7 +727,8 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         if not kernel_name:
             self._logger.msg_error.emit(
                 f"Something went wrong. Retrieving version of Julia {self._julia_exe} failed. "
-                f"Please select another Julia or try reinstalling")
+                f"Please select another Julia or try reinstalling"
+            )
             self.ui.label_julia_kernel_name.setText("Kernel name unavailable")
             return False
         if self._check_existing_kernels():
@@ -742,8 +759,10 @@ class MiniJuliaKernelEditor(KernelEditorBase):
             kernel_exe = _get_kernel_exe(kname, self._models.julia_kernel_model)
             kernel_project = _get_julia_kernel_project(kname, self._models.julia_kernel_model)
             kernel_project = "HOME" if not kernel_project else kernel_project
-            self._logger.msg.emit(f"Kernel <b>{kname}</b> using exe <b>{kernel_exe}</b> and project <b>{kernel_project}</b> "
-                                  f"already exists. Edit the Julia kernel prefix to make a new one.")
+            self._logger.msg.emit(
+                f"Kernel <b>{kname}</b> using exe <b>{kernel_exe}</b> and project <b>{kernel_project}</b> "
+                f"already exists. Edit the Julia kernel prefix to make a new one."
+            )
             self.ui.label_julia_kernel_name.setText(f"Click Close to activate kernel {kname}")
             self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
             self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
@@ -758,22 +777,31 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         existing_kernel = _get_julia_kernel_name_by_exe(self._julia_exe, self._models.julia_kernel_model)
         if existing_kernel:
             self.ui.textBrowser_process.clear()
-            match_found = _selected_project_matches_kernel_project(existing_kernel, self._julia_project, self._models.julia_kernel_model)
+            match_found = _selected_project_matches_kernel_project(
+                existing_kernel, self._julia_project, self._models.julia_kernel_model
+            )
             kernel_project = "HOME" if not self._julia_project else self._julia_project
             if match_found:
-                self.ui.label_message.setText(f"Kernel {existing_kernel} using your selections already exists. "
-                                              f"Click Close to activate it.")
-                self._logger.msg.emit(f"Kernel <b>{existing_kernel}</b> executable <b>{self._julia_exe}</b> and "
-                                      f"project <b>{kernel_project}</b> match your selections.")
+                self.ui.label_message.setText(
+                    f"Kernel {existing_kernel} using your selections already exists. " f"Click Close to activate it."
+                )
+                self._logger.msg.emit(
+                    f"Kernel <b>{existing_kernel}</b> executable <b>{self._julia_exe}</b> and "
+                    f"project <b>{kernel_project}</b> match your selections."
+                )
             else:
                 kernels_project = _get_julia_kernel_project(existing_kernel, self._models.julia_kernel_model)
-                self.ui.label_message.setText(f"Kernel {existing_kernel} is available but project does not match your "
-                                              f"selection. Click Close to activate it anyway.")
-                self._logger.msg.emit(f"Kernel <b>{existing_kernel}</b> using the selected Julia "
-                                      f"is available but the project does not match your selection. Kernel "
-                                      f"<b>{existing_kernel}</b> uses project <b>{kernels_project}</b>. Click "
-                                      f"Close to activate this kernel or edit the Julia kernel prefix and "
-                                      f"click Make kernel.")
+                self.ui.label_message.setText(
+                    f"Kernel {existing_kernel} is available but project does not match your "
+                    f"selection. Click Close to activate it anyway."
+                )
+                self._logger.msg.emit(
+                    f"Kernel <b>{existing_kernel}</b> using the selected Julia "
+                    f"is available but the project does not match your selection. Kernel "
+                    f"<b>{existing_kernel}</b> uses project <b>{kernels_project}</b>. Click "
+                    f"Close to activate this kernel or edit the Julia kernel prefix and "
+                    f"click Make kernel."
+                )
             self._new_kernel_name = existing_kernel
             self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
             self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)

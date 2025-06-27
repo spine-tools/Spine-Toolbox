@@ -381,7 +381,7 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 self.assertIn("settings", proj_v14["project"])
 
     def check_project_local_data_before_upgrade(self, pld):
-        self.assertEqual(6, len(pld['items'].keys()))
+        self.assertEqual(6, len(pld["items"].keys()))
         a = pld["items"]["Run SpineOpt"]
         expected = {}
         self.assertDictEqual(expected, a)
@@ -402,24 +402,57 @@ class TestProjectUpgrader(TestCaseWithQApplication):
         self.assertDictEqual(expected, f)
 
     def assert_project_local_data1(self, pld):
-        self.assertEqual(6, len(pld['items'].keys()))
+        self.assertEqual(6, len(pld["items"].keys()))
         a = pld["items"]["Run SpineOpt"]
-        expected = {"options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe", "project": "C:/data/JuliaProjects/SpineOptProject"}}
+        expected = {
+            "options": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": False,
+                "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe",
+                "project": "C:/data/JuliaProjects/SpineOptProject",
+            }
+        }
         self.assertDictEqual(expected, a)
         b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {'options': {"env": "", "kernel_spec_name": "julia-1.10", "use_jupyter_console": True, "executable": "", "project": "", "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}}
+        expected = {
+            "options": {
+                "env": "",
+                "kernel_spec_name": "julia-1.10",
+                "use_jupyter_console": True,
+                "executable": "",
+                "project": "",
+                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll",
+            }
+        }
         self.assertDictEqual(expected, b)
         c = pld["items"]["Python Tool Basic Console"]
-        expected = {"root_directory": {"type": "path", "relative": True, "path": "."}, "options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "some/python.exe"}}
+        expected = {
+            "root_directory": {"type": "path", "relative": True, "path": "."},
+            "options": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": False,
+                "executable": "some/python.exe",
+            },
+        }
         self.assertDictEqual(expected, c)
         d = pld["items"]["Python Tool Jupyter Console"]
-        expected = {"options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}}
+        expected = {
+            "options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}
+        }
         self.assertDictEqual(expected, d)
         e = pld["items"]["Run dir command"]
-        expected = {"root_directory": {"type": "path", "relative": False, "path": "C:/data"}, "options": {"cmd": "dir", "shell": "cmd.exe"}}
+        expected = {
+            "root_directory": {"type": "path", "relative": False, "path": "C:/data"},
+            "options": {"cmd": "dir", "shell": "cmd.exe"},
+        }
         self.assertDictEqual(expected, e)
         f = pld["items"]["Run Batch File"]
-        expected = {"root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"}, "options": {"cmd": "", "shell": "cmd.exe"}}
+        expected = {
+            "root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"},
+            "options": {"cmd": "", "shell": "cmd.exe"},
+        }
         self.assertDictEqual(expected, f)
 
     def test_upgrade_v13_to_v14_with_missing_local_data(self):
@@ -446,11 +479,15 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 julia_tool_dict = proj_v14["items"]["Julia Tool Jupyter Console"]
                 self.assertIsNone(julia_tool_dict.get("options", None))
                 # Check that julia_sysimage is now in project_local_dict.json
-                project_local_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+                project_local_data_fpath = os.path.join(
+                    project_dir, ".spinetoolbox", "local", "project_local_data.json"
+                )
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
                 local_julia_tool_dict_options = pld["items"]["Julia Tool Jupyter Console"]["options"]
-                expected = {"julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}
+                expected = {
+                    "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"
+                }
                 self.assertDictEqual(expected, local_julia_tool_dict_options)
 
     def test_upgrade_v13_to_v14_with_missing_local_project_data(self):
@@ -477,7 +514,9 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 julia_tool_dict = proj_v14["items"]["Julia Tool Jupyter Console"]
                 self.assertIsNone(julia_tool_dict.get("options", None))
                 # Check updated project_local_data.json
-                project_local_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+                project_local_data_fpath = os.path.join(
+                    project_dir, ".spinetoolbox", "local", "project_local_data.json"
+                )
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
                 self.assert_project_local_data2(pld)
@@ -486,18 +525,44 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 self.assertIn("settings", proj_v14["project"])
 
     def assert_project_local_data2(self, pld):
-        self.assertEqual(6, len(pld['items'].keys()))
+        self.assertEqual(6, len(pld["items"].keys()))
         a = pld["items"]["Run SpineOpt"]
-        expected = {"options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe", "project": "C:/data/JuliaProjects/SpineOptProject"}}
+        expected = {
+            "options": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": False,
+                "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe",
+                "project": "C:/data/JuliaProjects/SpineOptProject",
+            }
+        }
         self.assertDictEqual(expected, a)
         b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {'options': {"env": "", "kernel_spec_name": "julia-1.10", "use_jupyter_console": True, "executable": "", "project": "", "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}}
+        expected = {
+            "options": {
+                "env": "",
+                "kernel_spec_name": "julia-1.10",
+                "use_jupyter_console": True,
+                "executable": "",
+                "project": "",
+                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll",
+            }
+        }
         self.assertDictEqual(expected, b)
         c = pld["items"]["Python Tool Basic Console"]
-        expected = {"options": {"kernel_spec_name": "", "env": "", "use_jupyter_console": False, "executable": "some/python.exe"}}
+        expected = {
+            "options": {
+                "kernel_spec_name": "",
+                "env": "",
+                "use_jupyter_console": False,
+                "executable": "some/python.exe",
+            }
+        }
         self.assertDictEqual(expected, c)
         d = pld["items"]["Python Tool Jupyter Console"]
-        expected = {"options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}}
+        expected = {
+            "options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}
+        }
         self.assertDictEqual(expected, d)
         e = pld["items"]["Run dir command"]
         expected = {"options": {"cmd": "dir", "shell": "cmd.exe"}}
@@ -530,7 +595,9 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 julia_tool_dict = proj_v14["items"]["Julia Tool Jupyter Console"]
                 self.assertIsNone(julia_tool_dict.get("options", None))
                 # Check updated project_local_data.json
-                project_local_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+                project_local_data_fpath = os.path.join(
+                    project_dir, ".spinetoolbox", "local", "project_local_data.json"
+                )
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
                 self.assert_project_local_data3(pld)
@@ -539,12 +606,16 @@ class TestProjectUpgrader(TestCaseWithQApplication):
                 self.assertIn("settings", proj_v14["project"])
 
     def assert_project_local_data3(self, pld):
-        self.assertEqual(6, len(pld['items'].keys()))
+        self.assertEqual(6, len(pld["items"].keys()))
         a = pld["items"]["Run SpineOpt"]
         expected = {}
         self.assertDictEqual(expected, a)
         b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {"options": {"julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"}}
+        expected = {
+            "options": {
+                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"
+            }
+        }
         self.assertDictEqual(expected, b)
         c = pld["items"]["Python Tool Basic Console"]
         expected = {"root_directory": {"type": "path", "relative": True, "path": "."}}

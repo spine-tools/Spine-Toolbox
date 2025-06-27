@@ -23,13 +23,14 @@ class Notification(QFrame):
     _FADE_IN_OUT_DURATION = 500
 
     def __init__(
-            self,
-            parent,
-            txt,
-            anim_duration=_FADE_IN_OUT_DURATION,
-            life_span=None,
-            word_wrap=True,
-            corner=Qt.Corner.TopRightCorner):
+        self,
+        parent,
+        txt,
+        anim_duration=_FADE_IN_OUT_DURATION,
+        life_span=None,
+        word_wrap=True,
+        corner=Qt.Corner.TopRightCorner,
+    ):
         """
 
         Args:

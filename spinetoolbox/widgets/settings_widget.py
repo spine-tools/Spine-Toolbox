@@ -549,12 +549,22 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if not data.get("is_jupyter", False):
             if not data.get("is_project", False):
                 m.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_executable)
-                m.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open containing folder...", self._open_julia_executable_dir)
+                m.addAction(
+                    QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                    "Open containing folder...",
+                    self._open_julia_executable_dir,
+                )
             else:
                 m.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_project)
-                m.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open folder...", self._open_julia_project_dir)
+                m.addAction(
+                    QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open folder...", self._open_julia_project_dir
+                )
         else:
-            m.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open resource folder...", self._open_julia_kernel_resource_dir)
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open resource folder...",
+                self._open_julia_kernel_resource_dir,
+            )
         m.popup(global_pos)
 
     @Slot(QPoint)
@@ -575,10 +585,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return
         m = QMenu(menu_parent)
         if not data["is_jupyter"]:
-            m.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter)
-            m.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open containing folder...", self._open_python_interpreter_dir)
+            m.addAction(
+                QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter
+            )
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open containing folder...",
+                self._open_python_interpreter_dir,
+            )
         else:
-            m.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open resource folder...", self._open_python_kernel_resource_dir)
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open resource folder...",
+                self._open_python_kernel_resource_dir,
+            )
         m.popup(global_pos)
 
     @Slot(int)
@@ -718,11 +738,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         # Below lines ensure that the pythonPath interpreter is inserted into the pythonInterpreters list
         # I.e. it is for upgrading users settings to use the new keys.
         if not path_in_list(python_path, python_interpreters):
-            python_interpreters = save_path_to_qsettings(self._qsettings, "appSettings/pythonInterpreters", str(python_path))
+            python_interpreters = save_path_to_qsettings(
+                self._qsettings, "appSettings/pythonInterpreters", str(python_path)
+            )
         if not path_in_list(julia_path, julia_executables):
             julia_executables = save_path_to_qsettings(self._qsettings, "appSettings/juliaExecutables", str(julia_path))
         if not path_in_list(julia_project_path, julia_projects) and not julia_project_path == "@.":
-            julia_projects = save_path_to_qsettings(self._qsettings, "appSettings/juliaProjects", str(julia_project_path))
+            julia_projects = save_path_to_qsettings(
+                self._qsettings, "appSettings/juliaProjects", str(julia_project_path)
+            )
         if use_python_jupyter_console == "0":
             self.ui.radioButton_use_python_basic_console.setChecked(True)
         else:
@@ -1107,7 +1131,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
         if data["path"] == "@." or data["path"] == "":
             # Open the dir that contains the current Julia executable
-            current_julia_data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
+            current_julia_data = get_current_item_data(
+                self.ui.comboBox_julia_path, self._models.julia_executables_model
+            )
             current_julia = current_julia_data["exe"]
             if not current_julia:
                 path, _ = os.path.split(resolve_default_julia_executable())
@@ -1121,7 +1147,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _set_saved_julia_kernel_selected(self):
         """Selects saved Julia after Julia models have been reloaded."""
         # if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
-            # Settings widget closed while thread still running
+        # Settings widget closed while thread still running
         #     return
         ind = self._models.find_julia_kernel_index(self._saved_julia_kernel)
         if not ind.isValid():
@@ -1141,7 +1167,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return
         ind = self._models.add_python_interpreter(new_python)
         if not ind.isValid():
-            Notification(self, f"Could not find Python {new_python}.\nActivating the current Spine Toolbox Python.").show()
+            Notification(
+                self, f"Could not find Python {new_python}.\nActivating the current Spine Toolbox Python."
+            ).show()
             ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
 
@@ -1154,8 +1182,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         index = self._models.find_python_kernel_index(self._saved_python_kernel)
         if not index.isValid():
             Notification(
-                self,
-                f"Could not activate Python kernel {self._saved_python_kernel}.\n It may have been removed."
+                self, f"Could not activate Python kernel {self._saved_python_kernel}.\n It may have been removed."
             ).show()
             index = self._models.python_kernel_model.index(0, 0)
         self.ui.comboBox_python_kernels.setCurrentIndex(index.row())

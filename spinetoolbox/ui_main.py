@@ -1607,7 +1607,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def when_settings_widget_closes(self):
-        print("SettingsWidget closed")
+        pass
         # self.refresh_active_elements(None, None, set())
         # self.exec_compound_models.load_all()
         # TODO: Reload models

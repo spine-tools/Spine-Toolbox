@@ -285,7 +285,9 @@ class JuliaPopupMenu(CustomPopupMenu):
                 else:
                     text = project_path
                 action = submenu.addAction(QIcon(":/icons/folder.svg"), text)
-                action.triggered.connect(lambda checked=False, exe=julia_exe, path=project_path: self.open_julia_console(checked, exe, path))
+                action.triggered.connect(
+                    lambda checked=False, exe=julia_exe, path=project_path: self.open_julia_console(checked, exe, path)
+                )
 
     @Slot(bool, str, str)
     def open_julia_console(self, checked, julia_exe, julia_project):

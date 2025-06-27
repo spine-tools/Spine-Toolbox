@@ -55,9 +55,7 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             python_exec = "python.exe" if sys.platform == "win32" else "python"
             python_path = pathlib.Path(environment_dir, "Scripts", python_exec)
             kernel_name = "spinetoolbox_test_make_python_kernel"
-            with (
-                patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
-            ):
+            with (patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,):
                 mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
                 models = ExecutableCompoundModels(MagicMock())
                 editor = KernelEditorBase(self._settings_widget, models)
@@ -85,9 +83,7 @@ class TestKernelEditorBase(TestCaseWithQApplication):
         if not julia_exec:
             self.skipTest("Julia not found in PATH.")
         kernel_name = "spinetoolbox_test_make_julia_kernel"
-        with (
-            patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
-        ):
+        with (patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,):
             mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
             models = ExecutableCompoundModels(MagicMock())
             editor = KernelEditorBase(self._settings_widget, models)
