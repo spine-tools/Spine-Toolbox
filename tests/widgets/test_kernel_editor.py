@@ -19,6 +19,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from spinetoolbox.kernel_models import ExecutableCompoundModels
 from spine_engine.utils.helpers import resolve_default_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelEditorBase
 from tests.mock_helpers import TestCaseWithQApplication
@@ -38,8 +39,11 @@ class TestKernelEditorBase(TestCaseWithQApplication):
         self._settings_widget.deleteLater()
 
     def test_is_package_installed(self):
-        self.assertTrue(KernelEditorBase.is_package_installed(sys.executable, "PySide6"))
-        self.assertFalse(KernelEditorBase.is_package_installed(sys.executable, "nonexistenttestpackageXYZ"))
+        models = ExecutableCompoundModels(MagicMock())
+        keb = KernelEditorBase(self._settings_widget, models)
+        keb._python_exe = sys.executable
+        self.assertTrue(keb.is_package_installed("PySide6"))
+        self.assertFalse(keb.is_package_installed("nonexistenttestpackageXYZ"))
 
     def test_make_python_kernel(self):
         if sys.platform != "win32":
@@ -51,19 +55,17 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             python_exec = "python.exe" if sys.platform == "win32" else "python"
             python_path = pathlib.Path(environment_dir, "Scripts", python_exec)
             kernel_name = "spinetoolbox_test_make_python_kernel"
-            with (
-                patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
-                patch.object(KernelEditorBase, "_python_interpreter_name", return_value=str(python_path)),
-                patch.object(KernelEditorBase, "_python_kernel_name", return_value=kernel_name),
-                patch.object(KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"),
-            ):
+            with (patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,):
                 mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
-                editor = KernelEditorBase(self._settings_widget, "python")
+                models = ExecutableCompoundModels(MagicMock())
+                editor = KernelEditorBase(self._settings_widget, models)
+                editor._python_exe = str(python_path)
+                editor._python_kernel_name = kernel_name
                 self.assertTrue(editor.make_python_kernel())
                 while editor._install_package_process is not None:
                     QApplication.processEvents()
                 self.assertFalse(editor._ipykernel_install_failed)
-                self.assertTrue(KernelEditorBase.is_package_installed(str(python_path), "ipykernel"))
+                self.assertTrue(editor.is_package_installed("ipykernel"))
                 while editor._install_kernel_process is not None:
                     QApplication.processEvents()
                 editor.close()
@@ -75,27 +77,24 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             self.assertEqual(completion.returncode, 0)
 
     def test_make_julia_kernel(self):
-        """Makes a new Julia kernel if Julia is in PATH and the base project (@.) has
-        IJulia installed. Test Julia kernel is removed in the end if available."""
+        """Makes a new Julia kernel if Julia is in PATH and the base project ("") has
+        IJulia installed. Test Julia kernel is removed in the end."""
         julia_exec = resolve_default_julia_executable()
         if not julia_exec:
             self.skipTest("Julia not found in PATH.")
         kernel_name = "spinetoolbox_test_make_julia_kernel"
-        # with TemporaryDirectory() as julia_project_dir:
-        with (
-            patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
-            patch.object(KernelEditorBase, "_julia_kernel_name", return_value=kernel_name),
-            patch.object(KernelEditorBase, "_julia_executable", return_value=julia_exec),
-            patch.object(KernelEditorBase, "_julia_project", return_value="@."),
-        ):
+        with (patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,):
             mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
-            editor = KernelEditorBase(self._settings_widget, "julia")
-            julia_project_dir = editor._julia_project()
-            ijulia_installation_status = editor.is_ijulia_installed(julia_exec, julia_project_dir)
+            models = ExecutableCompoundModels(MagicMock())
+            editor = KernelEditorBase(self._settings_widget, models)
+            editor._julia_exe = julia_exec
+            editor._julia_project = ""
+            editor._julia_kernel_name_prefix = kernel_name
+            ijulia_installation_status = editor.is_ijulia_installed()
             if ijulia_installation_status == 0:
                 self.skipTest("Failed to check IJulia status.")
             elif ijulia_installation_status == 2:
-                self.skipTest(f"[{julia_exec}] IJulia not installed for project {editor._julia_project()}")
+                self.skipTest(f"[{julia_exec}] IJulia not installed for project {editor._julia_project}")
             self.assertTrue(editor.make_julia_kernel())
             while not editor._ready_to_install_kernel:
                 QApplication.processEvents()
@@ -103,7 +102,7 @@ class TestKernelEditorBase(TestCaseWithQApplication):
                 QApplication.processEvents()
             editor.close()
         completion = subprocess.run(
-            [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json", kernel_name],
+            [sys.executable, "-m", "jupyter", "kernelspec", "list", "--json"],
             capture_output=True,
             check=False,
         )

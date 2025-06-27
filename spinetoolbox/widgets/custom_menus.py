@@ -12,11 +12,13 @@
 
 """Classes for custom context menus and pop-up menus."""
 import os
-from PySide6.QtCore import QPersistentModelIndex, Slot
+from PySide6.QtCore import QPersistentModelIndex, Slot, Qt
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QMenu, QWidgetAction
-from spinetoolbox.helpers import CustomPopupMenu
+from PySide6.QtWidgets import QMenu, QWidgetAction, QApplication
+from spinetoolbox.kernel_fetcher import KernelFetcher
+from spinetoolbox.helpers import CustomPopupMenu, restore_override_cursor
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
+from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
 
 
 class CustomContextMenu(QMenu):
@@ -83,7 +85,7 @@ class ItemSpecificationMenu(CustomPopupMenu):
         super().__init__(toolbox)
         self._toolbox = toolbox
         self.index = QPersistentModelIndex(index)
-        self.add_action("Edit specification", lambda item=item: toolbox.edit_specification(self.index, item))
+        self.add_action("Edit specification", lambda it=item: toolbox.edit_specification(self.index, it))
         self.add_action("Remove specification", lambda: toolbox.remove_specification(self.index))
         self.add_action("Open specification file...", lambda: toolbox.open_specification_file(self.index))
 
@@ -122,7 +124,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                 name, filepath = entry.split("<>")
                 self.add_action(
                     name,
-                    lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
+                    lambda checked=False, fpath=filepath: self.call_open_project(checked, fpath),
                     tooltip=filepath,
                 )
 
@@ -171,6 +173,26 @@ class KernelsPopupMenu(CustomPopupMenu):
         super().__init__(parent=parent)
         self._parent = parent
         self.setToolTipsVisible(True)
+        self.kernel_fetcher = None
+
+    @Slot()
+    def fetch_kernels(self):
+        """Starts a thread for fetching local kernels."""
+        if self.kernel_fetcher is not None and self.kernel_fetcher.isRunning():
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
+        self.clear()
+        conda_path = self._parent.qsettings().value("appSettings/condaPath", defaultValue="")
+        self.kernel_fetcher = KernelFetcher(conda_path)
+        self.kernel_fetcher.kernel_found.connect(self.add_kernel)
+        self.kernel_fetcher.finished.connect(restore_override_cursor)
+        self.kernel_fetcher.start()
+
+    @Slot()
+    def stop_fetching_kernels(self):
+        """Terminates kernel fetcher thread."""
+        if self.kernel_fetcher is not None:
+            self.kernel_fetcher.stop_fetcher.emit()
 
     @Slot(str, str, bool, QIcon, dict)
     def add_kernel(self, kernel_name, resource_dir, cond, ico, deats):
@@ -195,6 +217,81 @@ class KernelsPopupMenu(CustomPopupMenu):
             conda (bool): Is this a Conda kernel spec?
         """
         self._parent.start_detached_jupyter_console(kernel_name, icon, conda)
+
+
+class PythonPopupMenu(CustomPopupMenu):
+    """Menu for showing Python interpreters in Consoles -> Start Python."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): Parent widget
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        self.setToolTipsVisible(True)
+        self._model = self._parent.exec_compound_models.python_interpreters_model
+
+    @Slot()
+    def populate_menu(self):
+        self.clear()
+        self._parent.exec_compound_models.refresh_python_interpreters_model()
+        for r in range(self._model.rowCount()):
+            item_data = self._model.itemFromIndex(self._model.index(r, 0)).data()
+            path = item_data["exe"]
+            if not item_data["exe"]:
+                path = resolve_current_python_interpreter()
+            action = self.addAction(QIcon(":/symbols/python-logo.svg"), path)
+            action.triggered.connect(lambda checked=False, exe=path: self.open_python_console(checked, exe))
+
+    @Slot(bool, str)
+    def open_python_console(self, checked, python_path):
+        self._parent.start_detached_python_basic_console(python_path)
+
+
+class JuliaPopupMenu(CustomPopupMenu):
+    """Menu for showing Julia executables and projects in Consoles -> Start Julia."""
+
+    def __init__(self, parent):
+        """
+        Args:
+            parent (QWidget): Parent widget
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        self.setToolTipsVisible(True)
+        self._julia_model = self._parent.exec_compound_models.julia_executables_model
+        self._project_model = self._parent.exec_compound_models.julia_projects_model
+
+    @Slot()
+    def populate_menu(self):
+        self.clear()
+        self._parent.exec_compound_models.refresh_julia_executables_model()
+        self._parent.exec_compound_models.refresh_julia_projects_model()
+        for julia_row in range(self._julia_model.rowCount()):
+            julia_item_data = self._julia_model.itemFromIndex(self._julia_model.index(julia_row, 0)).data()
+            if not julia_item_data:
+                action = self.addAction("No Julia's available. Add Julia executable(s) in Settings->Tools")
+                return
+            julia_exe = julia_item_data.get("exe", "")
+            if not julia_exe:
+                julia_exe = resolve_default_julia_executable()
+            submenu = self.addMenu(QIcon(":/symbols/julia-logo.svg"), julia_exe)
+            for project_row in range(self._project_model.rowCount()):
+                project_item_data = self._project_model.itemFromIndex(self._project_model.index(project_row, 0)).data()
+                project_path = project_item_data["path"]
+                if not project_path:
+                    text = "Home"
+                else:
+                    text = project_path
+                action = submenu.addAction(QIcon(":/icons/folder.svg"), text)
+                action.triggered.connect(
+                    lambda checked=False, exe=julia_exe, path=project_path: self.open_julia_console(checked, exe, path)
+                )
+
+    @Slot(bool, str, str)
+    def open_julia_console(self, checked, julia_exe, julia_project):
+        self._parent.start_detached_julia_basic_console(julia_exe, julia_project)
 
 
 class FilterMenuBase(QMenu):

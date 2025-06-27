@@ -1117,3 +1117,4 @@ class ConsoleWindow(QWidget):
 
     def closeEvent(self, event):
         self.console_closed.emit(self._key)
+        event.accept()

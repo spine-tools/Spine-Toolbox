@@ -39,6 +39,7 @@ def create_toolboxui():
     """Returns ToolboxUI for tests."""
     with (
         mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
+        mock.patch("spinetoolbox.ui_main.ExecutableCompoundModels.load_all") as mock_load_all,
         mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
     ):
         mock_set_app_style.return_value = True
@@ -46,6 +47,8 @@ def create_toolboxui():
         toolbox._qsettings = mock.MagicMock()
         toolbox._qsettings.value = mock.MagicMock()
         toolbox._qsettings.value.side_effect = return_default_value
+        mock_set_app_style.assert_called()
+        mock_load_all.assert_called()
     return toolbox
 
 
@@ -60,6 +63,7 @@ def create_toolboxui_with_project(project_dir):
     QSettings among others has been mocked."""
     with (
         mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
+        mock.patch("spinetoolbox.ui_main.ExecutableCompoundModels.load_all") as mock_load_all,
         mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
         mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
     ):
@@ -69,6 +73,8 @@ def create_toolboxui_with_project(project_dir):
         toolbox._qsettings.value = mock.MagicMock()
         toolbox._qsettings.value.side_effect = return_default_value
         toolbox.create_project(project_dir)
+        mock_set_app_style.assert_called()
+        mock_load_all.assert_called()
     return toolbox
 
 

@@ -1,0 +1,28 @@
+{
+    "items": {
+        "Run SpineOpt": {},
+        "Julia Tool Jupyter Console": {},
+        "Python Tool Basic Console": {
+            "root_directory": {
+                "type": "path",
+                "relative": true,
+                "path": "."
+            }
+        },
+        "Python Tool Jupyter Console": {},
+        "Run dir command": {
+            "root_directory": {
+                "type": "path",
+                "relative": false,
+                "path": "C:/data"
+            }
+        },
+        "Run Batch File": {
+            "root_directory": {
+                "type": "path",
+                "relative": true,
+                "path": "batch_work_dir"
+            }
+        }
+    }
+}

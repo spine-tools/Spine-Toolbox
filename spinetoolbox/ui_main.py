@@ -51,7 +51,6 @@ from PySide6.QtWidgets import (
 )
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.spine_engine import _set_resource_limits
-from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
@@ -74,7 +73,7 @@ from .helpers import (
     supported_img_formats,
     unique_name,
 )
-from .kernel_fetcher import KernelFetcher
+from .kernel_models import ExecutableCompoundModels
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
 from .load_project_items import load_project_items
 from .mvcmodels.filter_execution_model import FilterExecutionModel
@@ -100,7 +99,7 @@ from .spine_db_manager import SpineDBManager
 from .spine_engine_manager import make_engine_manager
 from .widgets import toolbars
 from .widgets.about_widget import AboutWidget
-from .widgets.custom_menus import KernelsPopupMenu, RecentProjectsPopupMenu
+from .widgets.custom_menus import KernelsPopupMenu, RecentProjectsPopupMenu, PythonPopupMenu, JuliaPopupMenu
 from .widgets.custom_qwidgets import ToolBarWidgetAction
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
@@ -171,6 +170,8 @@ class ToolboxUI(QMainWindow):
         self._anchor_callbacks = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
+        self.exec_compound_models = ExecutableCompoundModels(self._qsettings)
+        self.exec_compound_models.load_all()
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
@@ -178,6 +179,8 @@ class ToolboxUI(QMainWindow):
         self.add_project_item_form = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
+        self.start_python_menu = PythonPopupMenu(self)
+        self.start_julia_menu = JuliaPopupMenu(self)
         # Make and initialize toolbars
         self.items_toolbar = toolbars.ItemsToolBar(self)
         self.spec_toolbar = toolbars.SpecToolBar(self)
@@ -197,7 +200,6 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.setToolTipsVisible(True)
         self.ui.menuConsoles.setToolTipsVisible(True)
         self._add_execute_actions()
-        self.kernel_fetcher = None
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -267,10 +269,12 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
-        self.kernels_menu.aboutToShow.connect(self.fetch_kernels)
-        self.kernels_menu.aboutToHide.connect(self.stop_fetching_kernels)
-        self.ui.actionStart_default_python_in_basic_console.triggered.connect(self.start_detached_python_basic_console)
-        self.ui.actionStart_default_julia_in_basic_console.triggered.connect(self.start_detached_julia_basic_console)
+        self.kernels_menu.aboutToShow.connect(self.kernels_menu.fetch_kernels)
+        self.kernels_menu.aboutToHide.connect(self.kernels_menu.stop_fetching_kernels)
+        self.ui.actionStart_python.setMenu(self.start_python_menu)
+        self.ui.actionStart_julia.setMenu(self.start_julia_menu)
+        self.start_python_menu.aboutToShow.connect(self.start_python_menu.populate_menu)
+        self.start_julia_menu.aboutToShow.connect(self.start_julia_menu.populate_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
@@ -683,11 +687,11 @@ class ToolboxUI(QMainWindow):
         for k, toolbar in enumerate(all_toolbars):
             color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
             toolbar.set_color(color)
-            if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
-                self.addToolBar(Qt.TopToolBarArea, toolbar)
+            if self.toolBarArea(toolbar) == Qt.ToolBarArea.NoToolBarArea:
+                self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
         self.execute_toolbar.set_color(QColor("silver"))
-        if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
-            self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+        if self.toolBarArea(self.execute_toolbar) == Qt.ToolBarArea.NoToolBarArea:
+            self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.execute_toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -695,31 +699,6 @@ class ToolboxUI(QMainWindow):
         if not self.recent_projects_menu.isVisible():
             self.recent_projects_menu = RecentProjectsPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
-
-    @Slot()
-    def fetch_kernels(self):
-        """Starts a thread for fetching local kernels."""
-        if self.kernel_fetcher is not None and self.kernel_fetcher.isRunning():
-            return
-        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
-        self.kernels_menu.clear()
-        conda_path = self.qsettings().value("appSettings/condaPath", defaultValue="")
-        self.kernel_fetcher = KernelFetcher(conda_path)
-        self.kernel_fetcher.kernel_found.connect(self.kernels_menu.add_kernel)
-        self.kernel_fetcher.finished.connect(self.restore_override_cursor)
-        self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
-        self.kernel_fetcher.start()
-
-    @Slot()
-    def stop_fetching_kernels(self):
-        """Terminates kernel fetcher thread."""
-        if self.kernel_fetcher is not None:
-            self.kernel_fetcher.stop_fetcher.emit()
-
-    @Slot()
-    def restore_override_cursor(self):
-        """Restores default mouse cursor."""
-        QApplication.restoreOverrideCursor()
 
     @Slot()
     def save_project(self):
@@ -1392,8 +1371,8 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
         redo_action = self.undo_stack.createRedoAction(self)
-        undo_action.setShortcuts(QKeySequence.Undo)
-        redo_action.setShortcuts(QKeySequence.Redo)
+        undo_action.setShortcuts(QKeySequence.StandardKey.Undo)
+        redo_action.setShortcuts(QKeySequence.StandardKey.Redo)
         undo_action.setIcon(QIcon(":/icons/menu_icons/undo.svg"))
         redo_action.setIcon(QIcon(":/icons/menu_icons/redo.svg"))
         before = self.ui.menuEdit.actions()[0]
@@ -1623,7 +1602,18 @@ class ToolboxUI(QMainWindow):
     def show_settings(self):
         """Shows the Settings widget."""
         self.settings_form = SettingsWidget(self)
+        self.settings_form.closing.connect(self.when_settings_widget_closes)
         self.settings_form.show()
+
+    @Slot()
+    def when_settings_widget_closes(self):
+        pass
+        # self.refresh_active_elements(None, None, set())
+        # self.exec_compound_models.load_all()
+        # TODO: Reload models
+        # TODO: Check notifications for all items
+        # TODO: Check if Python interpreter, Julia Executable, or Julia Project defaults changed and update Tools
+        # TODO: That use defaults.
 
     @Slot()
     def show_about(self):
@@ -2338,23 +2328,20 @@ class ToolboxUI(QMainWindow):
         return menu
 
     @Slot()
-    def start_detached_python_basic_console(self):
+    def start_detached_python_basic_console(self, path):
         """Starts basic console with the default Python interpreter."""
-        python = resolve_python_interpreter(self.qsettings())
         _set_resource_limits(self.qsettings(), threading.Lock())
-        self.start_detached_basic_console("python", python)
+        self.start_detached_basic_console("python", path)
 
     @Slot()
-    def start_detached_julia_basic_console(self):
+    def start_detached_julia_basic_console(self, julia_exe, julia_project):
         """Starts basic console with the default Julia executable."""
-        julia = resolve_julia_executable(self.qsettings())
-        project = resolve_julia_project(self.qsettings())
-        if not julia:
+        if not julia_exe:
             self.msg_warning.emit("No Julia installation found. Add path to a Julia executable in Spine "
                                   "Toolbox Settings [<b>File->Settings->Tools</b>]")
             return
         _set_resource_limits(self.qsettings(), threading.Lock())
-        self.start_detached_basic_console("julia", julia, project)
+        self.start_detached_basic_console("julia", julia_exe, julia_project)
 
     def start_detached_basic_console(self, language, executable, julia_project=None):
         """Launches a new detached basic console with the given executable

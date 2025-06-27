@@ -127,6 +127,7 @@ class KernelFetcher(QThread):
         kernel_json = os.path.join(kernel_path, "kernel.json")
         if not os.path.exists(kernel_json):
             return deats
+        _, kernel_name = os.path.split(kernel_path)
         if os.stat(kernel_json).st_size == 0:  # File is empty
             return deats
         with open(kernel_json, "r") as fh:
@@ -147,4 +148,5 @@ class KernelFetcher(QThread):
                         deats["project"] = arg[10:]
             except (KeyError, IndexError):
                 pass
+            deats["kernel_name"] = kernel_name
             return deats
