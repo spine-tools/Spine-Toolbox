@@ -12,10 +12,18 @@
 from itertools import product
 import unittest
 from unittest import mock
+from PySide6.QtCore import QModelIndex
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyModelBase
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager, fetch_model
+from spinedb_api import to_database
+from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
+from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
+    DelayedDataSetter,
+    EmptyModelBase,
+    EmptyParameterDefinitionModel,
+    EmptyParameterValueModel,
+)
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model, q_object
 
 
 class TestEmptyModelBase(TestCaseWithQApplication):
@@ -23,7 +31,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         """Overridden method. Runs before each test."""
         app_settings = mock.MagicMock()
         logger = mock.MagicMock()
-        self._db_mngr = TestSpineDBManager(app_settings, None)
+        self._db_mngr = MockSpineDBManager(app_settings, None)
         self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
         self._db_mngr.name_registry.register(self._db_map.sa_url, "mock_db")
         self._undo_stack = QUndoStack()
@@ -266,6 +274,98 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         for row, column in product(range(model.rowCount()), range(len(expected[0]))):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+
+class TestDelayedDataSetter:
+    def test_sets_data_for_model(self, application):
+        with q_object(MinimalTableModel(header=["col 1"])) as model:
+            model.insertRows(0, 1, QModelIndex())
+            index = model.index(0, 0)
+            data_setter = DelayedDataSetter(model, index)
+            value_and_type = to_database(2.3)
+            data_setter(value_and_type)
+            assert model.index(0, 0).data() == 2.3
+
+    def test_moves_set_row_if_previous_row_is_removed(self, application):
+        with q_object(MinimalTableModel(header=["col 1"])) as model:
+            model.insertRows(0, 2)
+            index = model.index(1, 0)
+            data_setter = DelayedDataSetter(model, index)
+            model.removeRows(0, 1)
+            value_and_type = to_database(2.3)
+            data_setter(value_and_type)
+            assert model.index(0, 0).data() == 2.3
+
+    def test_gets_invalidated_when_row_is_removed(self, application):
+        with q_object(MinimalTableModel(header=["col 1"])) as model:
+            model.insertRows(0, 2)
+            index = model.index(1, 0)
+            data_setter = DelayedDataSetter(model, index)
+            model.removeRows(1, 1)
+            value_and_type = to_database(2.3)
+            data_setter(value_and_type)
+            assert model.index(0, 0).data() is None
+
+    def test_removing_succeeding_row_has_no_effect(self, application):
+        with q_object(MinimalTableModel(header=["col 1"])) as model:
+            model.insertRows(0, 2)
+            index = model.index(0, 0)
+            data_setter = DelayedDataSetter(model, index)
+            model.removeRows(1, 1)
+            value_and_type = to_database(2.3)
+            data_setter(value_and_type)
+            assert model.index(0, 0).data() == 2.3
+
+    def test_resetting_model_invalidates_setter(self):
+        with q_object(MinimalTableModel(header=["col 1"])) as model:
+            model.insertRows(0, 2)
+            index = model.index(1, 0)
+            data_setter = DelayedDataSetter(model, index)
+            model.clear()
+            value_and_type = to_database(2.3)
+            data_setter(value_and_type)
+            assert model.rowCount() == 0
+
+
+class TestEmptyParameterDefinitionModel:
+    def test_value_index_name_when_row_is_empty(self, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            model.append_empty_row()
+            index = model.index(0, model.columnCount() - 2)
+            assert model.index_name(index) == "<database> - <entity_class_name> - <parameter_name>"
+
+    def test_value_index_name_when_row_has_data(self, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.append_empty_row()
+            indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 6)]
+            data = ["my class", "my parameter", "my database"]
+            model.batch_set_data(indexes, data)
+            index = model.index(0, model.columnCount() - 2)
+            assert model.index_name(index) == "my database - my class - my parameter"
+
+
+class TestEmptyParameterValueModel:
+    def test_value_index_name_when_row_is_empty(self, db_mngr):
+        with q_object(EmptyParameterValueModel(db_mngr, parent=None)) as model:
+            model.append_empty_row()
+            index = model.index(0, model.columnCount() - 2)
+            assert (
+                model.index_name(index)
+                == "<database> - <entity_class_name> - <entity_byname> - <parameter_name> - <alternative_name>"
+            )
+
+    def test_value_index_name_when_row_has_data(self, db_mngr):
+        with q_object(EmptyParameterValueModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.append_empty_row()
+            indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 2), model.index(0, 3), model.index(0, 5)]
+            data = ["my class", "my entity", "my parameter", "my alternative", "my database"]
+            model.batch_set_data(indexes, data)
+            index = model.index(0, model.columnCount() - 2)
+            assert model.index_name(index) == "my database - my class - my entity - my parameter - my alternative"
 
 
 if __name__ == "__main__":

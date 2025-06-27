@@ -151,6 +151,33 @@ class TestParameterValueTableView(TestBase):
         for role, expected_for_role in expected.items():
             assert_table_model_data(model, expected_for_role, self, role)
 
+    def test_removing_row_removes_data_from_database(self):
+        self._db_map.add_entity_class(name="Object")
+        self._db_map.add_parameter_definition(entity_class_name="Object", name="y")
+        self._db_map.add_entity(entity_class_name="Object", name="pencil")
+        self._db_map.add_parameter_value(
+            entity_class_name="Object",
+            entity_byname=("pencil",),
+            parameter_definition_name="y",
+            alternative_name="Base",
+            parsed_value=2.3,
+        )
+        table_view = self._db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        model.fetchMore(QModelIndex())
+        while model.rowCount() != 1:
+            QApplication.processEvents()
+        expected = [
+            ["Object", "pencil", "y", "Base", "2.3", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        selection_model = table_view.selectionModel()
+        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        table_view.remove_selected()
+        while model.rowCount() != 0:
+            QApplication.processEvents()
+        self.assertEqual(self._db_map.find_parameter_values(), [])
+
     def test_removing_row_does_not_allow_fetching_more_data(self):
         tree_view = self._db_editor.ui.treeView_entity
         add_zero_dimension_entity_class(tree_view, "an_object_class")

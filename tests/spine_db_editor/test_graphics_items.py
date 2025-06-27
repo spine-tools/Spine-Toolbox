@@ -17,7 +17,7 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.graphics_items import EntityItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 
 
 class TestEntityItem(TestCaseWithQApplication):
@@ -30,7 +30,7 @@ class TestEntityItem(TestCaseWithQApplication):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwargs: 0
-            self._db_mngr = TestSpineDBManager(mock_settings, None)
+            self._db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
             self._db_mngr.name_registry.register(self._db_map.sa_url, "database")

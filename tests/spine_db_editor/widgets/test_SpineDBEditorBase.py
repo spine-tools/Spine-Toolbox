@@ -15,7 +15,7 @@ import unittest
 from unittest import mock
 from sqlalchemy.engine.url import make_url
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditorBase
-from tests.mock_helpers import TestCaseWithQApplication, TestSpineDBManager
+from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
 
 
 class TestSpineDBEditorBase(TestCaseWithQApplication):
@@ -28,7 +28,7 @@ class TestSpineDBEditorBase(TestCaseWithQApplication):
         ):
             mock_settings = mock.Mock()
             mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = TestSpineDBManager(mock_settings, None)
+            self.db_mngr = MockSpineDBManager(mock_settings, None)
 
             def DBMapping_side_effect(url, upgrade=False, create=False):
                 mock_db_map = mock.MagicMock()

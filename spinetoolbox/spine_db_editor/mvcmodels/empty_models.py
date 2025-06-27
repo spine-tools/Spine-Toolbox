@@ -11,16 +11,19 @@
 ######################################################################################################################
 
 """Empty models for dialogs as well as parameter definitions and values."""
+from __future__ import annotations
 from collections import defaultdict
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
 from spinedb_api import DatabaseMapping
+from spinedb_api.parameter_value import load_db_value
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems, rows_to_row_count_tuples
 from ...mvcmodels.empty_row_model import EmptyRowModel
+from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
 from ...spine_db_manager import SpineDBManager
 from ..commands import AppendEmptyRow, InsertEmptyModelRow, RemoveEmptyModelRow, UpdateEmptyModel
@@ -297,6 +300,7 @@ class ParameterMixin:
     value_field: ClassVar[str] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
     parameter_name_column: ClassVar[int] = NotImplemented
+    index_name_fields: ClassVar[tuple[str, ...]] = NotImplemented
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if self.header[index.column()] == self.value_field and role in {
@@ -315,6 +319,65 @@ class ParameterMixin:
         if not name:
             return []
         return [x["entity_class_name"] for x in db_map.get_items("parameter_definition", name=name)]
+
+    def index_name(self, index: QModelIndex) -> str:
+        """Generates a name for data at given index.
+
+        Args:
+            index to model
+
+        Returns:
+            label identifying the data
+        """
+        row_data = self._main_data[index.row()]
+        names = []
+        for index_field in self.index_name_fields:
+            column = self.header.index(index_field)
+            data = row_data[column]
+            names.append(data if data is not None else f"<{index_field}>")
+        return " - ".join(names)
+
+    def get_set_data_delayed(self, index: QModelIndex) -> Callable[[tuple[bytes, Optional[str]]], None]:
+        """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
+        even if the model changes.
+        """
+        return DelayedDataSetter(self, index)
+
+
+class DelayedDataSetter:
+    def __init__(self, model: MinimalTableModel, index: QModelIndex):
+        self._model = model
+        self._row = index.row()
+        self._column = index.column()
+        self._model.rowsInserted.connect(self._rows_inserted)
+        self._model.rowsRemoved.connect(self._rows_removed)
+        self._model.modelReset.connect(self._invalidate)
+        self._valid = True
+
+    def __call__(self, value_and_type: tuple[bytes, Optional[str]]) -> None:
+        self._model.rowsInserted.disconnect(self._rows_inserted)
+        self._model.rowsRemoved.disconnect(self._rows_removed)
+        self._model.modelReset.disconnect(self._invalidate)
+        if not self._valid:
+            return
+        index = self._model.index(self._row, self._column)
+        self._model.batch_set_data([index], [load_db_value(*value_and_type)])
+
+    def _rows_inserted(self, _: QModelIndex, first: int, last: int) -> None:
+        if first > self._row:
+            return
+        self._row += last - first + 1
+
+    def _rows_removed(self, _: QModelIndex, first: int, last: int) -> None:
+        if first > self._row:
+            return
+        if first <= self._row <= last:
+            self._valid = False
+            return
+        self._row -= last - first + 1
+
+    def _invalidate(self) -> None:
+        self._valid = False
 
 
 class EntityMixin:
@@ -386,6 +449,7 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     value_field = "default_value"
     type_field = "default_type"
     parameter_name_column = PARAMETER_DEFINITION_MODEL_HEADER.index("parameter_name")
+    index_name_fields = ("database", "entity_class_name", "parameter_name")
     group_fields = ("valid types",)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
@@ -408,10 +472,15 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
 
     item_type = "parameter_value"
     field_map = PARAMETER_VALUE_FIELD_MAP
+    index_name_fields: ClassVar[tuple[str, ...]] = (
+        "database",
+        "entity_class",
+    )
     value_field = "value"
     type_field = "type"
     entity_byname_column = PARAMETER_VALUE_MODEL_HEADER.index("entity_byname")
     parameter_name_column = PARAMETER_VALUE_MODEL_HEADER.index("parameter_name")
+    index_name_fields = ("database", "entity_class_name", "entity_byname", "parameter_name", "alternative_name")
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_VALUE_MODEL_HEADER, db_mngr, parent)

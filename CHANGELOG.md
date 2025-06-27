@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.9.7]
+
+### Added
+
 - Tool Properties has a new line edit where you change the Tool Results directory.
 
 ### Changed
@@ -18,8 +32,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - Tools do not make empty results directories anymore if the Tool Specification does not define
 any output files.
-
-### Security
 
 ## [0.9.6]
 

@@ -449,10 +449,8 @@ class ToolboxUI(QMainWindow):
             project_dir_from_args (str, optional): initial project directory from command line arguments
         """
         self._display_welcome_message()
-        if sys.version_info < (3, 9):
+        if sys.version_info < (3, 10):
             self._display_deprecated_python_warning()
-        elif sys.version_info < (3, 10):
-            self._display_python_39_deprecation_message()
         self.init_project(project_dir_from_args)
 
     def _display_welcome_message(self) -> None:
@@ -465,14 +463,6 @@ class ToolboxUI(QMainWindow):
         )
         welcome_msg = f"Welcome to Spine Toolbox! If you need help, please read the {getting_started_anchor} guide."
         self.msg.emit(welcome_msg)
-
-    def _display_python_39_deprecation_message(self) -> None:
-        """Shows Python 3.9 deprecation message in the event log."""
-        self.msg_warning.emit("Please upgrade your Python.")
-        self.msg_warning.emit(
-            f"Looks like you are running Python {sys.version_info[0]}.{sys.version_info[1]}. "
-            f"Support for <b>Python older than 3.10</b> will be dropped by the end of May 2025."
-        )
 
     def _display_deprecated_python_warning(self) -> None:
         """Shows a warning message in Event log."""
