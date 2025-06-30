@@ -370,7 +370,12 @@ class FrozenTableModel(QAbstractTableModel):
             table_name = "alternative"
         else:
             table_name = "entity"
-        with self.db_mngr.get_lock(db_map):
+        try:
+            db_lock = self.db_mngr.get_lock(db_map)
+        except KeyError:
+            # Happens when closing the DB editor after the frozen table dock has been shown, then hidden.
+            return ""
+        with db_lock:
             return db_map.mapped_table(table_name)[id_]["name"]
 
     @property

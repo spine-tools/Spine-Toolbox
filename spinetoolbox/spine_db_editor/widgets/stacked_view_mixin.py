@@ -129,11 +129,11 @@ class StackedViewMixin:
         editor = ElementNameListEditor(self, index, dimension_names, entity_byname_lists, current_element_byname_list)
         editor.show()
 
-    def _set_default_parameter_data(self, index=None):
+    def _set_default_parameter_data(self, index: Optional[QModelIndex] = None) -> None:
         """Sets default rows for parameter models according to given index.
 
         Args:
-            index (QModelIndex): an index of the entity tree
+            index: an index of the entity tree
         """
         if index is None or not index.isValid():
             default_db_map = next(iter(self.db_maps))
