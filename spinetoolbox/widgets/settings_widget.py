@@ -12,7 +12,7 @@
 
 """Widget for controlling user settings."""
 import os
-from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Slot, Signal
+from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Signal, Slot
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
@@ -26,25 +26,25 @@ from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
 from ..helpers import (
     dir_is_valid,
     file_is_valid,
-    is_valid_conda_executable,
-    open_url,
-    select_certificate_directory,
-    select_conda_executable,
-    select_gams_executable,
-    select_work_directory,
-    select_file_path,
-    select_dir,
-    load_list_of_paths_from_qsettings,
-    save_path_to_qsettings,
     get_current_item,
     get_current_item_data,
+    is_valid_conda_executable,
+    load_list_of_paths_from_qsettings,
+    open_url,
     path_in_list,
+    save_path_to_qsettings,
+    select_certificate_directory,
+    select_conda_executable,
+    select_dir,
+    select_file_path,
+    select_gams_executable,
+    select_work_directory,
 )
+from ..kernel_models import ExecutableCompoundModels
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
 from ..spine_db_editor.editors import db_editor_registry
 from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEditor
-from ..kernel_models import ExecutableCompoundModels
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
 from .notification import Notification
@@ -430,7 +430,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def _show_install_julia_wizard(self, _=False):
         """Opens Install Julia Wizard."""
         wizard = InstallJuliaWizard(self)
-        wizard.julia_exe_selected.connect(self.ui.comboBox_julia_path.setText)
+        wizard.julia_exe_selected.connect(self.ui.comboBox_julia_path.setCurrentText)
         wizard.show()
 
     @Slot(bool)
