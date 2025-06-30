@@ -24,6 +24,7 @@ from ..mvcmodels.empty_models import (
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
 )
+from ..stacked_table_seam import StackedTableSeam
 from .custom_qwidgets import AddedEntitiesPopup
 from .element_name_list_editor import ElementNameListEditor
 
@@ -63,6 +64,13 @@ class StackedViewMixin:
             view.connect_spine_db_editor(self)
             view.request_replace_undo_redo_actions.connect(self._replace_undo_redo_actions)
             view.request_reset_undo_redo_actions.connect(self.update_undo_redo_actions)
+        self._seams: list[StackedTableSeam] = []
+        for top_table, bottom_table in (
+            (self.ui.tableView_parameter_value, self.ui.empty_parameter_value_table_view),
+            (self.ui.tableView_parameter_definition, self.ui.empty_parameter_definition_table_view),
+            (self.ui.tableView_entity_alternative, self.ui.empty_entity_alternative_table_view),
+        ):
+            self._seams.append(StackedTableSeam(top_table, bottom_table))
 
     def connect_signals(self):
         """Connects signals to slots."""
