@@ -24,10 +24,10 @@ class TestInstallJuliaWizard(TestCaseWithQApplication):
         self.toolbox = create_toolboxui()
         with (
             mock.patch(
-                "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_python_kernels"
+                "spinetoolbox.widgets.settings_widget.ExecutableCompoundModels.start_fetching_python_kernels"
             ) as mock_fetch_python_kernels,
             mock.patch(
-                "spinetoolbox.widgets.settings_widget.SettingsWidget.start_fetching_julia_kernels"
+                "spinetoolbox.widgets.settings_widget.ExecutableCompoundModels.start_fetching_julia_kernels"
             ) as mock_fetch_julia_kernels,
         ):
             self._settings_widget = SettingsWidget(self.toolbox)

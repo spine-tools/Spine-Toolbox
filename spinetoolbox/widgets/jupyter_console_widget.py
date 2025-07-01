@@ -128,10 +128,8 @@ class JupyterConsoleWidget(RichJupyterWidget):
             return self._connection_file
         if msg["type"] == "kernel_spec_not_found":
             self._toolbox.msg_error.emit(
-                f"Kernel failed to start:<br/>"
-                f"Unable to find kernel spec <b>{msg['kernel_name']}</b>.<br/>"
-                f"For Python Tools, select a kernel spec in the Tool specification editor.<br/>"
-                f"For Julia Tools, select a kernel spec from File->Settings->Tools."
+                f"Starting a Jupyter Console failed because Jupyter "
+                f"kernel <b>{msg['kernel_name']} doesn't exist.</b><br/>"
             )
         elif msg["type"] == "conda_kernel_spec_not_found":
             msg_text = (

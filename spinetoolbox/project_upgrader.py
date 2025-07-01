@@ -119,6 +119,8 @@ class ProjectUpgrader:
                 project_dict = self.upgrade_v11_to_v12(project_dict)
             elif v == 12:
                 project_dict = self.upgrade_v12_to_v13(project_dict)
+            elif v == 13:
+                project_dict = self.upgrade_v13_to_v14(project_dict, project_dir)
             v += 1
             self._toolbox.msg_success.emit(f"Project upgraded to version {v}")
         return project_dict
@@ -577,6 +579,96 @@ class ProjectUpgrader:
         new["project"]["version"] = 13
         return new
 
+    def upgrade_v13_to_v14(self, old, project_dir):
+        """Upgrades version 13 project dictionary to version 14.
+
+        Changes:
+            - Update version to 14 in project.json
+            - Copy execution settings from <project_dir>.spinetoolbox/local/specification_local_data.json to
+            <project_dir>/.spinetoolbox/local/project_local_data.json because they are from now on Tool settings
+            instead of Tool Specification settings.
+            - Execution settings are now found in the 'options' dictionary.
+            - Move 'options' from project.json's Tool item dicts to local project data. In version 13, the Tool
+            'options' only has the 'julia_sysimage' key. This 'julia_sysimage' key-value is moved to the same local
+            project data 'options' dict than the execution settings.
+
+        Args:
+            old (dict): Version 13 project dictionary
+            project_dir (str): Project directory
+
+        Returns:
+            dict: Version 14 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 14
+        spec_data, project_data = self.get_local_data_dicts(project_dir)
+        item_dict = new["items"]
+        # Move "options": {"julia_sysimage": "C:\some\some.dll"} from project.json to project_local_data.json
+        for item_name in item_dict.keys():
+            if item_dict[item_name]["type"] != "Tool":
+                continue
+            opt = item_dict[item_name].pop("options", None)
+            if opt is not None:
+                sysimg_path = opt.get("julia_sysimage", "")
+                if not project_data:
+                    project_data = {"items": {item_name: {"options": {}}}}
+                if not project_data["items"][item_name].get("options", None):
+                    project_data["items"][item_name]["options"] = dict()
+                project_data["items"][item_name]["options"].update({"julia_sysimage": sysimg_path})
+        if not spec_data and not project_data:
+            return new
+        if spec_data:
+            # Move execution settings from local spec data to local project data
+            spec_tool_dict = spec_data.get("Tool", {})
+            spec_name_by_exec_settings = dict()
+            # Make Spec name to execution settings mapping
+            for spec_name in spec_tool_dict.keys():
+                exec_settings = spec_tool_dict[spec_name].get("execution_settings", {})
+                spec_name_by_exec_settings[spec_name] = exec_settings
+            # Make Tool name to Spec name mapping
+            item_name_to_spec_name = dict()
+            for item_name in item_dict.keys():
+                if item_dict[item_name]["type"] == "Tool":
+                    if item_dict[item_name].get("specification", "") != "":  # Skip Tools with no Tool Spec
+                        item_name_to_spec_name[item_name] = item_dict[item_name]["specification"]
+            # Insert execution settings to local Tool data
+            for item_name, spec_name in item_name_to_spec_name.items():
+                if not project_data:
+                    project_data = {"items": {}}
+                if item_name not in project_data["items"].keys():
+                    project_data["items"].update({item_name: {}})
+                if not project_data["items"][item_name].get("options", None):
+                    project_data["items"][item_name]["options"] = dict()
+                if spec_name in spec_name_by_exec_settings.keys():
+                    project_data["items"][item_name]["options"].update(spec_name_by_exec_settings[spec_name])
+        # Save updated project_local_data.json
+        local_dir = os.path.join(project_dir, ".spinetoolbox", "local")
+        if not os.path.exists(local_dir):
+            os.makedirs(local_dir)
+        try:
+            local_project_data_fpath = os.path.join(local_dir, "project_local_data.json")
+            with open(local_project_data_fpath, "w") as fp:
+                json.dump(project_data, fp, indent=4)
+        except OSError:
+            self._toolbox.msg_error.emit("Saving project_local_data.json file failed. Permission error, perhaps?")
+        return new
+
+    def get_local_data_dicts(self, project_dir):
+        """Returns local spec data and local project data dicts from project folder."""
+        local_spec_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "specification_local_data.json")
+        local_project_data_fpath = os.path.join(project_dir, ".spinetoolbox", "local", "project_local_data.json")
+        if not os.path.exists(local_spec_data_fpath):
+            local_spec_data = {}
+        else:
+            with open(local_spec_data_fpath) as local_spec_data_fp:
+                local_spec_data = json.load(local_spec_data_fp)
+        if not os.path.exists(local_project_data_fpath):
+            local_project_data = {}
+        else:
+            with open(local_project_data_fpath) as local_project_data_fp:
+                local_project_data = json.load(local_project_data_fp)
+        return local_spec_data, local_project_data
+
     @staticmethod
     def make_unique_importer_specification_name(importer_name, label, k):
         return f"{importer_name} - {os.path.basename(label['path'])} - {k}"
@@ -633,8 +725,8 @@ class ProjectUpgrader:
             return self.is_valid_v2_to_v8(p, v)
         if 9 <= v <= 10:
             return self.is_valid_v9_to_v10(p)
-        if 11 <= v <= 13:
-            return self.is_valid_v11_to_v12(p)
+        if 11 <= v <= 14:
+            return self.is_valid_v11_to_v14(p)
         raise NotImplementedError(f"No validity check available for version {v}")
 
     def is_valid_v1(self, p):
@@ -763,9 +855,9 @@ class ProjectUpgrader:
                 return False
         return True
 
-    def is_valid_v11_to_v12(self, p):
+    def is_valid_v11_to_v14(self, p):
         """Checks that the given project JSON dictionary contains
-        a valid version 11 or 12 Spine Toolbox project. Valid meaning, that
+        a valid version 11, 12, 13, or 14 Spine Toolbox project. Valid meaning, that
         it contains all required keys and values are of the correct
         type.
 

@@ -697,13 +697,8 @@ class TestToolboxUI(TestCaseWithQApplication):
             self.assertEqual(console.owners, {item})
 
     def test_detached_python_basic_console(self):
-        with (
-            mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,
-            mock.patch("spinetoolbox.ui_main.resolve_python_interpreter") as mock_resolve_python,
-        ):
-            mock_resolve_python.return_value = sys.executable
-            self.toolbox.ui.actionStart_default_python_in_basic_console.trigger()
-            mock_resolve_python.assert_called()
+        with (mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,):
+            self.toolbox.start_detached_python_basic_console(sys.executable)
             mock_show.assert_called()
         self.assertEqual(len(self.toolbox._persistent_consoles), 1)
         pcw = self.toolbox._persistent_consoles[list(self.toolbox._persistent_consoles.keys())[0]]
@@ -716,20 +711,14 @@ class TestToolboxUI(TestCaseWithQApplication):
     def test_detached_julia_basic_console(self):
         with (
             mock.patch("spinetoolbox.widgets.persistent_console_widget.ConsoleWindow.show") as mock_show,
-            mock.patch("spinetoolbox.ui_main.resolve_julia_executable") as mock_resolve_julia,
-            mock.patch("spinetoolbox.ui_main.resolve_julia_project") as mock_resolve_julia_project,
             mock.patch(
                 "spinetoolbox.widgets.persistent_console_widget.JuliaPersistentExecutionManager"
             ) as mock_julia_manager_class,
             mock.patch("spinetoolbox.widgets.persistent_console_widget.multiprocessing.Queue") as mock_queue,
         ):
-            mock_resolve_julia.return_value = "/some/julia"
-            mock_resolve_julia_project.return_value = "/some/julia/env"
             mock_queue.return_value = MockQueue()
-            self.toolbox.ui.actionStart_default_julia_in_basic_console.trigger()
+            self.toolbox.start_detached_julia_basic_console("/some/julia", "/some/julia/env")
             mock_show.assert_called()
-            mock_resolve_julia.assert_called()
-            mock_resolve_julia_project.assert_called()
             mock_julia_manager_class.assert_called_once()
             self.assertEqual(mock_julia_manager_class.call_args.args[1], ["/some/julia", "--project=/some/julia/env"])
             mock_queue.assert_called()

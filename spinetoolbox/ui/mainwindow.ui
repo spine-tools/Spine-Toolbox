@@ -120,8 +120,8 @@
      <string>&amp;Consoles</string>
     </property>
     <addaction name="actionStart_jupyter_console"/>
-    <addaction name="actionStart_default_python_in_basic_console"/>
-    <addaction name="actionStart_default_julia_in_basic_console"/>
+    <addaction name="actionStart_python"/>
+    <addaction name="actionStart_julia"/>
    </widget>
    <widget class="QMenu" name="menuServer">
     <property name="title">
@@ -869,7 +869,7 @@
   <action name="actionStart_jupyter_console">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/desktop.svg</normaloff>:/icons/desktop.svg</iconset>
+     <normaloff>:/symbols/Jupyter-logo.svg</normaloff>:/symbols/Jupyter-logo.svg</iconset>
    </property>
    <property name="text">
     <string>Start Jupyter Console</string>
@@ -887,22 +887,25 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Spine-Toolbox repository in GitHub&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
-  <action name="actionStart_default_python_in_basic_console">
+  <action name="actionStart_python">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/terminal.svg</normaloff>:/icons/menu_icons/terminal.svg</iconset>
    </property>
    <property name="text">
-    <string>Start Default Python in Basic Console</string>
+    <string>Start Python</string>
+   </property>
+   <property name="toolTip">
+    <string>Start Python</string>
    </property>
   </action>
-  <action name="actionStart_default_julia_in_basic_console">
+  <action name="actionStart_julia">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/terminal.svg</normaloff>:/icons/menu_icons/terminal.svg</iconset>
    </property>
    <property name="text">
-    <string>Start Default Julia in Basic Console</string>
+    <string>Start Julia</string>
    </property>
   </action>
  </widget>
