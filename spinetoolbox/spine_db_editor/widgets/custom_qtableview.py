@@ -15,7 +15,7 @@ from collections.abc import Iterable
 from dataclasses import replace
 from typing import Any, ClassVar, Optional, Union
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QKeyEvent, QKeySequence, QUndoStack
+from PySide6.QtGui import QAction, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
 from ...mvcmodels.minimal_table_model import MinimalTableModel

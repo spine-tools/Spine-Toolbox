@@ -436,9 +436,7 @@ class EntityMixin:
         byname = row_data[cls.entity_byname_column]
         if not byname:
             return []
-        return [
-            x["entity_class_name"] for x in db_map.find_entities(entity_byname=tuple(byname.split(DB_ITEM_SEPARATOR)))
-        ]
+        return [x["entity_class_name"] for x in db_map.find_entities(entity_byname=byname)]
 
 
 class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelBase):
