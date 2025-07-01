@@ -18,6 +18,9 @@ from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.widgets.custom_editors import SearchBarEditor
 from .manage_items_dialogs import ManageItemsDialog
 
+CURRENT_BYNAME_ROLE: int = Qt.ItemDataRole.UserRole + 1
+AVAILABLE_BYNAMES_ROLE: int = Qt.ItemDataRole.UserRole + 2
+
 
 class SearchBarDelegate(QItemDelegate):
     """A custom delegate to use with ElementNameListEditor."""
@@ -25,11 +28,14 @@ class SearchBarDelegate(QItemDelegate):
     data_committed = Signal(QModelIndex, object)
 
     def setModelData(self, editor, model, index):
-        model.setData(index, editor.data())
+        display_byname = editor.data()
+        byname = display_byname.split(DB_ITEM_SEPARATOR) if display_byname is not None else None
+        model.setData(index, display_byname)
+        model.setData(index, byname, CURRENT_BYNAME_ROLE)
 
     def createEditor(self, parent, option, index):
         editor = SearchBarEditor(parent)
-        editor.set_data(index.data(), index.data(Qt.ItemDataRole.UserRole))
+        editor.set_data(index.data(), [DB_ITEM_SEPARATOR.join(names) for names in index.data(AVAILABLE_BYNAMES_ROLE)])
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
         return editor
@@ -77,17 +83,24 @@ class ElementNameListEditor(ManageItemsDialog):
         item_list = []
         for k, entity_byname_list in enumerate(entity_byname_lists):
             try:
-                el_byname = DB_ITEM_SEPARATOR.join(current_element_byname_list[k])
+                current_byname = current_element_byname_list[k]
             except IndexError:
-                el_byname = None
-            qitem = QStandardItem(el_byname)
-            qitem.setData([DB_ITEM_SEPARATOR.join(bn) for bn in entity_byname_list], role=Qt.ItemDataRole.UserRole)
+                current_byname = None
+            display_byname = DB_ITEM_SEPARATOR.join(current_byname) if current_byname is not None else None
+            qitem = QStandardItem(display_byname)
+            qitem.setData(current_byname, role=CURRENT_BYNAME_ROLE)
+            qitem.setData(entity_byname_list, role=AVAILABLE_BYNAMES_ROLE)
             item_list.append(qitem)
         self.model.invisibleRootItem().appendRow(item_list)
 
     @Slot()
     def accept(self):
-        self._index.model().setData(
-            self._index, tuple(self.model.index(0, j).data() for j in range(self.model.columnCount()))
-        )
+        entire_byname = ()
+        for j in range(self.model.columnCount()):
+            byname = self.model.index(0, j).data(CURRENT_BYNAME_ROLE)
+            if byname is None:
+                entire_byname = None
+                break
+            entire_byname = entire_byname + tuple(byname)
+        self._index.model().setData(self._index, entire_byname)
         super().accept()
