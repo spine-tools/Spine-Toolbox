@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mini_kernel_editor_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.9.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -98,7 +98,7 @@ class Ui_Dialog(object):
         self.label_3 = QLabel(self.stackedWidgetPage1)
         self.label_3.setObjectName(u"label_3")
 
-        self.formLayout_3.setWidget(1, QFormLayout.LabelRole, self.label_3)
+        self.formLayout_3.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_3)
 
         self.lineEdit_python_interpreter = QLineEdit(self.stackedWidgetPage1)
         self.lineEdit_python_interpreter.setObjectName(u"lineEdit_python_interpreter")
@@ -108,7 +108,7 @@ class Ui_Dialog(object):
         self.lineEdit_python_interpreter.setReadOnly(True)
         self.lineEdit_python_interpreter.setClearButtonEnabled(False)
 
-        self.formLayout_3.setWidget(1, QFormLayout.FieldRole, self.lineEdit_python_interpreter)
+        self.formLayout_3.setWidget(1, QFormLayout.ItemRole.FieldRole, self.lineEdit_python_interpreter)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage1)
         self.stackedWidgetPage2 = QWidget()
@@ -123,7 +123,7 @@ class Ui_Dialog(object):
         self.label_6 = QLabel(self.stackedWidgetPage2)
         self.label_6.setObjectName(u"label_6")
 
-        self.formLayout_4.setWidget(1, QFormLayout.LabelRole, self.label_6)
+        self.formLayout_4.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_6)
 
         self.lineEdit_julia_executable = QLineEdit(self.stackedWidgetPage2)
         self.lineEdit_julia_executable.setObjectName(u"lineEdit_julia_executable")
@@ -132,19 +132,19 @@ class Ui_Dialog(object):
         self.lineEdit_julia_executable.setReadOnly(True)
         self.lineEdit_julia_executable.setClearButtonEnabled(False)
 
-        self.formLayout_4.setWidget(1, QFormLayout.FieldRole, self.lineEdit_julia_executable)
+        self.formLayout_4.setWidget(1, QFormLayout.ItemRole.FieldRole, self.lineEdit_julia_executable)
 
         self.label_9 = QLabel(self.stackedWidgetPage2)
         self.label_9.setObjectName(u"label_9")
 
-        self.formLayout_4.setWidget(2, QFormLayout.LabelRole, self.label_9)
+        self.formLayout_4.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_9)
 
         self.lineEdit_julia_project = QLineEdit(self.stackedWidgetPage2)
         self.lineEdit_julia_project.setObjectName(u"lineEdit_julia_project")
         self.lineEdit_julia_project.setReadOnly(True)
         self.lineEdit_julia_project.setClearButtonEnabled(False)
 
-        self.formLayout_4.setWidget(2, QFormLayout.FieldRole, self.lineEdit_julia_project)
+        self.formLayout_4.setWidget(2, QFormLayout.ItemRole.FieldRole, self.lineEdit_julia_project)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage2)
 

@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.9.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -30,14 +30,14 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
 from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QDockWidget,
     QFrame, QGraphicsView, QHBoxLayout, QHeaderView,
     QMainWindow, QMenu, QMenuBar, QSizePolicy,
-    QSpacerItem, QVBoxLayout, QWidget)
+    QSpacerItem, QTableView, QVBoxLayout, QWidget)
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterValueTableView, EntityAlternativeTableView,
     FrozenTableView, ItemMetadataTableView, MetadataTableView, ParameterDefinitionTableView,
     ParameterValueTableView, PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
-from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, TimeLineWidget)
+from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, ResizeSignallingWidget, TimeLineWidget)
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -238,13 +238,13 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_value_list)
         self.dockWidget_parameter_value = QDockWidget(MainWindow)
         self.dockWidget_parameter_value.setObjectName(u"dockWidget_parameter_value")
-        self.dockWidgetContents_2 = QWidget()
-        self.dockWidgetContents_2.setObjectName(u"dockWidgetContents_2")
-        self.verticalLayout_5 = QVBoxLayout(self.dockWidgetContents_2)
+        self.parameter_value_contents_widget = ResizeSignallingWidget()
+        self.parameter_value_contents_widget.setObjectName(u"parameter_value_contents_widget")
+        self.verticalLayout_5 = QVBoxLayout(self.parameter_value_contents_widget)
         self.verticalLayout_5.setSpacing(0)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
-        self.tableView_parameter_value = ParameterValueTableView(self.dockWidgetContents_2)
+        self.tableView_parameter_value = ParameterValueTableView(self.parameter_value_contents_widget)
         self.tableView_parameter_value.setObjectName(u"tableView_parameter_value")
         self.tableView_parameter_value.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.tableView_parameter_value.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -257,9 +257,9 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_5.addWidget(self.tableView_parameter_value)
 
-        self.empty_parameter_value_table_view = EmptyParameterValueTableView(self.dockWidgetContents_2)
+        self.empty_parameter_value_table_view = EmptyParameterValueTableView(self.parameter_value_contents_widget)
         self.empty_parameter_value_table_view.setObjectName(u"empty_parameter_value_table_view")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.empty_parameter_value_table_view.sizePolicy().hasHeightForWidth())
@@ -274,17 +274,17 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_5.addWidget(self.empty_parameter_value_table_view)
 
-        self.dockWidget_parameter_value.setWidget(self.dockWidgetContents_2)
+        self.dockWidget_parameter_value.setWidget(self.parameter_value_contents_widget)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_value)
         self.dockWidget_parameter_definition = QDockWidget(MainWindow)
         self.dockWidget_parameter_definition.setObjectName(u"dockWidget_parameter_definition")
-        self.dockWidgetContents_5 = QWidget()
-        self.dockWidgetContents_5.setObjectName(u"dockWidgetContents_5")
-        self.verticalLayout_10 = QVBoxLayout(self.dockWidgetContents_5)
+        self.parameter_definition_contents_widget = ResizeSignallingWidget()
+        self.parameter_definition_contents_widget.setObjectName(u"parameter_definition_contents_widget")
+        self.verticalLayout_10 = QVBoxLayout(self.parameter_definition_contents_widget)
         self.verticalLayout_10.setSpacing(0)
         self.verticalLayout_10.setObjectName(u"verticalLayout_10")
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
-        self.tableView_parameter_definition = ParameterDefinitionTableView(self.dockWidgetContents_5)
+        self.tableView_parameter_definition = ParameterDefinitionTableView(self.parameter_definition_contents_widget)
         self.tableView_parameter_definition.setObjectName(u"tableView_parameter_definition")
         self.tableView_parameter_definition.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.tableView_parameter_definition.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -299,7 +299,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_10.addWidget(self.tableView_parameter_definition)
 
-        self.empty_parameter_definition_table_view = EmptyParameterDefinitionTableView(self.dockWidgetContents_5)
+        self.empty_parameter_definition_table_view = EmptyParameterDefinitionTableView(self.parameter_definition_contents_widget)
         self.empty_parameter_definition_table_view.setObjectName(u"empty_parameter_definition_table_view")
         sizePolicy1.setHeightForWidth(self.empty_parameter_definition_table_view.sizePolicy().hasHeightForWidth())
         self.empty_parameter_definition_table_view.setSizePolicy(sizePolicy1)
@@ -312,7 +312,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_10.addWidget(self.empty_parameter_definition_table_view)
 
-        self.dockWidget_parameter_definition.setWidget(self.dockWidgetContents_5)
+        self.dockWidget_parameter_definition.setWidget(self.parameter_definition_contents_widget)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_parameter_definition)
         self.dockWidget_entity_tree = QDockWidget(MainWindow)
         self.dockWidget_entity_tree.setObjectName(u"dockWidget_entity_tree")
@@ -500,13 +500,13 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.scenario_dock_widget)
         self.dockWidget_entity_alternative = QDockWidget(MainWindow)
         self.dockWidget_entity_alternative.setObjectName(u"dockWidget_entity_alternative")
-        self.dockWidgetContents_3 = QWidget()
-        self.dockWidgetContents_3.setObjectName(u"dockWidgetContents_3")
-        self.verticalLayout_2 = QVBoxLayout(self.dockWidgetContents_3)
+        self.entity_alternative_contents_widget = ResizeSignallingWidget()
+        self.entity_alternative_contents_widget.setObjectName(u"entity_alternative_contents_widget")
+        self.verticalLayout_2 = QVBoxLayout(self.entity_alternative_contents_widget)
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
-        self.tableView_entity_alternative = EntityAlternativeTableView(self.dockWidgetContents_3)
+        self.tableView_entity_alternative = EntityAlternativeTableView(self.entity_alternative_contents_widget)
         self.tableView_entity_alternative.setObjectName(u"tableView_entity_alternative")
         self.tableView_entity_alternative.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.tableView_entity_alternative.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -519,7 +519,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addWidget(self.tableView_entity_alternative)
 
-        self.empty_entity_alternative_table_view = EmptyEntityAlternativeTableView(self.dockWidgetContents_3)
+        self.empty_entity_alternative_table_view = EmptyEntityAlternativeTableView(self.entity_alternative_contents_widget)
         self.empty_entity_alternative_table_view.setObjectName(u"empty_entity_alternative_table_view")
         sizePolicy1.setHeightForWidth(self.empty_entity_alternative_table_view.sizePolicy().hasHeightForWidth())
         self.empty_entity_alternative_table_view.setSizePolicy(sizePolicy1)
@@ -533,7 +533,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addWidget(self.empty_entity_alternative_table_view)
 
-        self.dockWidget_entity_alternative.setWidget(self.dockWidgetContents_3)
+        self.dockWidget_entity_alternative.setWidget(self.entity_alternative_contents_widget)
         MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dockWidget_entity_alternative)
         self.menuBar = QMenuBar(MainWindow)
         self.menuBar.setObjectName(u"menuBar")
@@ -547,6 +547,21 @@ class Ui_MainWindow(object):
         self.menuFile_2 = QMenu(self.menuBar)
         self.menuFile_2.setObjectName(u"menuFile_2")
         MainWindow.setMenuBar(self.menuBar)
+        self.entity_dock_widget = QDockWidget(MainWindow)
+        self.entity_dock_widget.setObjectName(u"entity_dock_widget")
+        self.dockWidgetContents_4 = QWidget()
+        self.dockWidgetContents_4.setObjectName(u"dockWidgetContents_4")
+        self.verticalLayout_3 = QVBoxLayout(self.dockWidgetContents_4)
+        self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.entity_table_view = QTableView(self.dockWidgetContents_4)
+        self.entity_table_view.setObjectName(u"entity_table_view")
+
+        self.verticalLayout_3.addWidget(self.entity_table_view)
+
+        self.entity_dock_widget.setWidget(self.dockWidgetContents_4)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.entity_dock_widget)
 
         self.menuBar.addAction(self.menuFile_2.menuAction())
         self.menuBar.addAction(self.menuEdit.menuAction())
@@ -736,5 +751,6 @@ class Ui_MainWindow(object):
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Sess&ion", None))
         self.menuFile_2.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
+        self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity", None))
     # retranslateUi
 

@@ -25,7 +25,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPalette
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPalette, QResizeEvent
 from PySide6.QtWidgets import (
     QDateTimeEdit,
     QDialog,
@@ -502,3 +502,12 @@ class AddedEntitiesPopup(QDialog):
                     str(entity["entity_byname"])
                 )
         self._entity_names = entity_names
+
+
+class ResizeSignallingWidget(QWidget):
+    height_changed = Signal()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        if event.oldSize().height() != event.size().height:
+            self.height_changed.emit()
+        super().resizeEvent(event)

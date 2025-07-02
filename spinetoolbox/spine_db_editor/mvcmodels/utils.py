@@ -88,13 +88,6 @@ def entity_class_id_for_row(index: QModelIndex, db_map: DatabaseMapping) -> Opti
     return entity_class["id"]
 
 
-def height_limited_size_hint(size_hint: QSize, parent_size: QSize) -> QSize:
-    max_height = parent_size.height() // 2
-    if size_hint.height() > max_height:
-        size_hint.setHeight(max_height)
-    return size_hint
-
-
 def make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optional[dict], list[str]]:
     """Returns a database entity item (id-based) from the given model parameter_value item (name-based).
 
