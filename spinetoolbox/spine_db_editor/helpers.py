@@ -62,19 +62,19 @@ def optional_to_string(x: Optional[Any]) -> Optional[str]:
     return str(x) if x is not None else None
 
 
-def group_to_string(types: Union[str, tuple[str, ...]]) -> Optional[str]:
-    if not types:
+def group_to_string(group: Union[str, tuple[str, ...]]) -> Optional[str]:
+    if not group:
         return None
-    if isinstance(types, str):
-        return types
-    return DB_ITEM_SEPARATOR.join(types)
+    if isinstance(group, str):
+        return group
+    return DB_ITEM_SEPARATOR.join(group)
 
 
-def string_to_group(types: Optional[str]) -> Union[str, tuple[str, ...]]:
-    if not types:
+def string_to_group(string: Optional[str]) -> Union[str, tuple[str, ...]]:
+    if not string:
         return ()
-    separator = DB_ITEM_SEPARATOR if DB_ITEM_SEPARATOR in types else ","
-    return tuple(stripped for t in types.split(separator) if (stripped := t.strip()))
+    separator = DB_ITEM_SEPARATOR if DB_ITEM_SEPARATOR in string else ","
+    return tuple(stripped for t in string.split(separator) if (stripped := t.strip()))
 
 
 def parameter_value_to_string(value: Any) -> str:

@@ -22,7 +22,12 @@ from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
-from tests.mock_helpers import assert_table_model_data, fetch_model, mock_clipboard_patch
+from tests.mock_helpers import (
+    assert_table_model_data,
+    assert_table_model_data_pytest,
+    fetch_model,
+    mock_clipboard_patch,
+)
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
 
@@ -587,6 +592,22 @@ class TestEntityAlternativeTableView(TestBase):
         self.assertTrue(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
         self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
         self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+
+
+class TestEmptyParameterDefinitionTableView:
+    def test_paste_parameter_types(self, db_editor):
+        table_view = db_editor.ui.empty_parameter_definition_table_view
+        model = table_view.model()
+        type_column = model.header.index("valid types")
+        index = model.index(0, type_column)
+        table_view.setCurrentIndex(index)
+        with mock_clipboard_patch("bool", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            assert table_view.paste()
+        expected = [
+            [None, None, "bool", None, None, None, "TestEmptyParameterDefinitionTableView_db"],
+            [None, None, None, None, None, None, "TestEmptyParameterDefinitionTableView_db"],
+        ]
+        assert_table_model_data_pytest(model, expected)
 
 
 class TestEmptyParameterValueTableView(TestBase):

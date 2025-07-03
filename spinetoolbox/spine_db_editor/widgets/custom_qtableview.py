@@ -114,6 +114,13 @@ class StackedTableView(AutoFilterCopyPasteTableView):
             return group_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
+    def _convert_pasted(
+        self, row: int, column: int, str_value: Optional[str], model: Union[SingleModelBase, EmptyModelBase]
+    ) -> Any:
+        if model.header[column] in model.group_fields:
+            return string_to_group(str_value)
+        return super()._convert_pasted(row, column, str_value, model)
+
     def _make_delegate(self, column_name, delegate_class):
         """Creates a delegate for the given column and returns it.
 
@@ -255,16 +262,12 @@ class ParameterTableView(StackedTableView):
         header = model.header[column]
         if header == self.value_column_header:
             return parameter_value_to_string(value)
-        if header == "entity_byname":
-            return group_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
     def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header == self.value_column_header:
             return string_to_parameter_value(str_value)
-        if header == "entity_byname":
-            return string_to_group(str_value)
         return super()._convert_pasted(row, column, str_value, model)
 
     def populate_context_menu(self):
@@ -473,16 +476,12 @@ class EntityAlternativeTableViewBase(StackedTableView):
 
     def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
         header = model.header[column]
-        if header == "entity_byname":
-            return group_to_string(value)
         if header == "active":
             return bool_to_string(value) if value is not None else None
         return super()._convert_copied(row, column, value, model)
 
     def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
         header = model.header[column]
-        if header == "entity_byname":
-            return string_to_group(str_value)
         if header == "active":
             return string_to_bool(str_value)
         return super()._convert_pasted(row, column, str_value, model)

@@ -372,6 +372,20 @@ def assert_table_model_data(
                 test_case.assertEqual(model.index(row, column).data(role), expected[row][column])
 
 
+def assert_table_model_data_pytest(
+    model: QAbstractTableModel,
+    expected: list[list[Any]],
+    role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+) -> None:
+    assert model.rowCount() == len(expected)
+    for row in range(model.rowCount()):
+        assert model.columnCount() == len(expected[row])
+        for column in range(model.columnCount()):
+            data = model.index(row, column).data(role)
+            expected_data = expected[row][column]
+            assert data == expected_data, f"{data} != {expected_data} on row {row} column {column}"
+
+
 def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
