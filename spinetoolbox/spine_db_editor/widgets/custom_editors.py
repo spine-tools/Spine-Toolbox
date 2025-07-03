@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom editors for model/view programming."""
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import Optional
 from PySide6.QtCore import (
@@ -202,12 +203,12 @@ class SearchBarEditor(QTableView):
         hover_color = self.palette().color(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight).lighter(220)
         self.setStyleSheet(f"QTableView::item:hover {{background: {hover_color.name()};}}")
 
-    def set_data(self, current, items):
+    def set_data(self, current: str, items: Iterable[str]):
         """Populates model.
 
         Args:
-            current (str): item that is currently selected from given items
-            items (Sequence of str): items to show in the list
+            current: item that is currently selected from given items
+            items: items to show in the list
         """
         item_list = [QStandardItem(current)]
         for item in sorted(items, key=lambda x: order_key(x.casefold())):

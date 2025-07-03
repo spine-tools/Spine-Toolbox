@@ -30,7 +30,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditorWithCreation,
 )
 from ...font import TOOLBOX_FONT
-from ...helpers import object_icon
+from ...helpers import DB_ITEM_SEPARATOR, object_icon
 from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
@@ -488,13 +488,15 @@ class EntityBynameDelegate(TableDelegate):
             entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
             if entity_class["dimension_id_list"]:
                 self.element_name_list_editor_requested.emit(index, entity_class_id, db_map)
-                return
+                return None
             entities = self.db_mngr.get_items_by_field(db_map, "entity", "class_id", entity_class_id)
         else:
             entities = self.db_mngr.get_items(db_map, "entity")
         editor = GroupEditor(self.parent(), parent)
         name_list = list({x["name"]: None for x in entities})
-        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        current_byname = index.data(Qt.ItemDataRole.EditRole)
+        current_name = current_byname[0] if current_byname else None
+        editor.set_data(current_name, name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
