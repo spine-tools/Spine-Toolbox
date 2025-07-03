@@ -9,7 +9,6 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-from itertools import product
 import unittest
 from unittest import mock
 from PySide6.QtCore import QModelIndex
@@ -23,7 +22,13 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
 )
-from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model, q_object
+from tests.mock_helpers import (
+    MockSpineDBManager,
+    TestCaseWithQApplication,
+    assert_table_model_data,
+    fetch_model,
+    q_object,
+)
 
 
 class TestEmptyModelBase(TestCaseWithQApplication):
@@ -49,16 +54,12 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 3)
         self.assertTrue(model.batch_set_data([model.index(0, 0)], ["X"]))
-        expected = [["X", None, None]]
-        for row, column in product(range(1), range(3)):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        expected = [["X", None, None], [None, None, None]]
+        assert_table_model_data(model, expected, self)
         self.assertTrue(self._undo_stack.canUndo())
         self._undo_stack.undo()
         expected = [[None, None, None]]
-        for row, column in product(range(1), range(3)):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_undo_handles_entity_class_name_candidates(self):
         with self._db_map:
@@ -83,17 +84,27 @@ class TestEmptyModelBase(TestCaseWithQApplication):
             check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
             self.assertTrue(model.batch_set_data([model.index(0, 1)], ["gadget"]))
             expected = [["Widget", "gadget", None, "mock_db"], [None, None, None, "mock_db"]]
-            self.assertEqual(model.rowCount(), len(expected))
-            for row, column in product(range(len(expected)), range(len(expected[0]))):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+            assert_table_model_data(model, expected, self)
             self.assertTrue(self._undo_stack.canUndo())
             self._undo_stack.undo()
             expected = [[None, None, None, "mock_db"]]
-            self.assertEqual(model.rowCount(), len(expected))
-            for row, column in product(range(len(expected)), range(len(expected[0]))):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(model.index(row, column).data(), expected[row][column])
+            assert_table_model_data(model, expected, self)
+
+    def test_remove_multiple_rows(self):
+        model = EmptyModelBase(
+            ["entity_class_name", "header 1", "header 2", "database"], self._db_mngr, parent=self._db_mngr
+        )
+        model.set_undo_stack(self._undo_stack)
+        fetch_model(model)
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.columnCount(), 4)
+        model.insertRow(0)
+        model.insertRow(0)
+        expected = [[None, None, None, None], [None, None, None, None], [None, None, None, None]]
+        assert_table_model_data(model, expected, self)
+        model.remove_rows([0, 1])
+        expected = [[None, None, None, None]]
+        assert_table_model_data(model, expected, self)
 
     def test_undo_remove_rows(self):
         model = EmptyModelBase(
@@ -106,23 +117,14 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         model.insertRow(0)
         self.assertTrue(model.batch_set_data([model.index(0, 1)], ["X"]))
         expected = [[None, "X", None, None], [None, None, None, None]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         model.removeRows(0, 1)
         expected = [[None, None, None, None]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         self.assertTrue(self._undo_stack.canUndo())
         self._undo_stack.undo()
         expected = [[None, "X", None, None], [None, None, None, None]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_undo_command_removed_when_row_goes_to_database(self):
         self._db_map.add_entity_class(name="Widget")
@@ -157,10 +159,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         new_entity = self._db_map.entity(entity_class_name="Widget", name="gadget")
         self.assertEqual(new_entity["description"], "A new friend for other widgets.")
         expected = [[None, None, None, None]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         self.assertFalse(self._undo_stack.canUndo())
         self.assertFalse(self._undo_stack.canRedo())
 
@@ -185,10 +184,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         self._undo_stack.undo()
         self.assertEqual(model.rowCount(), 1)
         expected = [[None, None, None, None]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_batch_setting_same_values_is_considered_a_no_operation(self):
         self._db_map.add_entity_class(name="Widget")
@@ -214,10 +210,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
             self.assertTrue(model.batch_set_data([model.index(0, 1)], ["gadget"]))
         self.assertEqual(self._undo_stack.count(), 1)
         expected = [["Widget", "gadget", None, "mock_db"], [None, None, None, "mock_db"]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         with (
             mock.patch.object(model, "_convert_to_db") as convert_to_db,
             mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
@@ -270,10 +263,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
                 QApplication.processEvents()
         self.assertEqual(self._undo_stack.count(), 0)
         expected = [[None, None, None, "mock_db"]]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(len(expected[0]))):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
 
 class TestDelayedDataSetter:
