@@ -14,7 +14,7 @@
 from collections.abc import Iterable
 from dataclasses import replace
 from typing import Any, ClassVar, Optional, Union
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, QSize, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
@@ -29,6 +29,7 @@ from ...widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPaste
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
+from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
     bool_to_string,
     group_to_string,
@@ -50,7 +51,6 @@ from ..mvcmodels.pivot_table_models import (
     ScenarioAlternativePivotTableModel,
 )
 from ..mvcmodels.single_models import SingleModelBase
-from ..mvcmodels.utils import height_limited_size_hint
 from ..stacked_table_seam import AboveSeam, BelowSeam
 from .custom_delegates import (
     AlternativeNameDelegate,
@@ -377,10 +377,7 @@ class WithUndoStack:
         self.request_reset_undo_redo_actions.emit()
 
 
-class EmptyParameterDefinitionTableView(BelowSeam, WithUndoStack, ParameterDefinitionTableViewBase):
-    def sizeHint(self, /):
-        return height_limited_size_hint(super().sizeHint(), self.parent().size())
-
+class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
     def _plot_selection(self, selection, plot_widget=None):
         return
 
@@ -417,9 +414,7 @@ class ParameterValueTableViewBase(ParameterTableView):
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
 
 
-class EmptyParameterValueTableView(BelowSeam, WithUndoStack, ParameterValueTableViewBase):
-    def sizeHint(self, /):
-        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
 
     def _plot_selection(self, selection, plot_widget=None):
         return
@@ -493,10 +488,7 @@ class EntityAlternativeTableViewBase(StackedTableView):
         return super()._convert_pasted(row, column, str_value, model)
 
 
-class EmptyEntityAlternativeTableView(BelowSeam, WithUndoStack, EntityAlternativeTableViewBase):
-
-    def sizeHint(self) -> QSize:
-        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack, EntityAlternativeTableViewBase):
 
     def _plot_selection(self, selection, plot_widget=None):
         return

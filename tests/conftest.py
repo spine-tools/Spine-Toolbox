@@ -11,7 +11,7 @@
 ######################################################################################################################
 from unittest import mock
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 import pytest
 from tests.mock_helpers import MockSpineDBManager
 
@@ -24,6 +24,13 @@ def application():
     yield application_instance
     QTimer.singleShot(0, lambda: application_instance.quit())
     application_instance.exec()
+
+
+@pytest.fixture
+def parent_widget(application):
+    parent = QWidget()
+    yield parent
+    parent.deleteLater()
 
 
 @pytest.fixture

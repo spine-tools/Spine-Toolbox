@@ -13,7 +13,8 @@
 """Contains the StackedViewMixin class."""
 from typing import Optional
 from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
-from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height
+from ...helpers import preferred_row_height
+from ..empty_table_size_hint_provider import EmptyTableSizeHintProvider
 from ..mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
     CompoundParameterDefinitionModel,
@@ -65,12 +66,22 @@ class StackedViewMixin:
             view.request_replace_undo_redo_actions.connect(self._replace_undo_redo_actions)
             view.request_reset_undo_redo_actions.connect(self.update_undo_redo_actions)
         self._seams: list[StackedTableSeam] = []
+        self._resize_hint_providers: list[EmptyTableSizeHintProvider] = []
         for top_table, bottom_table in (
             (self.ui.tableView_parameter_value, self.ui.empty_parameter_value_table_view),
             (self.ui.tableView_parameter_definition, self.ui.empty_parameter_definition_table_view),
             (self.ui.tableView_entity_alternative, self.ui.empty_entity_alternative_table_view),
         ):
             self._seams.append(StackedTableSeam(top_table, bottom_table))
+            size_hint_provider = EmptyTableSizeHintProvider(top_table, bottom_table)
+            self._resize_hint_providers.append(size_hint_provider)
+            bottom_table.set_size_hint_provider(size_hint_provider)
+        for contents_widget, empty_table_view in (
+            (self.ui.parameter_value_contents_widget, self.ui.empty_parameter_value_table_view),
+            (self.ui.parameter_definition_contents_widget, self.ui.empty_parameter_definition_table_view),
+            (self.ui.entity_alternative_contents_widget, self.ui.empty_entity_alternative_table_view),
+        ):
+            contents_widget.height_changed.connect(lambda: empty_table_view.updateGeometry())
 
     def connect_signals(self):
         """Connects signals to slots."""

@@ -18,7 +18,6 @@ from spinedb_api import DatabaseMapping
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.utils import (
     entity_class_id_for_row,
-    height_limited_size_hint,
     make_entity_on_the_fly,
     two_column_as_csv,
 )
@@ -84,18 +83,6 @@ class TestEntityClassIdForRow(TestCaseWithQApplication):
                 for column in range(model.columnCount()):
                     index = model.index(0, column)
                     self.assertIsNone(entity_class_id_for_row(index, db_map), entity_class["id"])
-
-
-class TestHeightLimitedSizeHint(unittest.TestCase):
-    def test_height_less_than_limit_is_ok(self):
-        size_hint = height_limited_size_hint(QSize(23, 49), QSize(23, 100))
-        self.assertEqual(size_hint.width(), 23)
-        self.assertEqual(size_hint.height(), 49)
-
-    def test_height_greater_than_limit_is_clamped(self):
-        size_hint = height_limited_size_hint(QSize(23, 51), QSize(23, 100))
-        self.assertEqual(size_hint.width(), 23)
-        self.assertEqual(size_hint.height(), 50)
 
 
 class TestMakeEntityOnTheFly(unittest.TestCase):
