@@ -423,14 +423,6 @@ class EntityMixin:
                     new_to_be_added.setdefault(db_map, []).append(item)
         return new_to_be_added
 
-    def _make_item(self, row):
-        item = super()._make_item(row)
-        byname = item["entity_byname"]
-        if not isinstance(byname, tuple):
-            byname = tuple(byname.split(DB_ITEM_SEPARATOR)) if byname else ()
-        item["entity_byname"] = byname
-        return item
-
     @classmethod
     def _entity_class_name_candidates_by_entity(cls, db_map: DatabaseMapping, row_data: list) -> list[str]:
         byname = row_data[cls.entity_byname_column]

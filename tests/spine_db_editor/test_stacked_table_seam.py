@@ -25,21 +25,14 @@ class Bottomtable(BelowSeam, QTableView):
     pass
 
 
-@pytest.fixture
-def parent(application):
-    parent_widget = QWidget()
-    yield parent_widget
-    parent_widget.deleteLater()
-
-
 class TestStackedTableSeam:
-    def test_navigating_from_top_to_bottom_and_back(self, parent):
-        top_table = TopTable(parent)
-        top_model = QStandardItemModel(parent)
+    def test_navigating_from_top_to_bottom_and_back(self, parent_widget):
+        top_table = TopTable(parent_widget)
+        top_model = QStandardItemModel(parent_widget)
         top_model.appendRow([QStandardItem("top A"), QStandardItem("top B")])
         top_table.setModel(top_model)
-        bottom_table = Bottomtable(parent)
-        bottom_model = QStandardItemModel(parent)
+        bottom_table = Bottomtable(parent_widget)
+        bottom_model = QStandardItemModel(parent_widget)
         bottom_model.appendRow([QStandardItem("bottom A"), QStandardItem("bottom B")])
         bottom_table.setModel(bottom_model)
         seam = StackedTableSeam(top_table, bottom_table)
