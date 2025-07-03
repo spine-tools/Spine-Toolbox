@@ -109,7 +109,7 @@ class EmptyModelBase(EmptyRowModel):
 
     def remove_rows(self, rows: Iterable[int]) -> None:
         self._undo_stack.beginMacro("remove rows")
-        for row in rows:
+        for row in sorted(rows, reverse=True):
             self._undo_stack.push(RemoveEmptyModelRow(self, row))
         self._undo_stack.endMacro()
 
