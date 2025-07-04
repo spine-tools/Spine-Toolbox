@@ -13,6 +13,8 @@
 """Contains the StackedViewMixin class."""
 from typing import Optional
 from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
+from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from ...helpers import preferred_row_height
 from ..empty_table_size_hint_provider import EmptyTableSizeHintProvider
 from ..mvcmodels.compound_models import (
@@ -114,14 +116,8 @@ class StackedViewMixin:
         self._set_default_parameter_data()
 
     @Slot(QModelIndex, object, object)
-    def show_element_name_list_editor(self, index, entity_class_id, db_map):
-        """Shows the element name list editor.
-
-        Args:
-            index (QModelIndex)
-            entity_class_id (int)
-            db_map (DatabaseMapping)
-        """
+    def show_element_name_list_editor(self, index: QModelIndex, entity_class_id: TempId, db_map: DatabaseMapping):
+        """Shows the element name list editor."""
         entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
         dimension_id_list = entity_class.get("dimension_id_list", ())
         dimension_names = []
