@@ -488,17 +488,33 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             value_column = []
             for row in data:
                 index_column.append(row[0])
-                value_column.append(row[1])
+                try:
+                    value_column.append(row[1])
+                except IndexError:
+                    value_column.append(None)
             pasted_table = [index_column, value_column]
+            paste_length = len(index_column)
+        else:
+            paste_length = len(pasted_table)
         first_row, last_row, first_column, _ = _range(selection_model.selection())
         selection_length = last_row - first_row + 1
         model = self.model()
-        model_row_count = model.rowCount() - 1
+        if selection_length == 1 or model.is_expanse_row(last_row):
+            # If a single row or the expanse row is selected, we paste everything.
+            model_last_row = model.rowCount() - 1
+            if model_last_row <= first_row + paste_length:
+                model.insertRows(model_last_row, paste_length - (model_last_row - first_row))
+        elif paste_length > selection_length:
+            # If multiple row are selected, we paste what fits the selection.
+            paste_length = selection_length
+            if paste_single_column:
+                pasted_table = pasted_table[0:selection_length]
+            else:
+                pasted_table = pasted_table[0][0:selection_length], pasted_table[1][0:selection_length]
         if paste_single_column:
             indexes_to_set, values_to_set = self._paste_single_column(
                 pasted_table, first_row, first_column, selection_length if selection_length > 1 else len(pasted_table)
             )
-            paste_length = len(indexes_to_set)
             paste_selection = QItemSelection(
                 model.index(first_row, first_column), model.index(first_row + paste_length - 1, first_column)
             )
@@ -507,22 +523,9 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
                 pasted_table[0],
                 pasted_table[1],
                 first_row,
-                selection_length if selection_length > 1 else len(pasted_table),
+                selection_length if selection_length > 1 else len(pasted_table[0]),
             )
-            paste_length = len(indexes_to_set) // 2
             paste_selection = QItemSelection(model.index(first_row, 0), model.index(first_row + paste_length - 1, 1))
-        paste_length = len(pasted_table) if paste_single_column else len(pasted_table[0])
-        if selection_length == 1 or model.is_expanse_row(last_row):
-            # If a single row or the expanse row is selected, we paste everything.
-            if model_row_count <= first_row + paste_length:
-                model.insertRows(model_row_count, paste_length - (model_row_count - first_row))
-        elif paste_length > selection_length:
-            # If multiple row are selected, we paste what fits the selection.
-            paste_length = selection_length
-            if paste_single_column:
-                pasted_table = pasted_table[0:selection_length]
-            else:
-                pasted_table = pasted_table[0][0:selection_length], pasted_table[1][0:selection_length]
         model.batch_set_data(indexes_to_set, values_to_set)
         self.selectionModel().select(paste_selection, QItemSelectionModel.ClearAndSelect)
         return True
