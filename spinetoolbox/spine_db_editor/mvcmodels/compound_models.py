@@ -69,7 +69,6 @@ class CompoundStackedModel(CompoundTableModel):
             handle_items_updated=self.handle_items_updated,
             owner=self,
         )
-        self.dock = None
         self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
 
     @staticmethod

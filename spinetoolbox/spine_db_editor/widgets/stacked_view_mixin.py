@@ -45,10 +45,11 @@ class StackedViewMixin:
             self.parameter_definition_model: self.ui.tableView_parameter_definition,
             self.entity_alternative_model: self.ui.tableView_entity_alternative,
         }
+        self._dock_by_item_type = {}
         for model, view in self._all_stacked_models.items():
             view.setModel(model)
             dock = view.parent().parent()
-            model.dock = dock
+            self._dock_by_item_type[model.item_type] = dock
             view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
             horizontal_header = view.horizontalHeader()
             horizontal_header.setSectionsMovable(True)

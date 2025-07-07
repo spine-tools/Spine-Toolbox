@@ -902,19 +902,18 @@ class SpineDBEditorBase(QMainWindow):
         dock.setPalette(palette)
 
     def handle_column_filters(self, model):
-        if not model.dock:
-            return
+        dock = self._dock_by_item_type[model.item_type]
+        table_name = table_name_from_item_type(model.item_type)
         if not any(model.column_filters.values()):
             # Back to defaults
-            model.dock.setWindowTitle(table_name_from_item_type(model.item_type))
-            self.set_dock_tab_color(model.dock, None)
+            dock.setWindowTitle(table_name)
+            self.set_dock_tab_color(dock, None)
             return
-        self.set_dock_tab_color(model.dock, QColor("paleturquoise"))
-        table_name = table_name_from_item_type(model.item_type)
+        self.set_dock_tab_color(dock, QColor("paleturquoise"))
         table_name += (
             f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
         )
-        model.dock.setWindowTitle(table_name)
+        dock.setWindowTitle(table_name)
 
     def setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor
