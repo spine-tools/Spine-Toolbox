@@ -3,19 +3,11 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
-
-### Added
-
-### Changed
-
-### Deprecated
+## [0.10.0]
 
 ### Removed
 
-### Fixed
-
-### Security
+- Removed support for Python 3.9.
 
 ## [0.9.7]
 
