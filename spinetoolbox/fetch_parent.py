@@ -102,7 +102,7 @@ class FetchParent(QObject):
             last_handler = None
             items = []
             for handler, item in changes:
-                if handler is last_handler:
+                if handler == last_handler:
                     items.append(item)
                     continue
                 if items:
