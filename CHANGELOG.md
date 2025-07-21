@@ -3,19 +3,17 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
-
-### Added
+## [0.10.1]
 
 ### Changed
 
-### Deprecated
-
-### Removed
+- Exporter now uses a cache while reading the database which speeds up the process considerably
+  in certain cases.
 
 ### Fixed
 
-### Security
+- Fixed performance regression in Spine Database Editor.
+- Fixed a bug in Importer where columns of floats were sometimes misinterpreted as integers when reading a datapackage.
 
 ## [0.10.0]
 
