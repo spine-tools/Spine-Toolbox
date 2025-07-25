@@ -164,7 +164,9 @@ class SpineDBEditorBase(QMainWindow):
         self._changelog.clear()
         self._purge_change_notifiers()
         for url in db_urls:
-            db_map = self.db_mngr.get_db_map(url, self, create=create, force_upgrade_prompt=True)
+            db_map = self.db_mngr.get_db_map(
+                url, self, create=create, force_upgrade_prompt=True, upgrade_prompt_parent=self
+            )
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:

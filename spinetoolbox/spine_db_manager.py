@@ -22,7 +22,7 @@ import numpy.typing as nptyping
 from PySide6.QtCore import QObject, QSettings, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QColor, QIcon
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from sqlalchemy.engine.url import URL
 from spinedb_api import (
     Array,
@@ -342,7 +342,12 @@ class SpineDBManager(QObject):
             self.close_session(url)
 
     def get_db_map(
-        self, url: str, logger: LoggerInterface, create: bool = False, force_upgrade_prompt: bool = False
+        self,
+        url: str,
+        logger: LoggerInterface,
+        create: bool = False,
+        force_upgrade_prompt: bool = False,
+        upgrade_prompt_parent: QWidget = None,
     ) -> Optional[DatabaseMapping]:
         """Returns a DatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
@@ -361,8 +366,9 @@ class SpineDBManager(QObject):
                 return None
             self._no_prompt_urls.add(url)
             title, text, option_to_kwargs, notes, preferred = prompt_data
+            prompt_parent = upgrade_prompt_parent if upgrade_prompt_parent is not None else self.parent()
             kwargs = OptionsDialog.get_answer(
-                self.parent(), title, text, option_to_kwargs, notes=notes, preferred=preferred
+                prompt_parent, title, text, option_to_kwargs, notes=notes, preferred=preferred
             )
             if kwargs is None:
                 return None
