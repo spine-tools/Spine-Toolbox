@@ -11,10 +11,13 @@
 
 """Unit tests for the ``settings_widget`` module."""
 import os
-import unittest
+import pathlib
+from tempfile import TemporaryDirectory
+from unittest import mock
 from PySide6.QtCore import QSettings
+from spinetoolbox.config import DEFAULT_WORK_DIR
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import TestCaseWithQApplication, create_toolboxui
+from tests.mock_helpers import TestCaseWithQApplication, create_toolboxui, q_object
 
 
 class TestSettingsWidget(TestCaseWithQApplication):
@@ -75,6 +78,41 @@ class TestSettingsWidget(TestCaseWithQApplication):
         finally:
             self._settings.endGroup()
 
+    def test_default_work_directory_is_used_if_nothing_else_is_specified(self):
+        with q_object(SettingsWidget(self._toolbox)) as settings_widget:
+            self.assertEqual(settings_widget.ui.lineEdit_work_dir.text(), "")
+            self.assertEqual(settings_widget.ui.lineEdit_work_dir.placeholderText(), DEFAULT_WORK_DIR)
+            settings_widget.close()
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_work_directory_controls_are_properly_enabled(self):
+        with q_object(SettingsWidget(self._toolbox)) as settings_widget:
+            self.assertTrue(settings_widget.ui.open_work_dir_button.isEnabled())
+            self.assertTrue(settings_widget.ui.work_dir_cleanup_button.isEnabled())
+            settings_widget.ui.lineEdit_work_dir.setText("no such dir")
+            self.assertFalse(settings_widget.ui.open_work_dir_button.isEnabled())
+            self.assertFalse(settings_widget.ui.work_dir_cleanup_button.isEnabled())
+            settings_widget.close()
+
+    def test_work_directory_cleanup_button(self):
+        with TemporaryDirectory() as temp_dir:
+            tmp_path = pathlib.Path(temp_dir)
+            (tmp_path / "file1").touch()
+            subdir = tmp_path / "sub"
+            subdir.mkdir()
+            (subdir / "file2").touch()
+            self._toolbox.set_work_directory(temp_dir)
+            with q_object(SettingsWidget(self._toolbox)) as settings_widget:
+                self.assertEqual(settings_widget.ui.lineEdit_work_dir.text(), temp_dir)
+                with mock.patch("spinetoolbox.widgets.settings_widget.QMessageBox") as message_box_constructor:
+                    mock_message_box = mock.MagicMock()
+                    message_box_constructor.return_value = mock_message_box
+                    button = object()
+                    add_button = mock.MagicMock()
+                    add_button.return_value = button
+                    mock_message_box.addButton = add_button
+                    clicked_button = mock.MagicMock()
+                    clicked_button.return_value = button
+                    mock_message_box.clickedButton = clicked_button
+                    settings_widget.ui.work_dir_cleanup_button.click()
+                settings_widget.close()
+            self.assertEqual(list(tmp_path.iterdir()), [])

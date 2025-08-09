@@ -31,6 +31,7 @@ from spinetoolbox.helpers import (
     create_dir,
     dir_is_valid,
     disconnect,
+    display_byte_size,
     erase_dir,
     file_is_valid,
     first_non_null,
@@ -559,5 +560,10 @@ class TestDisconnect(TestCaseWithQApplication):
                 self.assertTrue(receiver.triggered)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestDisplayByteSize:
+    def test_correctness(self):
+        assert display_byte_size(0) == (0, "B")
+        assert display_byte_size(23) == (23, "B")
+        assert display_byte_size(1000) == (1.0, "kB")
+        assert display_byte_size(3444555) == (3.4, "MB")
+        assert display_byte_size(999100000000) == (999.1, "GB")
