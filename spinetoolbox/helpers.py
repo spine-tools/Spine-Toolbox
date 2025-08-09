@@ -13,7 +13,6 @@
 """General helper functions and classes."""
 from __future__ import annotations
 import bisect
-import collections
 from collections.abc import Callable, Iterable, Mapping
 from contextlib import contextmanager
 import datetime
@@ -24,6 +23,7 @@ from html.parser import HTMLParser
 import itertools
 import json
 import logging
+import math
 import os
 import pathlib
 import re
@@ -1948,3 +1948,15 @@ def clear_qsettings(settings):
     settings.clear()
     s1 = QSettings("SpineProject", "AddUpSpineOptWizard")
     s1.clear()
+
+
+def display_byte_size(size_bytes: int) -> tuple[float | int, str]:
+    size_names = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    if size_bytes == 0:
+        return 0, size_names[0]
+    unit_index = int(math.floor(math.log(size_bytes, 1000)))
+    if unit_index == 0:
+        return size_bytes, size_names[0]
+    unit_count = math.pow(1000, unit_index)
+    rounded = round(size_bytes / unit_count, 1)
+    return rounded, size_names[unit_index]

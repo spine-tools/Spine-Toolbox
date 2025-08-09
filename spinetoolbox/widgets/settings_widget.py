@@ -12,8 +12,10 @@
 
 """Widget for controlling user settings."""
 import os
-from PySide6.QtCore import QEvent, QPoint, QSettings, QSize, Qt, Slot
-from PySide6.QtGui import QIcon, QPixmap, QStandardItem, QStandardItemModel
+import pathlib
+import shutil
+from PySide6.QtCore import QEvent, QPoint, QSettings, QSize, Qt, QUrl, Slot
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
     get_julia_env,
@@ -23,8 +25,10 @@ from spine_engine.utils.helpers import (
     resolve_gams_executable,
 )
 from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
+from ..file_size_aggregator import AggregatorProcess
 from ..helpers import (
     dir_is_valid,
+    display_byte_size,
     file_is_valid,
     is_valid_conda_executable,
     open_url,
@@ -57,7 +61,6 @@ class SettingsWidgetBase(QWidget):
         from ..ui.settings import Ui_SettingsForm  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
-        # Set up the ui from Qt Designer files
         self._qsettings = qsettings
         self.ui = Ui_SettingsForm()
         self.ui.setupUi(self)
@@ -328,9 +331,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
+        #
+        self.ui.lineEdit_work_dir.textChanged.connect(self._handle_work_directory_changed)
         self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
         self._update_julia_widgets_enabled(self.ui.radioButton_use_julia_jupyter_console.isChecked())
         self._update_remote_execution_page_widget_status(self.ui.checkBox_enable_remote_exec.isChecked())
+        self._work_directory_size_aggregator = AggregatorProcess(self)
+        self._work_directory_size_aggregator.aggregated.connect(self.set_work_directory_size)
+        work_directory = self.ui.lineEdit_work_dir.text()
+        self._handle_work_directory_changed(work_directory)
 
     def connect_signals(self):
         """Connect signals."""
@@ -377,6 +386,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.user_defined_persistent_process_limit_radio_button.toggled.connect(
             self.ui.persistent_process_limit_spin_box.setEnabled
         )
+        self.ui.open_work_dir_button.clicked.connect(self._open_work_directory)
+        self.ui.work_dir_cleanup_button.clicked.connect(self._clean_work_directory)
 
     def _make_python_kernel_context_menu(self):
         """Returns a context-menu for Python kernel comboBox."""
@@ -1022,6 +1033,54 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if self.orig_work_dir != new_work_dir:
             self._toolbox.set_work_directory(new_work_dir)
 
+    @Slot(bool)
+    def _open_work_directory(self, _=True) -> None:
+        work_dir = self.ui.lineEdit_work_dir.text()
+        if not work_dir:
+            work_dir = DEFAULT_WORK_DIR
+        QDesktopServices.openUrl(QUrl.fromLocalFile(work_dir))
+
+    @Slot(str)
+    def _handle_work_directory_changed(self, work_directory: str) -> None:
+        if not work_directory:
+            work_directory = DEFAULT_WORK_DIR
+        dir_exists = os.path.exists(work_directory)
+        self.ui.open_work_dir_button.setEnabled(dir_exists)
+        self.ui.work_dir_cleanup_button.setEnabled(dir_exists)
+        if dir_exists:
+            self.ui.work_dir_info_label.setText("Calculating directory size...")
+            self._work_directory_size_aggregator.start_aggregating(work_directory)
+        else:
+            self.ui.work_dir_info_label.setText("Cannot find work directory.")
+
+    @Slot(int)
+    def set_work_directory_size(self, size: int) -> None:
+        rounded_size, unit = display_byte_size(size)
+        self.ui.work_dir_info_label.setText(f"Work directory size: {rounded_size}{unit}")
+
+    @Slot(bool)
+    def _clean_work_directory(self, _: bool = True) -> None:
+        message_box = QMessageBox(
+            QMessageBox.Icon.Warning,
+            "Confirm work directory cleanup",
+            "All work directory content will be deleted. Are you sure?",
+            parent=self,
+        )
+        yes_button = message_box.addButton("Delete all content", QMessageBox.ButtonRole.YesRole)
+        cancel_button = message_box.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
+        message_box.setDefaultButton(cancel_button)
+        message_box.exec_()
+        if message_box.clickedButton() is yes_button:
+            work_directory = self.ui.lineEdit_work_dir.text()
+            if not work_directory:
+                work_directory = DEFAULT_WORK_DIR
+            for path in pathlib.Path(work_directory).iterdir():
+                if path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
+                elif path.is_file():
+                    path.unlink()
+            self._handle_work_directory_changed(work_directory)
+
     def update_ui(self):
         super().update_ui()
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
@@ -1180,6 +1239,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.start_fetching_python_kernels(conda_path_updated=True)
 
     def closeEvent(self, ev):
+        self._work_directory_size_aggregator.tear_down()
         self.stop_fetching_julia_kernels()
         self.stop_fetching_python_kernels()
         super().closeEvent(ev)

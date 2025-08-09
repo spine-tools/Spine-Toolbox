@@ -220,12 +220,127 @@
            <property name="spacing">
             <number>6</number>
            </property>
+           <item row="2" column="0">
+            <widget class="QCheckBox" name="checkBox_delete_data">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Delete data when project item is removed from project</string>
+             </property>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QCheckBox" name="checkBox_exit_prompt">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Always confirm exit</string>
+             </property>
+             <property name="tristate">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="5" column="0">
+            <layout class="QFormLayout" name="formLayout_2">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>When there are unsaved changes at exit:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QComboBox" name="project_save_options_combo_box">
+               <item>
+                <property name="text">
+                 <string>Ask what to do</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Automatically save project</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="15" column="0">
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QPushButton" name="open_work_dir_button">
+               <property name="text">
+                <string>Open work directory...</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="work_dir_info_label">
+               <property name="text">
+                <string>Calculating directory size...</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="work_dir_cleanup_button">
+               <property name="text">
+                <string>Delete files...</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_9">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <item row="1" column="0">
+            <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the type of dialog used in File-&amp;gt;Open project...&lt;/p&gt;&lt;p&gt;Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Custom open project dialog</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QCheckBox" name="checkBox_open_previous_project">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Open previous project at startup</string>
+             </property>
+            </widget>
+           </item>
            <item row="13" column="0">
             <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
               <widget class="QLabel" name="label">
                <property name="text">
-                <string>Work directory</string>
+                <string>Work directory:</string>
                </property>
               </widget>
              </item>
@@ -266,83 +381,6 @@
               </widget>
              </item>
             </layout>
-           </item>
-           <item row="5" column="0">
-            <layout class="QFormLayout" name="formLayout_2">
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_2">
-               <property name="text">
-                <string>When there are unsaved changes at exit:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="QComboBox" name="project_save_options_combo_box">
-               <item>
-                <property name="text">
-                 <string>Ask what to do</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Automatically save project</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="1" column="0">
-            <widget class="QCheckBox" name="checkBox_custom_open_project_dialog">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the type of dialog used in File-&amp;gt;Open project...&lt;/p&gt;&lt;p&gt;Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Custom open project dialog</string>
-             </property>
-             <property name="checked">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QCheckBox" name="checkBox_delete_data">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Delete data when project item is removed from project</string>
-             </property>
-            </widget>
-           </item>
-           <item row="4" column="0">
-            <widget class="QCheckBox" name="checkBox_exit_prompt">
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Checking this shows the 'confirm exit' question box when quitting the app&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Always confirm exit</string>
-             </property>
-             <property name="tristate">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="3" column="0">
-            <widget class="QCheckBox" name="checkBox_open_previous_project">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, application opens the project at startup that was open the last time the application was quit&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Open previous project at startup</string>
-             </property>
-            </widget>
            </item>
           </layout>
          </widget>
@@ -1198,7 +1236,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox_entity_tree">
           <property name="title">
-           <string>"Entity tree"</string>
+           <string>&quot;Entity tree&quot;</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
@@ -1840,7 +1878,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>

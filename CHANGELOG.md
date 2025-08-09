@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+* Added a button that deletes all files and directories in work directory to Settings window.
+* Added a button that opens the work directory in system's file browser to Settings window.
+* Added a work directory size calculator to Settings window.
+
 ### Changed
 
 ### Deprecated

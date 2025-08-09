@@ -51,7 +51,10 @@ Settings in the **Main** group:
   when the application exits.
 
 - **Work directory** Directory where processing Tools takes place. Default place (if left empty) is
-  shown as placeholder text. Make sure to clean up the directory every now and then.
+  shown as placeholder text.
+  The **Open work directory** button opens the directory in system's file browser.
+  All files and folders inside the work directory can be conveniently deleted with **Delete files...**.
+  Make sure to do this every now and then since the files may take up a lot of disk space.
 
 Settings in the **UI** group:
 
