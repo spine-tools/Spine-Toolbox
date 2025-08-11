@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+from collections.abc import Iterable
 import multiprocessing
 from multiprocessing import connection
 import pathlib
@@ -27,11 +28,11 @@ class AggregatorProcess(QObject):
         self._timer.setInterval(100)
         self._timer.timeout.connect(self._check_process)
 
-    def start_aggregating(self, directory: str | pathlib.Path) -> None:
+    def start_aggregating(self, paths: Iterable[str | pathlib.Path]) -> None:
         if self._process is not None:
             self._timer.stop()
             self._process.join()
-        self._process = multiprocessing.Process(target=_aggregation_process, args=(directory, self._sender))
+        self._process = multiprocessing.Process(target=_aggregation_process, args=(paths, self._sender))
         self._process.start()
         self._timer.start()
 
@@ -50,15 +51,17 @@ class AggregatorProcess(QObject):
             self._process.join()
 
 
-def _aggregation_process(directory: str | pathlib.Path, sender: connection.Connection) -> None:
-    size = aggregate_file_sizes(directory)
+def _aggregation_process(paths: Iterable[str | pathlib.Path], sender: connection.Connection) -> None:
+    size = sum(map(aggregate_file_sizes, paths))
     sender.send(size)
 
 
-def aggregate_file_sizes(directory: str | pathlib.Path) -> int:
+def aggregate_file_sizes(base_path: str | pathlib.Path) -> int:
     past_iterators = []
-    directory = pathlib.Path(directory)
-    dir_iterator = directory.iterdir()
+    base_path = pathlib.Path(base_path)
+    if base_path.is_file():
+        return base_path.stat().st_size
+    dir_iterator = base_path.iterdir()
     total_size = 0
     while True:
         try:

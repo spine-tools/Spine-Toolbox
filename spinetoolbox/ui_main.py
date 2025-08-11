@@ -108,7 +108,7 @@ from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.open_project_dialog import OpenProjectDialog
 from .widgets.persistent_console_widget import ConsoleWindow, PersistentConsoleWidget
-from .widgets.set_description_dialog import SetDescriptionDialog
+from .widgets.project_settings_dialog import ProjectSettingsDialog
 from .widgets.settings_widget import SettingsWidget
 
 
@@ -274,7 +274,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
-        self.ui.actionSet_description.triggered.connect(self.set_project_description)
+        self.ui.open_project_settings_action.triggered.connect(self.open_project_settings)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -634,6 +634,7 @@ class ToolboxUI(QMainWindow):
             return False
         self._enable_project_actions()
         self._plugin_manager.reload_plugins_with_local_data()
+        self._project.settings_updated.connect(self._handle_project_settings_update)
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
         self.update_recent_projects()
@@ -660,7 +661,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
         self.ui.actionClose.setDisabled(True)
-        self.ui.actionSet_description.setDisabled(True)
+        self.ui.open_project_settings_action.setDisabled(True)
         self.ui.actionExecute_project.setDisabled(True)
         self.ui.actionExecute_selection.setDisabled(True)
         self.ui.actionStop_execution.setDisabled(True)
@@ -674,7 +675,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setEnabled(True)
         self.ui.actionSave_As.setEnabled(True)
         self.ui.actionClose.setEnabled(True)
-        self.ui.actionSet_description.setEnabled(True)
+        self.ui.open_project_settings_action.setEnabled(True)
         self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
@@ -695,6 +696,10 @@ class ToolboxUI(QMainWindow):
         if not self.recent_projects_menu.isVisible():
             self.recent_projects_menu = RecentProjectsPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
+
+    @Slot()
+    def _handle_project_settings_update(self) -> None:
+        self._update_execute_enabled()
 
     @Slot()
     def fetch_kernels(self):
@@ -796,11 +801,11 @@ class ToolboxUI(QMainWindow):
         return True
 
     @Slot(bool)
-    def set_project_description(self, _=False):
-        """Opens a dialog where the user can enter a new description for the project."""
+    def open_project_settings(self, _=False):
+        """Opens a dialog where the user can manage current project's settings."""
         if not self._project:
             return
-        dialog = SetDescriptionDialog(self, self._project)
+        dialog = ProjectSettingsDialog(self, self._project)
         dialog.show()
 
     def init_specification_model(self):

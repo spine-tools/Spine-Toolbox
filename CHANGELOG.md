@@ -7,11 +7,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-* Added a button that deletes all files and directories in work directory to Settings window.
-* Added a button that opens the work directory in system's file browser to Settings window.
-* Added a work directory size calculator to Settings window.
+- Added a button that deletes all files and directories in work directory to Settings window.
+- Added a button that opens the work directory in system's file browser to Settings window.
+- Added a work directory size calculator to Settings window.
 
 ### Changed
+
+- **File->Set project description...** has been replaced by **File->Project settings...** which
+  opens a new Project Settings dialog that can be used to modify the currently open project.
+  Things that can be done using the dialog:
+
+  - Modify project description.
+  - Enable/disable the **Execute all** button.
+  - Delete temporary files from the items folder.
 
 ### Deprecated
 

@@ -57,7 +57,7 @@ from .helpers import (
     merge_dicts,
 )
 from .metaobject import MetaObject
-from .project_commands import SetProjectDescriptionCommand
+from .project_commands import SetProjectDescriptionCommand, SetProjectSettings
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from .project_settings import ProjectSettings
 from .project_upgrader import ProjectUpgrader
@@ -108,6 +108,7 @@ class SpineToolboxProject(MetaObject):
     """Emitted after a specification has been replaced."""
     specification_saved = Signal(str, str)
     """Emitted after a specification has been saved."""
+    settings_updated = Signal()
 
     LOCAL_EXECUTION_JOB_ID = "1"
 
@@ -159,8 +160,12 @@ class SpineToolboxProject(MetaObject):
         return len(self.all_item_names)
 
     @property
-    def settings(self):
+    def settings(self) -> ProjectSettings:
         return self._settings
+
+    def set_settings(self, settings: ProjectSettings) -> None:
+        self._settings = settings
+        self.settings_updated.emit()
 
     def has_items(self):
         """Returns True if project has project items.
@@ -223,8 +228,13 @@ class SpineToolboxProject(MetaObject):
                 return False
         return True
 
-    def call_set_description(self, description):
-        self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
+    def update_settings(self, description: Optional[str] = None, settings: Optional[ProjectSettings] = None) -> None:
+        self._toolbox.undo_stack.beginMacro("update project settings")
+        if description is not None:
+            self._toolbox.undo_stack.push(SetProjectDescriptionCommand(self, description))
+        if settings is not None:
+            self._toolbox.undo_stack.push(SetProjectSettings(self, settings))
+        self._toolbox.undo_stack.endMacro()
 
     def set_description(self, description):
         if description == self.description:

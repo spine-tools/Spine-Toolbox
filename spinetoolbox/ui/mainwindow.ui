@@ -55,7 +55,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
-    <addaction name="actionSet_description"/>
+    <addaction name="open_project_settings_action"/>
     <addaction name="separator"/>
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
@@ -796,16 +796,16 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Close current project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
-  <action name="actionSet_description">
+  <action name="open_project_settings_action">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/exchange-alt.svg</normaloff>:/icons/menu_icons/exchange-alt.svg</iconset>
    </property>
    <property name="text">
-    <string>Set project description...</string>
+    <string>Project settings...</string>
    </property>
    <property name="toolTip">
-    <string>Modify or set project description</string>
+    <string>Open project settings dialog.</string>
    </property>
   </action>
   <action name="actionExecute_project">

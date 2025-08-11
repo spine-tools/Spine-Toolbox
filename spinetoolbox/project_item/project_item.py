@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import logging
 import os
+import pathlib
 from typing import TYPE_CHECKING, Optional
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QAction
@@ -448,6 +449,15 @@ class ProjectItem(LogMixin, MetaObject):
             f"<b>{source_item.item_type()}</b> and a <b>{self.item_type()}</b> has not been "
             "implemented yet."
         )
+
+    def temporary_paths_in_item_directory(self) -> list[pathlib.Path]:
+        temp_paths = []
+        for path in pathlib.Path(self.data_dir).iterdir():
+            if path.name == "logs":
+                temp_paths += list(path.iterdir())
+            else:
+                temp_paths.append(path)
+        return temp_paths
 
     @staticmethod
     def upgrade_v1_to_v2(item_name: str, item_dict: dict) -> dict:

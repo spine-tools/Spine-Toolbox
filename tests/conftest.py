@@ -13,7 +13,7 @@ from unittest import mock
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest
-from tests.mock_helpers import MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, clean_up_toolbox, create_toolboxui, create_toolboxui_with_project
 
 
 @pytest.fixture(scope="module")
@@ -41,6 +41,20 @@ def app_settings():
 @pytest.fixture
 def logger():
     return mock.MagicMock()
+
+
+@pytest.fixture
+def spine_toolbox(application):
+    toolbox = create_toolboxui()
+    yield toolbox
+    clean_up_toolbox(toolbox)
+
+
+@pytest.fixture
+def spine_toolbox_with_project(application, tmp_path):
+    toolbox = create_toolboxui_with_project(str(tmp_path))
+    yield toolbox
+    clean_up_toolbox(toolbox)
 
 
 @pytest.fixture
