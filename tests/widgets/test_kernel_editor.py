@@ -52,12 +52,14 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             python_path = pathlib.Path(environment_dir, "Scripts", python_exec)
             kernel_name = "spinetoolbox_test_make_python_kernel"
             with (
-                patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,
+                patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as message_box_constructor,
                 patch.object(KernelEditorBase, "_python_interpreter_name", return_value=str(python_path)),
                 patch.object(KernelEditorBase, "_python_kernel_name", return_value=kernel_name),
                 patch.object(KernelEditorBase, "_python_kernel_display_name", return_value="Test kernel"),
             ):
-                mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
+                message_box = MagicMock()
+                message_box_constructor.return_value = message_box
+                message_box.exec.return_value = QMessageBox.StandardButton.Ok
                 editor = KernelEditorBase(self._settings_widget, "python")
                 self.assertTrue(editor.make_python_kernel())
                 while editor._install_package_process is not None:

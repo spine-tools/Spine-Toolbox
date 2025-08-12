@@ -1049,7 +1049,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.work_dir_cleanup_button.setEnabled(dir_exists)
         if dir_exists:
             self.ui.work_dir_info_label.setText("Calculating directory size...")
-            self._work_directory_size_aggregator.start_aggregating(work_directory)
+            self._work_directory_size_aggregator.start_aggregating([work_directory])
         else:
             self.ui.work_dir_info_label.setText("Cannot find work directory.")
 
