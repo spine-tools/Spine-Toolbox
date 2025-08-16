@@ -12,7 +12,7 @@
 
 """Classes to manage tool instance execution in various forms."""
 import logging
-from PySide6.QtCore import QObject, QProcess, Signal, Slot
+from PySide6.QtCore import QObject, QProcess, Signal, Slot, QProcessEnvironment
 
 
 class ExecutionManager(QObject):
@@ -64,6 +64,9 @@ class QProcessExecutionManager(ExecutionManager):
         self.process_failed_to_start = False
         self.user_stopped = False
         self._process = QProcess(self)
+        env = QProcessEnvironment.systemEnvironment()
+        env.insert("JUPYTER_PLATFORM_DIRS", "1")
+        self._process.setProcessEnvironment(env)  # Add environment variable to QProcess
         self.process_output = None  # stdout when running silent
         self.process_error = None  # stderr when running silent
         self._out_chunks = []
