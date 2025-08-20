@@ -21,7 +21,6 @@ from spinetoolbox.widgets.notification import ChangeNotifier, Notification
 from tests.mock_helpers import TestCaseWithQApplication
 
 
-@unittest.skipIf(sys.platform == "win32", "Test hangs on Windows when running all tests.")
 class TestChangeNotifier(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QWidget()

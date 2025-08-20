@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the MultiSpineDBEditor class."""
+from contextlib import suppress
 import os
 from PySide6.QtCore import QPoint, Slot
 from PySide6.QtGui import QFont, QIcon
@@ -171,7 +172,10 @@ class MultiSpineDBEditor(MultiTabWindow):
     def closeEvent(self, event):
         super().closeEvent(event)
         if event.isAccepted():
-            db_editor_registry.unregister_window(self)
+            with suppress(ValueError):
+                # If the window is closed quickly after opening while fetching a huge database,
+                # we may end up here before the window has been registered leading to a ValueError.
+                db_editor_registry.unregister_window(self)
 
 
 class _CustomStatusBar(QStatusBar):

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+import gc
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
@@ -59,16 +60,8 @@ class TestOpenDBEditor(TestCaseWithQApplication):
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
-        # Database connection may still be open. Retry cleanup until it succeeds.
-        running = True
-        while running:
-            QApplication.processEvents()
-            try:
-                self._temp_dir.cleanup()
-            except NotADirectoryError:
-                pass
-            else:
-                running = False
+        gc.collect()
+        self._temp_dir.cleanup()
 
     def _close_windows(self):
         for editor in self._db_editor_registry.windows():

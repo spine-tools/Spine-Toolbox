@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``add_items_dialog`` module."""
+import gc
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
@@ -56,6 +57,7 @@ class TestAddItemsDialog(TestCaseWithQApplication):
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
         self._db_editor = None
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_add_entity_classes(self):

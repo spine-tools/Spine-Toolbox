@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+import gc
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
@@ -18,7 +19,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 
 
 class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
@@ -58,6 +59,7 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
         self.db_mngr = None  # Ensure the database file is closed to allow the temporary directory to be removed.
         self.spine_db_editor.deleteLater()
         self.spine_db_editor = None
+        gc.collect()
         self._temp_dir.cleanup()
 
     def fetch_entity_tree_model(self):

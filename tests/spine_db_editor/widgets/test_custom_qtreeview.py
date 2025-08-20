@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTreeView`` classes."""
+import gc
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
@@ -373,6 +374,7 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
 
     def tearDown(self):
         self._common_tear_down()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_database_contents_shown_correctly(self):
@@ -553,6 +555,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
 
     def tearDown(self):
         self._common_tear_down()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_database_contents_shown_correctly(self):
@@ -829,6 +832,7 @@ class TestEntityTreeViewSorting(TestBase):
 
     def tearDown(self):
         self._common_tear_down()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_tree_item_sorting(self):
@@ -932,6 +936,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
 
     def tearDown(self):
         self._common_tear_down()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_tree_has_correct_initial_contents(self):

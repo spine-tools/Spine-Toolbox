@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the metadata table model."""
+import gc
 import itertools
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -20,7 +21,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, fetch_model
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model
 
 
 class TestMetadataTableModel(TestCaseWithQApplication):
@@ -40,6 +41,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
         while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
+        gc.collect()
         self._model.deleteLater()
 
     def test_empty_model(self):
@@ -109,6 +111,7 @@ class TestMetadataTableModel(TestCaseWithQApplication):
                     QApplication.processEvents()
             finally:
                 self._db_mngr.close_session(url)
+                gc.collect()
         self.assertEqual(self._model.rowCount(), 3)
         self.assertEqual(self._model.index(1, Column.NAME).data(), "title")
         self.assertEqual(self._model.index(1, Column.VALUE).data(), "My precious.")
