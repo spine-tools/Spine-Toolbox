@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``logging_connection`` module."""
+import gc
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -107,6 +108,7 @@ class TestLoggingConnectionWithDatabaseManager(TestCaseWithQApplication):
 
     def tearDown(self):
         clean_up_toolbox(self._toolbox)
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_has_filters_when_database_has_an_unknown_scenario(self):

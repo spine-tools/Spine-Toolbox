@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_model import AlternativeModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, model_data_to_dict
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, model_data_to_dict
 
 
 class TestAlternativeModel(TestCaseWithQApplication):
@@ -151,7 +151,6 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
-        self._temp_dir.cleanup()
 
     def test_paste_alternative_mime_data(self):
         self._db_mngr.add_items(

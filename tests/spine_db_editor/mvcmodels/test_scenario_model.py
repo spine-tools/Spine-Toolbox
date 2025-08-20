@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``scenario_model`` module."""
+import gc
 from pathlib import Path
 import pickle
 from tempfile import TemporaryDirectory
@@ -22,7 +23,7 @@ from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, model_data_to_dict
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, model_data_to_dict
 
 
 class _TestBase(TestCaseWithQApplication):
@@ -461,6 +462,7 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._db_editor.deleteLater()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_paste_alternative_mime_data_doesnt_paste_across_databases(self):

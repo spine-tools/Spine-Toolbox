@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the spine_db_manager module."""
+import gc
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
@@ -241,16 +242,8 @@ class TestAddItems(TestCaseWithQApplication):
     def tearDown(self):
         self._db_mngr.close_all_sessions()
         self._db_mngr.clean_up()
-        # Database connection may still be open. Retry cleanup until it succeeds.
-        running = True
-        while running:
-            QApplication.processEvents()
-            try:
-                self._temp_dir.cleanup()
-            except NotADirectoryError:
-                pass
-            else:
-                running = False
+        gc.collect()
+        self._temp_dir.cleanup()
 
     def test_add_metadata(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
@@ -299,14 +292,8 @@ class TestDoRestoreItems(TestCaseWithQApplication):
         self._db_mngr.clean_up()
         # Database connection may still be open. Retry cleanup until it succeeds.
         running = True
-        while running:
-            QApplication.processEvents()
-            try:
-                self._temp_dir.cleanup()
-            except NotADirectoryError:
-                pass
-            else:
-                running = False
+        gc.collect()
+        self._temp_dir.cleanup()
 
     def test_restore_entity_class(self):
         db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
@@ -337,6 +324,7 @@ class TestImportExportData(TestCaseWithQApplication):
         while not self._db_map.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_export_then_import_time_series_parameter_value(self):

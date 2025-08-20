@@ -12,6 +12,7 @@
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
 import csv
+import gc
 import io
 import itertools
 import os
@@ -411,6 +412,7 @@ class TestParameterValueTableWithExistingData(TestBase):
 
     def tearDown(self):
         self._common_tear_down()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def _whole_model_rowcount(self):

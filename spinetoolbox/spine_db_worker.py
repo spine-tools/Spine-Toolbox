@@ -12,6 +12,7 @@
 
 """The SpineDBWorker class."""
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
+from PySide6.QtWidgets import QApplication
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.temp_id import TempId
 from .helpers import busy_effect
@@ -192,12 +193,18 @@ class SpineDBWorker(QObject):
 
     def close_db_map(self) -> None:
         with self._db_mngr.get_lock(self._db_map):
-            self._db_map.close()
-            self._do_fetch_more = lambda worker, *args, **kwargs: None
             for parents in self._parents_by_type.values():
                 for parent in parents:
                     if not parent.is_obsolete:
                         parent.set_obsolete(True)
+            while any(
+                parent.is_busy and not parent.is_fetched
+                for parents in self._parents_by_type.values()
+                for parent in parents
+            ):
+                QApplication.processEvents()
+            self._do_fetch_more = lambda worker, *args, **kwargs: None
+            self._db_map.close()
 
     @busy_effect
     def add_items(self, item_type, orig_items, check):

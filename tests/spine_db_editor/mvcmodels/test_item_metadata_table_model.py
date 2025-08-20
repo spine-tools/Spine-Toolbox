@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the item metadata table model."""
+import gc
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
@@ -34,7 +35,7 @@ from spinedb_api import (
 )
 from spinetoolbox.spine_db_editor.mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, fetch_model
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model
 
 
 class TestItemMetadataTableModelWithExistingData(TestCaseWithQApplication):
@@ -91,6 +92,7 @@ class TestItemMetadataTableModelWithExistingData(TestCaseWithQApplication):
             QApplication.processEvents()
         self._db_mngr.clean_up()
         self._model.deleteLater()
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_model_is_initially_empty(self):
