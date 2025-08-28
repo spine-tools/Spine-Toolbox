@@ -11,46 +11,34 @@
 ######################################################################################################################
 
 """Contains unit tests for the ``notification`` module."""
-import sys
-import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QAbstractAnimation
 from PySide6.QtGui import QUndoCommand, QUndoStack
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.notification import ChangeNotifier, Notification
-from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestChangeNotifier(TestCaseWithQApplication):
-    def setUp(self):
-        self._parent = QWidget()
-        self._undo_stack = QUndoStack(self._parent)
-
-    def tearDown(self):
-        self._parent.deleteLater()
-
-    @patch.object(Notification, "_FADE_IN_OUT_DURATION", new=1)
-    @patch.object(ChangeNotifier, "_ANIMATION_LIFE_SPAN", new=1)
-    def test_tear_down_disconnects_signals(self):
+class TestChangeNotifier:
+    def test_tear_down_disconnects_signals(self, parent_widget, monkeypatch):
+        monkeypatch.setattr(ChangeNotifier, "_ANIMATION_LIFE_SPAN", 1)
+        undo_stack = QUndoStack(parent_widget)
         app_settings = MagicMock()
         app_settings.value.return_value = "2"
-        notifier = ChangeNotifier(self._parent, self._undo_stack, app_settings, "settings key")
+        notifier = ChangeNotifier(parent_widget, undo_stack, app_settings, "settings key")
         with patch.object(Notification, "show") as show_method:
-            self._undo_stack.push(QUndoCommand("something"))
-            while notifier._notification.fade_in_anim.state() != QAbstractAnimation.Stopped:
+            undo_stack.push(QUndoCommand("something"))
+            while notifier._notification.fade_in_anim.state() != QAbstractAnimation.State.Stopped:
                 QApplication.processEvents()
+                notifier._notification.fade_in_anim.setCurrentTime(notifier._notification.fade_in_anim.duration())
             notifier._notification.start_self_destruction()
             try:
-                while notifier._notification.fade_out_anim.state() != QAbstractAnimation.Stopped:
+                while notifier._notification.fade_out_anim.state() != QAbstractAnimation.State.Stopped:
                     QApplication.processEvents()
+                    notifier._notification.fade_out_anim.setCurrentTime(notifier._notification.fade_out_anim.duration())
             except RuntimeError:
                 pass
             show_method.assert_called_once()
         notifier.tear_down()
         with patch.object(Notification, "show") as show_method:
-            self._undo_stack.push(QUndoCommand("something else"))
+            undo_stack.push(QUndoCommand("something else"))
             show_method.assert_not_called()
-
-
-if __name__ == "__main__":
-    unittest.main()
