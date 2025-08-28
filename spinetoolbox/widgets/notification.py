@@ -94,7 +94,7 @@ class Notification(QFrame):
         self.fade_out_anim.valueChanged.connect(self.update_opacity)
         self.fade_out_anim.finished.connect(self.close)
         # Start fade in animation
-        self.fade_in_anim.start(QPropertyAnimation.DeleteWhenStopped)
+        self.fade_in_anim.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
     def show(self):
         """Shows widget and moves it to the selected corner of the parent widget."""
