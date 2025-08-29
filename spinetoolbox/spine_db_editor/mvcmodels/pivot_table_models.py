@@ -21,10 +21,11 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyMod
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_elements
-from spinedb_api.parameter_value import IndexedValue, join_value_and_type, split_value_and_type
+from spinedb_api.incomplete_values import join_value_and_type, split_value_and_type
+from spinedb_api.parameter_value import IndexedValue
 from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, DBMapTypedDictItems, parameter_identifier, plain_to_tool_tip
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
 from ...mvcmodels.shared import PARSED_ROLE
 from ..widgets.custom_delegates import (
     ParameterPivotTableDelegate,

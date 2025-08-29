@@ -12,6 +12,7 @@
 
 """Unit tests for the spine_db_manager module."""
 import gc
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import time
@@ -28,7 +29,8 @@ from spinedb_api import (
     import_functions,
     to_database,
 )
-from spinedb_api.parameter_value import Map, ParameterValueFormatError, from_database, join_value_and_type
+from spinedb_api.incomplete_values import join_value_and_type
+from spinedb_api.parameter_value import Map, ParameterValueFormatError, from_database
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.helpers import signal_waiter
@@ -90,7 +92,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = 2.3
         item = self._add_value(value)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(b"2.3", None))
+        self.assertEqual(formatted, join_value_and_type(b"2.3", "float"))
 
     def test_plain_number_in_tool_tip_role(self):
         value = 2.3
@@ -182,7 +184,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", ["7 hours", "12 hours"], [1.1, 2.2, 3.3], False, False)
         item = self._add_value(value, "fixed_resolution")
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.ToolTipRole)
-        self.assertEqual(formatted, "<qt>Start: 2019-07-12 08:00:00<br>resolution: [7h, 12h]<br>length: 3</qt>")
+        self.assertEqual(formatted, "<qt>Start: 2019-07-12T08:00:00<br>resolution: variable<br>length: 3</qt>")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         item = self._add_value(value, "variable_resolution")
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.ToolTipRole)
@@ -214,7 +216,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         )
         self.assertIsNone(error)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(b"diibadaaba", None))
+        self.assertEqual(formatted, json.dumps(["diibadaaba", "str"]))
 
     def test_broken_value_in_tool_tip_role(self):
         value = b"diibadaaba"
@@ -520,7 +522,7 @@ class TestUpdateExpandedParameterValues(TestCaseWithQApplication):
                 self.fail("timeout while waiting for update signal")
         updated_item = self._db_map.get_parameter_value_item(id=value_item["id"])
         update_value = from_database(updated_item["value"], updated_item["type"])
-        self.assertEqual(update_value, Map(["a"], ["c"]))
+        self.assertEqual(update_value, Map(["a"], ["c"], index_name="col_1"))
 
 
 class TestRemoveScenarioAlternative(TestCaseWithQApplication):

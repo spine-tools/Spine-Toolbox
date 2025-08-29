@@ -48,15 +48,8 @@ from spinedb_api import (
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.exception import NothingToCommit
 from spinedb_api.helpers import remove_credentials_from_url
-from spinedb_api.parameter_value import (
-    MapIndex,
-    Value,
-    deep_copy_value,
-    dump_db_value,
-    join_value_and_type,
-    load_db_value,
-    split_value_and_type,
-)
+from spinedb_api.incomplete_values import dump_db_value, join_value_and_type, split_value_and_type
+from spinedb_api.parameter_value import MapIndex, Value, deep_copy_value, load_db_value
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
 from spinetoolbox.database_display_names import NameRegistry
@@ -1396,7 +1389,9 @@ class SpineDBManager(QObject):
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
             with db_map:
-                for key, items in export_data(db_map, parse_value=load_db_value, **item_ids).items():
+                for key, items in export_data(
+                    db_map, parse_value=lambda value, _: load_db_value(value), **item_ids
+                ).items():
                     data.setdefault(key, []).extend(items)
         return data
 

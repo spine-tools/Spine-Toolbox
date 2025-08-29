@@ -13,12 +13,12 @@
 """Unit tests for the models in ``compound_models`` module."""
 from itertools import product
 import unittest
-from spinedb_api import Array, to_database
+from spinedb_api import Array, Duration, to_database
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
-from tests.mock_helpers import fetch_model
+from tests.mock_helpers import assert_table_model_data, fetch_model
 from ..helpers import TestBase
 
 
@@ -44,11 +44,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
         fetch_model(model)
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
-        self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 7)
-        row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["oc", "p", None, None, "None", None, self.db_codename]
-        self.assertEqual(row, expected)
+        expected = [["oc", "p", None, None, "None", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
 
     def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -58,11 +55,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
         self._db_map.fetch_all()
-        self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 7)
-        row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["rc", "p", None, None, "None", None, self.db_codename]
-        self.assertEqual(row, expected)
+        expected = [["rc", "p", None, None, "None", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
 
     def test_model_updates_when_entity_class_is_removed(self):
         self._db_map.add_entity_class(name="oc1")
@@ -133,11 +127,8 @@ class TestCompoundParameterValueModel(TestBase):
                 ]
             },
         )
-        self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 6)
-        row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["oc", "o", "p", "Base", "23.0", self.db_codename]
-        self.assertEqual(row, expected)
+        expected = [["oc", "o", "p", "Base", "23.0", self.db_codename]]
+        assert_table_model_data(model, expected, self)
 
     def test_data_for_single_parameter_in_multidimensional_entity(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -167,11 +158,8 @@ class TestCompoundParameterValueModel(TestBase):
                 ]
             },
         )
-        self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 6)
-        row = [model.index(0, column).data() for column in range(model.columnCount())]
-        expected = ["rc", "o", "p", "Base", "23.0", self.db_codename]
-        self.assertEqual(row, expected)
+        expected = [["rc", "o", "p", "Base", "23.0", self.db_codename]]
+        assert_table_model_data(model, expected, self)
 
     def test_index_name_returns_sane_label(self):
         self._db_map.add_entity_class(name="Object")
@@ -225,28 +213,18 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_in_base.remove()
         value_not_in_base.remove()
         expected = []
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_not_in_base.restore()
         value_in_base.restore()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_removing_second_of_two_uncommitted_rows(self):
         self._db_map.add_entity_class(name="Object")
@@ -278,19 +256,12 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_not_in_base.remove()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_restoring_removed_item_keeps_empty_row_last(self):
         self._db_map.add_entity_class(name="Object")
@@ -323,19 +294,12 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_in_base.remove()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_not_in_base.remove()
         self.assertEqual(model.rowCount(), 0)
         self.assertEqual(model.sub_models, [])
@@ -371,25 +335,15 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         model.set_filter_alternative_ids({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_in_base.remove()
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_restoring_removed_value_from_another_alternative_that_is_selected_for_filtering_works(self):
         self._db_map.add_entity_class(name="Object")
@@ -422,30 +376,17 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         model.set_filter_alternative_ids({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_in_base.remove()
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         value_in_base.restore()
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_remove_every_other_row(self):
         self._db_map.add_entity_class(name="Object")
@@ -500,20 +441,13 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
             ["Object", "curious sphere", "X", "del", "-23.0", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         self._db_map.remove_items("parameter_value", alt_value["id"], del_value["id"])
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_remove_item_from_another_entity_class_than_selected(self):
         object_class = self._db_map.add_entity_class(name="Object")
@@ -559,29 +493,18 @@ class TestCompoundParameterValueModel(TestBase):
             ["Immaterial", "ghost", "Z", "Base", "23.0", self.db_codename],
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         model.set_filter_class_ids({self._db_map: {object_class["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         z_value.remove()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_remove_visible_and_hidden_items(self):
         alternative = self._db_map.add_alternative(name="alt")
@@ -635,22 +558,14 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "mystic cube", "X", "Base", "23.0", self.db_codename],
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         model.set_filter_alternative_ids({self._db_map: {alternative["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
         spherical_value_in_base.remove()
         spherical_value_in_alt.remove()
         expected = [
@@ -660,6 +575,33 @@ class TestCompoundParameterValueModel(TestBase):
         for row, column in product(range(model.rowCount()), range(model.columnCount())):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
+
+    def test_get_set_data_delayed(self):
+        with self._db_map:
+            self._db_map.add_entity_class(name="Object")
+            self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
+            self._db_map.add_entity(name="motley cube", entity_class_name="Object")
+            self._db_map.add_parameter_value(
+                entity_class_name="Object",
+                entity_byname=("motley cube",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+                parsed_value=2.3,
+            )
+            self._db_map.commit_session("Add test data")
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [
+            ["Object", "motley cube", "X", "Base", "2.3", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        callback = model.get_set_data_delayed(model.index(0, 4))
+        callback(to_database(Duration("3 hours")))
+        expected = [
+            ["Object", "motley cube", "X", "Base", "3h", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,8 @@ from unittest import mock
 from PySide6.QtCore import QModelIndex
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication
-from spinedb_api import to_database
+from spinedb_api import DateTime, to_database
+from spinedb_api.incomplete_values import join_value_and_type
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     DelayedDataSetter,
@@ -26,6 +27,7 @@ from tests.mock_helpers import (
     MockSpineDBManager,
     TestCaseWithQApplication,
     assert_table_model_data,
+    assert_table_model_data_pytest,
     fetch_model,
     q_object,
 )
@@ -75,11 +77,9 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         self.assertEqual(model.columnCount(), 4)
         self.assertEqual(model.rowCount(), 1)
         with (
-            mock.patch.object(model, "_convert_to_db") as convert_to_db,
             mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
             mock.patch.object(model, "_check_item") as check_item,
         ):
-            convert_to_db.side_effect = lambda item: item
             entity_class_name_candidates.return_value = ["Widget"]
             check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
             self.assertTrue(model.batch_set_data([model.index(0, 1)], ["gadget"]))
@@ -139,15 +139,13 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 4)
         with (
-            mock.patch.object(model, "_convert_to_db") as convert_to_db,
             mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
             mock.patch.object(model, "_check_item") as check_item,
             mock.patch.object(model, "_make_unique_id") as make_unique_id,
         ):
-            convert_to_db.side_effect = lambda item: item
             entity_class_name_candidates.return_value = ["Widget"]
             check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
-            make_unique_id.side_effect = lambda item: (item["entity_class_name"], item["name"])
+            make_unique_id.side_effect = lambda item: (item.get("entity_class_name"), item.get("name"))
             self.assertTrue(
                 model.batch_set_data(
                     [model.index(0, 0), model.index(0, 1), model.index(0, 2), model.index(0, 3)],
@@ -198,29 +196,25 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         model.reset_db_maps([self._db_map])
         fetch_model(model)
         with (
-            mock.patch.object(model, "_convert_to_db") as convert_to_db,
             mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
             mock.patch.object(model, "_check_item") as check_item,
             mock.patch.object(model, "_make_unique_id") as make_unique_id,
         ):
-            convert_to_db.side_effect = lambda item: item
             entity_class_name_candidates.return_value = ["Widget"]
             check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
-            make_unique_id.side_effect = lambda item: (item["entity_class_name"], item["name"])
+            make_unique_id.side_effect = lambda item: (item.get("entity_class_name"), item.get("name"))
             self.assertTrue(model.batch_set_data([model.index(0, 1)], ["gadget"]))
         self.assertEqual(self._undo_stack.count(), 1)
         expected = [["Widget", "gadget", None, "mock_db"], [None, None, None, "mock_db"]]
         assert_table_model_data(model, expected, self)
         with (
-            mock.patch.object(model, "_convert_to_db") as convert_to_db,
             mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
             mock.patch.object(model, "_check_item") as check_item,
             mock.patch.object(model, "_make_unique_id") as make_unique_id,
         ):
-            convert_to_db.side_effect = lambda item: item
             entity_class_name_candidates.return_value = ["Widget"]
             check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
-            make_unique_id.side_effect = lambda item: (item["entity_class_name"], item["name"])
+            make_unique_id.side_effect = lambda item: (item.get("entity_class_name"), item.get("name"))
             self.assertFalse(model.batch_set_data([model.index(0, 1)], ["gadget"]))
         self.assertEqual(self._undo_stack.count(), 1)
 
@@ -236,15 +230,13 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         model.reset_db_maps([self._db_map])
         fetch_model(model)
         with (
-            mock.patch.object(model, "_convert_to_db") as convert_to_db,
             mock.patch.object(model, "_entity_class_name_candidates") as entity_class_name_candidates,
             mock.patch.object(model, "_check_item") as check_item,
             mock.patch.object(model, "_make_unique_id") as make_unique_id,
         ):
-            convert_to_db.side_effect = lambda item: item
             entity_class_name_candidates.return_value = ["Widget"]
             check_item.side_effect = lambda item: "entity_class_name" in item and "name" in item
-            make_unique_id.side_effect = lambda item: (item["entity_class_name"], item["name"])
+            make_unique_id.side_effect = lambda item: (item.get("entity_class_name"), item.get("name"))
             self.assertTrue(model.insertRows(1, 1))
             self.assertTrue(
                 model.batch_set_data(
@@ -272,8 +264,8 @@ class TestDelayedDataSetter:
             model.insertRows(0, 1, QModelIndex())
             index = model.index(0, 0)
             data_setter = DelayedDataSetter(model, index)
-            value_and_type = to_database(2.3)
-            data_setter(value_and_type)
+            value, _ = to_database(2.3)
+            data_setter(value)
             assert model.index(0, 0).data() == 2.3
 
     def test_moves_set_row_if_previous_row_is_removed(self, application):
@@ -282,8 +274,8 @@ class TestDelayedDataSetter:
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
             model.removeRows(0, 1)
-            value_and_type = to_database(2.3)
-            data_setter(value_and_type)
+            value, _ = to_database(2.3)
+            data_setter(value)
             assert model.index(0, 0).data() == 2.3
 
     def test_gets_invalidated_when_row_is_removed(self, application):
@@ -292,8 +284,8 @@ class TestDelayedDataSetter:
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
             model.removeRows(1, 1)
-            value_and_type = to_database(2.3)
-            data_setter(value_and_type)
+            value, _ = to_database(2.3)
+            data_setter(value)
             assert model.index(0, 0).data() is None
 
     def test_removing_succeeding_row_has_no_effect(self, application):
@@ -302,8 +294,8 @@ class TestDelayedDataSetter:
             index = model.index(0, 0)
             data_setter = DelayedDataSetter(model, index)
             model.removeRows(1, 1)
-            value_and_type = to_database(2.3)
-            data_setter(value_and_type)
+            value, _ = to_database(2.3)
+            data_setter(value)
             assert model.index(0, 0).data() == 2.3
 
     def test_resetting_model_invalidates_setter(self):
@@ -312,8 +304,8 @@ class TestDelayedDataSetter:
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
             model.clear()
-            value_and_type = to_database(2.3)
-            data_setter(value_and_type)
+            value, _ = to_database(2.3)
+            data_setter(value)
             assert model.rowCount() == 0
 
 
@@ -335,6 +327,114 @@ class TestEmptyParameterDefinitionModel:
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my parameter"
 
+    def test_finishing_row_adds_definition_to_database(self, db_map, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            indexes = [model.index(0, column) for column in (0, 1, 6)]
+            data = ["Object", "Y", db_mngr.name_registry.display_name(db_map.db_url)]
+            assert len(indexes) == len(data)
+            model.batch_set_data(indexes, data)
+            while model.index(0, 0).data() is not None:
+                QApplication.processEvents()
+            definition_item = db_map.parameter_definition(entity_class_name="Object", name="Y")
+            assert definition_item["parameter_type_list"] == ()
+            assert definition_item["parameter_value_list_name"] is None
+            assert definition_item["default_value"] is None
+            assert definition_item["description"] is None
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
+
+    def test_add_definition_with_valid_types_to_database(self, db_map, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            indexes = [model.index(0, column) for column in (0, 1, 2, 6)]
+            data = ["Object", "Y", ("float", "3d_map"), db_mngr.name_registry.display_name(db_map.db_url)]
+            assert len(indexes) == len(data)
+            model.batch_set_data(indexes, data)
+            while model.index(0, 0).data() is not None:
+                QApplication.processEvents()
+            definition_item = db_map.parameter_definition(entity_class_name="Object", name="Y")
+            assert definition_item["parameter_type_list"] == ("float", "3d_map")
+            assert definition_item["parameter_value_list_name"] is None
+            assert definition_item["default_value"] is None
+            assert definition_item["description"] is None
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
+
+    def test_add_definition_with_value_list_to_database(self, db_map, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            db_map.add_parameter_value_list(name="Enum")
+            indexes = [model.index(0, column) for column in (0, 1, 3, 6)]
+            data = ["Object", "Y", "Enum", db_mngr.name_registry.display_name(db_map.db_url)]
+            assert len(indexes) == len(data)
+            model.batch_set_data(indexes, data)
+            while model.index(0, 0).data() is not None:
+                QApplication.processEvents()
+            definition_item = db_map.parameter_definition(entity_class_name="Object", name="Y")
+            assert definition_item["parameter_type_list"] == ()
+            assert definition_item["parameter_value_list_name"] == "Enum"
+            assert definition_item["default_value"] is None
+            assert definition_item["description"] is None
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
+
+    def test_add_definition_with_default_value_to_database(self, db_map, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            db_map.add_parameter_value_list(name="Enum")
+            indexes = [model.index(0, column) for column in (0, 1, 4, 6)]
+            data = [
+                "Object",
+                "Y",
+                join_value_and_type(*to_database(DateTime("2025-09-11T14:30"))),
+                db_mngr.name_registry.display_name(db_map.db_url),
+            ]
+            assert len(indexes) == len(data)
+            model.batch_set_data(indexes, data)
+            while model.index(0, 0).data() is not None:
+                QApplication.processEvents()
+            definition_item = db_map.parameter_definition(entity_class_name="Object", name="Y")
+            assert definition_item["parameter_type_list"] == ()
+            assert definition_item["parameter_value_list_name"] is None
+            assert definition_item["parsed_value"] == DateTime("2025-09-11T14:30")
+            assert definition_item["description"] is None
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
+
+    def test_add_definition_with_description_to_database(self, db_map, db_mngr):
+        with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            db_map.add_parameter_value_list(name="Enum")
+            indexes = [model.index(0, column) for column in (0, 1, 5, 6)]
+            data = ["Object", "Y", "A very curious measure.", db_mngr.name_registry.display_name(db_map.db_url)]
+            assert len(indexes) == len(data)
+            model.batch_set_data(indexes, data)
+            while model.index(0, 0).data() is not None:
+                QApplication.processEvents()
+            definition_item = db_map.parameter_definition(entity_class_name="Object", name="Y")
+            assert definition_item["parameter_type_list"] == ()
+            assert definition_item["parameter_value_list_name"] is None
+            assert definition_item["default_value"] is None
+            assert definition_item["description"] == "A very curious measure."
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
+
 
 class TestEmptyParameterValueModel:
     def test_value_index_name_when_row_is_empty(self, db_mngr):
@@ -353,3 +453,52 @@ class TestEmptyParameterValueModel:
             model.batch_set_data(indexes, data)
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my entity - my parameter - my alternative"
+
+    def test_empty_row_is_protected_when_data_is_added_to_db(self, db_map, db_mngr):
+        with q_object(EmptyParameterValueModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            db_map.add_parameter_definition(entity_class_name="Object", name="Y")
+            db_map.add_entity(entity_class_name="Object", name="widget")
+            value_item = db_map.add_parameter_value(
+                entity_class_name="Object",
+                entity_byname=("widget",),
+                parameter_definition_name="Y",
+                alternative_name="Base",
+                parsed_value=2.3,
+            )
+            model.handle_items_added({db_map: [value_item._asdict()]})
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None]])
+
+    def test_finishing_row_adds_data_to_database(self, db_map, db_mngr):
+        with q_object(EmptyParameterValueModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.append_empty_row()
+            db_map.add_entity_class(name="Object")
+            db_map.add_parameter_definition(entity_class_name="Object", name="Y")
+            db_map.add_entity(entity_class_name="Object", name="widget")
+            indexes = [model.index(0, column) for column in range(model.columnCount())]
+            data = [
+                "Object",
+                ("widget",),
+                "Y",
+                "Base",
+                join_value_and_type(*to_database(2.3)),
+                db_mngr.name_registry.display_name(db_map.db_url),
+            ]
+            assert len(indexes) == len(data)
+            model.batch_set_data(indexes, data)
+            while model.index(0, 0).data() is not None:
+                QApplication.processEvents()
+            value_item = db_map.parameter_value(
+                entity_class_name="Object",
+                entity_byname=("widget",),
+                parameter_definition_name="Y",
+                alternative_name="Base",
+            )
+            assert value_item["parsed_value"] == 2.3
+            assert_table_model_data_pytest(model, [[None, None, None, None, None, None]])

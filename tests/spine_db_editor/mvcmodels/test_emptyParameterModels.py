@@ -22,8 +22,9 @@ from spinedb_api import (
     import_relationship_parameters,
     import_relationships,
 )
-from spinedb_api.parameter_value import join_value_and_type, to_database
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, signal_waiter
+from spinedb_api.incomplete_values import join_value_and_type
+from spinedb_api.parameter_value import to_database
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyParameterDefinitionModel, EmptyParameterValueModel
 from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model, q_object
 
@@ -82,7 +83,10 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
-                model.batch_set_data(_empty_indexes(model), ["fish", ("nemo",), "water", "Base", "salty", "mock_db"])
+                model.batch_set_data(
+                    _empty_indexes(model),
+                    ["fish", ("nemo",), "water", "Base", join_value_and_type(*to_database("salty")), "mock_db"],
+                )
             )
             values = [x for x in self._db_map.get_items("parameter_value") if not x["dimension_id_list"]]
             self.assertEqual(values, [])
