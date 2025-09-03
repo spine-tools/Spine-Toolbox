@@ -29,9 +29,9 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
 
     def test_init_fills_filter_list_with_database_codenames(self):
         db_map1 = mock.MagicMock()
-        db_map1.sa_url = "sqlite://a"
+        db_map1.sa_url = "sqlite:///a"
         db_map2 = mock.MagicMock()
-        db_map2.sa_url = "sqlite://b"
+        db_map2.sa_url = "sqlite:///b"
         db_maps = [db_map1, db_map2]
         name_registry = NameRegistry()
         name_registry.register(db_map1.sa_url, "db map 1")
@@ -46,9 +46,9 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
 
     def test_filter_changed_signal_is_emitted_correctly(self):
         db_map1 = mock.MagicMock()
-        db_map1.sa_url = "sqlite://a"
+        db_map1.sa_url = "sqlite:///a"
         db_map2 = mock.MagicMock()
-        db_map2.sa_url = "sqlite://b"
+        db_map2.sa_url = "sqlite:///b"
         db_maps = [db_map1, db_map2]
         name_registry = NameRegistry()
         name_registry.register(db_map1.sa_url, "db map 1")

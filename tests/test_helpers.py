@@ -46,6 +46,7 @@ from spinetoolbox.helpers import (
     load_specification_from_file,
     make_icon_id,
     merge_dicts,
+    normcase_database_url_path,
     order_key,
     plain_to_rich,
     plain_to_tool_tip,
@@ -567,3 +568,17 @@ class TestDisplayByteSize:
         assert display_byte_size(1000) == (1.0, "kB")
         assert display_byte_size(3444555) == (3.4, "MB")
         assert display_byte_size(999100000000) == (999.1, "GB")
+
+
+class TestNormcaseDatabaseUrlPath:
+    def test_correctness(self):
+        assert normcase_database_url_path("mysql://example.com/Path/MY_DB") == "mysql://example.com/Path/MY_DB"
+        if sys.platform == "win32":
+            assert (
+                normcase_database_url_path("sqlite:///C:\\Users\\SansSerif\\in.sqlite")
+                == "sqlite:///c:\\users\\sansserif\\in.sqlite"
+            )
+        else:
+            assert (
+                normcase_database_url_path("sqlite:///home/SansSerif/in.sqlite") == "sqlite:///home/SansSerif/in.sqlite"
+            )
