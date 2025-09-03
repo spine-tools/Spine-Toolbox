@@ -1960,3 +1960,10 @@ def display_byte_size(size_bytes: int) -> tuple[float | int, str]:
     unit_count = math.pow(1000, unit_index)
     rounded = round(size_bytes / unit_count, 1)
     return rounded, size_names[unit_index]
+
+
+def normcase_database_url_path(url: str) -> str:
+    if not url.startswith("sqlite://"):
+        return url
+    path = url[len("sqlite:///") :]
+    return "sqlite:///" + os.path.normcase(path)

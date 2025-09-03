@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QTabBar,
 )
 from sqlalchemy.engine.url import URL
+from spine_engine.utils.helpers import urls_equal
 from spinedb_api import Asterisk, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, export_data
 from spinedb_api.helpers import vacuum
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
@@ -140,7 +141,7 @@ class SpineDBEditorBase(QMainWindow):
             url (str): database url
             name (str): database display name
         """
-        if not any(str(db_map.sa_url) == url for db_map in self.db_maps):
+        if not any(urls_equal(str(db_map.sa_url), url) for db_map in self.db_maps):
             return
         self._reset_window_title()
 

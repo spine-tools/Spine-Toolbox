@@ -11,65 +11,68 @@
 ######################################################################################################################
 
 """This module contains functionality to manage database display names."""
+from collections.abc import Iterable, Iterator
 import hashlib
 import pathlib
 from PySide6.QtCore import QObject, Signal, Slot
 from sqlalchemy.engine.url import URL, make_url
+from spinedb_api import DatabaseMapping
+from spinetoolbox.helpers import normcase_database_url_path
 
 
 class NameRegistry(QObject):
     display_name_changed = Signal(str, str)
     """Emitted when the display name of a database changes."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None):
         """
         Args:
-            parent (QObject, optional): parent object
+            parent: parent object
         """
         super().__init__(parent)
         self._names_by_url: dict[str, set[str]] = {}
 
     @Slot(str, str)
-    def register(self, db_url, name):
+    def register(self, db_url: URL | str, name: str) -> None:
         """Registers a new name for given database URL.
 
         Args:
-            db_url (URL or str): database URL
-            name (str): name to register
+            db_url: database URL
+            name: name to register
         """
-        url = str(db_url)
+        url = normcase_database_url_path(str(db_url))
         if url in self._names_by_url and name in self._names_by_url[url]:
             return
         self._names_by_url.setdefault(url, set()).add(name)
         self.display_name_changed.emit(url, self.display_name(db_url))
 
     @Slot(str, str)
-    def unregister(self, db_url, name):
+    def unregister(self, db_url: URL | str, name: str) -> None:
         """Removes a name from the registry.
 
         Args:
-            db_url (URL or str): database URL
-            name (str): name to remove
+            db_url: database URL
+            name: name to remove
         """
-        url = str(db_url)
+        url = normcase_database_url_path(str(db_url))
         names = self._names_by_url[url]
-        old_name = self.display_name(url) if len(names) in (1, 2) else None
+        old_name = self.display_name(url) if 0 < len(names) < 3 else None
         names.remove(name)
         if old_name is not None:
             new_name = self.display_name(url)
             self.display_name_changed.emit(url, new_name)
 
-    def display_name(self, db_url):
+    def display_name(self, db_url: URL | str) -> str:
         """Makes display name for a database.
 
         Args:
-            db_url (URL or str): database URL
+            db_url: database URL
 
         Returns:
-            str: display name
+            display name
         """
         try:
-            registered_names = self._names_by_url[str(db_url)]
+            registered_names = self._names_by_url[normcase_database_url_path(str(db_url))]
         except KeyError:
             return suggest_display_name(db_url)
         else:
@@ -77,37 +80,37 @@ class NameRegistry(QObject):
                 return next(iter(registered_names))
             return suggest_display_name(db_url)
 
-    def display_name_iter(self, db_maps):
+    def display_name_iter(self, db_maps: Iterable[DatabaseMapping]) -> Iterator[str]:
         """Yields database mapping display names.
 
         Args:
-            db_maps (Iterable of DatabaseMapping): database mappings
+            db_maps: database mappings
 
         Yields:
-            str: display name
+            display name
         """
         yield from (self.display_name(db_map.sa_url) for db_map in db_maps)
 
-    def map_display_names_to_db_maps(self, db_maps):
+    def map_display_names_to_db_maps(self, db_maps: Iterable[DatabaseMapping]) -> dict[str, DatabaseMapping]:
         """Returns a dictionary that maps display names to database mappings.
 
         Args:
-            db_maps (Iterable of DatabaseMapping): database mappings
+            db_maps: database mappings
 
         Returns:
-            dict: database mappings keyed by display names
+            database mappings keyed by display names
         """
         return {self.display_name(db_map.sa_url): db_map for db_map in db_maps}
 
 
-def suggest_display_name(db_url):
+def suggest_display_name(db_url: URL | str) -> str:
     """Returns a short name for the database mapping.
 
     Args:
-        db_url (URL or str): database URL
+        db_url: database URL
 
     Returns:
-        str: suggested name for the database for display purposes.
+        suggested name for the database for display purposes.
     """
     if not isinstance(db_url, URL):
         db_url = make_url(db_url)
