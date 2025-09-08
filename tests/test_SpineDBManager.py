@@ -182,7 +182,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", ["7 hours", "12 hours"], [1.1, 2.2, 3.3], False, False)
         item = self._add_value(value, "fixed_resolution")
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.ToolTipRole)
-        self.assertEqual(formatted, "<qt>Start: 2019-07-12 08:00:00<br>resolution: [7h, 12h]<br>length: 3</qt>")
+        self.assertEqual(formatted, "<qt>Start: 2019-07-12T08:00:00<br>resolution: variable<br>length: 3</qt>")
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         item = self._add_value(value, "variable_resolution")
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.ToolTipRole)
