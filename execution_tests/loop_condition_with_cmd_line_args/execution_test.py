@@ -40,8 +40,8 @@ class LoopConditionWithCmdLineArgs(unittest.TestCase):
             output_value = from_database(value_rows[0].value, value_rows[0].type)
         expected_x = [f"T{i:03}" for i in range(31)]
         expected_y = [float(i) for i in range(31)]
-        self.assertEqual(output_value, Map(expected_x, expected_y))
+        self.assertEqual(output_value, Map(expected_x, expected_y, index_name="col_1"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

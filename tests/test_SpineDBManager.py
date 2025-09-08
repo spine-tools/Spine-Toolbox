@@ -520,7 +520,7 @@ class TestUpdateExpandedParameterValues(TestCaseWithQApplication):
                 self.fail("timeout while waiting for update signal")
         updated_item = self._db_map.get_parameter_value_item(id=value_item["id"])
         update_value = from_database(updated_item["value"], updated_item["type"])
-        self.assertEqual(update_value, Map(["a"], ["c"]))
+        self.assertEqual(update_value, Map(["a"], ["c"], index_name="col_1"))
 
 
 class TestRemoveScenarioAlternative(TestCaseWithQApplication):
