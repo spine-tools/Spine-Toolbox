@@ -14,14 +14,14 @@
 from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Iterator
-from typing import ClassVar, Optional
+from typing import ClassVar, Optional, TypedDict
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
 from spinedb_api import DatabaseMapping
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems, rows_to_row_count_tuples
+from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems, parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
@@ -300,7 +300,6 @@ class ParameterMixin:
     value_field: ClassVar[str] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
     parameter_name_column: ClassVar[int] = NotImplemented
-    index_name_fields: ClassVar[tuple[str, ...]] = NotImplemented
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if self.header[index.column()] == self.value_field and role in {
@@ -319,23 +318,6 @@ class ParameterMixin:
         if not name:
             return []
         return [x["entity_class_name"] for x in db_map.get_items("parameter_definition", name=name)]
-
-    def index_name(self, index: QModelIndex) -> str:
-        """Generates a name for data at given index.
-
-        Args:
-            index to model
-
-        Returns:
-            label identifying the data
-        """
-        row_data = self._main_data[index.row()]
-        names = []
-        for index_field in self.index_name_fields:
-            column = self.header.index(index_field)
-            data = row_data[column]
-            names.append(data if data is not None else f"<{index_field}>")
-        return " - ".join(names)
 
     def get_set_data_delayed(self, index: QModelIndex) -> Callable[[tuple[bytes, Optional[str]]], None]:
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
@@ -439,11 +421,25 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     value_field = "default_value"
     type_field = "default_type"
     parameter_name_column = PARAMETER_DEFINITION_MODEL_HEADER.index("parameter_name")
-    index_name_fields = ("database", "entity_class_name", "parameter_name")
     group_fields = ("valid types",)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_DEFINITION_MODEL_HEADER, db_mngr, parent)
+
+    def index_name(self, index: QModelIndex) -> str:
+        """Generates a name for data at given index.
+
+        Args:
+            index to model
+
+        Returns:
+            label identifying the data
+        """
+        row_data = self._main_data[index.row()]
+        database = row_data[self.header.index("database")] or "<database>"
+        entity_class_name = row_data[self.header.index("entity_class_name")] or "<entity_class>"
+        parameter_name = row_data[self.header.index("parameter_name")] or "<parameter>"
+        return parameter_identifier(database, entity_class_name, None, parameter_name, None)
 
     def _make_unique_id(self, item):
         return tuple(item.get(x) for x in ("entity_class_name", "name"))
@@ -462,18 +458,30 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
 
     item_type = "parameter_value"
     field_map = PARAMETER_VALUE_FIELD_MAP
-    index_name_fields: ClassVar[tuple[str, ...]] = (
-        "database",
-        "entity_class",
-    )
     value_field = "value"
     type_field = "type"
     entity_byname_column = PARAMETER_VALUE_MODEL_HEADER.index("entity_byname")
     parameter_name_column = PARAMETER_VALUE_MODEL_HEADER.index("parameter_name")
-    index_name_fields = ("database", "entity_class_name", "entity_byname", "parameter_name", "alternative_name")
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(PARAMETER_VALUE_MODEL_HEADER, db_mngr, parent)
+
+    def index_name(self, index: QModelIndex) -> str:
+        """Generates a name for data at given index.
+
+        Args:
+            index to model
+
+        Returns:
+            label identifying the data
+        """
+        row_data = self._main_data[index.row()]
+        database = row_data[self.header.index("database")] or "<database>"
+        entity_class_name = row_data[self.header.index("entity_class_name")] or "<entity_class>"
+        parameter_name = row_data[self.header.index("parameter_name")] or "<parameter>"
+        entity_byname = row_data[self.header.index("entity_byname")] or ["<entity>"]
+        alternative_name = row_data[self.header.index("alternative_name")] or "<alternative>"
+        return parameter_identifier(database, entity_class_name, entity_byname, parameter_name, alternative_name)
 
     @staticmethod
     def _check_item(item):

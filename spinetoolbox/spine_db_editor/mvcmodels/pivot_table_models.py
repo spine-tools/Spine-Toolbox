@@ -1192,20 +1192,15 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id).get("name", "")
         return entity_names, parameter_name, alternative_name, self.db_mngr.name_registry.display_name(db_map.sa_url)
 
-    def index_name(self, index):
+    def index_name(self, index: QModelIndex) -> str:
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.
+
         Used by plotting and ParameterValueEditor.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            str
         """
         if not self.index_in_data(index):
             return ""
         entity_names, parameter_name, alternative_name, db_name = self.all_header_names(index)
-        return parameter_identifier(db_name, parameter_name, entity_names, alternative_name)
+        return parameter_identifier(db_name, None, parameter_name, entity_names, alternative_name)
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.

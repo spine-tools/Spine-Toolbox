@@ -1401,20 +1401,33 @@ DB_ITEM_SEPARATOR = " \u01C0 "
 """Display string to separate items such as entity names."""
 
 
-def parameter_identifier(database, parameter, names, alternative):
+def parameter_identifier(
+    database: str | None,
+    entity_class_name: str | None,
+    entity_byname: list[str] | None,
+    parameter: str,
+    alternative: str | None,
+) -> str:
     """Concatenates given information into parameter value identifier string.
 
     Args:
-        database (str, optional): database's code name
-        parameter (str): parameter's name
-        names (list of str): name of the entity or class that holds the value
-        alternative (str or NoneType): name of the value's alternative
+        database: database's code name
+        entity_class_name: entity class' name
+        entity_byname: entity's byname
+        parameter: parameter's name
+        alternative: name of the value's alternative
+
+    Returns:
+        identifier string
     """
     parts = [database] if database is not None else []
-    parts += [parameter]
+    if entity_class_name is not None:
+        parts.append(entity_class_name)
+    if entity_byname is not None:
+        parts += [DB_ITEM_SEPARATOR.join(entity_byname)]
+    parts.append(parameter)
     if alternative is not None:
         parts += [alternative]
-    parts += [DB_ITEM_SEPARATOR.join(names)]
     return " - ".join(parts)
 
 

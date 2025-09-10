@@ -91,7 +91,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         model.init_model()
         fetch_model(model)
         index = model.index(0, 3)
-        self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - x - Object")
+        self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - Object - x")
 
 
 class TestCompoundParameterValueModel(TestBase):
@@ -190,7 +190,9 @@ class TestCompoundParameterValueModel(TestBase):
         model.init_model()
         fetch_model(model)
         index = model.index(0, 3)
-        self.assertEqual(model.index_name(index), "TestCompoundParameterValueModel_db - x - Base - mysterious cube")
+        self.assertEqual(
+            model.index_name(index), "TestCompoundParameterValueModel_db - Object - mysterious cube - x - Base"
+        )
 
     def test_removing_first_of_two_rows(self):
         self._db_map.add_entity_class(name="Object")
