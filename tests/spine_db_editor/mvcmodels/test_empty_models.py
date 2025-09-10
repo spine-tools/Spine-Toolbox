@@ -322,7 +322,7 @@ class TestEmptyParameterDefinitionModel:
         with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
             model.append_empty_row()
             index = model.index(0, model.columnCount() - 2)
-            assert model.index_name(index) == "<database> - <entity_class_name> - <parameter_name>"
+            assert model.index_name(index) == "<database> - <entity_class> - <parameter>"
 
     def test_value_index_name_when_row_has_data(self, db_mngr):
         with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
@@ -341,10 +341,7 @@ class TestEmptyParameterValueModel:
         with q_object(EmptyParameterValueModel(db_mngr, parent=None)) as model:
             model.append_empty_row()
             index = model.index(0, model.columnCount() - 2)
-            assert (
-                model.index_name(index)
-                == "<database> - <entity_class_name> - <entity_byname> - <parameter_name> - <alternative_name>"
-            )
+            assert model.index_name(index) == "<database> - <entity_class> - <entity> - <parameter> - <alternative>"
 
     def test_value_index_name_when_row_has_data(self, db_mngr):
         with q_object(EmptyParameterValueModel(db_mngr, parent=None)) as model:
@@ -352,11 +349,7 @@ class TestEmptyParameterValueModel:
             model.set_undo_stack(undo_stack)
             model.append_empty_row()
             indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 2), model.index(0, 3), model.index(0, 5)]
-            data = ["my class", "my entity", "my parameter", "my alternative", "my database"]
+            data = ["my class", ("my entity",), "my parameter", "my alternative", "my database"]
             model.batch_set_data(indexes, data)
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my entity - my parameter - my alternative"
-
-
-if __name__ == "__main__":
-    unittest.main()

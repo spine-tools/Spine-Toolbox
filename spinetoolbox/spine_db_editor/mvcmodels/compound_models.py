@@ -656,19 +656,20 @@ class EditParameterValueMixin:
         if item is None:
             return ""
         database = self.index(index.row(), self.columnCount() - 1).data()
+        entity_class_name = item["entity_class_name"]
         if self.item_type == "parameter_definition":
             parameter_name = item["name"]
-            names = [item["entity_class_name"]]
+            entity_byame = None
             alternative_name = None
         elif self.item_type == "parameter_value":
             parameter_name = item["parameter_name"]
-            names = list(item["entity_byname"])
+            entity_byame = list(item["entity_byname"])
             alternative_name = item["alternative_name"]
         else:
             raise ValueError(
                 f"invalid item_type: expected parameter_definition or parameter_value, got {self.item_type}"
             )
-        return parameter_identifier(database, parameter_name, names, alternative_name)
+        return parameter_identifier(database, entity_class_name, entity_byame, parameter_name, alternative_name)
 
     def get_set_data_delayed(self, index):
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,

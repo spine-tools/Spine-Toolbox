@@ -24,6 +24,7 @@ from PySide6.QtWidgets import QLineEdit, QWidget
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
+    DB_ITEM_SEPARATOR,
     HTMLTagFilter,
     add_keyboard_shortcut_to_tool_tip,
     add_keyboard_shortcuts_to_action_tool_tips,
@@ -48,6 +49,7 @@ from spinetoolbox.helpers import (
     merge_dicts,
     normcase_database_url_path,
     order_key,
+    parameter_identifier,
     plain_to_rich,
     plain_to_tool_tip,
     recursive_overwrite,
@@ -582,3 +584,15 @@ class TestNormcaseDatabaseUrlPath:
             assert (
                 normcase_database_url_path("sqlite:///home/SansSerif/in.sqlite") == "sqlite:///home/SansSerif/in.sqlite"
             )
+
+
+class TestParameterIdentifier:
+    def test_correctness(self):
+        parts = DB_ITEM_SEPARATOR.join(("a", "b"))
+        assert (
+            parameter_identifier("db", "my class", ["a", "b"], "par", "alt") == f"db - my class - {parts} - par - alt"
+        )
+        assert parameter_identifier(None, "my class", ["a", "b"], "par", "alt") == f"my class - {parts} - par - alt"
+        assert parameter_identifier("db", None, ["a"], "par", "alt") == f"db - a - par - alt"
+        assert parameter_identifier("db", "my class", None, "par", "alt") == f"db - my class - par - alt"
+        assert parameter_identifier("db", "my class", ["a", "b"], "par", None) == f"db - my class - {parts} - par"
