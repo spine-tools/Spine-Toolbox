@@ -16,7 +16,6 @@ from collections.abc import Iterable
 from typing import ClassVar, Type
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QFont
-from spinedb_api.parameter_value import join_value_and_type
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import parameter_identifier, rows_to_row_count_tuples
 from ..widgets.custom_menus import AutoFilterMenu
@@ -684,7 +683,7 @@ class EditParameterValueMixin:
         sub_model = self.sub_model_at_row(index.row())
         id_ = self.item_at_row(index.row())
         return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
-            [{"id": id_, sub_model.value_field: join_value_and_type(*value_and_type)}]
+            [{"id": id_, sub_model.value_field: value_and_type[0], sub_model.type_field: value_and_type[1]}]
         )
 
 

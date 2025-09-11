@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``project_item_icon`` module."""
+import gc
 import os.path
 from tempfile import TemporaryDirectory
 import unittest
@@ -25,8 +26,8 @@ from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.project_item_icon import ExclamationIcon, ProjectItemIcon, RankIcon
 from tests.mock_helpers import (
-    TestCaseWithQApplication,
     MockSpineDBManager,
+    TestCaseWithQApplication,
     add_view,
     clean_up_toolbox,
     create_toolboxui_with_project,
@@ -162,13 +163,14 @@ class TestLink(TestCaseWithQApplication):
 
     def tearDown(self):
         clean_up_toolbox(self._toolbox)
+        gc.collect()
         self._temp_dir.cleanup()
 
     def test_scenario_filter_gets_added_to_filter_model(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_scenarios(db_map, (("scenario", True),))
-        db_map.commit_session("Add test data.")
+        with DatabaseMapping(url, create=True) as db_map:
+            import_scenarios(db_map, (("scenario", True),))
+            db_map.commit_session("Add test data.")
         db_map.close()
         self._link.connection.receive_resources_from_source(
             [database_resource("provider", url, "my_database", filterable=True)]
@@ -206,9 +208,9 @@ class TestLink(TestCaseWithQApplication):
 
     def test_toggle_scenario_filter(self):
         url = "sqlite:///" + os.path.join(self._temp_dir.name, "db.sqlite")
-        db_map = DatabaseMapping(url, create=True)
-        import_scenarios(db_map, (("scenario", True),))
-        db_map.commit_session("Add test data.")
+        with DatabaseMapping(url, create=True) as db_map:
+            import_scenarios(db_map, (("scenario", True),))
+            db_map.commit_session("Add test data.")
         db_map.close()
         self._link.connection.receive_resources_from_source([database_resource("provider", url, filterable=True)])
         self._link.connection.refresh_resource_filter_model()

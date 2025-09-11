@@ -375,7 +375,7 @@ class TestPlotPivotTableSelection(TestBase):
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "col_1")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
             lines = plot_widget.canvas.axes.get_lines()
@@ -405,7 +405,7 @@ class TestPlotPivotTableSelection(TestBase):
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
             self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
+            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "col_2")
             self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
