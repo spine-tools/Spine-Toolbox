@@ -33,6 +33,10 @@ jobs:
             pyproject.toml
             requirements.txt
       - name: Install dependencies
+      - name: Python full version
+        id: py-full
+        run: |
+          python --version | ForEach-Object { 'ver=' + ($_.Trim() -split '\s+')[1] } >> $Env:GITHUB_OUTPUT
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
