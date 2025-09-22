@@ -18,6 +18,12 @@ jobs:
         with:
           ref: ${{ inputs.git-ref }}
           fetch-depth: 0
+      - name: Test if tag
+        id: commit
+        continue-on-error: true
+        run: |
+          git describe --tags --exact-match
+          Write-Output "is_tag=$(if ($?) { 'true' } else { 'false' })" >> $Env:GITHUB_OUTPUT
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
