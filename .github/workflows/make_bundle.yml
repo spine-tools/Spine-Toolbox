@@ -60,7 +60,7 @@ jobs:
         run: |
           mkdir embedded-python
           cd embedded-python
-          curl -o python.zip https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip
+          curl -o python.zip https://www.python.org/ftp/python/${{ steps.py-full.outputs.ver }}/python-${{ steps.py-full.outputs.ver }}-embed-amd64.zip
           tar xf python.zip
           del python.zip
       - name: Edit embedded Python search paths
