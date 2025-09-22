@@ -94,7 +94,17 @@ jobs:
         shell: bash
         run: |
           python -c "from importlib.metadata import version; print('version=' + version('spinetoolbox'))" >> $GITHUB_OUTPUT
+      - name: Create GitHub release for version ${{ inputs.git-ref }}
+        if: steps.commit.outputs.is_tag == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.git-ref }}
+          body: |
+            See [CHANGELOG.md](https://github.com/spine-tools/Spine-Toolbox/blob/${{ inputs.git-ref }}/CHANGELOG.md) for release notes.
+          files: |
+            dist/Spine Toolbox/*.zip
       - name: Upload archive
+        if: steps.commit.outputs.is_tag == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
