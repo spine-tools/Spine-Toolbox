@@ -104,7 +104,7 @@ jobs:
           body: |
             See [CHANGELOG.md](https://github.com/spine-tools/Spine-Toolbox/blob/${{ inputs.git-ref }}/CHANGELOG.md) for release notes.
           files: |
-            dist/Spine Toolbox/*.zip
+            dist/Spine Toolbox/Spine-Toolbox-win-${{ inputs.git-ref }}.zip
       - name: Upload archive
         if: steps.commit.outputs.is_tag == 'false'
         uses: actions/upload-artifact@v4
