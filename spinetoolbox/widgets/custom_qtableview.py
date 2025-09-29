@@ -16,6 +16,7 @@ import csv
 import ctypes
 import io
 from itertools import cycle
+import json
 import locale
 from numbers import Number
 from operator import methodcaller
@@ -33,7 +34,8 @@ from spinedb_api import (
     from_database,
     to_database,
 )
-from spinedb_api.parameter_value import FLOAT_VALUE_TYPE, join_value_and_type, split_value_and_type
+from spinedb_api.incomplete_values import join_value_and_type, split_value_and_type
+from spinedb_api.parameter_value import FLOAT_VALUE_TYPE
 from ..mvcmodels.empty_row_model import EmptyRowModel
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from .paste_excel import EXCEL_CLIPBOARD_MIME_TYPE, clipboard_excel_as_table
@@ -853,12 +855,16 @@ class MapTableView(CopyPasteTableView):
                         except SpineDBAPIError:
                             pass
                     try:
-                        value = from_database(*split_value_and_type(cell))
-                        table_row.append(value)
-                        continue
-                    except ParameterValueFormatError:
-                        pass
-                    table_row.append(cell)
+                        value_and_type = split_value_and_type(cell)
+                    except json.JSONDecodeError:
+                        table_row.append(cell)
+                    else:
+                        try:
+                            value = from_database(*value_and_type)
+                        except ParameterValueFormatError:
+                            table_row.append(cell)
+                        else:
+                            table_row.append(value)
                 pasted_table.append(table_row)
         return pasted_table
 

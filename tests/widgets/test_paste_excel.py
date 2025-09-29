@@ -11,7 +11,7 @@
 ######################################################################################################################
 import unittest
 from spinedb_api import DateTime, to_database
-from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.incomplete_values import join_value_and_type
 from spinetoolbox.widgets.paste_excel import clipboard_excel_as_table
 
 
@@ -71,8 +71,7 @@ class Test(unittest.TestCase):
  </Worksheet>\r\n\
 </Workbook>\r\n\
 \x00'
-        value, _ = to_database(True)
-        self.assertEqual(clipboard_excel_as_table(data), [[value]])
+        self.assertEqual(clipboard_excel_as_table(data), [[join_value_and_type(*to_database(True))]])
 
     def test_convert_single_number_cell(self):
         data = b'<?xml version="1.0"?>\r\n\
@@ -169,7 +168,7 @@ class Test(unittest.TestCase):
  </Worksheet>\r\n\
 </Workbook>\r\n\
 \x00'
-        value = bytes(join_value_and_type(*to_database(DateTime("2024-08-14T14:41:44"))), encoding="utf-8")
+        value = join_value_and_type(*to_database(DateTime("2024-08-14T14:41:44")))
         self.assertEqual(clipboard_excel_as_table(data), [[value]])
 
     def test_small_table(self):
@@ -212,8 +211,8 @@ class Test(unittest.TestCase):
  </Worksheet>\r\n\
 </Workbook>\r\n\
 \x00'
-        bool_value, _ = to_database(True)
-        date_time_value = bytes(join_value_and_type(*to_database(DateTime("2024-08-14T14:41:44"))), encoding="utf-8")
+        bool_value = join_value_and_type(*to_database(True))
+        date_time_value = join_value_and_type(*to_database(DateTime("2024-08-14T14:41:44")))
         self.assertEqual(
             clipboard_excel_as_table(data), [[2.3, bool_value, date_time_value], ["this is text", None, None]]
         )

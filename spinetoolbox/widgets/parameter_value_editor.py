@@ -60,10 +60,10 @@ class ParameterValueEditor(ParameterValueEditorBase):
     def _set_data(self, value):
         """See base class."""
         try:
-            value_type_tup = to_database(value)
+            value_and_type = to_database(value)
         except ParameterValueFormatError as error:
             message = f"Cannot set value: {error}"
             QMessageBox.warning(self, "Parameter Value error", message)
             return False
-        self.set_data_delayed(value_type_tup)
+        self.set_data_delayed(value_and_type)
         return True
