@@ -32,7 +32,9 @@ class FetchParent(QObject):
 
     _changes_pending = Signal()
 
-    def __init__(self, index: Optional[FetchIndex] = None, owner: Optional[object] = None, chunk_size: int = 1000):
+    def __init__(
+        self, index: Optional[FetchIndex] = None, owner: Optional[object] = None, chunk_size: int | None = 1000
+    ):
         """
         Args:
             index: an index to speedup looking up fetched items
@@ -261,7 +263,7 @@ class ItemTypeFetchParent(FetchParent):
         fetch_item_type: str,
         index: Optional[FetchIndex] = None,
         owner: Optional[object] = None,
-        chunk_size: int = 1000,
+        chunk_size: int | None = 1000,
     ):
         super().__init__(index=index, owner=owner, chunk_size=chunk_size)
         self._fetch_item_type = fetch_item_type
@@ -299,7 +301,7 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         key_for_index: Optional[Callable[[DatabaseMapping], TempId]] = None,
         index: Optional[FetchIndex] = None,
         owner: Optional[object] = None,
-        chunk_size: int = 1000,
+        chunk_size: int | None = 1000,
     ):
         super().__init__(fetch_item_type, index=index, owner=owner, chunk_size=chunk_size)
         self._handle_items_added = handle_items_added
