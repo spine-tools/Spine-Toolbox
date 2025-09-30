@@ -24,6 +24,7 @@ from PySide6.QtGui import QAction, QColor, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from sqlalchemy.engine.url import URL
+from spine_engine.logger_interface import LoggerInterface
 from spinedb_api import (
     Array,
     Asterisk,
@@ -59,10 +60,9 @@ from spinedb_api.parameter_value import (
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
-from spinetoolbox.database_display_names import NameRegistry
+from .database_display_names import NameRegistry
 from .fetch_parent import FetchParent
 from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, plain_to_tool_tip
-from .logger_interface import LoggerInterface
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
 from .parameter_type_validation import ParameterTypeValidator
 from .spine_db_commands import (

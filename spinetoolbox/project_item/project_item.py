@@ -20,12 +20,12 @@ from typing import TYPE_CHECKING, Optional
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QWidget
+from spine_engine.logger_interface import LoggerInterface
 from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.utils.helpers import ExecutionDirection, shorten
 from ..helpers import create_dir, open_url, rename_dir
 from ..log_mixin import LogMixin
-from ..logger_interface import LoggerInterface
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..project_item_icon import ProjectItemIcon
