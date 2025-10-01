@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Data Connection: it is now possible to add references to directories to Data Connection items.
+  They may be useful as command line arguments to Tools.
+- Data Connection: it is now possible to add file patterns, i.e. references to contents of given directory
+  using wildcards. They can be used, among other things, as Optional input files for Tools.
+- Data Connection: references can now be modified by right-clicking them and selecting **Select another...**
+  from the popup menu.
+
 ### Changed
 
 ### Deprecated
