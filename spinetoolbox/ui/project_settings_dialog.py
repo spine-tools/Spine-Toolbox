@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'project_settings_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.1
+## Created by: Qt User Interface Compiler version 6.9.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -63,7 +63,6 @@ class Ui_Form(object):
 
         self.name_line_edit = QLineEdit(Form)
         self.name_line_edit.setObjectName(u"name_line_edit")
-        self.name_line_edit.setEnabled(False)
         self.name_line_edit.setReadOnly(True)
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.name_line_edit)
