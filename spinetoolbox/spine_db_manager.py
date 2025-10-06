@@ -343,7 +343,7 @@ class SpineDBManager(QObject):
 
     def get_db_map(
         self,
-        url: str,
+        url: str | URL,
         logger: LoggerInterface,
         create: bool = False,
         force_upgrade_prompt: bool = False,
@@ -352,7 +352,8 @@ class SpineDBManager(QObject):
         """Returns a DatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
         """
-        url = str(url)
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
         db_map = self._db_maps.get(url)
         if db_map is not None:
             return db_map
