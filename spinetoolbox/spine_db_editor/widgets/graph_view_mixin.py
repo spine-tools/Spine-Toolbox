@@ -11,12 +11,14 @@
 ######################################################################################################################
 
 """Contains the GraphViewMixin class."""
+from collections.abc import Sequence
+from dataclasses import dataclass
 import itertools
 import json
 import math
 from time import monotonic
 from typing import Optional, Union
-from PySide6.QtCore import Qt, QThreadPool, QTimer, Slot
+from PySide6.QtCore import QPoint, Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QPen
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
@@ -62,6 +64,16 @@ def _min_max(pvs):
 @busy_effect
 def _min_max_indexes(pvs):
     return min(pv.indexes[0] for pv in pvs), max(pv.indexes[-1] for pv in pvs)
+
+
+@dataclass(frozen=True)
+class AddingObjects:
+    position: QPoint
+
+
+@dataclass(frozen=True)
+class ConnectingEntities:
+    entity_items: Sequence[EntityItem]
 
 
 class GraphViewMixin:
@@ -111,6 +123,7 @@ class GraphViewMixin:
             "parameter_value", handle_items_added=self._graph_handle_parameter_values_added, owner=self
         )
         self._graph_fetch_more_later()
+        self._entity_addition_mode: AddingObjects | ConnectingEntities | None = None
 
     @Slot(int)
     def _update_time_line_index(self, index):
@@ -268,6 +281,16 @@ class GraphViewMixin:
         Args:
             db_map_data: list of dictionary-items keyed by DatabaseMapping instance.
         """
+        if isinstance(self._entity_addition_mode, AddingObjects):
+            self._do_add_entities_at_pos(
+                db_map_data, self._entity_addition_mode.position.x(), self._entity_addition_mode.position.y()
+            )
+            self._entity_addition_mode = None
+            return
+        if isinstance(self._entity_addition_mode, ConnectingEntities):
+            self._do_finalize_connecting_entities(db_map_data, self._entity_addition_mode.entity_items)
+            self._entity_addition_mode = None
+            return
         new_db_map_id_sets = self.add_db_map_ids_to_items(db_map_data)
         if not new_db_map_id_sets:
             self._graph_fetch_more_later(entity=True, parameter_value=False)
@@ -871,13 +894,14 @@ class GraphViewMixin:
                     entities.add(element_byname_list)
         if not entities:
             return
-        dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map, commit_data=False)
-        dialog.accepted.connect(lambda: self._do_finalize_connecting_entities(dialog, entity_items))
+        self._entity_addition_mode = ConnectingEntities(entity_items)
+        dialog = AddReadyEntitiesDialog(self, entity_class, list(entities), self.db_mngr, db_map)
         dialog.show()
 
-    def _do_finalize_connecting_entities(self, dialog, element_items):
-        added_db_map_data = self._add_entities_from_dialog(dialog)
-        new_db_map_id_sets = list(self._db_map_ids_by_key(added_db_map_data).values())
+    def _do_finalize_connecting_entities(
+        self, db_map_data: DBMapPublicItems, element_items: Sequence[EntityItem]
+    ) -> None:
+        new_db_map_id_sets = list(self._db_map_ids_by_key(db_map_data).values())
         for db_map_ids in new_db_map_id_sets:
             entity_item = EntityItem(
                 self, 0, 0, self._VERTEX_EXTENT, tuple(db_map_ids), offset=self._get_entity_offset(db_map_ids)
@@ -893,14 +917,13 @@ class GraphViewMixin:
                 arc_item.ent_item.update_entity_pos()
 
     def add_entities_at_position(self, pos):
+        self._entity_addition_mode = AddingObjects(pos)
         parent_item = self.entity_tree_model.root_item
-        dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps, commit_data=False)
-        dialog.accepted.connect(lambda: self._do_add_entites_at_pos(dialog, pos.x(), pos.y()))
+        dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def _do_add_entites_at_pos(self, dialog, x, y):
-        added_db_map_data = self._add_entities_from_dialog(dialog)
-        new_db_map_id_sets = list(self._db_map_ids_by_key(added_db_map_data).values())
+    def _do_add_entities_at_pos(self, db_map_data: DBMapPublicItems, x: float, y: float) -> None:
+        new_db_map_id_sets = list(self._db_map_ids_by_key(db_map_data).values())
         spread = self._VERTEX_EXTENT * self.ui.graphicsView.zoom_factor
         gen = GraphLayoutGenerator(len(new_db_map_id_sets), spread=spread)
         layout_x, layout_y = gen.compute_layout()
@@ -908,19 +931,6 @@ class GraphViewMixin:
             entity_item = EntityItem(self, x + dx, y + dy, self._VERTEX_EXTENT, tuple(db_map_ids))
             self.scene.addItem(entity_item)
             entity_item.apply_zoom(self.ui.graphicsView.zoom_factor)
-
-    def _add_entities_from_dialog(self, dialog):
-        db_map_data = dialog.get_db_map_data()
-        self._entity_fetch_parent.set_busy(True)
-        self.db_mngr.add_items("entity", db_map_data)
-        self._entity_fetch_parent.set_busy(False)
-        added_db_map_data = {
-            db_map: [db_map.get_item("entity", **item) for item in items] for db_map, items in db_map_data.items()
-        }
-        for db_map, items in added_db_map_data.items():
-            for item in items:
-                self._entity_fetch_parent.bind_item(item, db_map)
-        return added_db_map_data
 
     def get_save_file_path(self, group, caption, filters):
         self.qsettings.beginGroup(self.settings_group)
@@ -968,6 +978,6 @@ class _Offset:
 class EntityBorder:
     """Highlight borders for the EntityItems"""
 
-    INACTIVE = QPen(Qt.SolidLine)
-    CONFLICTED = QPen(Qt.DashLine)
-    PARAMETER_VALUE = QPen(Qt.DotLine)
+    INACTIVE = QPen(Qt.PenStyle.SolidLine)
+    CONFLICTED = QPen(Qt.PenStyle.DashLine)
+    PARAMETER_VALUE = QPen(Qt.PenStyle.DotLine)
