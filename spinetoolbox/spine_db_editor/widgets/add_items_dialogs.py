@@ -450,16 +450,15 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         super().__init__(parent, db_mngr, *db_maps)
         self._commit_data = commit_data
         self.entity_names_by_class_name = {}
+        self.class_key: str | None = None
         if item.item_type == "entity":
             entity_name = item.name
             entity_class_name = item.parent_item.name
             self.entity_names_by_class_name = {entity_class_name: entity_name}
             if item.parent_item.item_type == "entity_class":
                 self.class_key = item.parent_item.display_id
-                self.class_item = item.parent_item
         elif item.item_type == "entity_class":
             self.class_key = item.display_id
-            self.class_item = item
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
@@ -528,10 +527,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.model.clear()
 
     def _class_is_active_by_default(self) -> bool:
-        db_map = self.class_item.first_db_map
-        id_ = self.class_item.db_map_ids[db_map]
-        with self.db_mngr.get_lock(db_map):
-            return db_map.mapped_table("entity_class")[id_]["active_by_default"]
+        for db_map, class_lookup in self.db_map_ent_cls_lookup_by_name.items():
+            if self.class_name in class_lookup:
+                class_item = class_lookup[self.class_name]
+                return class_item["active_by_default"]
+        raise RuntimeError(f"logic error: no database mapping for entity class {self.class_name}")
 
     def _resolve_default_alternative(self, default_db_maps: list[DatabaseMapping]) -> str:
         selected_alt_name = None
