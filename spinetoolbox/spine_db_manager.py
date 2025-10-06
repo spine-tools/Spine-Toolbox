@@ -134,7 +134,7 @@ class SpineDBManager(QObject):
         """
         super().__init__(parent)
         self.qsettings = settings
-        self._db_maps = {}
+        self._db_maps: dict[str, DatabaseMapping] = {}
         self.name_registry = NameRegistry(self)
         self._workers: dict[DatabaseMapping, SpineDBWorker] = {}
         self._lock_lock = RLock()
@@ -286,7 +286,8 @@ class SpineDBManager(QObject):
         Returns:
             a database map or None if not found
         """
-        url = str(url)
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
         return self._db_maps.get(url)
 
     def create_new_spine_database(self, url: str, logger: LoggerInterface, overwrite: bool = False):
