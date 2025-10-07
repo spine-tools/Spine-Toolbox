@@ -187,6 +187,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.setWindowTitle("Add entity classes")
         self.model = EmptyAddEntityOrClassRowModel(self)
         self.model.force_default = force_default
+        self.model.rowsInserted.connect(self._focus_on_table)
         self.table_view.setModel(self.model)
         self.dimension_count_widget = QWidget(self)
         layout = QHBoxLayout(self.dimension_count_widget)
@@ -350,6 +351,12 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def dialog_item_name():
         return "entity class name"
 
+    @Slot(QModelIndex, int, int)
+    def _focus_on_table(self, parent: QModelIndex, first: int, last: int) -> None:
+        self.model.rowsInserted.disconnect(self._focus_on_table)
+        self.table_view.setCurrentIndex(self.model.index(0, 0))
+        self.table_view.setFocus()
+
 
 class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new entities."""
@@ -363,6 +370,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.model = self.make_model()
+        self.model.rowsInserted.connect(self._focus_on_table)
         self.table_view.setModel(self.model)
         self.header_widget = QWidget(self)
         layout = QHBoxLayout(self.header_widget)
@@ -430,6 +438,12 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
             el_names = [n for n in (self.model.index(row, j).data() for j in range(dimension_count)) if n]
             entity_name = name_from_elements(el_names)
             self.model.setData(self.model.index(row, dimension_count), entity_name, role=Qt.ItemDataRole.UserRole)
+
+    @Slot(QModelIndex, int, int)
+    def _focus_on_table(self, parent: QModelIndex, first: int, last: int) -> None:
+        self.model.rowsInserted.disconnect(self._focus_on_table)
+        self.table_view.setCurrentIndex(self.model.index(0, 0))
+        self.table_view.setFocus()
 
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):

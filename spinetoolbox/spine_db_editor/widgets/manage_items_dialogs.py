@@ -74,6 +74,8 @@ class DialogWithTableAndButtons(DialogWithButtons):
     def showEvent(self, ev):
         super().showEvent(ev)
         self.resize_window_to_columns()
+        if self.table_view.currentIndex() is None:
+            self.table_view.setFocus()
 
     def make_table_view(self) -> QTableWidget:
         raise NotImplementedError()
