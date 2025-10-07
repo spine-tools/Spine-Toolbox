@@ -11,23 +11,27 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add, edit and remove database items."""
+from __future__ import annotations
 from functools import cached_property, reduce
-from PySide6.QtCore import QModelIndex, Qt, Slot
+from typing import TYPE_CHECKING, Any
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QGridLayout, QHeaderView, QMenu
+from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox, QGridLayout, QHeaderView, QMenu, QTableWidget
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.temp_id import TempId
 from spinetoolbox.spine_db_editor.widgets.custom_editors import IconColorEditor
 from ...helpers import DB_ITEM_SEPARATOR, busy_effect, preferred_row_height
+from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_qtableview import CopyPasteTableView
-from ..mvcmodels.entity_tree_item import EntityClassItem
+from ..mvcmodels.entity_tree_item import EntityClassItem, EntityClassVisualKey
+
+if TYPE_CHECKING:
+    from .spine_db_editor import SpineDBEditor
 
 
 class DialogWithButtons(QDialog):
-    def __init__(self, parent, db_mngr):
-        """
-        Args:
-            parent (SpineDBEditor): data store widget
-            db_mngr (SpineDBManager)
-        """
+    def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager):
         super().__init__(parent)
         self.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self.db_mngr = db_mngr
@@ -36,17 +40,17 @@ class DialogWithButtons(QDialog):
         self.addAction(self._accept_action)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         QGridLayout(self)
 
     def showEvent(self, ev):
         super().showEvent(ev)
         self._populate_layout()
 
-    def _populate_layout(self):
+    def _populate_layout(self) -> None:
         self.layout().addWidget(self.button_box)
 
-    def connect_signals(self):
+    def connect_signals(self) -> None:
         """Connect signals to slots."""
         self._accept_action.triggered.connect(self.accept)
         self.button_box.accepted.connect(self._accept_action.trigger)
@@ -54,18 +58,14 @@ class DialogWithButtons(QDialog):
 
 
 class DialogWithTableAndButtons(DialogWithButtons):
-    def __init__(self, parent, db_mngr):
-        """
-        Args:
-            parent (SpineDBEditor): data store widget
-            db_mngr (SpineDBManager)
-        """
+    def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager):
         super().__init__(parent, db_mngr)
         self.table_view = self.make_table_view()
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.horizontalHeader().setMinimumSectionSize(120)
         self.table_view.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+        self.table_view.setFocus()
 
     def _populate_layout(self):
         self.layout().addWidget(self.table_view)
@@ -75,10 +75,10 @@ class DialogWithTableAndButtons(DialogWithButtons):
         super().showEvent(ev)
         self.resize_window_to_columns()
 
-    def make_table_view(self):
+    def make_table_view(self) -> QTableWidget:
         raise NotImplementedError()
 
-    def resize_window_to_columns(self, height=None):
+    def resize_window_to_columns(self, height: int | None = None) -> None:
         self.table_view.resizeColumnsToContents()
         if height is None:
             height = self.sizeHint().height()
@@ -94,27 +94,30 @@ class DialogWithTableAndButtons(DialogWithButtons):
             height,
         )
 
+    def _commit_open_edits(self) -> None:
+        index = self.table_view.currentIndex()
+        if not self.table_view.isPersistentEditorOpen(index):
+            return
+        editor = self.table_view.indexWidget(index)
+        delegate = self.table_view.itemDelegateForIndex(index)
+        delegate.commitData.emit(editor)
+
 
 class ManageItemsDialog(DialogWithTableAndButtons):
     """A dialog with a CopyPasteTableView and a QDialogButtonBox. Base class for all
     dialogs to query user's preferences for adding/editing/managing data items.
     """
 
-    def __init__(self, parent, db_mngr):
-        """
-        Args:
-            parent (SpineDBEditor): data store widget
-            db_mngr (SpineDBManager)
-        """
+    def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager):
         super().__init__(parent, db_mngr)
-        self.model = None
+        self.model: QAbstractTableModel | None = None
 
-    def make_table_view(self):
+    def make_table_view(self) -> CopyPasteTableView:
         table_view = CopyPasteTableView(self)
         table_view.init_copy_and_paste_actions()
         return table_view
 
-    def connect_signals(self):
+    def connect_signals(self) -> None:
         """Connect signals to slots."""
         super().connect_signals()
         try:
@@ -125,18 +128,20 @@ class ManageItemsDialog(DialogWithTableAndButtons):
         self.model.modelReset.connect(self._handle_model_reset)
 
     @Slot(QModelIndex, QModelIndex, list)
-    def _handle_model_data_changed(self, top_left, bottom_right, roles):
+    def _handle_model_data_changed(
+        self, top_left: QModelIndex, bottom_right: QModelIndex, roles: list[Qt.ItemDataRole]
+    ) -> None:
         """Reimplement in subclasses to handle changes in model data."""
 
     @Slot(QModelIndex, object)
-    def set_model_data(self, index, data):
+    def set_model_data(self, index: QModelIndex, data: Any | None) -> None:
         """Update model data."""
         if data is None:
             return
         self.model.setData(index, data, Qt.ItemDataRole.EditRole)
 
     @Slot()
-    def _handle_model_reset(self):
+    def _handle_model_reset(self) -> None:
         """Resize columns and form."""
         self.table_view.resizeColumnsToContents()
         self.resize_window_to_columns()
@@ -146,7 +151,7 @@ class GetEntityClassesMixin:
     """Provides a method to retrieve entity classes for AddEntitiesDialog and AddEntityClassesDialog."""
 
     @cached_property
-    def db_map_ent_cls_lookup(self):
+    def db_map_ent_cls_lookup(self) -> dict[DatabaseMapping, dict[EntityClassVisualKey, PublicItem]]:
         return {
             db_map: {
                 tuple(x[k] for k in EntityClassItem.visual_key): x
@@ -156,26 +161,26 @@ class GetEntityClassesMixin:
         }
 
     @cached_property
-    def db_map_ent_cls_lookup_by_name(self):
+    def db_map_ent_cls_lookup_by_name(self) -> dict[DatabaseMapping, dict[str, PublicItem]]:
         return {
             db_map: {x["name"]: x for x in self.db_mngr.get_items(db_map, "entity_class")} for db_map in self.db_maps
         }
 
-    def entity_class_name_list(self, row):
+    def entity_class_name_list(self, row: int) -> list[str]:
         """Return a list of entity class names present in all databases selected for given row.
         Used by `ManageEntityClassesDelegate`.
         """
         db_column = self.model.header.index("databases")
         db_names = self.model._main_data[row][db_column]
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(", ") if x in self.keyed_db_maps]
-        return self._entity_class_name_list_from_db_maps(*db_maps)
+        return self._entity_class_name_list_from_db_maps(db_maps)
 
-    def _entity_class_name_list_from_db_maps(self, *db_maps):
+    def _entity_class_name_list_from_db_maps(self, db_maps: list[DatabaseMapping]) -> list[str]:
         db_maps = iter(db_maps)
         db_map = next(db_maps, None)
         if not db_map:
             return []
-        # Initalize list from first db_map
+        # Initialize list from first db_map
         entity_class_name_list = list(self.db_map_ent_cls_lookup_by_name[db_map])
         # Update list from remaining db_maps
         for db_map in db_maps:
@@ -190,29 +195,29 @@ class GetEntitiesMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entity_class = None
-        self._class_key = None
+        self.entity_class: PublicItem | None = None
+        self._class_key: EntityClassVisualKey | None = None
 
     @property
-    def class_key(self):
+    def class_key(self) -> EntityClassVisualKey | None:
         return self._class_key
 
     @property
-    def dimension_name_list(self):
+    def dimension_name_list(self) -> tuple[str, ...]:
         return self.entity_class["dimension_name_list"]
 
     @property
-    def class_name(self):
+    def class_name(self) -> str:
         return self.entity_class["name"]
 
     @class_key.setter
-    def class_key(self, class_key):
+    def class_key(self, class_key: EntityClassVisualKey) -> None:
         self._class_key = class_key
         entity_classes = (self.db_map_ent_cls_lookup[db_map].get(self.class_key) for db_map in self.db_maps)
         self.entity_class = next((x for x in entity_classes if x is not None), None)
 
     @cached_property
-    def db_map_ent_lookup(self):
+    def db_map_ent_lookup(self) -> dict[DatabaseMapping, dict[tuple[TempId, str], PublicItem]]:
         db_map_ent_lookup = {}
         for db_map in self.db_maps:
             ent_lookup = db_map_ent_lookup.setdefault(db_map, {})
@@ -222,13 +227,13 @@ class GetEntitiesMixin:
         return db_map_ent_lookup
 
     @cached_property
-    def db_map_alt_id_lookup(self):
+    def db_map_alt_id_lookup(self) -> dict[DatabaseMapping, dict[str, TempId]]:
         return {
             db_map: {x["name"]: x["id"] for x in self.db_mngr.get_items(db_map, "alternative")}
             for db_map in self.db_maps
         }
 
-    def alternative_name_list(self, row):
+    def alternative_name_list(self, row: int) -> list[str]:
         """Return a list of alternative names present in all databases selected for given row.
         Used by `ManageEntitiesDelegate`.
         """
@@ -237,7 +242,7 @@ class GetEntitiesMixin:
         db_maps = [self.keyed_db_maps[x] for x in db_names.split(", ") if x in self.keyed_db_maps]
         return sorted(set(x for db_map in db_maps for x in self.db_map_alt_id_lookup[db_map]))
 
-    def entity_name_list(self, row, column):
+    def entity_name_list(self, row: int, column: int) -> list[str]:
         """Return a list of entity names present in all databases selected for given row.
         Used by `ManageEntitiesDelegate`.
         """

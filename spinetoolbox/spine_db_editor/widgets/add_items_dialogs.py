@@ -281,6 +281,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
+        self._commit_open_edits()
         db_map_data = {}
         header_labels = self.model.horizontal_header_labels()
         name_column = header_labels.index("entity class name")
@@ -608,6 +609,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
+        self._commit_open_edits()
         db_map_data = self.get_db_map_data()
         if db_map_data is None:
             return
