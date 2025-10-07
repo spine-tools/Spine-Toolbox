@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes to represent entities in a tree."""
+from typing import TypeAlias
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon
 from spinetoolbox.fetch_parent import FetchIndex, FlexibleFetchParent
@@ -88,6 +89,9 @@ class EntityTreeRootItem(MultiDBTreeItem):
             child.set_has_children_initially(
                 any(child.db_map_id(db_map) in db_map_entity_class_ids.get(db_map, ()) for db_map in child.db_maps)
             )
+
+
+EntityClassVisualKey: TypeAlias = tuple[str, tuple[str, ...], str | None]
 
 
 class EntityClassItem(MultiDBTreeItem):

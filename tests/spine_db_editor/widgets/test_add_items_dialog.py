@@ -445,6 +445,13 @@ class TestAddEntitiesDialog(TestBase):
         self.assertEqual(model.index(0, 2).data(), None)
         self.assertEqual(model.index(0, 3).data(), self.db_codename)
 
+    def test_get_db_map_data_when_dialog_is_empty(self):
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1", "active_by_default": False}]})
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        root_item = self._db_editor.entity_tree_model.item_from_index(root_index)
+        dialog = AddEntitiesDialog(self._db_editor, root_item, self._db_mngr, self._db_map)
+        self.assertEqual(dialog.get_db_map_data(), {})
+
 
 if __name__ == "__main__":
     unittest.main()
