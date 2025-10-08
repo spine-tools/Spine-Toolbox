@@ -84,6 +84,7 @@ from PySide6.QtWidgets import (
     QStyle,
     QWidget,
 )
+from spine_engine.logger_interface import LoggerInterface
 from spine_engine.utils.serialization import deserialize_path
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
@@ -98,7 +99,6 @@ from .config import (
     SPECIFICATION_LOCAL_DATA_FILENAME,
 )
 from .font import TOOLBOX_FONT
-from .logger_interface import LoggerInterface
 
 if TYPE_CHECKING:
     from .ui_main import ToolboxUI
