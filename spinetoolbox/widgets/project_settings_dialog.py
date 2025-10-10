@@ -57,8 +57,10 @@ class ProjectSettingsDialog(QDialog):
         self._ui.item_directory_size_label.setText(f"Calculating...")
         self._file_size_aggregator.start_aggregating(self._temp_item_paths)
 
-    @Slot(int)
-    def _update_path_sizes(self, size: int) -> None:
+    @Slot(str)
+    def _update_path_sizes(self, size: int | str) -> None:
+        if isinstance(size, str):
+            size = int(size)
         number, unit = display_byte_size(size)
         self._ui.item_directory_size_label.setText(f"Temporary files in item directories: {number}{unit}")
 
