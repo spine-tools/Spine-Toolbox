@@ -34,7 +34,7 @@ from spine_engine.utils.helpers import (
     make_dag,
     shorten,
 )
-from spine_engine.utils.serialization import deserialize_path, serialize_path
+from spine_engine.utils.serialization import PathDict, deserialize_path, serialize_path
 from .config import (
     FG_COLOR,
     INVALID_CHARS,
@@ -290,7 +290,7 @@ class SpineToolboxProject(MetaObject):
                 except ValueError:
                     self._logger.msg_error.emit(f"Failed to save specification <b>{spec.name}</b>.")
                     continue
-                serialized_path = serialize_path(spec.definition_file_path, self.project_dir)
+                serialized_path = self.serialize_path(spec.definition_file_path)
                 serialized_spec_paths.setdefault(spec.item_type, []).append(serialized_path)
             if local_data:
                 specifications_local_data.setdefault(spec.item_type, {}).setdefault(spec.name, {}).update(local_data)
@@ -407,6 +407,10 @@ class SpineToolboxProject(MetaObject):
 
     def jump_from_dict(self, jump_dict):
         return LoggingJump.from_dict(jump_dict, toolbox=self._toolbox)
+
+    def serialize_path(self, path: str | Path) -> PathDict:
+        is_relative = True if self._settings.store_external_paths_as_relative else None
+        return serialize_path(path, self.project_dir, is_relative)
 
     def add_specification(self, specification, save_to_disk=True):
         """Adds a specification to the project.

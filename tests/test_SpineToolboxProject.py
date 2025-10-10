@@ -576,7 +576,7 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
                     "connections": [],
                     "description": "",
                     "jumps": [],
-                    "settings": {"enable_execute_all": True},
+                    "settings": {"enable_execute_all": True, "store_external_paths_as_relative": False},
                     "specifications": {},
                     "version": LATEST_PROJECT_VERSION,
                 },
