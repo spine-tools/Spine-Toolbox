@@ -38,6 +38,7 @@ class ProjectSettingsDialog(QDialog):
         self._ui.name_line_edit.setText(self._project.name)
         self._ui.description_text_edit.setPlainText(self._project.description)
         self._ui.enable_execute_all_check_box.setChecked(self._project.settings.enable_execute_all)
+        self._ui.store_paths_as_relative_check_box.setChecked(self._project.settings.store_external_paths_as_relative)
         self._ui.delete_item_files_button.clicked.connect(self._clean_item_directories)
         self._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self.accept)
         self._ui.button_box.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self.reject)
@@ -90,9 +91,14 @@ class ProjectSettingsDialog(QDialog):
         description = self.description
         if description != self._project.description:
             updates["description"] = description
+        settings = self._project.settings
         enable_execute_all = self._ui.enable_execute_all_check_box.isChecked()
-        if enable_execute_all != self._project.settings.enable_execute_all:
-            updates["settings"] = ProjectSettings(enable_execute_all)
+        store_paths_as_relative = self._ui.store_paths_as_relative_check_box.isChecked()
+        if (
+            enable_execute_all != settings.enable_execute_all
+            or store_paths_as_relative != settings.store_external_paths_as_relative
+        ):
+            updates["settings"] = ProjectSettings(enable_execute_all, store_paths_as_relative)
         if updates:
             self._project.update_settings(**updates)
 
