@@ -9,35 +9,15 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""Contains project-specific settings."""
-from __future__ import annotations
-import dataclasses
+from spinetoolbox.project_settings import ProjectSettings
 
 
-@dataclasses.dataclass
-class ProjectSettings:
-    """Spine Toolbox project settings."""
+class TestProjectSettings:
+    def test_serialization(self):
+        settings = ProjectSettings(False, True)
+        serialized = settings.to_dict()
+        assert ProjectSettings.from_dict(serialized) == settings
 
-    enable_execute_all: bool = True
-    store_external_paths_as_relative: bool = False
-
-    def to_dict(self) -> dict:
-        """Serializes the settings into a dictionary.
-
-        Returns:
-            serialized settings
-        """
-        return dataclasses.asdict(self)
-
-    @staticmethod
-    def from_dict(settings_dict: dict) -> ProjectSettings:
-        """Deserializes settings from dictionary.
-
-        Args:
-            settings_dict: serialized settings
-
-        Returns:
-            deserialized settings
-        """
-        return ProjectSettings(**settings_dict)
+    def test_deserialize_v1(self):
+        serialized = {"enable_execute_all": False}
+        assert ProjectSettings.from_dict(serialized) == ProjectSettings(enable_execute_all=False)

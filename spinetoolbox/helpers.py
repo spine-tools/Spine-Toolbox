@@ -13,7 +13,7 @@
 """General helper functions and classes."""
 from __future__ import annotations
 import bisect
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
@@ -73,11 +73,13 @@ from PySide6.QtGui import (
     QUndoCommand,
 )
 from PySide6.QtWidgets import (
+    QAbstractScrollArea,
     QApplication,
     QFileDialog,
     QFileIconProvider,
     QInputDialog,
     QLineEdit,
+    QMainWindow,
     QMenu,
     QMessageBox,
     QSplitter,
@@ -1565,18 +1567,12 @@ def inquire_index_name(model, column, title, parent_widget):
     model.setHeaderData(column, Qt.Orientation.Horizontal, new_name)
 
 
-def preferred_row_height(widget, factor=1.5):
+def preferred_row_height(widget: QWidget, factor: float = 1.5) -> float:
     return factor * widget.fontMetrics().lineSpacing()
 
 
-def restore_ui(window, app_settings, settings_group):
-    """Restores UI state from previous session.
-
-    Args:
-        window (QMainWindow)
-        app_settings (QSettings)
-        settings_group (str)
-    """
+def restore_ui(window: QMainWindow, app_settings: QSettings, settings_group: str) -> None:
+    """Restores UI state from previous session."""
     app_settings.beginGroup(settings_group)
     window_size = app_settings.value("windowSize")
     window_pos = app_settings.value("windowPosition")
@@ -1596,44 +1592,40 @@ def restore_ui(window, app_settings, settings_group):
         window.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
     # noinspection PyArgumentList
     if len(QGuiApplication.screens()) < int(n_screens):
-        # There are less screens available now than on previous application startup
+        # There are fewer screens available now than on previous application startup
         window.move(0, 0)  # Move this widget to primary screen position (0,0)
     for splitter, state in splitter_states.items():
         splitter.restoreState(state)
     ensure_window_is_on_screen(window, original_size)
     if window_maximized == "true":
-        window.setWindowState(Qt.WindowMaximized)
+        window.setWindowState(Qt.WindowState.WindowMaximized)
 
 
-def save_ui(window, app_settings, settings_group):
-    """Saves UI state for next session.
-
-    Args:
-        window (QMainWindow)
-        app_settings (QSettings)
-        settings_group (str)
-    """
+def save_ui(window: QMainWindow, app_settings: QSettings, settings_group: str) -> None:
+    """Saves UI state for next session."""
     app_settings.beginGroup(settings_group)
     app_settings.setValue("windowSize", window.size())
     app_settings.setValue("windowPosition", window.pos())
     app_settings.setValue("windowState", window.saveState(version=1))
-    app_settings.setValue("windowMaximized", window.windowState() == Qt.WindowMaximized)
+    app_settings.setValue("windowMaximized", window.windowState() == Qt.WindowState.WindowMaximized)
     app_settings.setValue("n_screens", len(QGuiApplication.screens()))
     for splitter in window.findChildren(QSplitter):
         app_settings.setValue(splitter.objectName() + "State", splitter.saveState())
     app_settings.endGroup()
 
 
-def bisect_chunks(current_data, new_data, key=None):
+def bisect_chunks(
+    current_data: list, new_data: list, key: Callable[[Any], Any] | None = None
+) -> Iterator[tuple[list, int]]:
     """Finds insertion points for chunks of data using binary search.
 
     Args:
-        current_data (list): sorted list where to insert new data
-        new_data (list): data to insert
-        key (Callable, optional): sort key
+        current_data: sorted list where to insert new data
+        new_data: data to insert
+        key: sort key
 
-    Returns:
-        tuple: sorted chunk of new data, insertion position
+    Yields:
+        sorted chunk of new data, insertion position
     """
     if key is not None:
         current_data = [key(x) for x in current_data]
@@ -1645,7 +1637,7 @@ def bisect_chunks(current_data, new_data, key=None):
 
     new_data = sorted(new_data, key=key)
     if not new_data:
-        return ()
+        return
     item = new_data[0]
     chunk = [item]
     lo = bisect.bisect_left(current_data, key(item))
@@ -1661,15 +1653,15 @@ def bisect_chunks(current_data, new_data, key=None):
     yield chunk, lo
 
 
-def load_project_dict(project_config_dir, logger):
+def load_project_dict(project_config_dir: str | pathlib.Path, logger: LoggerInterface) -> dict | None:
     """Loads project dictionary from project directory.
 
     Args:
-        project_config_dir (str): project's .spinetoolbox directory
-        logger (LoggerInterface): a logger
+        project_config_dir: project's .spinetoolbox directory
+        logger: a logger
 
     Returns:
-        dict: project dictionary
+        project dictionary
     """
     load_path = os.path.abspath(os.path.join(project_config_dir, PROJECT_FILENAME))
     try:
@@ -1685,15 +1677,15 @@ def load_project_dict(project_config_dir, logger):
     return project_dict
 
 
-def load_local_project_data(project_config_dir, logger):
+def load_local_project_data(project_config_dir: str | pathlib.Path, logger: LoggerInterface) -> dict:
     """Loads local project data.
 
     Args:
-        project_config_dir (Path or str): project's .spinetoolbox directory
-        logger (LoggerInterface): a logger
+        project_config_dir: project's .spinetoolbox directory
+        logger: a logger
 
     Returns:
-        dict: project's local data
+        project's local data
     """
     load_path = pathlib.Path(project_config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME)
     if not load_path.exists():
@@ -1707,12 +1699,12 @@ def load_local_project_data(project_config_dir, logger):
     return local_data_dict
 
 
-def merge_dicts(source, target):
+def merge_dicts(source: dict, target: dict) -> None:
     """Merges two dictionaries that may contain nested dictionaries recursively.
 
     Args:
-        source (dict): dictionary that will be merged to ``target``
-        target (dict): target dictionary
+        source: dictionary that will be merged to ``target``
+        target: target dictionary
     """
     for key, value in source.items():
         target_entry = target.get(key)
@@ -1722,13 +1714,13 @@ def merge_dicts(source, target):
             target[key] = value
 
 
-def fix_lightness_color(color, lightness=240):
+def fix_lightness_color(color: QColor, lightness: int = 240) -> QColor:
     h, s, _, a = color.getHsl()
     return QColor.fromHsl(h, s, lightness, a)
 
 
 @contextmanager
-def scrolling_to_bottom(widget, tolerance=1):
+def scrolling_to_bottom(widget: QAbstractScrollArea, tolerance: int = 1) -> Iterator[None]:
     scrollbar = widget.verticalScrollBar()
     at_bottom = scrollbar.value() >= scrollbar.maximum() - tolerance
     try:
@@ -1738,14 +1730,14 @@ def scrolling_to_bottom(widget, tolerance=1):
             scrollbar.setValue(scrollbar.maximum())
 
 
-def _is_metadata_item(item):
+def _is_metadata_item(item: dict) -> bool:
     """Identifies a database metadata record.
 
     Args:
-        item (dict): database item
+        item: database item
 
     Returns:
-        bool: True if item is metadata item, False otherwise
+        True if item is metadata item, False otherwise
     """
     return "name" in item and "value" in item
 
@@ -1757,7 +1749,7 @@ class HTMLTagFilter(HTMLParser):
         super().__init__()
         self._text = ""
 
-    def drain(self):
+    def drain(self) -> str:
         text = self._text
         self._text = ""
         return text
@@ -1769,11 +1761,11 @@ class HTMLTagFilter(HTMLParser):
         if tag == "br":
             self._text += "\n"
 
-    def error(self, message):
+    def error(self, message: str) -> None:
         """To stop pylint whining"""
 
 
-def same_path(path1, path2):
+def same_path(path1: str | pathlib.Path, path2: str | pathlib.Path) -> bool:
     """Checks if two paths are equal.
 
     This is a lightweight version of os.path.samefile(): it doesn't check if the paths
@@ -1781,26 +1773,26 @@ def same_path(path1, path2):
     case-sensitivity and such.
 
     Args:
-        path1 (str): a path
-        path2 (str): a path
+        path1: a path
+        path2: a path
 
     Returns:
-        bool: True if paths point to the same
+        True if paths point to the same
     """
     return os.path.normcase(path1) == os.path.normcase(path2)
 
 
-def solve_connection_file(connection_file, connection_file_dict):
+def solve_connection_file(connection_file: str, connection_file_dict: dict) -> str:
     """Returns the connection_file path, if it exists on this computer. If the path
     doesn't exist, assume that it points to a path on another computer, in which
     case store the contents of connection_file_dict into a tempfile.
 
     Args:
-        connection_file (str): Path to a connection file
+        connection_file: Path to a connection file
         connection_file_dict (dict) Contents of a connection file
 
     Returns:
-        str: Path to a connection file on this computer.
+        Path to a connection file on this computer.
     """
     if not os.path.exists(connection_file):
         fp = tempfile.TemporaryFile(mode="w+", suffix=".json", delete=False)
@@ -1811,7 +1803,7 @@ def solve_connection_file(connection_file, connection_file_dict):
     return connection_file
 
 
-def remove_first(lst, items):
+def remove_first(lst: list, items: Iterable) -> None:
     for x in items:
         try:
             lst.remove(x)
@@ -1823,10 +1815,10 @@ def remove_first(lst, items):
 class SealCommand(QUndoCommand):
     """A 'meta' command that does not store undo data but can be used in mergeWith methods of other commands."""
 
-    def __init__(self, command_id=1):
+    def __init__(self, command_id: int = 1):
         """
         Args:
-            command_id (int): command id
+            command_id: command id
         """
         super().__init__("")
         self._id = command_id
@@ -1838,38 +1830,38 @@ class SealCommand(QUndoCommand):
         return self._id
 
 
-def plain_to_rich(text):
+def plain_to_rich(text: str) -> str:
     """Turns plain strings into rich text.
 
     Args:
-        text (str): string to convert
+        text: string to convert
 
     Returns:
-        str: rich text string
+        rich text string
     """
     return "<qt>" + text + "</qt>"
 
 
-def list_to_rich_text(data):
+def list_to_rich_text(data: Iterable[str]) -> str:
     """Turns a sequence of strings into rich text list.
 
     Args:
-        data (Sequence of str): iterable to convert
+        data: iterable to convert
 
     Returns:
-        str: rich text string
+        rich text string
     """
     return plain_to_rich("<br>".join(data))
 
 
-def plain_to_tool_tip(text):
+def plain_to_tool_tip(text: str | None) -> str | None:
     """Turns plain strings into rich text and empty strings/Nones to None.
 
     Args:
-        text (str, optional): string to convert
+        text: string to convert
 
     Returns:
-        str or NoneType: rich text string or None
+        rich text string or None
     """
     return plain_to_rich(text) if text else None
 
@@ -1877,23 +1869,30 @@ def plain_to_tool_tip(text):
 class CustomPopupMenu(QMenu):
     """Popup menu master class for several popup menus."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget):
         """
         Args:
-            parent (QWidget): Parent widget of this pop-up menu
+            parent: Parent widget of this pop-up menu
         """
         super().__init__(parent=parent)
         self._parent = parent
 
-    def add_action(self, text, slot, enabled=True, tooltip=None, icon=None):
+    def add_action(
+        self,
+        text: str,
+        slot: Callable[[bool], None],
+        enabled: bool = True,
+        tooltip: str | None = None,
+        icon: QIcon | None = None,
+    ):
         """Adds an action to the popup menu.
 
         Args:
-            text (str): Text description of the action
-            slot (method): Method to connect to action's triggered signal
-            enabled (bool): Is action enabled?
-            tooltip (str): Tool tip for the action
-            icon (QIcon): Action icon
+            text: Text description of the action
+            slot: Method to connect to action's triggered signal
+            enabled: Is action enabled?
+            tooltip: Tool tip for the action
+            icon: Action icon
         """
         if icon is not None:
             action = self.addAction(icon, text, slot)
@@ -1904,7 +1903,7 @@ class CustomPopupMenu(QMenu):
             action.setToolTip(tooltip)
 
 
-def order_key(name):
+def order_key(name: str) -> list[str]:
     """Splits the given string into a list of its substrings and fills digits with '0'
     to ensure that e.g. 1 and 11 get sorted correctly.
 
@@ -1916,11 +1915,11 @@ def order_key(name):
     return key_list
 
 
-def add_keyboard_shortcut_to_tool_tip(action):
+def add_keyboard_shortcut_to_tool_tip(action: QAction) -> None:
     """Adds keyboard shortcut to action's tool tip.
 
     Args:
-        action (QAction): action to modify
+        action: action to modify
     """
     shortcut = action.shortcut()
     if shortcut.isEmpty():
@@ -1938,11 +1937,11 @@ def add_keyboard_shortcut_to_tool_tip(action):
     action.setToolTip(ElementTree.tostring(new_root, encoding="utf-8", method="html").decode())
 
 
-def add_keyboard_shortcuts_to_action_tool_tips(ui):
+def add_keyboard_shortcuts_to_action_tool_tips(ui: Any) -> None:
     """Appends keyboard shortcuts to the tool tip texts of given UI's actions.
 
     Args:
-        ui (object): UI to modify
+        ui: UI to modify
     """
     for attribute in dir(ui):
         action = getattr(ui, attribute)
@@ -1951,11 +1950,11 @@ def add_keyboard_shortcuts_to_action_tool_tips(ui):
         add_keyboard_shortcut_to_tool_tip(action)
 
 
-def clear_qsettings(settings):
+def clear_qsettings(settings: QSettings) -> None:
     """Clears Application Settings.
 
     Args:
-        settings (QSettings): Settings instance that refers to
+        settings: Settings instance that refers to
         'Spine Toolbox' application in a 'SpineProject' organization.
     """
     settings.clear()

@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- There is now a new checkbox in Project Settings, **Store all paths as relative to project dir**
+  (accessible from **File -> Project settings...**),
+  that turns all file paths into relative paths in `project.json`.
+  This may be useful for projects that are shared among multiple users.
 - Data Connection: it is now possible to add references to directories to Data Connection items.
   They may be useful as command line arguments to Tools.
 - Data Connection: it is now possible to add file patterns, i.e. references to contents of given directory

@@ -67,6 +67,11 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.name_line_edit)
 
+        self.store_paths_as_relative_check_box = QCheckBox(Form)
+        self.store_paths_as_relative_check_box.setObjectName(u"store_paths_as_relative_check_box")
+
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.store_paths_as_relative_check_box)
+
 
         self.verticalLayout.addLayout(self.formLayout)
 
@@ -106,6 +111,7 @@ class Ui_Form(object):
         self.label.setText(QCoreApplication.translate("Form", u"Name:", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"Description:", None))
         self.enable_execute_all_check_box.setText(QCoreApplication.translate("Form", u"Enable \"Execute All\" button", None))
+        self.store_paths_as_relative_check_box.setText(QCoreApplication.translate("Form", u"Store all paths as relative to project dir", None))
         self.item_directory_size_label.setText(QCoreApplication.translate("Form", u"Calculating item directory sizes...", None))
         self.delete_item_files_button.setText(QCoreApplication.translate("Form", u"Delete files...", None))
     # retranslateUi

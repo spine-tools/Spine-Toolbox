@@ -45,6 +45,17 @@ class TestProjectSettingsDialog:
         assert not project.settings.enable_execute_all
         dialog.close()
 
+    def test_enable_store_all_paths_as_relative_action(self, spine_toolbox_with_project, parent_widget):
+        project = spine_toolbox_with_project.project()
+        assert not project.settings.store_external_paths_as_relative
+        dialog = ProjectSettingsDialog(parent_widget, project)
+        assert not dialog._ui.store_paths_as_relative_check_box.isChecked()
+        dialog._ui.store_paths_as_relative_check_box.setChecked(True)
+        dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
+        assert dialog.isHidden()
+        assert project.settings.store_external_paths_as_relative
+        dialog.close()
+
     def test_item_directory_cleanup(self, spine_toolbox_with_project, parent_widget):
         project = spine_toolbox_with_project.project()
         dialog = ProjectSettingsDialog(parent_widget, project)

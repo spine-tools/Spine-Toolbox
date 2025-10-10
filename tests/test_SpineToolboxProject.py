@@ -33,6 +33,7 @@ from spinetoolbox.project import node_successors
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
+from spinetoolbox.project_settings import ProjectSettings
 from tests.mock_helpers import (
     TestCaseWithQApplication,
     add_data_transformer,
@@ -576,7 +577,7 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
                     "connections": [],
                     "description": "",
                     "jumps": [],
-                    "settings": {"enable_execute_all": True},
+                    "settings": {"enable_execute_all": True, "store_external_paths_as_relative": False},
                     "specifications": {},
                     "version": LATEST_PROJECT_VERSION,
                 },
@@ -731,6 +732,29 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         with open(local_data_file) as data_input:
             local_data = json.load(data_input)
         self.assertEqual(local_data, {})
+
+    def test_undo_modify_project_description(self):
+        project = self.toolbox.project()
+        self.assertEqual(project.description, "")
+        project.update_settings(description="I'm just a test project.")
+        self.assertEqual(project.description, "I'm just a test project.")
+        self.assertEqual(self.toolbox.undo_stack.text(self.toolbox.undo_stack.count() - 1), "update project settings")
+        self.toolbox.undo_stack.undo()
+        self.assertEqual(project.description, "")
+
+    def test_undo_modify_project_settings(self):
+        project = self.toolbox.project()
+        self.assertEqual(project.settings, ProjectSettings())
+        new_settings = ProjectSettings(
+            enable_execute_all=not project.settings.enable_execute_all,
+            store_external_paths_as_relative=not project.settings.store_external_paths_as_relative,
+        )
+        project.update_settings(settings=new_settings)
+        self.assertIsNot(project.settings, new_settings)
+        self.assertEqual(project.settings, new_settings)
+        self.assertEqual(self.toolbox.undo_stack.text(self.toolbox.undo_stack.count() - 1), "update project settings")
+        self.toolbox.undo_stack.undo()
+        self.assertEqual(project.settings, ProjectSettings())
 
     def _make_mock_executable(self, item):
         item_name = item.name
