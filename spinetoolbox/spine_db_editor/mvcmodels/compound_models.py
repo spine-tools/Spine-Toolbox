@@ -112,10 +112,16 @@ class CompoundStackedModel(CompoundTableModel):
         model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
         model.modelAboutToBeReset.connect(lambda model=model: self._handle_single_model_about_to_be_reset(model))
         model.dataChanged.connect(
-            lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
-                self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
+            lambda top_left, bottom_right, roles, model=model: self._handle_single_model_data_changed(
+                top_left, bottom_right, roles, model
             )
         )
+
+    def _handle_single_model_data_changed(self, top_left, bottom_right, roles, model):
+        top_left = self.map_from_sub(model, top_left)
+        bottom_right = self.map_from_sub(model, bottom_right)
+        if top_left.isValid() and bottom_right.isValid():
+            self.dataChanged.emit(top_left, bottom_right, roles)
 
     def _handle_single_model_about_to_be_reset(self, model: SingleModelBase) -> None:
         """Runs when given model is about to reset."""

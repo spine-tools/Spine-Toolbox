@@ -18,7 +18,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 
 class AggregatorProcess(QObject):
-    aggregated = Signal(int)
+    aggregated = Signal(str)  # Send size as a string; int is only 32 bits, too small for large directories.
 
     def __init__(self, parent: Optional[QObject]):
         super().__init__(parent)
@@ -41,7 +41,7 @@ class AggregatorProcess(QObject):
             size = self._receiver.recv()
             self._process.join()
             self._process = None
-            self.aggregated.emit(size)
+            self.aggregated.emit(str(size))
         else:
             self._timer.start()
 

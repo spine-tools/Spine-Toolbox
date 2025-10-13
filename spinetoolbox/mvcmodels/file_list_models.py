@@ -12,13 +12,15 @@
 
 """Contains a generic File list model and an Item for that model."""
 from collections import namedtuple
+from functools import cache, cached_property
 from itertools import takewhile
 import json
 from pathlib import Path
-from PySide6.QtCore import QAbstractItemModel, QFileInfo, QMimeData, QModelIndex, Qt, Signal
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QFileIconProvider
-from spine_engine.project_item.project_item_resource import CmdLineArg, LabelArg, extract_packs
+from typing import Any
+from PySide6.QtCore import QAbstractItemModel, QFileInfo, QMimeData, QModelIndex, QObject, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import QApplication, QFileIconProvider
+from spine_engine.project_item.project_item_resource import CmdLineArg, LabelArg, ProjectItemResource, extract_packs
 from spinetoolbox.helpers import plain_to_rich
 
 
@@ -28,11 +30,11 @@ class FileListModel(QAbstractItemModel):
     FileItem = namedtuple("FileItem", ["resource"])
     PackItem = namedtuple("PackItem", ["label", "resources"])
 
-    def __init__(self, header_label="", draggable=False):
+    def __init__(self, header_label: str = "", draggable: bool = False):
         """
         Args:
-            header_label (str): header label
-            draggable (bool): if True, the top level items are drag and droppable
+            header_label: header label
+            draggable: if True, the top level items are drag and droppable
         """
         super().__init__()
         self._header_label = header_label
@@ -104,13 +106,13 @@ class FileListModel(QAbstractItemModel):
     def flags(self, index):
         if index.internalPointer() is None:
             if index.row() < len(self._single_resources):
-                flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemNeverHasChildren
+                flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemNeverHasChildren
             else:
-                flags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+                flags = Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled
             if self._draggable:
-                flags = flags | Qt.ItemIsDragEnabled
+                flags = flags | Qt.ItemFlag.ItemIsDragEnabled
             return flags
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemNeverHasChildren
+        return Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemNeverHasChildren
 
     def mimeData(self, indexes):
         data = QMimeData()
@@ -118,15 +120,8 @@ class FileListModel(QAbstractItemModel):
         data.setText(text)
         return data
 
-    def resource(self, index):
-        """Returns the resource at given index.
-
-        Args:
-            index (QModelIndex): index
-
-        Returns:
-            ProjectItemResource: resource
-        """
+    def resource(self, index: QModelIndex) -> ProjectItemResource:
+        """Returns the resource at given index."""
         pack_label = index.internalPointer()
         if pack_label is None:
             row = index.row()
@@ -151,12 +146,8 @@ class FileListModel(QAbstractItemModel):
         pack_label = self._pack_resources[parent_row - len(self._single_resources)].label
         return self.createIndex(row, column, pack_label)
 
-    def update(self, resources):
-        """Updates the model according to given list of resources.
-
-        Args:
-            resources (Iterable of ProjectItemResource): resources
-        """
+    def update(self, resources: list[ProjectItemResource]) -> None:
+        """Updates the model according to given list of resources."""
         self.beginResetModel()
         single_resources, pack_resources = extract_packs(resources)
         new_singles = [self.FileItem(r) for r in single_resources]
@@ -167,11 +158,11 @@ class FileListModel(QAbstractItemModel):
         self._pack_resources = new_packs
         self.endResetModel()
 
-    def duplicate_paths(self):
+    def duplicate_paths(self) -> set[str]:
         """Checks if resources in the model have duplicate file paths.
 
         Returns:
-            set of str: set of duplicate file paths
+            set of duplicate file paths
         """
         single_paths = [Path(item.resource.path) for item in self._single_resources if item.resource.hasfilepath]
         pack_paths = [Path(r.path) for item in self._pack_resources for r in item.resources if r.hasfilepath]
@@ -185,20 +176,28 @@ class FileListModel(QAbstractItemModel):
                 seen.add(str(path))
         return duplicates
 
-    def _pack_index(self, pack_label):
+    def _pack_index(self, pack_label: str) -> int:
         """Finds a pack's index in pack resources list.
 
         Args:
-            pack_label (str): pack label
+            pack_label: pack label
 
         Returns:
-            int: index to pack resources list
+            index to pack resources list
         """
         return len(list(takewhile(lambda item: item.label != pack_label, self._pack_resources)))
 
 
 class CommandLineArgItem(QStandardItem):
-    def __init__(self, text="", rank=None, selectable=False, editable=False, drag_enabled=False, drop_enabled=False):
+    def __init__(
+        self,
+        text: str = "",
+        rank: int | None = None,
+        selectable: bool = False,
+        editable: bool = False,
+        drag_enabled: bool = False,
+        drop_enabled: bool = False,
+    ):
         super().__init__(text)
         self.setEditable(editable)
         self.setDropEnabled(drop_enabled)
@@ -206,17 +205,17 @@ class CommandLineArgItem(QStandardItem):
         self.setSelectable(selectable)
         self.set_rank(rank)
 
-    def set_rank(self, rank):
+    def set_rank(self, rank: int | None) -> None:
         if rank is not None:
             icon = self._make_icon(rank)
             self.setIcon(icon)
 
     @staticmethod
-    def _make_icon(rank=None):
+    def _make_icon(rank: int | None = None) -> QIcon:
         pixmap = QPixmap(16, 16)
-        pixmap.fill(Qt.white)
+        pixmap.fill(Qt.GlobalColor.white)
         painter = QPainter(pixmap)
-        painter.drawText(0, 0, 16, 16, Qt.AlignCenter, f"{rank}:")
+        painter.drawText(0, 0, 16, 16, Qt.AlignmentFlag.AlignCenter, f"{rank}:")
         painter.end()
         return QIcon(pixmap)
 
@@ -231,9 +230,14 @@ class CommandLineArgItem(QStandardItem):
 class NewCommandLineArgItem(CommandLineArgItem):
     def __init__(self):
         super().__init__("Type arg, or drag and drop from Available resources...", selectable=True, editable=True)
-        gray_color = qApp.palette().text().color()  # pylint: disable=undefined-variable
+        self.setForeground(self.text_color_hint())
+
+    @staticmethod
+    @cache
+    def text_color_hint() -> QColor:
+        gray_color = QApplication.instance().palette().text().color()
         gray_color.setAlpha(128)
-        self.setForeground(gray_color)
+        return gray_color
 
     def setData(self, value, role=Qt.ItemDataRole.UserRole + 1):
         if role != Qt.ItemDataRole.EditRole:
@@ -246,19 +250,26 @@ class NewCommandLineArgItem(CommandLineArgItem):
 class CommandLineArgsModel(QStandardItemModel):
     args_updated = Signal(list)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self.setHorizontalHeaderItem(0, QStandardItem("Command line arguments"))
-        self._args = []
+        self._args: list[CmdLineArg] = []
 
     @property
-    def args(self):
+    def args(self) -> list[CmdLineArg]:
         return self._args
 
-    def append_arg(self, arg):
+    @staticmethod
+    @cache
+    def non_label_arg_font() -> QFont:
+        font = QFont("")
+        font.setStyleHint(QFont.StyleHint.Monospace)
+        return font
+
+    def append_arg(self, arg: CmdLineArg) -> None:
         self.args_updated.emit(self._args + [arg])
 
-    def replace_arg(self, row, arg):
+    def replace_arg(self, row: int, arg: CmdLineArg) -> None:
         new_args = self._args.copy()
         new_args[row] = arg
         self.args_updated.emit(new_args)
@@ -285,8 +296,9 @@ class CommandLineArgsModel(QStandardItemModel):
             return True
         return False
 
-    @staticmethod
-    def _reset_root(root, args, child_params, has_empty_row=True):
+    def _reset_root(
+        self, root: QStandardItem, args: list[CmdLineArg], child_params: dict[str, Any], has_empty_row: bool = True
+    ) -> None:
         last_row = root.rowCount()
         if has_empty_row:
             last_row -= 1
@@ -302,15 +314,21 @@ class CommandLineArgsModel(QStandardItemModel):
             child.set_rank(k)
             child.setText(str(arg))
             color = QColor("red") if arg.missing else None
-            child.setData(color, role=Qt.ForegroundRole)
+            child.setData(color, role=Qt.ItemDataRole.ForegroundRole)
+            if isinstance(arg, LabelArg):
+                child.setFlags(child.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                child.setFont(QFont())
+            else:
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsEditable)
+                child.setFont(self.non_label_arg_font())
 
 
 class JumpCommandLineArgsModel(CommandLineArgsModel):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
         self.invisibleRootItem().appendRow(NewCommandLineArgItem())
 
-    def reset_model(self, args):
+    def reset_model(self, args: list[CmdLineArg]) -> None:
         self._args = args
         self._reset_root(
             self.invisibleRootItem(),

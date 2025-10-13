@@ -1053,8 +1053,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.work_dir_info_label.setText("Cannot find work directory.")
 
-    @Slot(int)
-    def set_work_directory_size(self, size: int) -> None:
+    @Slot(str)
+    def set_work_directory_size(self, size: int | str) -> None:
+        if isinstance(size, str):
+            size = int(size)
         rounded_size, unit = display_byte_size(size)
         self.ui.work_dir_info_label.setText(f"Work directory size: {rounded_size}{unit}")
 

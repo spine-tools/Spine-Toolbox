@@ -22,7 +22,7 @@ class TestAggregatorProcess:
             with signal_waiter(aggregator.aggregated, timeout=1.0) as waiter:
                 aggregator.start_aggregating([tmp_path])
                 waiter.wait()
-                assert waiter.args == (5,)
+                assert waiter.args == ("5",)
             aggregator.tear_down()
 
 

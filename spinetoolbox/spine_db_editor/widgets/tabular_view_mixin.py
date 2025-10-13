@@ -17,7 +17,7 @@ from itertools import chain
 from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
 from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import fix_name_ambiguity
 from spinedb_api.temp_id import TempId
@@ -291,12 +291,14 @@ class TabularViewMixin:
                 self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
                 self.pivot_table_model.frozen_values_added.disconnect(self._add_values_to_frozen_table)
                 self.pivot_table_model.frozen_values_removed.disconnect(self._remove_values_from_frozen_table)
+                self.pivot_table_model.big_data_refused.disconnect(self._warn_big_data_refused)
             self.pivot_table_model = pivot_table_model
             self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
             self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
             self.pivot_table_model.modelReset.connect(self.reload_frozen_table)
             self.pivot_table_model.frozen_values_added.connect(self._add_values_to_frozen_table)
             self.pivot_table_model.frozen_values_removed.connect(self._remove_values_from_frozen_table)
+            self.pivot_table_model.big_data_refused.connect(self._warn_big_data_refused)
             delegate = self.pivot_table_model.make_delegate(self)
             self.ui.pivot_table.setItemDelegate(delegate)
         pivot = self.get_pivot_preferences()
@@ -634,6 +636,12 @@ class TabularViewMixin:
             yield
         finally:
             self._disable_frozen_table_reload = False
+
+    @Slot()
+    def _warn_big_data_refused(self):
+        QMessageBox.warning(
+            self, "Too much data to show", "The data contains too many elements to show. Some data was dropped."
+        )
 
     def closeEvent(self, event):
         super().closeEvent(event)

@@ -426,6 +426,32 @@ class TestAddEntitiesDialog(TestBase):
         self.assertEqual(model.index(0, 2).data(), None)
         self.assertEqual(model.index(0, 3).data(), self.db_codename)
 
+    def test_select_entity_class_with_combo_box_when_no_entity_is_selected_in_entity_tree(self):
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1", "active_by_default": False}]})
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        root_item = self._db_editor.entity_tree_model.item_from_index(root_index)
+        dialog = AddEntitiesDialog(self._db_editor, root_item, self._db_mngr, self._db_map)
+        model = dialog.model
+        dialog.ent_cls_combo_box.setCurrentText("Object_1")
+        model.fetchMore(QModelIndex())
+        self.assertEqual(model.columnCount(), 4)
+        self.assertEqual(model.headerData(0), "entity name")
+        self.assertEqual(model.headerData(1), "alternative")
+        self.assertEqual(model.headerData(2), "entity group")
+        self.assertEqual(model.headerData(3), "databases")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(), None)
+        self.assertEqual(model.index(0, 1).data(), "Base")
+        self.assertEqual(model.index(0, 2).data(), None)
+        self.assertEqual(model.index(0, 3).data(), self.db_codename)
+
+    def test_get_db_map_data_when_dialog_is_empty(self):
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Object_1", "active_by_default": False}]})
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        root_item = self._db_editor.entity_tree_model.item_from_index(root_index)
+        dialog = AddEntitiesDialog(self._db_editor, root_item, self._db_mngr, self._db_map)
+        self.assertEqual(dialog.get_db_map_data(), {})
+
 
 if __name__ == "__main__":
     unittest.main()

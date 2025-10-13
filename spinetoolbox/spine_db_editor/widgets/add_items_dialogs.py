@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 )
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_dimensions, name_from_elements
-from ...helpers import DB_ITEM_SEPARATOR
+from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.compound_table_model import CompoundTableModel
 from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
@@ -53,7 +53,7 @@ from .manage_items_dialogs import (
 class AddReadyEntitiesDialog(DialogWithTableAndButtons):
     """A dialog to let the user add new 'ready' multidimensional entities."""
 
-    def __init__(self, parent, entity_class, entities, db_mngr, *db_maps, commit_data=True):
+    def __init__(self, parent, entity_class, entities, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor)
@@ -63,7 +63,6 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
             *db_maps: DatabaseMapping instances
         """
         super().__init__(parent, db_mngr)
-        self._commit_data = commit_data
         self.entity_class = entity_class
         self.entities = entities
         self.db_maps = db_maps
@@ -117,9 +116,6 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        if not self._commit_data:
-            super().accept()
-            return
         db_map_data = self.get_db_map_data()
         if not db_map_data:
             self.parent().msg_error.emit("Nothing to add")
@@ -191,6 +187,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
         self.setWindowTitle("Add entity classes")
         self.model = EmptyAddEntityOrClassRowModel(self)
         self.model.force_default = force_default
+        self.model.rowsInserted.connect(self._focus_on_table)
         self.table_view.setModel(self.model)
         self.dimension_count_widget = QWidget(self)
         layout = QHBoxLayout(self.dimension_count_widget)
@@ -285,6 +282,7 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
+        self._commit_open_edits()
         db_map_data = {}
         header_labels = self.model.horizontal_header_labels()
         name_column = header_labels.index("entity class name")
@@ -353,6 +351,12 @@ class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, Ad
     def dialog_item_name():
         return "entity class name"
 
+    @Slot(QModelIndex, int, int)
+    def _focus_on_table(self, parent: QModelIndex, first: int, last: int) -> None:
+        self.model.rowsInserted.disconnect(self._focus_on_table)
+        self.table_view.setCurrentIndex(self.model.index(0, 0))
+        self.table_view.setFocus()
+
 
 class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new entities."""
@@ -366,6 +370,7 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.model = self.make_model()
+        self.model.rowsInserted.connect(self._focus_on_table)
         self.table_view.setModel(self.model)
         self.header_widget = QWidget(self)
         layout = QHBoxLayout(self.header_widget)
@@ -434,11 +439,17 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
             entity_name = name_from_elements(el_names)
             self.model.setData(self.model.index(row, dimension_count), entity_name, role=Qt.ItemDataRole.UserRole)
 
+    @Slot(QModelIndex, int, int)
+    def _focus_on_table(self, parent: QModelIndex, first: int, last: int) -> None:
+        self.model.rowsInserted.disconnect(self._focus_on_table)
+        self.table_view.setCurrentIndex(self.model.index(0, 0))
+        self.table_view.setFocus()
+
 
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     """A dialog to query user's preferences for new entities."""
 
-    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False, commit_data=True):
+    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
         """
         Args:
             parent (SpineDBEditor)
@@ -448,18 +459,16 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
-        self._commit_data = commit_data
         self.entity_names_by_class_name = {}
+        self.class_key: str | None = None
         if item.item_type == "entity":
             entity_name = item.name
             entity_class_name = item.parent_item.name
             self.entity_names_by_class_name = {entity_class_name: entity_name}
             if item.parent_item.item_type == "entity_class":
                 self.class_key = item.parent_item.display_id
-                self.class_item = item.parent_item
         elif item.item_type == "entity_class":
             self.class_key = item.display_id
-            self.class_item = item
         self.model.force_default = force_default
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
@@ -528,10 +537,11 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
         self.model.clear()
 
     def _class_is_active_by_default(self) -> bool:
-        db_map = self.class_item.first_db_map
-        id_ = self.class_item.db_map_ids[db_map]
-        with self.db_mngr.get_lock(db_map):
-            return db_map.mapped_table("entity_class")[id_]["active_by_default"]
+        for db_map, class_lookup in self.db_map_ent_cls_lookup_by_name.items():
+            if self.class_name in class_lookup:
+                class_item = class_lookup[self.class_name]
+                return class_item["active_by_default"]
+        raise RuntimeError(f"logic error: no database mapping for entity class {self.class_name}")
 
     def _resolve_default_alternative(self, default_db_maps: list[DatabaseMapping]) -> str:
         selected_alt_name = None
@@ -569,8 +579,10 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             return name
         return name + "@(" + ", ".join(self.db_mngr.name_registry.display_name_iter(db_maps)) + ")"
 
-    def get_db_map_data(self):
-        db_map_data = {}
+    def get_db_map_data(self) -> DBMapDictItems | None:
+        if self.class_key is None:
+            return {}
+        db_map_data: DBMapDictItems = {}
         name_column = self.model.horizontal_header_labels().index("entity name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -579,7 +591,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             entity_name = row_data[name_column]
             if not entity_name:
                 self.parent().msg_error.emit(f"Entity missing at row {i + 1}")
-                return
+                return None
             pre_item = {"name": entity_name}
             db_names = row_data[db_column]
             if db_names is None:
@@ -587,7 +599,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
             for db_name in db_names.split(", "):
                 if db_name not in self.keyed_db_maps:
                     self.parent().msg_error.emit(f"Invalid database {db_name} at row {i + 1}")
-                    return
+                    return None
                 db_map = self.keyed_db_maps[db_name]
                 entity_classes = self.db_map_ent_cls_lookup[db_map]
                 ent_cls = entity_classes[self.class_key]
@@ -600,7 +612,7 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                         self.parent().msg_error.emit(
                             f"Invalid element '{element_byname}' for db '{db_name}' at row {i + 1}"
                         )
-                        return
+                        return None
                     element_id = entities[entity_class_id, element_byname]["id"]
                     element_id_list.append(element_id)
                 item = pre_item.copy()
@@ -611,14 +623,12 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     @Slot()
     def accept(self):
         """Collect info from dialog and try to add items."""
-        if not self._commit_data:
-            super().accept()
-            return
+        self._commit_open_edits()
         db_map_data = self.get_db_map_data()
         if db_map_data is None:
             return
         if not db_map_data:
-            self.parent().msg_error.emit("Nothing to add")
+            super().accept()
             return
         self.db_mngr.add_items("entity", db_map_data)
         created_entities = {}

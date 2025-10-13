@@ -11,12 +11,13 @@
 ######################################################################################################################
 
 """Provides pivot table models for the Tabular View."""
+from __future__ import annotations
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial
 from itertools import product
 from operator import itemgetter
-from typing import Iterable, Union
+from typing import TYPE_CHECKING, Iterable, Union
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
@@ -35,24 +36,24 @@ from ..widgets.custom_delegates import (
 from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
 from .pivot_model import PivotModel
 
+if TYPE_CHECKING:
+    from spinetoolbox.spine_db_manager import SpineDBManager
+    from ..widgets.spine_db_editor import SpineDBEditor
+
 
 class TopLeftHeaderItem:
     """Base class for all 'top left pivot headers'.
     Represents a header located in the top left area of the pivot table."""
 
-    def __init__(self, model):
-        """
-        Args:
-            model (PivotTableModelBase)
-        """
+    def __init__(self, model: PivotTableModelBase):
         self._model = model
 
     @property
-    def model(self):
+    def model(self) -> PivotTableModelBase:
         return self._model
 
     @property
-    def db_mngr(self):
+    def db_mngr(self) -> SpineDBManager:
         return self._model.db_mngr
 
     def _get_header_data_from_db(self, item_type, header_id, field_name, role):
@@ -333,12 +334,9 @@ class PivotTableModelBase(QAbstractTableModel):
     model_data_changed = Signal()
     frozen_values_added = Signal(set)
     frozen_values_removed = Signal(set)
+    big_data_refused = Signal()
 
-    def __init__(self, db_editor):
-        """
-        Args:
-            db_editor (SpineDBEditor)
-        """
+    def __init__(self, db_editor: SpineDBEditor):
         super().__init__(db_editor)
         self._parent = db_editor
         self.db_mngr = db_editor.db_mngr
@@ -1507,6 +1505,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
         full_data = {}
         get_id = _make_get_id(action)
+        big_data_refused = False
         for db_map, items in db_map_parameter_values.items():
             for item in items:
                 element_ids = tuple((db_map, id_) for id_ in item["element_id_list"])
@@ -1523,6 +1522,11 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
                     full_data[element_ids + ((None, value_index), parameter_id, alternative_ids, db_map)] = get_id(
                         db_map, item
                     )
+                if len(full_data) > 100000:
+                    big_data_refused = True
+                    break
+        if big_data_refused:
+            self.big_data_refused.emit()
         return full_data
 
     def _data(self, index, role):
@@ -1600,6 +1604,7 @@ class ElementPivotTableModel(PivotTableModelBase):
             for item in items:
                 class_entities.setdefault(item["class_id"], []).append(item)
         data = {}
+        big_data_refused = False
         for db_map in self.db_maps:
             element_id_lists = []
             all_given_ids = set()
@@ -1613,12 +1618,16 @@ class ElementPivotTableModel(PivotTableModelBase):
                     ids.update(given_ids)
                     all_given_ids.update(given_ids.keys())
                 element_id_lists.append(list(ids.keys()))
-            db_map_data = {
-                tuple((db_map, id_) for id_ in element_ids) + (db_map,): None
-                for element_ids in product(*element_id_lists)
-                if not all_given_ids or all_given_ids.intersection(element_ids)
-            }
+            db_map_data = {}
+            for i, element_ids in enumerate(product(*element_id_lists)):
+                if i == 100000:
+                    big_data_refused = True
+                    break
+                if not all_given_ids or not all_given_ids.isdisjoint(element_ids):
+                    db_map_data[tuple((db_map, id_) for id_ in element_ids) + (db_map,)] = None
             data.update(db_map_data)
+        if big_data_refused:
+            self.big_data_refused.emit()
         return data
 
     def _handle_elements_added(self, db_map_data):
