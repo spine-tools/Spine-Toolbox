@@ -12,11 +12,11 @@
 
 """Custom item delegates."""
 from numbers import Number
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
-from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.incomplete_values import join_value_and_type
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
     CheckListEditor,
@@ -30,7 +30,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditorWithCreation,
 )
 from ...font import TOOLBOX_FONT
-from ...helpers import DB_ITEM_SEPARATOR, object_icon
+from ...helpers import object_icon
 from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
