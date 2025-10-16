@@ -823,7 +823,7 @@ def select_work_directory(parent: Optional[QWidget], line_edit: QLineEdit) -> No
         line_edit: Line edit where the selected path will be inserted
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path else home_dir()
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
     answer = QFileDialog.getExistingDirectory(parent, "Select Work Directory", initial_path)
     if answer == "":  # Cancel button clicked
@@ -832,7 +832,7 @@ def select_work_directory(parent: Optional[QWidget], line_edit: QLineEdit) -> No
     line_edit.setText(selected_path)
 
 
-def select_gams_executable(parent, line_edit):
+def select_gams_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a Gams executable (i.e. gams.exe on Windows).
     File browser initial dir priority:
         1. current path in line edit (first text, then placeholder text)
@@ -840,8 +840,8 @@ def select_gams_executable(parent, line_edit):
         3. home_dir()
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select GAMS Program"
     gams_path_from_registry = find_gams_directory()
@@ -870,19 +870,19 @@ def select_gams_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def select_julia_executable(parent, line_edit):
+def select_julia_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a Julia executable (i.e. julia.exe on Windows).
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select Julia Executable"
     current_path = get_current_path(line_edit)
     if sys.platform == "win32":
         answer = get_path_from_native_open_file_dialog(parent, current_path, title + " (e.g. julia.exe on Windows)")
     else:
-        initial_path = current_path if current_path is not None else home_dir()
+        initial_path = current_path if current_path else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
@@ -897,34 +897,34 @@ def select_julia_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def select_julia_project(parent, line_edit):
+def select_julia_project(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Shows directory browser and inserts selected julia project dir to given line_edit.
 
     Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent of QFileDialog
+        line_edit: Line edit where the selected path will be inserted
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path else home_dir()
     answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", initial_path)
     if not answer:  # Canceled (american-english), cancelled (british-english)
         return
     line_edit.setText(answer)
 
 
-def select_python_interpreter(parent, line_edit):
+def select_python_interpreter(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a python interpreter (i.e. python.exe on Windows).
 
     Args:
-        parent (QWidget): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select Python Interpreter"
     current_path = get_current_path(line_edit)
     if sys.platform == "win32":
         answer = get_path_from_native_open_file_dialog(parent, current_path, title + " (e.g. python.exe on Windows)")
     else:
-        initial_path = current_path if current_path is not None else home_dir()
+        initial_path = current_path if current_path else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled
@@ -940,12 +940,12 @@ def select_python_interpreter(parent, line_edit):
     return
 
 
-def select_conda_executable(parent, line_edit):
+def select_conda_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a conda executable.
 
     Args:
-        parent (QWidget): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select Conda Executable"
     current_path = get_current_path(line_edit)
@@ -954,7 +954,7 @@ def select_conda_executable(parent, line_edit):
             parent, current_path, title + " (e.g. conda.exe or conda.bat on Windows)"
         )
     else:
-        initial_path = current_path if current_path is not None else home_dir()
+        initial_path = current_path if current_path else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled
@@ -969,49 +969,49 @@ def select_conda_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def select_certificate_directory(parent, line_edit):
+def select_certificate_directory(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Shows file browser and inserts selected certificate directory to given line edit.
 
     Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected dir path will be inserted
+        parent: Parent of QFileDialog
+        line_edit: Line edit where the selected dir path will be inserted
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path else home_dir()
     answer = QFileDialog.getExistingDirectory(parent, "Select certificates directory", initial_path)
     if not answer:
         return
     line_edit.setText(answer)
 
 
-def select_root_directory(parent, line_edit, project_path):
+def select_directory_with_dialog(parent: QWidget | None, title: str, line_edit: QLineEdit, default_path: str) -> None:
     """Shows file browser and inserts selected root directory to given line edit.
     Used in Tool Properties.
 
     Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
-        project_path (str): Project path
+        parent: Parent of QFileDialog
+        title: Dialog's title.
+        line_edit: Line edit where the selected path will be inserted
+        default_path: Path to use if line_edit is empty
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else project_path
-    answer = QFileDialog.getExistingDirectory(parent, "Select root directory", initial_path)
+    initial_path = current_path if current_path else default_path
+    answer = QFileDialog.getExistingDirectory(parent, title, initial_path)
     if not answer:
         return
-    line_edit.setText(answer)
-    return
+    line_edit.setText(str(pathlib.Path(answer)))
 
 
-def get_current_path(le):
+def get_current_path(line_edit: QLineEdit) -> str:
     """Returns the text in the given line edit. If no text, returns the
     placeholder text if it is a valid path. If it's not a valid path,
-    Returns None.
+    returns an empty string.
     """
-    current_path = le.text().strip()
+    current_path = line_edit.text().strip()
     if not current_path:
-        current_path = le.placeholderText().strip()
+        current_path = line_edit.placeholderText().strip()
         if not os.path.exists(current_path):
-            return None
+            return ""
     return os.path.abspath(current_path)
 
 
