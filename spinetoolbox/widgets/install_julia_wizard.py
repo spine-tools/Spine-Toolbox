@@ -190,12 +190,6 @@ class InstallJuliaPage(QWizardProcessPage):
         super().__init__(parent)
         self.setTitle("Installing Julia")
 
-    def cleanupPage(self):
-        super().cleanupPage()
-        if self._exec_mngr is not None:
-            self._exec_mngr.stop_execution()
-        self.msg_error.emit("Aborted by the user")
-
     def initializePage(self):
         args = [
             "-m",

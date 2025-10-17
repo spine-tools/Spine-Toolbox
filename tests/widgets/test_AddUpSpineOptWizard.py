@@ -13,7 +13,7 @@
 """Unit tests for the Add/Update SpineOpt Wizard."""
 from unittest import mock
 from PySide6.QtWidgets import QWizard
-from spinetoolbox.widgets.add_up_spine_opt_wizard import REQUIRED_SPINE_OPT_VERSION, AddUpSpineOptWizard
+from spinetoolbox.widgets.add_up_spine_opt_wizard import AddUpSpineOptWizard
 from spinetoolbox.widgets.settings_widget import SettingsWidget
 from tests.mock_helpers import MockInstantQProcess, TestCaseWithQApplication, clean_up_toolbox, create_toolboxui
 
@@ -36,6 +36,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
 
     def tearDown(self):
         """Clean up."""
+        self.settings_widget.close()
         clean_up_toolbox(self.toolbox)
         self.settings_widget.deleteLater()
 
@@ -56,6 +57,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
             wizard.next()
         self.assertEqual("Installing SpineOpt", wizard.currentPage().title())
         wizard.next()
+        self.assertEqual("Installation successful", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())
 
     def test_spine_opt_update_succeeds(self):
@@ -65,10 +67,7 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         wizard.next()
         self.assertEqual("Select Julia", wizard.currentPage().title())
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            # We need the process to return a version that's lower than required
-            curr_ver_split = [int(x) for x in REQUIRED_SPINE_OPT_VERSION.split(".")]
-            curr_ver_split[-1] = curr_ver_split[-1] - 1
-            curr_ver = ".".join(str(x) for x in curr_ver_split)
+            curr_ver = "0.10.2"
             stdout = curr_ver.encode()
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit), stdout=stdout)
             wizard.next()
@@ -76,23 +75,37 @@ class TestAddUpSpineOptWizard(TestCaseWithQApplication):
         self.assertTrue(wizard.currentPage().isCommitPage())
         self.assertEqual("Update SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit))
+            MockQProcess.return_value = MockInstantQProcess(
+                finished_args=(0, MockQProcess.NormalExit), stdout="0.10.3".encode()
+            )
             wizard.next()
         self.assertEqual("Updating SpineOpt", wizard.currentPage().title())
         wizard.next()
+        self.assertEqual("Update successful", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())
 
-    def test_spine_opt_already_up_to_date(self):
+    def test_spine_opt_no_update_found(self):
         wizard = AddUpSpineOptWizard(self.settings_widget, "path/to/julia", "path/to/julia_project")
         wizard.restart()
         self.assertEqual("Welcome", wizard.currentPage().title())
         wizard.next()
         self.assertEqual("Select Julia", wizard.currentPage().title())
         with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
-            stdout = REQUIRED_SPINE_OPT_VERSION.encode()
+            curr_ver = "0.10.2"
+            stdout = curr_ver.encode()
             MockQProcess.return_value = MockInstantQProcess(finished_args=(0, MockQProcess.NormalExit), stdout=stdout)
             wizard.next()
         self.assertEqual("Checking previous installation", wizard.currentPage().title())
+        self.assertTrue(wizard.currentPage().isCommitPage())
+        self.assertEqual("Update SpineOpt", wizard.currentPage().buttonText(QWizard.WizardButton.CommitButton))
+        with mock.patch("spinetoolbox.execution_managers.QProcess") as MockQProcess:
+            MockQProcess.return_value = MockInstantQProcess(
+                finished_args=(0, MockQProcess.NormalExit), stdout="0.10.2".encode()
+            )
+            wizard.next()
+        self.assertEqual("Updating SpineOpt", wizard.currentPage().title())
+        wizard.next()
+        self.assertEqual("No update available", wizard.currentPage().title())
         self.assertTrue(wizard.currentPage().isFinalPage())
 
     def _make_failed_wizard(self):

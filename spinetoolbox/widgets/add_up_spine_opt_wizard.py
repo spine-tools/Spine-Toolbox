@@ -12,13 +12,17 @@
 
 """Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
+import pathlib
+from typing import TypeAlias
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QCursor, QTextCursor
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QLayout,
     QLineEdit,
     QPushButton,
     QRadioButton,
@@ -26,9 +30,9 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
-    QApplication,
 )
-from ..config import REQUIRED_SPINE_OPT_VERSION
+from typing_extensions import Literal
+from spine_engine.logger_interface import LoggerInterface
 from ..execution_managers import QProcessExecutionManager
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .custom_qwidgets import HyperTextLabel, QWizardProcessPage, WrapLabel
@@ -47,19 +51,24 @@ class _PageId(IntEnum):
     TOTAL_FAILURE = auto()
 
 
+RequiredActions: TypeAlias = Literal["add", "update"]
+
+
 class AddUpSpineOptWizard(QWizard):
     """A wizard to install & upgrade SpineOpt."""
 
-    def __init__(self, parent, julia_exe, julia_project):
+    def __init__(self, parent: QWidget | None, julia_exe: str, julia_project: str):
         """
         Args:
-            parent (QWidget): the parent widget (SettingsWidget)
-            julia_exe (str): path to Julia executable
-            julia_project (str): path to Julia project
+            parent: the parent widget (SettingsWidget)
+            julia_exe: path to Julia executable
+            julia_project: path to Julia project
         """
         super().__init__(parent)
-        self.process_log = None
-        self.required_action = None
+        self.process_log: str | None = None
+        self.required_action: RequiredActions | None = None
+        self.spine_opt_version_before_update: list[int] | None = None
+        self.spine_opt_version_after_update: list[int] | None = None
         self.setWindowTitle("SpineOpt Installer")
         self.setPage(_PageId.INTRO, IntroPage(self))
         self.setPage(_PageId.SELECT_JULIA, SelectJuliaPage(self, julia_exe, julia_project))
@@ -76,7 +85,7 @@ class AddUpSpineOptWizard(QWizard):
 
 
 class IntroPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Welcome")
         label = HyperTextLabel(
@@ -92,7 +101,7 @@ class IntroPage(QWizardPage):
 
 
 class SelectJuliaPage(QWizardPage):
-    def __init__(self, parent, julia_exe, julia_project):
+    def __init__(self, parent: QWidget | None, julia_exe: str, julia_project: str):
         super().__init__(parent)
         self.setTitle("Select Julia")
         self._julia_exe = julia_exe
@@ -125,30 +134,30 @@ class SelectJuliaPage(QWizardPage):
         self._julia_project_line_edit.setText(self._julia_project)
 
     @Slot(bool)
-    def _select_julia_exe(self, _):
+    def _select_julia_exe(self, _) -> None:
         julia_exe, _ = QFileDialog.getOpenFileName(self, "Select Julia executable", self.field("julia_exe"))
         if not julia_exe:
             return
-        self.setField("julia_exe", julia_exe)
+        self.setField("julia_exe", str(pathlib.Path(julia_exe)))
 
     @Slot(bool)
-    def _select_julia_project(self, _):
+    def _select_julia_project(self, _) -> None:
         julia_project = QFileDialog.getExistingDirectory(
             self, "Select Julia project/environment (directory)", self.field("julia_project")
         )
         if not julia_project:
             return
-        self.setField("julia_project", julia_project)
+        self.setField("julia_project", str(pathlib.Path(julia_project)))
 
     def nextId(self):
         return _PageId.CHECK_PREVIOUS_INSTALL
 
 
 class CheckPreviousInstallPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Checking previous installation")
-        self._exec_mngr = None
+        self._exec_mngr: QProcessExecutionManager | None = None
         self._errored = False
         QVBoxLayout(self)
 
@@ -162,32 +171,20 @@ class CheckPreviousInstallPage(QWizardPage):
 
     def initializePage(self):
         _clear_layout(self.layout())
-        julia_exe = self.field("julia_exe")
-        julia_project = self.field("julia_project")
-        args = [
-            f"--project={julia_project}",
-            "-e",
-            "import Pkg; "
-            'manifest = joinpath(dirname(Base.active_project()), "Manifest.toml"); '
-            "pkgs = isfile(manifest) ? Pkg.TOML.parsefile(manifest) : Dict(); "
-            'manifest_format = get(pkgs, "manifest_format", missing); '
-            "if manifest_format === missing "
-            'spine_opt = get(pkgs, "SpineOpt", nothing) '
-            'else spine_opt = get(pkgs["deps"], "SpineOpt", nothing) end; '
-            'if spine_opt != nothing println(spine_opt[1]["version"]) end; ',
-        ]
-        self._exec_mngr = QProcessExecutionManager(self, julia_exe, args, silent=True)
+        self._exec_mngr = _create_exec_manager_to_resolve_spine_opt_version(
+            self.field("julia_exe"), self.field("julia_project"), self
+        )
         self.completeChanged.emit()
         self._exec_mngr.execution_finished.connect(self._handle_check_install_finished)
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
-    def _handle_check_install_finished(self, ret):
+    def _handle_check_install_finished(self, ret: int) -> None:
         QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_check_install_finished)
         if self.wizard().currentPage() is not self:
             return
-        output_log = self._exec_mngr.process_output
+        spine_opt_version = self._exec_mngr.process_output
         error_log = self._exec_mngr.process_error
         self._exec_mngr = None
         if ret != 0:
@@ -201,25 +198,15 @@ class CheckPreviousInstallPage(QWizardPage):
             self._errored = True
             self.completeChanged.emit()
             return
-        spine_opt_version = output_log
         if spine_opt_version:
-            if [int(x) for x in spine_opt_version.split(".")] >= [
-                int(x) for x in REQUIRED_SPINE_OPT_VERSION.split(".")
-            ]:
-                msg = f"SpineOpt version {spine_opt_version} is installed and is already the required version."
-                self.layout().addWidget(WrapLabel(msg))
-                self.setFinalPage(True)
-                return
-            msg = (
-                f"SpineOpt version {spine_opt_version} is installed, "
-                f"but version {REQUIRED_SPINE_OPT_VERSION} or higher is required."
-            )
+            msg = f"SpineOpt version {spine_opt_version} is installed."
             self.layout().addWidget(WrapLabel(msg))
             self.wizard().required_action = "update"
             self.setFinalPage(False)
             self.setCommitPage(True)
             self.setButtonText(QWizard.WizardButton.CommitButton, "Update SpineOpt")
             self.completeChanged.emit()
+            self.wizard().spine_opt_version_before_update = [int(v) for v in spine_opt_version.split(".")]
             return
         self.layout().addWidget(QLabel("SpineOpt is not installed."))
         self.wizard().required_action = "add"
@@ -236,6 +223,7 @@ class CheckPreviousInstallPage(QWizardPage):
 
 class AddUpSpineOptPage(QWizardProcessPage):
     def initializePage(self):
+        required_action = self.wizard().required_action
         processing, code, process = {
             "add": (
                 "Installing",
@@ -243,33 +231,60 @@ class AddUpSpineOptPage(QWizardProcessPage):
                 "installation",
             ),
             "update": ("Updating", 'using Pkg; Pkg.update("SpineInterface"); Pkg.update("SpineOpt")', "update"),
-        }[self.wizard().required_action]
+        }[required_action]
         self.setTitle(f"{processing} SpineOpt")
         julia_exe = self.field("julia_exe")
         julia_project = self.field("julia_project")
         args = [f"--project={julia_project}", "-e", code]
         self._exec_mngr = QProcessExecutionManager(self, julia_exe, args, semisilent=True)
         self.completeChanged.emit()
-        self._exec_mngr.execution_finished.connect(self._handle_spine_opt_add_up_finished)
+        if required_action == "add":
+            self._exec_mngr.execution_finished.connect(self._handle_spine_opt_add_up_finished)
+        else:
+            self._exec_mngr.execution_finished.connect(self._handle_spine_opt_update_finished)
         self.msg_success.emit(f"SpineOpt {process} started")
         cmd = julia_exe + " " + " ".join(args)
         self.msg.emit(f"$ <b>{cmd}<b/>")
         QApplication.setOverrideCursor(QCursor(Qt.CursorShape.BusyCursor))  # pylint: disable=undefined-variable
         self._exec_mngr.start_execution()
 
-    def _handle_spine_opt_add_up_finished(self, ret):
+    def _handle_spine_opt_update_finished(self, ret: int) -> None:
+        self._exec_mngr.execution_finished.disconnect(self._handle_spine_opt_update_finished)
+        if ret == 0:
+            self._exec_mngr = _create_exec_manager_to_resolve_spine_opt_version(
+                self.field("julia_exe"), self.field("julia_project"), self
+            )
+            self._exec_mngr.execution_finished.connect(self._handle_check_spine_opt_version_finished)
+            self._exec_mngr.start_execution()
+            return
+        self._handle_spine_opt_add_up_finished(ret)
+
+    def _handle_check_spine_opt_version_finished(self, ret: int) -> None:
+        self._exec_mngr.execution_finished.disconnect(self._handle_check_spine_opt_version_finished)
+        if ret == 0:
+            self.wizard().spine_opt_version_after_update = [int(v) for v in self._exec_mngr.process_output.split(".")]
+        self._handle_spine_opt_add_up_finished(ret)
+
+    def _handle_spine_opt_add_up_finished(self, ret: int) -> None:
         QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
-        self._exec_mngr.execution_finished.disconnect(self._handle_spine_opt_add_up_finished)
+        required_action = self.wizard().required_action
+        if required_action == "add":
+            self._exec_mngr.execution_finished.disconnect(self._handle_spine_opt_add_up_finished)
         if self.wizard().currentPage() is not self:
             return
         self._exec_mngr = None
         self._successful = ret == 0
         self.completeChanged.emit()
         if self._successful:
-            configured = {"add": "installed", "update": "updated"}[self.wizard().required_action]
-            self.msg_success.emit(f"SpineOpt successfully {configured}")
+            if required_action == "add":
+                message = "SpineOpt successfully installed."
+            elif self.wizard().spine_opt_version_before_update < self.wizard().spine_opt_version_after_update:
+                message = "SpineOpt successfully updated."
+            else:
+                message = "No update found."
+            self.msg_success.emit(message)
             return
-        process = {"add": "installation", "update": "update"}[self.wizard().required_action]
+        process = {"add": "installation", "update": "update"}[required_action]
         self.msg_error.emit(f"SpineOpt {process} failed")
         self.wizard().process_log = self._log.toHtml()
         self.wizard().process_log_plain = self._log.toPlainText()
@@ -281,15 +296,21 @@ class AddUpSpineOptPage(QWizardProcessPage):
 
 
 class SuccessPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self._label = WrapLabel()
         layout = QVBoxLayout(self)
         layout.addWidget(self._label)
 
     def initializePage(self):
-        process = {"add": "Installation", "update": "Update"}[self.wizard().required_action]
-        self.setTitle(f"{process} successful")
+        required_action = self.wizard().required_action
+        if required_action == "add":
+            self.setTitle("Installation successful")
+        else:
+            if self.wizard().spine_opt_version_after_update > self.wizard().spine_opt_version_before_update:
+                self.setTitle("Update successful")
+            else:
+                self.setTitle("No update available")
 
     def nextId(self):
         return -1
@@ -316,7 +337,7 @@ class FailurePage(QWizardPage):
         check_box.clicked.connect(self._handle_check_box_clicked)
 
     @Slot(bool)
-    def _handle_check_box_clicked(self, checked=False):
+    def _handle_check_box_clicked(self, checked: bool = False) -> None:
         self.setFinalPage(not checked)
 
     def nextId(self):
@@ -326,7 +347,7 @@ class FailurePage(QWizardPage):
 
 
 class TroubleshootProblemsPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Troubleshooting")
         msg = "Select your problem from the list."
@@ -424,7 +445,7 @@ class TroubleshootProblemsPage(QWizardPage):
         return self.field("problem1") or self.field("problem2") or self.field("problem3") or self.field("problem4")
 
     @Slot(bool)
-    def _show_log(self, _=False):
+    def _show_log(self, _: bool = False) -> None:
         log_widget = QWidget(self, f=Qt.WindowType.Window)
         layout = QVBoxLayout(log_widget)
         log = MonoSpaceFontTextBrowser(log_widget)
@@ -437,7 +458,7 @@ class TroubleshootProblemsPage(QWizardPage):
 
 
 class TroubleshootSolutionPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setCommitPage(True)
         QVBoxLayout(self)
@@ -453,7 +474,7 @@ class TroubleshootSolutionPage(QWizardPage):
         elif self.field("problem4"):
             self._initialize_page_solution4()
 
-    def _initialize_page_solution1(self):
+    def _initialize_page_solution1(self) -> None:
         self.setFinalPage(False)
         action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
         julia = self.field("julia_exe")
@@ -503,7 +524,7 @@ class TroubleshootSolutionPage(QWizardPage):
         self.layout().addWidget(HyperTextLabel(label2_txt))
         self.setButtonText(QWizard.WizardButton.CommitButton, action)
 
-    def _initialize_page_solution2(self):
+    def _initialize_page_solution2(self) -> None:
         self.setFinalPage(True)
         julia = self.field("julia_exe")
         env = self.field("julia_project")
@@ -538,7 +559,7 @@ class TroubleshootSolutionPage(QWizardPage):
         self.layout().addWidget(HyperTextLabel(description))
         self.layout().addWidget(cmd_browser)
 
-    def _initialize_page_solution3(self):
+    def _initialize_page_solution3(self) -> None:
         self.setFinalPage(True)
         julia = self.field("julia_exe")
         self.setTitle("Reset Julia General Registry")
@@ -560,7 +581,7 @@ class TroubleshootSolutionPage(QWizardPage):
         self.layout().addWidget(HyperTextLabel(description))
         self.layout().addWidget(cmd_browser)
 
-    def _initialize_page_solution4(self):
+    def _initialize_page_solution4(self) -> None:
         self.setFinalPage(True)
         action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
         self.setTitle("Update Windows Management Framework")
@@ -590,7 +611,7 @@ class AddUpSpineOptAgainPage(AddUpSpineOptPage):
 
 
 class TotalFailurePage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self._copy_label = QLabel()
 
@@ -614,7 +635,7 @@ class TotalFailurePage(QWizardPage):
         copy_button.clicked.connect(self._handle_copy_clicked)
 
     @Slot(bool)
-    def _handle_copy_clicked(self, _=False):
+    def _handle_copy_clicked(self, _: bool = False) -> None:
         self._copy_label.show()
         QApplication.clipboard().setText(self.wizard().process_log_plain)  # pylint: disable=undefined-variable
 
@@ -622,9 +643,27 @@ class TotalFailurePage(QWizardPage):
         return -1
 
 
-def _clear_layout(layout):
+def _clear_layout(layout: QLayout) -> None:
     while True:
         child = layout.takeAt(0)
         if child is None:
             break
         child.widget().deleteLater()
+
+
+def _create_exec_manager_to_resolve_spine_opt_version(
+    julia_exe: str, julia_project: str, logger: LoggerInterface
+) -> QProcessExecutionManager:
+    args = [
+        f"--project={julia_project}",
+        "-e",
+        "import Pkg; "
+        'manifest = joinpath(dirname(Base.active_project()), "Manifest.toml"); '
+        "pkgs = isfile(manifest) ? Pkg.TOML.parsefile(manifest) : Dict(); "
+        'manifest_format = get(pkgs, "manifest_format", missing); '
+        "if manifest_format === missing "
+        'spine_opt = get(pkgs, "SpineOpt", nothing) '
+        'else spine_opt = get(pkgs["deps"], "SpineOpt", nothing) end; '
+        'if spine_opt != nothing println(spine_opt[1]["version"]) end; ',
+    ]
+    return QProcessExecutionManager(logger, julia_exe, args, silent=True)
