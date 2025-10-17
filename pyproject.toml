@@ -27,6 +27,7 @@ dependencies = [
     "jill >=0.9.2",
     "pyzmq >=21.0",
     "spine_items>=0.24.1",
+    "pywin32; os_name == 'nt'",
 ]
 
 [project.urls]
