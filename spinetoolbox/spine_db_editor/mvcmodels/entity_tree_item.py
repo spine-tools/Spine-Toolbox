@@ -99,7 +99,10 @@ class EntityClassItem(MultiDBTreeItem):
 
     visual_key = ["name", "dimension_name_list", "superclass_name"]
     item_type = "entity_class"
-    _fetch_index = EntityClassIndex()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._fetch_index = EntityClassIndex()
 
     @property
     def display_icon(self):
@@ -179,13 +182,13 @@ class EntityItem(MultiDBTreeItem):
 
     visual_key = ["entity_class_name", "entity_byname"]
     item_type = "entity"
-    _fetch_index = EntityIndex()
-    _entity_group_index = EntityGroupIndex()
 
     def __init__(self, *args, is_member=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._is_group = False
         self._is_member = is_member
+        self._fetch_index = EntityIndex()
+        self._entity_group_index = EntityGroupIndex()
         self._entity_group_fetch_parent = FlexibleFetchParent(
             "entity_group",
             accepts_item=self._accepts_entity_group_item,
