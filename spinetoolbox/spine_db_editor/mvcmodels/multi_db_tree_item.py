@@ -24,7 +24,6 @@ class MultiDBTreeItem(TreeItem):
     item_type = None
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
-    _fetch_index = None
 
     def __init__(self, model, db_map_ids=None):
         """
