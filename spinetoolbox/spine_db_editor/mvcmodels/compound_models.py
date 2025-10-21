@@ -19,6 +19,7 @@ from PySide6.QtGui import QFont
 from spinedb_api.parameter_value import join_value_and_type
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import parameter_identifier, rows_to_row_count_tuples
+from ...mvcmodels.shared import ITEM_ID_ROLE
 from ..widgets.custom_menus import AutoFilterMenu
 from .compound_table_model import CompoundTableModel
 from .single_models import (
@@ -639,9 +640,16 @@ class EditParameterValueMixin:
                 )
                 if single_model is not None:
                     single_model.revalidate_item_types(class_items)
-                    changed_rows = [
-                        self._inv_row_map[(single_model, single_row)] for single_row in range(single_model.rowCount())
-                    ]
+                    ids = {item["id"] for item in class_items}
+                    changed_rows = []
+                    for single_row in range(single_model.rowCount()):
+                        key = (single_model, single_row)
+                        if (
+                            key in self._inv_row_map
+                            and (item_id := single_model.index(single_row, 0).data(ITEM_ID_ROLE)) in ids
+                        ):
+                            changed_rows.append(self._inv_row_map[key])
+                            ids.remove(item_id)
         if changed_rows:
             column_count = self.columnCount()
             for first_row, count in rows_to_row_count_tuples(changed_rows):

@@ -16,7 +16,7 @@ from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
 from .utils import make_entity_on_the_fly
@@ -219,6 +219,8 @@ class SingleModelBase(HalfSortedTableModel):
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_id)
         if role == DB_MAP_ROLE:
             return self.db_map
+        if role == ITEM_ID_ROLE:
+            return self._main_data[index.row()]
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):
