@@ -11,16 +11,17 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``compound_models`` module."""
-from itertools import product
-import unittest
 from PySide6.QtCore import Qt
 from spinedb_api import Array, to_database
 from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.parameter_type_validation import ValidationKey
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
+    CompoundEntityAlternativeModel,
+    CompoundEntityModel,
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
-from tests.mock_helpers import assert_table_model_data, fetch_model
+from tests.mock_helpers import assert_table_model_data, assert_table_model_data_pytest, fetch_model
 from ..helpers import TestBase
 
 
@@ -29,11 +30,11 @@ class TestCompoundParameterDefinitionModel(TestBase):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         expected_header = [
-            "entity_class_name",
-            "parameter_name",
+            "class",
+            "parameter name",
             "valid types",
-            "value_list_name",
-            "default_value",
+            "value list",
+            "default value",
             "description",
             "database",
         ]
@@ -89,16 +90,43 @@ class TestCompoundParameterDefinitionModel(TestBase):
         index = model.index(0, 3)
         self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - Object - x")
 
+    def test_updating_definition_triggers_value_type_validation(self):
+        with self._db_map:
+            self._db_map.add_entity_class(name="Widget")
+            weight = self._db_map.add_parameter_definition(
+                entity_class_name="Widget", name="weight", parsed_value="a lot"
+            )
+        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+            fetch_model(model)
+            waiter.wait()
+            self.assertEqual(
+                waiter.args,
+                ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [True]),
+            )
+        expected = [["Widget", "weight", None, None, "a lot", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+            model.setData(model.index(0, 2), ("float",), Qt.ItemDataRole.EditRole)
+            expected = [["Widget", "weight", "float", None, "a lot", None, self.db_codename]]
+            assert_table_model_data(model, expected, self)
+            waiter.wait()
+            self.assertEqual(
+                waiter.args,
+                ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [False]),
+            )
+
 
 class TestCompoundParameterValueModel(TestBase):
     def test_horizontal_header(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         expected_header = [
-            "entity_class_name",
-            "entity_byname",
-            "parameter_name",
-            "alternative_name",
+            "class",
+            "entity byname",
+            "parameter name",
+            "alternative",
             "value",
             "database",
         ]
@@ -639,6 +667,138 @@ class TestCompoundParameterValueModel(TestBase):
         ]
         assert_table_model_data(model, expected, self)
 
+    def test_updating_definition_triggers_value_type_validation(self):
+        with self._db_map:
+            self._db_map.add_entity_class(name="Widget")
+            self._db_map.add_entity(entity_class_name="Widget", name="gadget")
+            weight = self._db_map.add_parameter_definition(entity_class_name="Widget", name="weight")
+            weight_value = self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="weight",
+                alternative_name="Base",
+                parsed_value="a lot",
+            )
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+            fetch_model(model)
+            expected = [["Widget", "gadget", "weight", "Base", "a lot", self.db_codename]]
+            assert_table_model_data(model, expected, self)
+            waiter.wait()
+            self.assertEqual(
+                waiter.args,
+                (
+                    [
+                        ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id),
+                        ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id),
+                    ],
+                    [True, True],
+                ),
+            )
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+            self._db_mngr.update_items(
+                "parameter_definition", {self._db_map: [{"id": weight["id"], "parameter_type_list": ("float",)}]}
+            )
+            waiter.wait()
+            self.assertEqual(
+                waiter.args,
+                (
+                    [
+                        ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id),
+                        ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id),
+                    ],
+                    [True, False],
+                ),
+            )
 
-if __name__ == "__main__":
-    unittest.main()
+
+class TestCompoundEntityAlternativeModel:
+    def test_horizontal_header(self, db_mngr, db_map, db_editor):
+        model = CompoundEntityAlternativeModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        expected_header = [
+            "class",
+            "entity byname",
+            "alternative",
+            "active",
+            "database",
+        ]
+        header = [model.headerData(i) for i in range(model.columnCount())]
+        assert header == expected_header
+
+    def test_data_for_single_entity_alternative(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="gadget")
+            db_map.add_entity_alternative(
+                entity_class_name="Widget", entity_byname=("gadget",), alternative_name="Base", active=True
+            )
+        model = CompoundEntityAlternativeModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [["Widget", "gadget", "Base", True, db_name]]
+        assert_table_model_data_pytest(model, expected)
+
+
+class TestCompoundEntityModel:
+    def test_horizontal_header(self, db_mngr, db_map, db_editor):
+        model = CompoundEntityModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        expected_header = [
+            "class",
+            "name",
+            "byname",
+            "description",
+            "latitude",
+            "longitude",
+            "altitude",
+            "shape name",
+            "shape blob",
+            "database",
+        ]
+        header = [model.headerData(i) for i in range(model.columnCount())]
+        assert header == expected_header
+
+    def test_data_for_single_entity_alternative(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="gadget", description="Gadget is a widget.")
+        model = CompoundEntityModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [["Widget", "gadget", "gadget", "Gadget is a widget.", None, None, None, None, None, db_name]]
+        assert_table_model_data_pytest(model, expected)
+
+    def test_filtering_by_entity(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            flashlight = db_map.add_entity(entity_class_name="Gadget", name="flashlight")
+            microphone = db_map.add_entity(entity_class_name="Gadget", name="microphone")
+        model = CompoundEntityModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [
+            ["Gadget", "flashlight", "flashlight", None, None, None, None, None, None, db_name],
+            ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],
+        ]
+        assert_table_model_data_pytest(model, expected)
+        model.set_filter_entity_ids({(db_map, gadget["id"]): {microphone["id"]}})
+        model.refresh()
+        expected = [
+            ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],
+        ]
+        assert_table_model_data_pytest(model, expected)
+
+    def test_update_entity_with_location_and_shape_information(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            gadget = db_map.add_entity(entity_class_name="Widget", name="gadget")
+        model = CompoundEntityModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [["Widget", "gadget", "gadget", None, None, None, None, None, None, db_name]]
+        assert_table_model_data_pytest(model, expected)
+        gadget.update(lat=1.1, lon=2.2, alt=3.3, shape_name="region", shape_blob="{}")
+        expected = [["Widget", "gadget", "gadget", None, 1.1, 2.2, 3.3, "region", "<geojson>", db_name]]
+        assert_table_model_data_pytest(model, expected)

@@ -185,7 +185,7 @@ class CompoundTableModel(MinimalTableModel):
         and calls batch_set_data on each of them."""
         if not indexes or not data:
             return False
-        d = {}  # Maps models to (index, value) tuples
+        d: dict[SingleModelBase, list[tuple[QModelIndex, Any]]] = {}
         rows = []
         columns = []
         successful = True

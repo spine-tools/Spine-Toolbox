@@ -56,11 +56,18 @@ class TestTwoColumnAsCsv(TestCaseWithQApplication):
 
 
 class TestEntityClassIdForRow(TestCaseWithQApplication):
+    class _ExampleCompoundStackedModel(MinimalTableModel):
+        @staticmethod
+        def field_to_header(field):
+            if field == "entity_class_name":
+                return "class"
+            return field
+
     def test_class_id_is_found(self):
         with DatabaseMapping("sqlite://", create=True) as db_map:
             entity_class = db_map.add_entity_class(name="MyClass")
             with q_object(QObject()) as parent:
-                model = MinimalTableModel(parent, ["entity_class_name", "header 2", "header 3"])
+                model = self._ExampleCompoundStackedModel(parent, ["class", "header 2", "header 3"])
                 self.assertTrue(model.insertRows(0, 1))
                 data = [entity_class["name"], "x", "y"]
                 for column in range(model.columnCount()):
@@ -74,7 +81,7 @@ class TestEntityClassIdForRow(TestCaseWithQApplication):
         with DatabaseMapping("sqlite://", create=True) as db_map:
             entity_class = db_map.add_entity_class(name="MyClass")
             with q_object(QObject()) as parent:
-                model = MinimalTableModel(parent, ["entity_class_name", "header 2", "header 3"])
+                model = self._ExampleCompoundStackedModel(parent, ["class", "header 2", "header 3"])
                 self.assertTrue(model.insertRows(0, 1))
                 data = ["NotMyClass", "x", "y"]
                 for column in range(model.columnCount()):

@@ -398,7 +398,7 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
     def _get_value_list_id(self, index, db_map):
         """See base class"""
         h = index.model().header.index
-        value_list_name = index.sibling(index.row(), h("value_list_name")).data()
+        value_list_name = index.sibling(index.row(), h("value list")).data()
         value_lists = self.db_mngr.get_items_by_field(db_map, "parameter_value_list", "name", value_list_name)
         if len(value_lists) == 1:
             return value_lists[0]["id"]
@@ -410,7 +410,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     def _get_value_list_id(self, index, db_map):
         """See base class."""
         h = index.model().header.index
-        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
+        parameter_name = index.sibling(index.row(), h("parameter name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "name", parameter_name)
         entity_class_id = entity_class_id_for_row(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}

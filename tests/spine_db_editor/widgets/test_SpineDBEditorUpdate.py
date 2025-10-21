@@ -71,9 +71,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
         self.assertTrue(("fish", "fire") in parameters)
 
     def test_update_relationship_parameter_definitions_in_model(self):
@@ -92,9 +90,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
         self.assertTrue(("fish__dog", "each_others_opinion") in parameters)
 
     def test_update_object_parameter_values_in_model(self):
@@ -116,8 +112,8 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("entity_byname")).data(),
-                    model.index(row, h("parameter_name")).data(),
+                    model.index(row, h("entity byname")).data(),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
@@ -143,8 +139,8 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    tuple((model.index(row, h("entity_byname")).data() or "").split(DB_ITEM_SEPARATOR)),
-                    model.index(row, h("parameter_name")).data(),
+                    tuple((model.index(row, h("entity byname")).data() or "").split(DB_ITEM_SEPARATOR)),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )

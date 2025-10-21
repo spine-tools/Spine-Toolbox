@@ -31,7 +31,13 @@ from tests.mock_helpers import (
 )
 
 
-class TestEmptyModelBase(TestCaseWithQApplication):
+class ExampleEmptyModel(EmptyModelBase):
+    field_map = {field: field for field in ["entity_class_name", "name", "description", "database"]}
+    _entity_class_column = 0
+    _database_column = 3
+
+
+class TestExampleEmptyModel(TestCaseWithQApplication):
     def setUp(self):
         """Overridden method. Runs before each test."""
         app_settings = mock.MagicMock()
@@ -48,25 +54,23 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         self._undo_stack.deleteLater()
 
     def test_undo_change_in_single_cell(self):
-        model = EmptyModelBase(["entity_class_name", "header 2", "database"], self._db_mngr, parent=self._db_mngr)
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.columnCount(), 4)
         self.assertTrue(model.batch_set_data([model.index(0, 0)], ["X"]))
-        expected = [["X", None, None], [None, None, None]]
+        expected = [["X", None, None, None], [None, None, None, None]]
         assert_table_model_data(model, expected, self)
         self.assertTrue(self._undo_stack.canUndo())
         self._undo_stack.undo()
-        expected = [[None, None, None]]
+        expected = [[None, None, None, None]]
         assert_table_model_data(model, expected, self)
 
     def test_undo_handles_entity_class_name_candidates(self):
         with self._db_map:
             self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
@@ -91,9 +95,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
             assert_table_model_data(model, expected, self)
 
     def test_remove_multiple_rows(self):
-        model = EmptyModelBase(
-            ["entity_class_name", "header 1", "header 2", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
@@ -107,9 +109,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         assert_table_model_data(model, expected, self)
 
     def test_undo_remove_rows(self):
-        model = EmptyModelBase(
-            ["entity_class_name", "header 1", "header 2", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
@@ -128,9 +128,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_undo_command_removed_when_row_goes_to_database(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -165,9 +163,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_undo_multiple_row_insertions(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -188,9 +184,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_batch_setting_same_values_is_considered_a_no_operation(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -226,9 +220,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_batch_setting_complete_rows_results_in_single_empty_row(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type

@@ -79,13 +79,14 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.fetch_entity_tree_model()
+        self.assertEqual(model.rowCount(), 2)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.water_parameter["id"]}}})
+        self.assertEqual(model.rowCount(), 1)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
+        self.assertEqual(len(parameters), 1)
         self.assertTrue(("dog", "breed") in parameters)
         self.assertTrue(("fish", "water") not in parameters)
 
@@ -100,13 +101,14 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_relationship_parameter_definitions_in_db_mngr()
         self.fetch_entity_tree_model()
+        self.assertEqual(model.rowCount(), 4)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.relative_speed_parameter["id"]}}})
+        self.assertEqual(model.rowCount(), 3)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
+        self.assertEqual(len(parameters), 3)
         self.assertTrue(("dog__fish", "combined_mojo") in parameters)
         self.assertTrue(("fish__dog", "relative_speed") not in parameters)
 
@@ -119,17 +121,20 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.put_mock_object_parameter_definitions_in_db_mngr()
         self.put_mock_object_parameter_values_in_db_mngr()
         self.fetch_entity_tree_model()
+        self.assertEqual(model.rowCount(), 3)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_water["id"]}}})
+        self.assertEqual(model.rowCount(), 2)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("entity_byname")).data(),
-                    model.index(row, h("parameter_name")).data(),
+                    model.index(row, h("entity byname")).data(),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
+        self.assertEqual(len(parameters), 2)
         self.assertTrue(("nemo", "water", "salt") not in parameters)
 
     def test_remove_relationship_parameter_values_from_model(self):
@@ -137,15 +142,19 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         model = self.spine_db_editor.parameter_value_model
         model.init_model()
         self.put_mock_dataset_in_db_mngr()
+        self.fetch_entity_tree_model()
+        self.assertEqual(model.rowCount(), 6)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_pluto_relative_speed["id"]}}})
+        self.assertEqual(model.rowCount(), 5)
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("entity_byname")).data(),
-                    model.index(row, h("parameter_name")).data(),
+                    model.index(row, h("entity byname")).data(),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
+        self.assertEqual(len(parameters), 5)
         self.assertTrue(("nemo,pluto", "relative_speed", None) not in parameters)

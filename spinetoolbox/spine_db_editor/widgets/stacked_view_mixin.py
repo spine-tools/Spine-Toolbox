@@ -19,6 +19,7 @@ from ...helpers import preferred_row_height
 from ..empty_table_size_hint_provider import EmptyTableSizeHintProvider
 from ..mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
+    CompoundEntityModel,
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
@@ -40,10 +41,12 @@ class StackedViewMixin:
         self.parameter_value_model = CompoundParameterValueModel(self, self.db_mngr)
         self.parameter_definition_model = CompoundParameterDefinitionModel(self, self.db_mngr)
         self.entity_alternative_model = CompoundEntityAlternativeModel(self, self.db_mngr)
+        self.entity_model = CompoundEntityModel(self, self.db_mngr)
         self._all_stacked_models = {
             self.parameter_value_model: self.ui.tableView_parameter_value,
             self.parameter_definition_model: self.ui.tableView_parameter_definition,
             self.entity_alternative_model: self.ui.tableView_entity_alternative,
+            self.entity_model: self.ui.entity_table_view,
         }
         self._dock_by_item_type = {}
         for model, view in self._all_stacked_models.items():
@@ -199,10 +202,11 @@ class StackedViewMixin:
         """Resets filters."""
         for model in self._all_stacked_models:
             model.set_filter_class_ids(self._filter_class_ids)
+        alternatives = self.get_all_alternatives()
         for model in (self.parameter_value_model, self.entity_alternative_model):
             model.set_filter_entity_ids(self._filter_entity_ids)
-            alternatives = self.get_all_alternatives()
             model.set_filter_alternative_ids(alternatives)
+        self.entity_model.set_filter_entity_ids(self._filter_entity_ids)
 
     def get_all_alternatives(self):
         """Combines alternative ids from Scenario and Alternative tree selections."""

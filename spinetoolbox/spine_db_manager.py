@@ -95,21 +95,21 @@ class SpineDBManager(QObject):
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of added dict-items.
+        object: a dictionary mapping DatabaseMapping to list of added dict-items.
     """
     items_updated = Signal(str, object)
     """Emitted whenever items are updated in a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of updated dict-items.
+        object: a dictionary mapping DatabaseMapping to list of updated dict-items.
     """
     items_removed = Signal(str, object)
     """Emitted whenever items are removed from a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of updated dict-items.
+        object: a dictionary mapping DatabaseMapping to list of updated dict-items.
     """
     database_clean_changed = Signal(object, bool)
     """Emitted whenever database becomes clean or dirty.

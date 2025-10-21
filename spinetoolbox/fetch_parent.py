@@ -14,7 +14,7 @@
 from __future__ import annotations
 from collections.abc import Callable, Hashable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, TypeAlias
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import MappedItemBase, PublicItem
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .spine_db_manager import SpineDBManager
 
 
-DBMapMixedItems = dict[DatabaseMapping, list[MappedItemBase | PublicItem]]
+DBMapMixedItems: TypeAlias = dict[DatabaseMapping, list[MappedItemBase | PublicItem]]
 
 
 class FetchParent(QObject):
