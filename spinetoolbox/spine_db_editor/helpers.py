@@ -78,6 +78,8 @@ def string_to_group(string: Optional[str]) -> Union[str, tuple[str, ...]]:
 
 
 def parameter_value_to_string(value: Any) -> str:
+    if value is None:
+        return ""
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
