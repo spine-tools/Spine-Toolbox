@@ -526,12 +526,14 @@ class EntityAlternativeTableView(AboveSeam, EntityAlternativeTableViewBase):
 class EntityTableView(StackedTableView):
     _COLUMN_SIZE_HINTS = {
         field_header("entity_class_name", ENTITY_FIELD_MAP): 200,
-        field_header("entity_class_name", ENTITY_FIELD_MAP): 200,
-        field_header("entity_class_name", ENTITY_FIELD_MAP): 200,
-        field_header("entity_class_name", ENTITY_FIELD_MAP): 20,
-        field_header("entity_class_name", ENTITY_FIELD_MAP): 20,
-        field_header("entity_class_name", ENTITY_FIELD_MAP): 20,
-        field_header("entity_class_name", ENTITY_FIELD_MAP): 20,
+        field_header("name", ENTITY_FIELD_MAP): 125,
+        field_header("entity_byname", ENTITY_FIELD_MAP): 200,
+        field_header("description", ENTITY_FIELD_MAP): 70,
+        field_header("lat", ENTITY_FIELD_MAP): 70,
+        field_header("lon", ENTITY_FIELD_MAP): 70,
+        field_header("alt", ENTITY_FIELD_MAP): 70,
+        field_header("shape_name", ENTITY_FIELD_MAP): 70,
+        field_header("shape_blob", ENTITY_FIELD_MAP): 70,
     }
     _EXPECTED_COLUMN_COUNT = len(ENTITY_FIELD_MAP)
 
