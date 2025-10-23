@@ -206,10 +206,14 @@ class CopyPasteTableView(QTableView):
                     index = model_index(row, column)
                     if index.flags() & Qt.ItemFlag.ItemIsEditable:
                         i = (row - rows[0]) % len(data)
-                        j = (column - columns[0]) % len(data[i])
-                        value = data[i][j]
-                        indexes.append(index)
-                        values.append(self._convert_pasted(row, column, value, model))
+                        data_row = data[i]
+                        if data_row:
+                            j = (column - columns[0]) % len(data_row)
+                            value = data[i][j]
+                            indexes.append(index)
+                            values.append(self._convert_pasted(row, column, value, model))
+        if not indexes:
+            return False
         model.batch_set_data(indexes, values)
         return True
 
@@ -241,11 +245,16 @@ class CopyPasteTableView(QTableView):
         columns = []
         columns_append = columns.append
         h = self.horizontalHeader()
-        for _ in range(len(data[0])):
-            while is_visual_column_hidden(visual_column):
+        for data_row in data:
+            for _ in range(len(data_row)):
+                while is_visual_column_hidden(visual_column):
+                    visual_column += 1
+                columns_append(h.logicalIndex(visual_column))
                 visual_column += 1
-            columns_append(h.logicalIndex(visual_column))
-            visual_column += 1
+            if data_row:
+                break
+        else:
+            return False
         # Insert extra rows if needed:
         last_row = rows[-1]
         model = self.model()
