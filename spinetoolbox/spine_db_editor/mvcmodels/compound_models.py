@@ -63,7 +63,7 @@ class CompoundStackedModel(CompoundTableModel):
         super().__init__(parent=parent, header=self._make_header())
         self._parent = parent
         self.db_mngr = db_mngr
-        self.db_maps: list[DatabaseMapping] = list(db_maps)
+        self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] = {}
         self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
         self._auto_filter: dict[str, dict[tuple[DatabaseMapping, TempId], set[AutoFilterValue]]] = {}
@@ -79,6 +79,8 @@ class CompoundStackedModel(CompoundTableModel):
             handle_items_updated=self.handle_items_updated,
             owner=self,
         )
+        for db_map in self._db_maps:
+            self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
         self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
 
     @classmethod
@@ -104,24 +106,27 @@ class CompoundStackedModel(CompoundTableModel):
         raise NotImplementedError()
 
     def canFetchMore(self, _parent):
-        result = False
-        for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
-        return result
+        return bool(self._db_maps) and not self._fetch_parent.is_fetched
 
     def fetchMore(self, _parent):
-        for db_map in self.db_maps:
+        for db_map in self._db_maps:
             self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
     def shows_item(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
     def reset_db_maps(self, db_maps):
-        if set(db_maps) == set(self.db_maps):
+        if set(db_maps) == set(self._db_maps):
             return
-        self.db_maps = db_maps
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
+        for old_db_map in self._db_maps:
+            if old_db_map not in db_maps:
+                self.db_mngr.unregister_fetch_parent(old_db_map, self._fetch_parent)
+        for new_db_map in db_maps:
+            if new_db_map not in self._db_maps:
+                self.db_mngr.register_fetch_parent(new_db_map, self._fetch_parent)
+        self._db_maps = db_maps
 
     def _connect_single_model(self, model: SingleModelBase) -> None:
         """Connects signals so changes in the submodels are acknowledged by the compound."""
@@ -198,7 +203,7 @@ class CompoundStackedModel(CompoundTableModel):
         field = self.field_map.get(field, field)
         if field not in self._auto_filter_menus:
             self._auto_filter_menus[field] = menu = AutoFilterMenu(
-                self._parent, self.db_mngr, self.db_maps, self.item_type, field, show_empty=False
+                self._parent, self.db_mngr, self._db_maps, self.item_type, field, show_empty=False
             )
             menu.filterChanged.connect(self.set_auto_filter)
         return self._auto_filter_menus[field]
@@ -346,7 +351,7 @@ class CompoundStackedModel(CompoundTableModel):
             db_map_data: list of added dict-items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             db_map_single_models = [m for m in self.sub_models if m.db_map is db_map]
             existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
@@ -451,7 +456,7 @@ class CompoundStackedModel(CompoundTableModel):
         Args:
             db_map_data: list of updated dict-items keyed by DatabaseMapping
         """
-        if all(db_map not in self.db_maps for db_map in db_map_data):
+        if all(db_map not in self._db_maps for db_map in db_map_data):
             return
         self.dataChanged.emit(
             self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1), [Qt.ItemDataRole.DisplayRole]
@@ -465,7 +470,7 @@ class CompoundStackedModel(CompoundTableModel):
             db_map_data: list of removed dict-items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             items_per_class = self._items_per_class(items)
             emptied_single_model_indexes = []
@@ -611,7 +616,7 @@ class EditParameterValueMixin:
     def handle_items_updated(self, db_map_data):
         changed_rows = []
         for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             items_by_class = self._items_per_class(items)
             for entity_class_id, class_items in items_by_class.items():
@@ -702,9 +707,6 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_mngr.items_updated.connect(self._handle_parameter_definitions_updated)
-        self.destroyed.connect(
-            lambda: self.db_mngr.items_updated.disconnect(self._handle_parameter_definitions_updated)
-        )
 
     @property
     def _single_model_type(self):
@@ -716,7 +718,7 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
         if item_type != "parameter_definition":
             return
         for db_map, definition_items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             value_table = db_map.mapped_table("parameter_value")
             for sub_model in self.sub_models:

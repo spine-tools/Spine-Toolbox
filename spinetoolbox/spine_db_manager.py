@@ -211,6 +211,15 @@ class SpineDBManager(QObject):
             return
         worker.register_fetch_parent(parent)
 
+    def unregister_fetch_parent(self, db_map: DatabaseMapping, parent: FetchParent) -> None:
+        if db_map.closed:
+            return
+        try:
+            worker = self._workers[db_map]
+        except KeyError:
+            return
+        worker.unregister_fetch_parent(parent)
+
     def can_fetch_more(self, db_map: DatabaseMapping, parent: FetchParent) -> bool:
         """Whether we can fetch more items of given type from given db."""
         if db_map.closed:

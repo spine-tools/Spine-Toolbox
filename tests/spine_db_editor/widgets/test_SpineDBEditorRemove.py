@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for database item removal functionality in Database editor."""
+from PySide6.QtWidgets import QApplication
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
@@ -81,6 +82,8 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.fetch_entity_tree_model()
         self.assertEqual(model.rowCount(), 2)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.water_parameter["id"]}}})
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 1)
         h = model.header.index
         parameters = []
@@ -103,6 +106,8 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.fetch_entity_tree_model()
         self.assertEqual(model.rowCount(), 4)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_definition": {self.relative_speed_parameter["id"]}}})
+        while model.rowCount() == 4:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 3)
         h = model.header.index
         parameters = []
@@ -123,6 +128,8 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.fetch_entity_tree_model()
         self.assertEqual(model.rowCount(), 3)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_water["id"]}}})
+        while model.rowCount() == 3:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 2)
         h = model.header.index
         parameters = []
@@ -145,6 +152,8 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
         self.fetch_entity_tree_model()
         self.assertEqual(model.rowCount(), 6)
         self.db_mngr.remove_items({self.mock_db_map: {"parameter_value": {self.nemo_pluto_relative_speed["id"]}}})
+        while model.rowCount() == 6:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 5)
         h = model.header.index
         parameters = []

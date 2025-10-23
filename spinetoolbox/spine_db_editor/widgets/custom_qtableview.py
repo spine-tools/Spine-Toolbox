@@ -438,7 +438,7 @@ class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, P
 
 
 class ParameterValueTableView(AboveSeam, ParameterValueTableViewBase):
-    _private_key_fields: ClassVar[tuple[str, str, str, str]] = (
+    _private_key_headers: ClassVar[tuple[str, str, str, str]] = (
         field_header("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
         field_header("entity_byname", PARAMETER_VALUE_FIELD_MAP),
         field_header("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP),
@@ -463,14 +463,16 @@ class ParameterValueTableView(AboveSeam, ParameterValueTableViewBase):
         db_item = self.model().db_item(index)
         if db_item is None:
             return None
-        return (db_map.db_url, {f: db_item[f] for f in self._private_key_fields})
+        model = self.model()
+        private_key_fields = [model.field_map[header] for header in self._private_key_headers]
+        return (db_map.db_url, {f: db_item[f] for f in private_key_fields})
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class."""
         model = self.model()
         header_sections = [
             ParameterTableHeaderSection(label)
-            for label in (model.field_to_header("database"),) + self._private_key_fields
+            for label in (model.field_to_header("database"),) + self._private_key_headers
         ]
         byname_header = model.field_to_header("entity_byname")
         for i, section in enumerate(header_sections):

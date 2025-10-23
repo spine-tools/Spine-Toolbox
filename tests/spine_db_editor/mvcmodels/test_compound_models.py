@@ -11,8 +11,13 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``compound_models`` module."""
+import gc
+import pathlib
+from tempfile import TemporaryDirectory
+from unittest import mock
 from PySide6.QtCore import Qt
-from spinedb_api import Array, to_database
+from PySide6.QtWidgets import QApplication
+from spinedb_api import Array
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
@@ -44,20 +49,21 @@ class TestCompoundParameterDefinitionModel(TestBase):
     def test_data_for_single_parameter_definition(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        fetch_model(model)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
+        while model.rowCount() != 1:
+            QApplication.processEvents()
         expected = [["oc", "p", None, None, "None", None, self.db_codename]]
         assert_table_model_data(model, expected, self)
 
     def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        fetch_model(model)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
-        self._db_map.fetch_all()
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "rc"}]})
+        while model.rowCount() != 1:
+            QApplication.processEvents()
         expected = [["rc", "p", None, None, "None", None, self.db_codename]]
         assert_table_model_data(model, expected, self)
 
@@ -76,14 +82,13 @@ class TestCompoundParameterDefinitionModel(TestBase):
         model.refresh()
         self.assertEqual(model.rowCount(), 2)
         self._db_mngr.remove_items({self._db_map: {"entity_class": [entity_class_2["id"]]}})
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
 
     def test_index_name_returns_sane_label(self):
         self._db_map.add_entity_class(name="Object")
-        value, value_type = to_database(Array([2.3]))
-        self._db_map.add_parameter_definition(
-            name="x", entity_class_name="Object", default_value=value, default_type=value_type
-        )
+        self._db_map.add_parameter_definition(name="x", entity_class_name="Object", parsed_value=Array([2.3]))
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
         fetch_model(model)
@@ -117,6 +122,32 @@ class TestCompoundParameterDefinitionModel(TestBase):
                 ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [False]),
             )
 
+    def test_restore_db_maps(self):
+        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p1", "entity_class_name": "oc"}]})
+        while model.rowCount() != 1:
+            QApplication.processEvents()
+        expected = [["oc", "p1", None, None, "None", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
+        with TemporaryDirectory() as tmp_dir:
+            url = "sqlite:///" + str(pathlib.Path(tmp_dir, "other_db.sqlite"))
+            logger = mock.MagicMock()
+            db_map = self._db_mngr.get_db_map(url, logger, create=True)
+            with db_map:
+                db_map.add_entity_class(name="Object")
+                db_map.add_parameter_definition(entity_class_name="Object", name="X", description="X marks the spot.")
+            model.reset_db_maps([db_map])
+            model.init_model()
+            self.assertEqual(model.rowCount(), 0)
+            self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p2", "entity_class_name": "oc"}]})
+            fetch_model(model)
+            expected = [["Object", "X", None, None, "None", "X marks the spot.", "other_db"]]
+            assert_table_model_data(model, expected, self)
+            self._db_mngr.close_session(url)
+            gc.collect()
+
 
 class TestCompoundParameterValueModel(TestBase):
     def test_horizontal_header(self):
@@ -136,58 +167,54 @@ class TestCompoundParameterValueModel(TestBase):
     def test_data_for_single_parameter(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        fetch_model(model)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 1, "id": 1}]})
-        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
-        value, value_type = to_database(23.0)
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
         self._db_mngr.add_items(
             "parameter_value",
             {
                 self._db_map: [
                     {
-                        "parameter_definition_id": 1,
-                        "value": value,
-                        "type": value_type,
-                        "entity_id": 1,
-                        "entity_class_id": 1,
-                        "alternative_id": 1,
-                        "id": 1,
+                        "parameter_definition_name": "p",
+                        "parsed_value": 23.0,
+                        "entity_byname": ("o",),
+                        "entity_class_name": "oc",
+                        "alternative_name": "Base",
                     }
                 ]
             },
         )
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         expected = [["oc", "o", "p", "Base", "23.0", self.db_codename]]
         assert_table_model_data(model, expected, self)
 
     def test_data_for_single_parameter_in_multidimensional_entity(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
-        fetch_model(model)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc", "id": 1}]})
-        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "class_id": 1, "id": 1}]})
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_id_list": [1], "id": 2}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_id": 2, "id": 1}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "rc"}]})
         self._db_mngr.add_items(
-            "entity", {self._db_map: [{"name": "r", "class_id": 2, "element_id_list": [1], "id": 2}]}
+            "entity", {self._db_map: [{"name": "r", "entity_class_name": "rc", "element_name_list": ["o"]}]}
         )
-        value, value_type = to_database(23.0)
         self._db_mngr.add_items(
             "parameter_value",
             {
                 self._db_map: [
                     {
-                        "parameter_definition_id": 1,
-                        "value": value,
-                        "type": value_type,
-                        "entity_id": 2,
-                        "entity_class_id": 2,
-                        "alternative_id": 1,
-                        "id": 1,
+                        "parameter_definition_name": "p",
+                        "parsed_value": 23.0,
+                        "entity_byname": ("o",),
+                        "entity_class_name": "rc",
+                        "alternative_name": "Base",
                     }
                 ]
             },
         )
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         expected = [["rc", "o", "p", "Base", "23.0", self.db_codename]]
         assert_table_model_data(model, expected, self)
 
@@ -195,14 +222,12 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_entity_class(name="Object")
         self._db_map.add_parameter_definition(name="x", entity_class_name="Object")
         self._db_map.add_entity(name="mysterious cube", entity_class_name="Object")
-        value, value_type = to_database(Array([2.3]))
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("mysterious cube",),
             parameter_definition_name="x",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=Array([2.3]),
         )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
@@ -217,23 +242,19 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         self._db_map.add_alternative(name="not-Base")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         value_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         value_not_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="not-Base",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -246,10 +267,14 @@ class TestCompoundParameterValueModel(TestBase):
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
         value_not_in_base.remove()
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         expected = []
         assert_table_model_data(model, expected, self)
         value_not_in_base.restore()
         value_in_base.restore()
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
@@ -261,23 +286,19 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         self._db_map.add_alternative(name="not-Base")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         value_not_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="not-Base",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         model.init_model()
@@ -288,6 +309,8 @@ class TestCompoundParameterValueModel(TestBase):
         ]
         assert_table_model_data(model, expected, self)
         value_not_in_base.remove()
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
@@ -298,23 +321,19 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         self._db_map.add_alternative(name="not-Base")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         value_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         value_not_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="not-Base",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -326,11 +345,15 @@ class TestCompoundParameterValueModel(TestBase):
         ]
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_not_in_base.remove()
+        while model.rowCount() == 1:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
         self.assertEqual(model.sub_models, [])
 
@@ -339,23 +362,19 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         not_base_alternative = self._db_map.add_alternative(name="not-Base")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         value_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="not-Base",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -380,23 +399,19 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         not_base_alternative = self._db_map.add_alternative(name="not-Base")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         value_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="not-Base",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -425,41 +440,33 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_alternative(name="alt")
         self._db_map.add_alternative(name="del")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="ctrl",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
-        value, value_type = to_database(23.0)
         alt_value = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="alt",
-            value=value,
-            type=value_type,
+            parsed_value=23.0,
         )
-        value, value_type = to_database(-23.0)
         del_value = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="del",
-            value=value,
-            type=value_type,
+            parsed_value=-23.0,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -473,6 +480,8 @@ class TestCompoundParameterValueModel(TestBase):
         ]
         assert_table_model_data(model, expected, self)
         self._db_map.remove_items("parameter_value", alt_value["id"], del_value["id"])
+        while model.rowCount() == 4:
+            QApplication.processEvents()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
             ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
@@ -483,36 +492,30 @@ class TestCompoundParameterValueModel(TestBase):
         object_class = self._db_map.add_entity_class(name="Object")
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
         self._db_map.add_entity_class(name="Immaterial")
         self._db_map.add_parameter_definition(name="Y", entity_class_name="Immaterial")
         self._db_map.add_parameter_definition(name="Z", entity_class_name="Immaterial")
         self._db_map.add_entity(name="ghost", entity_class_name="Immaterial")
-        value, value_type = to_database(-2.3)
         self._db_map.add_parameter_value(
             entity_class_name="Immaterial",
             entity_byname=("ghost",),
             parameter_definition_name="Y",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
-        value, value_type = to_database(23.0)
         z_value = self._db_map.add_parameter_value(
             entity_class_name="Immaterial",
             entity_byname=("ghost",),
             parameter_definition_name="Z",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=23.0,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -542,41 +545,33 @@ class TestCompoundParameterValueModel(TestBase):
         self._db_map.add_parameter_definition(name="X", entity_class_name="Object")
         self._db_map.add_entity(name="mystic cube", entity_class_name="Object")
         self._db_map.add_entity(name="curious sphere", entity_class_name="Object")
-        value, value_type = to_database(2.3)
         spherical_value_in_base = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=2.3,
         )
-        value, value_type = to_database(-2.3)
         spherical_value_in_alt = self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("curious sphere",),
             parameter_definition_name="X",
             alternative_name="alt",
-            value=value,
-            type=value_type,
+            parsed_value=-2.3,
         )
-        value, value_type = to_database(23.0)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("mystic cube",),
             parameter_definition_name="X",
             alternative_name="Base",
-            value=value,
-            type=value_type,
+            parsed_value=23.0,
         )
-        value, value_type = to_database(-23.0)
         self._db_map.add_parameter_value(
             entity_class_name="Object",
             entity_byname=("mystic cube",),
             parameter_definition_name="X",
             alternative_name="alt",
-            value=value,
-            type=value_type,
+            parsed_value=-23.0,
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -598,6 +593,8 @@ class TestCompoundParameterValueModel(TestBase):
         assert_table_model_data(model, expected, self)
         spherical_value_in_base.remove()
         spherical_value_in_alt.remove()
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         expected = [
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
@@ -686,30 +683,27 @@ class TestCompoundParameterValueModel(TestBase):
             expected = [["Widget", "gadget", "weight", "Base", "a lot", self.db_codename]]
             assert_table_model_data(model, expected, self)
             waiter.wait()
+            args_as_dict = dict(zip(*waiter.args))
             self.assertEqual(
-                waiter.args,
-                (
-                    [
-                        ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id),
-                        ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id),
-                    ],
-                    [True, True],
-                ),
+                args_as_dict,
+                {
+                    ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id): True,
+                    ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id): True,
+                },
             )
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             self._db_mngr.update_items(
                 "parameter_definition", {self._db_map: [{"id": weight["id"], "parameter_type_list": ("float",)}]}
             )
+
             waiter.wait()
+            args_as_dict = dict(zip(*waiter.args))
             self.assertEqual(
-                waiter.args,
-                (
-                    [
-                        ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id),
-                        ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id),
-                    ],
-                    [True, False],
-                ),
+                args_as_dict,
+                {
+                    ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id): True,
+                    ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id): False,
+                },
             )
 
 
