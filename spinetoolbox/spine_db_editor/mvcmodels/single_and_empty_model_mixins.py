@@ -16,22 +16,7 @@ from spinedb_api import DatabaseMapping
 from spinedb_api.parameter_value import split_value_and_type
 
 
-class ConvertToDBMixin:
-    """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
-
-    def _convert_to_db(self, item: dict) -> dict:
-        """Returns a db item (id-based) from the given model item (name-based).
-
-        Args:
-            item: the model item
-
-        Returns:
-            the db item and error log
-        """
-        return {self.field_map.get(key, key): value for key, value in item.items()}
-
-
-class SplitValueAndTypeMixin(ConvertToDBMixin):
+class SplitValueAndTypeMixin:
     def _convert_to_db(self, item: dict) -> dict:
         item = super()._convert_to_db(item)
         if self.value_field in item:

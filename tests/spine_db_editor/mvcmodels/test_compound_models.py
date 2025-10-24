@@ -706,6 +706,32 @@ class TestCompoundParameterValueModel(TestBase):
                 },
             )
 
+    def test_update_parameter_value(self):
+        with self._db_map:
+            self._db_map.add_entity_class(name="Widget")
+            self._db_map.add_entity(entity_class_name="Widget", name="gadget")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="weight")
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="weight",
+                alternative_name="Base",
+                parsed_value="a lot",
+            )
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [
+            ["Widget", "gadget", "weight", "Base", "a lot", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        index = model.index(0, 4)
+        self.assertTrue(model.batch_set_data([index], ["too much"]))
+        expected = [
+            ["Widget", "gadget", "weight", "Base", "too much", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+
 
 class TestCompoundEntityAlternativeModel:
     def test_horizontal_header(self, db_mngr, db_map, db_editor):
@@ -795,4 +821,29 @@ class TestCompoundEntityModel:
         assert_table_model_data_pytest(model, expected)
         gadget.update(lat=1.1, lon=2.2, alt=3.3, shape_name="region", shape_blob="{}")
         expected = [["Widget", "gadget", "gadget", None, "1.1", "2.2", "3.3", "region", "<geojson>", db_name]]
+        assert_table_model_data_pytest(model, expected)
+
+    def test_update_entity_byname(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="clock")
+            db_map.add_entity(entity_class_name="Widget", name="calendar")
+            db_map.add_entity_class(dimension_name_list=["Widget"])
+            db_map.add_entity(entity_class_name="Widget__", entity_byname=("calendar",))
+        model = CompoundEntityModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [
+            ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],
+            ["Widget", "clock", "clock", None, None, None, None, None, None, db_name],
+            ["Widget__", "calendar__", "calendar", None, None, None, None, None, None, db_name],
+        ]
+        assert_table_model_data_pytest(model, expected)
+        index = model.index(2, 2)
+        assert model.batch_set_data([index], [("clock",)])
+        expected = [
+            ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],
+            ["Widget", "clock", "clock", None, None, None, None, None, None, db_name],
+            ["Widget__", "calendar__", "clock", None, None, None, None, None, None, db_name],
+        ]
         assert_table_model_data_pytest(model, expected)

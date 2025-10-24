@@ -110,10 +110,10 @@ class SingleModelBase(HalfSortedTableModel):
             if tuple(item_to_upd.keys()) != ("id",):
                 items_to_upd.append(item_to_upd)
         if items_to_upd:
-            self._do_update_items_in_db({self.db_map: items_to_upd})
+            self.db_mngr.update_items(self._parent.item_type, {self.db_map: items_to_upd})
 
     def _convert_to_db(self, item: dict) -> dict:
-        return item.copy()
+        return item
 
     @property
     def _references(self) -> dict[str, tuple[str, str | None]]:
@@ -422,8 +422,9 @@ class EntityMixin:
 
     def update_items_in_db(self, items):
         """Overridden to create entities on the fly first."""
+        class_name = self.entity_class_name
         for item in items:
-            item["entity_class_name"] = self.entity_class_name
+            item["entity_class_name"] = class_name
         entities = []
         error_log = []
         for item in items:
@@ -438,9 +439,6 @@ class EntityMixin:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
         super().update_items_in_db(items)
 
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_items(self._parent.item_type, db_map_data)
-
 
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
@@ -454,9 +452,6 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
         mapped_table = self.db_map.mapped_table(self._parent.item_type)
         item = mapped_table[item_id]
         return order_key(item.get("name", ""))
-
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_items("parameter_definition", db_map_data)
 
 
 class SingleParameterValueModel(
@@ -504,14 +499,32 @@ class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, Si
         }
 
 
-class SingleEntityModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
     _NUMERICAL_COLUMNS: ClassVar[set[int]] = {
         field_index("lat", ENTITY_FIELD_MAP),
         field_index("lon", ENTITY_FIELD_MAP),
         field_index("alt", ENTITY_FIELD_MAP),
     }
+    _BYNAME_COLUMN: ClassVar[int] = field_index("entity_byname", ENTITY_FIELD_MAP)
     _SHAPE_BLOB_COLUMN: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
     group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
+
+    def __init__(
+        self,
+        parent: CompoundStackedModel,
+        db_map: DatabaseMapping,
+        entity_class_id: TempId,
+        committed: bool,
+        lazy: bool = False,
+    ):
+        super().__init__(parent, db_map, entity_class_id, committed, lazy)
+        self._entity_class_dimensions = len(db_map.mapped_table("entity_class")[entity_class_id]["dimension_id_list"])
+
+    def flags(self, index):
+        flags = super().flags(index)
+        if index.column() == self._BYNAME_COLUMN and self._entity_class_dimensions == 0:
+            flags = flags & ~Qt.ItemFlag.ItemIsEditable
+        return flags
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         column = index.column()
@@ -525,6 +538,12 @@ class SingleEntityModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBa
             mapped_table = self.db_map.mapped_table("entity")
             entity_item = mapped_table[self._main_data[index.row()]]
             return None if entity_item["shape_blob"] is None else "<geojson>"
+        elif (
+            column == self._BYNAME_COLUMN
+            and role == Qt.ItemDataRole.BackgroundRole
+            and self._entity_class_dimensions == 0
+        ):
+            return FIXED_FIELD_COLOR
         return super().data(index, role)
 
     def _sort_key(self, item_id: TempId) -> list[str]:

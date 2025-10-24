@@ -267,8 +267,7 @@ class EmptyModelBase(EmptyRowModel):
         return super().data(index, role)
 
     def _convert_to_db(self, item: dict) -> dict:
-        """Returns a db item (id-based) from the given model item (name-based)."""
-        return item.copy()
+        return item
 
     @staticmethod
     def _check_item(item: dict) -> bool:
