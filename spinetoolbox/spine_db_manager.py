@@ -90,21 +90,21 @@ class SpineDBManager(QObject):
 
     error_msg = Signal(object)
     # Data changed signals
-    items_added = Signal(str, dict)
+    items_added = Signal(str, object)
     """Emitted whenever items are added to a DB.
 
     Args:
         str: item type, such as "object_class"
         dict: mapping DatabaseMapping to list of added dict-items.
     """
-    items_updated = Signal(str, dict)
+    items_updated = Signal(str, object)
     """Emitted whenever items are updated in a DB.
 
     Args:
         str: item type, such as "object_class"
         dict: mapping DatabaseMapping to list of updated dict-items.
     """
-    items_removed = Signal(str, dict)
+    items_removed = Signal(str, object)
     """Emitted whenever items are removed from a DB.
 
     Args:

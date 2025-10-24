@@ -136,7 +136,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
                         self._selected.add(item)
             self._all_selected = self._check_all_selected()
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
-            self.dataChanged.emit(0, 0, [Qt.ItemDataRole.CheckStateRole])
+            self.dataChanged.emit(self.index(0, 0), self.index(0, 0), [Qt.ItemDataRole.CheckStateRole])
 
     def set_list(self, data, all_selected=True):
         self.beginResetModel()
