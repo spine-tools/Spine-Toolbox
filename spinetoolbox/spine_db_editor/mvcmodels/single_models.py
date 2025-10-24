@@ -505,11 +505,23 @@ class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, Si
 
 
 class SingleEntityModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
-    _shape_blob_column: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
+    _NUMERICAL_COLUMNS: ClassVar[set[int]] = {
+        field_index("lat", ENTITY_FIELD_MAP),
+        field_index("lon", ENTITY_FIELD_MAP),
+        field_index("alt", ENTITY_FIELD_MAP),
+    }
+    _SHAPE_BLOB_COLUMN: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
     group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if index.column() == self._shape_blob_column and role == Qt.ItemDataRole.DisplayRole:
+        column = index.column()
+        if column in self._NUMERICAL_COLUMNS:
+            if role == Qt.ItemDataRole.DisplayRole:
+                data = super().data(index, role)
+                return str(data) if data is not None else None
+            if role == Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        elif column == self._SHAPE_BLOB_COLUMN and role == Qt.ItemDataRole.DisplayRole:
             mapped_table = self.db_map.mapped_table("entity")
             entity_item = mapped_table[self._main_data[index.row()]]
             return None if entity_item["shape_blob"] is None else "<geojson>"

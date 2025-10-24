@@ -75,10 +75,11 @@ from .custom_delegates import (
     ItemMetadataDelegate,
     MetadataDelegate,
     ParameterDefaultValueDelegate,
-    ParameterDefinitionNameAndDescriptionDelegate,
     ParameterNameDelegate,
     ParameterTypeListDelegate,
     ParameterValueDelegate,
+    PlainNumberDelegate,
+    PlainTextDelegate,
     TableDelegate,
     ValueListDelegate,
 )
@@ -366,8 +367,8 @@ class ParameterDefinitionTableViewBase(ParameterTableView):
         model = self.model()
         self._make_delegate(model.field_to_header("parameter_type_list"), ParameterTypeListDelegate)
         self._make_delegate(model.field_to_header("parameter_value_list_name"), ValueListDelegate)
-        self._make_delegate(model.field_to_header("name"), ParameterDefinitionNameAndDescriptionDelegate)
-        self._make_delegate(model.field_to_header("description"), ParameterDefinitionNameAndDescriptionDelegate)
+        self._make_delegate(model.field_to_header("name"), PlainTextDelegate)
+        self._make_delegate(model.field_to_header("description"), PlainTextDelegate)
         delegate = self._make_delegate(model.field_to_header("default_value"), ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
@@ -536,6 +537,38 @@ class EntityTableView(StackedTableView):
         field_header("shape_blob", ENTITY_FIELD_MAP): 70,
     }
     _EXPECTED_COLUMN_COUNT = len(ENTITY_FIELD_MAP)
+    _NUMERICAL_HEADERS = {
+        field_header("lat", ENTITY_FIELD_MAP),
+        field_header("lon", ENTITY_FIELD_MAP),
+        field_header("alt", ENTITY_FIELD_MAP),
+    }
+
+    def create_delegates(self):
+        super().create_delegates()
+        model = self.model()
+        self._make_delegate(model.field_to_header("name"), PlainTextDelegate)
+        delegate = self._make_delegate(model.field_to_header("entity_byname"), EntityBynameDelegate)
+        delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
+        self._make_delegate(model.field_to_header("description"), PlainTextDelegate)
+        for header in self._NUMERICAL_HEADERS:
+            self._make_delegate(header, PlainNumberDelegate)
+        self._make_delegate(model.field_to_header("shape_name"), PlainTextDelegate)
+        self._make_delegate(model.field_to_header("shape_blob"), PlainTextDelegate)
+
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+        header = model.header[column]
+        if header in self._NUMERICAL_HEADERS:
+            return str(value) if value is not None else None
+        return super()._convert_copied(row, column, value, model)
+
+    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+        header = model.header[column]
+        if header in self._NUMERICAL_HEADERS:
+            try:
+                return float(str_value)
+            except (ValueError, TypeError):
+                return None
+        return super()._convert_pasted(row, column, str_value, model)
 
 
 class PivotTableView(CopyPasteTableView):

@@ -794,5 +794,5 @@ class TestCompoundEntityModel:
         expected = [["Widget", "gadget", "gadget", None, None, None, None, None, None, db_name]]
         assert_table_model_data_pytest(model, expected)
         gadget.update(lat=1.1, lon=2.2, alt=3.3, shape_name="region", shape_blob="{}")
-        expected = [["Widget", "gadget", "gadget", None, 1.1, 2.2, 3.3, "region", "<geojson>", db_name]]
+        expected = [["Widget", "gadget", "gadget", None, "1.1", "2.2", "3.3", "region", "<geojson>", db_name]]
         assert_table_model_data_pytest(model, expected)
