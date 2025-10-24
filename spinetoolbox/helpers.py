@@ -607,6 +607,9 @@ class ColoredIconEngine(QIconEngine):
             self._icon.actualSize(size), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
         )
 
+    def paint(self, painter, rect, mode=None, state=None):
+        pass
+
 
 def color_pixmap(pixmap: QPixmap, color: QColor) -> QPixmap:
     img = pixmap.toImage()

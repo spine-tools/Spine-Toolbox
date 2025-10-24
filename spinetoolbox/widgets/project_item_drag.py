@@ -223,3 +223,6 @@ class _ChoppedIconEngine(QIconEngine):
 
     def pixmap(self, size, mode, state):
         return self._pixmap
+
+    def paint(self, painter, rect, mode=None, state=None):
+        pass
