@@ -57,6 +57,7 @@ class EmptyModelBase(EmptyRowModel):
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
         super().__init__(parent, list(self.field_map))
         self.db_mngr = db_mngr
+        self._db_maps: list[DatabaseMapping] = []
         self._undo_stack: Optional[QUndoStack] = None
         self.entity_class_id: Optional[TempId] = None
         self._fetch_parent = FlexibleFetchParent(
@@ -287,11 +288,16 @@ class EmptyModelBase(EmptyRowModel):
             super().set_default_row(**candidate)
             self._undo_stack.clear()
 
-    def reset_db_maps(self, db_maps: Iterable[DatabaseMapping]):
+    def reset_db_maps(self, db_maps: list[DatabaseMapping]):
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
+        for db_map in self._db_maps:
+            if db_map not in db_maps:
+                self.db_mngr.unregister_fetch_parent(db_map, self._fetch_parent)
         for db_map in db_maps:
-            self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
+            if db_map not in self._db_maps:
+                self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
+        self._db_maps = db_maps
 
 
 class _TempDBMapCache:

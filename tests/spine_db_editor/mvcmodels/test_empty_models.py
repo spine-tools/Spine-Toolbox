@@ -329,6 +329,44 @@ class TestEmptyParameterDefinitionModel:
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my parameter"
 
+    def test_change_db_maps_by_reset_db_maps(self, db_mngr, db_map, db_name, tmp_path, logger):
+        url = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        with db_map:
+            db_map.add_entity_class(name="my class")
+        db_map2 = db_mngr.get_db_map(url, logger, create=True)
+        db_mngr.name_registry.register(db_map2.sa_url, "the other database")
+        with db_map2:
+            db_map2.add_entity_class(name="my class")
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.mvcmodels.empty_models.EmptyParameterDefinitionModel.handle_items_added"
+        ) as mock_handler:
+            with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+                undo_stack = QUndoStack(model)
+                model.set_undo_stack(undo_stack)
+                model.reset_db_maps([db_map])
+                model.set_default_row(entity_class_name="my class", database=db_name)
+                model.append_empty_row()
+                indexes = [model.index(0, 1)]
+                data = ["my parameter"]
+                assert model.batch_set_data(indexes, data)
+                QApplication.processEvents()
+                mock_handler.assert_called_once_with(
+                    {db_map: [db_map.parameter_definition(entity_class_name="my class", name="my parameter")]}
+                )
+                mock_handler.reset_mock()
+                model.reset_db_maps([db_map2])
+                indexes = [model.index(0, 1), model.index(0, 6)]
+                data = ["your parameter", "the other database"]
+                assert model.batch_set_data(indexes, data)
+                QApplication.processEvents()
+                mock_handler.assert_called_once_with(
+                    {db_map2: [db_map2.parameter_definition(entity_class_name="my class", name="your parameter")]}
+                )
+                mock_handler.reset_mock()
+                db_map.add_parameter_definition(entity_class_name="my class", name="should not be seen by model")
+                QApplication.processEvents()
+                mock_handler.assert_not_called()
+
 
 class TestEmptyParameterValueModel:
     def test_value_index_name_when_row_is_empty(self, db_mngr):
