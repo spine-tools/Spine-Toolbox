@@ -12,7 +12,7 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from __future__ import annotations
-from typing import TYPE_CHECKING, ClassVar, Iterable
+from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
@@ -27,7 +27,6 @@ from .utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
-    FilterIds,
     field_index,
     make_entity_on_the_fly,
 )
@@ -61,8 +60,10 @@ class HalfSortedTableModel(MinimalTableModel[TempId]):
 class SingleModelBase(HalfSortedTableModel):
     """Base class for all single models that go in a CompoundModelBase subclass."""
 
+    entity_class_column: ClassVar[int] = NotImplemented
+    database_column: ClassVar[int] = NotImplemented
     group_columns: ClassVar[set[int]] = set()
-    fixed_fields: ClassVar[tuple[str, ...]] = ("entity_class_name", "database")
+    fixed_columns: ClassVar[tuple[int, ...]] = ()
 
     def __init__(
         self,
@@ -159,7 +160,7 @@ class SingleModelBase(HalfSortedTableModel):
     def flags(self, index):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
-        if self.header[index.column()] in self.fixed_fields:
+        if index.column() in self.fixed_columns:
             return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
@@ -205,15 +206,16 @@ class SingleModelBase(HalfSortedTableModel):
         return False
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        field = self._parent.field_map[self.header[index.column()]]
-        if role == Qt.ItemDataRole.BackgroundRole and field in self.fixed_fields:
+        column = index.column()
+        if role == Qt.ItemDataRole.BackgroundRole and column in self.fixed_columns:
             return FIXED_FIELD_COLOR
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
-            if field == "database":
+            if column == self.database_column:
                 return self.db_mngr.name_registry.display_name(self.db_map.sa_url)
             id_ = self._main_data[index.row()]
             mapped_table = self.db_map.mapped_table(self._parent.item_type)
             item = mapped_table[id_]
+            field = self._parent.field_map[self.header[column]]
             if role == Qt.ItemDataRole.ToolTipRole:
                 ref_item = self._get_ref(item, field)
                 if ref_item is not None and (description := ref_item.get("description")):
@@ -222,7 +224,7 @@ class SingleModelBase(HalfSortedTableModel):
             if index.column() in self.group_columns and role != Qt.ItemDataRole.EditRole:
                 data = DB_ITEM_SEPARATOR.join(data) if data else None
             return data
-        if role == Qt.ItemDataRole.DecorationRole and field == "entity_class_name":
+        if role == Qt.ItemDataRole.DecorationRole and column == self.entity_class_column:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_id)
         if role == DB_MAP_ROLE:
             return self.db_map
@@ -302,6 +304,7 @@ class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
     value_field: ClassVar[str] = NotImplemented
+    VALUE_COLUMN: ClassVar[int] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
     parameter_definition_id_key: ClassVar[str] = NotImplemented
 
@@ -338,8 +341,7 @@ class ParameterMixin:
         using the item_type property.
         Paint the object_class icon next to the name.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
-        field = self.field_map[self.header[index.column()]]
-        if field == self.value_field and role in {
+        if index.column() == self.VALUE_COLUMN and role in {
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.EditRole,
             Qt.ItemDataRole.ToolTipRole,
@@ -393,7 +395,6 @@ class ParameterMixin:
         self._ids_pending_type_validation -= private_ids_of_interest
         if not self._ids_pending_type_validation:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
-        value_column = self.header.index(self._parent.field_to_header(self.value_field))
         min_row = None
         max_row = None
         for row, id_ in enumerate(self._main_data):
@@ -406,8 +407,8 @@ class ParameterMixin:
                     break
         if min_row is None:
             return
-        top_left = self.index(min_row, value_column)
-        bottom_right = self.index(max_row, value_column)
+        top_left = self.index(min_row, self.VALUE_COLUMN)
+        bottom_right = self.index(max_row, self.VALUE_COLUMN)
         self.dataChanged.emit(top_left, bottom_right, [PARAMETER_TYPE_VALIDATION_ROLE])
 
     @Slot(object)
@@ -443,10 +444,17 @@ class EntityMixin:
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
 
+    entity_class_column = field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP)
+    database_column = field_index("database", PARAMETER_DEFINITION_FIELD_MAP)
     value_field = "default_value"
+    VALUE_COLUMN = field_index("default_value", PARAMETER_DEFINITION_FIELD_MAP)
     type_field = "default_type"
     parameter_definition_id_key = "id"
     group_columns = {field_index("parameter_type_list", PARAMETER_DEFINITION_FIELD_MAP)}
+    fixed_columns = (
+        field_index("entity_class_column", PARAMETER_DEFINITION_FIELD_MAP),
+        field_index("database", PARAMETER_DEFINITION_FIELD_MAP),
+    )
 
     def _sort_key(self, item_id):
         mapped_table = self.db_map.mapped_table(self._parent.item_type)
@@ -463,8 +471,15 @@ class SingleParameterValueModel(
 ):
     """A parameter_value model for a single entity_class."""
 
+    entity_class_column = field_index("entity_class_name", PARAMETER_VALUE_FIELD_MAP)
+    database_column = field_index("database", PARAMETER_VALUE_FIELD_MAP)
     group_columns = {field_index("entity_byname", PARAMETER_VALUE_FIELD_MAP)}
+    fixed_columns = (
+        field_index("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
+        field_index("database", PARAMETER_VALUE_FIELD_MAP),
+    )
     value_field = "value"
+    VALUE_COLUMN = field_index("value", PARAMETER_VALUE_FIELD_MAP)
     type_field = "type"
     parameter_definition_id_key = "parameter_id"
 
@@ -480,6 +495,12 @@ class SingleParameterValueModel(
 class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
+    entity_class_column = field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP)
+    database_column = field_index("database", ENTITY_ALTERNATIVE_FIELD_MAP)
+    fixed_columns = (
+        field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP),
+        field_index("database", ENTITY_ALTERNATIVE_FIELD_MAP),
+    )
     group_columns = {field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)}
 
     def _sort_key(self, item_id):
@@ -500,6 +521,8 @@ class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase
 
 
 class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
+    entity_class_column = field_index("entity_class_name", ENTITY_FIELD_MAP)
+    database_column = field_index("database", ENTITY_FIELD_MAP)
     _NUMERICAL_COLUMNS: ClassVar[set[int]] = {
         field_index("lat", ENTITY_FIELD_MAP),
         field_index("lon", ENTITY_FIELD_MAP),
@@ -507,6 +530,7 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
     }
     _BYNAME_COLUMN: ClassVar[int] = field_index("entity_byname", ENTITY_FIELD_MAP)
     _SHAPE_BLOB_COLUMN: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
+    fixed_columns = (field_index("entity_class_name", ENTITY_FIELD_MAP), field_index("database", ENTITY_FIELD_MAP))
     group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
 
     def __init__(

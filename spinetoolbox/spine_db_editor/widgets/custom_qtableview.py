@@ -48,6 +48,7 @@ from ..helpers import (
     string_to_group,
     string_to_parameter_value,
 )
+from ..mvcmodels.compound_models import CompoundStackedModel
 from ..mvcmodels.empty_models import EmptyModelBase
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ..mvcmodels.pivot_table_models import (
@@ -127,14 +128,14 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def _convert_copied(
-        self, row: int, column: int, value: Any, model: Union[SingleModelBase, EmptyModelBase]
+        self, row: int, column: int, value: Any, model: Union[CompoundStackedModel, EmptyModelBase]
     ) -> Optional[str]:
         if column in model.group_columns:
             return group_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
     def _convert_pasted(
-        self, row: int, column: int, str_value: Optional[str], model: Union[SingleModelBase, EmptyModelBase]
+        self, row: int, column: int, str_value: Optional[str], model: Union[CompoundStackedModel, EmptyModelBase]
     ) -> Any:
         if column in model.group_columns:
             return string_to_group(str_value)
