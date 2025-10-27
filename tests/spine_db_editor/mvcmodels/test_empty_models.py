@@ -18,6 +18,7 @@ from spinedb_api import to_database
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     DelayedDataSetter,
+    EmptyEntityAlternativeModel,
     EmptyModelBase,
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
@@ -26,6 +27,7 @@ from tests.mock_helpers import (
     MockSpineDBManager,
     TestCaseWithQApplication,
     assert_table_model_data,
+    assert_table_model_data_pytest,
     fetch_model,
     q_object,
 )
@@ -100,8 +102,8 @@ class TestExampleEmptyModel(TestCaseWithQApplication):
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 4)
-        model.insertRow(0)
-        model.insertRow(0)
+        self.assertTrue(model.insertRow(0))
+        self.assertTrue(model.insertRow(0))
         expected = [[None, None, None, None], [None, None, None, None], [None, None, None, None]]
         assert_table_model_data(model, expected, self)
         model.remove_rows([0, 1])
@@ -261,7 +263,7 @@ class TestExampleEmptyModel(TestCaseWithQApplication):
 class TestDelayedDataSetter:
     def test_sets_data_for_model(self, application):
         with q_object(MinimalTableModel(header=["col 1"])) as model:
-            model.insertRows(0, 1, QModelIndex())
+            assert model.insertRows(0, 1, QModelIndex())
             index = model.index(0, 0)
             data_setter = DelayedDataSetter(model, index)
             value_and_type = to_database(2.3)
@@ -273,7 +275,7 @@ class TestDelayedDataSetter:
             model.insertRows(0, 2)
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
-            model.removeRows(0, 1)
+            assert model.removeRows(0, 1)
             value_and_type = to_database(2.3)
             data_setter(value_and_type)
             assert model.index(0, 0).data() == 2.3
@@ -283,24 +285,24 @@ class TestDelayedDataSetter:
             model.insertRows(0, 2)
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
-            model.removeRows(1, 1)
+            assert model.removeRows(1, 1)
             value_and_type = to_database(2.3)
             data_setter(value_and_type)
             assert model.index(0, 0).data() is None
 
     def test_removing_succeeding_row_has_no_effect(self, application):
         with q_object(MinimalTableModel(header=["col 1"])) as model:
-            model.insertRows(0, 2)
+            assert model.insertRows(0, 2)
             index = model.index(0, 0)
             data_setter = DelayedDataSetter(model, index)
-            model.removeRows(1, 1)
+            assert model.removeRows(1, 1)
             value_and_type = to_database(2.3)
             data_setter(value_and_type)
             assert model.index(0, 0).data() == 2.3
 
     def test_resetting_model_invalidates_setter(self):
         with q_object(MinimalTableModel(header=["col 1"])) as model:
-            model.insertRows(0, 2)
+            assert model.insertRows(0, 2)
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
             model.clear()
@@ -323,7 +325,7 @@ class TestEmptyParameterDefinitionModel:
             model.append_empty_row()
             indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 6)]
             data = ["my class", "my parameter", "my database"]
-            model.batch_set_data(indexes, data)
+            assert model.batch_set_data(indexes, data)
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my parameter"
 
@@ -342,6 +344,34 @@ class TestEmptyParameterValueModel:
             model.append_empty_row()
             indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 2), model.index(0, 3), model.index(0, 5)]
             data = ["my class", ("my entity",), "my parameter", "my alternative", "my database"]
-            model.batch_set_data(indexes, data)
+            assert model.batch_set_data(indexes, data)
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my entity - my parameter - my alternative"
+
+
+class TestEmptyEntityAlternativeModel:
+
+    def test_create_entity_on_the_fly(self, db_mngr, db_map, db_name):
+        with db_map:
+            db_map.add_entity_class(name="my class")
+        with q_object(EmptyEntityAlternativeModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.set_default_row(entity_class_name="my class", database=db_name)
+            model.append_empty_row()
+            indexes = [model.index(0, 1), model.index(0, 2), model.index(0, 3)]
+            data = [("my entity",), "Base", True]
+            assert model.batch_set_data(indexes, data)
+            while model.rowCount() == 2:
+                QApplication.processEvents()
+            entities = db_map.find_entities()
+            assert len(entities) == 1
+            assert entities[0]["name"] == "my entity"
+            entity_alternatives = db_map.find_entity_alternatives()
+            assert len(entity_alternatives) == 1
+            assert entity_alternatives[0]["entity_byname"] == ("my entity",)
+            assert entity_alternatives[0]["alternative_name"] == "Base"
+            assert entity_alternatives[0]["active"]
+            expected = [["my class", None, None, None, db_name]]
+            assert_table_model_data_pytest(model, expected)

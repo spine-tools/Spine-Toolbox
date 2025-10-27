@@ -760,6 +760,27 @@ class TestCompoundEntityAlternativeModel:
         expected = [["Widget", "gadget", "Base", True, db_name]]
         assert_table_model_data_pytest(model, expected)
 
+    def test_updating_byname_to_non_existing_entity_fails(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="gadget")
+            db_map.add_entity_alternative(
+                entity_class_name="Widget", entity_byname=("gadget",), alternative_name="Base", active=True
+            )
+        model = CompoundEntityAlternativeModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [["Widget", "gadget", "Base", True, db_name]]
+        assert_table_model_data_pytest(model, expected)
+        index = model.index(0, 1)
+        db_editor.msg_error.disconnect(db_editor.err_msg.showMessage)
+        with signal_waiter(db_editor.msg_error, timeout=1.0) as waiter:
+            assert model.batch_set_data([index], [("non-existent",)])
+            waiter.wait()
+            assert waiter.args == (
+                "<ul><li>From TestCompoundEntityAlternativeModel_db: <ul><li>no entity matching {'entity_class_name': 'Widget', 'entity_byname': ('non-existent',)}</li></ul></li></ul>",
+            )
+
 
 class TestCompoundEntityModel:
     def test_horizontal_header(self, db_mngr, db_map, db_editor):

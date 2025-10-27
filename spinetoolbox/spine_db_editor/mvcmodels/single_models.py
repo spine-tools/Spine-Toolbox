@@ -477,7 +477,7 @@ class SingleParameterValueModel(
         return byname, parameter_name, alt_name
 
 
-class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
     group_columns = {field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)}
