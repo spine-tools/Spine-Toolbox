@@ -48,7 +48,6 @@ from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ..helpers import table_name_from_item_type
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
@@ -115,6 +114,12 @@ class SpineDBEditorBase(QMainWindow):
         self.update_commit_enabled()
         self.last_view = None
         self.setup_focus_shortcuts()
+        self.table_name_from_item_type = {
+            "parameter_value": self.ui.dockWidget_parameter_value.windowTitle(),
+            "parameter_definition": self.ui.dockWidget_parameter_definition.windowTitle(),
+            "entity_alternative": self.ui.dockWidget_entity_alternative.windowTitle(),
+            "entity": self.ui.entity_dock_widget.windowTitle(),
+        }
 
     @property
     def toolbox(self):
@@ -903,7 +908,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def handle_column_filters(self, model):
         dock = self._dock_by_item_type[model.item_type]
-        table_name = table_name_from_item_type(model.item_type)
+        table_name = self.table_name_from_item_type[model.item_type]
         if not any(model.column_filters.values()):
             # Back to defaults
             dock.setWindowTitle(table_name)
