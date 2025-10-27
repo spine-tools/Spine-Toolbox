@@ -13,7 +13,7 @@
 """Compound models. These models concatenate several 'single' models and one 'empty' model."""
 from __future__ import annotations
 import bisect
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Type
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
@@ -40,7 +40,6 @@ from .utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
-    FilterIds,
 )
 
 if TYPE_CHECKING:
@@ -66,7 +65,7 @@ class CompoundStackedModel(CompoundTableModel):
         self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] = {}
         self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
-        self._auto_filter: dict[str, dict[tuple[DatabaseMapping, TempId], set[AutoFilterValue]]] = {}
+        self._auto_filter: dict[str, dict[tuple[DatabaseMapping, TempId], set]] = {}
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.setInterval(100)
@@ -115,7 +114,7 @@ class CompoundStackedModel(CompoundTableModel):
     def shows_item(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
         return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
 
-    def reset_db_maps(self, db_maps):
+    def reset_db_maps(self, db_maps: Sequence[DatabaseMapping]) -> None:
         if set(db_maps) == set(self._db_maps):
             return
         self._fetch_parent.set_obsolete(False)
@@ -138,7 +137,13 @@ class CompoundStackedModel(CompoundTableModel):
             )
         )
 
-    def _handle_single_model_data_changed(self, top_left, bottom_right, roles, model):
+    def _handle_single_model_data_changed(
+        self,
+        top_left: QModelIndex,
+        bottom_right: QModelIndex,
+        roles: list[Qt.ItemDataRole] | None,
+        model: SingleModelBase,
+    ) -> None:
         top_left = self.map_from_sub(model, top_left)
         bottom_right = self.map_from_sub(model, bottom_right)
         if top_left.isValid() and bottom_right.isValid():
@@ -217,7 +222,7 @@ class CompoundStackedModel(CompoundTableModel):
         if (
             role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
-            and self._auto_filter.get(real_field, {}) != {}
+            and self._auto_filter.get(real_field)
         ):
             return italic_font
         return super().headerData(section, orientation, role)
@@ -273,7 +278,7 @@ class CompoundStackedModel(CompoundTableModel):
         self._invalidate_filter()
 
     @Slot(str, object)
-    def set_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set[AutoFilterValue]]):
+    def set_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]):
         """Updates and applies the auto filter.
 
         Args:
@@ -289,14 +294,12 @@ class CompoundStackedModel(CompoundTableModel):
             self._column_filters[field] = False
         self._parent.handle_column_filters(self)
 
-    def _set_compound_auto_filter(
-        self, field: str, values: dict[tuple[DatabaseMapping, TempId], set[AutoFilterValue]]
-    ) -> None:
+    def _set_compound_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]) -> None:
         """Sets the auto filter for given column in the compound model.
 
         Args:
             field: the field name
-            values: set of valid (db_map, item_type, id) tuples
+            values: mapping from (db map, id) to a set of valid values
         """
         if self._auto_filter.setdefault(field, {}) == values:
             return
@@ -591,19 +594,21 @@ class FilterEntityAlternativeMixin:
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
 
-    def set_filter_entity_ids(self, entity_ids):
+    def set_filter_entity_ids(self, entity_ids: dict[DatabaseMapping, set[TempId]]) -> None:
         self._filter_entity_ids = entity_ids
         for model in self.sub_models:
             if model.set_filter_entity_ids(entity_ids):
                 self._invalidate_filter()
 
-    def set_filter_alternative_ids(self, alternative_ids):
+    def set_filter_alternative_ids(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
         self._filter_alternative_ids = alternative_ids
         for model in self.sub_models:
             if model.set_filter_alternative_ids(alternative_ids):
                 self._invalidate_filter()
 
-    def _create_single_model(self, db_map, entity_class_id, committed):
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
         model = super()._create_single_model(db_map, entity_class_id, committed)
         model.set_filter_entity_ids(self._filter_entity_ids)
         model.set_filter_alternative_ids(self._filter_alternative_ids)
@@ -670,15 +675,9 @@ class EditParameterValueMixin:
             )
         return parameter_identifier(database, entity_class_name, entity_byame, parameter_name, alternative_name)
 
-    def get_set_data_delayed(self, index):
+    def get_set_data_delayed(self, index: QModelIndex) -> Callable[tuple[bytes, str], None]:
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
         even if the model changes.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            function
         """
         sub_model = self.sub_model_at_row(index.row())
         id_ = self.item_at_row(index.row())

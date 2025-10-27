@@ -76,7 +76,7 @@ class EmptyModelBase(EmptyRowModel):
         self.modelReset.connect(self._clear_undo_stack)
 
     @Slot()
-    def _clear_undo_stack(self):
+    def _clear_undo_stack(self) -> None:
         self._undo_stack.clear()
 
     def fetchMore(self, parent):
@@ -288,7 +288,7 @@ class EmptyModelBase(EmptyRowModel):
             super().set_default_row(**candidate)
             self._undo_stack.clear()
 
-    def reset_db_maps(self, db_maps: list[DatabaseMapping]):
+    def reset_db_maps(self, db_maps: list[DatabaseMapping]) -> None:
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
         for db_map in self._db_maps:
@@ -566,7 +566,7 @@ class EmptyEntityAlternativeModel(EntityMixin, EmptyModelBase):
 class EmptyAddEntityOrClassRowModel(EmptyRowModel):
     """A table model with a last empty row."""
 
-    def __init__(self, parent=None, header=None):
+    def __init__(self, parent: QObject | None = None, header: list[str] | None = None):
         super().__init__(parent, header=header)
         self._entity_name_user_defined = False
 

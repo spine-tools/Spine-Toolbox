@@ -12,6 +12,7 @@
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from __future__ import annotations
+from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import DatabaseMapping
@@ -20,6 +21,7 @@ from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
 from .utils import (
@@ -77,7 +79,7 @@ class SingleModelBase(HalfSortedTableModel):
         self.db_mngr = parent.db_mngr
         self.db_map = db_map
         self.entity_class_id = entity_class_id
-        self._auto_filter = {}  # Maps field to accepted ids for that field
+        self._auto_filter: dict[str, set] = {}  # Maps field to accepted values for that field
         self.committed = committed
 
     def __lt__(self, other):
@@ -103,7 +105,7 @@ class SingleModelBase(HalfSortedTableModel):
     def field_map(self) -> dict[str, str]:
         return self._parent.field_map
 
-    def update_items_in_db(self, items):
+    def update_items_in_db(self, items: list[dict]) -> None:
         """Update items in db. Required by batch_set_data"""
         items_to_upd = []
         for item in items:
@@ -145,17 +147,10 @@ class SingleModelBase(HalfSortedTableModel):
         """Returns model's parameter ids."""
         return set(self._main_data)
 
-    def db_item(self, index):
-        return self._db_item(index.row())
-
-    def _db_item(self, row: int) -> PublicItem:
-        id_ = self._main_data[row]
+    def db_item(self, index: QModelIndex) -> PublicItem:
+        id_ = self._main_data[index.row()]
         mapped_table = self.db_map.mapped_table(self._parent.item_type)
         return mapped_table[id_]
-
-    def db_items(self) -> list[PublicItem]:
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
-        return [mapped_table[self._main_data[row]] for row in range(self.rowCount())]
 
     def flags(self, index):
         """Make fixed indexes non-editable."""
@@ -164,17 +159,7 @@ class SingleModelBase(HalfSortedTableModel):
             return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def filter_accepts_item(self, item):
-        return self._auto_filter_accepts_item(item)
-
-    def set_auto_filter(self, field, values):
-        if values == self._auto_filter.get(field, set()):
-            return False
-        self._auto_filter[field] = values
-        return True
-
-    def _auto_filter_accepts_item(self, item):
-        """Returns the result of the auto filter."""
+    def filter_accepts_item(self, item: PublicItem) -> bool:
         if self._auto_filter is None:
             return False
         for field, values in self._auto_filter.items():
@@ -182,7 +167,13 @@ class SingleModelBase(HalfSortedTableModel):
                 return False
         return True
 
-    def accepted_rows(self):
+    def set_auto_filter(self, field: str, values: set) -> bool:
+        if values == self._auto_filter.get(field, set()):
+            return False
+        self._auto_filter[field] = values
+        return True
+
+    def accepted_rows(self) -> Iterator[int]:
         """Yields accepted rows, for convenience."""
         mapped_table = self.db_map.mapped_table(self._parent.item_type)
         for row in range(self.rowCount()):
@@ -256,7 +247,7 @@ class FilterEntityAlternativeMixin:
         self._filter_alternative_ids = set()
         self._filter_entity_ids = set()
 
-    def set_filter_entity_ids(self, db_map_class_entity_ids):
+    def set_filter_entity_ids(self, db_map_class_entity_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]) -> bool:
         # Don't accept entity id filters from entities that don't belong in this model
         filter_entity_ids = set().union(
             *(
@@ -270,14 +261,16 @@ class FilterEntityAlternativeMixin:
         self._filter_entity_ids = filter_entity_ids
         return True
 
-    def set_filter_alternative_ids(self, db_map_alternative_ids):
+    def set_filter_alternative_ids(
+        self, db_map_alternative_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]
+    ) -> bool:
         alternative_ids = db_map_alternative_ids.get(self.db_map, set())
         if self._filter_alternative_ids == alternative_ids:
             return False
         self._filter_alternative_ids = alternative_ids
         return True
 
-    def filter_accepts_item(self, item):
+    def filter_accepts_item(self, item: PublicItem) -> bool:
         """Reimplemented to also account for the entity and alternative filter."""
         return (
             super().filter_accepts_item(item)
@@ -285,14 +278,14 @@ class FilterEntityAlternativeMixin:
             and self._alternative_filter_accepts_item(item)
         )
 
-    def _entity_filter_accepts_item(self, item):
+    def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the entity filter."""
         if not self._filter_entity_ids:
             return True
         entity_id = item["entity_id"]
         return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
 
-    def _alternative_filter_accepts_item(self, item):
+    def _alternative_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the alternative filter."""
         if not self._filter_alternative_ids:
             return True
@@ -314,7 +307,7 @@ class ParameterMixin:
         self.destroyed.connect(self._stop_waiting_validation)
 
     @property
-    def _references(self):
+    def _references(self) -> dict[str, tuple[str, str | None]]:
         return {
             "entity_class_name": ("entity_class_id", "entity_class"),
             "entity_byname": ("entity_id", "entity"),
@@ -327,7 +320,7 @@ class ParameterMixin:
             "alternative_name": ("alternative_id", "alternative"),
         }
 
-    def reset_model(self, main_data=None):
+    def reset_model(self, main_data: list[TempId] | None = None) -> None:
         """Resets the model."""
         super().reset_model(main_data)
         if self._ids_pending_type_validation:
@@ -356,15 +349,15 @@ class ParameterMixin:
                 return self.db_mngr.get_value(self.db_map, item, role)
         return super().data(index, role)
 
-    def add_rows(self, ids):
+    def add_rows(self, ids: list[TempId]) -> None:
         super().add_rows(ids)
         self._start_validating_types(ids)
 
-    def revalidate_item_types(self, items):
+    def revalidate_item_types(self, items: PublicItem) -> None:
         ids = tuple(item["id"] for item in items)
         self._start_validating_types(ids)
 
-    def _start_validating_types(self, ids):
+    def _start_validating_types(self, ids: Iterable[TempId]) -> None:
         private_ids = set(temp_id.private_id for temp_id in ids)
         new_ids = private_ids - self._ids_pending_type_validation
         if not new_ids:
@@ -377,12 +370,12 @@ class ParameterMixin:
             self.db_mngr, self.db_map, (id_ for id_ in ids if id_.private_id in new_ids)
         )
 
-    def _parameter_type_validated(self, keys, is_valid_list):
+    def _parameter_type_validated(self, keys: list[ValidationKey], is_valid_list: list[bool]) -> None:
         """Notifies the model that values have been validated.
 
         Args:
-            keys (list of ValidationKey): validation keys
-            is_valid_list (list of bool): True if value type is valid, False otherwise for each key
+            keys: validation keys
+            is_valid_list: True if value type is valid, False otherwise for each key
         """
         db_map_id = id(self.db_map)
         private_ids_of_interest = set()
@@ -412,7 +405,7 @@ class ParameterMixin:
         self.dataChanged.emit(top_left, bottom_right, [PARAMETER_TYPE_VALIDATION_ROLE])
 
     @Slot(object)
-    def _stop_waiting_validation(self):
+    def _stop_waiting_validation(self) -> None:
         """Stops the model from waiting for type validation notifications."""
         if self._ids_pending_type_validation:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
@@ -421,7 +414,7 @@ class ParameterMixin:
 
 class EntityMixin:
 
-    def update_items_in_db(self, items):
+    def update_items_in_db(self, items: list[dict]) -> None:
         """Overridden to create entities on the fly first."""
         class_name = self.entity_class_name
         for item in items:
