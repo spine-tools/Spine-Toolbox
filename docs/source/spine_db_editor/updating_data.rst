@@ -27,12 +27,17 @@ Modify the field(s) you want under the corresponding column(s).
 Specify the databases where you want to update each item under the *databases* column.
 When you're ready, press **OK**.
 
+From **Entity Table**
+~~~~~~~~~~~~~~~~~~~~~
+
+**Entity Table** allows changing all entity data, including description and location.
+
 From **Pivot View**
 ~~~~~~~~~~~~~~~~~~~
 
 To rename an entity of a specific class, bring the class to **Pivot View** using any input type
 (see :ref:`using_pivot_table_and_frozen_table`).
-Then, just edit the appropriate cell in the corresponding class header.
+Then, just edit the appropriate cell under the corresponding class header.
 
 Updating Parameter Definitions and Values
 =========================================

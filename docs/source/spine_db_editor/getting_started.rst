@@ -9,7 +9,7 @@
 Getting Started
 ***************
 
-This section gives a short outline on how to get started using the editor and how to navigate the ui.
+This section gives a short outline on how to get started using the editor and how to navigate the UI.
 Information about the settings for the editor can be found in :ref:`DB editor settings`.
 
 .. contents::
@@ -172,7 +172,7 @@ Spine Database Editor has the following main UI components:
 
 - *Entity tree*:
   they present the structure of entities in all databases in the shape of a tree.
-- *Table views* (*Parameter value*, *Parameter definition*, *Entity alternative*):
+- *Table views* (*Parameter value*, *Parameter definition*, *Entity alternative*, *Entity*):
   they present entity data in the form of stacked tables.
 - *Pivot table* and *Frozen table*: they present data in the form of a pivot table,
   optionally with frozen dimensions.

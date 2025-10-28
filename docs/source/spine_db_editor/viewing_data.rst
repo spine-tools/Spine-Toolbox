@@ -9,13 +9,10 @@ This section describes the available tools to view data.
 .. contents::
    :local:
 
-Viewing Entities and Entity Classes
-===================================
-
 Using the **Entity Tree**
-~~~~~~~~~~~~~~~~~~~~~~~~~
+=========================
 
-The **Entity Tree** presents the structure of entity classes and entities in all databases in the shape of a tree:
+The **Entity tree** presents the structure of entity classes and entities in all databases in the shape of a tree:
 
 .. image:: img/entity_tree.png
    :align: center
@@ -23,10 +20,10 @@ The **Entity Tree** presents the structure of entity classes and entities in all
 - To view all entities of a class, expand the corresponding entity class item.
 - To view all multidimensional entities where a specific entity is an member, expand that entity.
 
-.. tip:: To *extend* the selection in **Entity Tree**, press and hold the **Ctrl** key
+.. tip:: To *extend* the selection in **Entity tree**, press and hold the **Ctrl** key
    while clicking on the items.
 
-Right clicking items in the **Entity Tree** will open up a context menu. Depending on what kind of item
+Right clicking items in the **Entity tree** will open up a context menu. Depending on what kind of item
 the menu was opened from (root, entity class, entity, N-D entity) all of the options might not be available.
 Unavailable options are still visible but they are greyed out:
 
@@ -43,7 +40,7 @@ Unavailable options are still visible but they are greyed out:
 - **Manage members** opens up a dialog to delete or add new members in an entity group.
 - **Select superclass** opens up a dialog to set the superclass for a given entity class
 
-- **Find next occurrence** goes to the next occurrence of the N-D entity in the **Entity Tree** and selects it.
+- **Find next occurrence** goes to the next occurrence of the N-D entity in the **Entity tree** and selects it.
   This can also be done by double-clicking the item.
 
 - **Edit...** opens up a dialog where the name, description, icon and active by default -setting of an
@@ -58,7 +55,7 @@ Unavailable options are still visible but they are greyed out:
 
 - **Hide empty classes** whether to show empty classes in the tree or not.
 
-.. tip:: To expand an item in **Entity Tree**, you can also double-click on the item or press the right arrow.
+.. tip:: To expand an item in **Entity tree**, you can also double-click on the item or press the right arrow.
    This will only expand the next layer and leave the children expanded or collapsed depending on their previous
    state. Items in gray don't have any children, thus they cannot be expanded. To collapse an expanded item,
    double-click on it again or press the left arrow.
@@ -66,14 +63,14 @@ Unavailable options are still visible but they are greyed out:
 .. tip:: Expand or collapse all items by selecting **Fully collapse**/**Fully expand** from the root item's
          context menu.
 
-.. tip:: **Entity Tree** also supports **Sticky selection**, which allows one to
+.. tip:: **Entity tree** also supports **Sticky selection**, which allows one to
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select
    **Settings** from **Menu bar -> File**, and check the corresponding box.
 
 Using the **Graph View**
-~~~~~~~~~~~~~~~~~~~~~~~~
+========================
 
-**Graph View** presents the structure of entities from one database in the shape of a graph:
+**Graph view** presents the structure of entities from one database in the shape of a graph:
 
 .. image:: img/entity_graph.png
    :align: center
@@ -81,10 +78,10 @@ Using the **Graph View**
 Building the Graph
 ******************
 
-The entities included in the graph depend on the selections in **Entity Tree**, **Scenario Tree** and **Alternative**.
+The entities included in the graph depend on the selections in **Entity tree**, **Scenario tree** and **Alternative**.
 These selections can also be combined. This enables for example the inspection of which entities from a specific
 entity class are included in a certain scenario. This can be done by selecting the scenario and the entity class at
-once. If selections form **Scenario Tree** or **Alternative** are present, entities in the graph may get highlighted
+once. If selections form **Scenario tree** or **Alternative** are present, entities in the graph may get highlighted
 in certain ways. This is to provide additional information about why the entities are shown in the graph. More on this
 in the next section.
 
@@ -92,7 +89,7 @@ If the auto-build is enabled, the graph will be built every time the selections 
 Otherwise the graph has to be built manually by clicking the **Rebuild** button or by pressing **F5**. Auto-build
 can be also toggled by pressing **Ctrl+F5**.
 
-How to use the **Entity Tree** selections to build the graph:
+How to use the **Entity tree** selections to build the graph:
 
 - To include all entities from the database, select the root item.
 - To include all entities of an entity class, select the corresponding class item.
@@ -103,7 +100,7 @@ How the **Alternative** selections affect the graph:
 - Selecting an alternative item will include all entities that either have entity alternative activity set as true
   or have parameters in the corresponding alternative.
 
-How the **Scenario** selections affect the graph:
+How the **Scenario tree** selections affect the graph:
 
 - Selecting an scenario item will include all entities that:
 
@@ -114,19 +111,19 @@ How the **Scenario** selections affect the graph:
 
 - Selecting an scenario alternative item will act like selecting the corresponding item from **Alternative**.
 
-.. note:: In **Graph View**, a small unnamed vertex represents a multidimensional entity with multiple elements,
+.. note:: In **Graph view**, a small unnamed vertex represents a multidimensional entity with multiple elements,
    whereas a bigger named vertex represents a zero dimensional entity. An arc between entities indicates that
    the 0-D entity is an element of that N-D entity.
 
 The graph automatically includes N-D entities whenever *all* the elements of that entity are included
-(even if these entities are not selected in **Entity Tree**). You can change this behavior to automatically
+(even if these entities are not selected in **Entity tree**). You can change this behavior to automatically
 include N-D entities whenever *any* of the member elements are included. To do this, enable **Auto-expand entities**
-via the **Graph View**'s context menu, or from the settings **Ctrl+,**.
+via the **Graph view**'s context menu, or from the settings **Ctrl+,**.
 
 Entity Highlights
 *****************
 
-As mentioned before, **Scenario Tree** and **Alternative** may cause the entity items in the graph to become
+As mentioned before, **Scenario tree** and **Alternative** may cause the entity items in the graph to become
 highlighted. The highlighting is done by adding a border around the entity item. This is what it looks like:
 
 .. image:: img/graph_alt_selection.png
@@ -138,7 +135,7 @@ There are four different borders:
 
 - No border
 
-  - If an entity doesn't have a border, either only **Entity Tree** -selections are present, or the entity is active
+  - If an entity doesn't have a border, either only **Entity tree** -selections are present, or the entity is active
     in the selected alternative/scenario.
 
 - Solid
@@ -166,7 +163,7 @@ Manipulating the Graph
 You can move items in the graph by dragging them with your mouse. By default, each items moves individually.
 Like in the **Design view**, multiple items can be moved at once by selecting them first.
 
-To display **Graph View**'s context menu, just right-click on an empty space in the graph.
+To display **Graph view**'s context menu, just right-click on an empty space in the graph.
 The context menu has the following options:
 
 - **Add entities...** opens up the add entities dialog, from where new entities can be added.
@@ -179,7 +176,7 @@ The context menu has the following options:
 - **Prune classes** works like **Hide classes** but it also hides all the classes that have the specified class
   as an element. Once again these can be brought back one by one with **Restore** or all at once with **Restore all**.
 
-- **Zoom** has three options: zoom out, zoom in and reset zoom. Using the scroll wheel of the mouse on the **Graph View**
+- **Zoom** has three options: zoom out, zoom in and reset zoom. Using the scroll wheel of the mouse on the **Graph view**
   also works.
 - **Arc-length** has two buttons: one for making the arcs between the entities longer and one for making them shorter.
 - **Rotate** rotates the whole graph by 15° per step. Also can be done by holding down **SHIFT** while scrolling with
@@ -200,11 +197,11 @@ The context menu has the following options:
 - **Select graph parameters** is where different aspects of the graph can be mapped to for example parameter values.
 - **Select background image** can be used to set any `.svg` image as the background for the graph.
 
-- **Save positions** Saves the positions of the items into the database. To clear the saved position select
+- **Save positions** Saves the positions of the selected items into the database. To clear the saved position select
   **Clear saved positions**.
 
 - **Save state...** saves the drawn graph. Selecting a specific state from **Load state...** will load that state
-  into the **Graph View**. Saved states can be deleted from **Remove state**.
+  into the **Graph view**. Saved states can be deleted from **Remove state**.
 
 - **Export as image...** can be used to export the image of the graph in either `.svg` or `.pdf` formats
 - **Export as video...** can be used to export the video of the graph.
@@ -212,7 +209,7 @@ The context menu has the following options:
 - **Rebuild** to rebuild the whole graph.
 
 
-.. note:: **Graph View** supports extended selection and rubber-band selection.
+.. note:: **Graph view** supports extended selection and rubber-band selection.
    To extend a selection, press and hold **Ctrl** while clicking on the items.
    To perform rubber-band selection, drag your mouse around the items you want to select.
 
@@ -223,40 +220,43 @@ To display an entity item's context menu, just right-click on it. The context me
 
 - To expand or collapse N-D entities, on an entities context menu hover **Expand** or **Collapse** and select
   the entity class from the popup menu.
-- **Connect entities** allows the creation of new N-D entities straight from the **Graph View**. When hovering over
+- **Connect entities** allows the creation of new N-D entities straight from the **Graph view**. When hovering over
   the option, the list of relevant multi dimensional entity classes where the selected entity could possibly be
   a member are shown. After selecting one of the items in the list, the entities that you want to make up the new
   new entity in the selected entity class can be selected by clicking them in the graph. Once the selections are
   made, a popup showing the to be added entities is shown. By default every permutation of the selections is staged
   to be added but individual items can be also deselected.
-- **Edit**, **Remove** and **Duplicate** work as they do in the **Entity Tree**.
+- **Edit**, **Remove** and **Duplicate** work as they do in the **Entity tree**.
 
-
-Viewing Parameter Pefinitions and Palues as well as Entity Alternatives
-=======================================================================
 
 Using **Table Views**
-~~~~~~~~~~~~~~~~~~~~~
+=====================
 
-**Table View**'s: *Parameter value*, *Parameter definition* and *Entity alternative* present entity data
+**Table view**'s: *Parameter value*, *Parameter definition*, *Entity alternative* and *Entity* present entity data
 from all databases in the form of tables:
 
 .. image:: img/entity_parameter_value_table.png
    :align: center
 
-To filter a **Table View** by any entities and/or classes,
-select the corresponding items in either **Entity Tree** or **Graph View**.
-To remove all these filters, select the root item in **Entity Tree**.
+To filter a **Table view** by any entities and/or classes,
+select the corresponding items in either **Entity tree** or **Graph view**.
+To remove all these filters, select the root item in **Entity tree**.
+Hold the **Ctrl** key while selecting to
 
-A **Table View** can also be filtered by selecting alternatives or scenarios from **Alternative**
+A **Table view** can also be filtered by selecting alternatives or scenarios from **Alternative**
 and **Scenario tree**. This filter is orthogonal to the entity/class filter and can be used together with it.
-To remove all these filters, simply select the root item in **Entity Tree** or deselect all items from
+Hold the **Ctrl** key while selecting to extend the selection across the trees and tables.
+
+To remove all these filters, simply select the root item in **Entity tree** or deselect all items from
 **Alternative** and **Scenario tree**.
 
 All the filters described above can also be cleared with the *Clear all filters* item available in the right-click
-context menu of the **Parameter value** table.
+context menu of the **Parameter value** table:
 
-To apply a custom filter on a **Table View**, click on any horizontal header.
+.. image:: img/clear_all_filters.png
+   :align: center
+
+To apply a custom filter on a **Table view**, click on any horizontal header.
 A menu will pop up listing the items in the corresponding column:
 
 .. image:: img/entity_name_filter_menu.png
@@ -266,57 +266,45 @@ Uncheck the items you don't want to see in the table and press **Ok**.
 Additionally, you can type in the search bar at the top of the menu to filter the list of items.
 To remove the current filter, select **Remove filters**.
 
-To filter a **Table View** according to a selection of items in the table itself, right-click on the selection
+To filter a **Table view** according to a selection of items in the table itself, right-click on the selection
 to show the context menu, and then select **Filter by** or **Filter excluding**. To remove these filters, select
 **Remove filters** from the header menus of the filtered columns.
 
 .. tip:: You can rearrange columns in *Table Views* by dragging the headers with your mouse.
    The ordering will be remembered the next time you open Spine DB editor.
 
-**Entity alternative**
-~~~~~~~~~~~~~~~~~~~~~~
-
-Entity alternative provides a way to set which entities are active and which are not in each alternative:
-
-.. image:: img/entity_alternative_table.png
-   :align: center
-
-Viewing Parameter Values and Multidimensional Entities
-======================================================
-
 .. _using_pivot_table_and_frozen_table:
 
 Using **Pivot View** and **Frozen Table**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+=========================================
 
-**Pivot View** and **Frozen Table** present data for an individual class from one database in the form of a pivot table,
+**Pivot view** and **Frozen table** present data for an individual class from one database in the form of a pivot table,
 optionally with frozen dimensions:
-
 
 .. image:: img/pivot_table.png
    :align: center
 
 To populate the tables with data for a certain class,
-just select the corresponding class item in **Entity Tree**.
+just select the corresponding class item in **Entity tree**.
 
 Selecting the Input Type
 ************************
 
-**Pivot View** and **Frozen Table** support four different input types:
+**Pivot view** and **Frozen table** support four different input types:
 
 - **Value** (the default): it shows entities, parameter definitions, alternatives, and databases in the headers,
   and corresponding parameter values in the table body.
 - **Index**: Similar to the above, but it also shows parameter indexes in the headers.
   Indexes are extracted from special parameter values, such as time-series.
 - **Element**: it shows entities, and databases in the headers, and corresponding multidimensional entities
-  in the table body. It only works when a N-D entity is selected in the **Entity Tree**.
+  in the table body. It only works when a N-D entity is selected in the **Entity tree**.
 - **Scenario**: it shows scenarios, alternatives, and databases in the header, and corresponding *rank*
   in the table body.
 
 
 You can select the input type from the **Toolbar**.
 
-.. note:: In **Pivot View**, header blocks in the top-left area indicate what is shown in each horizontal
+.. note:: In **Pivot view**, header blocks in the top-left area indicate what is shown in each horizontal
    and vertical header. For example, in **Value** input type, by default, the horizontal header
    has two rows, listing alternative and parameter names, respectively; whereas the vertical header has
    one or more columns listing entity names.
@@ -329,18 +317,18 @@ To pivot the data, drag a header block across the top-left area of the table.
 You can turn a horizontal header into a vertical header and vice versa,
 as well as rearrange headers vertically or horizontally.
 
-To freeze a dimension, drag the corresponding header block from **Pivot View** into **Frozen table**.
+To freeze a dimension, drag the corresponding header block from **Pivot view** into **Frozen table**.
 To unfreeze a frozen dimension, just do the opposite.
 
 .. note:: Your pivoting and freezing selections for any class will be remembered when switching to another class.
 
 .. tip:: If you are not seeing the data you think you should be seeing, it might be because there is
-         some selection active in the **Frozen Table** that is filtering those values out of the **Pivot View**.
+         some selection active in the **Frozen table** that is filtering those values out of the **Pivot view**.
 
 Filtering
 *********
 
-To apply a custom filter on **Pivot View**, click on the arrow next to the name of any header block.
+To apply a custom filter on **Pivot view**, click on the arrow next to the name of any header block.
 A menu will pop up listing the items in the corresponding row or column:
 
 .. image:: img/entity_name_filter_menu.png
@@ -350,12 +338,12 @@ Uncheck the items you don't want to see in the table and press **Ok**.
 Additionally, you can type in the search bar at the top of the menu to filter the list of items.
 To remove the current filter, select **Remove filters**.
 
-To filter the **Pivot View** by an individual vector across the frozen dimensions,
-select the corresponding row in **Frozen Table**.
+To filter the **Pivot view** by an individual vector across the frozen dimensions,
+select the corresponding row in **Frozen table**.
 
 
-Viewing Alternatives and Scenarios
-==================================
+Viewing Alternatives
+====================
 
 You can find alternatives from all databases under **Alternative**:
 
