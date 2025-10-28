@@ -49,7 +49,7 @@
      <item row="2" column="1">
       <widget class="QCheckBox" name="enable_execute_all_check_box">
        <property name="text">
-        <string>Enable &quot;Execute All&quot; button</string>
+        <string>&amp;Enable &quot;Execute All&quot; button</string>
        </property>
        <property name="checked">
         <bool>true</bool>
@@ -66,7 +66,7 @@
      <item row="3" column="1">
       <widget class="QCheckBox" name="store_paths_as_relative_check_box">
        <property name="text">
-        <string>Store all paths as relative to project dir</string>
+        <string>&amp;Store all paths as relative to project dir</string>
        </property>
       </widget>
      </item>
@@ -112,6 +112,13 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>description_text_edit</tabstop>
+  <tabstop>enable_execute_all_check_box</tabstop>
+  <tabstop>store_paths_as_relative_check_box</tabstop>
+  <tabstop>delete_item_files_button</tabstop>
+  <tabstop>name_line_edit</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

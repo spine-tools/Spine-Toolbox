@@ -100,6 +100,10 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.button_box)
 
+        QWidget.setTabOrder(self.description_text_edit, self.enable_execute_all_check_box)
+        QWidget.setTabOrder(self.enable_execute_all_check_box, self.store_paths_as_relative_check_box)
+        QWidget.setTabOrder(self.store_paths_as_relative_check_box, self.delete_item_files_button)
+        QWidget.setTabOrder(self.delete_item_files_button, self.name_line_edit)
 
         self.retranslateUi(Form)
 
@@ -110,8 +114,8 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.label.setText(QCoreApplication.translate("Form", u"Name:", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"Description:", None))
-        self.enable_execute_all_check_box.setText(QCoreApplication.translate("Form", u"Enable \"Execute All\" button", None))
-        self.store_paths_as_relative_check_box.setText(QCoreApplication.translate("Form", u"Store all paths as relative to project dir", None))
+        self.enable_execute_all_check_box.setText(QCoreApplication.translate("Form", u"&Enable \"Execute All\" button", None))
+        self.store_paths_as_relative_check_box.setText(QCoreApplication.translate("Form", u"&Store all paths as relative to project dir", None))
         self.item_directory_size_label.setText(QCoreApplication.translate("Form", u"Calculating item directory sizes...", None))
         self.delete_item_files_button.setText(QCoreApplication.translate("Form", u"Delete files...", None))
     # retranslateUi
