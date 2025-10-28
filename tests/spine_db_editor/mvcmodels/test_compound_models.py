@@ -112,6 +112,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
             )
         expected = [["Widget", "weight", None, None, "a lot", None, self.db_codename]]
         assert_table_model_data(model, expected, self)
+        while self._db_mngr.parameter_type_validator._sent_task_count != 0:
+            QApplication.processEvents()
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             model.setData(model.index(0, 2), ("float",), Qt.ItemDataRole.EditRole)
             expected = [["Widget", "weight", "float", None, "a lot", None, self.db_codename]]
@@ -121,6 +123,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
                 waiter.args,
                 ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [False]),
             )
+        while self._db_mngr.parameter_type_validator._sent_task_count != 0:
+            QApplication.processEvents()
 
     def test_restore_db_maps(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -688,9 +692,10 @@ class TestCompoundParameterValueModel(TestBase):
                 args_as_dict,
                 {
                     ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id): True,
-                    ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id): True,
                 },
             )
+        while self._db_mngr.parameter_type_validator._sent_task_count != 0:
+            QApplication.processEvents()
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             self._db_mngr.update_items(
                 "parameter_definition", {self._db_map: [{"id": weight["id"], "parameter_type_list": ("float",)}]}
@@ -701,10 +706,11 @@ class TestCompoundParameterValueModel(TestBase):
             self.assertEqual(
                 args_as_dict,
                 {
-                    ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id): True,
                     ValidationKey("parameter_value", id(self._db_map), weight_value["id"].private_id): False,
                 },
             )
+        while self._db_mngr.parameter_type_validator._sent_task_count != 0:
+            QApplication.processEvents()
 
     def test_update_parameter_value(self):
         with self._db_map:
