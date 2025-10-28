@@ -1,7 +1,7 @@
 
 .. _viewing data:
 
-Viewing data
+Viewing Data
 ------------
 
 This section describes the available tools to view data.
@@ -9,7 +9,7 @@ This section describes the available tools to view data.
 .. contents::
    :local:
 
-Viewing entities and entity classes
+Viewing Entities and Entity Classes
 ===================================
 
 Using the **Entity Tree**
@@ -78,7 +78,7 @@ Using the **Graph View**
 .. image:: img/entity_graph.png
    :align: center
 
-Building the graph
+Building the Graph
 ******************
 
 The entities included in the graph depend on the selections in **Entity Tree**, **Scenario Tree** and **Alternative**.
@@ -123,7 +123,7 @@ The graph automatically includes N-D entities whenever *all* the elements of tha
 include N-D entities whenever *any* of the member elements are included. To do this, enable **Auto-expand entities**
 via the **Graph View**'s context menu, or from the settings **Ctrl+,**.
 
-Entity highlights
+Entity Highlights
 *****************
 
 As mentioned before, **Scenario Tree** and **Alternative** may cause the entity items in the graph to become
@@ -160,7 +160,7 @@ Below is a reference for what these different borders look like:
    :align: center
 
 
-Manipulating the graph
+Manipulating the Graph
 **********************
 
 You can move items in the graph by dragging them with your mouse. By default, each items moves individually.
@@ -232,7 +232,7 @@ To display an entity item's context menu, just right-click on it. The context me
 - **Edit**, **Remove** and **Duplicate** work as they do in the **Entity Tree**.
 
 
-Viewing parameter definitions and values as well as entity alternatives
+Viewing Parameter Pefinitions and Palues as well as Entity Alternatives
 =======================================================================
 
 Using **Table Views**
@@ -281,7 +281,7 @@ Entity alternative provides a way to set which entities are active and which are
 .. image:: img/entity_alternative_table.png
    :align: center
 
-Viewing parameter values and multidimensional entities
+Viewing Parameter Values and Multidimensional Entities
 ======================================================
 
 .. _using_pivot_table_and_frozen_table:
@@ -299,7 +299,7 @@ optionally with frozen dimensions:
 To populate the tables with data for a certain class,
 just select the corresponding class item in **Entity Tree**.
 
-Selecting the input type
+Selecting the Input Type
 ************************
 
 **Pivot View** and **Frozen Table** support four different input types:
@@ -322,7 +322,7 @@ You can select the input type from the **Toolbar**.
    one or more columns listing entity names.
 
 
-Pivoting and freezing
+Pivoting and Freezing
 *********************
 
 To pivot the data, drag a header block across the top-left area of the table.
@@ -354,7 +354,7 @@ To filter the **Pivot View** by an individual vector across the frozen dimension
 select the corresponding row in **Frozen Table**.
 
 
-Viewing alternatives and scenarios
+Viewing Alternatives and Scenarios
 ==================================
 
 You can find alternatives from all databases under **Alternative**:
@@ -365,7 +365,7 @@ You can find alternatives from all databases under **Alternative**:
 To view the alternatives from each database,
 expand the root item for that database.
 
-Viewing scenarios
+Viewing Scenarios
 =================
 
 You can find scenarios from all databases under **Scenario tree**:
@@ -378,7 +378,7 @@ expand the root item for that database.
 To view the alternatives for a particular scenario,
 expand the corresponding scenario item.
 
-Viewing parameter value lists
+Viewing Parameter Value Lists
 =============================
 
 You can find parameter value lists from all databases under **Parameter value list**:
@@ -391,7 +391,7 @@ expand the root item for that database.
 To view the values for each list, expand the corresponding list item.
 
 
-Viewing metadata
+Viewing Metadata
 ================
 
 You can find metadata from all databases under **Metadata**:
@@ -402,7 +402,7 @@ You can find metadata from all databases under **Metadata**:
 See also `Metadata description <https://spine-database-api.readthedocs.io/en/latest/metadata.html>`_
 in Spine Database API documentation.
 
-Viewing item metadata
+Viewing Item Metadata
 =====================
 
 You can find metadata for currently selected entities or parameter values under **Item metadata**:

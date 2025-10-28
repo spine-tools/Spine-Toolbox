@@ -4,7 +4,7 @@
    :width: 16
 
 
-Adding data
+Adding Data
 -----------
 
 This section describes the available tools to add new data. Note that after adding
@@ -15,7 +15,7 @@ information about this in the chapter :ref:`committing_and_history`.
 .. contents::
    :local:
 
-Adding entity classes
+Adding Entity Classes
 =====================
 
 From **Entity Tree**
@@ -64,7 +64,7 @@ with **Remove selected rows**. When you're ready, press **Ok** to make the addit
    If needed, the table will grow to accommodate the exceeding data.
    To paste data on multiple cells, select all the cells you want to paste on and press **Ctrl+V**.
 
-Adding entities
+Adding Entities
 ===============
 
 From **Entity Tree** or **Graph View**
@@ -134,7 +134,7 @@ will be shown that contains all the newly added entities. The popup can be quick
 **Esc** or just by clicking **OK**. The automatic adding of entities works with entities of any dimension, but all of
 the elements of the new entity must already be present in the database.
 
-Duplicating entities
+Duplicating Entities
 ~~~~~~~~~~~~~~~~~~~~
 
 To duplicate an existing entity with all its parameter values and other associated data, right-click over the
@@ -143,7 +143,7 @@ new entity will have the same name with an added (1) to indicate that it is a co
 can be renamed to be something else afterwards.
 
 
-Adding entity groups
+Adding Entity Groups
 ====================
 
 Right-click on an entity class item in **Entity Tree**,
@@ -160,7 +160,7 @@ Multiple selection is supported with **Ctrl** and **Shift**. Finally press **OK*
 
 When you're happy with your selections, press **OK** to add the group to the database.
 
-Adding parameter definitions
+Adding Parameter Definitions
 ============================
 
 From **Table View**
@@ -206,7 +206,7 @@ with existing parameter definitions for the class.
 Enter a name for the new parameter in the last cell of that header.
 
 
-Adding parameter values
+Adding Parameter Values
 =======================
 
 From **Table View**
@@ -241,7 +241,7 @@ Then, enter the parameter value in the corresponding cell in the table body.
    To paste data on multiple cells, select all the cells you want to paste on and press **Ctrl+V**.
 
 
-Adding entity alternatives
+Adding Entity Alternatives
 ==========================
 
 To add an entity alternative, open the **Entity Alternative** **Table View**. There under *entity_class_name* select
@@ -253,7 +253,7 @@ been added.
 .. tip:: Like with the parameter values, new entities can be created on the fly by filling out the cell below
          *entity_byname* with either text or a valid combination of elements.
 
-Adding alternatives
+Adding Alternatives
 ===================
 
 From **Alternative**
@@ -271,7 +271,7 @@ Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table
 To add a new alternative, enter a name in the last cell of the **alternative** header.
 
 
-Adding scenarios
+Adding Scenarios
 ================
 
 From **Scenario Tree**
@@ -326,7 +326,7 @@ The **Alternative by rank** list allows reordering the ranks of the alternatives
 
 .. _parameter_value_list:
 
-Adding parameter value lists
+Adding Parameter Value Lists
 ============================
 
 To add a new parameter value list, go to **Parameter Value List** and select the last item under the appropriate
@@ -339,7 +339,7 @@ corresponding list item, and enter the value. To enter a complex value, right-cl
 .. note:: To be actually added to the database, a parameter value list must have at least one value.
 
 
-Adding metadata and item metadata
+Adding Metadata and Item Metadata
 =================================
 
 To add new metadata go to **Metadata** and add a new name and value to the last row.

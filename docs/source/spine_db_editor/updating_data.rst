@@ -1,5 +1,5 @@
 
-Updating data
+Updating Data
 -------------
 
 This section describes the available tools to update existing data.
@@ -8,7 +8,7 @@ This section describes the available tools to update existing data.
 .. contents::
    :local:
 
-Updating entities and classes
+Updating Entities and Classes
 =============================
 
 From **Entity Tree** or **Graph View**
@@ -34,7 +34,7 @@ To rename an entity of a specific class, bring the class to **Pivot View** using
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then, just edit the appropriate cell in the corresponding class header.
 
-Updating parameter definitions and values
+Updating Parameter Definitions and Values
 =========================================
 
 From **Table Views**
@@ -55,12 +55,12 @@ bring the corresponding class to **Pivot View** using the **Value** input type
 (see :ref:`using_pivot_table_and_frozen_table`).
 Then, just edit the appropriate cell in the table body.
 
-Updating entity alternatives
+Updating Entity Alternatives
 ============================
 
 To update an entity alternative, edit the corresponding row from **Entity Alternative** in **Table View**.
 
-Updating alternatives
+Updating Alternatives
 =====================
 
 From **Pivot View**
@@ -74,7 +74,7 @@ From **Alternative**
 
 To rename an alternative, just edit the appropriate item in **Alternative**.
 
-Updating scenarios
+Updating Scenarios
 ==================
 
 From **Pivot View**
@@ -94,7 +94,7 @@ To rename a scenario, just edit the appropriate item in **Scenario Tree**.
 
 To change scenario alternative ranks, just drag and drop the items under the corresponding scenario.
 
-Updating parameter value lists
+Updating Parameter Value Lists
 ==============================
 
 To rename a parameter value list or change any of its values, just edit

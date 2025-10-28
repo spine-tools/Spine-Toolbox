@@ -1,5 +1,5 @@
 
-Importing and exporting data
+Importing and Exporting Data
 ----------------------------
 
 This section describes the available tools to import and export data.
@@ -26,7 +26,7 @@ Select the file type (SQLite, JSON, or Excel), enter the path of the file to imp
 Exporting
 =========
 
-Mass export
+Mass Export
 ~~~~~~~~~~~
 
 To export items in mass, select **Menu bar -> File -> Export**.
@@ -41,7 +41,7 @@ The *Export file* dialog will pop up now.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
 
 
-Selective export
+Selective Export
 ~~~~~~~~~~~~~~~~
 
 To export a specific subset of items, select the corresponding items in the **Entity Tree**,
@@ -51,7 +51,7 @@ The *Export file* dialog will pop up.
 Select the file type (SQLite, JSON, or Excel), enter the path of the file to export, and accept the dialog.
 
 
-Session export
+Session Export
 ~~~~~~~~~~~~~~
 
 To export only uncommitted changes made in the current session, select **File --> Export session** from
@@ -63,7 +63,7 @@ Select the file type (SQLite, JSON, or Excel), enter the path of the file to exp
 .. note:: Export operations include all uncommitted changes.
 
 
-Accessing/using exported files
+Accessing/using Exported Files
 ==============================
 
 Whenever you successfully export a file, 
@@ -78,13 +78,13 @@ to the file name and select **Open containing folder** from the popup menu.
 
 .. _format_specifications:
 
-Format specifications
+Format Specifications
 =====================
 
 .. tip:: To create a template file with the JSON or Excel format you can simply export an existing Spine database
    into one of those formats.
 
-Excel format
+Excel Format
 ~~~~~~~~~~~~
 .. note:: Excel exports are not comprehensive. Even though every type of item is selectable in
           the exporting selection, sheets will be generated only for some of the selections.
@@ -108,7 +108,7 @@ indexed parameter data:
       :align: center
 
 
-JSON format
+JSON Format
 ~~~~~~~~~~~
 
 The JSON export is complete since it contains all of the data from the database.

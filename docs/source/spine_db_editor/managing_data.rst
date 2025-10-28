@@ -4,7 +4,7 @@
    :width: 16
 
 
-Managing data
+Managing Data
 -------------
 
 This section describes the available tools to manage data, i.e., adding, updating or removing data at the same time.
@@ -12,7 +12,7 @@ This section describes the available tools to manage data, i.e., adding, updatin
 .. contents::
    :local:
 
-Managing entity groups
+Managing Entity Groups
 ======================
 
 To modify entity groups, expand the corresponding entity class item in **Entity Tree** to display the group item,
@@ -31,7 +31,7 @@ When you're happy with the members, press **OK**.
 .. note:: Changes made using the *Manage members* dialog are not applied to
    the database until you press **OK**.
 
-Managing N-D entities
+Managing N-D Entities
 =====================
 
 Right click the root item, or an N-D entity class item in **Entity Tree** and from the context menu select
