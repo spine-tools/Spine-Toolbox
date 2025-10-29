@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.2
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -34,8 +34,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplicat
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
 from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterValueTableView, EntityAlternativeTableView,
-    FrozenTableView, ItemMetadataTableView, MetadataTableView, ParameterDefinitionTableView,
-    ParameterValueTableView, PivotTableView)
+    EntityTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
+    ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
 from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, ResizeSignallingWidget, TimeLineWidget)
 from spinetoolbox import resources_icons_rc
@@ -289,9 +289,7 @@ class Ui_MainWindow(object):
         self.tableView_parameter_definition.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.tableView_parameter_definition.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.tableView_parameter_definition.setTabKeyNavigation(False)
-        self.tableView_parameter_definition.setTextElideMode(Qt.TextElideMode.ElideLeft)
         self.tableView_parameter_definition.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.tableView_parameter_definition.setSortingEnabled(False)
         self.tableView_parameter_definition.setWordWrap(False)
         self.tableView_parameter_definition.horizontalHeader().setHighlightSections(False)
         self.tableView_parameter_definition.verticalHeader().setVisible(False)
@@ -529,7 +527,9 @@ class Ui_MainWindow(object):
         self.empty_entity_alternative_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.empty_entity_alternative_table_view.setWordWrap(False)
         self.empty_entity_alternative_table_view.horizontalHeader().setVisible(False)
+        self.empty_entity_alternative_table_view.horizontalHeader().setHighlightSections(False)
         self.empty_entity_alternative_table_view.verticalHeader().setVisible(False)
+        self.empty_entity_alternative_table_view.verticalHeader().setHighlightSections(False)
 
         self.verticalLayout_2.addWidget(self.empty_entity_alternative_table_view)
 
@@ -547,6 +547,27 @@ class Ui_MainWindow(object):
         self.menuFile_2 = QMenu(self.menuBar)
         self.menuFile_2.setObjectName(u"menuFile_2")
         MainWindow.setMenuBar(self.menuBar)
+        self.entity_dock_widget = QDockWidget(MainWindow)
+        self.entity_dock_widget.setObjectName(u"entity_dock_widget")
+        self.dockWidgetContents_4 = QWidget()
+        self.dockWidgetContents_4.setObjectName(u"dockWidgetContents_4")
+        self.verticalLayout_3 = QVBoxLayout(self.dockWidgetContents_4)
+        self.verticalLayout_3.setSpacing(0)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.entity_table_view = EntityTableView(self.dockWidgetContents_4)
+        self.entity_table_view.setObjectName(u"entity_table_view")
+        self.entity_table_view.setTabKeyNavigation(False)
+        self.entity_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.entity_table_view.setWordWrap(False)
+        self.entity_table_view.horizontalHeader().setHighlightSections(False)
+        self.entity_table_view.verticalHeader().setVisible(False)
+        self.entity_table_view.verticalHeader().setHighlightSections(False)
+
+        self.verticalLayout_3.addWidget(self.entity_table_view)
+
+        self.entity_dock_widget.setWidget(self.dockWidgetContents_4)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.entity_dock_widget)
 
         self.menuBar.addAction(self.menuFile_2.menuAction())
         self.menuBar.addAction(self.menuEdit.menuAction())
@@ -736,5 +757,6 @@ class Ui_MainWindow(object):
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Sess&ion", None))
         self.menuFile_2.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
+        self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity", None))
     # retranslateUi
 

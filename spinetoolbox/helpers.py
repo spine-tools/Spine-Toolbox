@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disa
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
+    QAbstractItemModel,
     QEvent,
     QFile,
     QIODevice,
@@ -1906,13 +1907,26 @@ class CustomPopupMenu(QMenu):
             action.setToolTip(tooltip)
 
 
+_SPLIT_PATTERN = re.compile(r"(\d+)")
+
+
 def order_key(name: str) -> list[str]:
     """Splits the given string into a list of its substrings and fills digits with '0'
     to ensure that e.g. 1 and 11 get sorted correctly.
 
     Example: "David_1946_Gilmour" -> ["David_", "000000001946", "_Gilmour"]
     """
-    key_list = [f"{int(text):#012}" if text.isdigit() else text for text in re.split(r"(\d+|__)", name) if text]
+    key_list = [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
+    if key_list and key_list[0].isdigit():
+        key_list.insert(0, "\U0010FFFF")
+    return key_list
+
+
+def order_key_from_names(names: Iterable[str]) -> list[str]:
+    """Same as order_key() but optimized for entity bynames and such."""
+    key_list = []
+    for name in names:
+        key_list += [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
     if key_list and key_list[0].isdigit():
         key_list.insert(0, "\U0010FFFF")
     return key_list
@@ -1982,3 +1996,13 @@ def normcase_database_url_path(url: str) -> str:
         return url
     path = url[len("sqlite:///") :]
     return "sqlite:///" + os.path.normcase(path)
+
+
+def find_section_in_table_model_header(
+    data: Any, model: QAbstractItemModel, orientation: Qt.Orientation = Qt.Orientation.Horizontal
+) -> int:
+    count = model.columnCount() if orientation == Qt.Orientation.Horizontal else model.rowCount()
+    for section in range(count):
+        if model.headerData(section, orientation) == data:
+            return section
+    raise ValueError(f"{data} not found in header")

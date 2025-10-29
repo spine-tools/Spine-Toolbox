@@ -11,35 +11,40 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
+from typing import TypeAlias
 from PySide6.QtCore import QPoint, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QMenu
-from spinedb_api import IndexedValue
+from PySide6.QtWidgets import QMenu, QWidget
+from spinedb_api import DatabaseMapping, IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
+from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_menus import FilterMenuBase
+
+AutoFilterValue: TypeAlias = tuple[DatabaseMapping, TempId, tuple[str, ...]]
 
 
 class AutoFilterMenu(FilterMenuBase):
     filterChanged = Signal(str, object)
 
-    def __init__(self, parent, db_mngr, db_maps, item_type, field, show_empty=True):
-        """
-        Args:
-            parent (SpineDBEditor): parent widget
-            db_mngr (SpineDBManager)
-            db_maps (Sequence of DatabaseMapping)
-            item_type (str)
-            field (str): the field name
-            show_empty (bool)
-        """
+    def __init__(
+        self,
+        parent: QWidget | None,
+        db_mngr: SpineDBManager,
+        db_maps: list[DatabaseMapping],
+        item_type: str,
+        field: str,
+        show_empty: bool = True,
+    ):
+
         super().__init__(parent)
         self._item_type = item_type
         self._db_mngr = db_mngr
         self._field = field
-        self._menu_data = {}  # Maps display value to set of (db map, entity_class_id, actual value) tuples
+        self._menu_data: dict[tuple[DatabaseMapping, TempId], set[AutoFilterValue]] = {}
         fetch_parent = FlexibleFetchParent(
             self._item_type,
             handle_items_added=self._handle_items_added,
@@ -80,7 +85,8 @@ class AutoFilterMenu(FilterMenuBase):
                 display_value = self._get_display_value(item, db_map)
                 value = self._get_value(item, db_map)
                 to_add.add(display_value)
-                self._menu_data.setdefault(display_value, set()).add((db_map, item["entity_class_id"], value))
+                entity_class_field = "class_id" if item.item_type == "entity" else "entity_class_id"
+                self._menu_data.setdefault(display_value, set()).add((db_map, item[entity_class_field], value))
         self.add_items_to_filter_list(to_add)
 
     def _handle_items_removed(self, db_map_data):
@@ -88,7 +94,8 @@ class AutoFilterMenu(FilterMenuBase):
             for item in items:
                 display_value = self._get_display_value(item, db_map)
                 value = self._get_value(item, db_map)
-                self._menu_data.get(display_value, set()).discard((db_map, item["entity_class_id"], value))
+                entity_class_field = "class_id" if item.item_type == "entity" else "entity_class_id"
+                self._menu_data.get(display_value, set()).discard((db_map, item[entity_class_field], value))
         to_remove = {display_value for display_value, data in self._menu_data.items() if not data}
         for display_value in to_remove:
             del self._menu_data[display_value]

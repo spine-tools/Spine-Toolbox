@@ -14,7 +14,7 @@
 import os
 from PySide6.QtCore import QPersistentModelIndex, Slot
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QMenu, QWidgetAction
+from PySide6.QtWidgets import QMenu, QWidget, QWidgetAction
 from spinetoolbox.helpers import CustomPopupMenu
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
@@ -200,13 +200,13 @@ class KernelsPopupMenu(CustomPopupMenu):
 class FilterMenuBase(QMenu):
     """Filter menu."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent (QWidget): a parent widget
+            parent: a parent widget
         """
         super().__init__(parent)
-        self._filter = None
+        self._filter: FilterWidget | None = None
         self._remove_filter = QAction("Remove filters", None)
         self._filter_action = QWidgetAction(self)
         self.addAction(self._remove_filter)

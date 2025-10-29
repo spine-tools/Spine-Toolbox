@@ -95,7 +95,7 @@ class ParameterTypeValidator(QObject):
         try:
             results = self._receiver.get_nowait()
         except queue.Empty:
-            pass
+            self._sender.put("wake up")
         else:
             self.validated.emit(*results)
             self._sent_task_count -= len(results[0])
@@ -149,10 +149,13 @@ def schedule(sender, receiver):
                 if task == "quit":
                     sender.put("finished")
                     return
+                if task == "wake up":
+                    break
                 validatable_values += task
                 if receiver.empty():
                     break
         chunk = validatable_values[:CHUNK_SIZE]
-        validatable_values = validatable_values[CHUNK_SIZE:]
-        results = validate_chunk(chunk)
-        sender.put((list(results.keys()), list(results.values())))
+        if chunk:
+            validatable_values = validatable_values[CHUNK_SIZE:]
+            results = validate_chunk(chunk)
+            sender.put((list(results.keys()), list(results.values())))

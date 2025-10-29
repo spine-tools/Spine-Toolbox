@@ -114,13 +114,4 @@ def input_string_to_int(str_value: str) -> int:
     return int(round(x))
 
 
-def table_name_from_item_type(item_type: str) -> str:
-    """Returns the dock widgets headers text for the given item type"""
-    return {
-        "parameter_value": "Parameter value",
-        "parameter_definition": "Parameter definition",
-        "entity_alternative": "Entity alternative",
-    }.get(item_type)
-
-
 GRAPH_OVERLAY_COLOR = QColor(210, 210, 210, 211)

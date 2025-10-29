@@ -13,7 +13,7 @@
 """Custom item delegates."""
 from numbers import Number
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon
+from PySide6.QtGui import QColor, QDoubleValidator, QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
@@ -398,7 +398,7 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
     def _get_value_list_id(self, index, db_map):
         """See base class"""
         h = index.model().header.index
-        value_list_name = index.sibling(index.row(), h("value_list_name")).data()
+        value_list_name = index.sibling(index.row(), h("value list")).data()
         value_lists = self.db_mngr.get_items_by_field(db_map, "parameter_value_list", "name", value_list_name)
         if len(value_lists) == 1:
             return value_lists[0]["id"]
@@ -410,7 +410,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     def _get_value_list_id(self, index, db_map):
         """See base class."""
         h = index.model().header.index
-        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
+        parameter_name = index.sibling(index.row(), h("parameter name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "name", parameter_name)
         entity_class_id = entity_class_id_for_row(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
@@ -659,14 +659,30 @@ class ScenarioDelegate(QStyledItemDelegate):
         self.setModelData(editor, index.model(), index)
 
 
-class ParameterDefinitionNameAndDescriptionDelegate(TableDelegate):
-    """A delegate for the parameter_name and description columns in Parameter Definition Table View."""
+class PlainTextDelegate(TableDelegate):
+    """A delegate for the plain text columns."""
 
     def setEditorData(self, editor, index):
         editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
 
     def createEditor(self, parent, option, index):
         editor = CustomLineEditor(parent)
+        return editor
+
+
+class PlainNumberDelegate(TableDelegate):
+    """A delegate for non-localized numeric columns."""
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        self.data_committed.emit(index, float(editor.data()))
+
+    def setEditorData(self, editor, index):
+        editor.setText(str(index.data(Qt.ItemDataRole.DisplayRole)))
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        editor.setValidator(QDoubleValidator(editor))
         return editor
 
 

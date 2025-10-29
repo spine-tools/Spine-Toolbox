@@ -40,6 +40,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         index = model.index(0, 4)
         plot_widget = table_view._plot_selection([index])
         try:
@@ -67,6 +70,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         valid_types_column = model.header.index("valid types")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -85,6 +91,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         valid_types_column = model.header.index("valid types")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -103,6 +112,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         valid_types_column = model.header.index("valid types")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -122,6 +134,7 @@ class TestParameterDefinitionTableView(TestBase):
 
 
 class TestParameterValueTableView(TestBase):
+
     def test_paste_empty_string_to_entity_byname_column(self):
         self._db_map.add_entity_class(name="Object")
         self._db_map.add_entity(entity_class_name="Object", name="my_object")
@@ -136,7 +149,9 @@ class TestParameterValueTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         fetch_model(model)
-        byname_column = model.header.index("entity_byname")
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        byname_column = model.header.index("entity byname")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
@@ -214,10 +229,14 @@ class TestParameterValueTableView(TestBase):
             ["an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
             ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
         selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
             ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
@@ -244,6 +263,8 @@ class TestParameterValueTableView(TestBase):
         delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         expected = [
             ["an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
         ]
@@ -288,28 +309,14 @@ class TestParameterValueTableView(TestBase):
         )
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
-        expected = [
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
-        ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
-        self._commit_changes_to_database("Add test data.")
-        self._db_editor.refresh_session()
-        while model.rowCount() != 3:
-            model.fetchMore(QModelIndex())
+        while model.rowCount() == 0:
             QApplication.processEvents()
         expected = [
             ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
             ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
+            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_plotting(self):
         self._db_map.add_entity_class(name="Object")
@@ -325,6 +332,8 @@ class TestParameterValueTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         index = model.index(0, 4)
         plot_widget = table_view._plot_selection([index])
         try:
@@ -423,6 +432,8 @@ class TestParameterValueTableWithExistingData(TestBase):
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
 
     def test_purging_value_data_clears_table(self):
@@ -430,6 +441,8 @@ class TestParameterValueTableWithExistingData(TestBase):
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
 
     def test_remove_fetched_rows(self):
@@ -438,13 +451,17 @@ class TestParameterValueTableWithExistingData(TestBase):
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
         ids = [model.item_at_row(row) for row in range(0, model.rowCount() - 1, 2)]
         self._db_mngr.remove_items({self._db_map: {"parameter_value": set(ids)}})
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE // 2)
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), self._whole_model_rowcount() - self._CHUNK_SIZE // 2)
 
     def test_undoing_purge(self):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
         self._db_mngr.undo_stack[self._db_map].undo()
         while model.rowCount() != self._whole_model_rowcount():
@@ -468,8 +485,12 @@ class TestParameterValueTableWithExistingData(TestBase):
     def test_rolling_back_purge(self):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
             roll_back_dialog.StandardButton.Ok = QMessageBox.StandardButton.Ok
@@ -504,19 +525,24 @@ class TestParameterValueTableWithExistingData(TestBase):
                 ("object_class", "0parameter_"),
                 ("object_class", "1parameter_"),
             )
-            import_functions.import_object_parameters(db_map, parameter_definition_data)
+            _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
+            self.assertEqual(errors, [])
             parameter_value_data = (
                 ("object_class", "object_0", "0parameter_", "a_value"),
                 ("object_class", "object_0", "1parameter_", "a_value"),
                 ("object_class", "object_1", "0parameter_", "a_value"),
                 ("object_class", "object_1", "1parameter_", "a_value"),
             )
-            import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            _, errors = import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            self.assertEqual(errors, [])
             db_map.commit_session("Add test data.")
+        db_map.close()
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        while model.rowCount() != self._whole_model_rowcount() + 4:
+        self._db_mngr.refresh_session(self._db_map)
+        fetch_model(model)
+        while model.rowCount() == 0:
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = []
@@ -546,7 +572,6 @@ class TestParameterValueTableWithExistingData(TestBase):
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount() + 4)
         assert_table_model_data(model, expected, self)
 
 
@@ -560,6 +585,8 @@ class TestEntityAlternativeTableView(TestBase):
         table_view = self._db_editor.ui.tableView_entity_alternative
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with mock_clipboard_patch(
             "Object\tspoon\tBase\tGIBBERISH", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
@@ -579,6 +606,8 @@ class TestEntityAlternativeTableView(TestBase):
         table_view = self._db_editor.ui.tableView_entity_alternative
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with mock_clipboard_patch(
             "Object\tspoon\tBase\tyes", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
@@ -661,7 +690,7 @@ class TestEmptyParameterValueTableView(TestBase):
     def test_paste_empty_string_to_entity_byname_column(self):
         table_view = self._db_editor.ui.empty_parameter_value_table_view
         model = table_view.model()
-        byname_column = model.header.index("entity_byname")
+        byname_column = model.header.index(model.field_to_header("entity_byname"))
         table_view.selectionModel().setCurrentIndex(
             model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )

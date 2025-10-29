@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Models that vertically concatenate two or more table models."""
-from typing import Optional
+from typing import Any, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, QTimer, Slot
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from .single_models import SingleModelBase
@@ -185,7 +185,7 @@ class CompoundTableModel(MinimalTableModel):
         and calls batch_set_data on each of them."""
         if not indexes or not data:
             return False
-        d = {}  # Maps models to (index, value) tuples
+        d: dict[SingleModelBase, list[tuple[QModelIndex, Any]]] = {}
         rows = []
         columns = []
         successful = True

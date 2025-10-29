@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Spine Database editor has now a new Entity table which shows all entity information
+  including location data that has not been accessible in the editor before.
+  Existing entities can be updated using the table. 
+  However, new entities cannot currently be added from the table.
+
 ### Changed
 
 ### Deprecated

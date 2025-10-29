@@ -125,9 +125,10 @@ class TreeViewMixin:
             if not single_models:
                 return True
             parameter_value_ids = set()
+            value_table = db_map.mapped_table("parameter_value")
             for model in single_models:
                 for _, row in self.parameter_value_model._row_map_iterator_for_model(model):
-                    parameter_value_ids.add(model._db_item(row).get("entity_id"))
+                    parameter_value_ids.add(value_table[model.item_id(row)]["entity_id"])
             if not parameter_value_ids and db_map in self._filter_parameter_value_ids:
                 del self._filter_parameter_value_ids[db_map]
             self._filter_parameter_value_ids[db_map] = parameter_value_ids

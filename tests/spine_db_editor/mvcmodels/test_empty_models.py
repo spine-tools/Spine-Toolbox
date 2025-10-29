@@ -18,6 +18,7 @@ from spinedb_api import to_database
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     DelayedDataSetter,
+    EmptyEntityAlternativeModel,
     EmptyModelBase,
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
@@ -26,12 +27,19 @@ from tests.mock_helpers import (
     MockSpineDBManager,
     TestCaseWithQApplication,
     assert_table_model_data,
+    assert_table_model_data_pytest,
     fetch_model,
     q_object,
 )
 
 
-class TestEmptyModelBase(TestCaseWithQApplication):
+class ExampleEmptyModel(EmptyModelBase):
+    field_map = {field: field for field in ["entity_class_name", "name", "description", "database"]}
+    _entity_class_column = 0
+    _database_column = 3
+
+
+class TestExampleEmptyModel(TestCaseWithQApplication):
     def setUp(self):
         """Overridden method. Runs before each test."""
         app_settings = mock.MagicMock()
@@ -48,25 +56,23 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         self._undo_stack.deleteLater()
 
     def test_undo_change_in_single_cell(self):
-        model = EmptyModelBase(["entity_class_name", "header 2", "database"], self._db_mngr, parent=self._db_mngr)
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.columnCount(), 3)
+        self.assertEqual(model.columnCount(), 4)
         self.assertTrue(model.batch_set_data([model.index(0, 0)], ["X"]))
-        expected = [["X", None, None], [None, None, None]]
+        expected = [["X", None, None, None], [None, None, None, None]]
         assert_table_model_data(model, expected, self)
         self.assertTrue(self._undo_stack.canUndo())
         self._undo_stack.undo()
-        expected = [[None, None, None]]
+        expected = [[None, None, None, None]]
         assert_table_model_data(model, expected, self)
 
     def test_undo_handles_entity_class_name_candidates(self):
         with self._db_map:
             self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
@@ -91,15 +97,13 @@ class TestEmptyModelBase(TestCaseWithQApplication):
             assert_table_model_data(model, expected, self)
 
     def test_remove_multiple_rows(self):
-        model = EmptyModelBase(
-            ["entity_class_name", "header 1", "header 2", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 4)
-        model.insertRow(0)
-        model.insertRow(0)
+        self.assertTrue(model.insertRow(0))
+        self.assertTrue(model.insertRow(0))
         expected = [[None, None, None, None], [None, None, None, None], [None, None, None, None]]
         assert_table_model_data(model, expected, self)
         model.remove_rows([0, 1])
@@ -107,9 +111,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
         assert_table_model_data(model, expected, self)
 
     def test_undo_remove_rows(self):
-        model = EmptyModelBase(
-            ["entity_class_name", "header 1", "header 2", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.set_undo_stack(self._undo_stack)
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
@@ -128,9 +130,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_undo_command_removed_when_row_goes_to_database(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -165,9 +165,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_undo_multiple_row_insertions(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -188,9 +186,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_batch_setting_same_values_is_considered_a_no_operation(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -226,9 +222,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 
     def test_batch_setting_complete_rows_results_in_single_empty_row(self):
         self._db_map.add_entity_class(name="Widget")
-        model = EmptyModelBase(
-            ["entity_class_name", "name", "description", "database"], self._db_mngr, parent=self._db_mngr
-        )
+        model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model._fetch_parent.fetch_item_type = model.item_type
@@ -269,7 +263,7 @@ class TestEmptyModelBase(TestCaseWithQApplication):
 class TestDelayedDataSetter:
     def test_sets_data_for_model(self, application):
         with q_object(MinimalTableModel(header=["col 1"])) as model:
-            model.insertRows(0, 1, QModelIndex())
+            assert model.insertRows(0, 1, QModelIndex())
             index = model.index(0, 0)
             data_setter = DelayedDataSetter(model, index)
             value_and_type = to_database(2.3)
@@ -281,7 +275,7 @@ class TestDelayedDataSetter:
             model.insertRows(0, 2)
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
-            model.removeRows(0, 1)
+            assert model.removeRows(0, 1)
             value_and_type = to_database(2.3)
             data_setter(value_and_type)
             assert model.index(0, 0).data() == 2.3
@@ -291,24 +285,24 @@ class TestDelayedDataSetter:
             model.insertRows(0, 2)
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
-            model.removeRows(1, 1)
+            assert model.removeRows(1, 1)
             value_and_type = to_database(2.3)
             data_setter(value_and_type)
             assert model.index(0, 0).data() is None
 
     def test_removing_succeeding_row_has_no_effect(self, application):
         with q_object(MinimalTableModel(header=["col 1"])) as model:
-            model.insertRows(0, 2)
+            assert model.insertRows(0, 2)
             index = model.index(0, 0)
             data_setter = DelayedDataSetter(model, index)
-            model.removeRows(1, 1)
+            assert model.removeRows(1, 1)
             value_and_type = to_database(2.3)
             data_setter(value_and_type)
             assert model.index(0, 0).data() == 2.3
 
     def test_resetting_model_invalidates_setter(self):
         with q_object(MinimalTableModel(header=["col 1"])) as model:
-            model.insertRows(0, 2)
+            assert model.insertRows(0, 2)
             index = model.index(1, 0)
             data_setter = DelayedDataSetter(model, index)
             model.clear()
@@ -331,9 +325,47 @@ class TestEmptyParameterDefinitionModel:
             model.append_empty_row()
             indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 6)]
             data = ["my class", "my parameter", "my database"]
-            model.batch_set_data(indexes, data)
+            assert model.batch_set_data(indexes, data)
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my parameter"
+
+    def test_change_db_maps_by_reset_db_maps(self, db_mngr, db_map, db_name, tmp_path, logger):
+        url = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        with db_map:
+            db_map.add_entity_class(name="my class")
+        db_map2 = db_mngr.get_db_map(url, logger, create=True)
+        db_mngr.name_registry.register(db_map2.sa_url, "the other database")
+        with db_map2:
+            db_map2.add_entity_class(name="my class")
+        with mock.patch(
+            "spinetoolbox.spine_db_editor.mvcmodels.empty_models.EmptyParameterDefinitionModel.handle_items_added"
+        ) as mock_handler:
+            with q_object(EmptyParameterDefinitionModel(db_mngr, parent=None)) as model:
+                undo_stack = QUndoStack(model)
+                model.set_undo_stack(undo_stack)
+                model.reset_db_maps([db_map])
+                model.set_default_row(entity_class_name="my class", database=db_name)
+                model.append_empty_row()
+                indexes = [model.index(0, 1)]
+                data = ["my parameter"]
+                assert model.batch_set_data(indexes, data)
+                QApplication.processEvents()
+                mock_handler.assert_called_once_with(
+                    {db_map: [db_map.parameter_definition(entity_class_name="my class", name="my parameter")]}
+                )
+                mock_handler.reset_mock()
+                model.reset_db_maps([db_map2])
+                indexes = [model.index(0, 1), model.index(0, 6)]
+                data = ["your parameter", "the other database"]
+                assert model.batch_set_data(indexes, data)
+                QApplication.processEvents()
+                mock_handler.assert_called_once_with(
+                    {db_map2: [db_map2.parameter_definition(entity_class_name="my class", name="your parameter")]}
+                )
+                mock_handler.reset_mock()
+                db_map.add_parameter_definition(entity_class_name="my class", name="should not be seen by model")
+                QApplication.processEvents()
+                mock_handler.assert_not_called()
 
 
 class TestEmptyParameterValueModel:
@@ -350,6 +382,34 @@ class TestEmptyParameterValueModel:
             model.append_empty_row()
             indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 2), model.index(0, 3), model.index(0, 5)]
             data = ["my class", ("my entity",), "my parameter", "my alternative", "my database"]
-            model.batch_set_data(indexes, data)
+            assert model.batch_set_data(indexes, data)
             index = model.index(0, model.columnCount() - 2)
             assert model.index_name(index) == "my database - my class - my entity - my parameter - my alternative"
+
+
+class TestEmptyEntityAlternativeModel:
+
+    def test_create_entity_on_the_fly(self, db_mngr, db_map, db_name):
+        with db_map:
+            db_map.add_entity_class(name="my class")
+        with q_object(EmptyEntityAlternativeModel(db_mngr, parent=None)) as model:
+            undo_stack = QUndoStack(model)
+            model.set_undo_stack(undo_stack)
+            model.reset_db_maps([db_map])
+            model.set_default_row(entity_class_name="my class", database=db_name)
+            model.append_empty_row()
+            indexes = [model.index(0, 1), model.index(0, 2), model.index(0, 3)]
+            data = [("my entity",), "Base", True]
+            assert model.batch_set_data(indexes, data)
+            while model.rowCount() == 2:
+                QApplication.processEvents()
+            entities = db_map.find_entities()
+            assert len(entities) == 1
+            assert entities[0]["name"] == "my entity"
+            entity_alternatives = db_map.find_entity_alternatives()
+            assert len(entity_alternatives) == 1
+            assert entity_alternatives[0]["entity_byname"] == ("my entity",)
+            assert entity_alternatives[0]["alternative_name"] == "Base"
+            assert entity_alternatives[0]["active"]
+            expected = [["my class", None, None, None, db_name]]
+            assert_table_model_data_pytest(model, expected)

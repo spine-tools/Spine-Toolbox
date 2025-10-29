@@ -14,14 +14,21 @@
 from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Iterator
-from typing import ClassVar, Optional, TypedDict
+from functools import cache
+from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
 from spinedb_api import DatabaseMapping
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems, parameter_identifier, rows_to_row_count_tuples
+from ...helpers import (
+    DB_ITEM_SEPARATOR,
+    DBMapDictItems,
+    DBMapPublicItems,
+    parameter_identifier,
+    rows_to_row_count_tuples,
+)
 from ...mvcmodels.empty_row_model import EmptyRowModel
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
@@ -29,11 +36,10 @@ from ...spine_db_manager import SpineDBManager
 from ..commands import AppendEmptyRow, InsertEmptyModelRow, RemoveEmptyModelRow, UpdateEmptyModel
 from .single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .utils import (
-    ENTITY_ALTERNATIVE_MODEL_HEADER,
+    ENTITY_ALTERNATIVE_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
-    PARAMETER_DEFINITION_MODEL_HEADER,
     PARAMETER_VALUE_FIELD_MAP,
-    PARAMETER_VALUE_MODEL_HEADER,
+    field_index,
     make_entity_on_the_fly,
 )
 
@@ -44,14 +50,15 @@ class EmptyModelBase(EmptyRowModel):
     item_type: ClassVar[str] = NotImplemented
     can_be_filtered: ClassVar[bool] = False
     field_map: ClassVar[dict[str, str]] = {}
-    group_fields: ClassVar[Iterable[str]] = ()
+    group_columns: ClassVar[set[int]] = set()
+    _entity_class_column: ClassVar[int] = NotImplemented
+    _database_column: ClassVar[int] = NotImplemented
 
-    def __init__(self, header: list[str], db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(parent, header)
+    def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
+        super().__init__(parent, list(self.field_map))
         self.db_mngr = db_mngr
+        self._db_maps: list[DatabaseMapping] = []
         self._undo_stack: Optional[QUndoStack] = None
-        self._entity_class_column = header.index("entity_class_name")
-        self._database_column = header.index("database")
         self.entity_class_id: Optional[TempId] = None
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
@@ -59,12 +66,17 @@ class EmptyModelBase(EmptyRowModel):
             owner=self,
         )
 
+    @classmethod
+    @cache
+    def field_to_header(cls, field: str) -> str:
+        return dict(zip(cls.field_map.values(), cls.field_map.keys()))[field]
+
     def set_undo_stack(self, undo_stack: QUndoStack) -> None:
         self._undo_stack = undo_stack
         self.modelReset.connect(self._clear_undo_stack)
 
     @Slot()
-    def _clear_undo_stack(self):
+    def _clear_undo_stack(self) -> None:
         self._undo_stack.clear()
 
     def fetchMore(self, parent):
@@ -136,7 +148,7 @@ class EmptyModelBase(EmptyRowModel):
     def accepted_rows(self) -> Iterator[int]:
         yield from range(self.rowCount())
 
-    def handle_items_added(self, db_map_data: DBMapDictItems) -> None:
+    def handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
         """Finds and removes model items that were successfully added to the db."""
         added_ids = set()
         for db_map, items in db_map_data.items():
@@ -217,7 +229,7 @@ class EmptyModelBase(EmptyRowModel):
         raise NotImplementedError()
 
     def _make_item(self, row: int) -> dict:
-        return dict(zip(self.header, self._main_data[row]))
+        return dict(zip(self.field_map.values(), self._main_data[row]))
 
     def _make_db_map_data(self, rows: Iterable[int]) -> DBMapDictItems:
         """
@@ -248,16 +260,15 @@ class EmptyModelBase(EmptyRowModel):
                 iter(x for x in self.db_mngr.db_maps if self.db_mngr.name_registry.display_name(x.sa_url) == database),
                 None,
             )
-        if (role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.ToolTipRole) and self.header[
-            index.column()
-        ] in self.group_fields:
+        if (
+            role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.ToolTipRole
+        ) and index.column() in self.group_columns:
             data = super().data(index, role)
             return DB_ITEM_SEPARATOR.join(data) if data else None
         return super().data(index, role)
 
     def _convert_to_db(self, item: dict) -> dict:
-        """Returns a db item (id-based) from the given model item (name-based)."""
-        return item.copy()
+        return item
 
     @staticmethod
     def _check_item(item: dict) -> bool:
@@ -266,15 +277,27 @@ class EmptyModelBase(EmptyRowModel):
 
     def set_default_row(self, **kwargs) -> None:
         """Sets default row data."""
-        if self.default_row != kwargs:
-            super().set_default_row(**kwargs)
+        candidate = {}
+        for field, value in kwargs.items():
+            try:
+                header = self.field_to_header(field)
+            except KeyError:
+                continue
+            candidate[header] = value
+        if self.default_row != candidate:
+            super().set_default_row(**candidate)
             self._undo_stack.clear()
 
-    def reset_db_maps(self, db_maps: Iterable[DatabaseMapping]):
+    def reset_db_maps(self, db_maps: list[DatabaseMapping]) -> None:
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
+        for db_map in self._db_maps:
+            if db_map not in db_maps:
+                self.db_mngr.unregister_fetch_parent(db_map, self._fetch_parent)
         for db_map in db_maps:
-            self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
+            if db_map not in self._db_maps:
+                self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
+        self._db_maps = db_maps
 
 
 class _TempDBMapCache:
@@ -299,7 +322,7 @@ class _TempDBMapCache:
 class ParameterMixin:
     value_field: ClassVar[str] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
-    parameter_name_column: ClassVar[int] = NotImplemented
+    _parameter_name_column: ClassVar[int] = NotImplemented
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if self.header[index.column()] == self.value_field and role in {
@@ -314,10 +337,10 @@ class ParameterMixin:
 
     @classmethod
     def _entity_class_name_candidates_by_parameter(cls, db_map: DatabaseMapping, row_data: list) -> list[str]:
-        name = row_data[cls.parameter_name_column]
+        name = row_data[cls._parameter_name_column]
         if not name:
             return []
-        return [x["entity_class_name"] for x in db_map.get_items("parameter_definition", name=name)]
+        return [x["entity_class_name"] for x in db_map.find_parameter_definitions(name=name)]
 
     def get_set_data_delayed(self, index: QModelIndex) -> Callable[[tuple[bytes, Optional[str]]], None]:
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
@@ -363,9 +386,8 @@ class DelayedDataSetter:
 
 
 class EntityMixin:
-    group_fields = ("entity_byname",)
     entities_added = Signal(object)
-    entity_byname_column: ClassVar[int] = NotImplemented
+    _entity_byname_column: ClassVar[int] = NotImplemented
 
     def add_items_to_db(self, db_map_data):
         """Overridden to add entities on the fly first."""
@@ -407,7 +429,7 @@ class EntityMixin:
 
     @classmethod
     def _entity_class_name_candidates_by_entity(cls, db_map: DatabaseMapping, row_data: list) -> list[str]:
-        byname = row_data[cls.entity_byname_column]
+        byname = row_data[cls._entity_byname_column]
         if not byname:
             return []
         return [x["entity_class_name"] for x in db_map.find_entities(entity_byname=byname)]
@@ -420,11 +442,13 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     field_map = PARAMETER_DEFINITION_FIELD_MAP
     value_field = "default_value"
     type_field = "default_type"
-    parameter_name_column = PARAMETER_DEFINITION_MODEL_HEADER.index("parameter_name")
-    group_fields = ("valid types",)
+    group_columns = {field_index("parameter_type_list", PARAMETER_DEFINITION_FIELD_MAP)}
+    _parameter_name_column = field_index("name", PARAMETER_DEFINITION_FIELD_MAP)
+    _entity_class_column: ClassVar[int] = field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP)
+    _database_column: ClassVar[int] = field_index("database", PARAMETER_DEFINITION_FIELD_MAP)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(PARAMETER_DEFINITION_MODEL_HEADER, db_mngr, parent)
+        super().__init__(db_mngr, parent)
 
     def index_name(self, index: QModelIndex) -> str:
         """Generates a name for data at given index.
@@ -436,13 +460,13 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
             label identifying the data
         """
         row_data = self._main_data[index.row()]
-        database = row_data[self.header.index("database")] or "<database>"
-        entity_class_name = row_data[self.header.index("entity_class_name")] or "<entity_class>"
-        parameter_name = row_data[self.header.index("parameter_name")] or "<parameter>"
+        database = row_data[self._database_column] or "<database>"
+        entity_class_name = row_data[self._entity_class_column] or "<entity_class>"
+        parameter_name = row_data[self._parameter_name_column] or "<parameter>"
         return parameter_identifier(database, entity_class_name, None, parameter_name, None)
 
     def _make_unique_id(self, item):
-        return tuple(item.get(x) for x in ("entity_class_name", "name"))
+        return item.get("entity_class_name"), item.get("name")
 
     @staticmethod
     def _check_item(item):
@@ -460,11 +484,14 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
     field_map = PARAMETER_VALUE_FIELD_MAP
     value_field = "value"
     type_field = "type"
-    entity_byname_column = PARAMETER_VALUE_MODEL_HEADER.index("entity_byname")
-    parameter_name_column = PARAMETER_VALUE_MODEL_HEADER.index("parameter_name")
+    group_columns = {field_index("entity_byname", PARAMETER_VALUE_FIELD_MAP)}
+    _parameter_name_column = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
+    _entity_class_column = field_index("entity_class_name", PARAMETER_VALUE_FIELD_MAP)
+    _entity_byname_column = field_index("entity_byname", PARAMETER_VALUE_FIELD_MAP)
+    _database_column = field_index("database", PARAMETER_VALUE_FIELD_MAP)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(PARAMETER_VALUE_MODEL_HEADER, db_mngr, parent)
+        super().__init__(db_mngr, parent)
 
     def index_name(self, index: QModelIndex) -> str:
         """Generates a name for data at given index.
@@ -476,11 +503,11 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
             label identifying the data
         """
         row_data = self._main_data[index.row()]
-        database = row_data[self.header.index("database")] or "<database>"
-        entity_class_name = row_data[self.header.index("entity_class_name")] or "<entity_class>"
-        parameter_name = row_data[self.header.index("parameter_name")] or "<parameter>"
-        entity_byname = row_data[self.header.index("entity_byname")] or ["<entity>"]
-        alternative_name = row_data[self.header.index("alternative_name")] or "<alternative>"
+        database = row_data[self._database_column] or "<database>"
+        entity_class_name = row_data[self._entity_class_column] or "<entity_class>"
+        parameter_name = row_data[self._parameter_name_column] or "<parameter>"
+        entity_byname = row_data[self._entity_byname_column] or ["<entity>"]
+        alternative_name = row_data[self.header.index(self.field_to_header("alternative_name"))] or "<alternative>"
         return parameter_identifier(database, entity_class_name, entity_byname, parameter_name, alternative_name)
 
     @staticmethod
@@ -515,10 +542,14 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
 
 class EmptyEntityAlternativeModel(EntityMixin, EmptyModelBase):
     item_type = "entity_alternative"
-    entity_byname_column = ENTITY_ALTERNATIVE_MODEL_HEADER.index("entity_byname")
+    field_map = ENTITY_ALTERNATIVE_FIELD_MAP
+    group_columns = {field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)}
+    _entity_byname_column = field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)
+    _entity_class_column = field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP)
+    _database_column = field_index("database", ENTITY_ALTERNATIVE_FIELD_MAP)
 
     def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(ENTITY_ALTERNATIVE_MODEL_HEADER, db_mngr, parent)
+        super().__init__(db_mngr, parent)
 
     @staticmethod
     def _check_item(item):
@@ -535,7 +566,7 @@ class EmptyEntityAlternativeModel(EntityMixin, EmptyModelBase):
 class EmptyAddEntityOrClassRowModel(EmptyRowModel):
     """A table model with a last empty row."""
 
-    def __init__(self, parent=None, header=None):
+    def __init__(self, parent: QObject | None = None, header: list[str] | None = None):
         super().__init__(parent, header=header)
         self._entity_name_user_defined = False
 

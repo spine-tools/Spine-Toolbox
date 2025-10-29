@@ -31,6 +31,7 @@ class KernelEditorBase(QDialog):
     msg_success = Signal(str)
     msg_warning = Signal(str)
     msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
     msg_error = Signal(str)
 
     def __init__(self, parent, python_or_julia):
