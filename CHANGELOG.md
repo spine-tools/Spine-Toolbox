@@ -3,7 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.3]
 
 ### Added
 
@@ -17,16 +17,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   using wildcards. They can be used, among other things, as Optional input files for Tools.
 - Data Connection: references can now be modified by right-clicking them and selecting **Select another...**
   from the popup menu.
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.10.2]
 
