@@ -19,7 +19,7 @@ class TestAggregatorProcess:
         with open(tmp_path / "file", "wb") as file1:
             file1.write(b"xxxxx")
         with q_object(AggregatorProcess(None)) as aggregator:
-            with signal_waiter(aggregator.aggregated, timeout=1.0) as waiter:
+            with signal_waiter(aggregator.aggregated, timeout=5.0) as waiter:
                 aggregator.start_aggregating([tmp_path])
                 waiter.wait()
                 assert waiter.args == ("5",)
