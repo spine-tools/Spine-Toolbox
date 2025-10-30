@@ -12,8 +12,9 @@
 
 """Custom item delegates."""
 from numbers import Number
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QDoubleValidator, QFont, QFontMetrics, QIcon
+import re
+from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QRegularExpressionValidator
 from PySide6.QtWidgets import QStyledItemDelegate
 from spinedb_api import to_database
 from spinedb_api.parameter_value import join_value_and_type
@@ -673,16 +674,22 @@ class PlainTextDelegate(TableDelegate):
 class PlainNumberDelegate(TableDelegate):
     """A delegate for non-localized numeric columns."""
 
+    _NUMBER_REGEXP = "^[+-]?[0-9]*($|\.[0-9]*$)"
+
     def setModelData(self, editor, model, index):
         """Send signal."""
-        self.data_committed.emit(index, float(editor.data()))
+        text = editor.data()
+        data = float(text) if text else None
+        self.data_committed.emit(index, data)
 
     def setEditorData(self, editor, index):
-        editor.setText(str(index.data(Qt.ItemDataRole.DisplayRole)))
+        data = index.data(Qt.ItemDataRole.DisplayRole)
+        text = str(data) if data is not None else ""
+        editor.setText(text)
 
     def createEditor(self, parent, option, index):
         editor = CustomLineEditor(parent)
-        editor.setValidator(QDoubleValidator(editor))
+        editor.setValidator(QRegularExpressionValidator(self._NUMBER_REGEXP, editor))
         return editor
 
 
