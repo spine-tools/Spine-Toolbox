@@ -318,8 +318,7 @@ class GraphViewMixin:
         for item in self.ui.graphicsView.items():
             if isinstance(item, EntityItem) and not updated_ids.isdisjoint(item.db_map_ids):
                 entity = entities_by_db_map_id[next(iter(item.db_map_ids))]
-                if (latitude := entity["lat"]) is not None:
-                    longitude = entity["lon"]
+                if (latitude := entity["lat"]) is not None and (longitude := entity["lon"]) is not None:
                     x, y = self.ui.graphicsView.x_y(latitude, longitude)
                     position = item.pos()
                     if not math.isclose(position.x(), x, rel_tol=1e-10) or not math.isclose(
