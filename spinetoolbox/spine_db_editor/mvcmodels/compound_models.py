@@ -26,7 +26,7 @@ from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.shared import ITEM_ID_ROLE
 from ...spine_db_manager import SpineDBManager
-from ..widgets.custom_menus import AutoFilterMenu, AutoFilterValue
+from ..widgets.custom_menus import AutoFilterMenu
 from .compound_table_model import CompoundTableModel
 from .single_models import (
     SingleEntityAlternativeModel,
@@ -351,7 +351,7 @@ class CompoundStackedModel(CompoundTableModel):
         Also notifies the empty model, so it can remove rows that are already in.
 
         Args:
-            db_map_data: list of added dict-items keyed by DatabaseMapping
+            db_map_data: list of added items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
             if db_map not in self._db_maps:
@@ -365,6 +365,7 @@ class CompoundStackedModel(CompoundTableModel):
                 for item in class_items:
                     item_id = item["id"]
                     if item_id in existing_ids:
+                        existing_ids.remove(item_id)
                         continue
                     if item.is_committed():
                         ids_committed.append(item_id)

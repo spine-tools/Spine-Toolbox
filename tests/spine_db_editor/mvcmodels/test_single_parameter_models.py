@@ -23,7 +23,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.single_models import (
     SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, fetch_model, q_object
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model, q_object
 
 ENTITY_PARAMETER_VALUE_HEADER = [
     "entity_class_name",
@@ -45,7 +45,7 @@ class ExampleSingleParameterValueModel(SingleParameterValueModel):
         super().__init__(CompoundParameterValueModel(None, db_mngr), db_map, entity_class_id, committed)
 
 
-class TestEmptySingleParameterDefinitionModel(TestCaseWithQApplication):
+class TestSingleParameterDefinitionModel:
     HEADER = [
         "entity_class_name",
         "parameter_name",
@@ -56,13 +56,13 @@ class TestEmptySingleParameterDefinitionModel(TestCaseWithQApplication):
         "database",
     ]
 
-    def test_rowCount_is_zero(self):
-        with q_object(ExampleSingleParameterDefinitionModel(None, None, 1, False)) as model:
-            self.assertEqual(model.rowCount(), 0)
+    def test_rowCount_is_zero(self, db_map, application):
+        with q_object(ExampleSingleParameterDefinitionModel(None, db_map, 1, False)) as model:
+            assert model.rowCount() == 0
 
-    def test_columnCount_is_header_length(self):
-        with q_object(ExampleSingleParameterDefinitionModel(None, None, 1, False)) as model:
-            self.assertEqual(model.columnCount(), len(self.HEADER))
+    def test_columnCount_is_header_length(self, db_map, application):
+        with q_object(ExampleSingleParameterDefinitionModel(None, db_map, 1, False)) as model:
+            assert model.columnCount() == len(self.HEADER)
 
 
 class TestSingleObjectParameterValueModel(TestCaseWithQApplication):
