@@ -409,10 +409,7 @@ class CompoundStackedModel(CompoundTableModel):
     def _insert_row_map(self, pos: int, single_row_map: list[tuple[SingleModelBase, int]]) -> None:
         if not single_row_map:
             # Emit layoutChanged to trigger fetching.
-            # The QTimer is to avoid funny situations where the user enters new data via the empty row model,
-            # and those rows need to be removed at the same time as we fetch the added data.
-            # Doing it in the same loop cycle was causing bugs.
-            QTimer.singleShot(0, self.layoutChanged.emit)
+            self.layoutChanged.emit()
             return
         row = self._get_row_for_insertion(pos)
         last = row + len(single_row_map) - 1
