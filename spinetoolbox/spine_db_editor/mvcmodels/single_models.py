@@ -443,7 +443,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
     parameter_definition_id_key = "id"
     group_columns = {field_index("parameter_type_list", PARAMETER_DEFINITION_FIELD_MAP)}
     fixed_columns = (
-        field_index("entity_class_column", PARAMETER_DEFINITION_FIELD_MAP),
+        field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP),
         field_index("database", PARAMETER_DEFINITION_FIELD_MAP),
     )
 
