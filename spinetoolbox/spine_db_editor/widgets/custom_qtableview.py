@@ -374,6 +374,29 @@ class ParameterDefinitionTableViewBase(ParameterTableView):
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
 
+class HighlightNonCommittedRows:
+    def setModel(self, model: CompoundStackedModel) -> None:
+        super().setModel(model)
+        model.non_committed_items_about_to_be_added.connect(self._begin_following_added_rows)
+        model.non_committed_items_added.connect(self._end_following_added_rows)
+
+    @Slot()
+    def _begin_following_added_rows(self) -> None:
+        self.model().rowsInserted.connect(self._highlight_inserted_rows)
+        self.selectionModel().clearSelection()
+
+    @Slot()
+    def _end_following_added_rows(self) -> None:
+        self.model().rowsInserted.disconnect(self._highlight_inserted_rows)
+
+    @Slot(QModelIndex, int, int)
+    def _highlight_inserted_rows(self, parent: QModelIndex, first: int, last: int) -> None:
+        model = self.model()
+        self.scrollTo(model.index(last, 0, parent))
+        selection = QItemSelection(model.index(first, 0, parent), model.index(last, model.columnCount() - 1, parent))
+        self.selectionModel().select(selection, QItemSelectionModel.SelectionFlag.Select)
+
+
 class WithUndoStack:
     request_replace_undo_redo_actions = Signal(QAction, QAction)
     request_reset_undo_redo_actions = Signal()
@@ -402,7 +425,7 @@ class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoSta
         return
 
 
-class ParameterDefinitionTableView(AboveSeam, ParameterDefinitionTableViewBase):
+class ParameterDefinitionTableView(AboveSeam, HighlightNonCommittedRows, ParameterDefinitionTableViewBase):
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
@@ -439,7 +462,7 @@ class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, P
         return
 
 
-class ParameterValueTableView(AboveSeam, ParameterValueTableViewBase):
+class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, ParameterValueTableViewBase):
     _private_key_headers: ClassVar[tuple[str, str, str, str]] = (
         field_header("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
         field_header("entity_byname", PARAMETER_VALUE_FIELD_MAP),
@@ -521,7 +544,7 @@ class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack
         return
 
 
-class EntityAlternativeTableView(AboveSeam, EntityAlternativeTableViewBase):
+class EntityAlternativeTableView(AboveSeam, HighlightNonCommittedRows, EntityAlternativeTableViewBase):
     """Visualize entities and their alternatives."""
 
 

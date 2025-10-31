@@ -16,7 +16,7 @@ import bisect
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Type
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
+from PySide6.QtCore import QModelIndex, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
@@ -51,6 +51,9 @@ class CompoundStackedModel(CompoundTableModel):
 
     item_type: ClassVar[str] = NotImplemented
     field_map: ClassVar[dict[str, str]] = {}
+
+    non_committed_items_about_to_be_added = Signal()
+    non_committed_items_added = Signal()
 
     def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager, *db_maps):
         """
@@ -371,8 +374,12 @@ class CompoundStackedModel(CompoundTableModel):
                         ids_committed.append(item_id)
                     else:
                         ids_uncommitted.append(item_id)
-                self._add_items(db_map, entity_class_id, ids_committed, committed=True)
-                self._add_items(db_map, entity_class_id, ids_uncommitted, committed=False)
+                if ids_committed:
+                    self._add_items(db_map, entity_class_id, ids_committed, committed=True)
+                if ids_uncommitted:
+                    self.non_committed_items_about_to_be_added.emit()
+                    self._add_items(db_map, entity_class_id, ids_uncommitted, committed=False)
+                    self.non_committed_items_added.emit()
 
     def _get_insert_position(self, model: SingleModelBase) -> int:
         if model.committed:
@@ -409,6 +416,7 @@ class CompoundStackedModel(CompoundTableModel):
     def _insert_row_map(self, pos: int, single_row_map: list[tuple[SingleModelBase, int]]) -> None:
         if not single_row_map:
             # Emit layoutChanged to trigger fetching.
+            print("Layout changed!")
             self.layoutChanged.emit()
             return
         row = self._get_row_for_insertion(pos)
@@ -438,8 +446,6 @@ class CompoundStackedModel(CompoundTableModel):
             ids: parameter ids
             committed: True if the ids have been committed, False otherwise
         """
-        if not ids:
-            return
         if committed:
             existing = next(
                 (m for m in self.sub_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
