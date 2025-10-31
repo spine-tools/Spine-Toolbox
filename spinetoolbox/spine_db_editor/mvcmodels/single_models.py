@@ -78,6 +78,7 @@ class SingleModelBase(HalfSortedTableModel):
         super().__init__(parent=parent, header=parent.header, lazy=lazy)
         self.db_mngr = parent.db_mngr
         self.db_map = db_map
+        self._mapped_table = self.db_map.mapped_table(parent.item_type)
         self.entity_class_id = entity_class_id
         self._auto_filter: dict[str, set] = {}  # Maps field to accepted values for that field
         self.committed = committed
@@ -124,13 +125,13 @@ class SingleModelBase(HalfSortedTableModel):
 
     @property
     def entity_class_name(self) -> str:
-        mapped_table = self.db_map.mapped_table("entity_class")
-        return mapped_table[self.entity_class_id]["name"]
+        entity_class_table = self.db_map.mapped_table("entity_class")
+        return entity_class_table[self.entity_class_id]["name"]
 
     @property
     def dimension_id_list(self) -> list[TempId]:
-        mapped_table = self.db_map.mapped_table("entity_class")
-        return mapped_table[self.entity_class_id]["dimension_id_list"]
+        entity_class_table = self.db_map.mapped_table("entity_class")
+        return entity_class_table[self.entity_class_id]["dimension_id_list"]
 
     def item_id(self, row: int) -> TempId:
         """Returns parameter id for row.
@@ -149,8 +150,7 @@ class SingleModelBase(HalfSortedTableModel):
 
     def db_item(self, index: QModelIndex) -> PublicItem:
         id_ = self._main_data[index.row()]
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
-        return mapped_table[id_]
+        return self._mapped_table[id_]
 
     def flags(self, index):
         """Make fixed indexes non-editable."""
@@ -175,7 +175,7 @@ class SingleModelBase(HalfSortedTableModel):
 
     def accepted_rows(self) -> Iterator[int]:
         """Yields accepted rows, for convenience."""
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
+        mapped_table = self._mapped_table
         for row in range(self.rowCount()):
             item = mapped_table[self._main_data[row]]
             if self.filter_accepts_item(item):
@@ -190,8 +190,8 @@ class SingleModelBase(HalfSortedTableModel):
         ref_id = db_item.get(src_id_key)
         if ref_id is None:
             return None
-        mapped_table = self.db_map.mapped_table(ref_type)
-        return mapped_table[ref_id]
+        mapped_ref_table = self.db_map.mapped_table(ref_type)
+        return mapped_ref_table[ref_id]
 
     def insertRows(self, row, count, parent=QModelIndex()):
         return False
@@ -204,8 +204,7 @@ class SingleModelBase(HalfSortedTableModel):
             if column == self.database_column:
                 return self.db_mngr.name_registry.display_name(self.db_map.sa_url)
             id_ = self._main_data[index.row()]
-            mapped_table = self.db_map.mapped_table(self._parent.item_type)
-            item = mapped_table[id_]
+            item = self._mapped_table[id_]
             field = self._parent.field_map[self.header[column]]
             if role == Qt.ItemDataRole.ToolTipRole:
                 ref_item = self._get_ref(item, field)
@@ -343,9 +342,8 @@ class ParameterMixin:
             PARAMETER_TYPE_VALIDATION_ROLE,
         }:
             id_ = self._main_data[index.row()]
-            mapped_table = self.db_map.mapped_table(self._parent.item_type)
             with self.db_mngr.get_lock(self.db_map):
-                item = mapped_table[id_]
+                item = self._mapped_table[id_]
                 return self.db_mngr.get_value(self.db_map, item, role)
         return super().data(index, role)
 
@@ -445,14 +443,13 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
     parameter_definition_id_key = "id"
     group_columns = {field_index("parameter_type_list", PARAMETER_DEFINITION_FIELD_MAP)}
     fixed_columns = (
-        field_index("entity_class_column", PARAMETER_DEFINITION_FIELD_MAP),
+        field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP),
         field_index("database", PARAMETER_DEFINITION_FIELD_MAP),
     )
 
     def _sort_key(self, item_id):
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
-        item = mapped_table[item_id]
-        return order_key(item.get("name", ""))
+        item = self._mapped_table[item_id]
+        return order_key(item["name"])
 
 
 class SingleParameterValueModel(
@@ -477,11 +474,10 @@ class SingleParameterValueModel(
     parameter_definition_id_key = "parameter_id"
 
     def _sort_key(self, item_id):
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
-        item = mapped_table[item_id]
-        byname = order_key_from_names(item.get("entity_byname", ()))
-        parameter_name = order_key(item.get("parameter_name", ""))
-        alt_name = order_key(item.get("alternative_name", ""))
+        item = self._mapped_table[item_id]
+        byname = order_key_from_names(item["entity_byname"])
+        parameter_name = order_key(item["parameter_name"])
+        alt_name = order_key(item["alternative_name"])
         return byname, parameter_name, alt_name
 
 
@@ -497,10 +493,9 @@ class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase
     group_columns = {field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)}
 
     def _sort_key(self, item_id):
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
-        item = mapped_table[item_id]
-        byname = order_key_from_names(item.get("entity_byname", ()))
-        alt_name = order_key(item.get("alternative_name", ""))
+        item = self._mapped_table[item_id]
+        byname = order_key_from_names(item["entity_byname"])
+        alt_name = order_key(item["alternative_name"])
         return byname, alt_name
 
     @property
@@ -552,8 +547,7 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
             if role == Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         elif column == self._SHAPE_BLOB_COLUMN and role == Qt.ItemDataRole.DisplayRole:
-            mapped_table = self.db_map.mapped_table("entity")
-            entity_item = mapped_table[self._main_data[index.row()]]
+            entity_item = self._mapped_table[self._main_data[index.row()]]
             return None if entity_item["shape_blob"] is None else "<geojson>"
         elif (
             column == self._BYNAME_COLUMN
@@ -564,9 +558,8 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
         return super().data(index, role)
 
     def _sort_key(self, item_id: TempId) -> list[str]:
-        mapped_table = self.db_map.mapped_table(self._parent.item_type)
-        item = mapped_table[item_id]
-        byname = order_key_from_names(item.get("entity_byname", ()))
+        item = self._mapped_table[item_id]
+        byname = order_key_from_names(item["entity_byname"])
         return byname
 
     @property

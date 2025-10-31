@@ -152,6 +152,39 @@ class TestCompoundParameterDefinitionModel(TestBase):
             self._db_mngr.close_session(url)
             gc.collect()
 
+    def test_signals_when_non_committed_data_is_added(self):
+        with self._db_map:
+            self._db_map.add_entity_class(name="Gadget")
+            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
+            self._db_map.commit_session("Mark items as committed.")
+        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+        model.init_model()
+        with (
+            mock.patch.object(model, "non_committed_items_about_to_be_added") as begin_signal,
+            mock.patch.object(model, "non_committed_items_added") as end_signal,
+        ):
+            fetch_model(model)
+            begin_signal.emit.assert_not_called()
+            end_signal.emit.assert_not_called()
+        expected = [["Gadget", "X", None, None, "None", None, self.db_codename]]
+        assert_table_model_data_pytest(model, expected)
+        with (
+            mock.patch.object(model, "non_committed_items_about_to_be_added") as begin_signal,
+            mock.patch.object(model, "non_committed_items_added") as end_signal,
+        ):
+            self._db_mngr.add_items(
+                "parameter_definition", {self._db_map: [{"entity_class_name": "Gadget", "name": "Y"}]}
+            )
+            while model.rowCount() == 1:
+                QApplication.processEvents()
+            begin_signal.emit.assert_called_once_with()
+            end_signal.emit.assert_called_once_with()
+        expected = [
+            ["Gadget", "X", None, None, "None", None, self.db_codename],
+            ["Gadget", "Y", None, None, "None", None, self.db_codename],
+        ]
+        assert_table_model_data_pytest(model, expected)
+
 
 class TestCompoundParameterValueModel(TestBase):
     def test_horizontal_header(self):

@@ -125,7 +125,10 @@ def make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optiona
 
 
 def field_index(field: str, field_map: dict[str, str]) -> int:
-    return len(list(takewhile(lambda x: x != field, field_map.values())))
+    index = len(list(takewhile(lambda x: x != field, field_map.values())))
+    if index == len(field_map):
+        raise RuntimeError(f"field {field} not found")
+    return index
 
 
 def field_header(field: str, field_map: dict[str, str]) -> str:
