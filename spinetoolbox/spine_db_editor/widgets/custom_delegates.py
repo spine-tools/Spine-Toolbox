@@ -674,7 +674,7 @@ class PlainTextDelegate(TableDelegate):
 class PlainNumberDelegate(TableDelegate):
     """A delegate for non-localized numeric columns."""
 
-    _NUMBER_REGEXP = "^[+-]?[0-9]*($|\.[0-9]*$)"
+    _NUMBER_REGEXP = r"^[+-]?[0-9]*($|\.[0-9]*$)"
 
     def setModelData(self, editor, model, index):
         """Send signal."""
