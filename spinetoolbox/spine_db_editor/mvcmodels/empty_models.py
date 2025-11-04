@@ -229,7 +229,7 @@ class EmptyModelBase(EmptyRowModel):
         raise NotImplementedError()
 
     def _make_item(self, row: int) -> dict:
-        return dict(zip(self.field_map.values(), self._main_data[row]))
+        return {key: value for key, value in zip(self.field_map.values(), self._main_data[row]) if value is not None}
 
     def _make_db_map_data(self, rows: Iterable[int]) -> DBMapDictItems:
         """
@@ -245,11 +245,10 @@ class EmptyModelBase(EmptyRowModel):
         db_map_cache = _TempDBMapCache(self.db_mngr)
         for row in rows:
             item = self._make_item(row)
-            database = item.pop("database")
+            database = item.pop("database", "")
             db_map = db_map_cache.get(database)
             if db_map is None:
                 continue
-            item = {k: v for k, v in item.items() if v is not None}
             db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
 
@@ -342,7 +341,7 @@ class ParameterMixin:
             return []
         return [x["entity_class_name"] for x in db_map.find_parameter_definitions(name=name)]
 
-    def get_set_data_delayed(self, index: QModelIndex) -> Callable[[tuple[bytes, Optional[str]]], None]:
+    def get_set_data_delayed(self, index: QModelIndex) -> Callable[[Optional[bytes | str]], None]:
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
         even if the model changes.
         """
@@ -359,14 +358,14 @@ class DelayedDataSetter:
         self._model.modelReset.connect(self._invalidate)
         self._valid = True
 
-    def __call__(self, value_and_type: tuple[bytes, Optional[str]]) -> None:
+    def __call__(self, blob: Optional[bytes | str]) -> None:
         self._model.rowsInserted.disconnect(self._rows_inserted)
         self._model.rowsRemoved.disconnect(self._rows_removed)
         self._model.modelReset.disconnect(self._invalidate)
         if not self._valid:
             return
         index = self._model.index(self._row, self._column)
-        self._model.batch_set_data([index], [load_db_value(*value_and_type)])
+        self._model.batch_set_data([index], [load_db_value(blob)])
 
     def _rows_inserted(self, _: QModelIndex, first: int, last: int) -> None:
         if first > self._row:

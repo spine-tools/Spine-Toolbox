@@ -15,7 +15,7 @@ from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 
 
 class DBEditorTestBase(TestCaseWithQApplication):
@@ -169,7 +169,7 @@ class DBEditorTestBase(TestCaseWithQApplication):
 
     def put_mock_relationship_parameter_values_in_db_mngr(self):
         """Puts some relationship parameter values in the db mngr."""
-        value, type_ = to_database(-1)
+        value, type_ = to_database(-1.0)
         self.nemo_pluto_relative_speed = self._assert_success(
             self.mock_db_map.add_parameter_value_item(
                 entity_class_name=self.fish_dog_class["name"],
@@ -180,7 +180,7 @@ class DBEditorTestBase(TestCaseWithQApplication):
                 type=type_,
             )
         )
-        value, type_ = to_database(5)
+        value, type_ = to_database(5.0)
         self.nemo_scooby_relative_speed = self._assert_success(
             self.mock_db_map.add_parameter_value_item(
                 entity_class_name=self.fish_dog_class["name"],
@@ -191,7 +191,7 @@ class DBEditorTestBase(TestCaseWithQApplication):
                 type=type_,
             )
         )
-        value, type_ = to_database(100)
+        value, type_ = to_database(100.0)
         self.pluto_nemo_combined_mojo = self._assert_success(
             self.mock_db_map.add_parameter_value_item(
                 entity_class_name=self.dog_fish_class["name"],

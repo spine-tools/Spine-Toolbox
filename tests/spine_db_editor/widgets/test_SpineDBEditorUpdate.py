@@ -127,7 +127,7 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
             model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
         self.fetch_entity_tree_model()
-        value, type_ = to_database(100)
+        value, type_ = to_database(100.0)
         nemo_pluto_relative_speed_update = {
             "id": self.nemo_pluto_relative_speed["id"],
             "value": value,

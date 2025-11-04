@@ -12,7 +12,7 @@
 """This module contains utilities for pasting data from Excel."""
 from xml.etree import ElementTree
 from spinedb_api import DateTime, to_database
-from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.incomplete_values import join_value_and_type
 
 # Ideally, we would use openpyxl to deal with Excel data.
 # However, openpyxl is geared towards handling data from file,
@@ -34,10 +34,10 @@ def _convert_from_excel(data):
     """
 
     def date_time_to_database(x):
-        return bytes(join_value_and_type(*to_database(DateTime(x))), encoding="utf-8")
+        return join_value_and_type(*to_database(DateTime(x)))
 
     def bool_to_database(x):
-        return bytes(join_value_and_type(*to_database(bool(x))), encoding="utf-8")
+        return join_value_and_type(*to_database(bool(x)))
 
     convert_function = {
         "Boolean": bool_to_database,

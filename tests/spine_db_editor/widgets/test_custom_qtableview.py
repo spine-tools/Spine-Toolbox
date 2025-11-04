@@ -21,7 +21,8 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
-from spinedb_api import Array, DatabaseMapping, import_functions
+from spinedb_api import Array, DatabaseMapping, import_functions, to_database
+from spinedb_api.incomplete_values import join_value_and_type
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from tests.mock_helpers import (
     assert_table_model_data,
@@ -166,7 +167,7 @@ class TestParameterValueTableView(TestBase):
                 ["Object", "my_object", "X", "<qt>Base alternative</qt>", None, self.db_codename],
             ],
             Qt.ItemDataRole.EditRole: [
-                ["Object", ("my_object",), "X", "Base", "2.3", self.db_codename],
+                ["Object", ("my_object",), "X", "Base", join_value_and_type(*to_database(2.3)), self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():

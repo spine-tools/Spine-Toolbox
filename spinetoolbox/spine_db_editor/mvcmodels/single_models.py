@@ -111,7 +111,7 @@ class SingleModelBase(HalfSortedTableModel):
         items_to_upd = []
         for item in items:
             item_to_upd = self._convert_to_db(item)
-            if tuple(item_to_upd.keys()) != ("id",):
+            if len(item_to_upd) > 1:
                 items_to_upd.append(item_to_upd)
         if items_to_upd:
             self.db_mngr.update_items(self._parent.item_type, {self.db_map: items_to_upd})

@@ -11,16 +11,20 @@
 ######################################################################################################################
 
 """Miscellaneous mixins for parameter models."""
-from typing import Optional
-from spinedb_api import DatabaseMapping
-from spinedb_api.parameter_value import split_value_and_type
+from json import JSONDecodeError
+from spinedb_api.incomplete_values import split_value_and_type
 
 
 class SplitValueAndTypeMixin:
     def _convert_to_db(self, item: dict) -> dict:
         item = super()._convert_to_db(item)
-        if self.value_field in item:
-            value, value_type = split_value_and_type(item[self.value_field])
-            item[self.value_field] = value
-            item[self.type_field] = value_type
+        if self.value_field in item and not self.type_field in item:
+            value = item.pop(self.value_field)
+            try:
+                value_blob, value_type = split_value_and_type(value)
+            except JSONDecodeError:
+                item["parsed_value"] = value
+            else:
+                item[self.value_field] = value_blob
+                item[self.type_field] = value_type
         return item
