@@ -78,6 +78,8 @@ def string_to_group(string: Optional[str]) -> Union[str, tuple[str, ...]]:
 
 
 def parameter_value_to_string(value: Any) -> str:
+    if value is None:
+        return ""
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
@@ -110,15 +112,6 @@ def input_string_to_int(str_value: str) -> int:
     except ValueError:
         x = locale.atof(str_value)
     return int(round(x))
-
-
-def table_name_from_item_type(item_type: str) -> str:
-    """Returns the dock widgets headers text for the given item type"""
-    return {
-        "parameter_value": "Parameter value",
-        "parameter_definition": "Parameter definition",
-        "entity_alternative": "Entity alternative",
-    }.get(item_type)
 
 
 GRAPH_OVERLAY_COLOR = QColor(210, 210, 210, 211)

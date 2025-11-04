@@ -11,19 +11,34 @@
 ######################################################################################################################
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
-from typing import ClassVar, Iterable
+from __future__ import annotations
+from collections.abc import Iterable, Iterator
+from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.temp_id import TempId
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_rich
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
-from .utils import make_entity_on_the_fly
+from .utils import (
+    ENTITY_ALTERNATIVE_FIELD_MAP,
+    ENTITY_FIELD_MAP,
+    PARAMETER_DEFINITION_FIELD_MAP,
+    PARAMETER_VALUE_FIELD_MAP,
+    field_index,
+    make_entity_on_the_fly,
+)
+
+if TYPE_CHECKING:
+    from .compound_models import CompoundStackedModel
 
 
 class HalfSortedTableModel(MinimalTableModel[TempId]):
-    def reset_model(self, main_data=None):
+    def reset_model(self, main_data: list[TempId] | None = None):
         """Reset model."""
         if main_data is None:
             main_data = []
@@ -31,7 +46,7 @@ class HalfSortedTableModel(MinimalTableModel[TempId]):
         self._main_data = sorted(main_data, key=self._sort_key)
         self.endResetModel()
 
-    def add_rows(self, data):
+    def add_rows(self, data: list[TempId]) -> None:
         data = [item for item in data if item not in self._main_data]
         if not data:
             return
@@ -40,31 +55,32 @@ class HalfSortedTableModel(MinimalTableModel[TempId]):
         self._main_data.sort(key=self._sort_key)
         self.endResetModel()
 
-    def _sort_key(self, element):
-        return element
+    def _sort_key(self, item_id: TempId) -> str | tuple[str, ...]:
+        raise NotImplementedError()
 
 
 class SingleModelBase(HalfSortedTableModel):
     """Base class for all single models that go in a CompoundModelBase subclass."""
 
-    item_type: ClassVar[str] = NotImplemented
-    group_fields: ClassVar[Iterable[str]] = ()
-    can_be_filtered = True
+    entity_class_column: ClassVar[int] = NotImplemented
+    database_column: ClassVar[int] = NotImplemented
+    group_columns: ClassVar[set[int]] = set()
+    fixed_columns: ClassVar[tuple[int, ...]] = ()
 
-    def __init__(self, parent, db_map, entity_class_id, committed, lazy=False):
-        """
-        Args:
-            parent (CompoundModelBase): the parent model
-            db_map (DatabaseMapping)
-            entity_class_id (int)
-            committed (bool)
-            lazy (bool)
-        """
+    def __init__(
+        self,
+        parent: CompoundStackedModel,
+        db_map: DatabaseMapping,
+        entity_class_id: TempId,
+        committed: bool,
+        lazy: bool = False,
+    ):
         super().__init__(parent=parent, header=parent.header, lazy=lazy)
         self.db_mngr = parent.db_mngr
         self.db_map = db_map
+        self._mapped_table = self.db_map.mapped_table(parent.item_type)
         self.entity_class_id = entity_class_id
-        self._auto_filter = {}  # Maps field to accepted ids for that field
+        self._auto_filter: dict[str, set] = {}  # Maps field to accepted values for that field
         self.committed = committed
 
     def __lt__(self, other):
@@ -83,95 +99,67 @@ class SingleModelBase(HalfSortedTableModel):
         return keys["left"] < keys["right"]
 
     @property
-    def field_map(self):
+    def item_type(self) -> str:
+        return self._parent.item_type
+
+    @property
+    def field_map(self) -> dict[str, str]:
         return self._parent.field_map
 
-    def update_items_in_db(self, items):
+    def update_items_in_db(self, items: list[dict]) -> None:
         """Update items in db. Required by batch_set_data"""
         items_to_upd = []
         for item in items:
             item_to_upd = self._convert_to_db(item)
-            if tuple(item_to_upd.keys()) != ("id",):
+            if len(item_to_upd) > 1:
                 items_to_upd.append(item_to_upd)
         if items_to_upd:
-            self._do_update_items_in_db({self.db_map: items_to_upd})
+            self.db_mngr.update_items(self._parent.item_type, {self.db_map: items_to_upd})
 
     def _convert_to_db(self, item: dict) -> dict:
-        return item.copy()
+        return item
 
     @property
-    def _references(self):
+    def _references(self) -> dict[str, tuple[str, str | None]]:
         raise NotImplementedError()
 
     @property
-    def entity_class_name(self):
-        return self.db_mngr.get_item(self.db_map, "entity_class", self.entity_class_id)["name"]
+    def entity_class_name(self) -> str:
+        entity_class_table = self.db_map.mapped_table("entity_class")
+        return entity_class_table[self.entity_class_id]["name"]
 
     @property
-    def dimension_id_list(self):
-        return self.db_mngr.get_item(self.db_map, "entity_class", self.entity_class_id)["dimension_id_list"]
+    def dimension_id_list(self) -> list[TempId]:
+        entity_class_table = self.db_map.mapped_table("entity_class")
+        return entity_class_table[self.entity_class_id]["dimension_id_list"]
 
-    @property
-    def fixed_fields(self):
-        return ["entity_class_name", "database"]
-
-    def _mapped_field(self, field):
-        return self.field_map.get(field, field)
-
-    def item_id(self, row):
+    def item_id(self, row: int) -> TempId:
         """Returns parameter id for row.
 
         Args:
-            row (int): row index
+            row: row index
 
         Returns:
-            int: parameter id
+            parameter id
         """
         return self._main_data[row]
 
-    def item_ids(self):
-        """Returns model's parameter ids.
-
-        Returns:
-            set of int: ids
-        """
+    def item_ids(self) -> set[TempId]:
+        """Returns model's parameter ids."""
         return set(self._main_data)
 
-    def db_item(self, index):
-        return self._db_item(index.row())
-
-    def _db_item(self, row):
-        id_ = self._main_data[row]
-        return self.db_item_from_id(id_)
-
-    def db_item_from_id(self, id_):
-        return self.db_mngr.get_item(self.db_map, self.item_type, id_)
-
-    def db_items(self):
-        return [self._db_item(row) for row in range(self.rowCount())]
+    def db_item(self, index: QModelIndex) -> PublicItem:
+        id_ = self._main_data[index.row()]
+        return self._mapped_table[id_]
 
     def flags(self, index):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
-        if self.header[index.column()] in self.fixed_fields:
+        if index.column() in self.fixed_columns:
             return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
-    def _filter_accepts_row(self, row):
-        item = self.db_mngr.get_item(self.db_map, self.item_type, self._main_data[row])
-        return self.filter_accepts_item(item)
-
-    def filter_accepts_item(self, item):
-        return self._auto_filter_accepts_item(item)
-
-    def set_auto_filter(self, field, values):
-        if values == self._auto_filter.get(field, set()):
-            return False
-        self._auto_filter[field] = values
-        return True
-
-    def _auto_filter_accepts_item(self, item):
-        """Returns the result of the auto filter."""
+    def filter_accepts_item(self, item: PublicItem) -> bool:
         if self._auto_filter is None:
             return False
         for field, values in self._auto_filter.items():
@@ -179,46 +167,59 @@ class SingleModelBase(HalfSortedTableModel):
                 return False
         return True
 
-    def accepted_rows(self):
+    def set_auto_filter(self, field: str, values: set) -> bool:
+        if values == self._auto_filter.get(field, set()):
+            return False
+        self._auto_filter[field] = values
+        return True
+
+    def accepted_rows(self) -> Iterator[int]:
         """Yields accepted rows, for convenience."""
+        mapped_table = self._mapped_table
         for row in range(self.rowCount()):
-            if self._filter_accepts_row(row):
+            item = mapped_table[self._main_data[row]]
+            if self.filter_accepts_item(item):
                 yield row
 
-    def _get_ref(self, db_item, field):
+    def _get_ref(self, db_item: PublicItem, field: str) -> PublicItem | None:
         """Returns the item referred by the given field."""
         ref = self._references.get(field)
         if ref is None:
-            return {}
+            return None
         src_id_key, ref_type = ref
         ref_id = db_item.get(src_id_key)
-        return self.db_mngr.get_item(self.db_map, ref_type, ref_id)
+        if ref_id is None:
+            return None
+        mapped_ref_table = self.db_map.mapped_table(ref_type)
+        return mapped_ref_table[ref_id]
 
     def insertRows(self, row, count, parent=QModelIndex()):
         return False
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        field = self.header[index.column()]
-        if role == Qt.ItemDataRole.BackgroundRole and field in self.fixed_fields:
+        column = index.column()
+        if role == Qt.ItemDataRole.BackgroundRole and column in self.fixed_columns:
             return FIXED_FIELD_COLOR
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
-            if field == "database":
+            if column == self.database_column:
                 return self.db_mngr.name_registry.display_name(self.db_map.sa_url)
             id_ = self._main_data[index.row()]
-            item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+            item = self._mapped_table[id_]
+            field = self._parent.field_map[self.header[column]]
             if role == Qt.ItemDataRole.ToolTipRole:
                 ref_item = self._get_ref(item, field)
                 if ref_item is not None and (description := ref_item.get("description")):
                     return plain_to_rich(description)
-            mapped_field = self._mapped_field(field)
-            data = item.get(mapped_field)
-            if field in self.group_fields and role != Qt.ItemDataRole.EditRole:
+            data = item.get(field)
+            if index.column() in self.group_columns and role != Qt.ItemDataRole.EditRole:
                 data = DB_ITEM_SEPARATOR.join(data) if data else None
             return data
-        if role == Qt.ItemDataRole.DecorationRole and field == "entity_class_name":
+        if role == Qt.ItemDataRole.DecorationRole and column == self.entity_class_column:
             return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_id)
         if role == DB_MAP_ROLE:
             return self.db_map
+        if role == ITEM_ID_ROLE:
+            return self._main_data[index.row()]
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):
@@ -229,8 +230,9 @@ class SingleModelBase(HalfSortedTableModel):
         if not indexes or not data:
             return False
         row_data = {}
+        field_map = self._parent.field_map
         for index, value in zip(indexes, data):
-            row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
+            row_data.setdefault(index.row(), {})[field_map[self.header[index.column()]]] = value
         items = [{"id": self._main_data[row], **data} for row, data in row_data.items()]
         self.update_items_in_db(items)
         return True
@@ -244,7 +246,7 @@ class FilterEntityAlternativeMixin:
         self._filter_alternative_ids = set()
         self._filter_entity_ids = set()
 
-    def set_filter_entity_ids(self, db_map_class_entity_ids):
+    def set_filter_entity_ids(self, db_map_class_entity_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]) -> bool:
         # Don't accept entity id filters from entities that don't belong in this model
         filter_entity_ids = set().union(
             *(
@@ -258,14 +260,16 @@ class FilterEntityAlternativeMixin:
         self._filter_entity_ids = filter_entity_ids
         return True
 
-    def set_filter_alternative_ids(self, db_map_alternative_ids):
+    def set_filter_alternative_ids(
+        self, db_map_alternative_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]
+    ) -> bool:
         alternative_ids = db_map_alternative_ids.get(self.db_map, set())
         if self._filter_alternative_ids == alternative_ids:
             return False
         self._filter_alternative_ids = alternative_ids
         return True
 
-    def filter_accepts_item(self, item):
+    def filter_accepts_item(self, item: PublicItem) -> bool:
         """Reimplemented to also account for the entity and alternative filter."""
         return (
             super().filter_accepts_item(item)
@@ -273,14 +277,14 @@ class FilterEntityAlternativeMixin:
             and self._alternative_filter_accepts_item(item)
         )
 
-    def _entity_filter_accepts_item(self, item):
+    def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:  # If no entities are selected, only entity classes
+        if not self._filter_entity_ids:
             return True
-        entity_id = item[self._mapped_field("entity_id")]
-        return entity_id in self._filter_entity_ids or bool(set(item["element_id_list"]) & self._filter_entity_ids)
+        entity_id = item["entity_id"]
+        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
 
-    def _alternative_filter_accepts_item(self, item):
+    def _alternative_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the alternative filter."""
         if not self._filter_alternative_ids:
             return True
@@ -292,6 +296,7 @@ class ParameterMixin:
     """Provides the data method for parameter values and definitions."""
 
     value_field: ClassVar[str] = NotImplemented
+    VALUE_COLUMN: ClassVar[int] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
     parameter_definition_id_key: ClassVar[str] = NotImplemented
 
@@ -301,7 +306,7 @@ class ParameterMixin:
         self.destroyed.connect(self._stop_waiting_validation)
 
     @property
-    def _references(self):
+    def _references(self) -> dict[str, tuple[str, str | None]]:
         return {
             "entity_class_name": ("entity_class_id", "entity_class"),
             "entity_byname": ("entity_id", "entity"),
@@ -314,7 +319,7 @@ class ParameterMixin:
             "alternative_name": ("alternative_id", "alternative"),
         }
 
-    def reset_model(self, main_data=None):
+    def reset_model(self, main_data: list[TempId] | None = None) -> None:
         """Resets the model."""
         super().reset_model(main_data)
         if self._ids_pending_type_validation:
@@ -328,9 +333,7 @@ class ParameterMixin:
         using the item_type property.
         Paint the object_class icon next to the name.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
-        field = self.header[index.column()]
-        # Display, edit, tool tip, alignment role of 'value fields'
-        if field == self.value_field and role in {
+        if index.column() == self.VALUE_COLUMN and role in {
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.EditRole,
             Qt.ItemDataRole.ToolTipRole,
@@ -340,20 +343,19 @@ class ParameterMixin:
         }:
             id_ = self._main_data[index.row()]
             with self.db_mngr.get_lock(self.db_map):
-                item = self.db_mngr.get_item(self.db_map, self.item_type, id_)
+                item = self._mapped_table[id_]
                 return self.db_mngr.get_value(self.db_map, item, role)
         return super().data(index, role)
 
-    def add_rows(self, ids):
+    def add_rows(self, ids: list[TempId]) -> None:
         super().add_rows(ids)
         self._start_validating_types(ids)
 
-    def revalidate_item_types(self, items):
+    def revalidate_item_types(self, items: PublicItem) -> None:
         ids = tuple(item["id"] for item in items)
         self._start_validating_types(ids)
 
-    def _start_validating_types(self, ids):
-        """"""
+    def _start_validating_types(self, ids: Iterable[TempId]) -> None:
         private_ids = set(temp_id.private_id for temp_id in ids)
         new_ids = private_ids - self._ids_pending_type_validation
         if not new_ids:
@@ -366,17 +368,17 @@ class ParameterMixin:
             self.db_mngr, self.db_map, (id_ for id_ in ids if id_.private_id in new_ids)
         )
 
-    def _parameter_type_validated(self, keys, is_valid_list):
+    def _parameter_type_validated(self, keys: list[ValidationKey], is_valid_list: list[bool]) -> None:
         """Notifies the model that values have been validated.
 
         Args:
-            keys (list of ValidationKey): validation keys
-            is_valid_list (list of bool): True if value type is valid, False otherwise for each key
+            keys: validation keys
+            is_valid_list: True if value type is valid, False otherwise for each key
         """
         db_map_id = id(self.db_map)
         private_ids_of_interest = set()
         for key in keys:
-            if key.item_type != self.item_type or key.db_map_id != db_map_id:
+            if key.item_type != self._parent.item_type or key.db_map_id != db_map_id:
                 continue
             private_ids_of_interest.add(key.item_private_id)
         if not private_ids_of_interest:
@@ -384,7 +386,6 @@ class ParameterMixin:
         self._ids_pending_type_validation -= private_ids_of_interest
         if not self._ids_pending_type_validation:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
-        value_column = self.header.index(self.value_field)
         min_row = None
         max_row = None
         for row, id_ in enumerate(self._main_data):
@@ -397,12 +398,12 @@ class ParameterMixin:
                     break
         if min_row is None:
             return
-        top_left = self.index(min_row, value_column)
-        bottom_right = self.index(max_row, value_column)
+        top_left = self.index(min_row, self.VALUE_COLUMN)
+        bottom_right = self.index(max_row, self.VALUE_COLUMN)
         self.dataChanged.emit(top_left, bottom_right, [PARAMETER_TYPE_VALIDATION_ROLE])
 
     @Slot(object)
-    def _stop_waiting_validation(self):
+    def _stop_waiting_validation(self) -> None:
         """Stops the model from waiting for type validation notifications."""
         if self._ids_pending_type_validation:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
@@ -410,12 +411,12 @@ class ParameterMixin:
 
 
 class EntityMixin:
-    group_fields = ("entity_byname",)
 
-    def update_items_in_db(self, items):
-        """Overriden to create entities on the fly first."""
+    def update_items_in_db(self, items: list[dict]) -> None:
+        """Overridden to create entities on the fly first."""
+        class_name = self.entity_class_name
         for item in items:
-            item["entity_class_name"] = self.entity_class_name
+            item["entity_class_name"] = class_name
         entities = []
         error_log = []
         for item in items:
@@ -430,25 +431,25 @@ class EntityMixin:
             self.db_mngr.error_msg.emit({self.db_map: error_log})
         super().update_items_in_db(items)
 
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_items(self.item_type, db_map_data)
-
 
 class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
 
-    item_type = "parameter_definition"
+    entity_class_column = field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP)
+    database_column = field_index("database", PARAMETER_DEFINITION_FIELD_MAP)
     value_field = "default_value"
+    VALUE_COLUMN = field_index("default_value", PARAMETER_DEFINITION_FIELD_MAP)
     type_field = "default_type"
     parameter_definition_id_key = "id"
-    group_fields = ("valid types",)
+    group_columns = {field_index("parameter_type_list", PARAMETER_DEFINITION_FIELD_MAP)}
+    fixed_columns = (
+        field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP),
+        field_index("database", PARAMETER_DEFINITION_FIELD_MAP),
+    )
 
-    def _sort_key(self, element):
-        item = self.db_item_from_id(element)
-        return order_key(item.get("name", ""))
-
-    def _do_update_items_in_db(self, db_map_data):
-        self.db_mngr.update_items("parameter_definition", db_map_data)
+    def _sort_key(self, item_id):
+        item = self._mapped_table[item_id]
+        return order_key(item["name"])
 
 
 class SingleParameterValueModel(
@@ -460,28 +461,41 @@ class SingleParameterValueModel(
 ):
     """A parameter_value model for a single entity_class."""
 
-    item_type = "parameter_value"
+    entity_class_column = field_index("entity_class_name", PARAMETER_VALUE_FIELD_MAP)
+    database_column = field_index("database", PARAMETER_VALUE_FIELD_MAP)
+    group_columns = {field_index("entity_byname", PARAMETER_VALUE_FIELD_MAP)}
+    fixed_columns = (
+        field_index("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
+        field_index("database", PARAMETER_VALUE_FIELD_MAP),
+    )
     value_field = "value"
+    VALUE_COLUMN = field_index("value", PARAMETER_VALUE_FIELD_MAP)
     type_field = "type"
     parameter_definition_id_key = "parameter_id"
 
-    def _sort_key(self, element):
-        item = self.db_item_from_id(element)
-        byname = order_key("__".join(item.get("entity_byname", ())))
-        parameter_name = order_key(item.get("parameter_name", ""))
-        alt_name = order_key(item.get("alternative_name", ""))
+    def _sort_key(self, item_id):
+        item = self._mapped_table[item_id]
+        byname = order_key_from_names(item["entity_byname"])
+        parameter_name = order_key(item["parameter_name"])
+        alt_name = order_key(item["alternative_name"])
         return byname, parameter_name, alt_name
 
 
-class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
-    item_type = "entity_alternative"
+    entity_class_column = field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP)
+    database_column = field_index("database", ENTITY_ALTERNATIVE_FIELD_MAP)
+    fixed_columns = (
+        field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP),
+        field_index("database", ENTITY_ALTERNATIVE_FIELD_MAP),
+    )
+    group_columns = {field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)}
 
-    def _sort_key(self, element):
-        item = self.db_item_from_id(element)
-        byname = order_key("__".join(item.get("entity_byname", ())))
-        alt_name = order_key(item.get("alternative_name", ""))
+    def _sort_key(self, item_id):
+        item = self._mapped_table[item_id]
+        byname = order_key_from_names(item["entity_byname"])
+        alt_name = order_key(item["alternative_name"])
         return byname, alt_name
 
     @property
@@ -492,3 +506,73 @@ class SingleEntityAlternativeModel(EntityMixin, FilterEntityAlternativeMixin, Si
             "alternative_name": ("alternative_id", "alternative"),
             "database": ("database", None),
         }
+
+
+class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
+    entity_class_column = field_index("entity_class_name", ENTITY_FIELD_MAP)
+    database_column = field_index("database", ENTITY_FIELD_MAP)
+    _NUMERICAL_COLUMNS: ClassVar[set[int]] = {
+        field_index("lat", ENTITY_FIELD_MAP),
+        field_index("lon", ENTITY_FIELD_MAP),
+        field_index("alt", ENTITY_FIELD_MAP),
+    }
+    _BYNAME_COLUMN: ClassVar[int] = field_index("entity_byname", ENTITY_FIELD_MAP)
+    _SHAPE_BLOB_COLUMN: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
+    fixed_columns = (field_index("entity_class_name", ENTITY_FIELD_MAP), field_index("database", ENTITY_FIELD_MAP))
+    group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
+
+    def __init__(
+        self,
+        parent: CompoundStackedModel,
+        db_map: DatabaseMapping,
+        entity_class_id: TempId,
+        committed: bool,
+        lazy: bool = False,
+    ):
+        super().__init__(parent, db_map, entity_class_id, committed, lazy)
+        self._entity_class_dimensions = len(db_map.mapped_table("entity_class")[entity_class_id]["dimension_id_list"])
+
+    def flags(self, index):
+        flags = super().flags(index)
+        if index.column() == self._BYNAME_COLUMN and self._entity_class_dimensions == 0:
+            flags = flags & ~Qt.ItemFlag.ItemIsEditable
+        return flags
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        column = index.column()
+        if column in self._NUMERICAL_COLUMNS:
+            if role == Qt.ItemDataRole.DisplayRole:
+                data = super().data(index, role)
+                return str(data) if data is not None else None
+            if role == Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        elif column == self._SHAPE_BLOB_COLUMN and role == Qt.ItemDataRole.DisplayRole:
+            entity_item = self._mapped_table[self._main_data[index.row()]]
+            return None if entity_item["shape_blob"] is None else "<geojson>"
+        elif (
+            column == self._BYNAME_COLUMN
+            and role == Qt.ItemDataRole.BackgroundRole
+            and self._entity_class_dimensions == 0
+        ):
+            return FIXED_FIELD_COLOR
+        return super().data(index, role)
+
+    def _sort_key(self, item_id: TempId) -> list[str]:
+        item = self._mapped_table[item_id]
+        byname = order_key_from_names(item["entity_byname"])
+        return byname
+
+    @property
+    def _references(self) -> dict[str, tuple[str, str | None]]:
+        return {
+            "entity_class_name": ("class_id", "entity_class"),
+            "entity_byname": ("entity_id", "entity"),
+            "database": ("database", None),
+        }
+
+    def _entity_filter_accepts_item(self, item):
+        """Returns the result of the entity filter."""
+        if not self._filter_entity_ids:
+            return True
+        entity_id = item["id"]
+        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])

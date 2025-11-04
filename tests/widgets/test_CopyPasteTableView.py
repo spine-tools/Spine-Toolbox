@@ -17,7 +17,7 @@ from unittest import mock
 from PySide6.QtCore import QAbstractTableModel, QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
-from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, assert_table_model_data, mock_clipboard_patch
 
 
 class _MockModel(QAbstractTableModel):
@@ -110,7 +110,7 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         view.setCurrentIndex(model.index(0, 2))
         QApplication.clipboard().setText(locale.str(-1.1))
         self.assertTrue(view.paste())
-        self.assertEqual(model.index(0, 2).data(), "-1.1")
+        assert_table_model_data(model, [["a", "b", "-1.1"], ["c", "d", "2.2"], ["e", "f", "3.3"]], self)
 
     def test_paste_single_localized_row(self):
         view = CopyPasteTableView()
@@ -122,9 +122,7 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         )
         QApplication.clipboard().setText(f"A\tB\t{locale.str(-1.1)}")
         self.assertTrue(view.paste())
-        self.assertEqual(model.index(0, 0).data(), "A")
-        self.assertEqual(model.index(0, 1).data(), "B")
-        self.assertEqual(model.index(0, 2).data(), "-1.1")
+        assert_table_model_data(model, [["A", "B", "-1.1"], ["c", "d", "2.2"], ["e", "f", "3.3"]], self)
 
     def test_paste_single_comma_separated_string(self):
         view = CopyPasteTableView()
@@ -133,6 +131,7 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         view.setCurrentIndex(model.index(0, 2))
         QApplication.clipboard().setText("unit,node")
         self.assertTrue(view.paste())
+        assert_table_model_data(model, [["a", "b", "unit,node"], ["c", "d", "2.2"], ["e", "f", "3.3"]], self)
         self.assertEqual(model.index(0, 2).data(), "unit,node")
 
     def test_pasting_normal_with_converter(self):
@@ -146,9 +145,7 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
                 convert_pasted.side_effect = lambda row, column, value, model: float(value)
                 self.assertTrue(view.paste())
                 convert_pasted.assert_called_once_with(0, 2, "3.14", model)
-        data = model.index(0, 2).data()
-        self.assertIsInstance(data, float)
-        self.assertEqual(data, 3.14)
+        assert_table_model_data(model, [["a", "b", 3.14], ["c", "d", "2.2"], ["e", "f", "3.3"]], self)
 
     def test_pasting_selection_with_converter(self):
         view = CopyPasteTableView()
@@ -162,6 +159,7 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
                 convert_pasted.side_effect = lambda row, column, value, model: float(value) if column == 2 else value
                 self.assertTrue(view.paste())
                 convert_pasted.assert_called()
+        assert_table_model_data(model, [["a", "b", "1.1"], ["G", "H", 3.14], ["e", "f", "3.3"]], self)
         data = [model.index(1, column).data() for column in range(3)]
         self.assertEqual(data, ["G", "H", 3.14])
 
@@ -169,6 +167,41 @@ class TestCopyPasteTableView(TestCaseWithQApplication):
         self.assertEqual(
             CopyPasteTableView._cull_rows(2, [3, 0, 2, 1], [[33], [100], [22], [11]]), ([0, 1], [[100], [11]])
         )
+
+    def test_pasting_text_starting_with_new_lines(self):
+        view = CopyPasteTableView()
+        model = _MockModel()
+        view.setModel(model)
+        view.setCurrentIndex(model.index(0, 0))
+        selection = QItemSelection(model.index(0, 0), model.index(0, 0))
+        selection_model = view.selectionModel()
+        selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock_clipboard_patch("\ndata", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertTrue(view.paste())
+        assert_table_model_data(model, [["a", "b", "1.1"], ["data", "d", "2.2"], ["e", "f", "3.3"]], self)
+
+    def test_pasting_new_lines_only_fails_gracefully(self):
+        view = CopyPasteTableView()
+        model = _MockModel()
+        view.setModel(model)
+        view.setCurrentIndex(model.index(0, 0))
+        selection = QItemSelection(model.index(0, 0), model.index(0, 0))
+        selection_model = view.selectionModel()
+        selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock_clipboard_patch("\n\n", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertFalse(view.paste())
+        assert_table_model_data(model, [["a", "b", "1.1"], ["c", "d", "2.2"], ["e", "f", "3.3"]], self)
+
+    def test_pasting_new_lines_on_selection(self):
+        view = CopyPasteTableView()
+        model = _MockModel()
+        view.setModel(model)
+        selection = QItemSelection(model.index(1, 1), model.index(1, 2))
+        selection_model = view.selectionModel()
+        selection_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        with mock_clipboard_patch("\n3.14", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            self.assertFalse(view.paste())
+        assert_table_model_data(model, [["a", "b", "1.1"], ["c", "d", "2.2"], ["e", "f", "3.3"]], self)
 
 
 if __name__ == "__main__":

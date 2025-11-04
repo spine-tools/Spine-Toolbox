@@ -13,11 +13,11 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "PySide6 >= 6.5.0, != 6.5.3, != 6.6.3, != 6.7.0, != 6.8.0",
+    "PySide6 >= 6.9",
     "jupyter_client >=6.0",
     "qtconsole >=5.1",
-    "spinedb_api>=0.36.0",
-    "spine_engine>=0.26.1",
+    "spinedb_api>=0.36.1",
+    "spine_engine>=0.26.2",
     "numpy >=1.20.2",
     "matplotlib >= 3.5",
     "scipy >=1.7.1",
@@ -26,7 +26,8 @@ dependencies = [
     "Pygments >=2.8",
     "jill >=0.9.2",
     "pyzmq >=21.0",
-    "spine_items>=0.24.1",
+    "spine_items>=0.24.2",
+    "pywin32; os_name == 'nt'",
 ]
 
 [project.urls]
@@ -42,7 +43,7 @@ requires = ["setuptools>=64", "setuptools_scm[toml]>=6.2", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "spinetoolbox/_version.py"
+version_file = "spinetoolbox/_version.py"
 # default: guess-next-dev, alternatives: post-release, no-guess-dev
 version_scheme = "release-branch-semver"
 

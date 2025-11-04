@@ -6,16 +6,16 @@
    :width: 16
 
 ***************
-Getting started
+Getting Started
 ***************
 
-This section gives a short outline on how to get started using the editor and how to navigate the ui.
+This section gives a short outline on how to get started using the editor and how to navigate the UI.
 Information about the settings for the editor can be found in :ref:`DB editor settings`.
 
 .. contents::
    :local:
 
-Launching the editor
+Launching the Editor
 --------------------
 
 From Spine Toolbox
@@ -35,7 +35,7 @@ Without a *Data Store*:
 1. From the main window select **File -> New DB Editor**.
 2. From the **Menu bar** select **File -> Open...** to open an existing database or **New..** to create a new one.
 
-From the command line
+From the Command Line
 =====================
 
 To open a single database in Spine database editor, use the ``spine-db-editor`` 
@@ -46,7 +46,7 @@ the editor can be opened with the following command::
 
 Note that for e.g. an SQLite database, the url should start with ``sqlite:///`` followed by the path.
 
-Adding multiple databases to one editor
+Adding Multiple Databases to One Editor
 ---------------------------------------
 
 It is possible to open multiple databases in the same editor. This allows one to view and modify
@@ -75,7 +75,7 @@ or from the button in the **Toolbar** with the same name.
 
 There are keyboard shortcuts to activate most of the widgets. For example Entity tree is activated with **Alt+1**.
 
-Tab bar
+Tab Bar
 =======
 
 The uppermost UI element is the **Tab bar**. One editor window can have multiple tabs. New tabs can be added by
@@ -84,7 +84,7 @@ with the instructions given above. Tabs can be deleted from the editor by pressi
 a tab. The tabs can be dragged from the **Tab bar** to create new editor windows. Tabs from different windows
 can also be dragged into others, fusing them into the same editor window.
 
-Menu bar
+Menu Bar
 ========
 
 Right below the **Tab bar** there is the **Menu bar**. The **Menu bar** has five different sections: **File**, **Edit**,
@@ -158,21 +158,21 @@ The right side of the **Toolbar** houses tow buttons. **Show URLs** opens up a p
 URLs of the currently open databases. From there they can be copied, if one needs the URL for some purpose.
 After that there is the Spine-Toolbox logo which, when clicked, brings up the Spine Toolbox main window.
 
-Undo and redo
+Undo and Redo
 =============
 
 Whenever changes are made to the data in the Spine Database Editor, the changes get stored into memory. This
 allows undoing and redoing the operations made in the editor. Buttons for these operations can be found in the
 **Toolbar** and the usual shortcuts **Ctrl+Z** and **Ctrl+Y** work also.
 
-Views and trees
+Views and Trees
 ===============
 
 Spine Database Editor has the following main UI components:
 
 - *Entity tree*:
   they present the structure of entities in all databases in the shape of a tree.
-- *Table views* (*Parameter value*, *Parameter definition*, *Entity alternative*):
+- *Table views* (*Parameter value*, *Parameter definition*, *Entity alternative*, *Entity*):
   they present entity data in the form of stacked tables.
 - *Pivot table* and *Frozen table*: they present data in the form of a pivot table,
   optionally with frozen dimensions.

@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from unittest import mock
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QTimer
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest
 from tests.mock_helpers import MockSpineDBManager, clean_up_toolbox, create_toolboxui, create_toolboxui_with_project
@@ -24,6 +24,13 @@ def application():
     yield application_instance
     QTimer.singleShot(0, lambda: application_instance.quit())
     application_instance.exec()
+
+
+@pytest.fixture
+def parent_object(application):
+    parent = QObject()
+    yield parent
+    parent.deleteLater()
 
 
 @pytest.fixture
@@ -67,8 +74,12 @@ def db_mngr(application, app_settings, logger):
 
 
 @pytest.fixture
-def db_map(db_mngr, logger, request):
+def db_name(request):
+    return "mock_db" if request.cls is None else request.cls.__name__ + "_db"
+
+
+@pytest.fixture
+def db_map(db_mngr, db_name, logger, request):
     db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
-    db_name = "mock_db" if request.cls is None else request.cls.__name__ + "_db"
     db_mngr.name_registry.register(db_map.sa_url, db_name)
     return db_map

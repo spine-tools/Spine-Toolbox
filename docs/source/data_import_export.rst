@@ -116,7 +116,7 @@ the proper connector and is only waiting for confirmation
 .. image:: img/importer_connector_type.png
    :align: center
 
-When creating a Importer specification, it is usually helpful to have the data already connected to the Importer in
+When creating an Importer specification, it is usually helpful to have the data already connected to the Importer in
 question so it is easier to visualize how the importer is handling the data.
 
 In the upper part of the specification editor, the name and description for the specification can be set.
@@ -153,6 +153,19 @@ The order can be changed by dragging and dropping the table names.
    Specifically, each CSV file in the datapackage shows up as a separate table in the table list.
    See :ref:`Setting up datapackages in Links` for more information on how to pack CSVs into a datapackage
    automatically within your workflow.
+
+The image below shows different font styles used in the table:
+
+.. image:: img/import_editor_source_tables.png
+   :align: center
+
+The tables that exist in the input source, such as the 'Widgets' table above, are shown with normal text in the list.
+Tables that are defined in the specification but are missing in the source are geyed like the 'Objects' table.
+New tables that have not been mapped before are tagged with ``(new)``.
+
+Greyed tables can be removed by selecting them (use **Shift** or **Ctrl** to select multiple)
+and clicking **Delete** from the right-click popup menu.
+The **Remove unavailable tables** button will delete all such tables that are not found in the source.
 
 Next to the table list, there is a small widget that allows to "format" the selected table.
 The available options differ depending on the selected input type. The above picture shows some of the available

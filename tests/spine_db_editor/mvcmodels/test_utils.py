@@ -14,10 +14,13 @@
 import unittest
 from PySide6.QtCore import QObject, QSize
 from PySide6.QtGui import QStandardItem, QStandardItemModel
+import pytest
 from spinedb_api import DatabaseMapping
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.utils import (
     entity_class_id_for_row,
+    field_header,
+    field_index,
     make_entity_on_the_fly,
     two_column_as_csv,
 )
@@ -56,11 +59,18 @@ class TestTwoColumnAsCsv(TestCaseWithQApplication):
 
 
 class TestEntityClassIdForRow(TestCaseWithQApplication):
+    class _ExampleCompoundStackedModel(MinimalTableModel):
+        @staticmethod
+        def field_to_header(field):
+            if field == "entity_class_name":
+                return "class"
+            return field
+
     def test_class_id_is_found(self):
         with DatabaseMapping("sqlite://", create=True) as db_map:
             entity_class = db_map.add_entity_class(name="MyClass")
             with q_object(QObject()) as parent:
-                model = MinimalTableModel(parent, ["entity_class_name", "header 2", "header 3"])
+                model = self._ExampleCompoundStackedModel(parent, ["class", "header 2", "header 3"])
                 self.assertTrue(model.insertRows(0, 1))
                 data = [entity_class["name"], "x", "y"]
                 for column in range(model.columnCount()):
@@ -74,7 +84,7 @@ class TestEntityClassIdForRow(TestCaseWithQApplication):
         with DatabaseMapping("sqlite://", create=True) as db_map:
             entity_class = db_map.add_entity_class(name="MyClass")
             with q_object(QObject()) as parent:
-                model = MinimalTableModel(parent, ["entity_class_name", "header 2", "header 3"])
+                model = self._ExampleCompoundStackedModel(parent, ["class", "header 2", "header 3"])
                 self.assertTrue(model.insertRows(0, 1))
                 data = ["NotMyClass", "x", "y"]
                 for column in range(model.columnCount()):
@@ -125,5 +135,19 @@ class TestMakeEntityOnTheFly(unittest.TestCase):
             self.assertIsNone(entity)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestFieldIndex:
+    def test_correctness(self):
+        assert field_index("a", {"A": "a"}) == 0
+        assert field_index("b", {"A": "a", "B": "b", "C": "c"}) == 1
+        assert field_index("c", {"A": "a", "B": "b", "C": "c"}) == 2
+        with pytest.raises(RuntimeError, match="^field d not found$"):
+            field_index("d", {"A": "a", "B": "b", "C": "c"})
+
+
+class TestFieldHeader:
+    def test_correctness(self):
+        assert field_header("a", {"A": "a"}) == "A"
+        assert field_header("b", {"A": "a", "B": "b", "C": "c"}) == "B"
+        assert field_header("c", {"A": "a", "B": "b", "C": "c"}) == "C"
+        with pytest.raises(StopIteration):
+            field_header("z", {"A": "a", "B": "b", "C": "c"})

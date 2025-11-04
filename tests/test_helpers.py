@@ -18,9 +18,10 @@ import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QObject, QSettings, Signal
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtCore import QObject, QSettings, Qt, Signal
+from PySide6.QtGui import QAction, QKeySequence, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QLineEdit, QWidget
+import pytest
 from spine_engine.load_project_items import load_item_specification_factories
 from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
@@ -35,6 +36,7 @@ from spinetoolbox.helpers import (
     display_byte_size,
     erase_dir,
     file_is_valid,
+    find_section_in_table_model_header,
     first_non_null,
     format_log_message,
     format_string_list,
@@ -49,12 +51,14 @@ from spinetoolbox.helpers import (
     merge_dicts,
     normcase_database_url_path,
     order_key,
+    order_key_from_names,
     parameter_identifier,
     plain_to_rich,
     plain_to_tool_tip,
     recursive_overwrite,
     rename_dir,
     rows_to_row_count_tuples,
+    select_directory_with_dialog,
     select_julia_executable,
     select_julia_project,
     select_python_interpreter,
@@ -315,7 +319,7 @@ class TestHelpers(TestCaseWithQApplication):
                     line_edit.setPlaceholderText("")
                     select_python_interpreter(parent_widget, line_edit)
                     # initial dir should be the home dir
-                    self.assertEqual(mock_native_dialog.call_args[1]["File"], None)
+                    self.assertEqual(mock_native_dialog.call_args[1]["File"], "")
                     self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
             else:  # Linux et al.
                 with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName") as mock_open_file_dialog:
@@ -428,14 +432,23 @@ class TestHelpers(TestCaseWithQApplication):
         merge_dicts({"a": {"b": 2}}, target)
         self.assertEqual(target, {"a": {"b": 2}})
 
+
+class TestOrderKey:
     def test_order_key(self):
-        self.assertEqual(["Humphrey_Bogart"], order_key("Humphrey_Bogart"))
-        self.assertEqual(["Wes_", "000000001969", "_Anderson"], order_key("Wes_1969_Anderson"))
-        self.assertEqual(
-            ["\U0010FFFF", "000000001899", "_Alfred-", "000000001980", "Hitchcock"],
-            order_key("1899_Alfred-1980Hitchcock"),
+        assert ["Humphrey_Bogart"] == order_key("Humphrey_Bogart")
+        assert ["Wes_", "000000001969", "_Anderson"] == order_key("Wes_1969_Anderson")
+        assert ["\U0010FFFF", "000000001899", "_Alfred-", "000000001980", "Hitchcock"] == order_key(
+            "1899_Alfred-1980Hitchcock"
         )
-        self.assertEqual([], order_key(""))
+        assert [] == order_key("")
+
+
+class TestOrderKeyFromNames:
+    def test_it_works(self):
+        assert order_key_from_names([]) == []
+        assert order_key_from_names(["c", "b", "a"]) == ["c", "b", "a"]
+        assert order_key_from_names(["a", "23b", "c"]) == ["a", "000000000023", "b", "c"]
+        assert order_key_from_names(["23a", "b", "c"]) == ["\U0010FFFF", "000000000023", "a", "b", "c"]
 
 
 class TestHTMLTagFilter(unittest.TestCase):
@@ -596,3 +609,58 @@ class TestParameterIdentifier:
         assert parameter_identifier("db", None, ["a"], "par", "alt") == f"db - a - par - alt"
         assert parameter_identifier("db", "my class", None, "par", "alt") == f"db - my class - par - alt"
         assert parameter_identifier("db", "my class", ["a", "b"], "par", None) == f"db - my class - {parts} - par"
+
+
+class TestSelectDirectoryWithDialog:
+    def test_uses_default_path_when_line_edit_is_empty(self, application):
+        default_path = Path(__file__).parent
+        selected_path = Path(sys.executable).parent
+        with q_object(QLineEdit()) as line_edit:
+            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
+                mock_dialog.return_value = selected_path.as_posix()  # The dialog returns a POSIX path even on Windows.
+                select_directory_with_dialog(line_edit, "Select test directory", line_edit, str(default_path))
+                mock_dialog.assert_called_once_with(line_edit, "Select test directory", str(default_path))
+            assert line_edit.text() == str(selected_path)
+
+    def test_uses_path_from_line_edit(self, application, tmp_path):
+        default_path = Path(__file__).parent
+        selected_path = Path(sys.executable).parent
+        with q_object(QLineEdit()) as line_edit:
+            line_edit.setText(str(tmp_path))
+            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
+                mock_dialog.return_value = selected_path.as_posix()  # The dialog returns a POSIX path even on Windows.
+                select_directory_with_dialog(line_edit, "Select test directory", line_edit, str(default_path))
+                mock_dialog.assert_called_once_with(line_edit, "Select test directory", str(tmp_path))
+            assert line_edit.text() == str(selected_path)
+
+    def test_line_edit_is_not_modified_when_dialog_is_cancelled(self, application):
+        default_path = Path(__file__).parent
+        current_path = Path(sys.executable).parent
+        with q_object(QLineEdit()) as line_edit:
+            line_edit.setText(str(current_path))
+            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
+                mock_dialog.return_value = ""
+                select_directory_with_dialog(line_edit, "Select test directory", line_edit, str(default_path))
+                mock_dialog.assert_called_once_with(line_edit, "Select test directory", str(current_path))
+            assert line_edit.text() == str(current_path)
+
+
+class TestFindSectionInTableModelHeader:
+    def test_find_section(self):
+        with q_object(QStandardItemModel()) as model:
+            model.setHorizontalHeaderLabels(["a", "b", "c"])
+            assert find_section_in_table_model_header("b", model) == 1
+
+    def test_find_vertical_section(self):
+        with q_object(QStandardItemModel()) as model:
+            model.setHorizontalHeaderLabels(["a"])
+            for row in range(3):
+                model.appendRow(QStandardItem(str(row + 1)))
+            model.setVerticalHeaderLabels(["first row", "middle row", "last row"])
+            assert find_section_in_table_model_header("middle row", model, Qt.Orientation.Vertical) == 1
+
+    def test_not_finding_section_raises(self):
+        with q_object(QStandardItemModel()) as model:
+            model.setHorizontalHeaderLabels(["a", "b", "c"])
+            with pytest.raises(ValueError, match="^d not found in header$"):
+                find_section_in_table_model_header("d", model)

@@ -28,7 +28,9 @@ def db_editor(db_mngr, db_map, logger):
     yield db_editor
     with (
         mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+        mock.patch.object(db_editor.qsettings, "value") as commit_at_exit_setting,
         mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
     ):
+        commit_at_exit_setting.return_value = "0"  # Discard changes and close.
         db_editor.close()
     db_editor.deleteLater()

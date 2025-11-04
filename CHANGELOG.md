@@ -7,16 +7,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- There is now a new checkbox in Project Settings, **Store all paths as relative to project dir**
-  (accessible from **File -> Project settings...**),
-  that turns all file paths into relative paths in `project.json`.
-  This may be useful for projects that are shared among multiple users.
-- Data Connection: it is now possible to add references to directories to Data Connection items.
-  They may be useful as command line arguments to Tools.
-- Data Connection: it is now possible to add file patterns, i.e. references to contents of given directory
-  using wildcards. They can be used, among other things, as Optional input files for Tools.
-- Data Connection: references can now be modified by right-clicking them and selecting **Select another...**
-  from the popup menu.
+- Spine Database editor has now a new Entity table which shows all entity information
+  including location data that has not been accessible in the editor before.
+  Existing entities can be updated using the table. 
+  However, new entities cannot currently be added from the table.
+- Importer Specification editor has a new button **Remove unavailable tables** that removes source tables
+  which are not found in the input source.
+- Source tables can now also be removed with the **Delete** action found in the right-click context menu.
+  The action removes all selected items except the ones that are found in the source.
+  Existing tables can be unchecked to exclude them.
 
 ### Changed
 
@@ -27,6 +26,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 ### Fixed
 
 ### Security
+
+## [0.10.3]
+
+### Added
+
+- There is now a new checkbox in Project Settings, **Store all paths as relative to project dir**
+  (accessible from **File -> Project settings...**),
+  that turns all file paths into relative paths in `project.json`.
+  This may be useful for projects that are shared among multiple users.
+- Data Connection: it is now possible to add references to directories to Data Connection items.
+  They may be useful as command line arguments to Tools.
+- Data Connection: it is now possible to add file patterns, i.e. references to contents of given directory
+  using wildcards. They can be used, among other things, as Optional input files for Tools.
+- Data Connection: references can now be modified by right-clicking them and selecting **Select another...**
+  from the popup menu.
 
 ## [0.10.2]
 

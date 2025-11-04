@@ -36,6 +36,7 @@ class TestInstallJuliaWizard(TestCaseWithQApplication):
 
     def tearDown(self):
         """Clean up."""
+        self._settings_widget.close()
         clean_up_toolbox(self.toolbox)
 
     def test_julia_installation_succeeds(self):

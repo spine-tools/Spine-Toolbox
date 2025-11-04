@@ -83,26 +83,26 @@ class SpineDBManager(QObject):
 
     error_msg = Signal(object)
     # Data changed signals
-    items_added = Signal(str, dict)
+    items_added = Signal(str, object)
     """Emitted whenever items are added to a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of added dict-items.
+        object: a dictionary mapping DatabaseMapping to list of added dict-items.
     """
-    items_updated = Signal(str, dict)
+    items_updated = Signal(str, object)
     """Emitted whenever items are updated in a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of updated dict-items.
+        object: a dictionary mapping DatabaseMapping to list of updated dict-items.
     """
-    items_removed = Signal(str, dict)
+    items_removed = Signal(str, object)
     """Emitted whenever items are removed from a DB.
 
     Args:
         str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of updated dict-items.
+        object: a dictionary mapping DatabaseMapping to list of updated dict-items.
     """
     database_clean_changed = Signal(object, bool)
     """Emitted whenever database becomes clean or dirty.
@@ -203,6 +203,15 @@ class SpineDBManager(QObject):
         except KeyError:
             return
         worker.register_fetch_parent(parent)
+
+    def unregister_fetch_parent(self, db_map: DatabaseMapping, parent: FetchParent) -> None:
+        if db_map.closed:
+            return
+        try:
+            worker = self._workers[db_map]
+        except KeyError:
+            return
+        worker.unregister_fetch_parent(parent)
 
     def can_fetch_more(self, db_map: DatabaseMapping, parent: FetchParent) -> bool:
         """Whether we can fetch more items of given type from given db."""

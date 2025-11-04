@@ -24,7 +24,6 @@ class MultiDBTreeItem(TreeItem):
     item_type = None
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
-    _fetch_index = None
 
     def __init__(self, model, db_map_ids=None):
         """
@@ -37,6 +36,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map = {}  # Maps db_map to id to row number
+        self._fetch_index = None
         self._fetch_parent = FlexibleFetchParent(
             self.fetch_item_type,
             accepts_item=self.accepts_item,

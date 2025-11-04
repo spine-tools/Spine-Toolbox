@@ -649,3 +649,4 @@ class TabularViewMixin:
             return
         if self.pivot_table_model is not None:
             self.pivot_table_model.tear_down()
+            self.pivot_table_model = None

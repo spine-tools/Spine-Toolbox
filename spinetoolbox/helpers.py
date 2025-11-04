@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disa
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
+    QAbstractItemModel,
     QEvent,
     QFile,
     QIODevice,
@@ -607,6 +608,9 @@ class ColoredIconEngine(QIconEngine):
             self._icon.actualSize(size), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
         )
 
+    def paint(self, painter, rect, mode=None, state=None):
+        pass
+
 
 def color_pixmap(pixmap: QPixmap, color: QColor) -> QPixmap:
     img = pixmap.toImage()
@@ -823,7 +827,7 @@ def select_work_directory(parent: Optional[QWidget], line_edit: QLineEdit) -> No
         line_edit: Line edit where the selected path will be inserted
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path else home_dir()
     # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
     answer = QFileDialog.getExistingDirectory(parent, "Select Work Directory", initial_path)
     if answer == "":  # Cancel button clicked
@@ -832,7 +836,7 @@ def select_work_directory(parent: Optional[QWidget], line_edit: QLineEdit) -> No
     line_edit.setText(selected_path)
 
 
-def select_gams_executable(parent, line_edit):
+def select_gams_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a Gams executable (i.e. gams.exe on Windows).
     File browser initial dir priority:
         1. current path in line edit (first text, then placeholder text)
@@ -840,8 +844,8 @@ def select_gams_executable(parent, line_edit):
         3. home_dir()
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select GAMS Program"
     gams_path_from_registry = find_gams_directory()
@@ -870,19 +874,19 @@ def select_gams_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def select_julia_executable(parent, line_edit):
+def select_julia_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a Julia executable (i.e. julia.exe on Windows).
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select Julia Executable"
     current_path = get_current_path(line_edit)
     if sys.platform == "win32":
         answer = get_path_from_native_open_file_dialog(parent, current_path, title + " (e.g. julia.exe on Windows)")
     else:
-        initial_path = current_path if current_path is not None else home_dir()
+        initial_path = current_path if current_path else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
@@ -897,34 +901,34 @@ def select_julia_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def select_julia_project(parent, line_edit):
+def select_julia_project(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Shows directory browser and inserts selected julia project dir to given line_edit.
 
     Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent of QFileDialog
+        line_edit: Line edit where the selected path will be inserted
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path else home_dir()
     answer = QFileDialog.getExistingDirectory(parent, "Select Julia project directory", initial_path)
     if not answer:  # Canceled (american-english), cancelled (british-english)
         return
     line_edit.setText(answer)
 
 
-def select_python_interpreter(parent, line_edit):
+def select_python_interpreter(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a python interpreter (i.e. python.exe on Windows).
 
     Args:
-        parent (QWidget): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select Python Interpreter"
     current_path = get_current_path(line_edit)
     if sys.platform == "win32":
         answer = get_path_from_native_open_file_dialog(parent, current_path, title + " (e.g. python.exe on Windows)")
     else:
-        initial_path = current_path if current_path is not None else home_dir()
+        initial_path = current_path if current_path else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled
@@ -940,12 +944,12 @@ def select_python_interpreter(parent, line_edit):
     return
 
 
-def select_conda_executable(parent, line_edit):
+def select_conda_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a conda executable.
 
     Args:
-        parent (QWidget): Parent widget for the file dialog and message boxes
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
+        parent: Parent widget for the file dialog and message boxes
+        line_edit: Line edit where the selected path will be inserted
     """
     title = "Select Conda Executable"
     current_path = get_current_path(line_edit)
@@ -954,7 +958,7 @@ def select_conda_executable(parent, line_edit):
             parent, current_path, title + " (e.g. conda.exe or conda.bat on Windows)"
         )
     else:
-        initial_path = current_path if current_path is not None else home_dir()
+        initial_path = current_path if current_path else home_dir()
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
     if answer[0] == "":  # Canceled
@@ -969,49 +973,49 @@ def select_conda_executable(parent, line_edit):
     line_edit.setText(answer[0])
 
 
-def select_certificate_directory(parent, line_edit):
+def select_certificate_directory(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Shows file browser and inserts selected certificate directory to given line edit.
 
     Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected dir path will be inserted
+        parent: Parent of QFileDialog
+        line_edit: Line edit where the selected dir path will be inserted
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else home_dir()
+    initial_path = current_path if current_path else home_dir()
     answer = QFileDialog.getExistingDirectory(parent, "Select certificates directory", initial_path)
     if not answer:
         return
     line_edit.setText(answer)
 
 
-def select_root_directory(parent, line_edit, project_path):
+def select_directory_with_dialog(parent: QWidget | None, title: str, line_edit: QLineEdit, default_path: str) -> None:
     """Shows file browser and inserts selected root directory to given line edit.
     Used in Tool Properties.
 
     Args:
-        parent (QWidget, optional): Parent of QFileDialog
-        line_edit (QLineEdit): Line edit where the selected path will be inserted
-        project_path (str): Project path
+        parent: Parent of QFileDialog
+        title: Dialog's title.
+        line_edit: Line edit where the selected path will be inserted
+        default_path: Path to use if line_edit is empty
     """
     current_path = get_current_path(line_edit)
-    initial_path = current_path if current_path is not None else project_path
-    answer = QFileDialog.getExistingDirectory(parent, "Select root directory", initial_path)
+    initial_path = current_path if current_path else default_path
+    answer = QFileDialog.getExistingDirectory(parent, title, initial_path)
     if not answer:
         return
-    line_edit.setText(answer)
-    return
+    line_edit.setText(str(pathlib.Path(answer)))
 
 
-def get_current_path(le):
+def get_current_path(line_edit: QLineEdit) -> str:
     """Returns the text in the given line edit. If no text, returns the
     placeholder text if it is a valid path. If it's not a valid path,
-    Returns None.
+    returns an empty string.
     """
-    current_path = le.text().strip()
+    current_path = line_edit.text().strip()
     if not current_path:
-        current_path = le.placeholderText().strip()
+        current_path = line_edit.placeholderText().strip()
         if not os.path.exists(current_path):
-            return None
+            return ""
     return os.path.abspath(current_path)
 
 
@@ -1903,13 +1907,26 @@ class CustomPopupMenu(QMenu):
             action.setToolTip(tooltip)
 
 
+_SPLIT_PATTERN = re.compile(r"(\d+)")
+
+
 def order_key(name: str) -> list[str]:
     """Splits the given string into a list of its substrings and fills digits with '0'
     to ensure that e.g. 1 and 11 get sorted correctly.
 
     Example: "David_1946_Gilmour" -> ["David_", "000000001946", "_Gilmour"]
     """
-    key_list = [f"{int(text):#012}" if text.isdigit() else text for text in re.split(r"(\d+|__)", name) if text]
+    key_list = [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
+    if key_list and key_list[0].isdigit():
+        key_list.insert(0, "\U0010FFFF")
+    return key_list
+
+
+def order_key_from_names(names: Iterable[str]) -> list[str]:
+    """Same as order_key() but optimized for entity bynames and such."""
+    key_list = []
+    for name in names:
+        key_list += [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
     if key_list and key_list[0].isdigit():
         key_list.insert(0, "\U0010FFFF")
     return key_list
@@ -1979,3 +1996,13 @@ def normcase_database_url_path(url: str) -> str:
         return url
     path = url[len("sqlite:///") :]
     return "sqlite:///" + os.path.normcase(path)
+
+
+def find_section_in_table_model_header(
+    data: Any, model: QAbstractItemModel, orientation: Qt.Orientation = Qt.Orientation.Horizontal
+) -> int:
+    count = model.columnCount() if orientation == Qt.Orientation.Horizontal else model.rowCount()
+    for section in range(count):
+        if model.headerData(section, orientation) == data:
+            return section
+    raise ValueError(f"{data} not found in header")

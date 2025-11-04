@@ -29,8 +29,8 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
     @property
     def _filtered_fields(self):
         return {
-            self.spine_db_editor.parameter_definition_model: ("entity_class_name",),
-            self.spine_db_editor.parameter_value_model: ("entity_class_name", "entity_byname"),
+            self.spine_db_editor.parameter_definition_model: ("class",),
+            self.spine_db_editor.parameter_value_model: ("class", "entity byname"),
         }
 
     @staticmethod

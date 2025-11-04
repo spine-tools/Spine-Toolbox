@@ -9,22 +9,17 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""Miscellaneous mixins for parameter models."""
-from json import JSONDecodeError
-from spinedb_api.incomplete_values import split_value_and_type
+from PySide6.QtCore import QObject, Signal
 
 
-class SplitValueAndTypeMixin:
-    def _convert_to_db(self, item: dict) -> dict:
-        item = super()._convert_to_db(item)
-        if self.value_field in item and not self.type_field in item:
-            value = item.pop(self.value_field)
-            try:
-                value_blob, value_type = split_value_and_type(value)
-            except JSONDecodeError:
-                item["parsed_value"] = value
-            else:
-                item[self.value_field] = value_blob
-                item[self.type_field] = value_type
-        return item
+class QtLogger(QObject):
+    """A LoggerInterface-compliant logger that uses Qt signals."""
+
+    msg = Signal(str)
+    msg_success = Signal(str)
+    msg_warning = Signal(str)
+    msg_error = Signal(str)
+    msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
+    information_box = Signal(str, str)
+    error_box = Signal(str, str)

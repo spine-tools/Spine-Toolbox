@@ -48,7 +48,6 @@ from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ..helpers import table_name_from_item_type
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
@@ -86,7 +85,7 @@ class SpineDBEditorBase(QMainWindow):
         add_keyboard_shortcuts_to_action_tool_tips(self.ui)
         self.takeCentralWidget().deleteLater()
         self.toolbar = DBEditorToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         toolbox = self.db_mngr.parent()
         if toolbox is not None:
             self.toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
@@ -106,7 +105,7 @@ class SpineDBEditorBase(QMainWindow):
         self.redo_action: Optional[QAction] = None
         self.ui.actionUndo.setShortcuts(QKeySequence.StandardKey.Undo)
         self.ui.actionRedo.setShortcuts(QKeySequence.StandardKey.Redo)
-        self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self._torn_down = False
         self._purge_items_dialog = None
         self._purge_items_dialog_state = None
@@ -115,6 +114,12 @@ class SpineDBEditorBase(QMainWindow):
         self.update_commit_enabled()
         self.last_view = None
         self.setup_focus_shortcuts()
+        self.table_name_from_item_type = {
+            "parameter_value": self.ui.dockWidget_parameter_value.windowTitle(),
+            "parameter_definition": self.ui.dockWidget_parameter_definition.windowTitle(),
+            "entity_alternative": self.ui.dockWidget_entity_alternative.windowTitle(),
+            "entity": self.ui.entity_dock_widget.windowTitle(),
+        }
 
     @property
     def toolbox(self):
@@ -369,7 +374,7 @@ class SpineDBEditorBase(QMainWindow):
         """
         if self.silenced:
             return
-        Notification(self, msg, corner=Qt.BottomRightCorner).show()
+        Notification(self, msg, corner=Qt.Corner.BottomRightCorner).show()
 
     @Slot()
     def refresh_copy_paste_actions(self):
@@ -898,23 +903,22 @@ class SpineDBEditorBase(QMainWindow):
         """Colors the header of a dock widget"""
         palette = QPalette()
         if color:
-            palette.setColor(QPalette.Window, color)
+            palette.setColor(QPalette.ColorRole.Window, color)
         dock.setPalette(palette)
 
     def handle_column_filters(self, model):
-        if not model.dock:
-            return
+        dock = self._dock_by_item_type[model.item_type]
+        table_name = self.table_name_from_item_type[model.item_type]
         if not any(model.column_filters.values()):
             # Back to defaults
-            model.dock.setWindowTitle(table_name_from_item_type(model.item_type))
-            self.set_dock_tab_color(model.dock, None)
+            dock.setWindowTitle(table_name)
+            self.set_dock_tab_color(dock, None)
             return
-        self.set_dock_tab_color(model.dock, QColor("paleturquoise"))
-        table_name = table_name_from_item_type(model.item_type)
+        self.set_dock_tab_color(dock, QColor("paleturquoise"))
         table_name += (
             f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
         )
-        model.dock.setWindowTitle(table_name)
+        dock.setWindowTitle(table_name)
 
     def setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor
@@ -984,6 +988,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self.ui.empty_parameter_value_table_view,
             self.ui.tableView_parameter_definition,
             self.ui.empty_parameter_definition_table_view,
+            self.ui.entity_table_view,
             self.ui.treeView_entity,
         ):
             view.set_db_column_visibility(visible)
@@ -1017,7 +1022,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
     def _restart_timer_refresh_tab_order(self, _visible=False):
         if self._torn_down:
             return
-        self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.UniqueConnection)
+        self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.ConnectionType.UniqueConnection)
         self._timer_refresh_tab_order.start(100)
 
     def _refresh_tab_order(self):
@@ -1030,9 +1035,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 continue
             if dock.pos().x() >= 0 and not dock.isFloating():
                 visible_docks.append(dock)
-                view.setFocusPolicy(Qt.StrongFocus)
+                view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             else:
-                view.setFocusPolicy(Qt.ClickFocus)
+                view.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         if not visible_docks:
             return
         sorted_docks = sorted(visible_docks, key=lambda d: (d.pos().x(), d.pos().y()))
@@ -1066,7 +1071,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         for dock in self._dock_views:
             dock.setFloating(False)
             dock.setVisible(True)
-            self.addDockWidget(Qt.RightDockWidgetArea, dock)
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
     def update_last_view(self):
         self.qsettings.beginGroup(self.settings_group)
@@ -1130,6 +1135,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 self.ui.dockWidget_parameter_value,
                 self.ui.dockWidget_parameter_definition,
                 self.ui.dockWidget_entity_alternative,
+                self.ui.entity_dock_widget,
             ]
         )
         self.ui.dockWidget_pivot_table.hide()
@@ -1157,6 +1163,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.dockWidget_parameter_value.hide()
         self.ui.dockWidget_parameter_definition.hide()
         self.ui.dockWidget_entity_alternative.hide()
+        self.ui.entity_dock_widget.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]

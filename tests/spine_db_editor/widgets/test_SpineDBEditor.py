@@ -20,7 +20,7 @@ from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, assert_table_model_data
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
@@ -35,13 +35,15 @@ class TestSpineDBEditor(DBEditorTestBase):
         fish_item = root_item.child(1)
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
         self.spine_db_editor.ui.treeView_entity.setCurrentIndex(fish_index)
-        self.spine_db_editor.ui.treeView_entity.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        self.spine_db_editor.ui.treeView_entity.selectionModel().select(
+            fish_index, QItemSelectionModel.SelectionFlag.Select
+        )
         # Check default in object parameter_definition
         model = self.spine_db_editor.empty_parameter_definition_model
         h = model.header.index
         row_data = []
         for row in range(model.rowCount()):
-            row_data.append(tuple(model.index(row, h(field)).data() for field in ("entity_class_name", "database")))
+            row_data.append(tuple(model.index(row, h(field)).data() for field in ("class", "database")))
         self.assertIn(("fish", self.db_codename), row_data)
 
     def test_save_window_state(self):

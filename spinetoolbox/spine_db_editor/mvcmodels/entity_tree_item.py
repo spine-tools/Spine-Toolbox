@@ -15,7 +15,7 @@ from typing import TypeAlias
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon
 from spinetoolbox.fetch_parent import FetchIndex, FlexibleFetchParent
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_tool_tip
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_tool_tip
 from .multi_db_tree_item import MultiDBTreeItem
 
 
@@ -99,7 +99,10 @@ class EntityClassItem(MultiDBTreeItem):
 
     visual_key = ["name", "dimension_name_list", "superclass_name"]
     item_type = "entity_class"
-    _fetch_index = EntityClassIndex()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._fetch_index = EntityClassIndex()
 
     @property
     def display_icon(self):
@@ -116,7 +119,7 @@ class EntityClassItem(MultiDBTreeItem):
     @property
     def _children_sort_key(self):
         """Reimplemented so groups are above non-groups."""
-        return lambda item: (not item.is_group, order_key("__".join(item.display_id[1]).casefold()))
+        return lambda item: (not item.is_group, order_key_from_names(i.casefold() for i in item.display_id[1]))
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -179,13 +182,13 @@ class EntityItem(MultiDBTreeItem):
 
     visual_key = ["entity_class_name", "entity_byname"]
     item_type = "entity"
-    _fetch_index = EntityIndex()
-    _entity_group_index = EntityGroupIndex()
 
     def __init__(self, *args, is_member=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._is_group = False
         self._is_member = is_member
+        self._fetch_index = EntityIndex()
+        self._entity_group_index = EntityGroupIndex()
         self._entity_group_fetch_parent = FlexibleFetchParent(
             "entity_group",
             accepts_item=self._accepts_entity_group_item,
@@ -290,7 +293,11 @@ class EntityItem(MultiDBTreeItem):
         return self.parent_item.name in self.element_name_list
 
     def _can_fetch_more_entity_groups(self):
-        return any(self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent) for db_map in self.db_maps)
+        result = False
+        for db_map in self.db_maps:
+            # Must loop over all fetch parents so they get registered.
+            result |= self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent)
+        return result
 
     def can_fetch_more(self):
         return self._can_fetch_more_entity_groups() or super().can_fetch_more()

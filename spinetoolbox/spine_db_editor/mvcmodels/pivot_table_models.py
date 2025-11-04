@@ -1931,12 +1931,18 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
             identifier (int): index identifier
             filter_value (set, None): A set of accepted values, or None if no filter (all pass)
         """
+        self.beginFilterChange()
         self.index_filters[identifier] = filter_value
-        self.invalidateFilter()  # trigger filter update
+        if identifier in self.sourceModel().model.pivot_columns:
+            direction = QSortFilterProxyModel.Direction.Columns
+        else:
+            direction = QSortFilterProxyModel.Direction.Rows
+        self.endFilterChange(direction)
 
     def clear_filter(self):
+        self.beginFilterChange()
         self.index_filters = {}
-        self.invalidateFilter()  # trigger filter update
+        self.endFilterChange(QSortFilterProxyModel.Direction.Both)
 
     def accept_index(self, index, index_ids):
         for i, identifier in zip(index, index_ids):

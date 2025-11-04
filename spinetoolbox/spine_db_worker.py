@@ -15,6 +15,7 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.temp_id import TempId
+from .fetch_parent import FetchParent
 from .helpers import busy_effect
 from .qthread_pool_executor import QtBasedThreadPoolExecutor, SynchronousExecutor
 
@@ -54,14 +55,18 @@ class SpineDBWorker(QObject):
         self._db_map = DatabaseMapping(self._db_url, *args, sqlite_timeout=2, **kwargs)
         return self._db_map
 
-    def register_fetch_parent(self, parent):
+    def register_fetch_parent(self, parent: FetchParent) -> None:
         """Registers the given parent.
 
         Args:
-            parent (FetchParent): parent to add
+            parent: parent to add
         """
         parents = self._parents_by_type.setdefault(parent.fetch_item_type, set())
         parents.add(parent)
+
+    def unregister_fetch_parent(self, parent: FetchParent) -> None:
+        parents = self._parents_by_type.setdefault(parent.fetch_item_type, set())
+        parents.remove(parent)
 
     @busy_effect
     def _iterate_mapping(self, parent):

@@ -4,7 +4,7 @@
 
 .. _Removing data:
 
-Removing data
+Removing Data
 -------------
 
 This section describes the available tools to remove data.
@@ -12,7 +12,7 @@ This section describes the available tools to remove data.
 .. contents::
    :local:
 
-Purging items
+Purging Items
 =============
 
 To remove all items of specific types, select **Purge** (|purge|) from the **Toolbar**.
@@ -37,7 +37,7 @@ the mass removal.
 .. tip:: Purging can also be an automated part of the workflow. See :ref:`Links and Loops` for more information
          about purging a database automatically.
 
-Removing entities and classes
+Removing Entities and Classes
 =============================
 
 From **Entity Tree** or **Graph View**
@@ -73,7 +73,7 @@ Locate the member entities you want to remove,
 and uncheck the corresponding box in the table body.
 
 
-Removing parameter definitions and values
+Removing Parameter Pefinitions and Values
 =========================================
 
 From **Table View**
@@ -98,7 +98,7 @@ Then:
 2. Select the cells in the table body corresponding to the parameter values you want to remove,
    right-click on the selection and choose **Remove parameter values** from the context menu.
 
-Removing alternatives
+Removing Alternatives
 =====================
 
 From **Pivot View**
@@ -115,7 +115,7 @@ To remove an alternative, just select the corresponding items in **Alternative**
 right-click on the selection and choose **Remove** from the context menu.
 
 
-Removing scenarios
+Removing Scenarios
 ==================
 
 From **Pivot View**
@@ -134,19 +134,19 @@ right-click on the selection and choose **Remove** from the context menu.
 To remove a scenario alternative from a scenario, select the corresponding alternative items
 in **Scenario Tree**, right-click on the selection and choose **Remove** from the context menu.
 
-Removing parameter value lists
+Removing Parameter Value Lists
 ==============================
 
 To remove a parameter value list or any of its values, just select the corresponding items in *Parameter value list*,
 right-click on the selection and choose **Remove** from the context menu.
 
-Removing metadata
+Removing Metadata
 =================
 
 Select the corresponding items in **Metadata**, right-click on the selection and choose **Remove row(s)**
 from the context menu.
 
-Removing item metadata
+Removing Item Metadata
 ======================
 
 Select the corresponding items in **Item metadata**, right-click on the selection and choose **Remove row(s)**

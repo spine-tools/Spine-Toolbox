@@ -9,22 +9,12 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""Miscellaneous mixins for parameter models."""
-from json import JSONDecodeError
-from spinedb_api.incomplete_values import split_value_and_type
+from spine_engine.logger_interface import LoggerInterface
+from spinetoolbox.logger import QtLogger
 
 
-class SplitValueAndTypeMixin:
-    def _convert_to_db(self, item: dict) -> dict:
-        item = super()._convert_to_db(item)
-        if self.value_field in item and not self.type_field in item:
-            value = item.pop(self.value_field)
-            try:
-                value_blob, value_type = split_value_and_type(value)
-            except JSONDecodeError:
-                item["parsed_value"] = value
-            else:
-                item[self.value_field] = value_blob
-                item[self.type_field] = value_type
-        return item
+class TestLogger:
+    def test_has_same_attributes_as_the_protocol(self):
+        for field in LoggerInterface.__dict__:
+            if not field.startswith("_"):
+                assert hasattr(QtLogger, field)

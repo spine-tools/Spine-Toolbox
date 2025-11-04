@@ -558,7 +558,7 @@ class IconColorEditor(QDialog):
 
     def connect_signals(self):
         """Connects signals to slots."""
-        self.line_edit.textEdited.connect(self.proxy_model.invalidateFilter)
+        self.line_edit.textEdited.connect(self.proxy_model.invalidate)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.button_box_reset.clicked.connect(lambda: self.reset_pressed.emit(self))

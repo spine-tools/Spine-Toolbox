@@ -74,6 +74,7 @@ class TestStringToGroup(unittest.TestCase):
 
 class TestParameterValueToString(unittest.TestCase):
     def test_non_numeric_values(self):
+        self.assertEqual(parameter_value_to_string(None), "")
         self.assertEqual(parameter_value_to_string("is_string"), "is_string")
         self.assertEqual(parameter_value_to_string(True), "true")
         self.assertEqual(parameter_value_to_string(False), "false")
