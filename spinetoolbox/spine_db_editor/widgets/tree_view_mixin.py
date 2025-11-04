@@ -13,6 +13,7 @@
 """Contains the TreeViewMixin class."""
 from PySide6.QtCore import QEvent, Qt, Slot
 from PySide6.QtGui import QMouseEvent
+from ...mvcmodels.shared import ITEM_ROLE
 from ...spine_db_parcel import SpineDBParcel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
@@ -59,7 +60,7 @@ class TreeViewMixin:
         self._filter_entity_ids = {}  # Entity ids from entity selections
         self._filter_alternative_ids = {}  # Alternative ids
         self._filter_scenario_ids = {}  # Scenario ids by db_map. Each scenario id maps to alternatives sorted by rank.
-        self._filter_parameter_value_ids = {}  # Entity ids for currently accepted parameter value rows in tables
+        self._entity_ids_with_visible_values = {}  # Entity ids for currently accepted parameter value rows in tables
 
     def connect_signals(self):
         """Connects the signals"""
@@ -120,20 +121,13 @@ class TreeViewMixin:
         self._update_filter_parameter_value_ids()
         self.build_graph()
 
-    def _update_filter_parameter_value_ids(self):
+    def _update_filter_parameter_value_ids(self) -> None:
         """Updates the parameter"""
-        for db_map in self.db_maps:
-            single_models = self.parameter_value_model._models_with_db_map(db_map)
-            if not single_models:
-                return True
-            parameter_value_ids = set()
-            value_table = db_map.mapped_table("parameter_value")
-            for model in single_models:
-                for _, row in self.parameter_value_model._row_map_iterator_for_model(model):
-                    parameter_value_ids.add(value_table[model.item_id(row)]["entity_id"])
-            if not parameter_value_ids and db_map in self._filter_parameter_value_ids:
-                del self._filter_parameter_value_ids[db_map]
-            self._filter_parameter_value_ids[db_map] = parameter_value_ids
+        self._entity_ids_with_visible_values.clear()
+        for row in range(self.parameter_value_model.rowCount()):
+            index = self.parameter_value_model.index(row, 0)
+            value_item = self.parameter_value_model.data(index, ITEM_ROLE)
+            self._entity_ids_with_visible_values.setdefault(value_item.db_map, set()).add(value_item["entity_id"])
 
     def handle_mousepress(self, tree_view, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.

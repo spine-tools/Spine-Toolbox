@@ -20,7 +20,7 @@ from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, ITEM_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
@@ -220,6 +220,8 @@ class SingleModelBase(HalfSortedTableModel):
             return self.db_map
         if role == ITEM_ID_ROLE:
             return self._main_data[index.row()]
+        if role == ITEM_ROLE:
+            return self._mapped_table[self._main_data[index.row()]]
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):

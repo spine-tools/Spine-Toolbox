@@ -261,18 +261,19 @@ class GraphViewMixin:
         self.highlight_by_id[item["id"]] = EntityBorder.INACTIVE
         return False
 
-    def _parameter_value_accepts(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
+    def _parameter_value_accepts(self, entity_item: PublicItem, db_map: DatabaseMapping) -> bool:
         """Returns True if the entity has parameter values set with the selected alternatives"""
-        if not self._filter_parameter_value_ids:
+        if not self._entity_ids_with_visible_values:
             return False
-        if item["id"] in self._filter_parameter_value_ids.get(db_map):
-            if item["element_id_list"]:
-                for id_ in item["element_id_list"]:
-                    if self.highlight_by_id.get(id_) == EntityBorder.INACTIVE:
-                        self.highlight_by_id[id_] = EntityBorder.PARAMETER_VALUE
-            if self.highlight_by_id.get(item["id"]) == EntityBorder.INACTIVE:
-                self.highlight_by_id[item["id"]] = EntityBorder.PARAMETER_VALUE
-            return True  # Entity is present in the parameter_value table with the current selections
+        entity_id = entity_item["id"]
+        if entity_id in self._entity_ids_with_visible_values[db_map]:
+            if entity_item["element_id_list"]:
+                for element_id in entity_item["element_id_list"]:
+                    if self.highlight_by_id.get(element_id) == EntityBorder.INACTIVE:
+                        self.highlight_by_id[element_id] = EntityBorder.PARAMETER_VALUE
+            if self.highlight_by_id.get(entity_id) == EntityBorder.INACTIVE:
+                self.highlight_by_id[entity_id] = EntityBorder.PARAMETER_VALUE
+            return True
         return False
 
     def _graph_handle_entities_added(self, db_map_data: DBMapPublicItems) -> None:

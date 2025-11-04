@@ -335,10 +335,6 @@ class CompoundStackedModel(CompoundTableModel):
         for i in model.accepted_rows():
             yield (model, i)
 
-    def _models_with_db_map(self, db_map: DatabaseMapping) -> list[SingleModelBase]:
-        """Returns a collection of single models with given db_map."""
-        return [m for m in self.sub_models if m.db_map == db_map]
-
     @staticmethod
     def _items_per_class(items: Iterable[PublicItem]) -> dict[TempId, list[PublicItem]]:
         """Returns a dict mapping entity_class ids to a set of items."""
