@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   including location data that has not been accessible in the editor before.
   Existing entities can be updated using the table. 
   However, new entities cannot currently be added from the table.
+- Importer Specification editor has a new button **Remove unavailable tables** that removes source tables
+  which are not found in the input source.
+- Source tables can now also be removed with the **Delete** action found in the right-click context menu.
+  The action removes all selected items except the ones that are found in the source.
+  Existing tables can be unchecked to exclude them.
 
 ### Changed
 
