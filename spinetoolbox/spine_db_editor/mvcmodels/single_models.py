@@ -15,13 +15,15 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
-from spinedb_api import DatabaseMapping
+from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.helpers import AsteriskType
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, ITEM_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...parameter_type_validation import ValidationKey
+from ..filter_selection import EntitySelection
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .colors import FIXED_FIELD_COLOR
 from .utils import (
@@ -246,20 +248,36 @@ class FilterEntityAlternativeMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._filter_alternative_ids = set()
-        self._filter_entity_ids = set()
+        self._filter_entity_ids = Asterisk
 
-    def set_filter_entity_ids(self, db_map_class_entity_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]) -> bool:
-        # Don't accept entity id filters from entities that don't belong in this model
-        filter_entity_ids = set().union(
-            *(
-                ent_ids
-                for (db_map, class_id), ent_ids in db_map_class_entity_ids.items()
-                if db_map == self.db_map and (class_id == self.entity_class_id or class_id in self.dimension_id_list)
-            )
-        )
-        if self._filter_entity_ids == filter_entity_ids:
+    def set_filter_entity_ids(self, entity_selection: EntitySelection) -> bool:
+        if entity_selection is Asterisk or not entity_selection:
+            entity_ids = Asterisk
+        else:
+            try:
+                selected_entities_by_class = entity_selection[self.db_map]
+            except KeyError:
+                entity_ids = set()
+            else:
+                if self.entity_class_id in selected_entities_by_class:
+                    entity_ids = selected_entities_by_class[self.entity_class_id]
+                else:
+                    entity_ids = set()
+                    dimension_id_list = self.db_map.mapped_table("entity_class")[self.entity_class_id][
+                        "dimension_id_list"
+                    ]
+                    for dimension_id in dimension_id_list:
+                        if dimension_id not in selected_entities_by_class:
+                            continue
+                        selected_entities = selected_entities_by_class[dimension_id]
+                        if selected_entities is Asterisk:
+                            continue
+                        entity_ids |= selected_entities
+                    if dimension_id_list and not entity_ids:
+                        entity_ids = Asterisk
+        if entity_ids == self._filter_entity_ids:
             return False
-        self._filter_entity_ids = filter_entity_ids
+        self._filter_entity_ids = entity_ids
         return True
 
     def set_filter_alternative_ids(
@@ -281,7 +299,7 @@ class FilterEntityAlternativeMixin:
 
     def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:
+        if self._filter_entity_ids is Asterisk:
             return True
         entity_id = item["entity_id"]
         return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
@@ -574,7 +592,7 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
 
     def _entity_filter_accepts_item(self, item):
         """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:
+        if self._filter_entity_ids is Asterisk:
             return True
         entity_id = item["id"]
         return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])

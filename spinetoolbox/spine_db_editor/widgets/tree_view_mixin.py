@@ -11,8 +11,10 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
-from PySide6.QtCore import QEvent, Qt, Slot
+from PySide6.QtCore import QEvent, QModelIndex, Qt, Slot
 from PySide6.QtGui import QMouseEvent
+from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from ...mvcmodels.shared import ITEM_ROLE
 from ...spine_db_parcel import SpineDBParcel
 from ..mvcmodels.alternative_model import AlternativeModel
@@ -56,11 +58,9 @@ class TreeViewMixin:
             view.header().setResizeContentsPrecision(self.visible_rows)
         self.clear_tree_selections = True
         # Filter caches
-        self._filter_class_ids = {}  # Class ids from entity class- and entity selections (cascading)
         self._filter_entity_ids = {}  # Entity ids from entity selections
         self._filter_alternative_ids = {}  # Alternative ids
         self._filter_scenario_ids = {}  # Scenario ids by db_map. Each scenario id maps to alternatives sorted by rank.
-        self._entity_ids_with_visible_values = {}  # Entity ids for currently accepted parameter value rows in tables
 
     def connect_signals(self):
         """Connects the signals"""
@@ -70,14 +70,7 @@ class TreeViewMixin:
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
-        self.entity_alternative_model.dataChanged.connect(lambda top_left, bottom_right, roles: self.build_graph())
-        self.parameter_value_model.dataChanged.connect(
-            lambda top_left, bottom_right, roles: self._refresh_parameters_and_graph()
-        )
-
-    def _refresh_parameters_and_graph(self):
-        self._update_filter_parameter_value_ids()
-        self.build_graph()
+        self.entity_alternative_model.dataChanged.connect(self.build_graph)
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
@@ -87,19 +80,10 @@ class TreeViewMixin:
             for parent in (i.parent() for i in entity_indexes)
             if self.entity_tree_model.item_from_index(parent).item_type == "entity"
         }
-        entity_class_indexes = set(selected_indexes.get("entity_class", {}).keys()) | {
-            parent_ind
-            for parent_ind in (ind.parent() for ind in entity_indexes)
-            if self.entity_tree_model.item_from_index(parent_ind).item_type == "entity_class"
-        }
-        self._filter_class_ids = self._db_map_ids(entity_class_indexes)
         self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
         # View specific stuff:
-        self._update_selected_item_type_db_map_ids(selected_indexes)
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
-        self._update_filter_parameter_value_ids()
-        self.build_graph()
 
     @Slot(object)
     def _handle_alternative_selection_changed(self, selected):
@@ -110,7 +94,6 @@ class TreeViewMixin:
             self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
         # View specific stuff:
         self._reset_filters()
-        self._update_filter_parameter_value_ids()
         self.build_graph()
 
     @Slot(object)
@@ -118,16 +101,7 @@ class TreeViewMixin:
         self._filter_scenario_ids = selected_ids
         # View specific stuff:
         self._reset_filters()
-        self._update_filter_parameter_value_ids()
         self.build_graph()
-
-    def _update_filter_parameter_value_ids(self) -> None:
-        """Updates the parameter"""
-        self._entity_ids_with_visible_values.clear()
-        for row in range(self.parameter_value_model.rowCount()):
-            index = self.parameter_value_model.index(row, 0)
-            value_item = self.parameter_value_model.data(index, ITEM_ROLE)
-            self._entity_ids_with_visible_values.setdefault(value_item.db_map, set()).add(value_item["entity_id"])
 
     def handle_mousepress(self, tree_view, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.

@@ -13,9 +13,11 @@
 """Base classes to represent items from multiple databases in a tree."""
 from PySide6.QtCore import Qt
 from spinedb_api import DatabaseMapping
-from ...fetch_parent import FlexibleFetchParent
+from spinedb_api.temp_id import TempId
+from ...fetch_parent import FetchIndex, FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
-from ...mvcmodels.minimal_tree_model import TreeItem
+from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from ...mvcmodels.shared import ITEM_ID_ROLE
 
 
 class MultiDBTreeItem(TreeItem):
@@ -25,18 +27,18 @@ class MultiDBTreeItem(TreeItem):
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key = ["name"]
 
-    def __init__(self, model, db_map_ids=None):
+    def __init__(self, model: MinimalTreeModel, db_map_ids: dict[DatabaseMapping, TempId] | None = None):
         """
         Args:
-            model (MinimalTreeModel, optional): item's model
-            db_map_ids (dict, optional): maps instances of DatabaseMapping to the id of the item in that db
+            model: item's model
+            db_map_ids: maps instances of DatabaseMapping to the id of the item in that db
         """
         super().__init__(model)
         if db_map_ids is None:
             db_map_ids = {}
         self._db_map_ids = db_map_ids
-        self._child_map = {}  # Maps db_map to id to row number
-        self._fetch_index = None
+        self._child_map: dict[DatabaseMapping, dict[TempId, int]] = {}
+        self._fetch_index: FetchIndex | None = None
         self._fetch_parent = FlexibleFetchParent(
             self.fetch_item_type,
             accepts_item=self.accepts_item,
@@ -47,8 +49,6 @@ class MultiDBTreeItem(TreeItem):
             key_for_index=self._key_for_index,
             owner=self,
         )
-        if self._fetch_index is not None:
-            self._fetch_index.connect(model.db_mngr)
 
     @property
     def visible_children(self):
@@ -491,6 +491,9 @@ class MultiDBTreeItem(TreeItem):
                 return self.display_icon
         if role == Qt.ItemDataRole.EditRole:
             return self.edit_data
+        if role == ITEM_ID_ROLE:
+            return self._db_map_ids
+        return None
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""

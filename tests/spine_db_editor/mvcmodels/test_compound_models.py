@@ -17,7 +17,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from spinedb_api import Array
+from spinedb_api import Array, Asterisk
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
@@ -78,7 +78,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         model.init_model()
         fetch_model(model)
         self.assertEqual(model.rowCount(), 3)
-        model.set_filter_class_ids({self._db_map: {entity_class_2["id"]}})
+        model.set_entity_selection_for_filtering({self._db_map: {entity_class_2["id"]: Asterisk}})
         model.refresh()
         self.assertEqual(model.rowCount(), 2)
         self._db_mngr.remove_items({self._db_map: {"entity_class": [entity_class_2["id"]]}})
@@ -564,7 +564,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
-        model.set_filter_class_ids({self._db_map: {object_class["id"]}})
+        model.set_entity_selection_for_filtering({self._db_map: {object_class["id"]: Asterisk}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -682,7 +682,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
-        model.set_filter_entity_ids({(self._db_map, object_class["id"]): {curious_sphere["id"]}})
+        model.set_entity_selection_for_filtering({self._db_map: {object_class["id"]: {curious_sphere["id"]}}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -863,7 +863,7 @@ class TestCompoundEntityModel:
             ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],
         ]
         assert_table_model_data_pytest(model, expected)
-        model.set_filter_entity_ids({(db_map, gadget["id"]): {microphone["id"]}})
+        model.set_entity_selection_for_filtering({db_map: {gadget["id"]: {microphone["id"]}}})
         model.refresh()
         expected = [
             ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],

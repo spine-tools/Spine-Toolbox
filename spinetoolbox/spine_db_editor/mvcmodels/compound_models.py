@@ -18,14 +18,16 @@ from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Type
 from PySide6.QtCore import QModelIndex, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
-from spinedb_api import DatabaseMapping
+from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.helpers import AsteriskType
 from spinedb_api.parameter_value import join_value_and_type
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.shared import ITEM_ID_ROLE
 from ...spine_db_manager import SpineDBManager
+from ..filter_selection import EntitySelection
 from ..widgets.custom_menus import AutoFilterMenu
 from .compound_table_model import CompoundTableModel
 from .single_models import (
@@ -66,12 +68,11 @@ class CompoundStackedModel(CompoundTableModel):
         self._parent = parent
         self.db_mngr = db_mngr
         self._db_maps: list[DatabaseMapping] = list(db_maps)
-        self._filter_class_ids: dict[DatabaseMapping, set[TempId]] = {}
+        self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
         self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
         self._auto_filter: dict[str, dict[tuple[DatabaseMapping, TempId], set]] = {}
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
-        self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
@@ -197,7 +198,7 @@ class CompoundStackedModel(CompoundTableModel):
             m.deleteLater()
         self.sub_models.clear()
         self._inv_row_map.clear()
-        self._filter_class_ids = {}
+        self._filter_class_ids = Asterisk
         self._auto_filter = {}
         while self._auto_filter_menus:
             _, menu = self._auto_filter_menus.popitem()
@@ -239,9 +240,11 @@ class CompoundStackedModel(CompoundTableModel):
         return True
 
     def _class_filter_accepts_model(self, model: SingleModelBase) -> bool:
-        if not self._filter_class_ids:
+        if self._filter_class_ids is Asterisk or not self._filter_class_ids:
             return True
-        class_ids = self._filter_class_ids.get(model.db_map, set())
+        if model.db_map not in self._filter_class_ids:
+            return False
+        class_ids = self._filter_class_ids[model.db_map]
         return model.entity_class_id in class_ids or not class_ids.isdisjoint(model.dimension_id_list)
 
     def _auto_filter_accepts_model(self, model: SingleModelBase) -> bool:
@@ -263,22 +266,25 @@ class CompoundStackedModel(CompoundTableModel):
         """
         return [m for m in self.sub_models if self.filter_accepts_model(m)]
 
-    def _invalidate_filter(self) -> None:
-        """Sets the filter invalid."""
-        self._filter_timer.start()
-
     def stop_invalidating_filter(self) -> None:
         """Stops invalidating the filter."""
         self._filter_timer.stop()
 
-    def set_filter_class_ids(self, class_ids: dict[DatabaseMapping, set[TempId]]) -> None:
-        if class_ids != self._filter_class_ids:
-            self._filter_class_ids = class_ids
-            self._invalidate_filter()
+    def set_entity_selection_for_filtering(self, entity_selection: EntitySelection) -> None:
+        if entity_selection is Asterisk:
+            filter_class_ids = Asterisk
+        else:
+            filter_class_ids = {
+                db_map: set(entities_by_class) for db_map, entities_by_class in entity_selection.items()
+            }
+        if filter_class_ids == self._filter_class_ids:
+            return
+        self._filter_class_ids = filter_class_ids
+        self._filter_timer.start()
 
     def clear_auto_filter(self) -> None:
         self._auto_filter = {}
-        self._invalidate_filter()
+        self._filter_timer.start()
 
     @Slot(str, object)
     def set_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]):
@@ -307,7 +313,7 @@ class CompoundStackedModel(CompoundTableModel):
         if self._auto_filter.setdefault(field, {}) == values:
             return
         self._auto_filter[field] = values
-        self._invalidate_filter()
+        self._filter_timer.start()
 
     def _set_single_auto_filter(self, model: SingleModelBase, field: str) -> None:
         """Sets the auto filter for given column in the given single model.
@@ -318,7 +324,7 @@ class CompoundStackedModel(CompoundTableModel):
         """
         values = self._auto_filter[field].get((model.db_map, model.entity_class_id), set())
         if model.set_auto_filter(field, values):
-            self._invalidate_filter()
+            self._filter_timer.start()
 
     def _row_map_iterator_for_model(self, model: SingleModelBase) -> Iterator[tuple[SingleModelBase, int]]:
         """Yields row map for the given model.
@@ -412,7 +418,6 @@ class CompoundStackedModel(CompoundTableModel):
     def _insert_row_map(self, pos: int, single_row_map: list[tuple[SingleModelBase, int]]) -> None:
         if not single_row_map:
             # Emit layoutChanged to trigger fetching.
-            print("Layout changed!")
             self.layoutChanged.emit()
             return
         row = self._get_row_for_insertion(pos)
@@ -586,31 +591,34 @@ class FilterEntityAlternativeMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._filter_entity_ids = {}
+        self._entity_selection: EntitySelection = Asterisk
         self._filter_alternative_ids = {}
 
     def init_model(self):
         super().init_model()
-        self._filter_entity_ids = {}
+        self._entity_selection = Asterisk
         self._filter_alternative_ids = {}
 
-    def set_filter_entity_ids(self, entity_ids: dict[DatabaseMapping, set[TempId]]) -> None:
-        self._filter_entity_ids = entity_ids
+    def set_entity_selection_for_filtering(self, entity_selection: EntitySelection) -> None:
+        self._entity_selection = entity_selection
+        should_invalidate_filter = False
         for model in self.sub_models:
-            if model.set_filter_entity_ids(entity_ids):
-                self._invalidate_filter()
+            should_invalidate_filter |= model.set_filter_entity_ids(entity_selection)
+        if should_invalidate_filter:
+            self._filter_timer.start()
+        super().set_entity_selection_for_filtering(entity_selection)
 
     def set_filter_alternative_ids(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
         self._filter_alternative_ids = alternative_ids
         for model in self.sub_models:
             if model.set_filter_alternative_ids(alternative_ids):
-                self._invalidate_filter()
+                self._filter_timer.start()
 
     def _create_single_model(
         self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
     ) -> SingleModelBase:
         model = super()._create_single_model(db_map, entity_class_id, committed)
-        model.set_filter_entity_ids(self._filter_entity_ids)
+        model.set_filter_entity_ids(self._entity_selection)
         model.set_filter_alternative_ids(self._filter_alternative_ids)
         return model
 

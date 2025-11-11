@@ -48,6 +48,7 @@ from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
+from ..filter_selection import FilterSelection
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
@@ -978,6 +979,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._item_metadata_editor = ItemMetadataEditor(
             self.ui.item_metadata_table_view, self, self._metadata_editor, db_mngr
         )
+        self._filter_selection = FilterSelection(self.ui.treeView_entity.selectionModel(), self)
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
         self._timer_refresh_tab_order.setSingleShot(True)
@@ -1008,6 +1010,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
     def connect_signals(self):
         super().connect_signals()
         self._metadata_editor.connect_signals(self.ui)
+        self._filter_selection.entity_selection_changed.connect(self._set_entity_selection_filter_for_stacked_tables)
+        self._filter_selection.entity_selection_changed.connect(self._set_entity_selection_filter_for_graph)
         self._item_metadata_editor.connect_signals(self.ui)
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)

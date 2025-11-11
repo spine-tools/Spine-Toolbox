@@ -58,7 +58,6 @@ class EntityTreeView(CopyPasteTreeView):
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
-        self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
         self._find_next_action = None
         self._hide_empty_classes_action = None
@@ -156,7 +155,7 @@ class EntityTreeView(CopyPasteTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self._refresh_selected_indexes()
-        QTimer.singleShot(20, self._do_find_next_entity)  # Keep looking for the next entity after new rows are inserted
+        QTimer.singleShot(0, self._do_find_next_entity)
 
     def rowsRemoved(self, parent, start, end):
         super().rowsRemoved(parent, start, end)

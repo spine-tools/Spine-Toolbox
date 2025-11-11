@@ -15,7 +15,7 @@ from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 
 
 class DBEditorTestBase(TestCaseWithQApplication):
@@ -218,4 +218,4 @@ class DBEditorTestBase(TestCaseWithQApplication):
         for item in self.spine_db_editor.entity_tree_model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
-                qApp.processEvents()  # pylint: disable=undefined-variable
+                QApplication.processEvents()

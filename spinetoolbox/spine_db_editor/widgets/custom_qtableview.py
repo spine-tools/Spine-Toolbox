@@ -1063,7 +1063,6 @@ class PivotTableView(CopyPasteTableView):
         self._context: Optional[PivotTableView._ContextBase] = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
-        self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
         self._left_header_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
         self.verticalScrollBar().valueChanged.connect(self._left_header_table.verticalScrollBar().setValue)

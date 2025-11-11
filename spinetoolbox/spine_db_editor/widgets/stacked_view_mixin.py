@@ -12,11 +12,13 @@
 
 """Contains the StackedViewMixin class."""
 from typing import Optional
-from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
+from PySide6.QtCore import QAbstractItemModel, QItemSelection, QModelIndex, QPersistentModelIndex, Qt, Slot
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from ...helpers import preferred_row_height
+from ...mvcmodels.shared import ITEM_ROLE
 from ..empty_table_size_hint_provider import EmptyTableSizeHintProvider
+from ..filter_selection import EntitySelection
 from ..mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
     CompoundEntityModel,
@@ -88,6 +90,7 @@ class StackedViewMixin:
             (self.ui.entity_alternative_contents_widget, self.ui.empty_entity_alternative_table_view),
         ):
             contents_widget.height_changed.connect(lambda: empty_table_view.updateGeometry())
+        self._entity_ids_with_visible_values: dict[DatabaseMapping, set[TempId]] | None = {}
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -106,6 +109,8 @@ class StackedViewMixin:
             invisible_scroll_bar = table_view.horizontalScrollBar()
             visible_scroll_bar.valueChanged.connect(invisible_scroll_bar.setValue)
             invisible_scroll_bar.valueChanged.connect(visible_scroll_bar.setValue)
+        self.parameter_value_model.layoutChanged.connect(self._handle_value_model_layout_changed)
+        self.parameter_value_model.rowsInserted.connect(self._handle_values_inserted)
         self.empty_parameter_value_model.entities_added.connect(self._notify_about_added_entities)
         self.empty_entity_alternative_model.entities_added.connect(self._notify_about_added_entities)
 
@@ -191,7 +196,6 @@ class StackedViewMixin:
     def clear_all_filters(self):
         for model in self._all_stacked_models:
             model.clear_auto_filter()
-        self._filter_class_ids = {}
         self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
         self._filter_scenario_ids = {}
@@ -202,13 +206,16 @@ class StackedViewMixin:
 
     def _reset_filters(self):
         """Resets filters."""
-        for model in self._all_stacked_models:
-            model.set_filter_class_ids(self._filter_class_ids)
+        # TODO: remove this
         alternatives = self.get_all_alternatives()
         for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_entity_ids(self._filter_entity_ids)
             model.set_filter_alternative_ids(alternatives)
-        self.entity_model.set_filter_entity_ids(self._filter_entity_ids)
+
+    @Slot(object)
+    def _set_entity_selection_filter_for_stacked_tables(self, entity_selection: EntitySelection) -> None:
+        for model in self._all_stacked_models:
+            model.set_entity_selection_for_filtering(entity_selection)
+        self._entity_ids_with_visible_values = None
 
     def get_all_alternatives(self):
         """Combines alternative ids from Scenario and Alternative tree selections."""
@@ -227,11 +234,30 @@ class StackedViewMixin:
         for x in selected_items:
             for db_map in x.db_maps:
                 active_items.setdefault(db_map, []).extend(x.db_items(db_map))
-        self._filter_class_ids = {}
-        for db_map, items in active_items.items():
-            self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
         self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
+
+    @Slot(QModelIndex, int, int)
+    def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
+        self._clear_table_related_caches()
+
+    @Slot(list, QAbstractItemModel.LayoutChangeHint)
+    def _handle_value_model_layout_changed(
+        self, parents: list[QPersistentModelIndex], hint: QAbstractItemModel.LayoutChangeHint
+    ) -> None:
+        self._clear_table_related_caches()
+
+    def _clear_table_related_caches(self) -> None:
+        self._entity_ids_with_visible_values = None
+        self._graph_build_timer.start()
+
+    def _recalculate_entity_ids_with_visible_values(self) -> None:
+        entity_ids = {}
+        for row in range(self.parameter_value_model.rowCount()):
+            index = self.parameter_value_model.index(row, 0)
+            value_item = self.parameter_value_model.data(index, ITEM_ROLE)
+            entity_ids.setdefault(value_item.db_map, set()).add(value_item["entity_id"])
+        self._entity_ids_with_visible_values = entity_ids
 
     @Slot(int, int, int)
     def _update_empty_parameter_definition_header_section_size(self, logical_index, old_size, new_size):

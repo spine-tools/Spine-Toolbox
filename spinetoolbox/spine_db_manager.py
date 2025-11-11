@@ -48,7 +48,7 @@ from spinedb_api import (
 )
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.exception import NothingToCommit
-from spinedb_api.helpers import remove_credentials_from_url
+from spinedb_api.helpers import ItemType, remove_credentials_from_url
 from spinedb_api.parameter_value import (
     MapIndex,
     Value,
@@ -246,7 +246,7 @@ class SpineDBManager(QObject):
             self._icon_mngr[db_map] = SpineDBIconManager()
         return self._icon_mngr[db_map]
 
-    def update_icons(self, db_map: DatabaseMapping, item_type: str, items: Iterable[PublicItem]) -> None:
+    def update_icons(self, db_map: DatabaseMapping, item_type: ItemType, items: Iterable[PublicItem]) -> None:
         """Runs when items are added or updated. Setups icons."""
         if item_type == "entity_class":
             self.get_icon_mngr(db_map).update_icon_caches(items)
@@ -689,7 +689,7 @@ class SpineDBManager(QObject):
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     @staticmethod
-    def get_item(db_map: DatabaseMapping, item_type: str, id_: TempId) -> Optional[PublicItem]:
+    def get_item(db_map: DatabaseMapping, item_type: ItemType, id_: TempId) -> Optional[PublicItem]:
         """Returns the item of the given type in the given db map that has the given id,
         or an empty dict if not found.
         """
@@ -699,13 +699,15 @@ class SpineDBManager(QObject):
         except KeyError:
             return None
 
-    def get_items(self, db_map: DatabaseMapping, item_type: str, **search_criteria) -> list[PublicItem]:
+    def get_items(self, db_map: DatabaseMapping, item_type: ItemType, **search_criteria) -> list[PublicItem]:
         """Returns a list of the items of the given type in the given db map."""
         with self.get_lock(db_map):
             table = db_map.mapped_table(item_type)
             return db_map.find(table, **search_criteria)
 
-    def get_items_by_field(self, db_map: DatabaseMapping, item_type: str, field: str, value: Any) -> list[PublicItem]:
+    def get_items_by_field(
+        self, db_map: DatabaseMapping, item_type: ItemType, field: str, value: Any
+    ) -> list[PublicItem]:
         """Returns a list of items of the given type in the given db map that have the given value
         for the given field.
         """
@@ -714,7 +716,7 @@ class SpineDBManager(QObject):
             return [x for x in db_map.find(mapped_table) if x.get(field) == value]
 
     def get_item_by_field(
-        self, db_map: DatabaseMapping, item_type: str, field: str, value: Any
+        self, db_map: DatabaseMapping, item_type: ItemType, field: str, value: Any
     ) -> Union[PublicItem, dict]:
         """Returns the first item of the given type in the given db map
         that has the given value for the given field
@@ -765,7 +767,9 @@ class SpineDBManager(QObject):
             return plain_to_tool_tip(f"Expected value's type to be <b>{type_list[0]}</b>.")
         return plain_to_tool_tip(f"Expected value's type to be one of <b>{', '.join(type_list)}</b>.")
 
-    def _format_list_value(self, db_map: DatabaseMapping, item_type: str, value: Value, list_value_id: TempId) -> str:
+    def _format_list_value(
+        self, db_map: DatabaseMapping, item_type: ItemType, value: Value, list_value_id: TempId
+    ) -> str:
         list_value = self.get_item(db_map, "list_value", list_value_id)
         if not list_value:
             return value
@@ -852,7 +856,7 @@ class SpineDBManager(QObject):
             return parsed_value
         return None
 
-    def get_value_indexes(self, db_map: DatabaseMapping, item_type: str, id_: TempId) -> nptyping.NDArray:
+    def get_value_indexes(self, db_map: DatabaseMapping, item_type: ItemType, id_: TempId) -> nptyping.NDArray:
         """Returns the value or default value indexes of a parameter.
 
         Args:
@@ -869,7 +873,7 @@ class SpineDBManager(QObject):
     def get_value_index(
         self,
         db_map: DatabaseMapping,
-        item_type: str,
+        item_type: ItemType,
         id_: TempId,
         index: MapIndex,
         role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
@@ -966,7 +970,7 @@ class SpineDBManager(QObject):
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    def add_ext_item_metadata(self, item_type: str, db_map_data: DBMapDictItems) -> None:
+    def add_ext_item_metadata(self, item_type: ItemType, db_map_data: DBMapDictItems) -> None:
         for db_map, items in db_map_data.items():
             identifier = self.get_command_identifier()
             metadata_items = db_map.get_metadata_to_add_with_item_metadata_items(*items)
@@ -1001,7 +1005,7 @@ class SpineDBManager(QObject):
                 items.append(item)
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, "parameter_value", items))
 
-    def update_ext_item_metadata(self, item_type: str, db_map_data: DBMapDictItems) -> None:
+    def update_ext_item_metadata(self, item_type: ItemType, db_map_data: DBMapDictItems) -> None:
         for db_map, items in db_map_data.items():
             identifier = self.get_command_identifier()
             metadata_items = db_map.get_metadata_to_add_with_item_metadata_items(*items)
@@ -1101,7 +1105,7 @@ class SpineDBManager(QObject):
         self.remove_items(db_map_typed_data, **kwargs)
 
     def add_items(
-        self, item_type: str, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
+        self, item_type: ItemType, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
     ) -> None:
         """Pushes commands to add items to undo stack."""
         if identifier is None:
@@ -1112,7 +1116,7 @@ class SpineDBManager(QObject):
             )
 
     def update_items(
-        self, item_type: str, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
+        self, item_type: ItemType, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
     ) -> None:
         """Pushes commands to update items to undo stack."""
         if identifier is None:
@@ -1125,7 +1129,7 @@ class SpineDBManager(QObject):
             )
 
     def add_update_items(
-        self, item_type: str, db_map_data: DBMapDictItems, command_text: str, identifier=None, **kwargs
+        self, item_type: ItemType, db_map_data: DBMapDictItems, command_text: str, identifier=None, **kwargs
     ) -> None:
         """Pushes commands to add_update items to undo stack."""
         if identifier is None:
@@ -1167,7 +1171,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_add_items(
-        self, db_map: DatabaseMapping, item_type: str, data: list[dict], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, data: list[dict], check: bool = True
     ) -> list[PublicItem]:
         try:
             worker = self._workers[db_map]
@@ -1178,7 +1182,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_update_items(
-        self, db_map: DatabaseMapping, item_type: str, data: list[dict], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, data: list[dict], check: bool = True
     ) -> list[PublicItem]:
         try:
             worker = self._workers[db_map]
@@ -1189,7 +1193,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_add_update_items(
-        self, db_map: DatabaseMapping, item_type: str, data: list[dict], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, data: list[dict], check: bool = True
     ) -> tuple[list[PublicItem], list[PublicItem]]:
         try:
             worker = self._workers[db_map]
@@ -1200,7 +1204,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_remove_items(
-        self, db_map: DatabaseMapping, item_type: str, ids: set[TempId], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, ids: set[TempId], check: bool = True
     ) -> list[PublicItem]:
         """Removes items from database.
 
@@ -1217,7 +1221,7 @@ class SpineDBManager(QObject):
         return worker.remove_items(item_type, ids, check)
 
     @busy_effect
-    def do_restore_items(self, db_map: DatabaseMapping, item_type: str, ids: set[TempId]) -> list[PublicItem]:
+    def do_restore_items(self, db_map: DatabaseMapping, item_type: ItemType, ids: set[TempId]) -> list[PublicItem]:
         """Restores items in database.
 
         Args:
@@ -1501,7 +1505,7 @@ class SpineDBManager(QObject):
             with suppress(KeyError):
                 self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
 
-    def _clear_validated_value_ids(self, item_type: str, db_map_data: DBMapPublicItems) -> None:
+    def _clear_validated_value_ids(self, item_type: ItemType, db_map_data: DBMapPublicItems) -> None:
         db_map_validated_values = self._validated_values[item_type]
         for db_map, data in db_map_data.items():
             validated_values = db_map_validated_values[id(db_map)]
