@@ -58,7 +58,6 @@ from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
-from ..mvcmodels.single_models import SingleModelBase
 from ..mvcmodels.utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
     ENTITY_FIELD_MAP,
@@ -107,6 +106,7 @@ class StackedTableView(AutoFilterCopyPasteTableView):
 
     _COLUMN_SIZE_HINTS: ClassVar[dict[str, int]] = {}
     _EXPECTED_COLUMN_COUNT: ClassVar[int] = NotImplemented
+    _MODEL_HAS_AUTO_FILTER_MENU: ClassVar[bool] = True
 
     def __init__(self, parent: QWidget | None):
         super().__init__(parent=parent)
@@ -177,8 +177,9 @@ class StackedTableView(AutoFilterCopyPasteTableView):
     def _clear_filters(self):
         """Clear all filters"""
         self._spine_db_editor.clear_all_filters()
-        for i in range(self._EXPECTED_COLUMN_COUNT):
-            self.model().get_auto_filter_menu(i)._clear_filter()
+        if self._MODEL_HAS_AUTO_FILTER_MENU:
+            for i in range(self._EXPECTED_COLUMN_COUNT):
+                self.model().get_auto_filter_menu(i).clear_filter()
 
     def contextMenuEvent(self, event):
         """Shows context menu."""
@@ -421,6 +422,8 @@ class WithUndoStack:
 
 
 class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
+    _MODEL_HAS_AUTO_FILTER_MENU = False
+
     def _plot_selection(self, selection, plot_widget=None):
         return
 
@@ -457,6 +460,7 @@ class ParameterValueTableViewBase(ParameterTableView):
 
 
 class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
+    _MODEL_HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return
@@ -539,6 +543,7 @@ class EntityAlternativeTableViewBase(StackedTableView):
 
 
 class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack, EntityAlternativeTableViewBase):
+    _MODEL_HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return

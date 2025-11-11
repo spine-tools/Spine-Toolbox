@@ -55,7 +55,7 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
         name_registry.register(db_map2.sa_url, "db map 2")
         menu = TabularViewDatabaseNameFilterMenu(self._parent, db_maps, "database", name_registry)
         with signal_waiter(menu.filterChanged, timeout=0.1) as waiter:
-            menu._clear_filter()
+            menu.clear_filter()
             waiter.wait()
             self.assertEqual(waiter.args, ("database", {None, "db map 1", "db map 2"}, False))
 

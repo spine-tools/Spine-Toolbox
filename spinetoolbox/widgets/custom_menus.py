@@ -219,7 +219,7 @@ class FilterMenuBase(QMenu):
 
     def connect_signals(self):
         self.aboutToShow.connect(self._check_filter)
-        self._remove_filter.triggered.connect(self._clear_filter)
+        self._remove_filter.triggered.connect(self.clear_filter)
         self._filter.okPressed.connect(self._change_filter)
         self._filter.cancelPressed.connect(self.hide)
 
@@ -231,7 +231,7 @@ class FilterMenuBase(QMenu):
         self._filter._filter_model.remove_items(items)
         self._filter.save_state()
 
-    def _clear_filter(self):
+    def clear_filter(self):
         self._filter.clear_filter()
         self._change_filter()
 
