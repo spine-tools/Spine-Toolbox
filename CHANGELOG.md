@@ -3,7 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.4]
 
 ### Added
 
@@ -13,19 +13,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   However, new entities cannot currently be added from the table.
 - Importer Specification editor has a new button **Remove unavailable tables** that removes source tables
   which are not found in the input source.
-- Source tables can now also be removed with the **Delete** action found in the right-click context menu.
+- Source tables can now be removed with the **Delete** action found in the right-click context menu.
   The action removes all selected items except the ones that are found in the source.
-  Existing tables can be unchecked to exclude them.
+  As always, tables that cannot be deleted can be unchecked to exclude them.
 
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.10.3]
 
