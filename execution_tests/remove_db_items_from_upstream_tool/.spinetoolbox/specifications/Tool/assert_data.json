@@ -1,0 +1,13 @@
+{
+    "name": "Assert data",
+    "tooltype": "python",
+    "includes": [
+        "assert_data.py"
+    ],
+    "description": "Checks that a Spine database does not contain orphaned parameter value records.",
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [],
+    "cmdline_args": [],
+    "includes_main_path": "../../.."
+}
