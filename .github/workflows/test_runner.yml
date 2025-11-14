@@ -10,6 +10,8 @@ on:
       - "requirements.txt"
       - "pyproject.toml"
       - "execution_tests/**"
+    branches-ignore:
+      - "release"
 
 jobs:
   call-unit-tests:
