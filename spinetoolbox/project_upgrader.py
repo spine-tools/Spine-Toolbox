@@ -28,7 +28,6 @@ class ProjectUpgrader:
 
     def __init__(self, toolbox):
         """
-
         Args:
             toolbox (ToolboxUI): App main window instance
         """
@@ -575,6 +574,34 @@ class ProjectUpgrader:
         """
         new = copy.deepcopy(old)
         new["project"]["version"] = 13
+        return new
+
+    @staticmethod
+    def upgrade_v13_to_v14(old: dict) -> dict:
+        """Upgrades version 13 project dictionary to version 14.
+
+        Changes:
+
+            1. Serialized project settings, items and connections now have their own internal version numbers.
+
+            Serialization and deserialization have now been moved to Pydantic-based solution
+            where Pydantic models handle upgrade to newer versions.
+
+        Args:
+            old: Version 13 project dictionary
+
+        Returns:
+            Version 14 project dictionary
+        """
+        new = copy.deepcopy(old)
+        new["project"]["version"] = 14
+        new["project"]["settings"]["version"] = 1
+        for connection in new["project"]["connections"]:
+            connection["version"] = 1
+        for jump in new["project"]["jumps"]:
+            jump["version"] = 1
+        for item in new["project"]["items"].values():
+            item["version"] = 1
         return new
 
     @staticmethod
