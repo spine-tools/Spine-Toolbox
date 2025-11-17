@@ -11,42 +11,53 @@
 ######################################################################################################################
 
 """Contains base classes for project items and item factories."""
+from __future__ import annotations
+from typing import TYPE_CHECKING, Type
+from PySide6.QtCore import QModelIndex
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QWidget
+from spine_engine.project_item.project_item_specification import ProjectItemSpecification
+from ..project import SpineToolboxProject
+from ..project_item_icon import ProjectItemIcon
+from ..widgets.add_project_item_widget import AddProjectItemWidget
+from ..widgets.custom_menus import ItemSpecificationMenu
+from ..widgets.properties_widget import PropertiesWidgetBase
+from .project_item import ProjectItem
+from .specification_editor_window import SpecificationEditorWindowBase
+
+if TYPE_CHECKING:
+    from ..ui_main import ToolboxUI
 
 
 class ProjectItemFactory:
     """Class for project item factories."""
 
     @staticmethod
-    def item_class():
+    def item_class() -> Type[ProjectItem]:
         """
         Returns the project item's class.
 
         Returns:
-            type: item's class
+            item's class
         """
         raise NotImplementedError()
 
     @staticmethod
-    def is_deprecated():
+    def is_deprecated() -> bool:
         """Queries if item is deprecated.
 
         Returns:
-            bool: True if item is deprecated, False otherwise
+            True if item is deprecated, False otherwise
         """
         return False
 
     @staticmethod
-    def icon():
-        """
-        Returns the icon resource path.
-
-        Returns:
-            str
-        """
+    def icon() -> str:
+        """Returns the icon resource path."""
         raise NotImplementedError()
 
     @staticmethod
-    def icon_color():
+    def icon_color() -> QColor:
         """
         Returns the icon color.
 
@@ -56,97 +67,95 @@ class ProjectItemFactory:
         raise NotImplementedError()
 
     @staticmethod
-    def make_add_item_widget(toolbox, x, y, specification):
+    def make_add_item_widget(toolbox: ToolboxUI, x: float, y: float, specification: str) -> AddProjectItemWidget:
         """
         Returns an appropriate Add project item widget.
 
         Args:
-            toolbox (ToolboxUI): the main window
-            x, y (int): Icon coordinates
-            specification (ProjectItemSpecification): item's specification
+            toolbox: the main window
+            x: Icon's horizontal coordinate.
+            y: Icon's vertical coordinate.
+            specification: The name of optionally selected specification.
 
         Returns:
-            QWidget
+            Add item widget.
         """
         raise NotImplementedError()
 
     @staticmethod
-    def make_icon(toolbox):
-        """
-        Returns a ProjectItemIcon to use with given toolbox, for given project item.
-
-        Args:
-            toolbox (ToolboxUI)
-
-        Returns:
-            ProjectItemIcon: item's icon
-        """
+    def make_icon(toolbox: ToolboxUI) -> ProjectItemIcon:
+        """Returns a ProjectItemIcon to use with given toolbox, for given project item."""
         raise NotImplementedError()
 
     @staticmethod
-    def make_item(name, item_dict, toolbox, project):
+    def make_item(name: str, item_dict: dict, toolbox: ToolboxUI, project: SpineToolboxProject) -> ProjectItem:
         """
         Returns a project item constructed from the given ``item_dict``.
 
         Args:
-            name (str): item's name
-            item_dict (dict): serialized project item
-            toolbox (ToolboxUI): Toolbox main window
-            project (SpineToolboxProject): the project the item belongs to
+            name: item's name
+            item_dict: serialized project item
+            toolbox: Toolbox main window
+            project: the project the item belongs to
+
         Returns:
-            ProjectItem
+            Deserialized project item.
         """
         raise NotImplementedError()
 
     @staticmethod
-    def make_properties_widget(toolbox):
+    def make_properties_widget(toolbox: ToolboxUI) -> PropertiesWidgetBase:
         """
         Creates the item's properties tab widget.
 
         Returns:
-            QWidget: item's properties tab widget
+            Item's properties tab widget.
         """
         raise NotImplementedError()
 
     @staticmethod
-    def make_specification_menu(parent, index):
+    def make_specification_menu(parent: QWidget, index: QModelIndex) -> ItemSpecificationMenu:
         """
         Creates item specification's context menu.
 
         Subclasses that do not support specifications can still raise :class:`NotImplementedError`.
 
         Args:
-            parent (QWidget): menu's parent widget
-            index (QModelIndex): an index from specification model
+            parent: menu's parent widget
+            index: an index from specification model
         Returns:
-            ItemSpecificationMenu: specification's context menu
+            specification's context menu
         """
         raise NotImplementedError()
 
     @staticmethod
-    def make_specification_editor(toolbox, specification=None, item=None, **kwargs):
+    def make_specification_editor(
+        toolbox: ToolboxUI,
+        specification: ProjectItemSpecification | None = None,
+        item: ProjectItem | None = None,
+        **kwargs,
+    ) -> SpecificationEditorWindowBase:
         """
         Creates the item's specification widget.
 
         Subclasses that do not support specifications can still raise :class:`NotImplementedError`.
 
         Args:
-            toolbox (ToolboxUI): Toolbox main window
-            specification (ProjectItemSpecification, optional): a specification to show in the widget or None for
-                a fresh start
-            item (ProjectItem, optional): a project item. If the specification is accepted, it is also set for this item
+            toolbox: Toolbox main window
+            specification: a specification to show in the widget or None for a fresh start
+            item: a project item. If the specification is accepted, it is also set for this item
             **kwargs: parameters passed to the specification widget
         Returns:
-            QWidget: item's specification widget
+            item's specification widget
         """
         raise NotImplementedError()
 
     @staticmethod
-    def repair_specification(toolbox, specification):
+    def repair_specification(toolbox: ToolboxUI, specification: ProjectItemSpecification) -> None:
         """Called right after a spec is added to the project. Finds if there's something wrong with the spec
         and proposes actions to fix it with help from toolbox.
 
         Args:
-            toolbox (ToolboxUI): Toolbox main window
-            specification (ProjectItemSpecification): a specification to check
+            toolbox: Toolbox main window
+            specification: a specification to check
         """

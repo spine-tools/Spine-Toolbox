@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a class for the main window of Spine Toolbox."""
+from collections.abc import Callable
 import json
 import locale
 import logging
@@ -50,6 +51,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
+from spine_engine.project_item.project_item_specification_factory import ProjectItemSpecificationFactory
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
@@ -75,7 +77,7 @@ from .helpers import (
     unique_name,
 )
 from .kernel_fetcher import KernelFetcher
-from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
+from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
 from .load_project_items import load_project_items
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .mvcmodels.project_item_specification_models import FilteredSpecificationModel, ProjectItemSpecificationModel
@@ -93,6 +95,8 @@ from .project_commands import (
     SpineToolboxCommand,
 )
 from .project_item.logging_connection import LoggingConnection, LoggingJump
+from .project_item.project_item import ProjectItem
+from .project_item.project_item_factory import ProjectItemFactory
 from .project_item_icon import ProjectItemIcon
 from .project_settings import ProjectSettings
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -109,6 +113,7 @@ from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.open_project_dialog import OpenProjectDialog
 from .widgets.persistent_console_widget import ConsoleWindow, PersistentConsoleWidget
 from .widgets.project_settings_dialog import ProjectSettingsDialog
+from .widgets.properties_widget import PropertiesWidgetBase
 from .widgets.settings_widget import SettingsWidget
 
 
@@ -157,25 +162,25 @@ class ToolboxUI(QMainWindow):
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self._item_properties_uis = {}
-        self.item_factories = {}  # maps item types to `ProjectItemFactory` objects
-        self._item_specification_factories = {}  # maps item types to `ProjectItemSpecificationFactory` objects
-        self._project = None
-        self.specification_model = None
-        self.filtered_spec_factory_models = {}
+        self._item_properties_uis: dict[str, PropertiesWidgetBase] = {}
+        self.item_factories: dict[str, ProjectItemFactory] = {}
+        self._item_specification_factories: dict[str, ProjectItemSpecificationFactory] = {}
+        self._project: SpineToolboxProject | None = None
+        self.specification_model: ProjectItemSpecificationModel | None = None
+        self.filtered_spec_factory_models: dict[str, FilteredSpecificationModel] = {}
         self.show_datetime = self.update_datetime()
-        self.active_project_item = None
-        self.active_link_item = None
-        self._selected_item_names = set()
+        self.active_project_item: ProjectItem | None = None
+        self.active_link_item: JumpOrLink | None = None
+        self._selected_item_names: set[str] = set()
         self.execution_in_progress = False
-        self._anchor_callbacks = {}
+        self._anchor_callbacks: dict[str, Callable[[], None]] = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
-        self.settings_form = None
-        self.add_project_item_form = None
+        self.settings_form: SettingsWidget | None = None
+        self.add_project_item_form: PropertiesWidgetBase | None = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         # Make and initialize toolbars
@@ -185,11 +190,11 @@ class ToolboxUI(QMainWindow):
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
-        self._item_consoles = {}  # Mapping of ProjectItem to console
-        self._filter_item_consoles = {}  # (ProjectItem, {f_id_0: console_0, f_id_1:console_1, ... , f_id_n:console_n})
-        self._persistent_consoles = {}  # Mapping of key to PersistentConsoleWidget
-        self._jupyter_consoles = {}  # Mapping of connection file to JupyterConsoleWidget
-        self._current_execution_keys = {}
+        self._item_consoles: dict[ProjectItem, PersistentConsoleWidget] = {}
+        self._filter_item_consoles: dict[ProjectItem, dict[str, JupyterConsoleWidget]] = {}
+        self._persistent_consoles: dict[str, PersistentConsoleWidget] = {}
+        self._jupyter_consoles: dict[str, JupyterConsoleWidget] = {}
+        self._current_execution_keys: dict[ProjectItem, str] = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -197,7 +202,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.setToolTipsVisible(True)
         self.ui.menuConsoles.setToolTipsVisible(True)
         self._add_execute_actions()
-        self.kernel_fetcher = None
+        self.kernel_fetcher: KernelFetcher | None = None
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -1413,7 +1418,7 @@ class ToolboxUI(QMainWindow):
         else:
             self.ui.tabWidget_item_properties.tabBar().show()
 
-    def update_datetime(self):
+    def update_datetime(self) -> bool:
         """Returns a boolean, which determines whether
         date and time is prepended to every Event Log message."""
         d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
