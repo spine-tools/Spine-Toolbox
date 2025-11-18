@@ -184,10 +184,6 @@ class EntityTreeView(CopyPasteTreeView):
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Classifies selection by item type and emits signal."""
-        if self._spine_db_editor.clear_tree_selections:
-            self._spine_db_editor.clear_tree_selections = False
-            self._spine_db_editor._clear_all_other_selections(self)
-        self._spine_db_editor.refresh_copy_paste_actions()
         self._refresh_selected_indexes()
         self.tree_selection_changed.emit(self._selected_indexes)
 

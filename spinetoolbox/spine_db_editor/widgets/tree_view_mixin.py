@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
-from PySide6.QtCore import QEvent, QModelIndex, Qt, Slot
+from PySide6.QtCore import QEvent, QItemSelection, QModelIndex, Qt, Slot
 from PySide6.QtGui import QMouseEvent
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
@@ -28,6 +28,7 @@ from .add_items_dialogs import (
     ManageElementsDialog,
     ManageMembersDialog,
 )
+from .custom_qtreeview import AlternativeTreeView, EntityTreeView, ScenarioTreeView
 from .edit_or_remove_items_dialogs import (
     EditEntitiesDialog,
     EditEntityClassesDialog,
@@ -66,11 +67,19 @@ class TreeViewMixin:
         """Connects the signals"""
         super().connect_signals()
         self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed)
+        self.ui.treeView_entity.selectionModel().selectionChanged.connect(self._handle_tree_selection_changed)
         self.ui.alternative_tree_view.alternative_selection_changed.connect(self._handle_alternative_selection_changed)
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
         self.entity_alternative_model.dataChanged.connect(self.build_graph)
+
+    @Slot(QItemSelection, QItemSelection)
+    def _handle_tree_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self.refresh_copy_paste_actions()
+        if self.clear_tree_selections:
+            self.clear_tree_selections = False
+            self._clear_all_other_selections(self.ui.treeView_entity)
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
@@ -143,7 +152,7 @@ class TreeViewMixin:
         )
         return new_event
 
-    def _clear_all_other_selections(self, current):
+    def _clear_all_other_selections(self, current: EntityTreeView | ScenarioTreeView | AlternativeTreeView) -> None:
         """Clears all selections from other tree views except from the current one.
 
         Args:
