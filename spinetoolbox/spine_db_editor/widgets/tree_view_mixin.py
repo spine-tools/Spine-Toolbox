@@ -59,7 +59,6 @@ class TreeViewMixin:
             view.header().setResizeContentsPrecision(self.visible_rows)
         self.clear_tree_selections = True
         # Filter caches
-        self._filter_entity_ids = {}  # Entity ids from entity selections
         self._filter_alternative_ids = {}  # Alternative ids
         self._filter_scenario_ids = {}  # Scenario ids by db_map. Each scenario id maps to alternatives sorted by rank.
 
@@ -83,13 +82,6 @@ class TreeViewMixin:
 
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
-        entity_indexes = set(selected_indexes.get("entity", {}).keys())
-        entity_indexes |= {
-            parent
-            for parent in (i.parent() for i in entity_indexes)
-            if self.entity_tree_model.item_from_index(parent).item_type == "entity"
-        }
-        self._filter_entity_ids = self.db_mngr.db_map_class_ids(group_items_by_db_map(entity_indexes))
         # View specific stuff:
         self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())

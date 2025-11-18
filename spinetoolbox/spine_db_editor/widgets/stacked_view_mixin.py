@@ -196,7 +196,6 @@ class StackedViewMixin:
     def clear_all_filters(self):
         for model in self._all_stacked_models:
             model.clear_auto_filter()
-        self._filter_entity_ids = {}
         self._filter_alternative_ids = {}
         self._filter_scenario_ids = {}
         self._reset_filters()
@@ -230,11 +229,6 @@ class StackedViewMixin:
     @Slot(list)
     def _handle_graph_selection_changed(self, selected_items):
         """Resets filter according to graph selection."""
-        active_items = {}
-        for x in selected_items:
-            for db_map in x.db_maps:
-                active_items.setdefault(db_map, []).extend(x.db_items(db_map))
-        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
         self._reset_filters()
 
     @Slot(QModelIndex, int, int)
