@@ -148,13 +148,12 @@ class SpineDBWorker(QObject):
         with self._db_mngr.get_lock(self._db_map):
             has_external_commits = self._db_map.has_external_commits()
         if not has_external_commits or fully_fetched:
-            if self._iterate_mapping(parent):
-                # Something fetched from mapping
+            something_fetched = self._iterate_mapping(parent)
+            if fully_fetched:
+                parent.set_fetched(self._db_map, True)
                 return
-        if fully_fetched:
-            # Nothing left in the DB
-            parent.set_fetched(self._db_map, True)
-            return
+            if something_fetched:
+                return
         # Query the DB
         if item_type in self._parents_fetching:
             self._parents_fetching[item_type].add(parent)

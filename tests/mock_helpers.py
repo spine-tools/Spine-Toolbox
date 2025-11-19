@@ -389,7 +389,7 @@ def assert_table_model_data_pytest(
 def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        QApplication.processEvents()
 
 
 class FakeDataStore:
