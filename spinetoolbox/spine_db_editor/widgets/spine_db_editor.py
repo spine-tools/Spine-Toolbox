@@ -1010,8 +1010,12 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
     def connect_signals(self):
         super().connect_signals()
         self._metadata_editor.connect_signals(self.ui)
+        self.ui.graphicsView.graph_selection_changed.connect(self._filter_selection.update_secondary_entity_selection)
         self._filter_selection.entity_selection_changed.connect(self._set_entity_selection_filter_for_stacked_tables)
         self._filter_selection.entity_selection_changed.connect(self._set_entity_selection_filter_for_graph)
+        self._filter_selection.secondary_entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_stacked_tables
+        )
         self._item_metadata_editor.connect_signals(self.ui)
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)

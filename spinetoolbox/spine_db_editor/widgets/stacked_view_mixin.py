@@ -96,7 +96,6 @@ class StackedViewMixin:
         """Connects signals to slots."""
         super().connect_signals()
         self.ui.treeView_entity.model().dataChanged.connect(self._update_empty_rows)
-        self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
         empty_model_item_types = ("parameter_definition", "parameter_value", "entity_alternative")
         for item_type in empty_model_item_types:
             table_view = getattr(self.ui, "tableView_" + item_type)
@@ -226,11 +225,6 @@ class StackedViewMixin:
             all_alternatives.setdefault(db_map, set()).update(alternatives)
         return all_alternatives
 
-    @Slot(list)
-    def _handle_graph_selection_changed(self, selected_items):
-        """Resets filter according to graph selection."""
-        self._reset_filters()
-
     @Slot(QModelIndex, int, int)
     def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
         self._clear_table_related_caches()
@@ -243,7 +237,6 @@ class StackedViewMixin:
 
     def _clear_table_related_caches(self) -> None:
         self._entity_ids_with_visible_values = None
-        self._graph_build_timer.start()
 
     def _recalculate_entity_ids_with_visible_values(self) -> None:
         entity_ids = {}

@@ -10,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from collections.abc import Iterable, Iterator
+from copy import deepcopy
 from typing import TypeAlias
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QObject, Signal, Slot
 from spinedb_api import Asterisk, DatabaseMapping
@@ -22,13 +23,15 @@ EntitySelection: TypeAlias = dict[DatabaseMapping, dict[TempId, set[TempId] | As
 
 class FilterSelection(QObject):
     entity_selection_changed = Signal(object)
+    secondary_entity_selection_changed = Signal(object)
 
-    def __init__(self, entity_tree_selection_model: QItemSelectionModel, parent: QObject):
+    def __init__(self, entity_tree_selection_model: QItemSelectionModel, parent: QObject | None):
         super().__init__(parent)
         self._entity_tree_selection_model = entity_tree_selection_model
         self._entity_tree_selection_model.selectionChanged.connect(self._update_class_or_entity_selection)
         self._alternatives: dict[DatabaseMapping, set[TempId]] = {}
         self._scenario_alternatives: dict[DatabaseMapping, list[list[TempId]]] = {}
+        self._current_entity_selection: EntitySelection = Asterisk
 
     @Slot(QItemSelection, QItemSelection)
     def _update_class_or_entity_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
@@ -44,18 +47,21 @@ class FilterSelection(QObject):
                     class_ids.setdefault(db_map, set()).add(item_id)
                 else:
                     entity_ids.setdefault(db_map, set()).add(item_id)
-        entity_selection = _collect_entity_selection_from_ids(class_ids, entity_ids)
-        self.entity_selection_changed.emit(entity_selection)
+        self._current_entity_selection = _collect_entity_selection_from_ids(class_ids, entity_ids)
+        self.entity_selection_changed.emit(self._current_entity_selection)
 
-    def _select_all_entity_classes(self) -> EntitySelection:
-        model = self._entity_tree_selection_model.model()
-        root_index = model.index(0, 0)
+    @Slot(object)
+    def update_secondary_entity_selection(self, entity_ids: dict[DatabaseMapping, list[TempId]]) -> None:
+        if not entity_ids:
+            self.secondary_entity_selection_changed.emit(self._current_entity_selection)
+            return
         entity_selection: EntitySelection = {}
-        for class_row in range(model.rowCount(root_index)):
-            db_map_ids = model.index(class_row, 0, root_index).data(ITEM_ID_ROLE)
-            for db_map, class_id in db_map_ids.items():
-                entity_selection.setdefault(db_map, {})[class_id] = Asterisk
-        return entity_selection
+        for db_map, ids in entity_ids.items():
+            mapped_table = db_map.mapped_table("entity")
+            for entity_id in ids:
+                class_id = mapped_table[entity_id]["class_id"]
+                entity_selection.setdefault(db_map, {}).setdefault(class_id, set()).add(entity_id)
+        self.secondary_entity_selection_changed.emit(entity_selection)
 
 
 def _collect_entity_selection_from_ids(

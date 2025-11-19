@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QObject, Qt
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from spinedb_api import Asterisk, DatabaseMapping
@@ -172,7 +173,7 @@ class TestFilterSelection:
     def test_root_item_selected_means_all_entities_selected(self):
         db_map = DatabaseMapping("sqlite://", create=True)
         with db_map:
-            entity_class = db_map.add_entity_class(name="Gadget")
+            db_map.add_entity_class(name="Gadget")
         with q_object(QObject()) as parent:
             model = QStandardItemModel(parent)
             _build_entity_tree_model([db_map], model)
@@ -185,6 +186,60 @@ class TestFilterSelection:
                 )
                 waiter.wait()
                 assert waiter.args == (Asterisk,)
+
+    def test_simplest_secondary_selection_case(self):
+        mock_selection_model = mock.MagicMock()
+        with q_object(FilterSelection(mock_selection_model, parent=None)) as filter_selection:
+            with signal_waiter(filter_selection.secondary_entity_selection_changed) as waiter:
+                filter_selection.update_secondary_entity_selection({})
+                waiter.wait()
+                assert waiter.args == (Asterisk,)
+
+    def test_empty_secondary_entity_selection_results_in_primary_selection(self):
+        db_map = DatabaseMapping("sqlite://", create=True)
+        with db_map:
+            entity_class = db_map.add_entity_class(name="Gadget")
+            entity = db_map.add_entity(entity_class_name=entity_class["name"], name="wall_clock")
+        with q_object(QObject()) as parent:
+            model = QStandardItemModel(parent)
+            _build_entity_tree_model([db_map], model)
+            selection_model = QItemSelectionModel(model, parent)
+            filter_selection = FilterSelection(selection_model, parent)
+            expected_selection = {db_map: {entity_class["id"]: {entity["id"]}}}
+            with signal_waiter(filter_selection.entity_selection_changed) as waiter:
+                selection_model.select(
+                    _find_child_item("wall_clock", model.item(0).child(0)).index(),
+                    QItemSelectionModel.SelectionFlag.Select,
+                )
+                waiter.wait()
+                assert waiter.args == (expected_selection,)
+            with signal_waiter(filter_selection.secondary_entity_selection_changed) as waiter:
+                filter_selection.update_secondary_entity_selection({})
+                waiter.wait()
+                assert waiter.args == (expected_selection,)
+
+    def test_update_secondary_entity_selection(self):
+        mock_selection_model = mock.MagicMock()
+        with DatabaseMapping("sqlite://", create=True) as db_map1:
+            entity_class1 = db_map1.add_entity_class(name="Class1")
+            selected_entity1 = db_map1.add_entity(name="e1", entity_class_name="Class1")
+            db_map1.add_entity(name="e2", entity_class_name="Class1")
+        with DatabaseMapping("sqlite://", create=True) as db_map2:
+            entity_class2 = db_map2.add_entity_class(name="Class1")
+            selected_entity2 = db_map2.add_entity(name="e1", entity_class_name="Class1")
+            db_map2.add_entity_class(name="Class2")
+            db_map2.add_entity(name="e2", entity_class_name="Class2")
+        with q_object(FilterSelection(mock_selection_model, parent=None)) as filter_selection:
+            entity_ids = {db_map1: [selected_entity1["id"]], db_map2: [selected_entity2["id"]]}
+            with signal_waiter(filter_selection.secondary_entity_selection_changed) as waiter:
+                filter_selection.update_secondary_entity_selection(entity_ids)
+                waiter.wait()
+                assert waiter.args == (
+                    {
+                        db_map1: {entity_class1["id"]: {selected_entity1["id"]}},
+                        db_map2: {entity_class2["id"]: {selected_entity2["id"]}},
+                    },
+                )
 
 
 def _find_child_item(name, item):
