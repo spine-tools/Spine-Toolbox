@@ -286,8 +286,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(class_index.data(), "a_relationship_class")
         view._context_item = model.item_from_index(class_index)
         self._add_multidimensional_entity("a_relationship", ["an_entity"])
-        if model.canFetchMore(class_index):
-            model.fetchMore(class_index)
+        while model.rowCount(class_index) != 1:
             QApplication.processEvents()
         self.assertEqual(model.rowCount(class_index), 1)
         entity_index = model.index(0, 0, class_index)

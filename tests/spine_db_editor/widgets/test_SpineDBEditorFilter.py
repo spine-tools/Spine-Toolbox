@@ -12,9 +12,10 @@
 
 """Unit tests for filtering in Database editor."""
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtCore import QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtGui import QColor, QPen
 from PySide6.QtWidgets import QApplication
+from tests.mock_helpers import fetch_model
 from tests.spine_db_editor.widgets.helpers import select_item_with_index
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
@@ -191,9 +192,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
     def _create_indexes(self):
         """Gets the indexes for every item in entity, alternative and scenario trees in the database"""
         self.indexes = {
-            "empty_space_entity": self.spine_db_editor.entity_tree_model.createIndex(-1, -1),
-            "empty_space_alternative": self.spine_db_editor.alternative_model.createIndex(-1, -1),
-            "empty_space_scenario": self.spine_db_editor.scenario_model.createIndex(-1, -1),
+            "empty_space_entity": QModelIndex(),
+            "empty_space_alternative": QModelIndex(),
+            "empty_space_scenario": QModelIndex(),
         }
         model = self.spine_db_editor.entity_tree_model
         root_item = model.root_item
@@ -201,8 +202,7 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         for entity_class in root_item.children:
             self.indexes[f"entity_class_{entity_class.name}"] = model.index_from_item(entity_class)
             class_index = model.index(2, 0, model.index_from_item(root_item))
-            while model.canFetchMore(class_index):
-                model.fetchMore(class_index)
+            while model.rowCount(class_index) == 0:
                 QApplication.processEvents()
             for entity in entity_class.children:
                 self.indexes[f"entity_{entity.name}"] = model.index_from_item(entity)
@@ -295,10 +295,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self.spine_db_editor.parameter_value_model,
             self.spine_db_editor.parameter_definition_model,
             self.spine_db_editor.entity_alternative_model,
+            self.spine_db_editor.entity_model,
         )
         for model in models:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
+            fetch_model(model)
 
     def _refresh_graph(self):
         """Rebuilds and refreshes the graph"""

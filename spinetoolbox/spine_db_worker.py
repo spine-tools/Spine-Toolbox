@@ -115,18 +115,18 @@ class SpineDBWorker(QObject):
             return False
         return added_count > 0
 
-    def can_fetch_more(self, parent):
+    def can_fetch_more(self, parent: FetchParent) -> bool:
         """Returns whether more data can be fetched for parent.
         Also, registers the parent to notify it of any relevant DB modifications later on.
 
         Args:
-            parent (FetchParent): fetch parent
+            parent: fetch parent
 
         Returns:
-            bool: True if more data is available, False otherwise
+            True if more data is available, False otherwise
         """
         self.register_fetch_parent(parent)
-        return not parent.is_fetched
+        return not parent.is_fetched(self._db_map)
 
     def fetch_more(self, parent):
         """Fetches items from the database.
@@ -148,13 +148,12 @@ class SpineDBWorker(QObject):
         with self._db_mngr.get_lock(self._db_map):
             has_external_commits = self._db_map.has_external_commits()
         if not has_external_commits or fully_fetched:
-            if self._iterate_mapping(parent):
-                # Something fetched from mapping
+            something_fetched = self._iterate_mapping(parent)
+            if fully_fetched:
+                parent.set_fetched(self._db_map, True)
                 return
-        if fully_fetched:
-            # Nothing left in the DB
-            parent.set_fetched(True)
-            return
+            if something_fetched:
+                return
         # Query the DB
         if item_type in self._parents_fetching:
             self._parents_fetching[item_type].add(parent)
@@ -203,7 +202,7 @@ class SpineDBWorker(QObject):
                     if not parent.is_obsolete:
                         parent.set_obsolete(True)
             while any(
-                parent.is_busy and not parent.is_fetched
+                parent.is_busy and not parent.is_fetched(self._db_map)
                 for parents in self._parents_by_type.values()
                 for parent in parents
             ):

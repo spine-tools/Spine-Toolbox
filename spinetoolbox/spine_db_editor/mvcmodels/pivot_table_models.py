@@ -375,9 +375,8 @@ class PivotTableModelBase(QAbstractTableModel):
             return False
         result = False
         for fetch_parent in self._fetch_parents():
-            if not fetch_parent.is_fetched:
-                for db_map in self._parent.db_maps:
-                    result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
+            for db_map in self._parent.db_maps:
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):

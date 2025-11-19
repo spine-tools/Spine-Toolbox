@@ -52,7 +52,7 @@ class FetchParent(QObject):
             DatabaseMapping, list[tuple[Callable[[DBMapMixedItems], None], MappedItemBase | PublicItem]]
         ] = {}
         self._obsolete = False
-        self._fetched = False
+        self._fetched: dict[DatabaseMapping, bool] = {}
         self._busy = False
         self._position: dict[DatabaseMapping, int] = {}
         self._timer = QTimer()
@@ -85,7 +85,7 @@ class FetchParent(QObject):
         self._remove_item_callbacks.clear()
         self._timer.stop()
         self._changes_by_db_map.clear()
-        self._fetched = False
+        self._fetched.clear()
         self._busy = False
         self._position.clear()
 
@@ -200,19 +200,19 @@ class FetchParent(QObject):
             self.set_busy(False)
         self._obsolete = obsolete
 
-    @property
-    def is_fetched(self) -> bool:
-        return self._fetched
+    def is_fetched(self, db_map: DatabaseMapping) -> bool:
+        return self._fetched.get(db_map, False)
 
-    def set_fetched(self, fetched: bool) -> None:
+    def set_fetched(self, db_map: DatabaseMapping, fetched: bool) -> None:
         """Sets the fetched status.
 
         Args:
+            db_map: Database mapping where fetch status has changed.
             fetched: whether parent has been fetched completely
         """
         if fetched:
             self.set_busy(False)
-        self._fetched = fetched
+        self._fetched[db_map] = fetched
 
     @property
     def is_busy(self) -> bool:

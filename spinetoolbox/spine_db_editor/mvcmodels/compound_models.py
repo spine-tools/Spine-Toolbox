@@ -108,7 +108,7 @@ class CompoundStackedModel(CompoundTableModel):
         raise NotImplementedError()
 
     def canFetchMore(self, _parent):
-        return bool(self._db_maps) and not self._fetch_parent.is_fetched
+        return bool(self._db_maps) and any(not self._fetch_parent.is_fetched(db_map) for db_map in self._db_maps)
 
     def fetchMore(self, _parent):
         for db_map in self._db_maps:
