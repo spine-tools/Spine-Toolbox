@@ -17,14 +17,13 @@ from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
-from spinedb_api.helpers import AsteriskType
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, ITEM_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...parameter_type_validation import ValidationKey
-from ..filter_selection import EntitySelection
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
+from ..selection_for_filtering import AlternativeSelection, EntitySelection
 from .colors import FIXED_FIELD_COLOR
 from .utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
@@ -280,10 +279,11 @@ class FilterEntityAlternativeMixin:
         self._filter_entity_ids = entity_ids
         return True
 
-    def set_filter_alternative_ids(
-        self, db_map_alternative_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]
-    ) -> bool:
-        alternative_ids = db_map_alternative_ids.get(self.db_map, set())
+    def set_filter_alternative_ids(self, alternative_selection: AlternativeSelection) -> bool:
+        if alternative_selection is Asterisk:
+            alternative_ids = Asterisk
+        else:
+            alternative_ids = alternative_selection.get(self.db_map, set())
         if self._filter_alternative_ids == alternative_ids:
             return False
         self._filter_alternative_ids = alternative_ids
@@ -306,10 +306,10 @@ class FilterEntityAlternativeMixin:
 
     def _alternative_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the alternative filter."""
-        if not self._filter_alternative_ids:
+        if self._filter_alternative_ids is Asterisk:
             return True
-        alternative_id = item.get("alternative_id")
-        return alternative_id is None or alternative_id in self._filter_alternative_ids
+        alternative_id = item["alternative_id"]
+        return alternative_id in self._filter_alternative_ids
 
 
 class ParameterMixin:

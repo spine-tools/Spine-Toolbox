@@ -27,7 +27,7 @@ from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.shared import ITEM_ID_ROLE
 from ...spine_db_manager import SpineDBManager
-from ..filter_selection import EntitySelection
+from ..selection_for_filtering import AlternativeSelection, EntitySelection
 from ..widgets.custom_menus import AutoFilterMenu
 from .compound_table_model import CompoundTableModel
 from .single_models import (
@@ -592,12 +592,12 @@ class FilterEntityAlternativeMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._entity_selection: EntitySelection = Asterisk
-        self._filter_alternative_ids = {}
+        self._alternative_selection: AlternativeSelection = Asterisk
 
     def init_model(self):
         super().init_model()
         self._entity_selection = Asterisk
-        self._filter_alternative_ids = {}
+        self._alternative_selection = Asterisk
 
     def set_entity_selection_for_filtering(self, entity_selection: EntitySelection) -> None:
         self._entity_selection = entity_selection
@@ -608,18 +608,20 @@ class FilterEntityAlternativeMixin:
             self._filter_timer.start()
         super().set_entity_selection_for_filtering(entity_selection)
 
-    def set_filter_alternative_ids(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
-        self._filter_alternative_ids = alternative_ids
+    def set_alternative_selection_for_filtering(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
+        self._alternative_selection = alternative_ids
+        should_invalidate_filter = False
         for model in self.sub_models:
-            if model.set_filter_alternative_ids(alternative_ids):
-                self._filter_timer.start()
+            should_invalidate_filter |= model.set_filter_alternative_ids(alternative_ids)
+        if should_invalidate_filter:
+            self._filter_timer.start()
 
     def _create_single_model(
         self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
     ) -> SingleModelBase:
         model = super()._create_single_model(db_map, entity_class_id, committed)
         model.set_filter_entity_ids(self._entity_selection)
-        model.set_filter_alternative_ids(self._filter_alternative_ids)
+        model.set_filter_alternative_ids(self._alternative_selection)
         return model
 
 

@@ -14,9 +14,11 @@
 from typing import ClassVar
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon
+from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
-from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
+from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 
 
 class StandardTreeItem(TreeItem):
@@ -240,14 +242,16 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
             return QIcon(":/symbols/Spine_symbol.png")
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return self._db_name_registry.display_name(self.db_map.sa_url)
+        if role == DB_MAP_ROLE:
+            return self.db_map
 
 
 class LeafItem(StandardTreeItem):
-    def __init__(self, model, identifier=None):
+    def __init__(self, model: MinimalTreeModel, identifier: TempId | None = None):
         """
         Args:
-            model (MinimalTreeModel)
-            identifier (int, optional): item's database id
+            model: The model the item belongs to.
+            identifier: Item's id.
         """
         super().__init__(model)
         self._id = identifier
@@ -287,6 +291,8 @@ class LeafItem(StandardTreeItem):
             if data is None:
                 data = ""
             return data
+        if role == ITEM_ID_ROLE:
+            return self._id
         return super().data(column, role)
 
     def set_data(self, column, value, role=Qt.ItemDataRole.EditRole):

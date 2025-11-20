@@ -327,7 +327,7 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         actual = {item.name: item._bg.pen() for item in self.spine_db_editor.entity_items}
         self.assertEqual(expected.keys(), actual.keys())
         for key, expected_pen in expected.items():
-            self.assertEqual(expected_pen.style(), actual[key].style())
+            self.assertEqual(expected_pen.style(), actual[key].style(), f"entity name: {key}")
             for i in ("red", "green", "blue"):
                 self.assertEqual(getattr(expected_pen.color(), i)(), getattr(actual[key].color(), i)())
 
@@ -417,9 +417,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             expected = {
                 "aa": self.CONFLICTED,
-                "ab": self.CONFLICTED,
+                "ab": self.ACTIVE,
                 "ba": self.PARAMETER,
-                "da": self.CONFLICTED,
+                "da": self.ACTIVE,
                 "db": self.PARAMETER,
                 "aa__ba": self.PARAMETER,
             }
@@ -500,14 +500,12 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.ACTIVE,
+                    "aa": self.CONFLICTED,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.INACTIVE,
-                    "aa__ba": self.INACTIVE,
-                    "ab__ba": self.INACTIVE,
+                    "aa__ba": self.PARAMETER,
                 }
             )
             # Select Alt3 under scen2
@@ -539,14 +537,12 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.ACTIVE,
+                    "aa": self.CONFLICTED,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.INACTIVE,
-                    "aa__ba": self.INACTIVE,
-                    "ab__ba": self.INACTIVE,
+                    "aa__ba": self.PARAMETER,
                 }
             )
 
@@ -566,14 +562,12 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.ACTIVE,
+                    "aa": self.CONFLICTED,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.INACTIVE,
-                    "aa__ba": self.INACTIVE,
-                    "ab__ba": self.INACTIVE,
+                    "aa__ba": self.PARAMETER,
                 }
             )
             # Select Alt3 under scen2
@@ -581,10 +575,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.PARAMETER,
+                    "aa": self.CONFLICTED,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
-                    "da": self.PARAMETER,
+                    "da": self.INACTIVE,
                     "db": self.PARAMETER,
                     "aa__ba": self.PARAMETER,
                 }
@@ -594,14 +588,12 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.ACTIVE,
+                    "aa": self.CONFLICTED,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.ACTIVE,
-                    "aa__ba": self.ACTIVE,
-                    "ab__ba": self.ACTIVE,
+                    "aa__ba": self.PARAMETER,
                 }
             )
 
@@ -708,6 +700,8 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 "entity_ids": set(),
             }
             self.spine_db_editor.start_connecting_entities(self.mock_db_map, entity_class, ent_item)
+            self.assertEqual(self.spine_db_editor.ui.graphicsView.entity_class, entity_class)
+            self.assertEqual(len(self.spine_db_editor.ui.graphicsView.cross_hairs_items), 4)
 
     def test_consistent_across_different_selection_order(self):
         """Tests that the graph view filter is consistent despite the selection order"""

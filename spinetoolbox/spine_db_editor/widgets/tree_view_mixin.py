@@ -58,20 +58,12 @@ class TreeViewMixin:
             view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
         self.clear_tree_selections = True
-        # Filter caches
-        self._filter_alternative_ids = {}  # Alternative ids
-        self._filter_scenario_ids = {}  # Scenario ids by db_map. Each scenario id maps to alternatives sorted by rank.
 
     def connect_signals(self):
         """Connects the signals"""
         super().connect_signals()
         self.ui.treeView_entity.tree_selection_changed.connect(self._handle_entity_tree_selection_changed)
         self.ui.treeView_entity.selectionModel().selectionChanged.connect(self._handle_tree_selection_changed)
-        self.ui.alternative_tree_view.alternative_selection_changed.connect(self._handle_alternative_selection_changed)
-        self.ui.scenario_tree_view.scenario_selection_changed.connect(
-            self._handle_scenario_alternative_selection_changed
-        )
-        self.entity_alternative_model.dataChanged.connect(self.build_graph)
 
     @Slot(QItemSelection, QItemSelection)
     def _handle_tree_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
@@ -83,26 +75,7 @@ class TreeViewMixin:
     @Slot(dict)
     def _handle_entity_tree_selection_changed(self, selected_indexes):
         # View specific stuff:
-        self._reset_filters()
         self._set_default_parameter_data(self.ui.treeView_entity.selectionModel().currentIndex())
-
-    @Slot(object)
-    def _handle_alternative_selection_changed(self, selected):
-        self._filter_alternative_ids.clear()
-        for db_map, alt_ids in selected.items():
-            if not alt_ids:
-                continue
-            self._filter_alternative_ids.setdefault(db_map, set()).update(alt_ids)
-        # View specific stuff:
-        self._reset_filters()
-        self.build_graph()
-
-    @Slot(object)
-    def _handle_scenario_alternative_selection_changed(self, selected_ids):
-        self._filter_scenario_ids = selected_ids
-        # View specific stuff:
-        self._reset_filters()
-        self.build_graph()
 
     def handle_mousepress(self, tree_view, event):
         """Overrides selection behaviour if the user has selected sticky selection in Settings.

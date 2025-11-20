@@ -422,7 +422,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
-        model.set_filter_alternative_ids({self._db_map: {not_base_alternative["id"]}})
+        model.set_alternative_selection_for_filtering({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
@@ -459,7 +459,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
-        model.set_filter_alternative_ids({self._db_map: {not_base_alternative["id"]}})
+        model.set_alternative_selection_for_filtering({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
@@ -621,7 +621,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
-        model.set_filter_alternative_ids({self._db_map: {alternative["id"]}})
+        model.set_alternative_selection_for_filtering({self._db_map: {alternative["id"]}})
         model.refresh()
         expected = [
             ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],

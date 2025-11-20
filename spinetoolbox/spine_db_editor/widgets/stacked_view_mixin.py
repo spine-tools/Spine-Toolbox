@@ -18,7 +18,6 @@ from spinedb_api.temp_id import TempId
 from ...helpers import preferred_row_height
 from ...mvcmodels.shared import ITEM_ROLE
 from ..empty_table_size_hint_provider import EmptyTableSizeHintProvider
-from ..filter_selection import EntitySelection
 from ..mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
     CompoundEntityModel,
@@ -30,6 +29,7 @@ from ..mvcmodels.empty_models import (
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
 )
+from ..selection_for_filtering import AlternativeSelection, EntitySelection
 from ..stacked_table_seam import StackedTableSeam
 from .custom_qwidgets import AddedEntitiesPopup
 from .element_name_list_editor import ElementNameListEditor
@@ -195,19 +195,9 @@ class StackedViewMixin:
     def clear_all_filters(self):
         for model in self._all_stacked_models:
             model.clear_auto_filter()
-        self._filter_alternative_ids = {}
-        self._filter_scenario_ids = {}
-        self._reset_filters()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
             tree.selectionModel().clearSelection()
-
-    def _reset_filters(self):
-        """Resets filters."""
-        # TODO: remove this
-        alternatives = self.get_all_alternatives()
-        for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_alternative_ids(alternatives)
 
     @Slot(object)
     def _set_entity_selection_filter_for_stacked_tables(self, entity_selection: EntitySelection) -> None:
@@ -215,15 +205,10 @@ class StackedViewMixin:
             model.set_entity_selection_for_filtering(entity_selection)
         self._entity_ids_with_visible_values = None
 
-    def get_all_alternatives(self):
-        """Combines alternative ids from Scenario and Alternative tree selections."""
-        all_alternatives = self._filter_alternative_ids.copy()
-        for db_map, scenarios in self._filter_scenario_ids.get("scenario", {}).items():
-            for _, alternatives in scenarios.items():
-                all_alternatives.setdefault(db_map, set()).update(alternatives)
-        for db_map, alternatives in self._filter_scenario_ids.get("scenario_alternative", {}).items():
-            all_alternatives.setdefault(db_map, set()).update(alternatives)
-        return all_alternatives
+    @Slot(object)
+    def _set_alternative_selection_filter_for_stacked_tables(self, alternative_selection: AlternativeSelection) -> None:
+        for model in (self.parameter_value_model, self.entity_alternative_model):
+            model.set_alternative_selection_for_filtering(alternative_selection)
 
     @Slot(QModelIndex, int, int)
     def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:

@@ -29,8 +29,8 @@ from spinetoolbox.helpers import DBMapPublicItems
 from ...fetch_parent import FlexibleFetchParent
 from ...helpers import busy_effect, get_open_file_name_in_last_dir, get_save_file_name_in_last_dir, remove_first
 from ...widgets.custom_qgraphicsscene import CustomGraphicsScene
-from ..filter_selection import EntitySelection
 from ..graphics_items import ArcItem, CrossHairsArcItem, CrossHairsEntityItem, CrossHairsItem, EntityItem
+from ..selection_for_filtering import AlternativeSelection, EntitySelection
 from .add_items_dialogs import AddEntitiesDialog, AddReadyEntitiesDialog
 from .graph_layout_generator import GraphLayoutGenerator, GraphLayoutGeneratorRunnable
 
@@ -99,6 +99,8 @@ class GraphViewMixin:
         self.entity_items = []
         self.arc_items = []
         self._entity_selection: EntitySelection = {}
+        self._filter_alternative_ids: AlternativeSelection = Asterisk
+        self._filter_scenario_ids = {}
         self._graph_build_timer = QTimer(self)
         self._graph_build_timer.setSingleShot(True)
         self._graph_build_timer.timeout.connect(self.build_graph)
@@ -176,6 +178,10 @@ class GraphViewMixin:
         self.scene.selectionChanged.connect(self.ui.graphicsView.handle_scene_selection_changed)
         self.db_mngr.items_added.connect(self._refresh_icons)
         self.db_mngr.items_updated.connect(self._refresh_icons)
+        self.entity_alternative_model.dataChanged.connect(lambda: self._graph_build_timer.start())
+        self.ui.scenario_tree_view.scenario_selection_changed.connect(
+            self._handle_scenario_alternative_selection_changed
+        )
 
     @Slot(str, object)
     def _refresh_icons(self, item_type: str, db_map_data: DBMapPublicItems) -> None:
@@ -212,7 +218,7 @@ class GraphViewMixin:
             return True
         if not self._entity_selection:
             # Allows entities to show when only alternatives or scenarios are selected.
-            return self._filter_alternative_ids or self._filter_scenario_ids
+            return self._filter_alternative_ids is not Asterisk or bool(self._filter_scenario_ids)
         if db_map not in self._entity_selection:
             return False
         entities_by_class = self._entity_selection[db_map]
@@ -243,34 +249,29 @@ class GraphViewMixin:
         return entity["element_id_list"] and cond(id_ in selected_entity_ids for id_ in entity["element_id_list"])
 
     def _alternative_accepts(self, entity: PublicItem, db_map: DatabaseMapping) -> bool:
-        selected_alternative_ids = self._filter_alternative_ids.get(db_map, set())
-        selected_scen_alts = self._filter_scenario_ids.get("scenario_alternative", {}).get(db_map, set())
         entity_id = entity["id"]
-        if not (selected_alternative_ids or selected_scen_alts):
+        if self._filter_alternative_ids is Asterisk:
             if entity_id in self.highlight_by_id:
                 del self.highlight_by_id[entity_id]
-            return True  # No alternatives
-        activities = set()
-        all_alternatives = selected_alternative_ids | selected_scen_alts
-        for alt_id in all_alternatives:
-            entity_alternative = db_map.get_entity_alternative_item(entity_id=entity_id, alternative_id=alt_id)
-            if entity_alternative:
-                if entity_alternative["active"]:
-                    activities.add(True)
-                    continue
-            activities.add(False)
-        if not activities:
-            return False  # No entity alternatives for this guy
-        if all(activities):
-            return True  # Active in all selected alternatives, good to go.
+            return True
+        selected_alternative_ids = self._filter_alternative_ids.get(db_map, set())
+        if selected_alternative_ids:
+            activities = {
+                ea["active"]
+                for ea in db_map.find_entity_alternatives(entity_id=entity_id)
+                if ea["alternative_id"] in selected_alternative_ids
+            }
+        else:
+            activities = set()
         if any(activities):
-            self.highlight_by_id[entity_id] = EntityBorder.CONFLICTED
-            return True  # Active in some selected alternatives, good to go.
+            if False in activities:
+                self.highlight_by_id[entity_id] = EntityBorder.CONFLICTED
+            return True
         self.highlight_by_id[entity_id] = EntityBorder.INACTIVE
         return False  # Not active in any selected alternatives, no go.
 
     def _scenario_accepts(self, entity: PublicItem, db_map: DatabaseMapping) -> bool:
-        scenarios = self._filter_scenario_ids.get("scenario", {}).get(db_map, {})
+        scenarios = self._filter_scenario_ids.get(db_map, {})
         if not scenarios:
             return True
         for scenario_id in scenarios:
@@ -699,6 +700,16 @@ class GraphViewMixin:
         if entity_selection == self._entity_selection:
             return
         self._entity_selection = entity_selection
+        self._graph_build_timer.start()
+
+    @Slot(object)
+    def _set_alternative_selection_filter_for_graph(self, alternative_selection: AlternativeSelection) -> None:
+        self._filter_alternative_ids = alternative_selection
+        self._graph_build_timer.start()
+
+    @Slot(object)
+    def _handle_scenario_alternative_selection_changed(self, selected_ids):
+        self._filter_scenario_ids = selected_ids
         self._graph_build_timer.start()
 
     def _get_db_map_entities_for_graph(self):
