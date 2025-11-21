@@ -21,6 +21,7 @@ from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 
 AlternativeSelection: TypeAlias = dict[DatabaseMapping, set[TempId]] | AsteriskType
 EntitySelection: TypeAlias = dict[DatabaseMapping, dict[TempId, set[TempId] | AsteriskType]] | AsteriskType
+ScenarioSelection: TypeAlias = dict[DatabaseMapping, set[TempId]] | AsteriskType
 
 
 class EntitySelectionForFiltering(QObject):
@@ -29,15 +30,15 @@ class EntitySelectionForFiltering(QObject):
 
     def __init__(self, entity_tree_selection_model: QItemSelectionModel, parent: QObject | None):
         super().__init__(parent)
-        self._entity_tree_selection_model = entity_tree_selection_model
-        self._entity_tree_selection_model.selectionChanged.connect(self._update_class_or_entity_selection)
+        self._selection_model = entity_tree_selection_model
+        self._selection_model.selectionChanged.connect(self._update_class_or_entity_selection)
         self._current_entity_selection: EntitySelection = {}
 
     @Slot(QItemSelection, QItemSelection)
     def _update_class_or_entity_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         class_ids = {}
         entity_ids = {}
-        for index in _include_parents(self._entity_tree_selection_model.selection().indexes()):
+        for index in _include_parents(self._selection_model.selection().indexes()):
             if index.column() != 0:
                 continue
             db_map_ids = index.data(ITEM_ID_ROLE)
@@ -176,3 +177,31 @@ class AlternativeSelectionForFiltering(QObject):
         if not total_selection:
             total_selection = Asterisk
         return total_selection
+
+
+class ScenarioSelectionForFiltering(QObject):
+    scenario_selection_changed = Signal(object)
+
+    def __init__(self, scenario_tree_selection_model: QItemSelectionModel, parent: QObject | None):
+        super().__init__(parent)
+        self._selection_model = scenario_tree_selection_model
+        self._selection_model.selectionChanged.connect(self._update_scenario_selection)
+        self._current_selection: ScenarioSelection = Asterisk
+
+    @Slot(QItemSelection, QItemSelection)
+    def _update_scenario_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        selection: ScenarioSelection = {}
+        for index in self._selection_model.selectedIndexes():
+            if index.column() != 0:
+                continue
+            parent_index = index.parent()
+            if not parent_index.isValid() or parent_index.parent().isValid():
+                continue
+            db_map = parent_index.data(DB_MAP_ROLE)
+            scenario_id = index.data(ITEM_ID_ROLE)
+            selection.setdefault(db_map, set()).add(scenario_id)
+        if not selection:
+            selection = Asterisk
+        if selection != self._current_selection:
+            self._current_selection = selection
+            self.scenario_selection_changed.emit(selection)

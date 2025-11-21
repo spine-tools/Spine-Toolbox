@@ -499,3 +499,42 @@ class TestAlternativeSelectionForFiltering:
                 alternative_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
             mock_signal.emit.assert_called_once_with({db_map: {base_alternative["id"], other_alternative["id"]}})
+
+
+class TestScenarioSelectionForFiltering:
+    def test_select_scenario(self, db_editor, logger):
+        db_mngr = db_editor.db_mngr
+        db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
+        with db_map:
+            db_map.alternative(name="Base")
+            db_map.add_alternative(name="Other", description="Another alternative")
+            scenario = db_map.add_scenario(name="Scenario 1")
+            db_map.add_scenario_alternative(scenario_name="Scenario 1", alternative_name="Base", rank=0)
+            db_map.add_scenario_alternative(scenario_name="Scenario 1", alternative_name="Other", rank=1)
+        view = db_editor.ui.scenario_tree_view
+        model = view.model()
+        database_index = model.index(0, 0)
+        assert database_index.data() == "TestScenarioSelectionForFiltering_db"
+        while model.rowCount(database_index) == 1:
+            model.fetchMore(database_index)
+            QApplication.processEvents()
+        scenario_index = model.index(0, 0, database_index)
+        assert scenario_index.data() == "Scenario 1"
+        while model.rowCount(scenario_index) == 1:
+            model.fetchMore(scenario_index)
+            QApplication.processEvents()
+        filter_selection = db_editor._scenario_selection_for_filtering
+        with mock.patch.object(filter_selection, "scenario_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            view.selectionModel().select(scenario_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+            mock_signal.emit.assert_called_once_with({db_map: {scenario["id"]}})
+            mock_signal.emit.reset_mock()
+            view.selectionModel().select(database_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+            mock_signal.emit.assert_called_once_with(Asterisk)
+            mock_signal.emit.reset_mock()
+            view.selectionModel().select(model.index(0, 0, scenario_index), QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_not_called()
+            view.selectionModel().select(model.index(0, 1, scenario_index), QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_not_called()
+            view.selectionModel().select(model.index(1, 0, scenario_index), QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_not_called()

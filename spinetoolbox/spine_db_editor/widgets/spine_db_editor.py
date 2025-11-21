@@ -49,7 +49,11 @@ from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ..selection_for_filtering import AlternativeSelectionForFiltering, EntitySelectionForFiltering
+from ..selection_for_filtering import (
+    AlternativeSelectionForFiltering,
+    EntitySelectionForFiltering,
+    ScenarioSelectionForFiltering,
+)
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
@@ -968,11 +972,11 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
 
     pinned_values_updated = Signal(list)
 
-    def __init__(self, db_mngr, db_urls=None):
+    def __init__(self, db_mngr: SpineDBManager, db_urls: list[str] | None = None):
         """
         Args:
-            db_mngr (SpineDBManager): The manager to use
-            db_urls (Iterable of str, optional): URLs of databases to load
+            db_mngr: The manager to use
+            db_urls: URLs of databases to load
         """
         super().__init__(db_mngr)
         self._original_size = None
@@ -985,6 +989,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self._entity_selection_for_filtering = EntitySelectionForFiltering(
             self.ui.treeView_entity.selectionModel(), self
+        )
+        self._scenario_selection_for_filtering = ScenarioSelectionForFiltering(
+            self.ui.scenario_tree_view.selectionModel(), self
         )
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
@@ -1033,6 +1040,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self._alternative_selection_for_filtering.alternative_selection_changed.connect(
             self._set_alternative_selection_filter_for_graph
+        )
+        self._scenario_selection_for_filtering.scenario_selection_changed.connect(
+            self._set_scenario_selection_filter_for_graph
         )
         self._item_metadata_editor.connect_signals(self.ui)
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)

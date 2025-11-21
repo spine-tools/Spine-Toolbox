@@ -550,20 +550,13 @@ class AlternativeTreeView(ItemTreeView):
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
-    scenario_selection_changed = Signal(object)
-
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent=parent)
-        self._selected_scenario_ids = {}
-        self._duplicate_scenario_action = None
-
-    def reset(self):
-        super().reset()
-        self._selected_scenario_ids.clear()
+        self._duplicate_scenario_action: QAction | None = None
 
     def connect_signals(self):
         """Connects signals."""
@@ -582,36 +575,10 @@ class ScenarioTreeView(ItemTreeView):
         super().populate_context_menu()
         self._duplicate_scenario_action = self._menu.addAction("Duplicate", self._duplicate_scenario)
 
-    def _db_map_alternative_ids_from_selection(self, selection):
-        """Collects database maps and alternative ids within given selection.
-
-        Args:
-            selection (Sequence of QModelIndex): selection indices
-
-        Returns:
-            dict: mapping from database map to set of alternative ids
-        """
-        db_map_ids = {}
-        for index in selection.indexes():
-            if index.column() != 0:
-                continue
-            item = self.model().item_from_index(index)
-            if isinstance(item, ScenarioItem) and item.id is not None:
-                db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
-            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                db_map_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        return db_map_ids
-
     @Slot(QItemSelection, QItemSelection)
     def _handle_selection_changed(self, selected, deselected):
         """Emits scenario_selection_changed with the current selection."""
         self._clear_trees()
-        self._selected_scenario_ids.clear()
-        for index in self.selectionModel().selectedIndexes():
-            item = self.model().item_from_index(index)
-            if isinstance(item, ScenarioItem) and item.id is not None:
-                self._selected_scenario_ids.setdefault(item.db_map, {}).update({item.id: item.alternative_id_list})
-        self.scenario_selection_changed.emit(self._selected_scenario_ids)
 
     def remove_selected(self):
         """See base class."""
