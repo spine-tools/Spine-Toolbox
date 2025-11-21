@@ -14,9 +14,8 @@
 import gc
 import os.path
 from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication
 from spinedb_api import (
     DatabaseMapping,
@@ -26,6 +25,7 @@ from spinedb_api import (
     import_parameter_value_lists,
 )
 from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
 from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditEntitiesDialog,
@@ -451,7 +451,7 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         model = view.model()
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
-        view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         _remove_entity_class(view)
         self.assertEqual(model.rowCount(root_index), 0)
         self._commit_changes_to_database("Remove entity class.")
@@ -471,7 +471,7 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
-        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         _remove_entity(view)
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
@@ -502,7 +502,7 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
-        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with DatabaseMapping(self._db_map.db_url) as db_map:
             db_map.add_entity_item(name="entity_3", entity_class_name="entity_class_1")
             db_map.commit_session("Add external data.")
@@ -682,7 +682,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
             QApplication.processEvents()
         class_index = model.index(2, 0, root_index)
         self.assertEqual(model.item_from_index(class_index).display_data, "relationship_class")
-        view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         self._remove_class()
         self.assertEqual(model.rowCount(root_index), 2)
         self._commit_changes_to_database("Remove relationship class.")
@@ -704,7 +704,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
-        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         self._remove_entity()
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
@@ -731,7 +731,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         while object_model.rowCount(root_index) != 3:
             QApplication.processEvents()
         class_index = object_model.index(0, 0, root_index)
-        object_tree_view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.ClearAndSelect)
+        object_tree_view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         _remove_entity_class(object_tree_view)
         view = self._db_editor.ui.treeView_entity
         model = view.model()
@@ -759,7 +759,9 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
             QApplication.processEvents()
         object_index = object_model.index(0, 0, class_index)
         self.assertEqual(object_index.data(), "object_21")
-        object_tree_view.selectionModel().setCurrentIndex(object_index, QItemSelectionModel.ClearAndSelect)
+        object_tree_view.selectionModel().setCurrentIndex(
+            object_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
         _remove_entity(object_tree_view)
         view = self._db_editor.ui.treeView_entity
         model = view.model()
@@ -827,7 +829,7 @@ class TestEntityTreeViewSorting(TestBase):
         for item in model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
-                qApp.processEvents()  # pylint: disable=undefined-variable
+                QApplication.processEvents()
 
     def tearDown(self):
         self._common_tear_down()
@@ -877,7 +879,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         list_name_index = self._edits.append_value_list(self._db_mngr, "a_value_list")
         self.assertEqual(list_name_index.data(), "a_value_list")
         view = self._db_editor.ui.treeView_parameter_value_list
-        view.selectionModel().select(list_name_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().select(list_name_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         view.remove_selected()
         model = view.model()
         root_index = model.index(0, 0)
@@ -957,9 +959,9 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
         value_index = model.index(0, 0, list_name_index)
-        view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         view.remove_selected()
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        QApplication.processEvents()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 2)
         list_name_index = model.index(0, 0, root_index)
@@ -983,7 +985,7 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
         model = view.model()
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
-        view.selectionModel().setCurrentIndex(list_name_index, QItemSelectionModel.ClearAndSelect)
+        view.selectionModel().setCurrentIndex(list_name_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         view.remove_selected()
         root_index = model.index(0, 0)
         self.assertEqual(model.rowCount(root_index), 1)
@@ -1040,5 +1042,107 @@ class TestParameterValueListTreeViewWithExistingData(TestBase):
                 self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestAlternativeTreeView:
+    def test_scenario_generation_action_availability(self, db_editor):
+        view = db_editor.ui.alternative_tree_view
+        model = view.model()
+        database_index = model.index(0, 0)
+        view.selectionModel().select(database_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        view.update_actions_availability(model.item_from_index(database_index))
+        assert not view._generate_scenarios_action.isEnabled()
+        empty_row_index = model.index(1, 0, database_index)
+        assert empty_row_index.data() == "Type new alternative name here..."
+        empty_description_index = model.index(1, 1, database_index)
+        assert empty_description_index.data() == ""
+        view.selectionModel().select(empty_row_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        view.selectionModel().select(empty_description_index, QItemSelectionModel.SelectionFlag.Select)
+        view.update_actions_availability(model.item_from_index(empty_row_index))
+        assert not view._generate_scenarios_action.isEnabled()
+        view.update_actions_availability(model.item_from_index(empty_description_index))
+        assert not view._generate_scenarios_action.isEnabled()
+        alternative_row_index = model.index(0, 0, database_index)
+        assert alternative_row_index.data() == "Base"
+        description_index = model.index(0, 1, database_index)
+        assert description_index.data() == "Base alternative"
+        view.selectionModel().select(alternative_row_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        view.selectionModel().select(description_index, QItemSelectionModel.SelectionFlag.Select)
+        view.update_actions_availability(model.item_from_index(alternative_row_index))
+        assert view._generate_scenarios_action.isEnabled()
+        view.update_actions_availability(model.item_from_index(description_index))
+        assert view._generate_scenarios_action.isEnabled()
+
+    def test_open_scenario_generator(self, db_editor):
+        view = db_editor.ui.alternative_tree_view
+        model = view.model()
+        database_index = model.index(0, 0)
+        db_map = database_index.data(DB_MAP_ROLE)
+        alternative_row_index = model.index(0, 0, database_index)
+        assert alternative_row_index.data() == "Base"
+        alternatives = [db_map.alternative(name="Base")]
+        view.setCurrentIndex(alternative_row_index)
+        view.selectionModel().select(model.index(0, 1, database_index), QItemSelectionModel.SelectionFlag.Select)
+        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map)
+        view.selectionModel().select(model.index(1, 0, database_index), QItemSelectionModel.SelectionFlag.Select)
+        view.selectionModel().select(model.index(1, 1, database_index), QItemSelectionModel.SelectionFlag.Select)
+        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map)
+        view.selectionModel().select(database_index, QItemSelectionModel.SelectionFlag.Select)
+        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map)
+
+    def test_opening_scenario_generator_ignores_alternatives_from_other_databases(self, db_editor, logger, tmp_path):
+        fake_db_listener = mock.MagicMock()
+        db_mngr = db_editor.db_mngr
+        db_map = db_mngr.get_db_map("sqlite://", logger)
+        db_mngr.register_listener(fake_db_listener, db_map)
+        db_path = tmp_path / "db.sqlite"
+        url = "sqlite:///" + str(db_path)
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_alternative(name="Other")
+            db_map.commit_session("Add alternative to foreign database.")
+        with (
+            mock.patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir"
+            ) as mocK_file_name_giver,
+            mock.patch.object(db_editor, "restore_ui"),
+        ):
+            mocK_file_name_giver.return_value = (str(db_path), "")
+            db_editor.add_db_file()
+        view = db_editor.ui.alternative_tree_view
+        model = view.model()
+        assert model.rowCount() == 2
+        database1_index = model.index(0, 0)
+        assert database1_index.data() == "TestAlternativeTreeView_db"
+        assert model.rowCount(database1_index) == 2
+        view.selectionModel().select(database1_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        top_left = model.index(0, 0, database1_index)
+        bottom_right = model.index(1, 1, database1_index)
+        view.selectionModel().select(QItemSelection(top_left, bottom_right), QItemSelectionModel.SelectionFlag.Select)
+        database2_index = model.index(1, 0)
+        assert database2_index.data() == db_path.stem
+        while model.rowCount(database2_index) != 3:
+            QApplication.processEvents()
+        view.selectionModel().select(database2_index, QItemSelectionModel.SelectionFlag.Select)
+        top_left = model.index(0, 0, database2_index)
+        bottom_right = model.index(2, 1, database2_index)
+        view.selectionModel().select(QItemSelection(top_left, bottom_right), QItemSelectionModel.SelectionFlag.Select)
+        view.selectionModel().setCurrentIndex(
+            model.index(0, 0, database1_index), QItemSelectionModel.SelectionFlag.Current
+        )
+        db_map1 = database1_index.data(DB_MAP_ROLE)
+        alternatives = [db_map1.alternative(name="Base")]
+        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map1)
+        view.selectionModel().setCurrentIndex(
+            model.index(0, 0, database2_index), QItemSelectionModel.SelectionFlag.Current
+        )
+        db_map2 = database2_index.data(DB_MAP_ROLE)
+        alternatives = [db_map2.alternative(name="Base"), db_map2.alternative(name="Other")]
+        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map2)
+
+    @staticmethod
+    def _assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map):
+        with mock.patch("spinetoolbox.spine_db_editor.widgets.custom_qtreeview.ScenarioGenerator") as mock_init:
+            mock_scenario_generator = mock.MagicMock()
+            mock_init.return_value = mock_scenario_generator
+            mock_scenario_generator.show = mock.MagicMock()
+            view._generate_scenarios_action.trigger()
+            mock_init.assert_called_once_with(view, db_map, alternatives, db_editor)
+            mock_scenario_generator.show.assert_called_once_with()
