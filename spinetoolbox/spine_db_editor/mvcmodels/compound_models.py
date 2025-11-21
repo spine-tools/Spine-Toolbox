@@ -586,41 +586,57 @@ class CompoundStackedModel(CompoundTableModel):
             menu.set_filter_rejected_values(rejected_values)
 
 
-class FilterEntityAlternativeMixin:
-    """Provides the interface to filter by entity and alternative."""
+class FilterEntityMixin:
+    """Provides the interface to filter by entity."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._entity_selection: EntitySelection = Asterisk
-        self._alternative_selection: AlternativeSelection = Asterisk
 
-    def init_model(self):
+    def init_model(self) -> None:
         super().init_model()
         self._entity_selection = Asterisk
-        self._alternative_selection = Asterisk
 
     def set_entity_selection_for_filtering(self, entity_selection: EntitySelection) -> None:
         self._entity_selection = entity_selection
         should_invalidate_filter = False
         for model in self.sub_models:
             should_invalidate_filter |= model.set_filter_entity_ids(entity_selection)
-        if should_invalidate_filter:
+        if should_invalidate_filter and not self._filter_timer.isActive():
             self._filter_timer.start()
         super().set_entity_selection_for_filtering(entity_selection)
-
-    def set_alternative_selection_for_filtering(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
-        self._alternative_selection = alternative_ids
-        should_invalidate_filter = False
-        for model in self.sub_models:
-            should_invalidate_filter |= model.set_filter_alternative_ids(alternative_ids)
-        if should_invalidate_filter:
-            self._filter_timer.start()
 
     def _create_single_model(
         self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
     ) -> SingleModelBase:
         model = super()._create_single_model(db_map, entity_class_id, committed)
         model.set_filter_entity_ids(self._entity_selection)
+        return model
+
+
+class FilterAlternativeMixin:
+    """Provides the interface to filter by alternative."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._alternative_selection: AlternativeSelection = Asterisk
+
+    def init_model(self) -> None:
+        super().init_model()
+        self._alternative_selection = Asterisk
+
+    def set_alternative_selection_for_filtering(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
+        self._alternative_selection = alternative_ids
+        should_invalidate_filter = False
+        for model in self.sub_models:
+            should_invalidate_filter |= model.set_filter_alternative_ids(alternative_ids)
+        if should_invalidate_filter and not self._filter_timer.isActive():
+            self._filter_timer.start()
+
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
+        model = super()._create_single_model(db_map, entity_class_id, committed)
         model.set_filter_alternative_ids(self._alternative_selection)
         return model
 
@@ -707,7 +723,9 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedM
         return SingleParameterDefinitionModel
 
 
-class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundStackedModel):
+class CompoundParameterValueModel(
+    FilterAlternativeMixin, FilterEntityMixin, EditParameterValueMixin, CompoundStackedModel
+):
     """A model that concatenates several single parameter_value models and one empty parameter_value model."""
 
     item_type = "parameter_value"
@@ -751,7 +769,7 @@ class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterVal
                 definition_items = leftover_definition_items
 
 
-class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundStackedModel):
+class CompoundEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, CompoundStackedModel):
 
     item_type = "entity_alternative"
     field_map = ENTITY_ALTERNATIVE_FIELD_MAP
@@ -761,7 +779,7 @@ class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundStack
         return SingleEntityAlternativeModel
 
 
-class CompoundEntityModel(FilterEntityAlternativeMixin, CompoundStackedModel):
+class CompoundEntityModel(FilterEntityMixin, CompoundStackedModel):
     item_type = "entity"
     field_map = ENTITY_FIELD_MAP
 

@@ -241,12 +241,13 @@ class SingleModelBase(HalfSortedTableModel):
         return True
 
 
-class FilterEntityAlternativeMixin:
-    """Provides the interface to filter by entity and alternative."""
+class FilterEntityMixin:
+    """Provides the interface to filter by entity."""
+
+    _ENTITY_ID_FIELD: ClassVar[str] = "entity_id"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._filter_alternative_ids = set()
         self._filter_entity_ids = Asterisk
 
     def set_filter_entity_ids(self, entity_selection: EntitySelection) -> bool:
@@ -279,6 +280,25 @@ class FilterEntityAlternativeMixin:
         self._filter_entity_ids = entity_ids
         return True
 
+    def filter_accepts_item(self, item: PublicItem) -> bool:
+        """Reimplemented to also account for the entity and alternative filter."""
+        return super().filter_accepts_item(item) and self._entity_filter_accepts_item(item)
+
+    def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
+        """Returns the result of the entity filter."""
+        if self._filter_entity_ids is Asterisk:
+            return True
+        entity_id = item[self._ENTITY_ID_FIELD]
+        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+
+
+class FilterAlternativeMixin:
+    """Provides the interface to filter by alternative."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_alternative_ids = set()
+
     def set_filter_alternative_ids(self, alternative_selection: AlternativeSelection) -> bool:
         if alternative_selection is Asterisk:
             alternative_ids = Asterisk
@@ -291,18 +311,7 @@ class FilterEntityAlternativeMixin:
 
     def filter_accepts_item(self, item: PublicItem) -> bool:
         """Reimplemented to also account for the entity and alternative filter."""
-        return (
-            super().filter_accepts_item(item)
-            and self._entity_filter_accepts_item(item)
-            and self._alternative_filter_accepts_item(item)
-        )
-
-    def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
-        """Returns the result of the entity filter."""
-        if self._filter_entity_ids is Asterisk:
-            return True
-        entity_id = item["entity_id"]
-        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+        return super().filter_accepts_item(item) and self._alternative_filter_accepts_item(item)
 
     def _alternative_filter_accepts_item(self, item: PublicItem) -> bool:
         """Returns the result of the alternative filter."""
@@ -476,7 +485,8 @@ class SingleParameterValueModel(
     SplitValueAndTypeMixin,
     ParameterMixin,
     EntityMixin,
-    FilterEntityAlternativeMixin,
+    FilterAlternativeMixin,
+    FilterEntityMixin,
     SingleModelBase,
 ):
     """A parameter_value model for a single entity_class."""
@@ -501,7 +511,7 @@ class SingleParameterValueModel(
         return byname, parameter_name, alt_name
 
 
-class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
     entity_class_column = field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP)
@@ -528,7 +538,7 @@ class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase
         }
 
 
-class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityModel(FilterEntityMixin, SingleModelBase):
     entity_class_column = field_index("entity_class_name", ENTITY_FIELD_MAP)
     database_column = field_index("database", ENTITY_FIELD_MAP)
     _NUMERICAL_COLUMNS: ClassVar[set[int]] = {
@@ -540,6 +550,7 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
     _SHAPE_BLOB_COLUMN: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
     fixed_columns = (field_index("entity_class_name", ENTITY_FIELD_MAP), field_index("database", ENTITY_FIELD_MAP))
     group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
+    _ENTITY_ID_FIELD = "id"
 
     def __init__(
         self,
