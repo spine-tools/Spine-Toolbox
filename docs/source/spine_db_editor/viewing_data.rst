@@ -123,13 +123,15 @@ via the **Graph view**'s context menu, or from the settings **Ctrl+,**.
 Entity Highlights
 *****************
 
-As mentioned before, **Scenario tree** and **Alternative** may cause the entity items in the graph to become
-highlighted. The highlighting is done by adding a border around the entity item. This is what it looks like:
+As mentioned before, selecting items in **Scenario tree** and **Alternative **
+may cause the entity items in the graph to become highlighted.
+The highlighting is done by adding a border around the entity item.
+This is how it looks like:
 
 .. image:: img/graph_alt_selection.png
    :align: center
 
-Note that the icons of the entities or colors don't change, only the border may change.
+Note that the icons of the entities or colors don't change, only the border.
 
 There are four different borders:
 
