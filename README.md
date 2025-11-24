@@ -468,10 +468,10 @@ The project root includes a configuration file for `pylint`.
 
 ### Unit tests
 
-Unit tests are located in the `tests` directory.
+Unit tests are located in the `tests` directory while execution tests are in `execution_tests`.
 You can run the entire test suite from project root by
 
-    python -m unittest
+    python -m pytest
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 
