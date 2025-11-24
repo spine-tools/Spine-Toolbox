@@ -494,18 +494,18 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             # When nothing selected, no entities should be visible
             self.assertFalse(self.spine_db_editor.entity_items)
             # Select scen1
-            with signal_waiter(self.spine_db_editor.ui.tableView_parameter_value.model().layoutChanged) as waiter:
-                select_item_with_index(scenario_tree_view, self.indexes["scenario_scen1"])
-                waiter.wait()
+            select_item_with_index(scenario_tree_view, self.indexes["scenario_scen1"])
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.CONFLICTED,
+                    "aa": self.ACTIVE,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ba": self.PARAMETER,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
             # Select Alt3 under scen2
@@ -531,18 +531,20 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 }
             )
             # Select scen1 again
-            with signal_waiter(self.spine_db_editor.ui.tableView_parameter_value.model().layoutChanged) as waiter:
-                select_item_with_index(scenario_tree_view, self.indexes["scenario_scen1"])
-                waiter.wait()
+            select_item_with_index(scenario_tree_view, self.indexes["scenario_scen1"])
+            while self.spine_db_editor.ui.tableView_parameter_value.model().rowCount() != 6:
+                QApplication.processEvents()
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.CONFLICTED,
+                    "aa": self.ACTIVE,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ba": self.PARAMETER,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
 
@@ -562,12 +564,14 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.CONFLICTED,
+                    "aa": self.ACTIVE,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ba": self.PARAMETER,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
             # Select Alt3 under scen2
@@ -575,10 +579,10 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.CONFLICTED,
+                    "aa": self.PARAMETER,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
-                    "da": self.INACTIVE,
+                    "da": self.PARAMETER,
                     "db": self.PARAMETER,
                     "aa__ba": self.PARAMETER,
                 }
@@ -588,12 +592,14 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible(
                 {
-                    "aa": self.CONFLICTED,
+                    "aa": self.ACTIVE,
                     "ab": self.ACTIVE,
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ba": self.PARAMETER,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
 

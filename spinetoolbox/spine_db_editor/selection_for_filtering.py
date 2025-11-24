@@ -140,27 +140,20 @@ class AlternativeSelectionForFiltering(QObject):
     def _update_scenario_alternative_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         alternative_selection = {}
         for index in self._scenario_tree_selection_model.selection().indexes():
-            if index.column() != 0 or not index.parent().isValid():
+            if index.column() != 0:
                 continue
-            id_ = index.data(ITEM_ID_ROLE)
-            if id_ is None:
-                scenario_index = index.parent()
-                scenario_id = scenario_index.data(ITEM_ID_ROLE)
-                if scenario_id is None:
-                    continue
-                db_map = scenario_index.parent().data(DB_MAP_ROLE)
-                alternative_ids = db_map.mapped_table("scenario")[scenario_index.data(ITEM_ID_ROLE)][
-                    "alternative_id_list"
-                ]
-                row = index.row()
-                if row == len(alternative_ids):
-                    continue
-                alternative_selection.setdefault(db_map, set()).add(alternative_ids[row])
-            else:
-                db_map = index.parent().data(DB_MAP_ROLE)
-                alternative_selection.setdefault(db_map, set()).update(
-                    db_map.mapped_table("scenario")[id_]["alternative_id_list"]
-                )
+            scenario_index = index.parent()
+            if not scenario_index.isValid():
+                continue
+            database_index = scenario_index.parent()
+            if not database_index.isValid():
+                continue
+            db_map = database_index.data(DB_MAP_ROLE)
+            alternative_ids = db_map.mapped_table("scenario")[scenario_index.data(ITEM_ID_ROLE)]["alternative_id_list"]
+            row = index.row()
+            if row == len(alternative_ids):
+                continue
+            alternative_selection.setdefault(db_map, set()).add(alternative_ids[row])
         if not alternative_selection:
             alternative_selection = Asterisk
         if alternative_selection != self._current_scenario_alternative_selection:

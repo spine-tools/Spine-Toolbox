@@ -331,12 +331,12 @@ class TestAlternativeSelectionForFiltering:
             view.selectionModel().select(description_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
             mock_signal.emit.assert_not_called()
 
-    def test_select_and_deselect_scenario_selects_and_deselects_all_its_alternatives(self, db_editor, logger):
+    def test_selecting_scenario_doesnt_select_its_alternatives(self, db_editor, logger):
         db_mngr = db_editor.db_mngr
         db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
         with db_map:
-            base_alternative = db_map.alternative(name="Base")
-            other_alternative = db_map.add_alternative(name="Other", description="Another alternative")
+            db_map.alternative(name="Base")
+            db_map.add_alternative(name="Other", description="Another alternative")
             db_map.add_scenario(name="Scenario 1")
             db_map.add_scenario_alternative(scenario_name="Scenario 1", alternative_name="Other", rank=0)
             db_map.add_scenario_alternative(scenario_name="Scenario 1", alternative_name="Base", rank=1)
@@ -353,10 +353,7 @@ class TestAlternativeSelectionForFiltering:
             scenario_index = model.index(0, 0, database_index)
             assert scenario_index.data() == "Scenario 1"
             view.selectionModel().select(scenario_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-            mock_signal.emit.assert_called_once_with({db_map: {base_alternative["id"], other_alternative["id"]}})
-            mock_signal.emit.reset_mock()
-            view.selectionModel().select(scenario_index, QItemSelectionModel.SelectionFlag.Clear)
-            mock_signal.emit.assert_called_once_with(Asterisk)
+            mock_signal.emit.assert_not_called()
 
     def test_select_scenario_alternatives(self, db_editor, logger):
         db_mngr = db_editor.db_mngr
