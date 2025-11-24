@@ -853,7 +853,7 @@ class TestCompoundEntityModel:
     def test_filtering_by_entity(self, db_mngr, db_map, db_name, db_editor):
         with db_map:
             gadget = db_map.add_entity_class(name="Gadget")
-            flashlight = db_map.add_entity(entity_class_name="Gadget", name="flashlight")
+            db_map.add_entity(entity_class_name="Gadget", name="flashlight")
             microphone = db_map.add_entity(entity_class_name="Gadget", name="microphone")
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
         model.init_model()
@@ -869,6 +869,68 @@ class TestCompoundEntityModel:
             ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],
         ]
         assert_table_model_data_pytest(model, expected)
+
+    def test_filtering_by_scenario(self, db_mngr, db_map, db_name, db_editor):
+        with db_map:
+            scenario = db_map.add_scenario(name="Scenario")
+            db_map.add_scenario_alternative(scenario_name="Scenario", alternative_name="Base", rank=0)
+            db_map.add_entity_class(name="Visible", active_by_default=True)
+            db_map.add_entity(name="indeterminate_visible", entity_class_name="Visible")
+            db_map.add_entity(name="active_visible", entity_class_name="Visible")
+            db_map.add_entity_alternative(
+                entity_class_name="Visible", entity_byname=("active_visible",), alternative_name="Base", active=True
+            )
+            db_map.add_entity(name="inactive_visible", entity_class_name="Visible")
+            db_map.add_entity_alternative(
+                entity_class_name="Visible", entity_byname=("inactive_visible",), alternative_name="Base", active=False
+            )
+            db_map.add_entity_class(name="Invisible", active_by_default=False)
+            db_map.add_entity(name="indeterminate_invisible", entity_class_name="Invisible")
+            db_map.add_entity(name="active_invisible", entity_class_name="Invisible")
+            db_map.add_entity_alternative(
+                entity_class_name="Invisible", entity_byname=("active_invisible",), alternative_name="Base", active=True
+            )
+            db_map.add_entity(name="inactive_invisible", entity_class_name="Invisible")
+            db_map.add_entity_alternative(
+                entity_class_name="Invisible",
+                entity_byname=("inactive_invisible",),
+                alternative_name="Base",
+                active=False,
+            )
+        model = CompoundEntityModel(db_editor, db_mngr, db_map)
+        model.init_model()
+        fetch_model(model)
+        expected = [
+            ["Visible", "active_visible", "active_visible", None, None, None, None, None, None, db_name],
+            ["Visible", "inactive_visible", "inactive_visible", None, None, None, None, None, None, db_name],
+            ["Visible", "indeterminate_visible", "indeterminate_visible", None, None, None, None, None, None, db_name],
+            ["Invisible", "active_invisible", "active_invisible", None, None, None, None, None, None, db_name],
+            ["Invisible", "inactive_invisible", "inactive_invisible", None, None, None, None, None, None, db_name],
+            [
+                "Invisible",
+                "indeterminate_invisible",
+                "indeterminate_invisible",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                db_name,
+            ],
+        ]
+        assert_table_model_data_pytest(model, expected)
+        model.set_scenario_selection_for_filtering({db_map: {scenario["id"]}})
+        model.refresh()
+        expected = [
+            ["Visible", "active_visible", "active_visible", None, None, None, None, None, None, db_name],
+            ["Visible", "indeterminate_visible", "indeterminate_visible", None, None, None, None, None, None, db_name],
+            ["Invisible", "active_invisible", "active_invisible", None, None, None, None, None, None, db_name],
+        ]
+        assert_table_model_data_pytest(model, expected)
+        model.set_scenario_selection_for_filtering({})
+        model.refresh()
+        assert model.rowCount() == 0
 
     def test_update_entity_with_location_and_shape_information(self, db_mngr, db_map, db_name, db_editor):
         with db_map:

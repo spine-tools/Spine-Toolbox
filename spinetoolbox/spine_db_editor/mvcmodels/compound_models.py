@@ -27,7 +27,7 @@ from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.shared import ITEM_ID_ROLE
 from ...spine_db_manager import SpineDBManager
-from ..selection_for_filtering import AlternativeSelection, EntitySelection
+from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from ..widgets.custom_menus import AutoFilterMenu
 from .compound_table_model import CompoundTableModel
 from .single_models import (
@@ -56,6 +56,8 @@ class CompoundStackedModel(CompoundTableModel):
 
     non_committed_items_about_to_be_added = Signal()
     non_committed_items_added = Signal()
+
+    _ENTITY_CLASS_ID_FIELD: ClassVar[str] = "entity_class_id"
 
     def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager, *db_maps):
         """
@@ -341,12 +343,13 @@ class CompoundStackedModel(CompoundTableModel):
         for i in model.accepted_rows():
             yield (model, i)
 
-    @staticmethod
-    def _items_per_class(items: Iterable[PublicItem]) -> dict[TempId, list[PublicItem]]:
+    @classmethod
+    def _items_per_class(cls, items: Iterable[PublicItem]) -> dict[TempId, list[PublicItem]]:
         """Returns a dict mapping entity_class ids to a set of items."""
         d = {}
+        class_id_field = cls._ENTITY_CLASS_ID_FIELD
         for item in items:
-            entity_class_id = item["entity_class_id"]
+            entity_class_id = item[class_id_field]
             d.setdefault(entity_class_id, []).append(item)
         return d
 
@@ -782,16 +785,27 @@ class CompoundEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, 
 class CompoundEntityModel(FilterEntityMixin, CompoundStackedModel):
     item_type = "entity"
     field_map = ENTITY_FIELD_MAP
+    _ENTITY_CLASS_ID_FIELD = "class_id"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._scenario_selection: ScenarioSelection = Asterisk
 
     @property
     def _single_model_type(self) -> Type[SingleEntityModel]:
         return SingleEntityModel
 
-    @staticmethod
-    def _items_per_class(items: Iterable[PublicItem]) -> dict[TempId, list[PublicItem]]:
-        """Returns a dict mapping entity_class ids to a set of items."""
-        d = {}
-        for item in items:
-            entity_class_id = item["class_id"]
-            d.setdefault(entity_class_id, []).append(item)
-        return d
+    def set_scenario_selection_for_filtering(self, scenario_selection: ScenarioSelection) -> None:
+        self._scenario_selection = scenario_selection
+        should_invalidate_filter = False
+        for model in self.sub_models:
+            should_invalidate_filter |= model.set_filter_scenario_ids(scenario_selection)
+        if should_invalidate_filter and not self._filter_timer.isActive():
+            self._filter_timer.start()
+
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
+        model = super()._create_single_model(db_map, entity_class_id, committed)
+        model.set_filter_scenario_ids(self._scenario_selection)
+        return model

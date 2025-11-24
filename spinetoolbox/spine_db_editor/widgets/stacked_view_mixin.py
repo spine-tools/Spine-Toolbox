@@ -29,7 +29,7 @@ from ..mvcmodels.empty_models import (
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
 )
-from ..selection_for_filtering import AlternativeSelection, EntitySelection
+from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from ..stacked_table_seam import StackedTableSeam
 from .custom_qwidgets import AddedEntitiesPopup
 from .element_name_list_editor import ElementNameListEditor
@@ -209,6 +209,10 @@ class StackedViewMixin:
     def _set_alternative_selection_filter_for_stacked_tables(self, alternative_selection: AlternativeSelection) -> None:
         for model in (self.parameter_value_model, self.entity_alternative_model):
             model.set_alternative_selection_for_filtering(alternative_selection)
+
+    @Slot(object)
+    def _set_scenario_selection_filter_for_stacekd_tables(self, scenario_selection: ScenarioSelection) -> None:
+        self.entity_model.set_scenario_selection_for_filtering(scenario_selection)
 
     @Slot(QModelIndex, int, int)
     def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:

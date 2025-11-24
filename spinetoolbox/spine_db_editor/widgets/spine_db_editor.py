@@ -1042,6 +1042,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self._set_alternative_selection_filter_for_graph
         )
         self._scenario_selection_for_filtering.scenario_selection_changed.connect(
+            self._set_scenario_selection_filter_for_stacekd_tables
+        )
+        self._scenario_selection_for_filtering.scenario_selection_changed.connect(
             self._set_scenario_selection_filter_for_graph
         )
         self._item_metadata_editor.connect_signals(self.ui)

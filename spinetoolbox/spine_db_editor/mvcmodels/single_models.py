@@ -17,13 +17,14 @@ from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.helpers import AsteriskType
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, ITEM_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
-from ..selection_for_filtering import AlternativeSelection, EntitySelection
+from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from .colors import FIXED_FIELD_COLOR
 from .utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
@@ -248,7 +249,7 @@ class FilterEntityMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._filter_entity_ids = Asterisk
+        self._filter_entity_ids: set[TempId] | AsteriskType = Asterisk
 
     def set_filter_entity_ids(self, entity_selection: EntitySelection) -> bool:
         if entity_selection is Asterisk or not entity_selection:
@@ -282,14 +283,12 @@ class FilterEntityMixin:
 
     def filter_accepts_item(self, item: PublicItem) -> bool:
         """Reimplemented to also account for the entity and alternative filter."""
-        return super().filter_accepts_item(item) and self._entity_filter_accepts_item(item)
-
-    def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
-        """Returns the result of the entity filter."""
         if self._filter_entity_ids is Asterisk:
-            return True
-        entity_id = item[self._ENTITY_ID_FIELD]
-        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+            return super().filter_accepts_item(item)
+        entity_accepts = item[
+            self._ENTITY_ID_FIELD
+        ] in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+        return entity_accepts and super().filter_accepts_item(item)
 
 
 class FilterAlternativeMixin:
@@ -311,14 +310,9 @@ class FilterAlternativeMixin:
 
     def filter_accepts_item(self, item: PublicItem) -> bool:
         """Reimplemented to also account for the entity and alternative filter."""
-        return super().filter_accepts_item(item) and self._alternative_filter_accepts_item(item)
-
-    def _alternative_filter_accepts_item(self, item: PublicItem) -> bool:
-        """Returns the result of the alternative filter."""
         if self._filter_alternative_ids is Asterisk:
-            return True
-        alternative_id = item["alternative_id"]
-        return alternative_id in self._filter_alternative_ids
+            return super().filter_accepts_item(item)
+        return item["alternative_id"] in self._filter_alternative_ids and super().filter_accepts_item(item)
 
 
 class ParameterMixin:
@@ -562,6 +556,7 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
     ):
         super().__init__(parent, db_map, entity_class_id, committed, lazy)
         self._entity_class_dimensions = len(db_map.mapped_table("entity_class")[entity_class_id]["dimension_id_list"])
+        self._filter_scenario_ids: set[TempId] | AsteriskType = Asterisk
 
     def flags(self, index):
         flags = super().flags(index)
@@ -601,9 +596,27 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
             "database": ("database", None),
         }
 
-    def _entity_filter_accepts_item(self, item):
-        """Returns the result of the entity filter."""
-        if self._filter_entity_ids is Asterisk:
-            return True
-        entity_id = item["id"]
-        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+    def set_filter_scenario_ids(self, scenario_selection: ScenarioSelection) -> bool:
+        if scenario_selection is Asterisk:
+            scenario_ids = Asterisk
+        else:
+            try:
+                scenario_ids = scenario_selection[self.db_map]
+            except KeyError:
+                scenario_ids = set()
+        if scenario_ids == self._filter_scenario_ids:
+            return False
+        self._filter_scenario_ids = scenario_ids
+        return True
+
+    def filter_accepts_item(self, item: PublicItem) -> bool:
+        if self._filter_scenario_ids is Asterisk:
+            return super().filter_accepts_item(item)
+        if not self._filter_scenario_ids:
+            return False
+        active_by_default = self.db_map.mapped_table("entity_class")[self.entity_class_id]["active_by_default"]
+        for scenario_id in self._filter_scenario_ids:
+            is_active = self.db_map.item_active_in_scenario(item, scenario_id)
+            if is_active is False or (is_active is None and not active_by_default):
+                return False
+        return super().filter_accepts_item(item)
