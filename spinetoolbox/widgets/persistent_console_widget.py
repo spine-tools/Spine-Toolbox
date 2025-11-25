@@ -11,11 +11,11 @@
 ######################################################################################################################
 
 """Contains a widget acting as a console for Julia & Python REPL's."""
+import multiprocessing
 import os
+from queue import Empty
 import sys
 import uuid
-import multiprocessing
-from queue import Empty
 from pygments.lexers import get_lexer_by_name
 from pygments.styles import get_style_by_name
 from pygments.token import Token
@@ -31,11 +31,11 @@ from PySide6.QtGui import (
     QTextCursor,
     QTextOption,
 )
-from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy, QVBoxLayout, QWidget
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.execution_managers.persistent_execution_manager import (
-    PythonPersistentExecutionManager,
     JuliaPersistentExecutionManager,
+    PythonPersistentExecutionManager,
 )
 from spine_engine.utils.queue_logger import QueueLogger
 from spinetoolbox.helpers import CustomSyntaxHighlighter

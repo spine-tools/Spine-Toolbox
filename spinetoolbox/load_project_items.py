@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Functions to load project item modules. """
+"""Functions to load project item modules."""
 import importlib
 
 

@@ -1237,7 +1237,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def db_map_class_ids(
-        db_map_data: Union[DBMapDictItems, DBMapPublicItems]
+        db_map_data: Union[DBMapDictItems, DBMapPublicItems],
     ) -> dict[tuple[DatabaseMapping, TempId], set[TempId]]:
         d = {}
         for db_map, items in db_map_data.items():
@@ -1402,7 +1402,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def _get_data_for_export(
-        db_map_item_ids: dict[DatabaseMapping, dict[str, Iterable[TempId]]]
+        db_map_item_ids: dict[DatabaseMapping, dict[str, Iterable[TempId]]],
     ) -> dict[str, list[tuple]]:
         data = {}
         for db_map, item_ids in db_map_item_ids.items():

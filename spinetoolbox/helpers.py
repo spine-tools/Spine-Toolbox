@@ -1403,7 +1403,7 @@ def load_specification_local_data(config_dir):
         return json.load(data_file)
 
 
-DB_ITEM_SEPARATOR = " \u01C0 "
+DB_ITEM_SEPARATOR = " \u01c0 "
 """Display string to separate items such as entity names."""
 
 
@@ -1918,7 +1918,7 @@ def order_key(name: str) -> list[str]:
     """
     key_list = [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
     if key_list and key_list[0].isdigit():
-        key_list.insert(0, "\U0010FFFF")
+        key_list.insert(0, "\U0010ffff")
     return key_list
 
 
@@ -1928,7 +1928,7 @@ def order_key_from_names(names: Iterable[str]) -> list[str]:
     for name in names:
         key_list += [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
     if key_list and key_list[0].isdigit():
-        key_list.insert(0, "\U0010FFFF")
+        key_list.insert(0, "\U0010ffff")
     return key_list
 
 
