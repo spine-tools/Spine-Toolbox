@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Contains ResourceFilterModel. """
+"""Contains ResourceFilterModel."""
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE

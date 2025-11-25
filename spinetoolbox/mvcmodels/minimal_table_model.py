@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-""" Contains a minimal table model. """
+"""Contains a minimal table model."""
 from collections.abc import Iterable, Sequence
 from typing import Any, Generic, Optional, TypeVar
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt

@@ -1,5 +1,5 @@
 coverage[toml]
-black == 24.4.2
+black == 25.11.0
 pre-commit
 pyperf
 sphinx
