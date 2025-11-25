@@ -13,7 +13,7 @@
 """Contains the SpineDBEditor class."""
 import json
 import os
-from typing import Optional
+from typing import Literal, Optional, TypeAlias
 from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
@@ -58,6 +58,8 @@ from .stacked_view_mixin import StackedViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .toolbar import DBEditorToolBar
 from .tree_view_mixin import TreeViewMixin
+
+ViewType: TypeAlias = Literal["graph", "stacked", "&Value", "&Index", "E&lement", "&Scenario"]
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -112,7 +114,7 @@ class SpineDBEditorBase(QMainWindow):
         self._export_items_dialog = None
         self._export_items_dialog_state = None
         self.update_commit_enabled()
-        self.last_view = None
+        self.last_view: ViewType | None = None
         self.setup_focus_shortcuts()
         self.table_name_from_item_type = {
             "parameter_value": self.ui.dockWidget_parameter_value.windowTitle(),
@@ -732,23 +734,23 @@ class SpineDBEditorBase(QMainWindow):
         msg = f"Successfully removed {count} {item_type} item(s)"
         self._log_items_change(msg)
 
-    def restore_ui(self, view_type, fresh=False):
+    def restore_ui(self, view_type: ViewType, fresh: bool = False) -> None:
         """Restores UI state from previous session.
 
         Args:
-            view_type (str): What the selected view type is.
-            fresh (bool): If true, the view specified with subgroup will be applied,
+            view_type: What the selected view type is.
+            fresh: If true, the view specified with subgroup will be applied,
                 instead of loading the previous window state of the said view.
         """
         if fresh and view_type:
             # Apply the view instead of loading the window state
             self.last_view = None
-            options = {
-                "stacked": self.apply_stacked_style,
-                "graph": self.apply_graph_style,
-            }
-            func = options[view_type] if view_type in options else self.apply_pivot_style
-            func(view_type)
+            if view_type == "stacked":
+                self.apply_stacked_style()
+            elif view_type == "graph":
+                self.apply_graph_style()
+            else:
+                self.apply_pivot_style(view_type)
             return
         window_state = None
         if view_type:
@@ -767,7 +769,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def save_window_state(self):
         """Saves window state parameters (size, position, state) via QSettings."""
-        if not self.db_maps or len(self.db_urls) != 1:
+        if not self.db_maps or len(self.db_urls) != 1 or self.last_view is None:
             # Only save window sates of single db tabs
             return
         self.qsettings.beginGroup(self.settings_group)
@@ -1153,7 +1155,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
     @Slot(QAction)
-    def apply_pivot_style(self, triggering_action_or_last_view: str | QAction) -> None:
+    def apply_pivot_style(self, triggering_action_or_last_view: QAction | ViewType) -> None:
         """Applies the pivot style, inspired in the former tabular view."""
         if self.last_view:
             self.save_window_state()
