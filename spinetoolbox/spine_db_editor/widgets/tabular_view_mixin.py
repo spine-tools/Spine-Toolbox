@@ -89,7 +89,9 @@ class TabularViewMixin:
             self._handle_entity_tree_selection_changed_in_pivot_table
         )
         self.ui.pivot_table.header_changed.connect(self._connect_pivot_table_header_signals)
-        self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
+        self.ui.frozen_table.header_dropped.connect(
+            lambda dropped, catcher: self.handle_header_dropped(dropped, catcher)
+        )
         self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
         self.frozen_table_model.rowsInserted.connect(self._check_frozen_value_selected)
         self.frozen_table_model.rowsRemoved.connect(self._check_frozen_value_selected)
@@ -140,7 +142,7 @@ class TabularViewMixin:
                         return True
         return False
 
-    @Slot(str, dict)
+    @Slot(str, object)
     def _reload_pivot_table_if_needed(self, item_type, db_map_data):
         if not self.pivot_table_model:
             return
@@ -508,7 +510,8 @@ class TabularViewMixin:
         )
         self.make_pivot_headers()
 
-    def _change_selected_frozen_row(self, current, previous):
+    @Slot(QModelIndex, QModelIndex)
+    def _change_selected_frozen_row(self, current: QModelIndex, previous: QModelIndex) -> None:
         """Sets the frozen value from selection in frozen table."""
         if not current.isValid():
             return

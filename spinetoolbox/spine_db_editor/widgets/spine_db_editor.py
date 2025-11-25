@@ -201,7 +201,8 @@ class SpineDBEditorBase(QMainWindow):
         self.set_db_column_visibility(db_column_visible)
         return True
 
-    def show_recent_db(self):
+    @Slot()
+    def show_recent_db(self) -> None:
         """Updates and sets up the recent projects menu to File-Open recent menu item."""
         if not self.recent_dbs_menu.isVisible():
             self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
@@ -247,8 +248,8 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + os.path.normcase(file_path)
         self.load_db_urls(self.db_urls + [url])
 
-    @Slot(bool)
-    def create_db_file(self, _=False):
+    @Slot()
+    def create_db_file(self) -> None:
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
             self.qsettings, "createSQLiteUrl", self, "Create SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
@@ -263,7 +264,8 @@ class SpineDBEditorBase(QMainWindow):
         url = "sqlite:///" + os.path.normcase(file_path)
         self.load_db_urls([url], create=True)
 
-    def reset_docks(self):
+    @Slot()
+    def reset_docks(self) -> None:
         """Resets the layout of the dock widgets for this URL"""
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
@@ -280,6 +282,7 @@ class SpineDBEditorBase(QMainWindow):
         menu.setTitle(QCoreApplication.translate("MainWindow", "&View", None))
         self.ui.menuBar.insertMenu(self.ui.menuBar.actions()[2], menu)
 
+    @Slot()
     def _browse_commits(self):
         browser = CommitViewer(self.qsettings, self.db_mngr, *self.db_maps, parent=self)
         browser.show()
@@ -327,14 +330,15 @@ class SpineDBEditorBase(QMainWindow):
             undo_stack.indexChanged.disconnect(self.update_undo_redo_actions)
             undo_stack.cleanChanged.disconnect(self.update_commit_enabled)
 
-    @Slot(int)
-    def update_undo_redo_actions(self, _=0):
+    @Slot()
+    def update_undo_redo_actions(self) -> None:
         undo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].undo_age)
         redo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].redo_age)
         new_undo_action = self.db_mngr.undo_action[undo_db_map]
         new_redo_action = self.db_mngr.redo_action[redo_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
+    @Slot(QAction, QAction)
     def _replace_undo_redo_actions(self, new_undo_action: QAction, new_redo_action: QAction) -> None:
         if new_undo_action is not self.undo_action:
             if self.undo_action:
@@ -710,16 +714,19 @@ class SpineDBEditorBase(QMainWindow):
         self._changelog.append(msg)
         self._update_export_enabled()
 
+    @Slot(str, object)
     def _handle_items_added(self, item_type, db_map_data):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully added {count} {item_type} item(s)"
         self._log_items_change(msg)
 
+    @Slot(str, object)
     def _handle_items_updated(self, item_type, db_map_data):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully updated {count} {item_type} item(s)"
         self._log_items_change(msg)
 
+    @Slot(str, object)
     def _handle_items_removed(self, item_type, db_map_data):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully removed {count} {item_type} item(s)"
@@ -1019,13 +1026,14 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._item_metadata_editor.init_models(self.db_maps)
 
     @Slot(bool)
-    def _restart_timer_refresh_tab_order(self, _visible=False):
+    def _restart_timer_refresh_tab_order(self, _visible: bool = False) -> None:
         if self._torn_down:
             return
         self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.ConnectionType.UniqueConnection)
         self._timer_refresh_tab_order.start(100)
 
-    def _refresh_tab_order(self):
+    @Slot()
+    def _refresh_tab_order(self) -> None:
         if self._torn_down:
             return
         self._timer_refresh_tab_order.timeout.disconnect(self._refresh_tab_order)
@@ -1102,8 +1110,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.dockWidget_exports.hide()
         self.resize(self._original_size)
 
-    @Slot(object)
-    def apply_stacked_style(self, _checked=None):
+    @Slot()
+    def apply_stacked_style(self) -> None:
         """Applies the stacked style, inspired in the former tree view."""
         if self.last_view:
             self.save_window_state()
@@ -1144,12 +1152,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
-    @Slot(object)
-    def apply_pivot_style(self, _checked=None):
+    @Slot(QAction)
+    def apply_pivot_style(self, triggering_action_or_last_view: str | QAction) -> None:
         """Applies the pivot style, inspired in the former tabular view."""
         if self.last_view:
             self.save_window_state()
-        self.last_view = _checked if isinstance(_checked, str) else _checked.text()
+        self.last_view = (
+            triggering_action_or_last_view
+            if isinstance(triggering_action_or_last_view, str)
+            else triggering_action_or_last_view.text()
+        )
         self.current_input_type = self.last_view
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
@@ -1172,8 +1184,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.end_style_change()
         self.restore_ui(self.last_view)
 
-    @Slot(object)
-    def apply_graph_style(self, _checked=None):
+    @Slot()
+    def apply_graph_style(self) -> None:
         """Applies the graph style, inspired in the former graph view."""
         if self.last_view:
             self.save_window_state()

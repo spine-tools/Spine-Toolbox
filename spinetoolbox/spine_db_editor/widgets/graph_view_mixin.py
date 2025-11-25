@@ -125,7 +125,7 @@ class GraphViewMixin:
         self._graph_fetch_more_later()
         self._entity_addition_mode: AddingObjects | ConnectingEntities | None = None
 
-    @Slot(int)
+    @Slot(object)
     def _update_time_line_index(self, index):
         for item in self.ui.graphicsView.entity_items:
             item.update_props(index)
@@ -162,6 +162,7 @@ class GraphViewMixin:
         self.db_mngr.items_added.connect(self._refresh_icons)
         self.db_mngr.items_updated.connect(self._refresh_icons)
 
+    @Slot(str, object)
     def _refresh_icons(self, item_type: str, db_map_data: DBMapPublicItems) -> None:
         """Runs when entity classes are added or updated in the db. Refreshes icons of entities in graph.
 

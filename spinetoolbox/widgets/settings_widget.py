@@ -628,7 +628,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._julia_kernel_combobox_context_menu.popup(global_pos)
 
     @Slot(bool)
-    def _open_python_kernel_resource_dir(self, _=False):
+    def _open_python_kernel_resource_dir(self, _: bool = False) -> None:
         """Opens Python kernels resource dir."""
         try:
             index = self.ui.comboBox_python_kernel.view().selectedIndexes()[0]
@@ -639,7 +639,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.open_rsc_dir(item)
 
     @Slot(bool)
-    def _open_julia_kernel_resource_dir(self, _=False):
+    def _open_julia_kernel_resource_dir(self, _: bool = False) -> None:
         """Opens Julia kernels resource dir."""
         try:
             index = self.ui.comboBox_julia_kernel.view().selectedIndexes()[0]
