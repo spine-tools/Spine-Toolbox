@@ -285,6 +285,7 @@ class SpecificationEditorWindowBase(Generic[UI], QMainWindow):
     def _duplicate_kwargs(self) -> dict:
         return {}
 
+    @Slot()
     def _duplicate(self) -> None:
         if not self._toolbox.project():
             self.show_error("Please open or create a project first")

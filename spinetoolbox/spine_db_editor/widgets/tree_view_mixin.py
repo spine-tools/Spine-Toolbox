@@ -69,8 +69,10 @@ class TreeViewMixin:
         self.ui.scenario_tree_view.scenario_selection_changed.connect(
             self._handle_scenario_alternative_selection_changed
         )
-        self.entity_alternative_model.dataChanged.connect(self.build_graph)
-        self.parameter_value_model.dataChanged.connect(self._refresh_parameters_and_graph)
+        self.entity_alternative_model.dataChanged.connect(lambda top_left, bottom_right, roles: self.build_graph())
+        self.parameter_value_model.dataChanged.connect(
+            lambda top_left, bottom_right, roles: self._refresh_parameters_and_graph()
+        )
 
     def _refresh_parameters_and_graph(self):
         self._update_filter_parameter_value_ids()
@@ -98,7 +100,7 @@ class TreeViewMixin:
         self._update_filter_parameter_value_ids()
         self.build_graph()
 
-    @Slot(dict)
+    @Slot(object)
     def _handle_alternative_selection_changed(self, selected):
         self._filter_alternative_ids.clear()
         for db_map, alt_ids in selected.items():
@@ -110,7 +112,7 @@ class TreeViewMixin:
         self._update_filter_parameter_value_ids()
         self.build_graph()
 
-    @Slot(dict)
+    @Slot(object)
     def _handle_scenario_alternative_selection_changed(self, selected_ids):
         self._filter_scenario_ids = selected_ids
         # View specific stuff:

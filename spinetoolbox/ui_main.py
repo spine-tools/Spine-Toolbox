@@ -268,7 +268,7 @@ class ToolboxUI(QMainWindow):
         self.error_box.connect(self._show_error_box)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
-        self.ui.actionOpen.triggered.connect(self.open_project)
+        self.ui.actionOpen.triggered.connect(lambda _: self.open_project())
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
@@ -278,7 +278,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionStart_default_julia_in_basic_console.triggered.connect(self.start_detached_julia_basic_console)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
-        self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
+        self.ui.actionClose.triggered.connect(lambda _checked: self.close_project())
         self.ui.open_project_settings_action.triggered.connect(self.open_project_settings)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
@@ -503,7 +503,7 @@ class ToolboxUI(QMainWindow):
         self.open_project(project_dir, clear_event_log=False)
 
     @Slot()
-    def new_project(self):
+    def new_project(self) -> None:
         """Opens a file dialog where user can select a directory where a project is created.
         Pops up a question box if selected directory is not empty or if it already contains
         a Spine Toolbox project. Initial project name is the directory name.
@@ -565,18 +565,17 @@ class ToolboxUI(QMainWindow):
         self._plugin_manager.reload_plugins_with_local_data()
         self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
 
-    @Slot()
-    def open_project(self, load_dir=None, clear_event_log=True):
+    def open_project(self, load_dir: str | None=None, clear_event_log: bool=True) -> bool:
         """Opens project from a selected or given directory.
 
         Args:
-            load_dir (str, optional): Path to project base directory. If default value is used,
+            load_dir: Path to project base directory. If default value is used,
                 a file explorer dialog is opened where the user can select the
                 project to open.
-            clear_event_log (bool): True clears the Event log before opening the project
+            clear_event_log: True clears the Event log before opening the project
 
         Returns:
-            bool: True when opening the project succeeded, False otherwise
+            True when opening the project succeeded, False otherwise
         """
         if not load_dir:
             custom_open_dialog = self.qsettings().value("appSettings/customOpenProjectDialog", defaultValue="true")
@@ -732,7 +731,7 @@ class ToolboxUI(QMainWindow):
         QApplication.restoreOverrideCursor()
 
     @Slot()
-    def save_project(self):
+    def save_project(self) -> None:
         """Saves project."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
@@ -742,7 +741,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.setClean()
 
     @Slot()
-    def save_project_as(self):
+    def save_project_as(self) -> None:
         """Asks user for a new project directory and duplicates the current project there.
         The name of the duplicated project will be the new directory name. The duplicated
         project is activated."""
@@ -805,8 +804,8 @@ class ToolboxUI(QMainWindow):
             self.ui.textBrowser_eventlog.clear()
         return True
 
-    @Slot(bool)
-    def open_project_settings(self, _=False):
+    @Slot()
+    def open_project_settings(self) -> None:
         """Opens a dialog where the user can manage current project's settings."""
         if not self._project:
             return
@@ -1328,8 +1327,8 @@ class ToolboxUI(QMainWindow):
                 f"10, go to Control Panel -> Default Programs to do this."
             )
 
-    @Slot(bool)
-    def new_db_editor(self):
+    @Slot()
+    def new_db_editor(self) -> None:
         editor = MultiSpineDBEditor(self.db_mngr, [])
         editor.show()
 
@@ -1411,6 +1410,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.insertAction(before, redo_action)
         self.ui.menuEdit.insertSeparator(before)
 
+    @Slot()
     def toggle_properties_tabbar_visibility(self):
         """Shows or hides the tab bar in properties dock widget. For debugging purposes."""
         if self.ui.tabWidget_item_properties.tabBar().isVisible():
@@ -1630,7 +1630,7 @@ class ToolboxUI(QMainWindow):
         return None
 
     @Slot()
-    def show_settings(self):
+    def show_settings(self) -> None:
         """Shows the Settings widget."""
         self.settings_form = SettingsWidget(self)
         self.settings_form.show()
@@ -2348,14 +2348,14 @@ class ToolboxUI(QMainWindow):
         return menu
 
     @Slot()
-    def start_detached_python_basic_console(self):
+    def start_detached_python_basic_console(self) -> None:
         """Starts basic console with the default Python interpreter."""
         python = resolve_python_interpreter(self.qsettings())
         _set_resource_limits(self.qsettings(), threading.Lock())
         self.start_detached_basic_console("python", python)
 
     @Slot()
-    def start_detached_julia_basic_console(self):
+    def start_detached_julia_basic_console(self) -> None:
         """Starts basic console with the default Julia executable."""
         julia = resolve_julia_executable(self.qsettings())
         project = resolve_julia_project(self.qsettings())

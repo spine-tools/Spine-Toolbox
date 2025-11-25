@@ -58,7 +58,9 @@ class EmptyRowModel(MinimalTableModel):
         super().reset_model(main_data)
 
     @Slot(QModelIndex, QModelIndex, list)
-    def _handle_data_changed(self, top_left, bottom_right, roles=None):
+    def _handle_data_changed(
+        self, top_left: QModelIndex, bottom_right: QModelIndex, roles: list[Qt.ItemDataRole] | None = None
+    ) -> None:
         """Inserts a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
         if roles and Qt.ItemDataRole.EditRole not in roles:

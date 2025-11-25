@@ -170,13 +170,15 @@ class StackedViewMixin:
             model.set_rows_to_default(model.rowCount() - 1)
 
     @Slot(QModelIndex, QModelIndex, list)
-    def _update_empty_rows(self, top_left, bottom_right, roles):
+    def _update_empty_rows(
+        self, top_left: QModelIndex, bottom_right: QModelIndex, roles: list[Qt.ItemDataRole]
+    ) -> None:
         """Updates empty default data on empty rows if relevant entity (class) name has changed.
 
         Args:
-            top_left (QModelIndex): top left corner of changed data in Entity tree
-            bottom_right (QModelIndex): bottom right corner of changed data in Entity tree
-            roles (list of Qt.ItemDataRole): affected item data roles
+            top_left: top left corner of changed data in Entity tree
+            bottom_right: bottom right corner of changed data in Entity tree
+            roles: affected item data roles
         """
         entity_selection_model = self.ui.treeView_entity.selectionModel()
         current_entity_index = entity_selection_model.currentIndex()
