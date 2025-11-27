@@ -364,6 +364,7 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
             import_entity_classes(db_map, (("entity_class_1",),))
             import_entities(db_map, (("entity_class_1", "entity_1"), ("entity_class_1", "entity_2")))
             db_map.commit_session("Add entities.")
+        db_map.close()
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         root_index = model.index(0, 0)
@@ -506,11 +507,12 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
         with DatabaseMapping(self._db_map.db_url) as db_map:
             db_map.add_entity_item(name="entity_3", entity_class_name="entity_class_1")
             db_map.commit_session("Add external data.")
-        with mock.patch.object(self._db_editor, "set_default_parameter_data") as expected_callable:
+        db_map.close()
+        with mock.patch.object(self._db_editor, "_set_stacked_model_default_data") as expected_callable:
             with signal_waiter(view.selectionModel().selectionChanged, timeout=1.0) as waiter:
                 self._db_mngr.refresh_session(self._db_map)
                 waiter.wait()
-            self.assertEqual(expected_callable.call_count, 2)
+            self.assertEqual(expected_callable.call_count, 2 * len(self._db_editor._all_empty_models))
 
     def _rename_entity_class(self, class_name):
         view = self._db_editor.ui.treeView_entity
@@ -545,6 +547,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
                 ),
             )
             db_map.commit_session("Add relationships.")
+        db_map.close()
         self._common_setup(url, create=False)
         model = self._db_editor.ui.treeView_entity.model()
         root_index = model.index(0, 0)

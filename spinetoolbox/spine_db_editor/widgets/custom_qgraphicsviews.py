@@ -18,7 +18,7 @@ import math
 import os
 import sys
 import tempfile
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 import numpy as np
 from PySide6.QtCore import QRectF, QRunnable, QSettings, Qt, QThreadPool, QTimeLine, Signal, Slot
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QPageSize, QPainter, QPixmap, QShortcut
@@ -176,7 +176,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
 
     graph_selection_changed = Signal(object)
 
-    VIRTUAL_RADIUS = 6371.0 * 10.0
+    VIRTUAL_RADIUS: ClassVar[float] = 6371.0 * 10.0
 
     def __init__(self, parent):
         """
@@ -280,13 +280,6 @@ class EntityQGraphicsView(CustomQGraphicsView):
             for db_map, entity_id in item.db_map_ids:
                 selected_entity_ids.setdefault(db_map, []).append(entity_id)
         self.graph_selection_changed.emit(selected_entity_ids)
-        if len(self.selected_items) == 1:
-            default_data = self.selected_items[0].default_parameter_data()
-            default_db_map = self.selected_items[0].first_db_map
-        else:
-            default_data = {}
-            default_db_map = None
-        self._spine_db_editor.set_default_parameter_data(default_data, default_db_map)
 
     def connect_spine_db_editor(self, spine_db_editor: SpineDBEditor) -> None:
         self._spine_db_editor = spine_db_editor

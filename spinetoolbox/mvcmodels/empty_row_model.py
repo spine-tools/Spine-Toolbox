@@ -93,6 +93,7 @@ class EmptyRowModel(MinimalTableModel):
         """Sets default data in newly inserted rows."""
         if last is None:
             last = first
+            first = 0
         if first >= self.rowCount() or last < 0:
             return
         column_count = self.columnCount()

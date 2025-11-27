@@ -24,8 +24,7 @@ class SpineDBParcel:
     """
 
     def __init__(self, db_mngr):
-        """Initializes the parcel object.
-
+        """
         Args:
             db_mngr (SpineDBManager)
         """

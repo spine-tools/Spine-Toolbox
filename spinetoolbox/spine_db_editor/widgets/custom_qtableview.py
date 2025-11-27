@@ -125,7 +125,6 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def _convert_copied(
         self, row: int, column: int, value: Any, model: Union[CompoundStackedModel, EmptyModelBase]
@@ -234,11 +233,6 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.selectionModel().clearSelection()
         model = self.model()
         model.remove_rows(rows)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        """Enables or disables copy and paste actions."""
-        self._spine_db_editor.refresh_copy_paste_actions()
 
     def _initial_column_size(self, column):
         label = (
@@ -1098,7 +1092,6 @@ class PivotTableView(CopyPasteTableView):
         self._spine_db_editor = spine_db_editor
         self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     @Slot()
     def _change_context(self):
@@ -1242,10 +1235,6 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setGeometry(x, y, total_w, header_h)
         self._top_left_header_table.setGeometry(x, y, header_w, header_h)
 
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        self._spine_db_editor.refresh_copy_paste_actions()
-
     def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
         return self._context.convert_copied(row, column, value, model)
 
@@ -1293,7 +1282,6 @@ class MetadataTableViewBase(CopyPasteTableView):
         horizontal_header.sectionCountChanged.connect(self._set_horizontal_header_resize_modes)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._menu = QMenu(self)
-        self._db_editor = None
 
     def connect_spine_db_editor(self, db_editor):
         """Finishes view's initialization.
@@ -1301,11 +1289,9 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self._db_editor = db_editor
         self.set_external_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
         self._populate_context_menu()
         self._enable_delegates(db_editor)
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
@@ -1344,10 +1330,6 @@ class MetadataTableViewBase(CopyPasteTableView):
             value (str): value
         """
         self.model().setData(index, value)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self):
-        self._db_editor.refresh_copy_paste_actions()
 
     @Slot(int, int)
     def _set_horizontal_header_resize_modes(self, old_column_count, new_column_count):
