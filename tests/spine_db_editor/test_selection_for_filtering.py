@@ -10,192 +10,264 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, Qt
-from PySide6.QtGui import QStandardItem, QStandardItemModel
+from PySide6.QtCore import QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Asterisk, DatabaseMapping
 from spinetoolbox.helpers import signal_waiter
-from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
 from spinetoolbox.spine_db_editor.selection_for_filtering import EntitySelectionForFiltering
 from tests.conftest import parent_object
+from tests.spine_db_editor.helpers import fetch_entity_tree_model
 
 
 class TestEntitySelectionForFiltering:
-    def test_deselect_everything(self, parent_object):
-        db_map = DatabaseMapping("sqlite://", create=True)
+    def test_deselect_everything(self, db_editor, db_map):
         with db_map:
             db_map.add_entity_class(name="Gadget")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            index = _find_child_item("Gadget", model.item(0)).index()
-            selection_model.select(index, QItemSelectionModel.SelectionFlag.Select)
-            waiter.wait()
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(index, QItemSelectionModel.SelectionFlag.Deselect)
-            waiter.wait()
-            assert waiter.args == ({},)
-
-    def test_select_entity_class(self, parent_object):
-        db_map = DatabaseMapping("sqlite://", create=True)
-        with db_map:
-            entity_class = db_map.add_entity_class(name="Gadget")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("Gadget", model.item(0)).index(), QItemSelectionModel.SelectionFlag.Select
-            )
-            waiter.wait()
-            assert waiter.args == ({db_map: {entity_class["id"]: Asterisk}},)
-
-    def test_selecting_database_column_doesnt_count(self, parent_object):
-        db_map = DatabaseMapping("sqlite://", create=True)
-        with db_map:
-            db_map.add_entity_class(name="Gadget")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
         with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
             mock_signal.emit = mock.MagicMock()
             root_index = model.index(0, 0)
-            description_index = model.index(0, 1, root_index)
-            assert description_index.data() == "database"
-            selection_model.select(description_index, QItemSelectionModel.SelectionFlag.Select)
+            assert root_index.data() == "root"
+            selection_model.select(root_index, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(Asterisk)
+            mock_signal.emit.reset_mock()
+            selection_model.select(root_index, QItemSelectionModel.SelectionFlag.Deselect)
+            mock_signal.emit.assert_called_once_with({})
+
+    def test_select_entity_class(self, db_editor, db_map):
+        with db_map:
+            entity_class = db_map.add_entity_class(name="Gadget")
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            assert root_index.data() == "root"
+            gadget_index = model.index(0, 0, root_index)
+            assert gadget_index.data() == "Gadget"
+            database_index = model.index(0, 1, root_index)
+            selection = QItemSelection(gadget_index, database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(
+                {db_map: {entity_class["id"]: Asterisk}},
+            )
+
+    def test_selecting_database_column_doesnt_count(self, db_editor, db_map):
+        with db_map:
+            db_map.add_entity_class(name="Gadget")
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            database_index = model.index(0, 1, root_index)
+            assert database_index.data() == "TestEntitySelectionForFiltering_db"
+            selection_model.select(database_index, QItemSelectionModel.SelectionFlag.Select)
             mock_signal.emit.assert_not_called()
 
-    def test_select_entity_class_with_multiple_db_maps(self, parent_object):
-        db_map1 = DatabaseMapping("sqlite://", create=True)
+    def test_select_entity_class_with_multiple_db_maps(self, db_editor, tmp_path, logger):
+        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        with DatabaseMapping(url1, create=True) as db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_entity_class(name="Widget")
+            db_map.commit_session("Add test data.")
+        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        with DatabaseMapping(url2, create=True) as db_map:
+            entity_class2 = db_map.add_entity_class(name="Gadget")
+            db_map.commit_session("Add test data.")
+        with mock.patch.object(db_editor, "save_window_state"), mock.patch.object(db_editor, "restore_ui"):
+            db_editor.load_db_urls([url1, url2])
+        db_map1 = db_editor.db_mngr.get_db_map(url1, logger)
         with db_map1:
-            entity_class1a = db_map1.add_entity_class(name="Gadget")
-            entity_class1b = db_map1.add_entity_class(name="Widget")
-        db_map2 = DatabaseMapping("sqlite://", create=True)
+            entity_class1a = db_map1.entity_class(name="Gadget")
+            entity_class1b = db_map1.entity_class(name="Widget")
+        db_map2 = db_editor.db_mngr.get_db_map(url2, logger)
         with db_map2:
-            entity_class2 = db_map2.add_entity_class(name="Gadget")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map1, db_map2], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("Gadget", model.item(0)).index(), QItemSelectionModel.SelectionFlag.Select
+            entity_class2 = db_map2.entity_class(name="Gadget")
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        fetch_entity_tree_model(db_editor)
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            gadget_index = model.index(0, 0, root_index)
+            assert gadget_index.data() == "Gadget"
+            gadget_database_index = model.index(0, 1, root_index)
+            assert gadget_database_index.data() == "db1, db2"
+            selection = QItemSelection(gadget_index, gadget_database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(
+                {db_map1: {entity_class1a["id"]: Asterisk}, db_map2: {entity_class2["id"]: Asterisk}}
             )
-            waiter.wait()
-            assert waiter.args == (
-                {db_map1: {entity_class1a["id"]: Asterisk}, db_map2: {entity_class2["id"]: Asterisk}},
-            )
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("Widget", model.item(0)).index(), QItemSelectionModel.SelectionFlag.Select
-            )
-            waiter.wait()
-            assert waiter.args == (
+            mock_signal.emit.reset_mock()
+            widget_index = model.index(1, 0, root_index)
+            assert widget_index.data() == "Widget"
+            widget_database_index = model.index(1, 1, root_index)
+            assert widget_database_index.data() == "db1"
+            selection = QItemSelection(widget_index, widget_database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(
                 {
                     db_map1: {entity_class1a["id"]: Asterisk, entity_class1b["id"]: Asterisk},
                     db_map2: {entity_class2["id"]: Asterisk},
-                },
+                }
             )
 
-    def test_select_single_entity(self, parent_object):
-        db_map = DatabaseMapping("sqlite://", create=True)
+    def test_select_single_entity(self, db_editor, db_map):
         with db_map:
             entity_class = db_map.add_entity_class(name="Gadget")
             entity = db_map.add_entity(entity_class_name=entity_class["name"], name="wall_clock")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            assert root_index.data() == "root"
+            gadget_index = model.index(0, 0, root_index)
+            assert gadget_index.data() == "Gadget"
+            wall_clock_index = model.index(0, 0, gadget_index)
+            wall_clock_database_index = model.index(0, 1, gadget_index)
+            selection = QItemSelection(wall_clock_index, wall_clock_database_index)
             selection_model.select(
-                _find_child_item("wall_clock", model.item(0).child(0)).index(),
+                selection,
                 QItemSelectionModel.SelectionFlag.Select,
             )
-            waiter.wait()
-            assert waiter.args == ({db_map: {entity_class["id"]: {entity["id"]}}},)
+            mock_signal.emit.assert_called_once_with({db_map: {entity_class["id"]: {entity["id"]}}})
 
-    def test_select_entity_with_multiple_db_maps(self, parent_object):
-        db_map1 = DatabaseMapping("sqlite://", create=True)
+    def test_select_entity_with_multiple_db_maps(self, db_editor, tmp_path, logger):
+        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        with DatabaseMapping(url1, create=True) as db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_entity(entity_class_name="Gadget", name="watch")
+            db_map.add_entity(entity_class_name="Gadget", name="iron")
+            db_map.commit_session("Add test data.")
+        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        with DatabaseMapping(url2, create=True) as db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_entity(entity_class_name="Gadget", name="watch")
+            db_map.commit_session("Add test data.")
+        with mock.patch.object(db_editor, "save_window_state"), mock.patch.object(db_editor, "restore_ui"):
+            db_editor.load_db_urls([url1, url2])
+        db_map1 = db_editor.db_mngr.get_db_map(url1, logger)
         with db_map1:
-            entity_class1 = db_map1.add_entity_class(name="Gadget")
-            entity1a = db_map1.add_entity(entity_class_name="Gadget", name="watch")
-            entity1b = db_map1.add_entity(entity_class_name="Gadget", name="iron")
-        db_map2 = DatabaseMapping("sqlite://", create=True)
+            entity_class1 = db_map1.entity_class(name="Gadget")
+            entity1a = db_map1.entity(entity_class_name="Gadget", name="watch")
+            entity1b = db_map1.entity(entity_class_name="Gadget", name="iron")
+        db_map2 = db_editor.db_mngr.get_db_map(url2, logger)
         with db_map2:
-            entity_class2 = db_map2.add_entity_class(name="Gadget")
-            entity2 = db_map2.add_entity(entity_class_name="Gadget", name="watch")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map1, db_map2], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        gadget_item = _find_child_item("Gadget", model.item(0))
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("watch", gadget_item).index(), QItemSelectionModel.SelectionFlag.Select
+            entity_class2 = db_map2.entity_class(name="Gadget")
+            entity2 = db_map2.entity(entity_class_name="Gadget", name="watch")
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            gadget_index = model.index(0, 0, root_index)
+            iron_index = model.index(0, 0, gadget_index)
+            assert iron_index.data() == "iron"
+            iron_database_index = model.index(0, 1, gadget_index)
+            assert iron_database_index.data() == "db1"
+            watch_index = model.index(1, 0, gadget_index)
+            assert watch_index.data() == "watch"
+            watch_database_index = model.index(1, 1, gadget_index)
+            assert watch_database_index.data() == "db1, db2"
+            selection = QItemSelection(iron_index, iron_database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(
+                {db_map1: {entity_class1["id"]: {entity1b["id"]}}, db_map2: {entity_class2["id"]: set()}}
             )
-            waiter.wait()
-            assert waiter.args == (
-                {db_map1: {entity_class1["id"]: {entity1a["id"]}}, db_map2: {entity_class2["id"]: {entity2["id"]}}},
-            )
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("iron", gadget_item).index(), QItemSelectionModel.SelectionFlag.Select
-            )
-            waiter.wait()
-            assert waiter.args == (
+            mock_signal.emit.reset_mock()
+            selection = QItemSelection(watch_index, watch_database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(
                 {
                     db_map1: {entity_class1["id"]: {entity1a["id"], entity1b["id"]}},
                     db_map2: {entity_class2["id"]: {entity2["id"]}},
-                },
+                }
             )
 
-    def test_select_entity_in_one_and_class_in_other_db_map(self, parent_object):
-        db_map1 = DatabaseMapping("sqlite://", create=True)
+    def test_select_entity_in_one_and_class_in_other_db_map(self, db_editor, tmp_path, logger):
+        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        with DatabaseMapping(url1, create=True) as db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_entity(entity_class_name="Gadget", name="watch")
+            db_map.commit_session("Add test data.")
+        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        with DatabaseMapping(url2, create=True) as db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.commit_session("Add test data.")
+        with mock.patch.object(db_editor, "save_window_state"), mock.patch.object(db_editor, "restore_ui"):
+            db_editor.load_db_urls([url1, url2])
+        db_map1 = db_editor.db_mngr.get_db_map(url1, logger)
         with db_map1:
-            entity_class1 = db_map1.add_entity_class(name="Gadget")
-            entity = db_map1.add_entity(entity_class_name="Gadget", name="watch")
-        db_map2 = DatabaseMapping("sqlite://", create=True)
+            entity_class1 = db_map1.entity_class(name="Gadget")
+            entity = db_map1.entity(entity_class_name="Gadget", name="watch")
+        db_map2 = db_editor.db_mngr.get_db_map(url2, logger)
         with db_map2:
-            entity_class2 = db_map2.add_entity_class(name="Widget")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map1, db_map2], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        gadget_item = _find_child_item("Gadget", model.item(0))
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("watch", gadget_item).index(), QItemSelectionModel.SelectionFlag.Select
-            )
-            waiter.wait()
-            assert waiter.args == ({db_map1: {entity_class1["id"]: {entity["id"]}}},)
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(
-                _find_child_item("Widget", model.item(0)).index(), QItemSelectionModel.SelectionFlag.Select
-            )
-            waiter.wait()
-            assert waiter.args == (
-                {db_map1: {entity_class1["id"]: {entity["id"]}}, db_map2: {entity_class2["id"]: Asterisk}},
+            entity_class2 = db_map2.entity_class(name="Widget")
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            gadget_index = model.index(0, 0, root_index)
+            assert gadget_index.data() == "Gadget"
+            watch_index = model.index(0, 0, gadget_index)
+            assert watch_index.data() == "watch"
+            watch_database_index = model.index(0, 1, gadget_index)
+            assert watch_database_index.data() == "db1"
+            selection = QItemSelection(watch_index, watch_database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with({db_map1: {entity_class1["id"]: {entity["id"]}}})
+            mock_signal.emit.reset_mock()
+            widget_index = model.index(1, 0, root_index)
+            assert widget_index.data() == "Widget"
+            widget_database_index = model.index(1, 1, root_index)
+            assert widget_database_index.data() == "db2"
+            selection = QItemSelection(widget_index, widget_database_index)
+            selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(
+                {db_map1: {entity_class1["id"]: {entity["id"]}}, db_map2: {entity_class2["id"]: Asterisk}}
             )
 
-    def test_root_item_selected_means_all_entities_selected(self, parent_object):
-        db_map = DatabaseMapping("sqlite://", create=True)
+    def test_root_item_selected_means_all_entities_selected(self, db_editor, db_map):
         with db_map:
             db_map.add_entity_class(name="Gadget")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
-            selection_model.select(model.item(0).index(), QItemSelectionModel.SelectionFlag.Select)
-            selection_model.select(
-                _find_child_item("Gadget", model.item(0)).index(), QItemSelectionModel.SelectionFlag.Select
-            )
-            waiter.wait()
-            assert waiter.args == (Asterisk,)
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            selection_model.select(root_index, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_called_once_with(Asterisk)
+            mock_signal.emit.reset_mock()
+            gadget_index = model.index(0, 0, root_index)
+            selection_model.select(gadget_index, QItemSelectionModel.SelectionFlag.Select)
+            mock_signal.emit.assert_not_called()
 
     def test_simplest_secondary_selection_case(self, parent_object):
         mock_selection_model = mock.MagicMock()
@@ -205,84 +277,69 @@ class TestEntitySelectionForFiltering:
             waiter.wait()
             assert waiter.args == ({},)
 
-    def test_empty_secondary_entity_selection_results_in_primary_selection(self, parent_object):
-        db_map = DatabaseMapping("sqlite://", create=True)
+    def test_empty_secondary_entity_selection_results_in_primary_selection(self, db_editor, db_map):
         with db_map:
             entity_class = db_map.add_entity_class(name="Gadget")
             entity = db_map.add_entity(entity_class_name=entity_class["name"], name="wall_clock")
-        model = QStandardItemModel(parent_object)
-        _build_entity_tree_model([db_map], model)
-        selection_model = QItemSelectionModel(model, parent_object)
-        filter_selection = EntitySelectionForFiltering(selection_model, parent_object)
+        fetch_entity_tree_model(db_editor)
+        view = db_editor.ui.treeView_entity
+        model = view.model()
+        filter_selection = db_editor._entity_selection_for_filtering
+        selection_model = view.selectionModel()
         expected_selection = {db_map: {entity_class["id"]: {entity["id"]}}}
-        with signal_waiter(filter_selection.entity_selection_changed) as waiter:
+        with mock.patch.object(filter_selection, "entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            root_index = model.index(0, 0)
+            gadget_index = model.index(0, 0, root_index)
+            wall_clock_index = model.index(0, 0, gadget_index)
+            wall_clock_database_index = model.index(0, 1, gadget_index)
+            selection = QItemSelection(wall_clock_index, wall_clock_database_index)
             selection_model.select(
-                _find_child_item("wall_clock", model.item(0).child(0)).index(),
+                selection,
                 QItemSelectionModel.SelectionFlag.Select,
             )
-            waiter.wait()
-            assert waiter.args == (expected_selection,)
-        with signal_waiter(filter_selection.secondary_entity_selection_changed) as waiter:
+            mock_signal.emit.assert_called_once_with(expected_selection)
+        with mock.patch.object(filter_selection, "secondary_entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
             filter_selection.update_secondary_entity_selection({})
-            waiter.wait()
-            assert waiter.args == (expected_selection,)
+            mock_signal.emit.assert_called_once_with(expected_selection)
 
-    def test_update_secondary_entity_selection(self, parent_object):
-        mock_selection_model = mock.MagicMock()
-        with DatabaseMapping("sqlite://", create=True) as db_map1:
-            entity_class1 = db_map1.add_entity_class(name="Class1")
-            selected_entity1 = db_map1.add_entity(name="e1", entity_class_name="Class1")
-            db_map1.add_entity(name="e2", entity_class_name="Class1")
-        with DatabaseMapping("sqlite://", create=True) as db_map2:
-            entity_class2 = db_map2.add_entity_class(name="Class1")
-            selected_entity2 = db_map2.add_entity(name="e1", entity_class_name="Class1")
-            db_map2.add_entity_class(name="Class2")
-            db_map2.add_entity(name="e2", entity_class_name="Class2")
-        filter_selection = EntitySelectionForFiltering(mock_selection_model, parent_object)
+    def test_update_secondary_entity_selection(self, db_editor, tmp_path, logger):
+        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        with DatabaseMapping(url1, create=True) as db_map:
+            db_map.add_entity_class(name="Class1")
+            db_map.add_entity(name="e1", entity_class_name="Class1")
+            db_map.add_entity(name="e2", entity_class_name="Class1")
+            db_map.commit_session("Add test data.")
+        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        with DatabaseMapping(url2, create=True) as db_map:
+            db_map.add_entity_class(name="Class1")
+            db_map.add_entity(name="e1", entity_class_name="Class1")
+            db_map.add_entity_class(name="Class2")
+            db_map.add_entity(name="e2", entity_class_name="Class2")
+            db_map.commit_session("Add test data.")
+        with mock.patch.object(db_editor, "save_window_state"), mock.patch.object(db_editor, "restore_ui"):
+            db_editor.load_db_urls([url1, url2])
+        db_map1 = db_editor.db_mngr.get_db_map(url1, logger)
+        with db_map1:
+            entity_class1 = db_map1.entity_class(name="Class1")
+            selected_entity1 = db_map1.entity(entity_class_name="Class1", name="e1")
+        db_map2 = db_editor.db_mngr.get_db_map(url2, logger)
+        with db_map2:
+            entity_class2 = db_map2.entity_class(name="Class1")
+            selected_entity2 = db_map2.entity(entity_class_name="Class1", name="e1")
+        fetch_entity_tree_model(db_editor)
+        filter_selection = db_editor._entity_selection_for_filtering
         entity_ids = {db_map1: [selected_entity1["id"]], db_map2: [selected_entity2["id"]]}
-        with signal_waiter(filter_selection.secondary_entity_selection_changed) as waiter:
+        with mock.patch.object(filter_selection, "secondary_entity_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
             filter_selection.update_secondary_entity_selection(entity_ids)
-            waiter.wait()
-            assert waiter.args == (
+            mock_signal.emit.assert_called_once_with(
                 {
                     db_map1: {entity_class1["id"]: {selected_entity1["id"]}},
                     db_map2: {entity_class2["id"]: {selected_entity2["id"]}},
-                },
+                }
             )
-
-
-def _find_child_item(name, item):
-    for row in range(item.rowCount()):
-        child_item = item.child(row)
-        if child_item.data(Qt.ItemDataRole.DisplayRole) == name:
-            return child_item
-    raise KeyError(name)
-
-
-def _build_entity_tree_model(db_maps, model):
-    root_item = QStandardItem("root")
-    root_item.setData({db_map: None for db_map in db_maps}, ITEM_ID_ROLE)
-    for db_map in db_maps:
-        with db_map:
-            for entity_class in db_map.find_entity_classes():
-                entity_class_item = _add_or_update_child_item(root_item, db_map, entity_class)
-                for entity in db_map.find_entities(class_id=entity_class["id"]):
-                    _add_or_update_child_item(entity_class_item, db_map, entity)
-    model.appendRow(root_item)
-
-
-def _add_or_update_child_item(parent_item, db_map, db_item):
-    for row in range(parent_item.rowCount()):
-        child_item = parent_item.child(row)
-        if child_item.data(Qt.ItemDataRole.DisplayRole) == db_item["name"]:
-            child_item.data(ITEM_ID_ROLE)[db_map] = db_item["id"]
-            break
-    else:
-        child_item = QStandardItem(db_item["name"])
-        child_item.setData({db_map: db_item["id"]}, ITEM_ID_ROLE)
-        db_item = QStandardItem("database")
-        parent_item.appendRow([child_item, db_item])
-    return child_item
 
 
 class TestAlternativeSelectionForFiltering:

@@ -14,7 +14,14 @@
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
+
+
+def fetch_entity_tree_model(db_editor):
+    for item in db_editor.entity_tree_model.visit_all():
+        while item.can_fetch_more():
+            item.fetch_more()
+            QApplication.processEvents()
 
 
 class TestBase(TestCaseWithQApplication):

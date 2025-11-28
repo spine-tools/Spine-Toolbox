@@ -16,6 +16,7 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
+from tests.spine_db_editor.helpers import fetch_entity_tree_model
 
 
 class DBEditorTestBase(TestCaseWithQApplication):
@@ -215,7 +216,4 @@ class DBEditorTestBase(TestCaseWithQApplication):
         self.put_mock_relationship_parameter_values_in_db_mngr()
 
     def fetch_entity_tree_model(self):
-        for item in self.spine_db_editor.entity_tree_model.visit_all():
-            while item.can_fetch_more():
-                item.fetch_more()
-                QApplication.processEvents()
+        fetch_entity_tree_model(self.spine_db_editor)

@@ -61,6 +61,8 @@ class TreeViewMixin:
         self.ui.treeView_entity.selection_export_requested.connect(self._export_selected_entity_tree_items)
         self.ui.treeView_entity.selection_removal_requested.connect(self._remove_entity_tree_items)
         self.ui.treeView_entity.selection_edit_requested.connect(self._edit_entity_tree_items)
+        self.entity_tree_model.dataChanged.connect(self._default_row_generator.entity_or_class_updated)
+        self.alternative_model.dataChanged.connect(self._default_row_generator.alternative_updated)
 
     def handle_mousepress(self, tree_view: QTreeView, event: QMouseEvent) -> QMouseEvent:
         """Overrides selection behaviour if the user has selected sticky selection in Settings.

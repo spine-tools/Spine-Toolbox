@@ -9,6 +9,7 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+from PySide6.QtCore import QModelIndex, Qt
 from spinedb_api import Asterisk, DatabaseMapping
 from spinetoolbox.spine_db_editor.default_row_generator import DefaultRowData, DefaultRowGenerator
 
@@ -263,3 +264,152 @@ class TestDefaultRowGenerator:
             assert receiver.entity_alternative_default_row == DefaultRowData(
                 {"entity_class_name": "Widget", "entity_byname": None, "alternative_name": "Base"}, db_map
             )
+
+    def test_entity_class_updated(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_entity_selection({db_map: {gadget["id"]: Asterisk}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            gadget.update(name="Widget")
+            generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [])
+            assert receiver.definition_default_row == DefaultRowData({"entity_class_name": "Widget"}, db_map)
+            assert receiver.value_default_row == DefaultRowData(
+                {"entity_class_name": "Widget", "entity_byname": None, "alternative_name": None}, db_map
+            )
+            assert receiver.entity_alternative_default_row == DefaultRowData(
+                {"entity_class_name": "Widget", "entity_byname": None, "alternative_name": None}, db_map
+            )
+
+    def test_entity_class_update_is_ignored_when_roles_dont_match(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_entity_selection({db_map: {gadget["id"]: Asterisk}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            gadget.update(name="Widget")
+            generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.EditRole])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None
+
+    def test_entity_class_update_is_ignored_when_name_doesnt_change(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_entity_selection({db_map: {gadget["id"]: Asterisk}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            gadget.update(description="Gadget is not a widget.")
+            generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None
+
+    def test_entity_class_update_is_ignored_when_no_class_is_selected(self, parent_object):
+        generator = DefaultRowGenerator(parent_object)
+        receiver = Receiver()
+        receiver.connect(generator)
+        generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole])
+        assert receiver.definition_default_row is None
+        assert receiver.value_default_row is None
+        assert receiver.entity_alternative_default_row is None
+
+    def test_entity_updated(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            wall_clock = db_map.add_entity(name="wall_clock", entity_class_name="Gadget")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_entity_selection({db_map: {gadget["id"]: {wall_clock["id"]}}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            wall_clock.update(name="microwave_oven")
+            generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole])
+            assert receiver.definition_default_row is None
+            row_data = DefaultRowData(
+                {"entity_class_name": "Gadget", "entity_byname": ("microwave_oven",), "alternative_name": None}, db_map
+            )
+            assert receiver.value_default_row == row_data
+            assert receiver.entity_alternative_default_row == row_data
+
+    def test_entity_updated_ignored_if_byname_doesnt_change(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            wall_clock = db_map.add_entity(name="wall_clock", entity_class_name="Gadget")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_entity_selection({db_map: {gadget["id"]: {wall_clock["id"]}}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            wall_clock.update(description="Just another clock on the wall.")
+            generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None
+
+    def test_entity_updated_ignored_if_no_entity_selected(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            gadget = db_map.add_entity_class(name="Gadget")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_entity_selection({db_map: {gadget["id"]: Asterisk}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            generator.entity_or_class_updated(QModelIndex(), QModelIndex(), [])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None
+
+    def test_alternative_updated(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            base = db_map.alternative(name="Base")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_alternative_selection({db_map: {base["id"]}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            base.update(name="Another")
+            generator.alternative_updated(QModelIndex(), QModelIndex(), [])
+            assert receiver.definition_default_row is None
+            row_data = DefaultRowData(
+                {"entity_class_name": None, "entity_byname": None, "alternative_name": "Another"}, db_map
+            )
+            assert receiver.value_default_row == row_data
+            assert receiver.entity_alternative_default_row == row_data
+
+    def test_alternative_updated_ignored_when_roles_mismatch(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            base = db_map.alternative(name="Base")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_alternative_selection({db_map: {base["id"]}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            base.update(name="Another")
+            generator.alternative_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.BackgroundRole])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None
+
+    def test_alternative_updated_ignored_when_alternative_name_hasnt_changed(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            base = db_map.alternative(name="Base")
+            generator = DefaultRowGenerator(parent_object)
+            generator.update_defaults_from_alternative_selection({db_map: {base["id"]}})
+            receiver = Receiver()
+            receiver.connect(generator)
+            base.update(description="The basis of all.")
+            generator.alternative_updated(QModelIndex(), QModelIndex(), [Qt.ItemDataRole.DisplayRole])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None
+
+    def test_alternative_update_ignored_when_no_alternative_is_selected(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map:
+            base = db_map.alternative(name="Base")
+            generator = DefaultRowGenerator(parent_object)
+            receiver = Receiver()
+            receiver.connect(generator)
+            base.update(name="Another")
+            generator.alternative_updated(QModelIndex(), QModelIndex(), [])
+            assert receiver.definition_default_row is None
+            assert receiver.value_default_row is None
+            assert receiver.entity_alternative_default_row is None

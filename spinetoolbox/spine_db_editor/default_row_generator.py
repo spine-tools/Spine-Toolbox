@@ -11,8 +11,10 @@
 ######################################################################################################################
 from dataclasses import dataclass
 from typing import Any
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from spinedb_api import Asterisk, DatabaseMapping
+from spinedb_api.temp_id import TempId
+from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 from spinetoolbox.spine_db_editor.selection_for_filtering import AlternativeSelection, EntitySelection
 
 
@@ -31,20 +33,29 @@ class DefaultRowGenerator(QObject):
         super().__init__(parent)
         self._selected_db_map: DatabaseMapping | None = None
         self._selected_entity_class: str | None = None
+        self._selected_entity_class_id: TempId | None = None
         self._selected_entity_byname: tuple[str, ...] | None = None
+        self._selected_entity_id: DatabaseMapping | None = None
         self._selected_alternative: str | None = None
+        self._selected_alternative_id: DatabaseMapping | None = None
 
     @Slot(object)
     def update_defaults_from_entity_selection(self, entity_selection: EntitySelection) -> None:
         any_updates = False
         any_updates |= self._update_selected_entity_class(entity_selection)
         if any_updates:
-            self.parameter_definition_default_row_updated.emit(
-                DefaultRowData({"entity_class_name": self._selected_entity_class}, self._selected_db_map)
-            )
+            self._emit_definition_row_update()
         any_updates |= self._update_selected_entity(entity_selection)
         if not any_updates:
             return
+        self._emit_value_and_entity_alternative_row_update()
+
+    def _emit_definition_row_update(self):
+        self.parameter_definition_default_row_updated.emit(
+            DefaultRowData({"entity_class_name": self._selected_entity_class}, self._selected_db_map)
+        )
+
+    def _emit_value_and_entity_alternative_row_update(self):
         row_data = DefaultRowData(
             {
                 "entity_class_name": self._selected_entity_class,
@@ -56,9 +67,53 @@ class DefaultRowGenerator(QObject):
         self.parameter_value_default_row_updated.emit(row_data)
         self.entity_alternative_default_row_updated.emit(row_data)
 
+    @Slot(QModelIndex, QModelIndex, list)
+    def entity_or_class_updated(
+        self, top_left: QModelIndex, bottom_right: QModelIndex, roles: list[Qt.ItemDataRole]
+    ) -> None:
+        if (roles and Qt.ItemDataRole.DisplayRole not in roles) or self._selected_db_map is None:
+            return
+        try:
+            entity = self._selected_db_map.mapped_table("entity")[self._selected_entity_id]
+        except KeyError:
+            byname_updated = False
+        else:
+            byname = entity["entity_byname"]
+            byname_updated = byname != self._selected_entity_byname
+            if byname_updated:
+                self._selected_entity_byname = byname
+        try:
+            entity_class = self._selected_db_map.mapped_table("entity_class")[self._selected_entity_class_id]
+        except KeyError:
+            class_name_updated = False
+        else:
+            class_name = entity_class["name"]
+            class_name_updated = class_name != self._selected_entity_class
+            if class_name_updated:
+                self._selected_entity_class = class_name
+                self._emit_definition_row_update()
+        if class_name_updated or byname_updated:
+            self._emit_value_and_entity_alternative_row_update()
+
+    @Slot(QModelIndex, QModelIndex, list)
+    def alternative_updated(
+        self, top_left: QModelIndex, bottom_right: QModelIndex, roles: list[Qt.ItemDataRole]
+    ) -> None:
+        if (roles and Qt.ItemDataRole.DisplayRole not in roles) or self._selected_db_map is None:
+            return
+        try:
+            alternative = self._selected_db_map.mapped_table("alternative")[self._selected_alternative_id]
+        except KeyError:
+            return
+        name = alternative["name"]
+        if name != self._selected_alternative:
+            self._selected_alternative = name
+            self._emit_value_and_entity_alternative_row_update()
+
     @Slot(object)
     def update_defaults_from_alternative_selection(self, alternative_selection: AlternativeSelection) -> None:
         default_db_maps = set()
+        alternative_id = None
         if alternative_selection is Asterisk:
             alternative = None
         else:
@@ -84,22 +139,13 @@ class DefaultRowGenerator(QObject):
             return
         self._selected_alternative = alternative
         if self._selected_db_map is None and default_db_maps:
-            db_map = next(iter(default_db_maps))
-        else:
-            db_map = self._selected_db_map
-        row_data = DefaultRowData(
-            {
-                "entity_class_name": self._selected_entity_class,
-                "entity_byname": self._selected_entity_byname,
-                "alternative_name": alternative,
-            },
-            db_map,
-        )
-        self.parameter_value_default_row_updated.emit(row_data)
-        self.entity_alternative_default_row_updated.emit(row_data)
+            self._selected_db_map = next(iter(default_db_maps))
+        self._selected_alternative_id = alternative_id
+        self._emit_value_and_entity_alternative_row_update()
 
     def _update_selected_entity_class(self, entity_selection: EntitySelection) -> bool:
         class_name = None
+        class_id = None
         default_db_map = None
         if entity_selection is not Asterisk:
             for db_map, class_selection in entity_selection.items():
@@ -120,10 +166,12 @@ class DefaultRowGenerator(QObject):
             return False
         self._selected_db_map = default_db_map
         self._selected_entity_class = class_name
+        self._selected_entity_class_id = class_id if default_db_map is not None and class_name is not None else None
         return True
 
     def _update_selected_entity(self, entity_selection: EntitySelection) -> bool:
         entity_byname = None
+        entity_id = None
         multiple_selected = object()
         if entity_selection is not Asterisk:
             for db_map, class_selection in entity_selection.items():
@@ -148,4 +196,5 @@ class DefaultRowGenerator(QObject):
         if entity_byname == self._selected_entity_byname:
             return False
         self._selected_entity_byname = entity_byname
+        self._selected_entity_id = entity_id if entity_byname is not None else None
         return True

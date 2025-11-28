@@ -38,15 +38,16 @@ class EntitySelectionForFiltering(QObject):
     def _update_class_or_entity_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         class_ids = {}
         entity_ids = {}
-        for index in _include_parents(self._selection_model.selection().indexes()):
+        selection = self._selection_model.selection().indexes()
+        for index in _include_parents(selection):
             if index.column() != 0:
                 continue
-            db_map_ids = index.data(ITEM_ID_ROLE)
             if not index.parent().isValid():
                 if self._current_entity_selection is not Asterisk:
                     self._current_entity_selection = Asterisk
                     self.entity_selection_changed.emit(Asterisk)
                 return
+            db_map_ids = index.data(ITEM_ID_ROLE)
             for db_map, item_id in db_map_ids.items():
                 if item_id.item_type == "entity_class":
                     class_ids.setdefault(db_map, set()).add(item_id)
@@ -87,7 +88,23 @@ def _collect_entity_selection_from_ids(
             if class_id in selection_by_class:
                 continue
             selection_by_class[class_id] = Asterisk
+    if len(entity_selection) > 1:
+        _remove_surplus_entity_id_asterisks(entity_selection)
     return entity_selection
+
+
+def _remove_surplus_entity_id_asterisks(entity_selection: EntitySelection) -> None:
+    classes_with_non_asterisk_entity_selection = set()
+    for db_map, class_selection in entity_selection.items():
+        class_table = db_map.mapped_table("entity_class")
+        for class_id, entity_ids in class_selection.items():
+            if entity_ids is not Asterisk:
+                classes_with_non_asterisk_entity_selection.add(class_table[class_id]["name"])
+    for db_map, class_selection in entity_selection.items():
+        class_table = db_map.mapped_table("entity_class")
+        for class_id, entity_ids in class_selection.items():
+            if entity_ids is Asterisk and class_table[class_id]["name"] in classes_with_non_asterisk_entity_selection:
+                class_selection[class_id] = set()
 
 
 def _include_parents(indexes: Iterable[QModelIndex]) -> Iterator[QModelIndex]:
