@@ -1884,11 +1884,11 @@ class CustomPopupMenu(QMenu):
     def add_action(
         self,
         text: str,
-        slot: Callable[[bool], None],
+        slot: Callable[[], None],
         enabled: bool = True,
         tooltip: str | None = None,
         icon: QIcon | None = None,
-    ):
+    ) -> QAction:
         """Adds an action to the popup menu.
 
         Args:
@@ -1897,6 +1897,9 @@ class CustomPopupMenu(QMenu):
             enabled: Is action enabled?
             tooltip: Tool tip for the action
             icon: Action icon
+
+        Returns:
+            The added action.
         """
         if icon is not None:
             action = self.addAction(icon, text, slot)
@@ -1905,6 +1908,7 @@ class CustomPopupMenu(QMenu):
         action.setEnabled(enabled)
         if tooltip is not None:
             action.setToolTip(tooltip)
+        return action
 
 
 _SPLIT_PATTERN = re.compile(r"(\d+)")

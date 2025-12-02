@@ -248,41 +248,31 @@ class TabularViewDatabaseNameFilterMenu(TabularViewFilterMenuBase):
 class RecentDatabasesPopupMenu(CustomPopupMenu):
     """Recent databases menu embedded to 'File-Open recent' QAction."""
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (SpineDBEditor): Parent widget of this menu (SpineDBEditor)
-        """
+    load_url_requested = Signal(str, str)
+    clear_url_history_requested = Signal()
+
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent=parent)
-        self._parent = parent
         self.setToolTipsVisible(True)
-        self.add_recent_dbs()
-        self.addSeparator()
-        self.add_action(
+        self._separator = self.addSeparator()
+        self._clear_action = self.add_action(
             "Clear",
-            self.clear_recents,
-            enabled=self.has_recents(),
+            lambda: self.clear_url_history_requested.emit(),
             icon=QIcon(":icons/menu_icons/trash-alt.svg"),
         )
 
-    def has_recents(self):
-        """Returns True if there are recent DBs."""
-        return bool(self._parent._history)
-
-    def add_recent_dbs(self):
-        """Adds opened db maps top recently opened. Adds them to the QMenu as QActions."""
-        for row in self._parent._history:
-            for name, url in row.items():
-                self.add_action(
-                    name,
-                    lambda name=name, url=url: self._parent.load_db_urls({url: name}),
-                    tooltip=url,
-                )
-
-    @Slot(bool)
-    def clear_recents(self):
-        """Slot to clear the history of the db editor."""
-        self._parent._history = []
+    def update_history(self, history: list[tuple[str, str]]) -> None:
+        self._clear_action.setEnabled(bool(history))
+        for action in self.actions():
+            if action is self._separator:
+                break
+            self.removeAction(action)
+        for row in history:
+            url, name = row
+            action = QAction(name)
+            action.setToolTip(url)
+            action.triggered.connect(lambda _, url=url, name=name: self.load_url_requested.emit(url, name))
+            self.insertAction(self._separator, action)
 
 
 class DocksMenu(QMenu):
