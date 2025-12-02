@@ -16,7 +16,7 @@ import json
 import os
 from typing import Literal, Optional, TypeAlias
 from PySide6.QtCore import QCoreApplication, QItemSelection, QModelIndex, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QApplication,
@@ -922,20 +922,6 @@ class SpineDBEditorBase(QMainWindow):
         if color:
             palette.setColor(QPalette.ColorRole.Window, color)
         dock.setPalette(palette)
-
-    def handle_column_filters(self, model):
-        dock = self._dock_by_item_type[model.item_type]
-        table_name = self.table_name_from_item_type[model.item_type]
-        if not any(model.column_filters.values()):
-            # Back to defaults
-            dock.setWindowTitle(table_name)
-            self.set_dock_tab_color(dock, None)
-            return
-        self.set_dock_tab_color(dock, QColor("paleturquoise"))
-        table_name += (
-            f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
-        )
-        dock.setWindowTitle(table_name)
 
     def setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor

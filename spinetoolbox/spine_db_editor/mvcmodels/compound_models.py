@@ -16,7 +16,7 @@ import bisect
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Type
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
@@ -56,6 +56,7 @@ class CompoundStackedModel(CompoundTableModel):
 
     non_committed_items_about_to_be_added = Signal()
     non_committed_items_added = Signal()
+    column_filter_changed = Signal(QAbstractTableModel)
 
     _ENTITY_CLASS_ID_FIELD: ClassVar[str] = "entity_class_id"
 
@@ -67,7 +68,6 @@ class CompoundStackedModel(CompoundTableModel):
             *db_maps: the database maps included in the model
         """
         super().__init__(parent=parent, header=self._make_header())
-        self._parent = parent
         self.db_mngr = db_mngr
         self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
@@ -214,7 +214,7 @@ class CompoundStackedModel(CompoundTableModel):
         field = self.field_map.get(field, field)
         if field not in self._auto_filter_menus:
             self._auto_filter_menus[field] = menu = AutoFilterMenu(
-                self._parent, self.db_mngr, self._db_maps, self.item_type, field, show_empty=False
+                self.parent(), self.db_mngr, self._db_maps, self.item_type, field, show_empty=False
             )
             menu.filterChanged.connect(self.set_auto_filter)
         return self._auto_filter_menus[field]
@@ -289,7 +289,7 @@ class CompoundStackedModel(CompoundTableModel):
         self._filter_timer.start()
 
     @Slot(str, object)
-    def set_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]):
+    def set_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]) -> None:
         """Updates and applies the auto filter.
 
         Args:
@@ -303,7 +303,7 @@ class CompoundStackedModel(CompoundTableModel):
             self._column_filters[field] = True
         else:
             self._column_filters[field] = False
-        self._parent.handle_column_filters(self)
+        self.column_filter_changed.emit(self)
 
     def _set_compound_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]) -> None:
         """Sets the auto filter for given column in the compound model.
