@@ -192,10 +192,10 @@ class CompoundStackedModel(CompoundTableModel):
 
     def init_model(self) -> None:
         """Initializes the model."""
+        self.beginResetModel()
+        self.reset_db_maps([])
         if self._row_map:
-            self.beginResetModel()
             self._row_map.clear()
-            self.endResetModel()
         for m in self.sub_models:
             m.deleteLater()
         self.sub_models.clear()
@@ -205,6 +205,7 @@ class CompoundStackedModel(CompoundTableModel):
         while self._auto_filter_menus:
             _, menu = self._auto_filter_menus.popitem()
             menu.deleteLater()
+        self.endResetModel()
 
     def get_auto_filter_menu(self, logical_index: int) -> AutoFilterMenu:
         """Returns auto filter menu for given logical index from header view."""

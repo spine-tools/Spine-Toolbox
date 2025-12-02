@@ -130,8 +130,8 @@ class StackedViewMixin:
         """Initializes models."""
         super().init_models()
         for model in self._all_stacked_models:
-            model.reset_db_maps(self.db_maps)
             model.init_model()
+            model.reset_db_maps(self.db_maps)
         for model in self._all_empty_models:
             model.reset_db_maps(self.db_maps)
             self._set_stacked_model_default_data(DefaultRowData({}, None), model)
@@ -283,6 +283,7 @@ class StackedViewMixin:
         if not super().tear_down():
             return False
         for model in self._all_stacked_models:
+            model.init_model()
             model.stop_invalidating_filter()
         return True
 

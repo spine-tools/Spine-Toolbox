@@ -33,7 +33,6 @@ from ..helpers import TestBase
 class TestCompoundParameterDefinitionModel(TestBase):
     def test_horizontal_header(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         expected_header = [
             "class",
             "parameter name",
@@ -48,7 +47,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
 
     def test_data_for_single_parameter_definition(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
         while model.rowCount() != 1:
@@ -58,7 +56,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
 
     def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "rc"}]})
@@ -75,7 +72,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_map.add_entity_class(name="rc", dimension_name_list=("oc1", "oc2"))
         self._db_map.add_parameter_definition(entity_class_name="rc", name="x")
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         self.assertEqual(model.rowCount(), 3)
         model.set_entity_selection_for_filtering({self._db_map: {entity_class_2["id"]: Asterisk}})
@@ -90,7 +86,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_map.add_entity_class(name="Object")
         self._db_map.add_parameter_definition(name="x", entity_class_name="Object", parsed_value=Array([2.3]))
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         index = model.index(0, 3)
         self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - Object - x")
@@ -102,7 +97,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
                 entity_class_name="Widget", name="weight", parsed_value="a lot"
             )
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             fetch_model(model)
             waiter.wait()
@@ -128,7 +122,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
 
     def test_restore_db_maps(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p1", "entity_class_name": "oc"}]})
         while model.rowCount() != 1:
@@ -142,8 +135,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
             with db_map:
                 db_map.add_entity_class(name="Object")
                 db_map.add_parameter_definition(entity_class_name="Object", name="X", description="X marks the spot.")
-            model.reset_db_maps([db_map])
             model.init_model()
+            model.reset_db_maps([db_map])
             self.assertEqual(model.rowCount(), 0)
             self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p2", "entity_class_name": "oc"}]})
             fetch_model(model)
@@ -158,7 +151,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
             self._db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
             self._db_map.commit_session("Mark items as committed.")
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         with (
             mock.patch.object(model, "non_committed_items_about_to_be_added") as begin_signal,
             mock.patch.object(model, "non_committed_items_added") as end_signal,
@@ -189,7 +181,6 @@ class TestCompoundParameterDefinitionModel(TestBase):
 class TestCompoundParameterValueModel(TestBase):
     def test_horizontal_header(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         expected_header = [
             "class",
             "entity byname",
@@ -203,7 +194,6 @@ class TestCompoundParameterValueModel(TestBase):
 
     def test_data_for_single_parameter(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
         self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
@@ -228,7 +218,6 @@ class TestCompoundParameterValueModel(TestBase):
 
     def test_data_for_single_parameter_in_multidimensional_entity(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
         self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
         self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
@@ -267,7 +256,6 @@ class TestCompoundParameterValueModel(TestBase):
             parsed_value=Array([2.3]),
         )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         index = model.index(0, 3)
         self.assertEqual(
@@ -295,7 +283,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -338,7 +325,6 @@ class TestCompoundParameterValueModel(TestBase):
             parsed_value=-2.3,
         )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -374,7 +360,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -415,7 +400,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -452,7 +436,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -507,7 +490,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -556,7 +538,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Immaterial", "ghost", "Y", "Base", "-2.3", self.db_codename],
@@ -612,7 +593,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -673,7 +653,6 @@ class TestCompoundParameterValueModel(TestBase):
         )
         self._db_map.commit_session("Add test data")
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
@@ -714,7 +693,6 @@ class TestCompoundParameterValueModel(TestBase):
                 parsed_value="a lot",
             )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             fetch_model(model)
             expected = [["Widget", "gadget", "weight", "Base", "a lot", self.db_codename]]
@@ -758,7 +736,6 @@ class TestCompoundParameterValueModel(TestBase):
                 parsed_value="a lot",
             )
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Widget", "gadget", "weight", "Base", "a lot", self.db_codename],
@@ -775,7 +752,6 @@ class TestCompoundParameterValueModel(TestBase):
 class TestCompoundEntityAlternativeModel:
     def test_horizontal_header(self, db_mngr, db_map, db_editor):
         model = CompoundEntityAlternativeModel(db_editor, db_mngr, db_map)
-        model.init_model()
         expected_header = [
             "class",
             "entity byname",
@@ -794,7 +770,6 @@ class TestCompoundEntityAlternativeModel:
                 entity_class_name="Widget", entity_byname=("gadget",), alternative_name="Base", active=True
             )
         model = CompoundEntityAlternativeModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [["Widget", "gadget", "Base", True, db_name]]
         assert_table_model_data_pytest(model, expected)
@@ -807,7 +782,6 @@ class TestCompoundEntityAlternativeModel:
                 entity_class_name="Widget", entity_byname=("gadget",), alternative_name="Base", active=True
             )
         model = CompoundEntityAlternativeModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [["Widget", "gadget", "Base", True, db_name]]
         assert_table_model_data_pytest(model, expected)
@@ -824,7 +798,6 @@ class TestCompoundEntityAlternativeModel:
 class TestCompoundEntityModel:
     def test_horizontal_header(self, db_mngr, db_map, db_editor):
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
-        model.init_model()
         expected_header = [
             "class",
             "name",
@@ -845,7 +818,6 @@ class TestCompoundEntityModel:
             db_map.add_entity_class(name="Widget")
             db_map.add_entity(entity_class_name="Widget", name="gadget", description="Gadget is a widget.")
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [["Widget", "gadget", "gadget", "Gadget is a widget.", None, None, None, None, None, db_name]]
         assert_table_model_data_pytest(model, expected)
@@ -856,7 +828,6 @@ class TestCompoundEntityModel:
             db_map.add_entity(entity_class_name="Gadget", name="flashlight")
             microphone = db_map.add_entity(entity_class_name="Gadget", name="microphone")
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Gadget", "flashlight", "flashlight", None, None, None, None, None, None, db_name],
@@ -898,7 +869,6 @@ class TestCompoundEntityModel:
                 active=False,
             )
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Visible", "active_visible", "active_visible", None, None, None, None, None, None, db_name],
@@ -937,7 +907,6 @@ class TestCompoundEntityModel:
             db_map.add_entity_class(name="Widget")
             gadget = db_map.add_entity(entity_class_name="Widget", name="gadget")
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [["Widget", "gadget", "gadget", None, None, None, None, None, None, db_name]]
         assert_table_model_data_pytest(model, expected)
@@ -953,7 +922,6 @@ class TestCompoundEntityModel:
             db_map.add_entity_class(dimension_name_list=["Widget"])
             db_map.add_entity(entity_class_name="Widget__", entity_byname=("calendar",))
         model = CompoundEntityModel(db_editor, db_mngr, db_map)
-        model.init_model()
         fetch_model(model)
         expected = [
             ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],

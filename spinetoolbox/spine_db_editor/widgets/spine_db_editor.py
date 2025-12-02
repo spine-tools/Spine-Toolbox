@@ -182,11 +182,12 @@ class SpineDBEditorBase(QMainWindow):
         self.toolbar.reload_action.setEnabled(False)
         if not db_urls:
             return True
-        if not self.tear_down():
-            return False
+        if self.db_maps:
+            if not self.tear_down():
+                return False
+            self.db_maps.clear()
         if self.db_maps:
             self.save_window_state()
-        self.db_maps = []
         self._changelog.clear()
         self._purge_change_notifiers()
         for url in db_urls:
@@ -802,11 +803,11 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 
-    def tear_down(self):
+    def tear_down(self) -> bool:
         """Performs clean up duties.
 
         Returns:
-            bool: True if editor is ready to close, False otherwise
+            True if editor is ready to close, False otherwise
         """
         dirty_db_maps = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
         commit_dirty = False
