@@ -15,14 +15,16 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
-from spinedb_api import DatabaseMapping
+from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.helpers import AsteriskType
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, ITEM_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
 from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
+from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from .colors import FIXED_FIELD_COLOR
 from .utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
@@ -220,6 +222,8 @@ class SingleModelBase(HalfSortedTableModel):
             return self.db_map
         if role == ITEM_ID_ROLE:
             return self._main_data[index.row()]
+        if role == ITEM_ROLE:
+            return self._mapped_table[self._main_data[index.row()]]
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):
@@ -238,32 +242,67 @@ class SingleModelBase(HalfSortedTableModel):
         return True
 
 
-class FilterEntityAlternativeMixin:
-    """Provides the interface to filter by entity and alternative."""
+class FilterEntityMixin:
+    """Provides the interface to filter by entity."""
+
+    _ENTITY_ID_FIELD: ClassVar[str] = "entity_id"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._filter_entity_ids: set[TempId] | AsteriskType = Asterisk
+
+    def set_filter_entity_ids(self, entity_selection: EntitySelection) -> bool:
+        if entity_selection is Asterisk or not entity_selection:
+            entity_ids = Asterisk
+        else:
+            try:
+                selected_entities_by_class = entity_selection[self.db_map]
+            except KeyError:
+                entity_ids = set()
+            else:
+                if self.entity_class_id in selected_entities_by_class:
+                    entity_ids = selected_entities_by_class[self.entity_class_id]
+                else:
+                    entity_ids = set()
+                    dimension_id_list = self.db_map.mapped_table("entity_class")[self.entity_class_id][
+                        "dimension_id_list"
+                    ]
+                    for dimension_id in dimension_id_list:
+                        if dimension_id not in selected_entities_by_class:
+                            continue
+                        selected_entities = selected_entities_by_class[dimension_id]
+                        if selected_entities is Asterisk:
+                            continue
+                        entity_ids |= selected_entities
+                    if dimension_id_list and not entity_ids:
+                        entity_ids = Asterisk
+        if entity_ids == self._filter_entity_ids:
+            return False
+        self._filter_entity_ids = entity_ids
+        return True
+
+    def filter_accepts_item(self, item: PublicItem) -> bool:
+        """Reimplemented to also account for the entity and alternative filter."""
+        if self._filter_entity_ids is Asterisk:
+            return super().filter_accepts_item(item)
+        entity_accepts = item[
+            self._ENTITY_ID_FIELD
+        ] in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+        return entity_accepts and super().filter_accepts_item(item)
+
+
+class FilterAlternativeMixin:
+    """Provides the interface to filter by alternative."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._filter_alternative_ids = set()
-        self._filter_entity_ids = set()
 
-    def set_filter_entity_ids(self, db_map_class_entity_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]) -> bool:
-        # Don't accept entity id filters from entities that don't belong in this model
-        filter_entity_ids = set().union(
-            *(
-                ent_ids
-                for (db_map, class_id), ent_ids in db_map_class_entity_ids.items()
-                if db_map == self.db_map and (class_id == self.entity_class_id or class_id in self.dimension_id_list)
-            )
-        )
-        if self._filter_entity_ids == filter_entity_ids:
-            return False
-        self._filter_entity_ids = filter_entity_ids
-        return True
-
-    def set_filter_alternative_ids(
-        self, db_map_alternative_ids: dict[tuple[DatabaseMapping, TempId], set[TempId]]
-    ) -> bool:
-        alternative_ids = db_map_alternative_ids.get(self.db_map, set())
+    def set_filter_alternative_ids(self, alternative_selection: AlternativeSelection) -> bool:
+        if alternative_selection is Asterisk:
+            alternative_ids = Asterisk
+        else:
+            alternative_ids = alternative_selection.get(self.db_map, set())
         if self._filter_alternative_ids == alternative_ids:
             return False
         self._filter_alternative_ids = alternative_ids
@@ -271,25 +310,9 @@ class FilterEntityAlternativeMixin:
 
     def filter_accepts_item(self, item: PublicItem) -> bool:
         """Reimplemented to also account for the entity and alternative filter."""
-        return (
-            super().filter_accepts_item(item)
-            and self._entity_filter_accepts_item(item)
-            and self._alternative_filter_accepts_item(item)
-        )
-
-    def _entity_filter_accepts_item(self, item: PublicItem) -> bool:
-        """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:
-            return True
-        entity_id = item["entity_id"]
-        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
-
-    def _alternative_filter_accepts_item(self, item: PublicItem) -> bool:
-        """Returns the result of the alternative filter."""
-        if not self._filter_alternative_ids:
-            return True
-        alternative_id = item.get("alternative_id")
-        return alternative_id is None or alternative_id in self._filter_alternative_ids
+        if self._filter_alternative_ids is Asterisk:
+            return super().filter_accepts_item(item)
+        return item["alternative_id"] in self._filter_alternative_ids and super().filter_accepts_item(item)
 
 
 class ParameterMixin:
@@ -456,7 +479,8 @@ class SingleParameterValueModel(
     SplitValueAndTypeMixin,
     ParameterMixin,
     EntityMixin,
-    FilterEntityAlternativeMixin,
+    FilterAlternativeMixin,
+    FilterEntityMixin,
     SingleModelBase,
 ):
     """A parameter_value model for a single entity_class."""
@@ -481,7 +505,7 @@ class SingleParameterValueModel(
         return byname, parameter_name, alt_name
 
 
-class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, SingleModelBase):
     """An entity_alternative model for a single entity_class."""
 
     entity_class_column = field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP)
@@ -508,7 +532,7 @@ class SingleEntityAlternativeModel(FilterEntityAlternativeMixin, SingleModelBase
         }
 
 
-class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
+class SingleEntityModel(FilterEntityMixin, SingleModelBase):
     entity_class_column = field_index("entity_class_name", ENTITY_FIELD_MAP)
     database_column = field_index("database", ENTITY_FIELD_MAP)
     _NUMERICAL_COLUMNS: ClassVar[set[int]] = {
@@ -520,6 +544,7 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
     _SHAPE_BLOB_COLUMN: ClassVar[int] = field_index("shape_blob", ENTITY_FIELD_MAP)
     fixed_columns = (field_index("entity_class_name", ENTITY_FIELD_MAP), field_index("database", ENTITY_FIELD_MAP))
     group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
+    _ENTITY_ID_FIELD = "id"
 
     def __init__(
         self,
@@ -531,6 +556,7 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
     ):
         super().__init__(parent, db_map, entity_class_id, committed, lazy)
         self._entity_class_dimensions = len(db_map.mapped_table("entity_class")[entity_class_id]["dimension_id_list"])
+        self._filter_scenario_ids: set[TempId] | AsteriskType = Asterisk
 
     def flags(self, index):
         flags = super().flags(index)
@@ -570,9 +596,27 @@ class SingleEntityModel(FilterEntityAlternativeMixin, SingleModelBase):
             "database": ("database", None),
         }
 
-    def _entity_filter_accepts_item(self, item):
-        """Returns the result of the entity filter."""
-        if not self._filter_entity_ids:
-            return True
-        entity_id = item["id"]
-        return entity_id in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+    def set_filter_scenario_ids(self, scenario_selection: ScenarioSelection) -> bool:
+        if scenario_selection is Asterisk:
+            scenario_ids = Asterisk
+        else:
+            try:
+                scenario_ids = scenario_selection[self.db_map]
+            except KeyError:
+                scenario_ids = set()
+        if scenario_ids == self._filter_scenario_ids:
+            return False
+        self._filter_scenario_ids = scenario_ids
+        return True
+
+    def filter_accepts_item(self, item: PublicItem) -> bool:
+        if self._filter_scenario_ids is Asterisk:
+            return super().filter_accepts_item(item)
+        if not self._filter_scenario_ids:
+            return False
+        active_by_default = self.db_map.mapped_table("entity_class")[self.entity_class_id]["active_by_default"]
+        for scenario_id in self._filter_scenario_ids:
+            is_active = self.db_map.item_active_in_scenario(item, scenario_id)
+            if is_active is False or (is_active is None and not active_by_default):
+                return False
+        return super().filter_accepts_item(item)

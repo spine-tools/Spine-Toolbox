@@ -12,10 +12,12 @@
 
 """Contains the StackedViewMixin class."""
 from typing import Optional
-from PySide6.QtCore import QItemSelection, QModelIndex, Qt, Slot
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QPersistentModelIndex, Qt, Slot
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from ...helpers import preferred_row_height
+from ...mvcmodels.shared import ITEM_ROLE
+from ..default_row_generator import DefaultRowData, DefaultRowGenerator
 from ..empty_table_size_hint_provider import EmptyTableSizeHintProvider
 from ..mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
@@ -25,9 +27,11 @@ from ..mvcmodels.compound_models import (
 )
 from ..mvcmodels.empty_models import (
     EmptyEntityAlternativeModel,
+    EmptyModelBase,
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
 )
+from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from ..stacked_table_seam import StackedTableSeam
 from .custom_qwidgets import AddedEntitiesPopup
 from .element_name_list_editor import ElementNameListEditor
@@ -88,12 +92,12 @@ class StackedViewMixin:
             (self.ui.entity_alternative_contents_widget, self.ui.empty_entity_alternative_table_view),
         ):
             contents_widget.height_changed.connect(lambda: empty_table_view.updateGeometry())
+        self._entity_ids_with_visible_values: dict[DatabaseMapping, set[TempId]] | None = {}
+        self._default_row_generator = DefaultRowGenerator(self)
 
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_entity.model().dataChanged.connect(self._update_empty_rows)
-        self.ui.graphicsView.graph_selection_changed.connect(self._handle_graph_selection_changed)
         empty_model_item_types = ("parameter_definition", "parameter_value", "entity_alternative")
         for item_type in empty_model_item_types:
             table_view = getattr(self.ui, "tableView_" + item_type)
@@ -106,8 +110,17 @@ class StackedViewMixin:
             invisible_scroll_bar = table_view.horizontalScrollBar()
             visible_scroll_bar.valueChanged.connect(invisible_scroll_bar.setValue)
             invisible_scroll_bar.valueChanged.connect(visible_scroll_bar.setValue)
+        self.parameter_value_model.layoutChanged.connect(self._handle_value_model_layout_changed)
+        self.parameter_value_model.rowsInserted.connect(self._handle_values_inserted)
         self.empty_parameter_value_model.entities_added.connect(self._notify_about_added_entities)
         self.empty_entity_alternative_model.entities_added.connect(self._notify_about_added_entities)
+        self._default_row_generator.parameter_definition_default_row_updated.connect(
+            self._set_default_parameter_definition_data
+        )
+        self._default_row_generator.parameter_value_default_row_updated.connect(self._set_default_parameter_value_data)
+        self._default_row_generator.entity_alternative_default_row_updated.connect(
+            self._set_default_entity_alternative_data
+        )
 
     def init_models(self):
         """Initializes models."""
@@ -117,7 +130,7 @@ class StackedViewMixin:
             model.init_model()
         for model in self._all_empty_models:
             model.reset_db_maps(self.db_maps)
-        self._set_default_parameter_data()
+            self._set_stacked_model_default_data(DefaultRowData({}, None), model)
 
     @Slot(QModelIndex, object, object)
     def show_element_name_list_editor(self, index: QModelIndex, entity_class_id: TempId, db_map: DatabaseMapping):
@@ -148,90 +161,70 @@ class StackedViewMixin:
         editor = ElementNameListEditor(self, index, dimension_names, entity_byname_lists, current_element_byname_list)
         editor.show()
 
-    def _set_default_parameter_data(self, index: Optional[QModelIndex] = None) -> None:
-        """Sets default rows for parameter models according to given index.
+    @Slot(object)
+    def _set_default_parameter_definition_data(self, default_data: DefaultRowData) -> None:
+        self._set_stacked_model_default_data(default_data, self.empty_parameter_definition_model)
 
-        Args:
-            index: an index of the entity tree
-        """
-        if index is None or not index.isValid():
-            default_db_map = next(iter(self.db_maps))
-            default_data = {"database": self.db_mngr.name_registry.display_name(default_db_map.sa_url)}
+    @Slot(object)
+    def _set_default_parameter_value_data(self, default_data: DefaultRowData) -> None:
+        self._set_stacked_model_default_data(default_data, self.empty_parameter_value_model)
+
+    @Slot(object)
+    def _set_default_entity_alternative_data(self, default_data: DefaultRowData) -> None:
+        self._set_stacked_model_default_data(default_data, self.empty_entity_alternative_model)
+
+    def _set_stacked_model_default_data(self, default_data: DefaultRowData, model: EmptyModelBase) -> None:
+        if default_data.default_db_map is not None:
+            db_map = default_data.default_db_map
         else:
-            item = index.model().item_from_index(index)
-            default_db_map = item.first_db_map
-            default_data = item.default_parameter_data()
-        self.set_default_parameter_data(default_data, default_db_map)
-
-    def set_default_parameter_data(self, default_data, default_db_map):
-        for model in self._all_empty_models:
-            model.db_map = default_db_map
-            model.set_default_row(**default_data)
-            model.set_rows_to_default(model.rowCount() - 1)
-
-    @Slot(QModelIndex, QModelIndex, list)
-    def _update_empty_rows(
-        self, top_left: QModelIndex, bottom_right: QModelIndex, roles: list[Qt.ItemDataRole]
-    ) -> None:
-        """Updates empty default data on empty rows if relevant entity (class) name has changed.
-
-        Args:
-            top_left: top left corner of changed data in Entity tree
-            bottom_right: bottom right corner of changed data in Entity tree
-            roles: affected item data roles
-        """
-        entity_selection_model = self.ui.treeView_entity.selectionModel()
-        current_entity_index = entity_selection_model.currentIndex()
-        if not current_entity_index.isValid() or (roles and Qt.ItemDataRole.DisplayRole not in roles):
-            return
-        selection = QItemSelection(top_left, bottom_right)
-        if selection.contains(current_entity_index):
-            self._set_default_parameter_data(current_entity_index)
+            db_map = self.db_maps[0]
+        database_name = self.db_mngr.name_registry.display_name(db_map.sa_url)
+        model.set_default_row(database=database_name, **default_data.default_data)
+        model.set_rows_to_default(model.rowCount() - 1)
+        model.db_map = db_map
 
     def clear_all_filters(self):
         for model in self._all_stacked_models:
             model.clear_auto_filter()
-        self._filter_class_ids = {}
-        self._filter_entity_ids = {}
-        self._filter_alternative_ids = {}
-        self._filter_scenario_ids = {}
-        self._reset_filters()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
             tree.selectionModel().clearSelection()
 
-    def _reset_filters(self):
-        """Resets filters."""
+    @Slot(object)
+    def _set_entity_selection_filter_for_stacked_tables(self, entity_selection: EntitySelection) -> None:
         for model in self._all_stacked_models:
-            model.set_filter_class_ids(self._filter_class_ids)
-        alternatives = self.get_all_alternatives()
+            model.set_entity_selection_for_filtering(entity_selection)
+        self._entity_ids_with_visible_values = None
+
+    @Slot(object)
+    def _set_alternative_selection_filter_for_stacked_tables(self, alternative_selection: AlternativeSelection) -> None:
         for model in (self.parameter_value_model, self.entity_alternative_model):
-            model.set_filter_entity_ids(self._filter_entity_ids)
-            model.set_filter_alternative_ids(alternatives)
-        self.entity_model.set_filter_entity_ids(self._filter_entity_ids)
+            model.set_alternative_selection_for_filtering(alternative_selection)
 
-    def get_all_alternatives(self):
-        """Combines alternative ids from Scenario and Alternative tree selections."""
-        all_alternatives = self._filter_alternative_ids.copy()
-        for db_map, scenarios in self._filter_scenario_ids.get("scenario", {}).items():
-            for _, alternatives in scenarios.items():
-                all_alternatives.setdefault(db_map, set()).update(alternatives)
-        for db_map, alternatives in self._filter_scenario_ids.get("scenario_alternative", {}).items():
-            all_alternatives.setdefault(db_map, set()).update(alternatives)
-        return all_alternatives
+    @Slot(object)
+    def _set_scenario_selection_filter_for_stacekd_tables(self, scenario_selection: ScenarioSelection) -> None:
+        self.entity_model.set_scenario_selection_for_filtering(scenario_selection)
 
-    @Slot(list)
-    def _handle_graph_selection_changed(self, selected_items):
-        """Resets filter according to graph selection."""
-        active_items = {}
-        for x in selected_items:
-            for db_map in x.db_maps:
-                active_items.setdefault(db_map, []).extend(x.db_items(db_map))
-        self._filter_class_ids = {}
-        for db_map, items in active_items.items():
-            self._filter_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self._filter_entity_ids = self.db_mngr.db_map_class_ids(active_items)
-        self._reset_filters()
+    @Slot(QModelIndex, int, int)
+    def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
+        self._clear_table_related_caches()
+
+    @Slot(list, QAbstractItemModel.LayoutChangeHint)
+    def _handle_value_model_layout_changed(
+        self, parents: list[QPersistentModelIndex], hint: QAbstractItemModel.LayoutChangeHint
+    ) -> None:
+        self._clear_table_related_caches()
+
+    def _clear_table_related_caches(self) -> None:
+        self._entity_ids_with_visible_values = None
+
+    def _recalculate_entity_ids_with_visible_values(self) -> None:
+        entity_ids = {}
+        for row in range(self.parameter_value_model.rowCount()):
+            index = self.parameter_value_model.index(row, 0)
+            value_item = self.parameter_value_model.data(index, ITEM_ROLE)
+            entity_ids.setdefault(value_item.db_map, set()).add(value_item["entity_id"])
+        self._entity_ids_with_visible_values = entity_ids
 
     @Slot(int, int, int)
     def _update_empty_parameter_definition_header_section_size(self, logical_index, old_size, new_size):

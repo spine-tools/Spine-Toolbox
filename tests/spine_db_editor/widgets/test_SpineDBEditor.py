@@ -12,15 +12,15 @@
 
 """Unit tests for SpineDBEditor classes."""
 import pathlib
-import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, QModelIndex
+from PySide6.QtCore import QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, assert_table_model_data
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
@@ -252,6 +252,85 @@ class TestSpineDBEditor(DBEditorTestBase):
                 empty_row = [model.index(row_count - 1, col).data() for col in range(model.columnCount())]
                 self.assertEqual(empty_row, expected_empty_row)
 
+    def test_export_selected_entity_tree_items(self):
+        gadget_index, widget_index, check_box_index = self._prepare_selection_including_descriptions()
+        with mock.patch.object(self.spine_db_editor, "export_data") as mock_export_data:
+            self.spine_db_editor.ui.treeView_entity.selection_export_requested.emit()
+            mock_export_data.assert_called_once_with(
+                {
+                    self.mock_db_map: {
+                        "entity_class_ids": {
+                            gadget_index.data(ITEM_ID_ROLE)[self.mock_db_map],
+                            widget_index.data(ITEM_ID_ROLE)[self.mock_db_map],
+                        },
+                        "entity_ids": {check_box_index.data(ITEM_ID_ROLE)[self.mock_db_map]},
+                        "entity_group_ids": set(),
+                        "parameter_definition_ids": set(),
+                        "parameter_value_ids": set(),
+                        "parameter_value_list_ids": set(),
+                        "alternative_ids": set(),
+                        "scenario_ids": set(),
+                        "scenario_alternative_ids": set(),
+                    }
+                }
+            )
+
+    def test_open_dialog_to_remove_selected_entity_tree_items(self):
+        gadget_index, widget_index, check_box_index = self._prepare_selection_including_descriptions()
+        model = self.spine_db_editor.entity_tree_model
+        with mock.patch.object(self.spine_db_editor, "show_remove_entity_tree_items_form") as mock_show_dialog:
+            self.spine_db_editor.ui.treeView_entity.selection_removal_requested.emit()
+            mock_show_dialog.assert_called_once_with(
+                {
+                    "entity_class": [model.item_from_index(gadget_index), model.item_from_index(widget_index)],
+                    "entity": [model.item_from_index(check_box_index)],
+                }
+            )
+
+    def test_open_dialog_to_edit_selected_entity_tree_items(self):
+        gadget_index, widget_index, check_box_index = self._prepare_selection_including_descriptions()
+        model = self.spine_db_editor.entity_tree_model
+        with (
+            mock.patch.object(self.spine_db_editor, "show_edit_entity_classes_form") as mock_show_edit_classes_dialog,
+            mock.patch.object(self.spine_db_editor, "show_edit_entities_form") as mock_show_edit_entities_dialog,
+        ):
+            self.spine_db_editor.ui.treeView_entity.selection_edit_requested.emit()
+            mock_show_edit_classes_dialog.assert_called_once_with(
+                {model.item_from_index(gadget_index), model.item_from_index(widget_index)}
+            )
+            mock_show_edit_entities_dialog.assert_called_once_with({model.item_from_index(check_box_index)})
+
+    def _prepare_selection_including_descriptions(self):
+        with self.mock_db_map:
+            self.mock_db_map.add_entity_class(name="Widget")
+            self.mock_db_map.add_entity(name="button", entity_class_name="Widget")
+            self.mock_db_map.add_entity(name="check_box", entity_class_name="Widget")
+            self.mock_db_map.add_entity_class(name="Gadget")
+            self.mock_db_map.add_entity(name="wall_clock", entity_class_name="Gadget")
+        self.fetch_entity_tree_model()
+        model = self.spine_db_editor.entity_tree_model
+        root_index = model.index(0, 0)
+        gadget_index = model.index(0, 0, root_index)
+        gadget_description_index = model.index(0, 1, root_index)
+        self.assertEqual(gadget_index.data(), "Gadget")
+        widget_index = model.index(1, 0, root_index)
+        widget_description_index = model.index(1, 1, root_index)
+        self.assertEqual(widget_index.data(), "Widget")
+        check_box_index = model.index(1, 0, widget_index)
+        check_box_description_index = model.index(1, 1, widget_index)
+        self.assertEqual(check_box_index.data(), "check_box")
+        selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
+        selection_model.select(
+            QItemSelection(gadget_index, gadget_description_index), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        selection_model.select(
+            QItemSelection(widget_index, widget_description_index), QItemSelectionModel.SelectionFlag.Select
+        )
+        selection_model.select(
+            QItemSelection(check_box_index, check_box_description_index), QItemSelectionModel.SelectionFlag.Select
+        )
+        return gadget_index, widget_index, check_box_index
+
 
 class TestClosingDBEditors(TestCaseWithQApplication):
     def setUp(self):
@@ -313,7 +392,3 @@ class TestClosingDBEditors(TestCaseWithQApplication):
             commit_changes.return_value = QMessageBox.StandardButton.Discard
             editor.close()
             commit_changes.assert_called_once()
-
-
-if __name__ == "__main__":
-    unittest.main()

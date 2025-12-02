@@ -12,10 +12,13 @@
 
 """Classes for custom QTreeViews and QTreeWidgets."""
 from PySide6.QtCore import QEvent, QItemSelection, QModelIndex, QTimer, Signal, Slot
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu, QWidget
+from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import CharIconEngine, busy_effect
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
+from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioDBItem, ScenarioItem
@@ -26,18 +29,19 @@ from .scenario_generator import ScenarioGenerator
 class EntityTreeView(CopyPasteTreeView):
     """Tree view for entity classes and entities."""
 
-    tree_selection_changed = Signal(dict)
+    selection_export_requested = Signal()
+    selection_removal_requested = Signal()
+    selection_edit_requested = Signal()
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent=parent)
         self.setItemDelegate(AddEntityButtonDelegate(self))
         self.setRootIsDecorated(False)
         self._context_item = None
-        self._selected_indexes = {}
         self._menu = QMenu(self)
         self._spine_db_editor = None
         self._fully_expand_action = None
@@ -58,17 +62,12 @@ class EntityTreeView(CopyPasteTreeView):
         self._cubes_pen_icon = QIcon(":/icons/menu_icons/cubes_pen.svg")
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
-        self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
         self._find_next_action = None
         self._hide_empty_classes_action = None
         self._entity_index = None
         self._header = self.header()
         self._header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-
-    def reset(self):
-        super().reset()
-        self._selected_indexes = {}
 
     def connect_spine_db_editor(self, spine_db_editor):
         """Connects a Spine db editor to work with this view.
@@ -150,17 +149,11 @@ class EntityTreeView(CopyPasteTreeView):
 
     def connect_signals(self):
         """Connects signals."""
-        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
         self.doubleClicked.connect(self.find_next_entity)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
-        self._refresh_selected_indexes()
-        QTimer.singleShot(20, self._do_find_next_entity)  # Keep looking for the next entity after new rows are inserted
-
-    def rowsRemoved(self, parent, start, end):
-        super().rowsRemoved(parent, start, end)
-        self._refresh_selected_indexes()
+        QTimer.singleShot(0, self._do_find_next_entity)
 
     def setModel(self, model):
         old_model = self.model()
@@ -181,26 +174,6 @@ class EntityTreeView(CopyPasteTreeView):
     def verticalScrollbarValueChanged(self, value):
         super().verticalScrollbarValueChanged(value)
         self._fetch_more_timer.start()
-
-    @Slot(QItemSelection, QItemSelection)
-    def _handle_selection_changed(self, selected, deselected):
-        """Classifies selection by item type and emits signal."""
-        if self._spine_db_editor.clear_tree_selections:
-            self._spine_db_editor.clear_tree_selections = False
-            self._spine_db_editor._clear_all_other_selections(self)
-        self._spine_db_editor.refresh_copy_paste_actions()
-        self._refresh_selected_indexes()
-        self.tree_selection_changed.emit(self._selected_indexes)
-
-    def _refresh_selected_indexes(self):
-        self._selected_indexes.clear()
-        model = self.model()
-        indexes = self.selectionModel().selectedIndexes()
-        for index in indexes:
-            if not index.isValid() or index.column() != 0:
-                continue
-            item = model.item_from_index(index)
-            self._selected_indexes.setdefault(item.item_type, {})[index] = None
 
     @busy_effect
     def fully_expand(self):
@@ -226,20 +199,17 @@ class EntityTreeView(CopyPasteTreeView):
             return
         super().collapse(index)
 
+    @Slot()
     def export_selected(self):
         """Exports data from selected indexes using the connected Spine db editor."""
-        self._spine_db_editor.export_selected(self._selected_indexes)
+        self.selection_export_requested.emit()
 
     def remove_selected(self):
         """Removes selected indexes using the connected Spine db editor."""
-        self._spine_db_editor.remove_entity_tree_items(self._selected_indexes)
+        self.selection_removal_requested.emit()
 
     def contextMenuEvent(self, event):
-        """Shows context menu.
-
-        Args:
-            event (QContextMenuEvent)
-        """
+        """Shows context menu."""
         index = self.indexAt(event.pos())
         if index.column() != 0:
             return
@@ -291,9 +261,10 @@ class EntityTreeView(CopyPasteTreeView):
             item.item_type == "entity" and item.parent_item.parent_item.item_type == "entity_class"
         )
 
+    @Slot()
     def edit_selected(self):
         """Edits all selected indexes using the connected Spine db editor."""
-        self._spine_db_editor.edit_entity_tree_items(self._selected_indexes)
+        self.selection_edit_requested.emit()
 
     def add_entity_classes(self):
         self._spine_db_editor.show_add_entity_classes_form(self._context_item)
@@ -306,7 +277,8 @@ class EntityTreeView(CopyPasteTreeView):
         self._entity_index = self.currentIndex()
         self._do_find_next_entity()
 
-    def _do_find_next_entity(self):
+    @Slot()
+    def _do_find_next_entity(self) -> None:
         if self._entity_index is None:
             return
         next_index = self.model().find_next_entity_index(self._entity_index)
@@ -337,10 +309,10 @@ class EntityTreeView(CopyPasteTreeView):
 class ItemTreeView(CopyPasteTreeView):
     """Base class for all non-entity tree views."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent=parent)
         self._spine_db_editor = None
@@ -355,10 +327,6 @@ class ItemTreeView(CopyPasteTreeView):
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self.resizeColumnToContents(0)
-
-    def connect_signals(self):
-        """Connects signals."""
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def remove_selected(self):
         """Removes items selected in the view."""
@@ -376,7 +344,6 @@ class ItemTreeView(CopyPasteTreeView):
         """
         self._spine_db_editor = spine_db_editor
         self.populate_context_menu()
-        self.connect_signals()
 
     def populate_context_menu(self):
         """Creates a context menu for this view."""
@@ -397,45 +364,17 @@ class ItemTreeView(CopyPasteTreeView):
         self.update_actions_availability(item)
         self._menu.exec(event.globalPos())
 
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        """Refreshes copy and paste actions enabled state."""
-        self._spine_db_editor.refresh_copy_paste_actions()
-
-    def _clear_trees(self):
-        """Clears selections from all other trees if such clearing is set as pending."""
-        if not self._spine_db_editor.clear_tree_selections:
-            return
-        self._spine_db_editor.clear_tree_selections = False
-        self._spine_db_editor._clear_all_other_selections(self)
-
 
 class AlternativeTreeView(ItemTreeView):
     """Custom QTreeView for the alternative tree in SpineDBEditor."""
 
-    alternative_selection_changed = Signal(object)
-
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent=parent)
-        self._selected_alternative_ids = {}
-        self._generate_scenarios_action = None
-
-    @property
-    def selected_alternative_ids(self):
-        return self._selected_alternative_ids
-
-    def reset(self):
-        super().reset()
-        self._selected_alternative_ids.clear()
-
-    def connect_signals(self):
-        """Connects signals."""
-        super().connect_signals()
-        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+        self._generate_scenarios_action: QAction | None = None
 
     def connect_spine_db_editor(self, spine_db_editor):
         """see base class"""
@@ -450,38 +389,6 @@ class AlternativeTreeView(ItemTreeView):
         self._menu.addSeparator()
         super().populate_context_menu()
 
-    def _db_map_alt_ids_from_selection(self, selection):
-        """Gather alternative ids per database map from selection.
-
-        Args:
-            selection (QItemSelection): selection
-
-        Returns:
-            dict: mapping from database map to set of alternative ids
-        """
-        db_map_ids = {}
-        for index in selection.indexes():
-            if index.column() != 0:
-                continue
-            item = self.model().item_from_index(index)
-            if isinstance(item, AlternativeItem) and item.id is not None:
-                db_map_ids.setdefault(item.db_map, set()).add(item.id)
-        return db_map_ids
-
-    @Slot(QItemSelection, QItemSelection)
-    def _handle_selection_changed(self, selected, deselected):
-        """Emits alternative_selection_changed with the current selection."""
-        self._clear_trees()
-        selected_db_map_alt_ids = self._db_map_alt_ids_from_selection(selected)
-        deselected_db_map_alt_ids = self._db_map_alt_ids_from_selection(deselected)
-        for db_map, ids in deselected_db_map_alt_ids.items():
-            if ids:
-                self._selected_alternative_ids[db_map].difference_update(ids)
-        for db_map, ids in selected_db_map_alt_ids.items():
-            if ids:
-                self._selected_alternative_ids.setdefault(db_map, set()).update(ids)
-        self.alternative_selection_changed.emit(self._selected_alternative_ids)
-
     def remove_selected(self):
         """See base class."""
         if not self.selectionModel().hasSelection():
@@ -494,26 +401,40 @@ class AlternativeTreeView(ItemTreeView):
                 if alt_item in items:
                     db_map_typed_data_to_rm[db_item.db_map]["alternative"].add(alt_item.id)
         self.model().db_mngr.remove_items(db_map_typed_data_to_rm)
-        self.selectionModel().clearSelection()
 
     def update_actions_availability(self, item):
         """See base class."""
+        for index in self.selectionModel().selectedIndexes():
+            if index.column() == 0 and (parent := index.parent()).isValid():
+                if parent.data(DB_MAP_ROLE) is item.db_map:
+                    has_selected_alternatives = True
+                    break
+        else:
+            has_selected_alternatives = False
         self._generate_scenarios_action.setEnabled(
-            isinstance(item, AlternativeItem) and bool(self._selected_alternative_ids.get(item.db_map))
+            isinstance(item, AlternativeItem) and item.id is not None and has_selected_alternatives
         )
 
-    def _open_scenario_generator(self):
+    def _open_scenario_generator(self) -> None:
         """Opens the scenario generator dialog."""
         item = self.model().item_from_index(self.currentIndex())
-        if not isinstance(item, AlternativeItem):
-            return
         included_ids = set()
         alternatives = []
         db_map = item.db_map
-        for id_ in self._selected_alternative_ids.get(db_map, ()):
-            if id_ not in included_ids:
-                alternatives.append(self._spine_db_editor.db_mngr.get_item(db_map, "alternative", id_))
-                included_ids.add(id_)
+        alternative_table = db_map.mapped_table("alternative")
+        for index in self.selectionModel().selectedIndexes():
+            if index.column() != 0:
+                continue
+            parent_index = index.parent()
+            if not parent_index.isValid():
+                continue
+            if db_map is not parent_index.data(DB_MAP_ROLE):
+                continue
+            alternative_id = index.data(ITEM_ID_ROLE)
+            if alternative_id is None or alternative_id in included_ids:
+                continue
+            alternatives.append(alternative_table[alternative_id])
+            included_ids.add(alternative_id)
         generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
         generator.show()
 
@@ -576,25 +497,13 @@ class AlternativeTreeView(ItemTreeView):
 class ScenarioTreeView(ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
-    scenario_selection_changed = Signal(object)
-
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent (QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent=parent)
-        self._selected_scenario_ids = {}
-        self._duplicate_scenario_action = None
-
-    def reset(self):
-        super().reset()
-        self._selected_scenario_ids.clear()
-
-    def connect_signals(self):
-        """Connects signals."""
-        super().connect_signals()
-        self.selectionModel().selectionChanged.connect(self._handle_selection_changed)
+        self._duplicate_scenario_action: QAction | None = None
 
     def connect_spine_db_editor(self, spine_db_editor):
         """see base class"""
@@ -607,43 +516,6 @@ class ScenarioTreeView(ItemTreeView):
         """See base class."""
         super().populate_context_menu()
         self._duplicate_scenario_action = self._menu.addAction("Duplicate", self._duplicate_scenario)
-
-    def _db_map_alternative_ids_from_selection(self, selection):
-        """Collects database maps and alternative ids within given selection.
-
-        Args:
-            selection (Sequence of QModelIndex): selection indices
-
-        Returns:
-            dict: mapping from database map to set of alternative ids
-        """
-        db_map_ids = {}
-        for index in selection.indexes():
-            if index.column() != 0:
-                continue
-            item = self.model().item_from_index(index)
-            if isinstance(item, ScenarioItem) and item.id is not None:
-                db_map_ids.setdefault(item.db_map, set()).update(item.alternative_id_list)
-            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                db_map_ids.setdefault(item.db_map, set()).add(item.alternative_id)
-        return db_map_ids
-
-    @Slot(QItemSelection, QItemSelection)
-    def _handle_selection_changed(self, selected, deselected):
-        """Emits scenario_selection_changed with the current selection."""
-        self._clear_trees()
-        self._selected_scenario_ids.clear()
-        for index in self.selectionModel().selectedIndexes():
-            item = self.model().item_from_index(index)
-            if isinstance(item, ScenarioItem) and item.id is not None:
-                self._selected_scenario_ids.setdefault("scenario", {}).setdefault(item.db_map, {}).update(
-                    {item.id: item.alternative_id_list}
-                )
-            elif isinstance(item, ScenarioAlternativeItem) and item.alternative_id is not None:
-                self._selected_scenario_ids.setdefault("scenario_alternative", {}).setdefault(item.db_map, set()).add(
-                    item.alternative_id
-                )
-        self.scenario_selection_changed.emit(self._selected_scenario_ids)
 
     def remove_selected(self):
         """See base class."""
@@ -765,10 +637,10 @@ class ScenarioTreeView(ItemTreeView):
 class ParameterValueListTreeView(ItemTreeView):
     """Custom QTreeView class for parameter_value_list in SpineDBEditor."""
 
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
-            parent(QWidget): parent widget
+            parent: parent widget
         """
         super().__init__(parent=parent)
         self._open_in_editor_action = None

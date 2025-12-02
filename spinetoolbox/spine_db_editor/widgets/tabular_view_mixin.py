@@ -85,7 +85,7 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_entity.tree_selection_changed.connect(
+        self.ui.treeView_entity.selectionModel().currentChanged.connect(
             self._handle_entity_tree_selection_changed_in_pivot_table
         )
         self.ui.pivot_table.header_changed.connect(self._connect_pivot_table_header_signals)
@@ -158,7 +158,8 @@ class TabularViewMixin:
     def init_models(self):
         """Initializes models."""
         with disconnect(
-            self.ui.treeView_entity.tree_selection_changed, self._handle_entity_tree_selection_changed_in_pivot_table
+            self.ui.treeView_entity.selectionModel().currentChanged,
+            self._handle_entity_tree_selection_changed_in_pivot_table,
         ):
             super().init_models()
         self.current_class_id = {}
@@ -230,25 +231,25 @@ class TabularViewMixin:
         if self._pending_reload:
             self.do_reload_pivot_table()
 
-    @Slot(dict)
-    def _handle_entity_tree_selection_changed_in_pivot_table(self, selected_indexes):
-        current_index = self.ui.treeView_entity.currentIndex()
-        self._update_class_attributes(current_index)
-        if self.current_input_type != self._SCENARIO_ALTERNATIVE:
+    @Slot(QModelIndex, QModelIndex)
+    def _handle_entity_tree_selection_changed_in_pivot_table(self, current: QModelIndex, previous: QModelIndex) -> None:
+        reload_required = self._update_class_attributes(current)
+        if self.current_input_type != self._SCENARIO_ALTERNATIVE and reload_required:
             self.do_reload_pivot_table()
 
-    def _update_class_attributes(self, current_index):
+    def _update_class_attributes(self, current_index: QModelIndex) -> bool:
         """Updates current class id and name."""
         current_class_item = self._get_current_class_item(current_index)
         if current_class_item is None:
             self.current_class_id = {}
             self.current_class_name = None
-            return
+            return True
         class_id = current_class_item.db_map_ids
         if self.current_class_id == class_id:
-            return
+            return False
         self.current_class_id = class_id
         self.current_class_name = current_class_item.name
+        return True
 
     @staticmethod
     def _get_current_class_item(current_index):

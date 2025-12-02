@@ -141,7 +141,7 @@ def select_item_with_index(view, index, extend=False):
     pos = rect.center()
     QTest.mouseClick(
         view.viewport(),
-        Qt.LeftButton,
+        Qt.MouseButton.LeftButton,
         modifier,
         pos,
     )

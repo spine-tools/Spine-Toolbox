@@ -11,13 +11,15 @@
 ######################################################################################################################
 
 """Contains the SpineDBEditor class."""
+from itertools import chain
 import json
 import os
 from typing import Literal, Optional, TypeAlias
-from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QCoreApplication, QItemSelection, QModelIndex, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
+    QApplication,
     QCheckBox,
     QDialog,
     QDockWidget,
@@ -25,6 +27,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QTabBar,
+    QTreeView,
 )
 from sqlalchemy.engine.url import URL
 from spine_engine.utils.helpers import urls_equal
@@ -48,6 +51,11 @@ from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
+from ..selection_for_filtering import (
+    AlternativeSelectionForFiltering,
+    EntitySelectionForFiltering,
+    ScenarioSelectionForFiltering,
+)
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
@@ -382,8 +390,8 @@ class SpineDBEditorBase(QMainWindow):
             return
         Notification(self, msg, corner=Qt.Corner.BottomRightCorner).show()
 
-    @Slot()
-    def refresh_copy_paste_actions(self):
+    @Slot(QItemSelection, QItemSelection)
+    def _refresh_copy_paste_actions(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         """Runs when menus are about to show.
         Enables or disables actions according to selection status."""
         self.ui.actionCopy.setEnabled(bool(call_on_focused_widget(self, "can_copy")))
@@ -966,17 +974,26 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
 
     pinned_values_updated = Signal(list)
 
-    def __init__(self, db_mngr, db_urls=None):
+    def __init__(self, db_mngr: SpineDBManager, db_urls: list[str] | None = None):
         """
         Args:
-            db_mngr (SpineDBManager): The manager to use
-            db_urls (Iterable of str, optional): URLs of databases to load
+            db_mngr: The manager to use
+            db_urls: URLs of databases to load
         """
         super().__init__(db_mngr)
         self._original_size = None
         self._metadata_editor = MetadataEditor(self.ui.metadata_table_view, self, db_mngr)
         self._item_metadata_editor = ItemMetadataEditor(
             self.ui.item_metadata_table_view, self, self._metadata_editor, db_mngr
+        )
+        self._alternative_selection_for_filtering = AlternativeSelectionForFiltering(
+            self.ui.alternative_tree_view.selectionModel(), self.ui.scenario_tree_view.selectionModel(), self
+        )
+        self._entity_selection_for_filtering = EntitySelectionForFiltering(
+            self.ui.treeView_entity.selectionModel(), self
+        )
+        self._scenario_selection_for_filtering = ScenarioSelectionForFiltering(
+            self.ui.scenario_tree_view.selectionModel(), self
         )
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
@@ -985,6 +1002,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.connect_signals()
         self.apply_stacked_style()
         self.set_db_column_visibility(False)
+        self._clear_tree_selections = True
         if db_urls is not None:
             self.load_db_urls(db_urls)
 
@@ -1009,6 +1027,39 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         super().connect_signals()
         self._metadata_editor.connect_signals(self.ui)
         self._item_metadata_editor.connect_signals(self.ui)
+        self.ui.graphicsView.graph_selection_changed.connect(
+            self._entity_selection_for_filtering.update_secondary_entity_selection
+        )
+        self._entity_selection_for_filtering.entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_stacked_tables
+        )
+        self._entity_selection_for_filtering.entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_graph
+        )
+        self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_stacked_tables
+        )
+        self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
+            self._default_row_generator.update_defaults_from_entity_selection
+        )
+        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
+            self._set_alternative_selection_filter_for_stacked_tables
+        )
+        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
+            self._set_alternative_selection_filter_for_graph
+        )
+        self._scenario_selection_for_filtering.scenario_selection_changed.connect(
+            self._set_scenario_selection_filter_for_stacekd_tables
+        )
+        self._scenario_selection_for_filtering.scenario_selection_changed.connect(
+            self._set_scenario_selection_filter_for_graph
+        )
+        self._entity_selection_for_filtering.entity_selection_changed.connect(
+            self._default_row_generator.update_defaults_from_entity_selection
+        )
+        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
+            self._default_row_generator.update_defaults_from_alternative_selection
+        )
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.ui.actionValue.triggered.connect(lambda: self._handle_pivot_action_triggered(self.ui.actionValue))
@@ -1021,6 +1072,25 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         for dock in self._dock_views:
             dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
         self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
+        for copy_paste_view in chain(
+            (
+                self.ui.treeView_entity,
+                self.ui.alternative_tree_view,
+                self.ui.scenario_tree_view,
+                self.ui.treeView_parameter_value_list,
+                self.ui.pivot_table,
+                self.ui.metadata_table_view,
+                self.ui.item_metadata_table_view,
+            ),
+            self._all_stacked_models.values(),
+            self._all_empty_models.values(),
+        ):
+            copy_paste_view.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
+        self.ui.treeView_entity.selectionModel().selectionChanged.connect(self._clear_non_entity_tree_selections)
+        self.ui.alternative_tree_view.selectionModel().selectionChanged.connect(
+            self._clear_non_alternative_tree_selections
+        )
+        self.ui.scenario_tree_view.selectionModel().selectionChanged.connect(self._clear_non_scenario_tree_selections)
 
     def init_models(self):
         super().init_models()
@@ -1091,6 +1161,24 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 
+    @Slot(QItemSelection, QItemSelection)
+    def _clear_non_entity_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self._clear_selections_if_required([self.ui.alternative_tree_view, self.ui.scenario_tree_view])
+
+    @Slot(QItemSelection, QItemSelection)
+    def _clear_non_alternative_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self._clear_selections_if_required([self.ui.treeView_entity, self.ui.scenario_tree_view])
+
+    @Slot(QItemSelection, QItemSelection)
+    def _clear_non_scenario_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self._clear_selections_if_required([self.ui.treeView_entity, self.ui.alternative_tree_view])
+
+    def _clear_selections_if_required(self, views: list[QTreeView]) -> None:
+        if self._clear_tree_selections:
+            self._clear_tree_selections = False
+            for view in views:
+                view.selectionModel().clearSelection()
+
     def begin_style_change(self):
         """Begins a style change operation."""
         self._original_size = self.size()
@@ -1108,7 +1196,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 continue
             if tab_bar.count() == 0 and tab_bar.isVisible():
                 tab_bar.hide()
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        QApplication.processEvents()
         self.ui.dockWidget_exports.hide()
         self.resize(self._original_size)
 
@@ -1208,7 +1296,3 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.end_style_change()
         self.restore_ui(self.last_view)
         self.ui.graphicsView.reset_zoom()
-
-    @staticmethod
-    def _get_base_dir():
-        return APPLICATION_PATH

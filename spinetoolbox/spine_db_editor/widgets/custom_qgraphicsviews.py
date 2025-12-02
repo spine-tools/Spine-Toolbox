@@ -18,7 +18,7 @@ import math
 import os
 import sys
 import tempfile
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 import numpy as np
 from PySide6.QtCore import QRectF, QRunnable, QSettings, Qt, QThreadPool, QTimeLine, Signal, Slot
 from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QPageSize, QPainter, QPixmap, QShortcut
@@ -37,6 +37,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from ...helpers import CharIconEngine, remove_first
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_qgraphicsviews import CustomQGraphicsView
@@ -172,13 +174,12 @@ class GraphOptionsOverlay(QWidget):
 class EntityQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Entity Graph View."""
 
-    graph_selection_changed = Signal(list)
+    graph_selection_changed = Signal(object)
 
-    VIRTUAL_RADIUS = 6371.0 * 10.0
+    VIRTUAL_RADIUS: ClassVar[float] = 6371.0 * 10.0
 
     def __init__(self, parent):
         """
-
         Args:
             parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
         """
@@ -192,7 +193,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
         self._current_state_name = ""
         self._margin = 0.025
         self._bg_item = None
-        self.selected_items = []
+        self.selected_items: list[EntityItem] = []
         self.hidden_items = {}
         self._hovered_ent_item = None
         self.entity_class = None
@@ -266,15 +267,19 @@ class EntityQGraphicsView(CustomQGraphicsView):
             self.set_property(name, value)
 
     @Slot()
-    def handle_scene_selection_changed(self):
+    def handle_scene_selection_changed(self) -> None:
         """Filters parameters by selected objects in the graph."""
         if self.scene() is None:
             return
-        self.selected_items = [x for x in self.scene().selectedItems() if isinstance(x, EntityItem)]
-        self.graph_selection_changed.emit(self.selected_items)
-        default_data = self.selected_items[0].default_parameter_data() if len(self.selected_items) == 1 else {}
-        default_db_map = self.selected_items[0].first_db_map if len(self.selected_items) == 1 else None
-        self._spine_db_editor.set_default_parameter_data(default_data, default_db_map)
+        self.selected_items.clear()
+        selected_entity_ids: dict[DatabaseMapping, list[TempId]] = {}
+        for item in self.scene().selectedItems():
+            if not isinstance(item, EntityItem):
+                continue
+            self.selected_items.append(item)
+            for db_map, entity_id in item.db_map_ids:
+                selected_entity_ids.setdefault(db_map, []).append(entity_id)
+        self.graph_selection_changed.emit(selected_entity_ids)
 
     def connect_spine_db_editor(self, spine_db_editor: SpineDBEditor) -> None:
         self._spine_db_editor = spine_db_editor

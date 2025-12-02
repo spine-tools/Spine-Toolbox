@@ -123,13 +123,15 @@ via the **Graph view**'s context menu, or from the settings **Ctrl+,**.
 Entity Highlights
 *****************
 
-As mentioned before, **Scenario tree** and **Alternative** may cause the entity items in the graph to become
-highlighted. The highlighting is done by adding a border around the entity item. This is what it looks like:
+As mentioned before, selecting items in **Scenario tree** and **Alternative **
+may cause the entity items in the graph to become highlighted.
+The highlighting is done by adding a border around the entity item.
+This is how it looks like:
 
 .. image:: img/graph_alt_selection.png
    :align: center
 
-Note that the icons of the entities or colors don't change, only the border may change.
+Note that the icons of the entities or colors don't change, only the border.
 
 There are four different borders:
 
@@ -238,20 +240,19 @@ from all databases in the form of tables:
 .. image:: img/entity_parameter_value_table.png
    :align: center
 
-To filter a **Table view** by any entities and/or classes,
-select the corresponding items in either **Entity tree** or **Graph view**.
-To remove all these filters, select the root item in **Entity tree**.
-Hold the **Ctrl** key while selecting to
-
-A **Table view** can also be filtered by selecting alternatives or scenarios from **Alternative**
-and **Scenario tree**. This filter is orthogonal to the entity/class filter and can be used together with it.
+Similarly to **Graph view**, the tables in **Table view** can be filtered
+by selections in **Entity tree**, **Alternative** and **Scenario tree**.
 Hold the **Ctrl** key while selecting to extend the selection across the trees and tables.
 
-To remove all these filters, simply select the root item in **Entity tree** or deselect all items from
-**Alternative** and **Scenario tree**.
+Additionally, entity selections in **Graph view** also filter the **Table view** tables.
+This filter is applied cumulatively to the entities and classes selected in **Entity tree**.
 
-All the filters described above can also be cleared with the *Clear all filters* item available in the right-click
-context menu of the **Parameter value** table:
+Note, that **Alternative** selections do no affect the **Entity** table.
+
+To remove all these filters, simply select the root item in **Entity tree**
+or deselect all items from **Alternative** and **Scenario tree**.
+Additionally, the filters be cleared with the *Clear all filters* item available in the right-click
+context menu of any of the **Table view** tables:
 
 .. image:: img/clear_all_filters.png
    :align: center

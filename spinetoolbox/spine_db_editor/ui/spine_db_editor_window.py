@@ -330,7 +330,7 @@ class Ui_MainWindow(object):
         self.treeView_entity.setSizePolicy(sizePolicy2)
         self.treeView_entity.setEditTriggers(QAbstractItemView.EditTrigger.EditKeyPressed)
         self.treeView_entity.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.treeView_entity.setIconSize(QSize(20, 20))
         self.treeView_entity.setUniformRowHeights(False)
 

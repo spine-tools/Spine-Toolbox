@@ -46,7 +46,7 @@ class EntityTreeRootItem(MultiDBTreeItem):
         self._has_children_initially = True
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.FontRole and column == 0:
+        if role == Qt.ItemDataRole.FontRole and column == 0:
             font = QFont()
             font.setBold(True)
             font.setUnderline(True)
@@ -152,7 +152,7 @@ class EntityClassItem(MultiDBTreeItem):
                 return bold_font
             if role == Qt.ItemDataRole.ForegroundRole:
                 if not self.has_children():
-                    return QBrush(Qt.gray)
+                    return QBrush(Qt.GlobalColor.gray)
         return super().data(column, role)
 
     def _key_for_index(self, db_map):

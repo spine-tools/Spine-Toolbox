@@ -298,7 +298,7 @@ class FlexibleFetchParent(ItemTypeFetchParent):
         handle_items_updated: Optional[Callable[[DBMapMixedItems], None]] = None,
         accepts_item: Optional[Callable[[MappedItemBase | PublicItem, DatabaseMapping], bool]] = None,
         shows_item: Optional[Callable[[MappedItemBase | PublicItem, DatabaseMapping], bool]] = None,
-        key_for_index: Optional[Callable[[DatabaseMapping], TempId]] = None,
+        key_for_index: Optional[Callable[[DatabaseMapping], TempId | None]] = None,
         index: Optional[FetchIndex] = None,
         owner: Optional[object] = None,
         chunk_size: int | None = 1000,

@@ -12,7 +12,7 @@
 
 """Models that vertically concatenate two or more table models."""
 from typing import Any, Optional
-from PySide6.QtCore import QModelIndex, QObject, Qt, QTimer, Slot
+from PySide6.QtCore import QModelIndex, QObject, Qt, Slot
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from .single_models import SingleModelBase
 

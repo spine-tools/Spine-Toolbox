@@ -285,14 +285,14 @@ class MinimalTreeModel(QAbstractItemModel):
             visit_children = False  # To make sure we don't visit children again
             current = parent_item
 
-    def item_from_index(self, index):
+    def item_from_index(self, index: QModelIndex) -> TreeItem:
         """Return the item corresponding to the given index.
 
         Args:
-            index (QModelIndex): model index
+            index: model index
 
         Returns:
-            TreeItem: item at index
+            item at index
         """
         if index.isValid():
             return index.internalPointer()

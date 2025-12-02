@@ -58,7 +58,6 @@ from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
-from ..mvcmodels.single_models import SingleModelBase
 from ..mvcmodels.utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
     ENTITY_FIELD_MAP,
@@ -107,6 +106,7 @@ class StackedTableView(AutoFilterCopyPasteTableView):
 
     _COLUMN_SIZE_HINTS: ClassVar[dict[str, int]] = {}
     _EXPECTED_COLUMN_COUNT: ClassVar[int] = NotImplemented
+    _MODEL_HAS_AUTO_FILTER_MENU: ClassVar[bool] = True
 
     def __init__(self, parent: QWidget | None):
         super().__init__(parent=parent)
@@ -125,7 +125,6 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def _convert_copied(
         self, row: int, column: int, value: Any, model: Union[CompoundStackedModel, EmptyModelBase]
@@ -177,8 +176,9 @@ class StackedTableView(AutoFilterCopyPasteTableView):
     def _clear_filters(self):
         """Clear all filters"""
         self._spine_db_editor.clear_all_filters()
-        for i in range(self._EXPECTED_COLUMN_COUNT):
-            self.model().get_auto_filter_menu(i)._clear_filter()
+        if self._MODEL_HAS_AUTO_FILTER_MENU:
+            for i in range(self._EXPECTED_COLUMN_COUNT):
+                self.model().get_auto_filter_menu(i).clear_filter()
 
     def contextMenuEvent(self, event):
         """Shows context menu."""
@@ -233,11 +233,6 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.selectionModel().clearSelection()
         model = self.model()
         model.remove_rows(rows)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        """Enables or disables copy and paste actions."""
-        self._spine_db_editor.refresh_copy_paste_actions()
 
     def _initial_column_size(self, column):
         label = (
@@ -421,6 +416,8 @@ class WithUndoStack:
 
 
 class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
+    _MODEL_HAS_AUTO_FILTER_MENU = False
+
     def _plot_selection(self, selection, plot_widget=None):
         return
 
@@ -457,6 +454,7 @@ class ParameterValueTableViewBase(ParameterTableView):
 
 
 class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
+    _MODEL_HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return
@@ -539,6 +537,7 @@ class EntityAlternativeTableViewBase(StackedTableView):
 
 
 class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack, EntityAlternativeTableViewBase):
+    _MODEL_HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return
@@ -1058,7 +1057,6 @@ class PivotTableView(CopyPasteTableView):
         self._context: Optional[PivotTableView._ContextBase] = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
-        self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
         self._left_header_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
         self.verticalScrollBar().valueChanged.connect(self._left_header_table.verticalScrollBar().setValue)
@@ -1094,7 +1092,6 @@ class PivotTableView(CopyPasteTableView):
         self._spine_db_editor = spine_db_editor
         self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     @Slot()
     def _change_context(self):
@@ -1238,10 +1235,6 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setGeometry(x, y, total_w, header_h)
         self._top_left_header_table.setGeometry(x, y, header_w, header_h)
 
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        self._spine_db_editor.refresh_copy_paste_actions()
-
     def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
         return self._context.convert_copied(row, column, value, model)
 
@@ -1289,7 +1282,6 @@ class MetadataTableViewBase(CopyPasteTableView):
         horizontal_header.sectionCountChanged.connect(self._set_horizontal_header_resize_modes)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._menu = QMenu(self)
-        self._db_editor = None
 
     def connect_spine_db_editor(self, db_editor):
         """Finishes view's initialization.
@@ -1297,11 +1289,9 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self._db_editor = db_editor
         self.set_external_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
         self._populate_context_menu()
         self._enable_delegates(db_editor)
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
@@ -1340,10 +1330,6 @@ class MetadataTableViewBase(CopyPasteTableView):
             value (str): value
         """
         self.model().setData(index, value)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self):
-        self._db_editor.refresh_copy_paste_actions()
 
     @Slot(int, int)
     def _set_horizontal_header_resize_modes(self, old_column_count, new_column_count):
