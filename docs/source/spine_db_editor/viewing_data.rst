@@ -9,8 +9,8 @@ This section describes the available tools to view data.
 .. contents::
    :local:
 
-Using the **Entity Tree**
-=========================
+Using the Entity Tree
+=====================
 
 The **Entity tree** presents the structure of entity classes and entities in all databases in the shape of a tree:
 
@@ -67,8 +67,8 @@ Unavailable options are still visible but they are greyed out:
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select
    **Settings** from **Menu bar -> File**, and check the corresponding box.
 
-Using the **Graph View**
-========================
+Using the Graph View
+====================
 
 **Graph view** presents the structure of entities from one database in the shape of a graph:
 
@@ -123,7 +123,7 @@ via the **Graph view**'s context menu, or from the settings **Ctrl+,**.
 Entity Highlights
 *****************
 
-As mentioned before, selecting items in **Scenario tree** and **Alternative **
+As mentioned before, selecting items in **Scenario tree** and **Alternative**
 may cause the entity items in the graph to become highlighted.
 The highlighting is done by adding a border around the entity item.
 This is how it looks like:
@@ -181,7 +181,7 @@ The context menu has the following options:
 - **Zoom** has three options: zoom out, zoom in and reset zoom. Using the scroll wheel of the mouse on the **Graph view**
   also works.
 - **Arc-length** has two buttons: one for making the arcs between the entities longer and one for making them shorter.
-- **Rotate** rotates the whole graph by 15° per step. Also can be done by holding down **SHIFT** while scrolling with
+- **Rotate** rotates the whole graph by 15° per step. Also can be done by holding down **Shift** while scrolling with
   the mouse wheel.
 
 - **Auto-expand entities** If enabled, the graph will also include entities where the selections are members besides
@@ -231,8 +231,8 @@ To display an entity item's context menu, just right-click on it. The context me
 - **Edit**, **Remove** and **Duplicate** work as they do in the **Entity tree**.
 
 
-Using **Table Views**
-=====================
+Using Table Views
+=================
 
 **Table view**'s: *Parameter value*, *Parameter definition*, *Entity alternative* and *Entity* present entity data
 from all databases in the form of tables:
@@ -276,8 +276,8 @@ to show the context menu, and then select **Filter by** or **Filter excluding**.
 
 .. _using_pivot_table_and_frozen_table:
 
-Using **Pivot View** and **Frozen Table**
-=========================================
+Using Pivot View and Frozen Table
+=================================
 
 **Pivot view** and **Frozen table** present data for an individual class from one database in the form of a pivot table,
 optionally with frozen dimensions:

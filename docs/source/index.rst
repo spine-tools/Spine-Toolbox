@@ -35,6 +35,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    executing_projects
    scenarios_and_alternatives
    settings
+   project_settings
    Spine Database Editor <spine_db_editor/index>
    plotting
    parameter_value_editor
