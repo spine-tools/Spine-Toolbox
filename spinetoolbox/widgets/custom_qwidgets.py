@@ -11,6 +11,8 @@
 ######################################################################################################################
 
 """Custom QWidgets for Filtering and Zooming."""
+from collections.abc import Callable
+from typing import Concatenate, ParamSpec
 from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
     QAction,
@@ -45,6 +47,7 @@ from PySide6.QtWidgets import (
 )
 from ..font import TOOLBOX_FONT
 from ..helpers import format_log_message
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
 
@@ -99,27 +102,36 @@ class UndoRedoMixin:
             super().keyPressEvent(e)
 
 
+P = ParamSpec("P")
+
+
 class FilterWidget(QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent, make_filter_model, *args, **kwargs):
+    def __init__(
+        self,
+        parent: QWidget | None,
+        make_filter_model: Callable[Concatenate[P], SimpleFilterCheckboxListModel],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ):
         """Init class.
 
         Args:
-            parent (QWidget, optional): parent widget
-            make_filter_model (Callable): callable that constructs the filter model
+            parent: parent widget
+            make_filter_model: callable that constructs the filter model
             *args: arguments forwarded to ``make_filter_model``
             **kwargs: keyword arguments forwarded to ``make_filter_model``
         """
         super().__init__(parent)
         # parameters
         self._filter_state = set()
-        self._filter_empty_state = None
+        self._filter_empty_state: bool | None = None
         self._search_text = ""
-        self.search_delay = 200
+        self.search_delay: int = 200
         # create ui elements
         self._ui_vertical_layout = QVBoxLayout(self)
         self._ui_list = QListView()
@@ -153,8 +165,8 @@ class FilterWidget(QWidget):
     def save_state(self):
         """Saves the state of the FilterCheckboxListModel."""
         self._filter_state = self._filter_model.get_selected()
-        if self._filter_model._show_empty:
-            self._filter_empty_state = self._filter_model._empty_selected
+        if self._filter_model.show_empty:
+            self._filter_empty_state = self._filter_model.empty_selected
 
     def reset_state(self):
         """Sets the state of the FilterCheckboxListModel to saved state."""

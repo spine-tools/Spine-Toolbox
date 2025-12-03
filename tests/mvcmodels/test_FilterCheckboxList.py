@@ -41,7 +41,7 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
 
     def test_is_all_selected_when_not_empty_selected(self):
         self.model.set_list(self.data)
-        self.model._empty_selected = False
+        self.model.empty_selected = False
         self.assertFalse(self.model._check_all_selected())
 
     def test_add_item_with_select_without_filter(self):
@@ -101,16 +101,16 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
             index = self.model.index(1, 0)
             self.model._handle_index_clicked(index)
-        self.assertFalse(self.model._empty_selected)
+        self.assertFalse(self.model.empty_selected)
         self.assertFalse(self.model._all_selected)
 
     def test_click_select_empty_when_unselected(self):
         self.model.set_list(self.data)
-        self.model._empty_selected = False
+        self.model.empty_selected = False
         with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
             index = self.model.index(1, 0)
             self.model._handle_index_clicked(index)
-        self.assertTrue(self.model._empty_selected)
+        self.assertTrue(self.model.empty_selected)
         self.assertTrue(self.model._all_selected)
 
     def test_click_select_all_when_not_all_selected(self):
@@ -220,7 +220,7 @@ class TestFilterCheckboxListModel(TestCaseWithQApplication):
         self.assertFalse(self.model._is_filtered)
         self.assertEqual(self.model._selected, set(self.data[3:]))
         self.assertEqual(self.model.rowCount(), 8)
-        self.assertFalse(self.model._empty_selected)
+        self.assertFalse(self.model.empty_selected)
 
     def test_apply_filter_with_add(self):
         self.model.set_list(self.data)

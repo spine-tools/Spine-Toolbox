@@ -11,52 +11,59 @@
 ######################################################################################################################
 
 """Provides FilterCheckboxListModel for FilterWidget."""
+from collections.abc import Callable, Hashable
 import re
-from PySide6.QtCore import QAbstractListModel, QModelIndex, Qt
+from typing import Any, Generic, TypeVar
+from PySide6.QtCore import QAbstractListModel, QModelIndex, QObject, Qt
+from spinedb_api import DatabaseMapping
+from spinetoolbox.fetch_parent import FetchParent
 from spinetoolbox.helpers import bisect_chunks, order_key
+from spinetoolbox.spine_db_manager import SpineDBManager
+
+T = TypeVar("T", bound=Hashable)
 
 
-class SimpleFilterCheckboxListModel(QAbstractListModel):
+class SimpleFilterCheckboxListModel(Generic[T], QAbstractListModel):
     _SELECT_ALL_STR = "(Select all)"
     _SELECT_ALL_FILTERED_STR = "(Select all filtered)"
     _EMPTY_STR = "(Empty)"
     _ADD_TO_SELECTION_STR = "Add current selection to filter"
 
-    def __init__(self, parent, show_empty=True):
+    def __init__(self, parent: QObject, show_empty: bool = True):
         """
         Args:
-            parent (QWidget): parent widget
-            show_empty (bool): if True, adds an empty row to the end of the list
+            parent: parent object
+            show_empty: if True, adds an empty row to the end of the list
         """
         super().__init__(parent)
-        self._data = []
-        self._data_set = set()
-        self._selected = set()
-        self._selected_filtered = set()
+        self._data: list[T] = []
+        self._data_set: set[T] = set()
+        self._selected: set[T] = set()
+        self._selected_filtered: set[T] = set()
         self._is_filtered = False
-        self._filter_index = []
+        self._filter_index: list[int] = []
         self._filter_expression = re.compile("")
         self._all_selected = True
-        self._empty_selected = True
+        self.empty_selected = True
         self._add_to_selection = False
-        self._action_rows = [self._SELECT_ALL_STR]
+        self._action_rows: list[str] = [self._SELECT_ALL_STR]
         if show_empty:
             self._action_rows.append(self._EMPTY_STR)
 
     @property
-    def _show_empty(self):
+    def show_empty(self) -> bool:
         return self._EMPTY_STR in self._action_rows
 
     @property
-    def _show_add_to_selection(self):
+    def _show_add_to_selection(self) -> bool:
         return self._ADD_TO_SELECTION_STR in self._action_rows
 
-    def reset_selection(self):
+    def reset_selection(self) -> None:
         self._selected = self._data_set.copy()
         self._all_selected = True
-        self._empty_selected = True
+        self.empty_selected = True
 
-    def _handle_select_all_clicked(self):
+    def _handle_select_all_clicked(self) -> None:
         if self._all_selected:
             if self._is_filtered:
                 self._selected_filtered = set()
@@ -68,14 +75,14 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             else:
                 self._selected = self._data_set.copy()
         self._all_selected = not self._all_selected
-        if self._show_empty:
-            self._empty_selected = self._all_selected
+        if self.show_empty:
+            self.empty_selected = self._all_selected
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), 0), [Qt.ItemDataRole.CheckStateRole])
 
-    def _check_all_selected(self):
+    def _check_all_selected(self) -> bool:
         if self._is_filtered:
             return len(self._selected_filtered) == len(self._filter_index)
-        return len(self._selected) == len(self._data_set) and self._empty_selected
+        return len(self._selected) == len(self._data_set) and self.empty_selected
 
     def rowCount(self, parent=QModelIndex()):
         if self._is_filtered:
@@ -91,8 +98,8 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         row = index.row()
         action_state = [self._all_selected]
         data_row = None
-        if self._show_empty:
-            action_state.append(self._empty_selected)
+        if self.show_empty:
+            action_state.append(self.empty_selected)
         if self._show_add_to_selection:
             action_state.append(self._add_to_selection)
         if self._is_filtered:
@@ -112,14 +119,14 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
                 return Qt.CheckState.Checked if self._data[data_row] in selected else Qt.CheckState.Unchecked
             return Qt.CheckState.Checked if action_state[row] else Qt.CheckState.Unchecked
 
-    def _handle_index_clicked(self, index):
+    def _handle_index_clicked(self, index: QModelIndex) -> None:
         if index.row() == 0:
             self._handle_select_all_clicked()
         else:
             if index.row() == 1 and self._show_add_to_selection:
                 self._add_to_selection = not self._add_to_selection
-            elif index.row() == 1 and self._show_empty:
-                self._empty_selected = not self._empty_selected
+            elif index.row() == 1 and self.show_empty:
+                self.empty_selected = not self.empty_selected
             else:
                 if self._is_filtered:
                     i = self._filter_index[index.row() - len(self._action_rows)]
@@ -138,47 +145,47 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
             self.dataChanged.emit(self.index(0, 0), self.index(0, 0), [Qt.ItemDataRole.CheckStateRole])
 
-    def set_list(self, data, all_selected=True):
+    def set_list(self, data: list[T], all_selected: bool = True) -> None:
         self.beginResetModel()
         self._data_set = set(data)
         self._data = list(data)
         if all_selected:
             self._selected = self._data_set.copy()
             self._all_selected = True
-            self._empty_selected = True
+            self.empty_selected = True
         else:
             self._selected = set()
             self._all_selected = False
-            self._empty_selected = False
+            self.empty_selected = False
         self.remove_filter()
         self.endResetModel()
 
-    def filter_by_condition(self, condition):
+    def filter_by_condition(self, condition: Callable[[T], bool]) -> None:
         """Updates selected items by applying a condition.
 
         Args:
-            condition (function): Filter acceptance condition.
+            condition: Filter acceptance condition.
         """
         selected = {item for item in self._data if condition(item)}
         self.set_selected(selected)
 
-    def set_selected(self, selected, select_empty=None):
+    def set_selected(self, selected: set[T], select_empty: bool | None = None):
         self.beginResetModel()
         self._selected = self._data_set.intersection(selected)
         if select_empty is not None:
-            self._empty_selected = select_empty
+            self.empty_selected = select_empty
         self._all_selected = self._check_all_selected()
         self.endResetModel()
 
-    def get_selected(self):
+    def get_selected(self) -> set[T]:
         return self._selected.copy()
 
-    def get_not_selected(self):
+    def get_not_selected(self) -> set[T]:
         if self._all_selected:
             return set()
         return self._data_set.difference(self._selected)
 
-    def set_filter(self, filter_expression):
+    def set_filter(self, filter_expression: str) -> None:
         filter_expression = filter_expression.strip()
         if filter_expression:
             try:
@@ -198,10 +205,10 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         else:
             self.remove_filter()
 
-    def search_filter_expression(self, item):
+    def search_filter_expression(self, item: T) -> re.Match:
         return self._filter_expression.search(item)
 
-    def apply_filter(self):
+    def apply_filter(self) -> None:
         if not self._is_filtered:
             return
         if self._add_to_selection:
@@ -209,7 +216,7 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         else:
             self._remove_and_replace_filtered()
 
-    def _remove_and_add_filtered(self):
+    def _remove_and_add_filtered(self) -> None:
         if not self._selected:
             # no previous selected, just replace
             self._selected = set(self._selected_filtered)
@@ -222,12 +229,12 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             )
         self.remove_filter()
 
-    def _remove_and_replace_filtered(self):
+    def _remove_and_replace_filtered(self) -> None:
         self._selected = set(self._selected_filtered)
-        self._empty_selected = False
+        self.empty_selected = False
         self.remove_filter()
 
-    def remove_filter(self):
+    def remove_filter(self) -> None:
         if not self._is_filtered:
             return
         self.beginResetModel()
@@ -241,14 +248,14 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
         self._all_selected = self._check_all_selected()
         self.endResetModel()
 
-    def _do_add_items(self, data):
+    def _do_add_items(self, data: list[T]) -> None:
         first = len(self._data)
         last = first + len(data) - 1
         self.beginInsertRows(self.index(0, 0), first, last)
         self._data += data
         self.endInsertRows()
 
-    def add_items(self, data, selected=None):
+    def add_items(self, data: list[T], selected: set[T] | None = None) -> None:
         if selected is None:
             selected = self._all_selected
         data = [x for x in data if x not in self._data_set]
@@ -264,9 +271,9 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
             self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
         self._all_selected = self._check_all_selected()
 
-    def remove_items(self, data):
+    def remove_items(self, data: list[T]) -> None:
         data = set(data)
-        if not data.intersection(self._data_set):
+        if data.isdisjoint(self._data_set):
             return
         for k, item in reversed(list(enumerate(self._data))):
             if item in data:
@@ -284,14 +291,21 @@ class SimpleFilterCheckboxListModel(QAbstractListModel):
 class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model."""
 
-    def __init__(self, parent, db_mngr, db_maps, fetch_parent, show_empty=True):
+    def __init__(
+        self,
+        parent: QObject,
+        db_mngr: SpineDBManager,
+        db_maps: list[DatabaseMapping],
+        fetch_parent: FetchParent,
+        show_empty: bool = True,
+    ):
         """
         Args:
-            parent (SpineDBEditor): parent widget
-            db_mngr (SpineDBManager): database manager
-            db_maps (Sequence of DatabaseMapping): database maps
-            fetch_parent (FetchParent): fetch parent
-            show_empty (bool): if True, show an empty row at the end of the list
+            parent: parent object
+            db_mngr: database manager
+            db_maps: database maps
+            fetch_parent: fetch parent
+            show_empty: if True, show an empty row at the end of the list
         """
         super().__init__(parent, show_empty=show_empty)
         self._db_mngr = db_mngr
@@ -319,12 +333,12 @@ class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
 class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):
     """Extends SimpleFilterCheckboxListModel to allow for translating internal data to a value for display role."""
 
-    def __init__(self, parent, data_to_value, show_empty=True):
+    def __init__(self, parent: QObject, data_to_value: Callable[[T], Any], show_empty: bool = True):
         """
         Args:
-            parent (SpineDBEditor): parent widget
-            data_to_value (method): a method to translate item data to a value for display role
-            show_empty (bool): if True, add an empty row to the end of the list
+            parent: parent object
+            data_to_value: a method to translate item data to a value for display role
+            show_empty: if True, add an empty row to the end of the list
         """
         super().__init__(parent, show_empty=show_empty)
         self.data_to_value = data_to_value
