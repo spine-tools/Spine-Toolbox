@@ -217,7 +217,7 @@ class CompoundStackedModel(CompoundTableModel):
             self._auto_filter_menus[field] = menu = AutoFilterMenu(
                 self.parent(), self.db_mngr, self._db_maps, self.item_type, field, show_empty=False
             )
-            menu.filterChanged.connect(self.set_auto_filter)
+            menu.filter_changed.connect(self.set_auto_filter)
         return self._auto_filter_menus[field]
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):

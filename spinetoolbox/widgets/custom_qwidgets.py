@@ -12,7 +12,7 @@
 
 """Custom QWidgets for Filtering and Zooming."""
 from collections.abc import Callable
-from typing import Concatenate, ParamSpec
+from typing import Concatenate, Generic, ParamSpec, TypeVar
 from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
     QAction,
@@ -103,9 +103,10 @@ class UndoRedoMixin:
 
 
 P = ParamSpec("P")
+T = TypeVar("T")
 
 
-class FilterWidget(QWidget):
+class FilterWidget(Generic[T], QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
@@ -114,22 +115,17 @@ class FilterWidget(QWidget):
     def __init__(
         self,
         parent: QWidget | None,
-        make_filter_model: Callable[Concatenate[P], SimpleFilterCheckboxListModel],
-        *args: P.args,
-        **kwargs: P.kwargs,
+        filter_model: SimpleFilterCheckboxListModel[T],
     ):
-        """Init class.
-
+        """
         Args:
             parent: parent widget
-            make_filter_model: callable that constructs the filter model
-            *args: arguments forwarded to ``make_filter_model``
-            **kwargs: keyword arguments forwarded to ``make_filter_model``
+            filter_model: callable that constructs the filter model
         """
         super().__init__(parent)
         # parameters
-        self._filter_state = set()
-        self._filter_empty_state: bool | None = None
+        self.filter_state: set[T] = set()
+        self.filter_empty_state: bool | None = None
         self._search_text = ""
         self.search_delay: int = 200
         # create ui elements
@@ -144,62 +140,64 @@ class FilterWidget(QWidget):
         self._ui_vertical_layout.addWidget(self._ui_buttons)
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
-        self._filter_model = make_filter_model(*args, **kwargs)
+        self._filter_model = filter_model
         self._filter_model.setParent(self)
-        self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
 
-    # For tests
-    def set_filter_list(self, items):
-        self._filter_state = items
-        self._filter_model.set_list(self._filter_state)
+    def model(self) -> SimpleFilterCheckboxListModel[T]:
+        return self._filter_model
 
-    def connect_signals(self):
-        self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
+    # For tests
+    def set_filter_list(self, items: list[T] | set[T]) -> None:
+        self.filter_state = set(items)
+        self._filter_model.set_list(items)
+
+    def connect_signals(self) -> None:
+        self._ui_list.clicked.connect(self._filter_model.handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
-        self._ui_buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._apply_filter)
+        self._ui_buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self.apply_filter)
         self._ui_buttons.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self._cancel_filter)
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Saves the state of the FilterCheckboxListModel."""
-        self._filter_state = self._filter_model.get_selected()
+        self.filter_state = self._filter_model.get_selected()
         if self._filter_model.show_empty:
-            self._filter_empty_state = self._filter_model.empty_selected
+            self.filter_empty_state = self._filter_model.empty_selected
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         """Sets the state of the FilterCheckboxListModel to saved state."""
-        self._filter_model.set_selected(self._filter_state, self._filter_empty_state)
+        self._filter_model.set_selected(self.filter_state, self.filter_empty_state)
 
-    def clear_filter(self):
+    def clear_filter(self) -> None:
         """Selects all items in FilterCheckBoxListModel."""
         self._filter_model.reset_selection()
         self.save_state()
 
-    def has_filter(self):
+    def has_filter(self) -> bool:
         """Returns true if any item is filtered in FilterCheckboxListModel false otherwise."""
-        return not self._filter_model._all_selected
+        return not self._filter_model.all_selected
 
-    def _apply_filter(self):
+    def apply_filter(self) -> None:
         """Apply current filter and save state."""
         self._filter_model.apply_filter()
         self.save_state()
         self._ui_edit.setText("")
         self.okPressed.emit()
 
-    def _cancel_filter(self):
+    def _cancel_filter(self) -> None:
         """Cancel current edit of filter and set the state to the stored state."""
         self._filter_model.remove_filter()
         self.reset_state()
         self._ui_edit.setText("")
         self.cancelPressed.emit()
 
-    def _filter_list(self):
+    def _filter_list(self) -> None:
         """Filter list with current text."""
         self._filter_model.set_filter(self._search_text)
 
-    def _text_edited(self, new_text):
+    def _text_edited(self, new_text: str) -> None:
         """Callback for edit text, starts/restarts timer.
         Start timer after text is edited, restart timer if text
         is edited before last time out.
@@ -211,17 +209,16 @@ class FilterWidget(QWidget):
 class CustomWidgetAction(QWidgetAction):
     """A QWidgetAction with custom hovering."""
 
-    def __init__(self, parent=None):
-        """Class constructor.
-
+    def __init__(self, parent: QWidget | None = None):
+        """
         Args:
-            parent (QMenu): the widget's parent
+            parent: the widget's parent
         """
         super().__init__(parent)
         self.hovered.connect(self._handle_hovered)
 
     @Slot()
-    def _handle_hovered(self):
+    def _handle_hovered(self) -> None:
         """Hides other menus that might be shown in the parent widget and repaints it.
         This is to emulate the behavior of QAction."""
         for menu in self.parent().findChildren(QMenu):

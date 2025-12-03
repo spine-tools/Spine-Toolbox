@@ -11,24 +11,30 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
-from typing import TypeAlias
-from PySide6.QtCore import QPoint, Qt, Signal, Slot
+from collections.abc import Callable, Iterator
+from typing import Any, TypeAlias, TypeVar
+from PySide6.QtCore import QModelIndex, QPoint, Qt, Signal
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QWidget
 from spinedb_api import DatabaseMapping, IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
+from ...database_display_names import NameRegistry
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu
+from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu, DBMapPublicItems
 from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_menus import FilterMenuBase
+from .tabular_view_header_widget import TabularViewHeaderWidget
 
-AutoFilterValue: TypeAlias = tuple[DatabaseMapping, TempId, tuple[str, ...]]
+AutoFilterValue: TypeAlias = tuple[DatabaseMapping, TempId, Any]
+
+T = TypeVar("T")
 
 
-class AutoFilterMenu(FilterMenuBase):
-    filterChanged = Signal(str, object)
+class AutoFilterMenu(FilterMenuBase[T]):
+    filter_changed = Signal(str, object)
 
     def __init__(
         self,
@@ -44,7 +50,7 @@ class AutoFilterMenu(FilterMenuBase):
         self._item_type = item_type
         self._db_mngr = db_mngr
         self._field = field
-        self._menu_data: dict[tuple[DatabaseMapping, TempId], set[AutoFilterValue]] = {}
+        self._menu_data: dict[str, set[AutoFilterValue]] = {}
         fetch_parent = FlexibleFetchParent(
             self._item_type,
             handle_items_added=self._handle_items_added,
@@ -52,33 +58,35 @@ class AutoFilterMenu(FilterMenuBase):
             owner=self,
             chunk_size=None,
         )
-        self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
+        filter_model = LazyFilterCheckboxListModel(self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
+        self._set_up(filter_model)
 
-    def set_filter_accepted_values(self, accepted_values):
-        if self._filter._filter_model.canFetchMore(None):
-            self._filter._filter_model.fetchMore(None)
-        self._filter._filter_model.filter_by_condition(lambda x: x in accepted_values)
-        self._filter._apply_filter()
+    def set_filter_accepted_values(self, accepted_values: set[T]) -> None:
+        self._apply_filter_with_condition(lambda x: x in accepted_values)
 
-    def set_filter_rejected_values(self, rejected_values):
-        if self._filter._filter_model.canFetchMore(None):
-            self._filter._filter_model.fetchMore(None)
-        self._filter._filter_model.filter_by_condition(lambda x: x not in rejected_values)
-        self._filter._apply_filter()
+    def set_filter_rejected_values(self, rejected_values: set[T]) -> None:
+        self._apply_filter_with_condition(lambda x: x not in rejected_values)
 
-    def _get_value(self, item, db_map):
+    def _apply_filter_with_condition(self, condition: Callable[[T], bool]) -> None:
+        filter_model = self.filter.model()
+        if filter_model.canFetchMore(QModelIndex()):
+            filter_model.fetchMore(QModelIndex())
+        filter_model.filter_by_condition(condition)
+        self.filter.apply_filter()
+
+    def _get_value(self, item: PublicItem, db_map: DatabaseMapping) -> Any:
         if self._field == "database":
             return self._db_mngr.name_registry.display_name(db_map.sa_url)
         return item[self._field]
 
-    def _get_display_value(self, item, db_map):
+    def _get_display_value(self, item: PublicItem, db_map: DatabaseMapping) -> str:
         if self._field in ("value", "default_value"):
             return self._db_mngr.get_value(db_map, item, role=Qt.ItemDataRole.DisplayRole)
         if self._field == "entity_byname":
             return DB_ITEM_SEPARATOR.join(item[self._field])
         return self._get_value(item, db_map) or "(empty)"
 
-    def _handle_items_added(self, db_map_data):
+    def _handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
         to_add = set()
         for db_map, items in db_map_data.items():
             for item in items:
@@ -89,7 +97,7 @@ class AutoFilterMenu(FilterMenuBase):
                 self._menu_data.setdefault(display_value, set()).add((db_map, item[entity_class_field], value))
         self.add_items_to_filter_list(to_add)
 
-    def _handle_items_removed(self, db_map_data):
+    def _handle_items_removed(self, db_map_data: DBMapPublicItems) -> None:
         for db_map, items in db_map_data.items():
             for item in items:
                 display_value = self._get_display_value(item, db_map)
@@ -101,17 +109,17 @@ class AutoFilterMenu(FilterMenuBase):
             del self._menu_data[display_value]
         self.remove_items_from_filter_list(to_remove)
 
-    def _build_auto_filter(self, valid_values):
+    def _build_auto_filter(self, valid_values: list[T]) -> dict[tuple[DatabaseMapping, TempId], set[T]] | None:
         """
         Builds the auto filter given valid values.
 
         Args:
-            valid_values (Sequence): Values accepted by the filter.
+            valid_values: Values accepted by the filter.
 
         Returns:
-            dict: mapping (db_map, entity_class_id) to set of valid values
+            mapping (db_map, entity_class_id) to set of valid values
         """
-        if not self._filter.has_filter():
+        if not self.filter.has_filter():
             return {}  # All-pass
         if not valid_values:
             return None  # You shall not pass
@@ -121,29 +129,29 @@ class AutoFilterMenu(FilterMenuBase):
                 auto_filter.setdefault((db_map, entity_class_id), set()).add(value)
         return auto_filter
 
-    def emit_filter_changed(self, valid_values):
+    def emit_filter_changed(self, valid_values: list[T]) -> None:
         """
         Builds auto filter and emits signal.
 
         Args:
-            valid_values (Sequence): Values accepted by the filter.
+            valid_values: Values accepted by the filter.
         """
         auto_filter = self._build_auto_filter(valid_values)
-        self.filterChanged.emit(self._field, auto_filter)
+        self.filter_changed.emit(self._field, auto_filter)
 
 
 class TabularViewFilterMenuBase(FilterMenuBase):
 
-    filterChanged = Signal(str, set, bool)
+    filter_changed = Signal(str, set, bool)
 
-    def __init__(self, parent, identifier):
+    def __init__(self, parent: QWidget | None, identifier: str):
         """
         Args:
-            parent (SpineDBEditor): parent widget
-            identifier (str): header identifier
+            parent: parent widget
+            identifier: header identifier
         """
         super().__init__(parent)
-        self.anchor = parent
+        self.anchor: TabularViewHeaderWidget | None = None
         self._identifier = identifier
 
     def showEvent(self, event):
@@ -161,16 +169,25 @@ class TabularViewFilterMenuBase(FilterMenuBase):
 class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
     """Filter menu to use together with FilterWidget in TabularViewMixin."""
 
-    def __init__(self, parent, db_mngr, db_maps, item_type, accepts_item, identifier, show_empty=True):
+    def __init__(
+        self,
+        parent: QWidget | None,
+        db_mngr: SpineDBManager,
+        db_maps: list[DatabaseMapping],
+        item_type: ItemType,
+        accepts_item: Callable[[PublicItem, DatabaseMapping], bool],
+        identifier: str,
+        show_empty: bool = True,
+    ):
         """
         Args:
-            parent (SpineDBEditor): parent widget
-            db_mngr (SpineDBManager): database manager
-            db_maps (Sequence of DatabaseMapping): database mappings
-            item_type (str): database item type to filter
-            accepts_item (Callable): callable that returns True when database item is accepted
-            identifier (str): header identifier
-            show_empty (bool): if True, an empty row will be added to the end of the item list
+            parent: parent widget
+            db_mngr: database manager
+            db_maps: database mappings
+            item_type: database item type to filter
+            accepts_item: callable that returns True when database item is accepted
+            identifier: header identifier
+            show_empty: if True, an empty row will be added to the end of the item list
         """
         super().__init__(parent, identifier)
         self._db_mngr = db_mngr
@@ -184,9 +201,10 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
             owner=self,
             chunk_size=None,
         )
-        self._set_up(LazyFilterCheckboxListModel, self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
+        filter_model = LazyFilterCheckboxListModel(self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
+        self._set_up(filter_model)
 
-    def _handle_items_added(self, db_map_data):
+    def _handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
         to_add = set()
         for db_map, items in db_map_data.items():
             for item in items:
@@ -195,7 +213,9 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
                     self._menu_data.setdefault(display_value, set()).add(value)
         self.add_items_to_filter_list(to_add)
 
-    def _get_values(self, db_map, item):
+    def _get_values(
+        self, db_map: DatabaseMapping, item
+    ) -> Iterator[tuple[str, tuple[DatabaseMapping, TempId] | tuple[None, Any]]]:
         if self._item_type == "parameter_value":
             if isinstance(item, PublicItem):
                 for index in self._db_mngr.get_value_indexes(db_map, "parameter_value", item["id"]):
@@ -209,7 +229,7 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
         else:
             yield item["name"], (db_map, item["id"])
 
-    def _handle_items_removed(self, db_map_data):
+    def _handle_items_removed(self, db_map_data: DBMapPublicItems) -> None:
         for db_map, items in db_map_data.items():
             for item in items:
                 for display_value, value in self._get_values(db_map, item):
@@ -221,28 +241,36 @@ class TabularViewDBItemFilterMenu(TabularViewFilterMenuBase):
 
     def emit_filter_changed(self, valid_values):
         valid_values = {db_map_id for v in valid_values for db_map_id in self._menu_data[v]}
-        self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
+        self.filter_changed.emit(self._identifier, valid_values, self.filter.has_filter())
 
 
 class TabularViewDatabaseNameFilterMenu(TabularViewFilterMenuBase):
     """Filter menu to filter database names in Pivot table."""
 
-    def __init__(self, parent, db_maps, identifier, db_name_registry, show_empty=True):
+    def __init__(
+        self,
+        parent: QWidget | None,
+        db_maps: list[DatabaseMapping],
+        identifier: str,
+        db_name_registry: NameRegistry,
+        show_empty: bool = True,
+    ):
         """
         Args:
-            parent (SpineDBEditor): parent widget
-            db_maps (Sequence of DatabaseMapping): database mappings
-            identifier (str): header identifier
-            db_name_registry (NameRegistry): database display name registry
-            show_empty (bool): if True, an empty row will be added to the end of the item list
+            parent: parent widget
+            db_maps: database mappings
+            identifier: header identifier
+            db_name_registry: database display name registry
+            show_empty: if True, an empty row will be added to the end of the item list
         """
         super().__init__(parent, identifier)
-        self._set_up(SimpleFilterCheckboxListModel, self, show_empty=show_empty)
-        self._filter.set_filter_list(list(db_name_registry.display_name_iter(db_maps)))
+        filter_model = SimpleFilterCheckboxListModel(self, show_empty=show_empty)
+        self._set_up(filter_model)
+        self.filter.set_filter_list(list(db_name_registry.display_name_iter(db_maps)))
 
     def emit_filter_changed(self, valid_values):
         """See base class."""
-        self.filterChanged.emit(self._identifier, valid_values, self._filter.has_filter())
+        self.filter_changed.emit(self._identifier, valid_values, self.filter.has_filter())
 
 
 class RecentDatabasesPopupMenu(CustomPopupMenu):

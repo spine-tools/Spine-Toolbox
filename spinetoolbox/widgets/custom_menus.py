@@ -11,11 +11,14 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
+from collections.abc import Iterable
 import os
+from typing import Generic, TypeVar
 from PySide6.QtCore import QPersistentModelIndex, Slot
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QWidget, QWidgetAction
 from spinetoolbox.helpers import CustomPopupMenu
+from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
 
@@ -197,7 +200,10 @@ class KernelsPopupMenu(CustomPopupMenu):
         self._parent.start_detached_jupyter_console(kernel_name, icon, conda)
 
 
-class FilterMenuBase(QMenu):
+T = TypeVar("T")
+
+
+class FilterMenuBase(Generic[T], QMenu):
     """Filter menu."""
 
     def __init__(self, parent: QWidget | None):
@@ -206,44 +212,44 @@ class FilterMenuBase(QMenu):
             parent: a parent widget
         """
         super().__init__(parent)
-        self._filter: FilterWidget | None = None
+        self.filter: FilterWidget | None = None
         self._remove_filter = QAction("Remove filters", None)
         self._filter_action = QWidgetAction(self)
         self.addAction(self._remove_filter)
 
-    def _set_up(self, make_filter_model, *args, **kwargs):
-        self._filter = FilterWidget(self, make_filter_model, *args, **kwargs)
-        self._filter_action.setDefaultWidget(self._filter)
+    def _set_up(self, filter_model: SimpleFilterCheckboxListModel[T]) -> None:
+        self.filter = FilterWidget(self, filter_model)
+        self._filter_action.setDefaultWidget(self.filter)
         self.addAction(self._filter_action)
         self.connect_signals()
 
-    def connect_signals(self):
+    def connect_signals(self) -> None:
         self.aboutToShow.connect(self._check_filter)
         self._remove_filter.triggered.connect(self.clear_filter)
-        self._filter.okPressed.connect(self._change_filter)
-        self._filter.cancelPressed.connect(self.hide)
+        self.filter.okPressed.connect(self._change_filter)
+        self.filter.cancelPressed.connect(self.hide)
 
-    def add_items_to_filter_list(self, items):
-        self._filter._filter_model.add_items(items)
-        self._filter.save_state()
+    def add_items_to_filter_list(self, items: Iterable[T]) -> None:
+        self.filter.model().add_items(items)
+        self.filter.save_state()
 
-    def remove_items_from_filter_list(self, items):
-        self._filter._filter_model.remove_items(items)
-        self._filter.save_state()
+    def remove_items_from_filter_list(self, items: set[T]) -> None:
+        self.filter.model().remove_items(items)
+        self.filter.save_state()
 
-    def clear_filter(self):
-        self._filter.clear_filter()
+    def clear_filter(self) -> None:
+        self.filter.clear_filter()
         self._change_filter()
 
-    def _check_filter(self):
-        self._remove_filter.setEnabled(self._filter.has_filter())
+    def _check_filter(self) -> None:
+        self._remove_filter.setEnabled(self.filter.has_filter())
 
-    def _change_filter(self):
-        valid_values = set(self._filter._filter_state)
-        if self._filter._filter_empty_state:
+    def _change_filter(self) -> None:
+        valid_values = set(self.filter.filter_state)
+        if self.filter.filter_empty_state:
             valid_values.add(None)
         self.emit_filter_changed(valid_values)
         self.hide()
 
-    def emit_filter_changed(self, valid_values):
+    def emit_filter_changed(self, valid_values: set[T]) -> None:
         raise NotImplementedError()

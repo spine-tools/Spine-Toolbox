@@ -59,7 +59,7 @@ class TabularViewMixin:
         self.current_class_id: dict[DatabaseMapping, TempId] = {}  # Mapping from db_map to class_id
         self.current_class_name: Optional[str] = None
         self.current_input_type = self._PARAMETER_VALUE
-        self.filter_menus = {}
+        self.filter_menus: dict[str, TabularViewDBItemFilterMenu] = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
         self.pivot_action_group = QActionGroup(self)
@@ -116,15 +116,15 @@ class TabularViewMixin:
 
     # FIXME: MM - this should be called after modifications
     @Slot(str)
-    def update_filter_menus(self, action):
+    def update_filter_menus(self, action: str) -> None:
         for identifier, menu in self.filter_menus.items():
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
             if action == "add":
-                menu.add_items_to_filter_list(list(index_values.keys()))
+                menu.add_items_to_filter_list(index_values.keys())
             elif action == "remove":
-                previous = menu._filter._filter_model._data_set
-                menu.remove_items_from_filter_list(list(previous - index_values.keys()))
+                previous = menu.filter.model().data_set
+                menu.remove_items_from_filter_list(previous - index_values.keys())
         self.reload_frozen_table()
 
     def _needs_to_update_headers(self, item_type, db_map_data):
@@ -432,7 +432,7 @@ class TabularViewMixin:
                     self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
                 )
             self.filter_menus[identifier] = menu
-            menu.filterChanged.connect(self.change_filter)
+            menu.filter_changed.connect(self.change_filter)
         return self.filter_menus[identifier]
 
     def create_header_widget(self, identifier, area, with_menu=True):

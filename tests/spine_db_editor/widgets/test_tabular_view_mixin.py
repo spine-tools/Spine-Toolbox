@@ -159,8 +159,8 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
         self._start()
         self._change_pivot_input_type(self._db_editor._INDEX_EXPANSION)
         for filter_menu in self._db_editor.filter_menus.values():
-            filter_menu._filter._filter_model.canFetchMore(None)
-            filter_menu._filter._filter_model.fetchMore(None)
+            filter_menu.filter._filter_model.canFetchMore(None)
+            filter_menu.filter._filter_model.fetchMore(None)
         while self._db_editor.pivot_table_model.rowCount() != 6:
             QApplication.processEvents()
         expected = [

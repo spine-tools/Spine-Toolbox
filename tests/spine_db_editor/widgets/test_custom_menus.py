@@ -37,8 +37,8 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
         name_registry.register(db_map1.sa_url, "db map 1")
         name_registry.register(db_map2.sa_url, "db map 2")
         menu = TabularViewDatabaseNameFilterMenu(self._parent, db_maps, "database", name_registry)
-        self.assertIs(menu.anchor, self._parent)
-        filter_list_model = menu._filter._filter_model
+        self.assertIsNone(menu.anchor)
+        filter_list_model = menu.filter.model()
         filter_rows = []
         for row in range(filter_list_model.rowCount()):
             filter_rows.append(filter_list_model.index(row, 0).data())
@@ -54,7 +54,7 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
         name_registry.register(db_map1.sa_url, "db map 1")
         name_registry.register(db_map2.sa_url, "db map 2")
         menu = TabularViewDatabaseNameFilterMenu(self._parent, db_maps, "database", name_registry)
-        with signal_waiter(menu.filterChanged, timeout=0.1) as waiter:
+        with signal_waiter(menu.filter_changed, timeout=0.1) as waiter:
             menu.clear_filter()
             waiter.wait()
             self.assertEqual(waiter.args, ("database", {None, "db map 1", "db map 2"}, False))
