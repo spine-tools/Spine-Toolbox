@@ -560,20 +560,6 @@ class CompoundStackedModel(CompoundTableModel):
             return None, None
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
-    def filter_by(self, rows_per_column: dict[int, list[int]]) -> None:
-        for column, rows in rows_per_column.items():
-            field = self.headerData(column)
-            menu = self._make_auto_filter_menu(field)
-            accepted_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
-            menu.set_filter_accepted_values(accepted_values)
-
-    def filter_excluding(self, rows_per_column: dict[int, list[int]]) -> None:
-        for column, rows in rows_per_column.items():
-            field = self.headerData(column)
-            menu = self._make_auto_filter_menu(field)
-            rejected_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
-            menu.set_filter_rejected_values(rejected_values)
-
 
 class FilterEntityMixin:
     """Provides the interface to filter by entity."""

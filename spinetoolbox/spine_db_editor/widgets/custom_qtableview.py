@@ -32,7 +32,7 @@ from ...plotting import (
     plot_pivot_table_selection,
 )
 from ...spine_db_manager import SpineDBManager
-from ...widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPasteTableView
+from ...widgets.custom_qtableview import CopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
@@ -49,6 +49,7 @@ from ..helpers import (
     string_to_parameter_value,
 )
 from ..mvcmodels.compound_models import CompoundStackedModel
+from ..mvcmodels.compound_table_model import CompoundTableModel
 from ..mvcmodels.empty_models import EmptyModelBase
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ..mvcmodels.pivot_table_models import (
@@ -83,6 +84,7 @@ from .custom_delegates import (
     TableDelegate,
     ValueListDelegate,
 )
+from .custom_menus import AutoFilterMenu
 from .pivot_table_header_view import (
     ParameterValuePivotHeaderView,
     PivotTableHeaderView,
@@ -101,12 +103,105 @@ def _set_data(index, new_value):
     index.model().setData(index, new_value)
 
 
-class StackedTableView(AutoFilterCopyPasteTableView):
+class UsesAutoFilter:
+    """A mixin that adds autofilter functionality to a StackedTableView."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
+        self._show_filter_menu_action = QAction(self)
+        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
+        self._show_filter_menu_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+        self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
+        self.addAction(self._show_filter_menu_action)
+        self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
+
+    def setModel(self, model: CompoundStackedModel) -> None:
+        """Disconnects the sectionPressed signal which seems to be connected by the super method.
+        Otherwise pressing the header just selects the column.
+        """
+        super().setModel(model)
+        self.horizontalHeader().sectionPressed.disconnect()
+        model.modelReset.connect(self._clear_auto_filter_menus)
+
+    def get_auto_filter_menu(self, logical_index: int) -> AutoFilterMenu:
+        """Returns auto filter menu for given logical index from header view."""
+        return self._make_auto_filter_menu(self.model().header[logical_index])
+
+    def _make_auto_filter_menu(self, header: str) -> AutoFilterMenu:
+        model: CompoundStackedModel = self.model()
+        field = model.field_map[header]
+        if field not in self._auto_filter_menus:
+            self._auto_filter_menus[field] = menu = AutoFilterMenu(
+                self, model.db_mngr, list(model.db_map_iter()), model.item_type, field, show_empty=False
+            )
+            menu.filter_changed.connect(model.set_auto_filter)
+        return self._auto_filter_menus[field]
+
+    @Slot()
+    def _clear_auto_filter_menus(self) -> None:
+        while self._auto_filter_menus:
+            _, menu = self._auto_filter_menus.popitem()
+            menu.deleteLater()
+
+    @Slot(bool)
+    def _trigger_filter_menu(self, _: bool) -> None:
+        """Shows current column's auto filter menu."""
+        self.show_auto_filter_menu(self.currentIndex().column())
+
+    @Slot(int)
+    def show_auto_filter_menu(self, logical_index: int) -> None:
+        """Called when user clicks on a horizontal section header.
+        Shows/hides the auto filter widget.
+
+        Args:
+            logical_index: header section index
+        """
+        menu = self.get_auto_filter_menu(logical_index)
+        if menu is None:
+            return
+        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
+        pos_y = header_pos.y() + self.horizontalHeader().height()
+        menu.popup(QPoint(pos_x, pos_y))
+
+    def _add_filter_actions_to_context_menu(self) -> None:
+        self._menu.addSeparator()
+        self._menu.addAction("Filter by", self.filter_by_selection)
+        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+
+    @Slot(bool)
+    def filter_by_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        model: CompoundTableModel = self.model()
+        for column, rows in rows_per_column.items():
+            field = model.header[column]
+            menu = self._make_auto_filter_menu(field)
+            accepted_values = {model.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
+            menu.set_filter_accepted_values(accepted_values)
+
+    @Slot(bool)
+    def filter_excluding_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        model: CompoundTableModel = self.model()
+        for column, rows in rows_per_column.items():
+            field = model.header[column]
+            menu = self._make_auto_filter_menu(field)
+            rejected_values = {model.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
+            menu.set_filter_rejected_values(rejected_values)
+
+    def _clear_filters(self):
+        """Clear all filters"""
+        super()._clear_filters()
+        for i in range(self._EXPECTED_COLUMN_COUNT):
+            self.get_auto_filter_menu(i).clear_filter()
+
+
+class StackedTableView(CopyPasteTableView):
     """Base stacked view."""
 
     _COLUMN_SIZE_HINTS: ClassVar[dict[str, int]] = {}
     _EXPECTED_COLUMN_COUNT: ClassVar[int] = NotImplemented
-    _HAS_AUTO_FILTER_MENU: ClassVar[bool] = True
 
     def __init__(self, parent: QWidget | None):
         super().__init__(parent=parent)
@@ -162,9 +257,7 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction(self._spine_db_editor.ui.actionPaste)
         self._menu.addSeparator()
         remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
-        self._menu.addSeparator()
-        self._menu.addAction("Filter by", self.filter_by_selection)
-        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._add_filter_actions_to_context_menu()
         self._menu.addSeparator()
         self._menu.addAction("Clear all filters", self._clear_filters)
         self._menu.addSeparator()
@@ -173,12 +266,12 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         remove_rows_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
         self.addAction(remove_rows_action)
 
+    def _add_filter_actions_to_context_menu(self) -> None:
+        return
+
     def _clear_filters(self):
         """Clear all filters"""
         self._spine_db_editor.clear_all_filters()
-        if self._HAS_AUTO_FILTER_MENU:
-            for i in range(self._EXPECTED_COLUMN_COUNT):
-                self.get_auto_filter_menu(i).clear_filter()
 
     def contextMenuEvent(self, event):
         """Shows context menu."""
@@ -209,16 +302,6 @@ class StackedTableView(AutoFilterCopyPasteTableView):
                         continue
                     rows.add(i)
         return rows_per_column
-
-    @Slot(bool)
-    def filter_by_selection(self, checked=False):
-        rows_per_column = self._selected_rows_per_column()
-        self.model().filter_by(rows_per_column)
-
-    @Slot(bool)
-    def filter_excluding_selection(self, checked=False):
-        rows_per_column = self._selected_rows_per_column()
-        self.model().filter_excluding(rows_per_column)
 
     def remove_selected(self) -> None:
         """Removes selected indexes."""
@@ -416,13 +499,14 @@ class WithUndoStack:
 
 
 class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
-    _HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return
 
 
-class ParameterDefinitionTableView(AboveSeam, HighlightNonCommittedRows, ParameterDefinitionTableViewBase):
+class ParameterDefinitionTableView(
+    AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, ParameterDefinitionTableViewBase
+):
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
@@ -454,13 +538,12 @@ class ParameterValueTableViewBase(ParameterTableView):
 
 
 class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
-    _HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return
 
 
-class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, ParameterValueTableViewBase):
+class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, ParameterValueTableViewBase):
     _private_key_headers: ClassVar[tuple[str, str, str, str]] = (
         field_header("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
         field_header("entity_byname", PARAMETER_VALUE_FIELD_MAP),
@@ -537,17 +620,16 @@ class EntityAlternativeTableViewBase(StackedTableView):
 
 
 class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack, EntityAlternativeTableViewBase):
-    _HAS_AUTO_FILTER_MENU = False
 
     def _plot_selection(self, selection, plot_widget=None):
         return
 
 
-class EntityAlternativeTableView(AboveSeam, HighlightNonCommittedRows, EntityAlternativeTableViewBase):
+class EntityAlternativeTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, EntityAlternativeTableViewBase):
     """Visualize entities and their alternatives."""
 
 
-class EntityTableView(StackedTableView):
+class EntityTableView(UsesAutoFilter, StackedTableView):
     _COLUMN_SIZE_HINTS = {
         field_header("entity_class_name", ENTITY_FIELD_MAP): 200,
         field_header("name", ENTITY_FIELD_MAP): 125,

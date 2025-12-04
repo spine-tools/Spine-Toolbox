@@ -21,7 +21,7 @@ from numbers import Number
 from operator import methodcaller
 import re
 from typing import Any, Optional
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, Slot
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView, QWidget
 from spinedb_api import (
@@ -36,8 +36,6 @@ from spinedb_api import (
 from spinedb_api.parameter_value import FLOAT_VALUE_TYPE, join_value_and_type, split_value_and_type
 from ..mvcmodels.empty_row_model import EmptyRowModel
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from ..spine_db_editor.mvcmodels.compound_models import CompoundStackedModel
-from ..spine_db_editor.widgets.custom_menus import AutoFilterMenu
 from .paste_excel import EXCEL_CLIPBOARD_MIME_TYPE, clipboard_excel_as_table
 
 _ = csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
@@ -303,69 +301,6 @@ class CopyPasteTableView(QTableView):
             culled_rows.append(row)
             culled_data.append(data[i])
         return culled_rows, culled_data
-
-
-class AutoFilterCopyPasteTableView(CopyPasteTableView):
-    """Custom QTableView class with autofilter functionality."""
-
-    def __init__(self, parent: Optional[QWidget]):
-        super().__init__(parent=parent)
-        self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
-        self._show_filter_menu_action = QAction(self)
-        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
-        self._show_filter_menu_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
-        self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
-        self.addAction(self._show_filter_menu_action)
-        self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
-
-    def setModel(self, model: CompoundStackedModel) -> None:
-        """Disconnects the sectionPressed signal which seems to be connected by the super method.
-        Otherwise pressing the header just selects the column.
-        """
-        super().setModel(model)
-        self.horizontalHeader().sectionPressed.disconnect()
-        model.modelReset.connect(self._clear_auto_filter_menus)
-
-    def get_auto_filter_menu(self, logical_index: int) -> AutoFilterMenu:
-        """Returns auto filter menu for given logical index from header view."""
-        return self._make_auto_filter_menu(self.model().header[logical_index])
-
-    def _make_auto_filter_menu(self, header: str) -> AutoFilterMenu:
-        model: CompoundStackedModel = self.model()
-        field = model.field_map[header]
-        if field not in self._auto_filter_menus:
-            self._auto_filter_menus[field] = menu = AutoFilterMenu(
-                self, model.db_mngr, list(model.db_map_iter()), model.item_type, field, show_empty=False
-            )
-            menu.filter_changed.connect(model.set_auto_filter)
-        return self._auto_filter_menus[field]
-
-    @Slot()
-    def _clear_auto_filter_menus(self) -> None:
-        while self._auto_filter_menus:
-            _, menu = self._auto_filter_menus.popitem()
-            menu.deleteLater()
-
-    @Slot(bool)
-    def _trigger_filter_menu(self, _: bool) -> None:
-        """Shows current column's auto filter menu."""
-        self.show_auto_filter_menu(self.currentIndex().column())
-
-    @Slot(int)
-    def show_auto_filter_menu(self, logical_index: int) -> None:
-        """Called when user clicks on a horizontal section header.
-        Shows/hides the auto filter widget.
-
-        Args:
-            logical_index (int): header section index
-        """
-        menu = self.get_auto_filter_menu(logical_index)
-        if menu is None:
-            return
-        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
-        pos_y = header_pos.y() + self.horizontalHeader().height()
-        menu.popup(QPoint(pos_x, pos_y))
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):
