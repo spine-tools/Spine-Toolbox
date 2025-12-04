@@ -28,7 +28,6 @@ from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count
 from ...mvcmodels.shared import ITEM_ID_ROLE
 from ...spine_db_manager import SpineDBManager
 from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
-from ..widgets.custom_menus import AutoFilterMenu
 from .compound_table_model import CompoundTableModel
 from .single_models import (
     SingleEntityAlternativeModel,
@@ -71,7 +70,6 @@ class CompoundStackedModel(CompoundTableModel):
         self.db_mngr = db_mngr
         self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
-        self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
         self._auto_filter: dict[str, dict[tuple[DatabaseMapping, TempId], set]] = {}
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
@@ -109,6 +107,9 @@ class CompoundStackedModel(CompoundTableModel):
     def _single_model_type(self) -> Type[SingleModelBase]:
         """Returns a constructor for the single models."""
         raise NotImplementedError()
+
+    def db_map_iter(self) -> Iterator[DatabaseMapping]:
+        yield from self._db_maps
 
     def canFetchMore(self, _parent):
         return bool(self._db_maps) and any(not self._fetch_parent.is_fetched(db_map) for db_map in self._db_maps)
@@ -202,35 +203,19 @@ class CompoundStackedModel(CompoundTableModel):
         self._inv_row_map.clear()
         self._filter_class_ids = Asterisk
         self._auto_filter = {}
-        while self._auto_filter_menus:
-            _, menu = self._auto_filter_menus.popitem()
-            menu.deleteLater()
         self.endResetModel()
-
-    def get_auto_filter_menu(self, logical_index: int) -> AutoFilterMenu:
-        """Returns auto filter menu for given logical index from header view."""
-        return self._make_auto_filter_menu(self.header[logical_index])
-
-    def _make_auto_filter_menu(self, field: str) -> AutoFilterMenu:
-        field = self.field_map.get(field, field)
-        if field not in self._auto_filter_menus:
-            self._auto_filter_menus[field] = menu = AutoFilterMenu(
-                self.parent(), self.db_mngr, self._db_maps, self.item_type, field, show_empty=False
-            )
-            menu.filter_changed.connect(self.set_auto_filter)
-        return self._auto_filter_menus[field]
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
         field = self.header[section]
-        real_field = self.field_map.get(field, field)
-        italic_font = QFont()
-        italic_font.setItalic(True)
+        real_field = self.field_map[field]
         if (
             role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
             and self._auto_filter.get(real_field)
         ):
+            italic_font = QFont()
+            italic_font.setItalic(True)
             return italic_font
         return super().headerData(section, orientation, role)
 
