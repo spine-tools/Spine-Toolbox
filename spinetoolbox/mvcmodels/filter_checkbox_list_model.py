@@ -10,15 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Provides FilterCheckboxListModel for FilterWidget."""
+"""Provides models for FilterWidget et al."""
 from collections.abc import Callable, Hashable, Iterable
 import re
 from typing import Any, Generic, TypeVar
 from PySide6.QtCore import QAbstractListModel, QModelIndex, QObject, Qt, Slot
-from spinedb_api import DatabaseMapping
-from spinetoolbox.fetch_parent import FetchParent
-from spinetoolbox.helpers import bisect_chunks, order_key
-from spinetoolbox.spine_db_manager import SpineDBManager
 
 T = TypeVar("T", bound=Hashable)
 
@@ -27,7 +23,7 @@ class SimpleFilterCheckboxListModel(Generic[T], QAbstractListModel):
     _SELECT_ALL_STR = "(Select all)"
     _SELECT_ALL_FILTERED_STR = "(Select all filtered)"
     _EMPTY_STR = "(Empty)"
-    _ADD_TO_SELECTION_STR = "Add current selection to filter"
+    _ADD_TO_SELECTION_STR = "(Add current selection to filter)"
 
     def __init__(self, parent: QObject | None, show_empty: bool = True):
         """
@@ -118,26 +114,28 @@ class SimpleFilterCheckboxListModel(Generic[T], QAbstractListModel):
             if row >= len(self._action_rows):
                 return Qt.CheckState.Checked if self._data[data_row] in selected else Qt.CheckState.Unchecked
             return Qt.CheckState.Checked if action_state[row] else Qt.CheckState.Unchecked
+        return None
 
     @Slot(QModelIndex)
     def handle_index_clicked(self, index: QModelIndex) -> None:
-        if index.row() == 0:
+        row = index.row()
+        if row == 0:
             self._handle_select_all_clicked()
         else:
-            if index.row() == 1 and self._show_add_to_selection:
+            if self._show_add_to_selection and row == len(self._action_rows) - 1:
                 self._add_to_selection = not self._add_to_selection
-            elif index.row() == 1 and self.show_empty:
+            elif row == 1 and self.show_empty:
                 self.empty_selected = not self.empty_selected
             else:
                 if self._is_filtered:
-                    i = self._filter_index[index.row() - len(self._action_rows)]
+                    i = self._filter_index[row - len(self._action_rows)]
                     item = self._data[i]
                     if item in self._selected_filtered:
                         self._selected_filtered.discard(item)
                     else:
                         self._selected_filtered.add(item)
                 else:
-                    item = self._data[index.row() - len(self._action_rows)]
+                    item = self._data[row - len(self._action_rows)]
                     if item in self._selected:
                         self._selected.discard(item)
                     else:
@@ -286,48 +284,6 @@ class SimpleFilterCheckboxListModel(Generic[T], QAbstractListModel):
             self._filter_index = [i for i, item in enumerate(self._data) if self.search_filter_expression(item)]
             self._selected_filtered.difference_update(data)
         self.all_selected = self._check_all_selected()
-
-
-class LazyFilterCheckboxListModel(SimpleFilterCheckboxListModel):
-    """Extends SimpleFilterCheckboxListModel to allow for lazy loading in synch with another model."""
-
-    def __init__(
-        self,
-        parent: QObject | None,
-        db_mngr: SpineDBManager,
-        db_maps: list[DatabaseMapping],
-        fetch_parent: FetchParent,
-        show_empty: bool = True,
-    ):
-        """
-        Args:
-            parent: parent object
-            db_mngr: database manager
-            db_maps: database maps
-            fetch_parent: fetch parent
-            show_empty: if True, show an empty row at the end of the list
-        """
-        super().__init__(parent, show_empty=show_empty)
-        self._db_mngr = db_mngr
-        self._db_maps = db_maps
-        self._fetch_parent = fetch_parent
-
-    def canFetchMore(self, _parent):
-        result = False
-        for db_map in self._db_maps:
-            result |= self._db_mngr.can_fetch_more(db_map, self._fetch_parent)
-        return result
-
-    def fetchMore(self, _parent):
-        for db_map in self._db_maps:
-            self._db_mngr.fetch_more(db_map, self._fetch_parent)
-
-    def _do_add_items(self, data):
-        """Adds items so the list is always sorted, while assuming that both existing and new items are sorted."""
-        for chunk, pos in bisect_chunks(self._data, data, key=lambda x: order_key(str(x))):
-            self.beginInsertRows(self.index(0, 0), pos, pos + len(chunk) - 1)
-            self._data[pos:pos] = chunk
-            self.endInsertRows()
 
 
 class DataToValueFilterCheckboxListModel(SimpleFilterCheckboxListModel):

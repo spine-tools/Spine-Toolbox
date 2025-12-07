@@ -15,8 +15,8 @@ from __future__ import annotations
 import bisect
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from functools import cache
-from typing import TYPE_CHECKING, ClassVar, Type
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QTimer, Signal, Slot
+from typing import Any, ClassVar, Type
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
@@ -27,6 +27,7 @@ from ...fetch_parent import FlexibleFetchParent
 from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count_tuples
 from ...mvcmodels.shared import ITEM_ID_ROLE
 from ...spine_db_manager import SpineDBManager
+from ..helpers import FALSE_STRING, TRUE_STRING
 from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from .compound_table_model import CompoundTableModel
 from .single_models import (
@@ -41,10 +42,8 @@ from .utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
+    field_index,
 )
-
-if TYPE_CHECKING:
-    from ..widgets.spine_db_editor import SpineDBEditor
 
 
 class CompoundStackedModel(CompoundTableModel):
@@ -52,14 +51,15 @@ class CompoundStackedModel(CompoundTableModel):
 
     item_type: ClassVar[str] = NotImplemented
     field_map: ClassVar[dict[str, str]] = {}
-
+    _single_model_type: Type[SingleModelBase] = NotImplemented
     non_committed_items_about_to_be_added = Signal()
     non_committed_items_added = Signal()
     column_filter_changed = Signal(QAbstractTableModel)
 
     _ENTITY_CLASS_ID_FIELD: ClassVar[str] = "entity_class_id"
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION: ClassVar[set[str]] = set()
 
-    def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager, *db_maps):
+    def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps):
         """
         Args:
             parent: the parent object
@@ -70,7 +70,7 @@ class CompoundStackedModel(CompoundTableModel):
         self.db_mngr = db_mngr
         self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
-        self._auto_filter: dict[str, dict[tuple[DatabaseMapping, TempId], set]] = {}
+        self._auto_filter: dict[str, set] = {}  # Shared with submodels; always modify, never set.
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.timeout.connect(self.refresh)
@@ -84,7 +84,6 @@ class CompoundStackedModel(CompoundTableModel):
         )
         for db_map in self._db_maps:
             self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
-        self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
 
     @classmethod
     @cache
@@ -96,20 +95,12 @@ class CompoundStackedModel(CompoundTableModel):
         return list(cls.field_map)
 
     @property
-    def column_filters(self) -> dict[str, bool]:
-        return self._column_filters
+    def filtered_columns(self) -> list[str]:
+        return list(self._auto_filter)
 
     @property
     def group_columns(self) -> set[int]:
         return self._single_model_type.group_columns
-
-    @property
-    def _single_model_type(self) -> Type[SingleModelBase]:
-        """Returns a constructor for the single models."""
-        raise NotImplementedError()
-
-    def db_map_iter(self) -> Iterator[DatabaseMapping]:
-        yield from self._db_maps
 
     def canFetchMore(self, _parent):
         return bool(self._db_maps) and any(not self._fetch_parent.is_fetched(db_map) for db_map in self._db_maps)
@@ -119,7 +110,9 @@ class CompoundStackedModel(CompoundTableModel):
             self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
     def shows_item(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
-        return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
+        return any(
+            m.db_map == db_map and m.filter_accepts_item(item) for m in self.sub_models if self.filter_accepts_model(m)
+        )
 
     def reset_db_maps(self, db_maps: Sequence[DatabaseMapping]) -> None:
         if set(db_maps) == set(self._db_maps):
@@ -202,7 +195,7 @@ class CompoundStackedModel(CompoundTableModel):
         self.sub_models.clear()
         self._inv_row_map.clear()
         self._filter_class_ids = Asterisk
-        self._auto_filter = {}
+        self._auto_filter.clear()
         self.endResetModel()
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
@@ -212,7 +205,7 @@ class CompoundStackedModel(CompoundTableModel):
         if (
             role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
-            and self._auto_filter.get(real_field)
+            and real_field in self._auto_filter
         ):
             italic_font = QFont()
             italic_font.setItalic(True)
@@ -221,38 +214,12 @@ class CompoundStackedModel(CompoundTableModel):
 
     def filter_accepts_model(self, model: SingleModelBase) -> bool:
         """Returns a boolean indicating whether the given model passes the filter for compound model."""
-        if not self._auto_filter_accepts_model(model):
-            return False
-        if not self._class_filter_accepts_model(model):
-            return False
-        return True
-
-    def _class_filter_accepts_model(self, model: SingleModelBase) -> bool:
         if self._filter_class_ids is Asterisk or not self._filter_class_ids:
             return True
         if model.db_map not in self._filter_class_ids:
             return False
         class_ids = self._filter_class_ids[model.db_map]
         return model.entity_class_id in class_ids or not class_ids.isdisjoint(model.dimension_id_list)
-
-    def _auto_filter_accepts_model(self, model: SingleModelBase) -> bool:
-        if None in self._auto_filter.values():
-            return False
-        for values in self._auto_filter.values():
-            if not values:
-                continue
-            for db_map, entity_class_id in values:
-                if model.db_map == db_map and (entity_class_id is None or model.entity_class_id == entity_class_id):
-                    break
-            else:
-                return False
-        return True
-
-    def accepted_single_models(self) -> list[SingleModelBase]:
-        """Returns a list of accepted single models by calling filter_accepts_model
-        on each of them, just for convenience.
-        """
-        return [m for m in self.sub_models if self.filter_accepts_model(m)]
 
     def stop_invalidating_filter(self) -> None:
         """Stops invalidating the filter."""
@@ -270,49 +237,55 @@ class CompoundStackedModel(CompoundTableModel):
         self._filter_class_ids = filter_class_ids
         self._filter_timer.start()
 
-    def clear_auto_filter(self) -> None:
-        self._auto_filter = {}
-        self._filter_timer.start()
+    def has_auto_filter(self, field: str) -> bool:
+        return field in self._auto_filter
 
-    @Slot(str, object)
-    def set_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]) -> None:
+    def has_auto_filter_empty_selected(self, field: str) -> bool:
+        if field not in self._auto_filter:
+            return True
+        auto_filter = self._auto_filter[field]
+        return "" in auto_filter or None in auto_filter
+
+    def clear_auto_filter(self) -> None:
+        self._auto_filter.clear()
+        if not self._filter_timer.isActive():
+            self._filter_timer.start()
+
+    def auto_filter_data_map(self, column_i: int) -> dict[str, Any]:
+        data = {}
+        for model in self.sub_models:
+            for row in range(model.rowCount()):
+                index = model.index(row, column_i)
+                data[index.data()] = index.data(Qt.ItemDataRole.EditRole)
+        return data
+
+    def auto_filter_data_list(self, column_i: int) -> list[str]:
+        data = set()
+        for model in self.sub_models:
+            for row in range(model.rowCount()):
+                if x := model.index(row, column_i).data():
+                    data.add(x)
+        return sorted(data)
+
+    @Slot(int, object)
+    def set_auto_filter(self, field: str, values: set | None) -> None:
         """Updates and applies the auto filter.
 
         Args:
-            field : the field name
-            values: mapping (db_map, entity_class_id) to set of valid values
+            field : Field name.
+            values: Values that should pass the filter; None means all pass.
         """
-        self._set_compound_auto_filter(field, values)
-        for model in self.accepted_single_models():
-            self._set_single_auto_filter(model, field)
-        if values is None or any(bool(i) for i in values.values()):
-            self._column_filters[field] = True
-        else:
-            self._column_filters[field] = False
-        self.column_filter_changed.emit(self)
-
-    def _set_compound_auto_filter(self, field: str, values: dict[tuple[DatabaseMapping, TempId], set]) -> None:
-        """Sets the auto filter for given column in the compound model.
-
-        Args:
-            field: the field name
-            values: mapping from (db map, id) to a set of valid values
-        """
-        if self._auto_filter.setdefault(field, {}) == values:
+        if (field in self._auto_filter and self._auto_filter[field] == values) or (
+            values is None and field not in self._auto_filter
+        ):
             return
-        self._auto_filter[field] = values
-        self._filter_timer.start()
-
-    def _set_single_auto_filter(self, model: SingleModelBase, field: str) -> None:
-        """Sets the auto filter for given column in the given single model.
-
-        Args:
-            model: the model
-            field: the field name
-        """
-        values = self._auto_filter[field].get((model.db_map, model.entity_class_id), set())
-        if model.set_auto_filter(field, values):
+        if values is None:
+            del self._auto_filter[field]
+        else:
+            self._auto_filter[field] = values
+        if not self._filter_timer.isActive():
             self._filter_timer.start()
+        self.column_filter_changed.emit(self)
 
     def _row_map_iterator_for_model(self, model: SingleModelBase) -> Iterator[tuple[SingleModelBase, int]]:
         """Yields row map for the given model.
@@ -382,8 +355,9 @@ class CompoundStackedModel(CompoundTableModel):
     ) -> SingleModelBase:
         model = self._single_model_type(self, db_map, entity_class_id, committed)
         self._connect_single_model(model)
-        for field in self._auto_filter:
-            self._set_single_auto_filter(model, field)
+        model.set_auto_filter(self._auto_filter)
+        if not self._filter_timer.isActive():
+            self._filter_timer.start()
         return model
 
     def _insert_single_model(self, model: SingleModelBase) -> None:
@@ -658,8 +632,6 @@ class EditParameterValueMixin:
             label identifying the data
         """
         item = self.db_item(index)
-        if item is None:
-            return ""
         database = self.index(index.row(), self.columnCount() - 1).data()
         entity_class_name = item["entity_class_name"]
         if self.item_type == "parameter_definition":
@@ -692,10 +664,10 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedM
 
     item_type = "parameter_definition"
     field_map = PARAMETER_DEFINITION_FIELD_MAP
-
-    @property
-    def _single_model_type(self):
-        return SingleParameterDefinitionModel
+    _single_model_type = SingleParameterDefinitionModel
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {
+        "parameter_type_list",
+    }
 
 
 class CompoundParameterValueModel(
@@ -705,14 +677,14 @@ class CompoundParameterValueModel(
 
     item_type = "parameter_value"
     field_map = PARAMETER_VALUE_FIELD_MAP
+    _single_model_type = SingleParameterValueModel
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {
+        "entity_byname",
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_mngr.items_updated.connect(self._handle_parameter_definitions_updated)
-
-    @property
-    def _single_model_type(self):
-        return SingleParameterValueModel
 
     def _handle_parameter_definitions_updated(
         self, item_type: str, db_map_data: dict[DatabaseMapping, list[PublicItem]]
@@ -748,24 +720,26 @@ class CompoundEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, 
 
     item_type = "entity_alternative"
     field_map = ENTITY_ALTERNATIVE_FIELD_MAP
+    _single_model_type = SingleEntityAlternativeModel
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {"entity_byname", "active"}
+    _ACTIVE_COLUMN = field_index("active", ENTITY_ALTERNATIVE_FIELD_MAP)
 
-    @property
-    def _single_model_type(self):
-        return SingleEntityAlternativeModel
+    def auto_filter_data_map(self, column_i: int) -> dict[str, Any]:
+        if column_i == self._ACTIVE_COLUMN:
+            return {TRUE_STRING: True, FALSE_STRING: False}
+        return super().auto_filter_data_map(column_i)
 
 
 class CompoundEntityModel(FilterEntityMixin, CompoundStackedModel):
     item_type = "entity"
     field_map = ENTITY_FIELD_MAP
+    _single_model_type = SingleEntityModel
     _ENTITY_CLASS_ID_FIELD = "class_id"
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {"entity_byname", "lat", "lon", "alt"}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._scenario_selection: ScenarioSelection = Asterisk
-
-    @property
-    def _single_model_type(self) -> Type[SingleEntityModel]:
-        return SingleEntityModel
 
     def set_scenario_selection_for_filtering(self, scenario_selection: ScenarioSelection) -> None:
         self._scenario_selection = scenario_selection

@@ -132,9 +132,7 @@ class UsesAutoFilter:
         model: CompoundStackedModel = self.model()
         field = model.field_map[header]
         if field not in self._auto_filter_menus:
-            self._auto_filter_menus[field] = menu = AutoFilterMenu(
-                self, model.db_mngr, list(model.db_map_iter()), model.item_type, field, show_empty=False
-            )
+            self._auto_filter_menus[field] = menu = AutoFilterMenu(self, model, field)
             menu.filter_changed.connect(model.set_auto_filter)
         return self._auto_filter_menus[field]
 

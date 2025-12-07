@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from typing import Any
 import unittest
 from unittest import mock
-from PySide6.QtCore import QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
+from PySide6.QtCore import QAbstractListModel, QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QWidget
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -377,13 +377,23 @@ def assert_table_model_data_pytest(
     expected: list[list[Any]],
     role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
 ) -> None:
-    assert model.rowCount() == len(expected)
+    assert model.rowCount() == len(expected), f"{model.rowCount()} != {len(expected)}"
     for row in range(model.rowCount()):
-        assert model.columnCount() == len(expected[row])
+        assert model.columnCount() == len(expected[row]), f"{model.columnCount()} != {len(expected[row])}"
         for column in range(model.columnCount()):
             data = model.index(row, column).data(role)
             expected_data = expected[row][column]
             assert data == expected_data, f"{data} != {expected_data} on row {row} column {column}"
+
+
+def assert_list_model_data_pytest(
+    model: QAbstractListModel, expected: list, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+) -> None:
+    assert model.rowCount() == len(expected), f"{model.rowCount()} != {len(expected)}"
+    for row in range(model.rowCount()):
+        data = model.index(row).data(role)
+        expected_data = expected[row]
+        assert data == expected_data, f"{data} != {expected_data} on row {row}"
 
 
 def fetch_model(model):

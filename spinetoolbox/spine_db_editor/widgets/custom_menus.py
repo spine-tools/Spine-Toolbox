@@ -12,8 +12,8 @@
 
 """Classes for custom context menus and pop-up menus."""
 from collections.abc import Callable, Iterator
-from typing import Any, TypeAlias, TypeVar
-from PySide6.QtCore import QModelIndex, QPoint, Qt, Signal
+from typing import Any, Hashable
+from PySide6.QtCore import QPoint, Signal, Slot
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QWidget
 from spinedb_api import DatabaseMapping, IndexedValue
@@ -22,122 +22,75 @@ from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from ...database_display_names import NameRegistry
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import DB_ITEM_SEPARATOR, CustomPopupMenu, DBMapPublicItems
-from ...mvcmodels.filter_checkbox_list_model import LazyFilterCheckboxListModel, SimpleFilterCheckboxListModel
+from ...helpers import CustomPopupMenu, DBMapPublicItems
+from ...mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_menus import FilterMenuBase
+from ..mvcmodels.compound_models import CompoundStackedModel
+from ..mvcmodels.lazy_filter_checkbox_list_model import LazyFilterCheckboxListModel
+from ..mvcmodels.utils import field_index
 from .tabular_view_header_widget import TabularViewHeaderWidget
 
-AutoFilterValue: TypeAlias = tuple[DatabaseMapping, TempId, Any]
 
-T = TypeVar("T")
-
-
-class AutoFilterMenu(FilterMenuBase[T]):
+class AutoFilterMenu(FilterMenuBase[str]):
     filter_changed = Signal(str, object)
 
-    def __init__(
-        self,
-        parent: QWidget | None,
-        db_mngr: SpineDBManager,
-        db_maps: list[DatabaseMapping],
-        item_type: str,
-        field: str,
-        show_empty: bool = True,
-    ):
-
+    def __init__(self, parent: QWidget | None, model: CompoundStackedModel, field: str):
         super().__init__(parent)
-        self._item_type = item_type
-        self._db_mngr = db_mngr
-        self._field = field
-        self._menu_data: dict[str, set[AutoFilterValue]] = {}
-        fetch_parent = FlexibleFetchParent(
-            self._item_type,
-            handle_items_added=self._handle_items_added,
-            handle_items_removed=self._handle_items_removed,
-            owner=self,
-            chunk_size=None,
-        )
-        filter_model = LazyFilterCheckboxListModel(self, db_mngr, db_maps, fetch_parent, show_empty=show_empty)
-        self._set_up(filter_model)
+        self._set_up(SimpleFilterCheckboxListModel(self, show_empty=True))
+        self._source_model = model
+        self._field: str = field
+        self._field_index: int = field_index(field, model.field_map)
+        self._display_value_to_edit_data: dict[str, Hashable] | None = None
+        self.aboutToShow.connect(self._populate_data)
 
-    def set_filter_accepted_values(self, accepted_values: set[T]) -> None:
+    def set_filter_accepted_values(self, accepted_values: set[str]) -> None:
         self._apply_filter_with_condition(lambda x: x in accepted_values)
 
-    def set_filter_rejected_values(self, rejected_values: set[T]) -> None:
+    def set_filter_rejected_values(self, rejected_values: set[str]) -> None:
         self._apply_filter_with_condition(lambda x: x not in rejected_values)
 
-    def _apply_filter_with_condition(self, condition: Callable[[T], bool]) -> None:
-        filter_model = self.filter.model()
-        if filter_model.canFetchMore(QModelIndex()):
-            filter_model.fetchMore(QModelIndex())
-        filter_model.filter_by_condition(condition)
+    def _apply_filter_with_condition(self, condition: Callable[[str], bool]) -> None:
+        self._populate_data()
+        self.filter.model().filter_by_condition(condition)
         self.filter.apply_filter()
 
-    def _get_value(self, item: PublicItem, db_map: DatabaseMapping) -> Any:
-        if self._field == "database":
-            return self._db_mngr.name_registry.display_name(db_map.sa_url)
-        return item[self._field]
+    @Slot()
+    def _populate_data(self) -> None:
+        selected = self.filter.model().get_selected()
+        if self._field in self._source_model.FIELDS_REQUIRING_FILTER_DATA_CONVERSION:
+            self._display_value_to_edit_data = self._source_model.auto_filter_data_map(self._field_index)
+            filter_data = [x for x in self._display_value_to_edit_data if x]
+        else:
+            filter_data = self._source_model.auto_filter_data_list(self._field_index)
+        all_selected = not self._source_model.has_auto_filter(self._field)
+        self.filter.model().set_list(filter_data, all_selected=all_selected)
+        if not all_selected:
+            empty_selected = self._source_model.has_auto_filter_empty_selected(self._field)
+            self.filter.model().set_selected(selected, empty_selected)
 
-    def _get_display_value(self, item: PublicItem, db_map: DatabaseMapping) -> str:
-        if self._field in ("value", "default_value"):
-            return self._db_mngr.get_value(db_map, item, role=Qt.ItemDataRole.DisplayRole)
-        if self._field == "entity_byname":
-            return DB_ITEM_SEPARATOR.join(item[self._field])
-        return self._get_value(item, db_map) or "(empty)"
-
-    def _handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
-        to_add = set()
-        for db_map, items in db_map_data.items():
-            for item in items:
-                display_value = self._get_display_value(item, db_map)
-                value = self._get_value(item, db_map)
-                to_add.add(display_value)
-                entity_class_field = "class_id" if item.item_type == "entity" else "entity_class_id"
-                self._menu_data.setdefault(display_value, set()).add((db_map, item[entity_class_field], value))
-        self.add_items_to_filter_list(to_add)
-
-    def _handle_items_removed(self, db_map_data: DBMapPublicItems) -> None:
-        for db_map, items in db_map_data.items():
-            for item in items:
-                display_value = self._get_display_value(item, db_map)
-                value = self._get_value(item, db_map)
-                entity_class_field = "class_id" if item.item_type == "entity" else "entity_class_id"
-                self._menu_data.get(display_value, set()).discard((db_map, item[entity_class_field], value))
-        to_remove = {display_value for display_value, data in self._menu_data.items() if not data}
-        for display_value in to_remove:
-            del self._menu_data[display_value]
-        self.remove_items_from_filter_list(to_remove)
-
-    def _build_auto_filter(self, valid_values: list[T]) -> dict[tuple[DatabaseMapping, TempId], set[T]] | None:
-        """
-        Builds the auto filter given valid values.
-
-        Args:
-            valid_values: Values accepted by the filter.
-
-        Returns:
-            mapping (db_map, entity_class_id) to set of valid values
-        """
-        if not self.filter.has_filter():
-            return {}  # All-pass
-        if not valid_values:
-            return None  # You shall not pass
-        auto_filter = {}
-        for display_value in valid_values:
-            for db_map, entity_class_id, value in self._menu_data[display_value]:
-                auto_filter.setdefault((db_map, entity_class_id), set()).add(value)
-        return auto_filter
-
-    def emit_filter_changed(self, valid_values: list[T]) -> None:
+    def emit_filter_changed(self, valid_values: set[str | None]) -> None:
         """
         Builds auto filter and emits signal.
 
         Args:
             valid_values: Values accepted by the filter.
         """
-        auto_filter = self._build_auto_filter(valid_values)
-        self.filter_changed.emit(self._field, auto_filter)
+        if self.filter.model().all_selected:
+            self.filter_changed.emit(self._field, None)
+            return
+        if self._display_value_to_edit_data is not None:
+            if None in valid_values:
+                if None not in self._display_value_to_edit_data:
+                    valid_values.remove(None)
+                if "" in self._display_value_to_edit_data:
+                    valid_values.add("")
+            values = {self._display_value_to_edit_data[value] for value in valid_values}
+        else:
+            if None in valid_values:
+                valid_values.add("")
+            values = valid_values
+        self.filter_changed.emit(self._field, values)
 
 
 class TabularViewFilterMenuBase(FilterMenuBase):

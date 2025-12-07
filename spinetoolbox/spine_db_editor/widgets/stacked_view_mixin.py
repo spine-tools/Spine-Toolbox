@@ -269,14 +269,12 @@ class StackedViewMixin:
     def _handle_column_filters(self, model: CompoundStackedModel) -> None:
         dock = self._dock_by_item_type[model.item_type]
         table_name = self.table_name_from_item_type[model.item_type]
-        if not any(model.column_filters.values()):
+        if not model.filtered_columns:
             dock.setWindowTitle(table_name)
             self.set_dock_tab_color(dock, None)
             return
         self.set_dock_tab_color(dock, QColor("paleturquoise"))
-        table_name += (
-            f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
-        )
+        table_name += f" [COLUMN FILTERS: {', '.join(sorted(model.filtered_columns))}]"
         dock.setWindowTitle(table_name)
 
     def tear_down(self):

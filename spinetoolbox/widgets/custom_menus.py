@@ -237,13 +237,16 @@ class FilterMenuBase(Generic[T], QMenu):
         self.filter.model().remove_items(items)
         self.filter.save_state()
 
+    @Slot()
     def clear_filter(self) -> None:
         self.filter.clear_filter()
         self._change_filter()
 
+    @Slot()
     def _check_filter(self) -> None:
         self._remove_filter.setEnabled(self.filter.has_filter())
 
+    @Slot()
     def _change_filter(self) -> None:
         valid_values = set(self.filter.filter_state)
         if self.filter.filter_empty_state:
