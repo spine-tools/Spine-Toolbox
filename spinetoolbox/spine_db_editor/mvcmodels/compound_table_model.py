@@ -67,42 +67,6 @@ class CompoundTableModel(MinimalTableModel):
             return QModelIndex()
         return self.index(row, sub_index.column())
 
-    def item_at_row(self, row):
-        """Returns the item at given row.
-
-        Args:
-            row (int)
-
-        Returns:
-            object
-        """
-        sub_model, sub_row = self._row_map[row]
-        return sub_model._main_data[sub_row]
-
-    def sub_model_at_row(self, row):
-        """Returns the submodel corresponding to the given row in the compound model.
-
-        Args:
-            row (int):
-
-        Returns:
-            MinimalTableModel
-        """
-        sub_model, _ = self._row_map[row]
-        return sub_model
-
-    def sub_model_row(self, row):
-        """Calculates sub model row.
-
-        Args:
-            row (int): row in compound model
-
-        Returns:
-            int: row in sub model
-        """
-        _, sub_row = self._row_map[row]
-        return sub_row
-
     @Slot()
     def refresh(self):
         """Refreshes the layout by computing a new row map."""

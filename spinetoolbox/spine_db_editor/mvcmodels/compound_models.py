@@ -153,15 +153,14 @@ class CompoundStackedModel(CompoundTableModel):
         """Runs when given model is about to reset."""
         if model not in self.sub_models:
             return
-        row_map = self._row_map_for_model(model)
-        if not row_map:
-            return
         removed_rows = []
-        for mapped_row in row_map:
+        for mapped_row in self._row_map_iterator_for_model(model):
             try:
                 removed_rows.append(self._inv_row_map[mapped_row])
             except KeyError:
                 pass
+        if not removed_rows:
+            return
         for first, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
             last = first + count - 1
             tail_row_map = self._row_map[last + 1 :]
@@ -395,9 +394,9 @@ class CompoundStackedModel(CompoundTableModel):
         """Removes given rows by removing the corresponding items from the db map."""
         db_map_typed_data = {}
         for row in sorted(rows, reverse=True):
-            sub_model = self.sub_model_at_row(row)
+            sub_model, sub_row = self._row_map[row]
             db_map = sub_model.db_map
-            id_ = self.item_at_row(row)
+            id_ = sub_model.item_id(sub_row)
             db_map_typed_data.setdefault(db_map, {}).setdefault(self.item_type, []).append(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
@@ -652,8 +651,8 @@ class EditParameterValueMixin:
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
         even if the model changes.
         """
-        sub_model = self.sub_model_at_row(index.row())
-        id_ = self.item_at_row(index.row())
+        sub_model, sub_row = self._row_map[index.row()]
+        id_ = sub_model.item_id(sub_row)
         return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
             [{"id": id_, sub_model.value_field: join_value_and_type(*value_and_type)}]
         )
