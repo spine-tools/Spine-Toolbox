@@ -12,7 +12,8 @@
 
 """Contains the StackedViewMixin class."""
 from typing import Optional
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, QPersistentModelIndex, Qt, Slot
+from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt, Slot
+from PySide6.QtGui import QColor
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from ...helpers import preferred_row_height
@@ -24,6 +25,7 @@ from ..mvcmodels.compound_models import (
     CompoundEntityModel,
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
+    CompoundStackedModel,
 )
 from ..mvcmodels.empty_models import (
     EmptyEntityAlternativeModel,
@@ -110,6 +112,8 @@ class StackedViewMixin:
             invisible_scroll_bar = table_view.horizontalScrollBar()
             visible_scroll_bar.valueChanged.connect(invisible_scroll_bar.setValue)
             invisible_scroll_bar.valueChanged.connect(visible_scroll_bar.setValue)
+        for model in self._all_stacked_models:
+            model.column_filter_changed.connect(self._handle_column_filters)
         self.parameter_value_model.layoutChanged.connect(self._handle_value_model_layout_changed)
         self.parameter_value_model.rowsInserted.connect(self._handle_values_inserted)
         self.empty_parameter_value_model.entities_added.connect(self._notify_about_added_entities)
@@ -126,8 +130,8 @@ class StackedViewMixin:
         """Initializes models."""
         super().init_models()
         for model in self._all_stacked_models:
-            model.reset_db_maps(self.db_maps)
             model.init_model()
+            model.reset_db_maps(self.db_maps)
         for model in self._all_empty_models:
             model.reset_db_maps(self.db_maps)
             self._set_stacked_model_default_data(DefaultRowData({}, None), model)
@@ -261,10 +265,23 @@ class StackedViewMixin:
         popup = AddedEntitiesPopup(self, self.db_mngr.name_registry, added_entities)
         popup.show()
 
+    @Slot(QAbstractTableModel)
+    def _handle_column_filters(self, model: CompoundStackedModel) -> None:
+        dock = self._dock_by_item_type[model.item_type]
+        table_name = self.table_name_from_item_type[model.item_type]
+        if not model.filtered_columns:
+            dock.setWindowTitle(table_name)
+            self.set_dock_tab_color(dock, None)
+            return
+        self.set_dock_tab_color(dock, QColor("paleturquoise"))
+        table_name += f" [COLUMN FILTERS: {', '.join(sorted(model.filtered_columns))}]"
+        dock.setWindowTitle(table_name)
+
     def tear_down(self):
         if not super().tear_down():
             return False
         for model in self._all_stacked_models:
+            model.init_model()
             model.stop_invalidating_filter()
         return True
 

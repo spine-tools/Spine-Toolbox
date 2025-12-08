@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'link_properties.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -62,12 +62,12 @@ class Ui_Form(object):
         self.filter_type_label = QLabel(self.scrollAreaWidgetContents)
         self.filter_type_label.setObjectName(u"filter_type_label")
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.filter_type_label)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.filter_type_label)
 
         self.filter_type_combo_box = QComboBox(self.scrollAreaWidgetContents)
         self.filter_type_combo_box.setObjectName(u"filter_type_combo_box")
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.filter_type_combo_box)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.filter_type_combo_box)
 
 
         self.verticalLayout.addLayout(self.formLayout)

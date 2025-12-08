@@ -60,7 +60,6 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_object_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.parameter_definition_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -77,7 +76,6 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_relationship_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.parameter_definition_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -96,7 +94,6 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_object_parameter_values_in_model(self):
         """Test that object parameter values are updated in the model."""
         model = self.spine_db_editor.parameter_value_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -122,7 +119,6 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_relationship_parameter_values_in_model(self):
         """Test that relationship parameter values are updated in the model."""
         model = self.spine_db_editor.parameter_value_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()

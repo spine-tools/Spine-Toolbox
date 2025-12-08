@@ -22,7 +22,9 @@ from tests.mock_helpers import TestCaseWithQApplication
 
 class TestFilterWidget(TestCaseWithQApplication):
     def setUp(self):
-        self._widget = FilterWidget(None, DataToValueFilterCheckboxListModel, None, str)
+        filter_model = DataToValueFilterCheckboxListModel(None, str)
+        self._widget = FilterWidget(None, filter_model)
+        filter_model.setParent(self._widget)
         self._widget.set_filter_list(["ei", "bii", "cii"])
 
     def tearDown(self):
@@ -36,8 +38,8 @@ class TestFilterWidget(TestCaseWithQApplication):
         self.assertEqual(data, ["(Select all)", "(Empty)", "ei", "bii", "cii"])
         checked = [model.index(row, 0).data(Qt.ItemDataRole.CheckStateRole).value for row in range(model.rowCount())]
         self.assertEqual(checked, 5 * [Qt.CheckState.Checked.value])
-        self.assertEqual(self._widget._filter_state, ["ei", "bii", "cii"])
-        self.assertIsNone(self._widget._filter_empty_state)
+        self.assertEqual(self._widget.filter_state, {"ei", "bii", "cii"})
+        self.assertIsNone(self._widget.filter_empty_state)
 
     def test_click_Empty_item(self):
         model = self._widget._ui_list.model()
@@ -85,8 +87,8 @@ class TestFilterWidget(TestCaseWithQApplication):
         model = self._widget._ui_list.model()
         self._widget._ui_list.clicked.emit(model.index(2, 0))
         self._widget.save_state()
-        self.assertEqual(self._widget._filter_state, {"bii", "cii"})
-        self.assertTrue(self._widget._filter_empty_state)
+        self.assertEqual(self._widget.filter_state, {"bii", "cii"})
+        self.assertTrue(self._widget.filter_empty_state)
 
 
 class TestSelectDatabaseItemsDialog(TestCaseWithQApplication):

@@ -21,7 +21,7 @@ from numbers import Number
 from operator import methodcaller
 import re
 from typing import Any, Optional
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, Slot
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView, QWidget
 from spinedb_api import (
@@ -301,50 +301,6 @@ class CopyPasteTableView(QTableView):
             culled_rows.append(row)
             culled_data.append(data[i])
         return culled_rows, culled_data
-
-
-class AutoFilterCopyPasteTableView(CopyPasteTableView):
-    """Custom QTableView class with autofilter functionality."""
-
-    def __init__(self, parent: Optional[QWidget]):
-        super().__init__(parent=parent)
-        self._show_filter_menu_action = QAction(self)
-        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
-        self._show_filter_menu_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
-        self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
-        self.addAction(self._show_filter_menu_action)
-        self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
-
-    def setModel(self, model):
-        """Disconnects the sectionPressed signal which seems to be connected by the super method.
-        Otherwise pressing the header just selects the column.
-
-        Args:
-            model (QAbstractItemModel)
-        """
-        super().setModel(model)
-        self.horizontalHeader().sectionPressed.disconnect()
-
-    @Slot(bool)
-    def _trigger_filter_menu(self, _):
-        """Shows current column's auto filter menu."""
-        self.show_auto_filter_menu(self.currentIndex().column())
-
-    @Slot(int)
-    def show_auto_filter_menu(self, logical_index):
-        """Called when user clicks on a horizontal section header.
-        Shows/hides the auto filter widget.
-
-        Args:
-            logical_index (int): header section index
-        """
-        menu = self.model().get_auto_filter_menu(logical_index)
-        if menu is None:
-            return
-        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
-        pos_y = header_pos.y() + self.horizontalHeader().height()
-        menu.popup(QPoint(pos_x, pos_y))
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):

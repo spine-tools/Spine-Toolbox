@@ -16,7 +16,7 @@ import json
 import os
 from typing import Literal, Optional, TypeAlias
 from PySide6.QtCore import QCoreApplication, QItemSelection, QModelIndex, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
     QApplication,
@@ -85,8 +85,10 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr = db_mngr
         self.db_maps: list[DatabaseMapping] = []
         self.db_urls: list[str] = []
-        self._history = []
+        self._history: list[tuple[str, str]] = []
         self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
+        self.recent_dbs_menu.load_url_requested.connect(self._load_recent_url)
+        self.recent_dbs_menu.clear_url_history_requested.connect(self._clear_url_history)
         self._change_notifiers = []
         self._changelog = []
         # Setup UI from Qt Designer file
@@ -164,6 +166,14 @@ class SpineDBEditorBase(QMainWindow):
         """Sets new window title according to open databases."""
         self.setWindowTitle(", ".join(self.db_mngr.name_registry.display_name_iter(self.db_maps)))
 
+    @Slot()
+    def _clear_url_history(self) -> None:
+        self._history.clear()
+
+    @Slot(str, str)
+    def _load_recent_url(self, url: str, name: str) -> None:
+        self.load_db_urls({url: name})
+
     def load_db_urls(self, db_urls, create=False, update_history=True):
         self.ui.actionImport.setEnabled(False)
         self.ui.actionExport.setEnabled(False)
@@ -172,11 +182,12 @@ class SpineDBEditorBase(QMainWindow):
         self.toolbar.reload_action.setEnabled(False)
         if not db_urls:
             return True
-        if not self.tear_down():
-            return False
+        if self.db_maps:
+            if not self.tear_down():
+                return False
+            self.db_maps.clear()
         if self.db_maps:
             self.save_window_state()
-        self.db_maps = []
         self._changelog.clear()
         self._purge_change_notifiers()
         for url in db_urls:
@@ -215,19 +226,20 @@ class SpineDBEditorBase(QMainWindow):
     def show_recent_db(self) -> None:
         """Updates and sets up the recent projects menu to File-Open recent menu item."""
         if not self.recent_dbs_menu.isVisible():
-            self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
+            self.recent_dbs_menu.update_history(self._history)
             self.ui.actionOpen_recent.setMenu(self.recent_dbs_menu)
 
     def add_urls_to_history(self):
         """Adds current urls to history."""
-        opened_names = set()
-        for row in self._history:
-            for name in row:
-                opened_names.add(name)
-        for url in self.db_urls:
+        new = []
+        for url in reversed(self.db_urls):
             name = self.db_mngr.name_registry.display_name(url)
-            if name not in opened_names:
-                self._history.insert(0, {name: url})
+            new.append((url, name))
+        old = []
+        for row in self._history:
+            if row not in new:
+                old.append(row)
+        self._history = new + old
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
@@ -342,6 +354,8 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot()
     def update_undo_redo_actions(self) -> None:
+        if not self.db_maps:
+            return
         undo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].undo_age)
         redo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].redo_age)
         new_undo_action = self.db_mngr.undo_action[undo_db_map]
@@ -789,11 +803,11 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 
-    def tear_down(self):
+    def tear_down(self) -> bool:
         """Performs clean up duties.
 
         Returns:
-            bool: True if editor is ready to close, False otherwise
+            True if editor is ready to close, False otherwise
         """
         dirty_db_maps = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
         commit_dirty = False
@@ -922,20 +936,6 @@ class SpineDBEditorBase(QMainWindow):
         if color:
             palette.setColor(QPalette.ColorRole.Window, color)
         dock.setPalette(palette)
-
-    def handle_column_filters(self, model):
-        dock = self._dock_by_item_type[model.item_type]
-        table_name = self.table_name_from_item_type[model.item_type]
-        if not any(model.column_filters.values()):
-            # Back to defaults
-            dock.setWindowTitle(table_name)
-            self.set_dock_tab_color(dock, None)
-            return
-        self.set_dock_tab_color(dock, QColor("paleturquoise"))
-        table_name += (
-            f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
-        )
-        dock.setWindowTitle(table_name)
 
     def setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor

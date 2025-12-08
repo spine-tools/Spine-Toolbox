@@ -11,376 +11,335 @@
 ######################################################################################################################
 
 """Unit tests for FilterCheckboxListModel class."""
-import unittest
-from unittest import mock
 from PySide6.QtCore import Qt
+import pytest
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
-from tests.mock_helpers import TestCaseWithQApplication
+from tests.mock_helpers import assert_list_model_data_pytest
 
 
-class TestFilterCheckboxListModel(TestCaseWithQApplication):
-    def setUp(self):
-        self.model = SimpleFilterCheckboxListModel(None)
-        self.data = ["a", "aa", "aaa", "b", "bb", "bbb"]
+@pytest.fixture()
+def data():
+    yield ["a", "aa", "aaa", "b", "bb", "bbb"]
 
-    def test_set_list(self):
-        self.model.set_list(self.data)
-        self.assertEqual(self.model._data, sorted(self.data))
-        self.assertEqual(self.model._data_set, set(self.data))
-        self.assertEqual(self.model._selected, set(self.data))
-        self.assertTrue(self.model._all_selected)
 
-    def test_is_all_selected_when_all_selected(self):
-        self.model.set_list(self.data)
-        self.assertTrue(self.model._check_all_selected())
+@pytest.fixture()
+def model(parent_object):
+    yield SimpleFilterCheckboxListModel(parent_object, show_empty=True)
 
-    def test_is_all_selected_when_not_all_selected(self):
-        self.model.set_list(self.data)
-        self.model._selected.discard("a")
-        self.assertFalse(self.model._check_all_selected())
 
-    def test_is_all_selected_when_not_empty_selected(self):
-        self.model.set_list(self.data)
-        self.model._empty_selected = False
-        self.assertFalse(self.model._check_all_selected())
+@pytest.fixture()
+def model_without_empty(parent_object):
+    yield SimpleFilterCheckboxListModel(parent_object, show_empty=False)
 
-    def test_add_item_with_select_without_filter(self):
+
+class TestFilterCheckboxListModel:
+    def test_set_list(self, model, data):
+        model.set_list(data)
+        assert model._data == sorted(data)
+        assert model.data_set == set(data)
+        assert model._selected == set(data)
+        assert model.all_selected
+        assert model.empty_selected
+        expected = ["(Select all)", "(Empty)"] + data
+        assert_list_model_data_pytest(model, expected)
+        expected = len(expected) * [Qt.CheckState.Checked]
+        assert_list_model_data_pytest(model, expected, Qt.ItemDataRole.CheckStateRole)
+
+    def test_set_list_without_empty_option(self, model_without_empty, data):
+        model_without_empty.set_list(data)
+        assert model_without_empty._data == sorted(data)
+        assert model_without_empty.data_set == set(data)
+        assert model_without_empty._selected == set(data)
+        assert model_without_empty.all_selected
+        assert model_without_empty.empty_selected
+        expected = ["(Select all)"] + data
+        assert_list_model_data_pytest(model_without_empty, expected)
+        expected = len(expected) * [Qt.CheckState.Checked]
+        assert_list_model_data_pytest(model_without_empty, expected, Qt.ItemDataRole.CheckStateRole)
+
+    def test_is_all_selected_when_all_selected(self, model, data):
+        model.set_list(data)
+        assert model._check_all_selected()
+
+    def test_is_all_selected_when_not_all_selected(self, model, data):
+        model.set_list(data)
+        model._selected.discard("a")
+        assert not model._check_all_selected()
+
+    def test_is_all_selected_when_not_empty_selected(self, model, data):
+        model.set_list(data)
+        model.empty_selected = False
+        assert not model._check_all_selected()
+
+    def test_add_item_with_select_without_filter(self, model, data):
         new_item = ["aaaa"]
-        self.model.set_list(self.data)
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
-        ):
-            self.model.add_items(new_item)
-        self.assertEqual(self.model._data, self.data + new_item)
-        self.assertEqual(self.model._data_set, set(self.data + new_item))
+        model.set_list(data)
+        model.add_items(new_item)
+        assert model._data == data + new_item
+        assert model.data_set == set(data + new_item)
 
-    def test_add_item_without_select_without_filter(self):
+    def test_add_item_without_select_without_filter(self, model, data):
         new_item = ["aaaa"]
-        self.model.set_list(self.data)
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
-        ):
-            self.model.add_items(new_item, selected=False)
-        self.assertFalse(self.model._all_selected)
+        model.set_list(data)
+        model.add_items(new_item, selected=set())
+        assert not model.all_selected
 
-    def test_click_select_all_when_all_selected(self):
-        self.model.set_list(self.data)
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(0, 0)
-            self.model._handle_index_clicked(index)
-        self.assertFalse(self.model._all_selected)
-        self.assertEqual(self.model._selected, set())
+    def test_click_select_all_when_all_selected(self, model, data):
+        model.set_list(data)
+        index = model.index(0, 0)
+        model.handle_index_clicked(index)
+        assert not model.all_selected
+        assert model._selected == set()
 
-    def test_click_selected_item(self):
-        self.model.set_list(self.data)
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(2, 0)
-            self.model._handle_index_clicked(index)
-        self.assertEqual(self.model._selected, set(self.data).difference({"a"}))
-        self.assertFalse(self.model._all_selected)
+    def test_click_selected_item(self, model, data):
+        model.set_list(data)
+        index = model.index(2, 0)
+        model.handle_index_clicked(index)
+        assert model._selected == set(data).difference({"a"})
+        assert not model.all_selected
 
-    def test_click_unselected_item(self):
-        self.model.set_list(self.data)
-        self.model._selected.discard("a")
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(2, 0)
-            self.model._handle_index_clicked(index)
-        self.assertEqual(self.model._selected, set(self.data))
-        self.assertTrue(self.model._all_selected)
+    def test_click_unselected_item(self, model, data):
+        model.set_list(data)
+        model._selected.discard("a")
+        index = model.index(2, 0)
+        model.handle_index_clicked(index)
+        assert model._selected == set(data)
+        assert model.all_selected
 
-    def test_click_select_empty_when_selected(self):
-        self.model.set_list(self.data)
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(1, 0)
-            self.model._handle_index_clicked(index)
-        self.assertFalse(self.model._empty_selected)
-        self.assertFalse(self.model._all_selected)
+    def test_click_select_empty_when_selected(self, model, data):
+        model.set_list(data)
+        index = model.index(1, 0)
+        model.handle_index_clicked(index)
+        assert not model.empty_selected
+        assert not model.all_selected
 
-    def test_click_select_empty_when_unselected(self):
-        self.model.set_list(self.data)
-        self.model._empty_selected = False
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(1, 0)
-            self.model._handle_index_clicked(index)
-        self.assertTrue(self.model._empty_selected)
-        self.assertTrue(self.model._all_selected)
+    def test_click_select_empty_when_unselected(self, model, data):
+        model.set_list(data)
+        model.empty_selected = False
+        index = model.index(1, 0)
+        model.handle_index_clicked(index)
+        assert model.empty_selected
+        assert model.all_selected
 
-    def test_click_select_all_when_not_all_selected(self):
-        self.model.set_list(self.data)
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(2, 0)
-            self.model._handle_index_clicked(index)
-            index = self.model.index(0, 0)
-            self.model._handle_index_clicked(index)
-        self.assertTrue(self.model._all_selected)
-        self.assertEqual(self.model._selected, set(self.data))
+    def test_click_select_all_when_not_all_selected(self, model, data):
+        model.set_list(data)
+        index = model.index(2, 0)
+        model.handle_index_clicked(index)
+        index = model.index(0, 0)
+        model.handle_index_clicked(index)
+        assert model.all_selected
+        assert model._selected == set(data)
 
-    def test_set_filter_index(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.assertEqual(self.model._filter_index, [3, 4, 5])
+    def test_set_filter_index(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        assert model._filter_index == [3, 4, 5]
+        expected = ["(Select all)", "(Empty)", "(Add current selection to filter)"] + [
+            data[i] for i in model._filter_index
+        ]
+        assert_list_model_data_pytest(model, expected)
+        expected = [Qt.CheckState.Checked, Qt.CheckState.Checked, Qt.CheckState.Unchecked] + len(
+            model._filter_index
+        ) * [Qt.CheckState.Checked]
+        assert_list_model_data_pytest(model, expected, Qt.ItemDataRole.CheckStateRole)
 
-    def test_rowCount_when_filter(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.assertEqual(self.model.rowCount(), 3 + len(self.model._action_rows))
+    def test_set_filter_index_without_empty_option(self, model_without_empty, data):
+        model_without_empty.set_list(data)
+        model_without_empty.set_filter("b")
+        assert model_without_empty._filter_index == [3, 4, 5]
+        expected = ["(Select all)", "(Add current selection to filter)"] + [
+            data[i] for i in model_without_empty._filter_index
+        ]
+        assert_list_model_data_pytest(model_without_empty, expected)
+        expected = [Qt.CheckState.Checked, Qt.CheckState.Unchecked] + len(model_without_empty._filter_index) * [
+            Qt.CheckState.Checked
+        ]
+        assert_list_model_data_pytest(model_without_empty, expected, Qt.ItemDataRole.CheckStateRole)
 
-    def test_add_to_selection_when_filter(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.assertFalse(self.model._add_to_selection)
-        self.assertEqual(
-            self.model.data(self.model.index(len(self.model._action_rows) - 1, 0), Qt.ItemDataRole.CheckStateRole),
-            Qt.CheckState.Unchecked,
+    def test_add_to_selection_when_filter(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        assert not model._add_to_selection
+        assert (
+            model.data(model.index(len(model._action_rows) - 1, 0), Qt.ItemDataRole.CheckStateRole)
+            == Qt.CheckState.Unchecked
         )
 
-    def test_selected_when_filtered(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.assertEqual(self.model._selected, set(self.data))
-        self.assertEqual(self.model._selected_filtered, set(self.data[3:]))
+    def test_clicking_add_to_selection(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        index = model.index(2, 0)
+        assert index.data() == "(Add current selection to filter)"
+        assert index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Unchecked
+        model.handle_index_clicked(index)
+        assert index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked
 
-    def test_get_data_when_filtered(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.assertEqual(self.model.data(self.model.index(len(self.model._action_rows), 0)), "b")
+    def test_clicking_add_to_selection_without_empty_option(self, model_without_empty, data):
+        model_without_empty.set_list(data)
+        model_without_empty.set_filter("b")
+        index = model_without_empty.index(1, 0)
+        assert index.data() == "(Add current selection to filter)"
+        assert index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Unchecked
+        model_without_empty.handle_index_clicked(index)
+        assert index.data(Qt.ItemDataRole.CheckStateRole) == Qt.CheckState.Checked
 
-    def test_data_works_when_show_empty_is_unset(self):
-        self.model = SimpleFilterCheckboxListModel(None, show_empty=False)
-        self.model.set_list(self.data)
-        self.assertEqual(self.model.rowCount(), len(self.data) + 1)
-        self.assertEqual(self.model.data(self.model.index(0, 0)), "(Select all)")
-        self.assertEqual(self.model.data(self.model.index(0, 0), Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked)
-        for index, expected in enumerate(self.data):
-            model_index = self.model.index(index + 1, 0)
-            self.assertEqual(self.model.data(model_index), expected)
-            self.assertEqual(self.model.data(model_index, Qt.ItemDataRole.CheckStateRole), Qt.CheckState.Checked)
+    def test_selected_when_filtered(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        assert model._selected == set(data)
+        assert model._selected_filtered == set(data[3:])
 
-    def test_click_select_all_when_all_selected_and_filtered(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(0, 0)
-            self.model._handle_index_clicked(index)
-        self.assertFalse(self.model._all_selected)
-        self.assertEqual(self.model._selected, set(self.data))
-        self.assertEqual(self.model._selected_filtered, set())
+    def test_get_data_when_filtered(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        assert model.data(model.index(len(model._action_rows), 0)) == "b"
 
-    def test_click_select_all_when_all_not_selected_and_filtered(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(2, 0)
-            self.model._handle_index_clicked(index)
-            index = self.model.index(0, 0)
-            self.model._handle_index_clicked(index)
-        self.assertTrue(self.model._all_selected)
-        self.assertEqual(self.model._selected, set(self.data))
-        self.assertEqual(self.model._selected_filtered, set(self.data[3:]))
+    def test_click_select_all_when_all_selected_and_filtered(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        index = model.index(0, 0)
+        model.handle_index_clicked(index)
+        assert not model.all_selected
+        assert model._selected == set(data)
+        assert model._selected_filtered == set()
 
-    def test_click_selected_item_when_filtered(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(len(self.model._action_rows), 0)
-            self.model._handle_index_clicked(index)
-        self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
-        self.assertFalse(self.model._all_selected)
+    def test_click_select_all_when_all_not_selected_and_filtered(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        index = model.index(3, 0)
+        model.handle_index_clicked(index)
+        index = model.index(0, 0)
+        model.handle_index_clicked(index)
+        assert model.all_selected
+        assert model._selected == set(data)
+        assert model._selected_filtered == set(data[3:])
 
-    def test_click_unselected_item_when_filtered(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.model._selected_filtered.discard("b")
-        with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"):
-            index = self.model.index(len(self.model._action_rows), 0)
-            self.model._handle_index_clicked(index)
-        self.assertEqual(self.model._selected_filtered, set(self.data[3:]))
-        self.assertTrue(self.model._all_selected)
+    def test_click_selected_item_when_filtered(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        index = model.index(len(model._action_rows), 0)
+        model.handle_index_clicked(index)
+        assert model._selected_filtered == set(data[4:])
+        assert not model.all_selected
 
-    def test_remove_filter(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.model.remove_filter()
-        self.assertFalse(self.model._is_filtered)
-        self.assertEqual(self.model._selected, set(self.data))
-        self.assertEqual(self.model.rowCount(), 8)
+    def test_click_unselected_item_when_filtered(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        model._selected_filtered.discard("b")
+        index = model.index(len(model._action_rows), 0)
+        model.handle_index_clicked(index)
+        assert model._selected_filtered == set(data[3:])
+        assert model.all_selected
 
-    def test_apply_filter_with_replace(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.model.apply_filter()
-        self.assertFalse(self.model._is_filtered)
-        self.assertEqual(self.model._selected, set(self.data[3:]))
-        self.assertEqual(self.model.rowCount(), 8)
-        self.assertFalse(self.model._empty_selected)
+    def test_remove_filter(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        model.remove_filter()
+        assert not model._is_filtered
+        assert model._selected == set(data)
+        assert model.rowCount() == 8
 
-    def test_apply_filter_with_add(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.model._add_to_selection = True
-        self.model._selected_filtered.discard("bbb")
-        self.model.apply_filter()
-        self.assertFalse(self.model._is_filtered)
-        self.assertEqual(self.model._selected, set(self.data[:5]))
-        self.assertEqual(self.model.rowCount(), 8)
-        self.assertFalse(self.model._all_selected)
+    def test_apply_filter_with_replace(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        model.apply_filter()
+        assert not model._is_filtered
+        assert model._selected == set(data[3:])
+        assert model.rowCount() == 8
+        assert not model.empty_selected
 
-    def test_add_item_with_select_with_filter_last(self):
+    def test_apply_filter_with_add(self, model, data):
+        model.set_list(data)
+        model.set_filter("b")
+        model._add_to_selection = True
+        model._selected_filtered.discard("bbb")
+        model.apply_filter()
+        assert not model._is_filtered
+        assert model._selected == set(data[:5])
+        assert model.rowCount() == 8
+        assert not model.all_selected
+
+    def test_add_item_with_select_with_filter_last(self, model, data):
         new_item = ["bbbb"]
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
-        ):
-            self.model.add_items(new_item)
-        self.assertEqual(self.model._data, sorted(self.data + new_item))
-        self.assertEqual(self.model._data_set, set(self.data + new_item))
-        self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
-        self.assertEqual(self.model._selected_filtered, set(self.data[3:] + new_item))
-        self.assertEqual(self.model.data(self.model.index(3 + len(self.model._action_rows), 0)), new_item[0])
+        model.set_list(data)
+        model.set_filter("b")
+        model.add_items(new_item)
+        assert model._data == sorted(data + new_item)
+        assert model.data_set == set(data + new_item)
+        assert model._filter_index == [3, 4, 5, 6]
+        assert model._selected_filtered == set(data[3:] + new_item)
+        assert model.data(model.index(3 + len(model._action_rows), 0)) == new_item[0]
 
-    def test_add_item_with_select_with_filter_first(self):
+    def test_add_item_with_select_with_filter_first(self, model, data):
         new_item = ["0b"]
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
-        ):
-            self.model.add_items(new_item)
-        self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
-        self.assertEqual(self.model.data(self.model.index(3 + len(self.model._action_rows), 0)), new_item[0])
+        model.set_list(data)
+        model.set_filter("b")
+        model.add_items(new_item)
+        assert model._filter_index == [3, 4, 5, 6]
+        assert model.data(model.index(3 + len(model._action_rows), 0)) == new_item[0]
 
-    def test_add_item_with_select_with_filter_middle(self):
+    def test_add_item_with_select_with_filter_middle(self, model, data):
         new_item = ["b1"]
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginInsertRows"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endInsertRows"),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.dataChanged"),
-        ):
-            self.model.add_items(new_item)
-        self.assertEqual(self.model._filter_index, [3, 4, 5, 6])
-        self.assertEqual(self.model.data(self.model.index(3 + len(self.model._action_rows), 0)), new_item[0])
+        model.set_list(data)
+        model.set_filter("b")
+        model.add_items(new_item)
+        assert model._filter_index == [3, 4, 5, 6]
+        assert model.data(model.index(3 + len(model._action_rows), 0)) == new_item[0]
 
-    def test_remove_items_data(self):
+    def test_remove_items_data(self, model, data):
         items = set("a")
-        self.model.set_list(self.data)
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
-        ):
-            self.model.remove_items(items)
-        self.assertEqual(self.model._data, self.data[1:])
-        self.assertEqual(self.model._data_set, set(self.data[1:]))
+        model.set_list(data)
+        model.remove_items(items)
+        assert model._data == data[1:]
+        assert model.data_set == set(data[1:])
 
-    def test_remove_items_selected(self):
+    def test_remove_items_selected(self, model, data):
         items = set("a")
-        self.model.set_list(self.data)
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
-        ):
-            self.model.remove_items(items)
-        self.assertEqual(self.model._selected, set(self.data[1:]))
-        self.assertTrue(self.model._all_selected)
+        model.set_list(data)
+        model.remove_items(items)
+        assert model._selected == set(data[1:])
+        assert model.all_selected
 
-    def test_remove_items_not_selected(self):
+    def test_remove_items_not_selected(self, model, data):
         items = set("a")
-        self.model.set_list(self.data)
-        self.model._selected.discard("a")
-        self.model._all_selected = False
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
-        ):
-            self.model.remove_items(items)
-        self.assertEqual(self.model._selected, set(self.data[1:]))
-        self.assertTrue(self.model._all_selected)
+        model.set_list(data)
+        model._selected.discard("a")
+        model.all_selected = False
+        model.remove_items(items)
+        assert model._selected == set(data[1:])
+        assert model.all_selected
 
-    def test_remove_items_filtered_data(self):
+    def test_remove_items_filtered_data(self, model, data):
         items = set("b")
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
-        ):
-            self.model.remove_items(items)
-        self.assertEqual(self.model._filter_index, [3, 4])
-        self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
+        model.set_list(data)
+        model.set_filter("b")
+        model.remove_items(items)
+        assert model._filter_index == [3, 4]
+        assert model._selected_filtered == set(data[4:])
 
-    def test_remove_items_filtered_data_middle(self):
+    def test_remove_items_filtered_data_middle(self, model, data):
         items = set("bb")
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
-        ):
-            self.model.remove_items(items)
-        self.assertEqual(self.model._filter_index, [3, 4])
+        model.set_list(data)
+        model.set_filter("b")
+        model.remove_items(items)
+        assert model._filter_index == [3, 4]
 
-    def test_remove_items_filtered_data_not_selected(self):
+    def test_remove_items_filtered_data_not_selected(self, model, data):
         items = set("b")
-        self.model.set_list(self.data)
-        self.model.set_filter("b")
-        self.model._selected_filtered.discard("a")
-        self.model._all_selected = False
-        with (
-            mock.patch(
-                "spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.beginResetModel"
-            ),
-            mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.SimpleFilterCheckboxListModel.endResetModel"),
-        ):
-            self.model.remove_items(items)
-        self.assertEqual(self.model._selected_filtered, set(self.data[4:]))
-        self.assertTrue(self.model._all_selected)
+        model.set_list(data)
+        model.set_filter("b")
+        model._selected_filtered.discard("a")
+        model.all_selected = False
+        model.remove_items(items)
+        assert model._selected_filtered == set(data[4:])
+        assert model.all_selected
 
-    def test_half_finished_expression_does_not_raise_exception(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("[")
-        self.assertEqual(
-            [self.model.index(row, 0).data() for row in range(self.model.rowCount())],
-            ["(Select all)", "(Empty)"] + self.data,
-        )
+    def test_half_finished_expression_does_not_raise_exception(self, model, data):
+        model.set_list(data)
+        model.set_filter("[")
+        assert [model.index(row, 0).data() for row in range(model.rowCount())] == ["(Select all)", "(Empty)"] + data
 
-    def test_only_whitespaces_in_filter_expression_does_not_filter(self):
-        self.model.set_list(self.data)
-        self.model.set_filter("   ")
-        self.assertEqual(
-            [self.model.index(row, 0).data() for row in range(self.model.rowCount())],
-            ["(Select all)", "(Empty)"] + self.data,
-        )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_only_whitespaces_in_filter_expression_does_not_filter(self, model, data):
+        model.set_list(data)
+        model.set_filter("   ")
+        assert [model.index(row, 0).data() for row in range(model.rowCount())] == ["(Select all)", "(Empty)"] + data

@@ -23,6 +23,7 @@ from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
 from tests.mock_helpers import (
     assert_table_model_data,
     assert_table_model_data_pytest,
@@ -449,7 +450,7 @@ class TestParameterValueTableWithExistingData(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        ids = [model.item_at_row(row) for row in range(0, model.rowCount() - 1, 2)]
+        ids = [model.index(row, 0).data(ITEM_ID_ROLE) for row in range(0, model.rowCount() - 1, 2)]
         self._db_mngr.remove_items({self._db_map: {"parameter_value": set(ids)}})
         while model.rowCount() == self._CHUNK_SIZE:
             QApplication.processEvents()

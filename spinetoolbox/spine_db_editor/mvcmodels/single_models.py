@@ -68,6 +68,7 @@ class SingleModelBase(HalfSortedTableModel):
     database_column: ClassVar[int] = NotImplemented
     group_columns: ClassVar[set[int]] = set()
     fixed_columns: ClassVar[tuple[int, ...]] = ()
+    _AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES: ClassVar[set[str]] = set()
 
     def __init__(
         self,
@@ -82,7 +83,7 @@ class SingleModelBase(HalfSortedTableModel):
         self.db_map = db_map
         self._mapped_table = self.db_map.mapped_table(parent.item_type)
         self.entity_class_id = entity_class_id
-        self._auto_filter: dict[str, set] = {}  # Maps field to accepted values for that field
+        self._auto_filter: dict[str, set] = {}
         self.committed = committed
 
     def __lt__(self, other):
@@ -161,19 +162,23 @@ class SingleModelBase(HalfSortedTableModel):
             return flags & ~Qt.ItemFlag.ItemIsEditable
         return flags
 
+    def _display_value_for_forced_comparison(self, item: PublicItem) -> str:
+        raise NotImplementedError()
+
     def filter_accepts_item(self, item: PublicItem) -> bool:
-        if self._auto_filter is None:
-            return False
+        if not self._auto_filter:
+            return True
         for field, values in self._auto_filter.items():
-            if values and item.get(field) not in values:
+            if field in self._AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES:
+                display_value = self._display_value_for_forced_comparison(item)
+                if display_value not in values:
+                    return False
+            elif item[field] not in values:
                 return False
         return True
 
-    def set_auto_filter(self, field: str, values: set) -> bool:
-        if values == self._auto_filter.get(field, set()):
-            return False
-        self._auto_filter[field] = values
-        return True
+    def set_auto_filter(self, auto_filter: dict[str, set | None]) -> None:
+        self._auto_filter = auto_filter
 
     def accepted_rows(self) -> Iterator[int]:
         """Yields accepted rows, for convenience."""
@@ -432,6 +437,9 @@ class ParameterMixin:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)
             self._ids_pending_type_validation.clear()
 
+    def _display_value_for_forced_comparison(self, item):
+        return self.db_mngr.get_value(self.db_map, item, Qt.ItemDataRole.DisplayRole)
+
 
 class EntityMixin:
 
@@ -469,6 +477,7 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
         field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP),
         field_index("database", PARAMETER_DEFINITION_FIELD_MAP),
     )
+    _AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES = {"default_value"}
 
     def _sort_key(self, item_id):
         item = self._mapped_table[item_id]
@@ -496,6 +505,7 @@ class SingleParameterValueModel(
     VALUE_COLUMN = field_index("value", PARAMETER_VALUE_FIELD_MAP)
     type_field = "type"
     parameter_definition_id_key = "parameter_id"
+    _AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES = {"value"}
 
     def _sort_key(self, item_id):
         item = self._mapped_table[item_id]
@@ -545,6 +555,7 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
     fixed_columns = (field_index("entity_class_name", ENTITY_FIELD_MAP), field_index("database", ENTITY_FIELD_MAP))
     group_columns = {field_index("entity_byname", ENTITY_FIELD_MAP)}
     _ENTITY_ID_FIELD = "id"
+    _AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES = {"shape_blob"}
 
     def __init__(
         self,
@@ -620,3 +631,6 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
             if is_active is False or (is_active is None and not active_by_default):
                 return False
         return super().filter_accepts_item(item)
+
+    def _display_value_for_forced_comparison(self, item):
+        return "<geojson>" if item["shape_blob"] is not None else None
