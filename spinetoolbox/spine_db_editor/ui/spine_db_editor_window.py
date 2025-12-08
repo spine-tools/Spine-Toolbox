@@ -722,7 +722,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionGitHub.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open Spine-Toolbox repository in GitHub</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative (Alt+5)", None))
+        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative (Alt+6)", None))
 #if QT_CONFIG(accessibility)
         self.alternative_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
 #endif // QT_CONFIG(accessibility)
@@ -748,7 +748,7 @@ class Ui_MainWindow(object):
         self.dockWidget_exports.setWindowTitle(QCoreApplication.translate("MainWindow", u"Exports", None))
         self.metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Metadata", None))
         self.item_metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item metadata", None))
-        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree (Alt+6)", None))
+        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree (Alt+7)", None))
 #if QT_CONFIG(accessibility)
         self.scenario_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"scenario tree", None))
 #endif // QT_CONFIG(accessibility)
@@ -757,6 +757,6 @@ class Ui_MainWindow(object):
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Sess&ion", None))
         self.menuFile_2.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
-        self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity", None))
+        self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity (Alt+5)", None))
     # retranslateUi
 
