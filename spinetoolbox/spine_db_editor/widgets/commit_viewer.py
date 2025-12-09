@@ -365,5 +365,18 @@ class Worker(QObject):
             return db_mngr.get_value(db_map, item, role=Qt.ItemDataRole.DisplayRole)
         value = item[key]
         if isinstance(value, (tuple, list)):
-            return DB_ITEM_SEPARATOR.join(value)
+            try:
+                return DB_ITEM_SEPARATOR.join(value)
+            except TypeError:
+                return DB_ITEM_SEPARATOR.join(_join_nested_byname_lists(value))
         return value
+
+
+def _join_nested_byname_lists(lists: tuple) -> list[str]:
+    joined = []
+    for value in lists:
+        if isinstance(value, str):
+            joined.append(value)
+        else:
+            joined += _join_nested_byname_lists(value)
+    return joined
