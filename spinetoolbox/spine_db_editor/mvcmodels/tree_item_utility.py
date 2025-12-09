@@ -16,7 +16,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon
 from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
+from spinetoolbox.helpers import CharIconEngine, DBMapPublicItems, bisect_chunks, plain_to_tool_tip
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 
@@ -175,23 +175,23 @@ class FetchMoreMixin:
     def accepts_item(self, item, db_map):
         return True
 
-    def handle_items_added(self, db_map_data):
-        """Inserts items at right positions. Items with commit_id are kept sorted.
-        Items without a commit_id are put at the end.
+    def handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
+        """Inserts items at right positions. Items that have been committed are kept sorted.
+        Uncommitted items are put at the end.
 
         Args:
-            db_map_data (dict): mapping db_map to list of dict corresponding to db items
+            db_map_data: mapping db_map to list of dict corresponding to db items
         """
         db_items = db_map_data.get(self.db_map, [])
-        ids_committed = []
-        ids_uncommitted = []
+        children_committed = []
+        children_uncommitted = []
+        existing_ids = set(self.children_ids)
         for item in db_items:
-            if item["id"] in self.children_ids:
+            item_id = item["id"]
+            if item_id in existing_ids:
                 continue
-            ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
-            ids.append(item["id"])
-        children_committed = [self._do_make_child(id_) for id_ in ids_committed]
-        children_uncommitted = [self._do_make_child(id_) for id_ in ids_uncommitted]
+            child = self._do_make_child(item_id)
+            (children_committed if item.is_committed() else children_uncommitted).append(child)
         self.insert_children_sorted(children_committed)
         self.insert_children(len(self.non_empty_children), children_uncommitted)
 
