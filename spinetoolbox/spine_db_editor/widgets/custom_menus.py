@@ -57,17 +57,12 @@ class AutoFilterMenu(FilterMenuBase[str]):
 
     @Slot()
     def _populate_data(self) -> None:
-        selected = self.filter.model().get_selected()
         if self._field in self._source_model.FIELDS_REQUIRING_FILTER_DATA_CONVERSION:
             self._display_value_to_edit_data = self._source_model.auto_filter_data_map(self._field_index)
             filter_data = [x for x in self._display_value_to_edit_data if x]
         else:
             filter_data = self._source_model.auto_filter_data_list(self._field_index)
-        all_selected = not self._source_model.has_auto_filter(self._field)
-        self.filter.model().set_list(filter_data, all_selected=all_selected)
-        if not all_selected:
-            empty_selected = self._source_model.has_auto_filter_empty_selected(self._field)
-            self.filter.model().set_selected(selected, empty_selected)
+        self.filter.model().set_list(filter_data, all_selected=True)
 
     def emit_filter_changed(self, valid_values: set[str | None]) -> None:
         """

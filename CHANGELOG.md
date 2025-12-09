@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 - The Entity table in Spine Database editor can now be properly filtered by selecting scenarios
   from the Scenario tree.
   When doing so, the table will show the entities that are visible in the selected scenario.
+- The column filters in the tables of Stacked view in Spine Database editor now contain only
+  visible items instead of all possible choices.
 
 ### Deprecated
 

@@ -236,9 +236,6 @@ class CompoundStackedModel(CompoundTableModel):
         self._filter_class_ids = filter_class_ids
         self._filter_timer.start()
 
-    def has_auto_filter(self, field: str) -> bool:
-        return field in self._auto_filter
-
     def has_auto_filter_empty_selected(self, field: str) -> bool:
         if field not in self._auto_filter:
             return True
@@ -252,18 +249,16 @@ class CompoundStackedModel(CompoundTableModel):
 
     def auto_filter_data_map(self, column_i: int) -> dict[str, Any]:
         data = {}
-        for model in self.sub_models:
-            for row in range(model.rowCount()):
-                index = model.index(row, column_i)
-                data[index.data()] = index.data(Qt.ItemDataRole.EditRole)
+        for sub_model, sub_row in self._row_map:
+            index = sub_model.index(sub_row, column_i)
+            data[index.data()] = index.data(Qt.ItemDataRole.EditRole)
         return data
 
     def auto_filter_data_list(self, column_i: int) -> list[str]:
         data = set()
-        for model in self.sub_models:
-            for row in range(model.rowCount()):
-                if x := model.index(row, column_i).data():
-                    data.add(x)
+        for sub_model, sub_row in self._row_map:
+            if x := sub_model.index(sub_row, column_i).data():
+                data.add(x)
         return sorted(data)
 
     @Slot(int, object)
