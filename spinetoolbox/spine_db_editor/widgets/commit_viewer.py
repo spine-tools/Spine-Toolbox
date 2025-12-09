@@ -48,6 +48,8 @@ class _DBCommitViewer(QWidget):
         self._ui.splitter.setSizes([0.3, 0.7])
         self._ui.splitter.setStretchFactor(0, 0)
         self._ui.splitter.setStretchFactor(1, 1)
+        for child_index in range(self._ui.splitter.count()):
+            self._ui.splitter.setCollapsible(child_index, False)
         self._ui.affected_items_widget_stack.setCurrentIndex(3)
         for commit in reversed(db_map.get_items("commit")):
             tree_item = QTreeWidgetItem(self._ui.commit_list)
@@ -365,5 +367,18 @@ class Worker(QObject):
             return db_mngr.get_value(db_map, item, role=Qt.ItemDataRole.DisplayRole)
         value = item[key]
         if isinstance(value, (tuple, list)):
-            return DB_ITEM_SEPARATOR.join(value)
+            try:
+                return DB_ITEM_SEPARATOR.join(value)
+            except TypeError:
+                return DB_ITEM_SEPARATOR.join(_join_nested_byname_lists(value))
         return value
+
+
+def _join_nested_byname_lists(lists: tuple) -> list[str]:
+    joined = []
+    for value in lists:
+        if isinstance(value, str):
+            joined.append(value)
+        else:
+            joined += _join_nested_byname_lists(value)
+    return joined
