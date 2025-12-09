@@ -48,6 +48,8 @@ class _DBCommitViewer(QWidget):
         self._ui.splitter.setSizes([0.3, 0.7])
         self._ui.splitter.setStretchFactor(0, 0)
         self._ui.splitter.setStretchFactor(1, 1)
+        for child_index in range(self._ui.splitter.count()):
+            self._ui.splitter.setCollapsible(child_index, False)
         self._ui.affected_items_widget_stack.setCurrentIndex(3)
         for commit in reversed(db_map.get_items("commit")):
             tree_item = QTreeWidgetItem(self._ui.commit_list)
