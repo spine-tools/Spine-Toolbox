@@ -136,7 +136,7 @@ class TestAutoFilterMenu:
             waiter.wait()
             assert waiter.args == ("entity_byname", {("eel", "cassowary")})
 
-    def test_menu_remembers_selected_data(self, parent_widget, db_mngr, db_map):
+    def test_all_selected_when_shown_again_with_filtered_data(self, parent_widget, db_mngr, db_map):
         with db_map:
             db_map.add_entity_class(name="bird")
             db_map.add_parameter_definition(entity_class_name="bird", name="wing")
@@ -166,9 +166,9 @@ class TestAutoFilterMenu:
             )
             waiter.wait()
         menu.aboutToShow.emit()
-        assert menu.filter.model().data_set == {"wing", "fin", "weight"}
-        assert not menu.filter.model().all_selected
-        assert not menu.filter.model().empty_selected
+        assert menu.filter.model().data_set == {"wing"}
+        assert menu.filter.model().all_selected
+        assert menu.filter.model().empty_selected
         assert menu.filter.model().get_selected() == {"wing"}
 
     def test_empty_selected(self, parent_widget, db_mngr, db_map):
@@ -198,34 +198,53 @@ class TestAutoFilterMenu:
             waiter.wait()
             assert waiter.args == ("description", {None, ""})
 
-    def test_empty_selection_remembered(self, parent_widget, db_mngr, db_map):
+    def test_menu_gets_only_visible_items(self, parent_widget, db_mngr, db_map):
         with db_map:
             db_map.add_entity_class(name="bird")
-            db_map.add_entity(entity_class_name="bird", name="cassowary", lat=2.3, lon=3.2)
-            db_map.add_entity(entity_class_name="bird", name="emu")
-            db_map.add_entity(entity_class_name="bird", name="ostrich")
-        source_model = CompoundEntityModel(db_mngr, db_mngr, db_map)
+            db_map.add_parameter_definition(entity_class_name="bird", name="wing")
+            db_map.add_entity_class(name="fish")
+            db_map.add_parameter_definition(entity_class_name="fish", name="fin")
+        source_model = CompoundParameterDefinitionModel(db_mngr, db_mngr, db_map)
         fetch_model(source_model)
-        menu = AutoFilterMenu(parent_widget, source_model, "lon")
+        menu = AutoFilterMenu(parent_widget, source_model, "entity_class_name")
         menu.aboutToShow.emit()
-        assert menu.filter.model().data_set == {"3.2"}
-        menu.filter.model().filter_by_condition(lambda active: False)
-        assert menu.filter.model().empty_selected
+        assert menu.filter.model().data_set == {"bird", "fish"}
+        menu.filter.model().empty_selected = False
+        menu.filter.model().filter_by_condition(lambda name: name == "fish")
         with signal_waiter(menu.filter_changed, timeout=0.1) as waiter:
             menu.filter.apply_filter()
             waiter.wait()
-            assert waiter.args == ("lon", {None})
-            source_model.set_auto_filter(*waiter.args)
-        while source_model.rowCount() != 2:
-            QApplication.processEvents()
-        expected = [
-            ["bird", "emu", "emu", None, None, None, None, None, None, "TestAutoFilterMenu_db"],
-            ["bird", "ostrich", "ostrich", None, None, None, None, None, None, "TestAutoFilterMenu_db"],
-        ]
-        assert_table_model_data_pytest(source_model, expected)
+            assert waiter.args == ("entity_class_name", {"fish"})
+            with signal_waiter(source_model.layoutChanged, timeout=0.1) as layout_waiter:
+                source_model.set_auto_filter(*waiter.args)
+                layout_waiter.wait()
+        menu = AutoFilterMenu(parent_widget, source_model, "name")
         menu.aboutToShow.emit()
-        assert menu.filter.model().data_set == {"3.2"}
-        assert menu.filter.model().empty_selected
+        assert menu.filter.model().data_set == {"fin"}
+
+    def test_menu_gets_only_visible_items_with_data_map(self, parent_widget, db_mngr, db_map):
+        with db_map:
+            db_map.add_entity_class(name="bird")
+            db_map.add_entity(entity_class_name="bird", name="ostrich")
+            db_map.add_entity_class(name="fish")
+            db_map.add_entity(entity_class_name="fish", name="barracuda")
+        source_model = CompoundEntityModel(db_mngr, db_mngr, db_map)
+        fetch_model(source_model)
+        menu = AutoFilterMenu(parent_widget, source_model, "entity_class_name")
+        menu.aboutToShow.emit()
+        assert menu.filter.model().data_set == {"bird", "fish"}
+        menu.filter.model().empty_selected = False
+        menu.filter.model().filter_by_condition(lambda name: name == "fish")
+        with signal_waiter(menu.filter_changed, timeout=0.1) as waiter:
+            menu.filter.apply_filter()
+            waiter.wait()
+            assert waiter.args == ("entity_class_name", {"fish"})
+            with signal_waiter(source_model.layoutChanged, timeout=0.1) as layout_waiter:
+                source_model.set_auto_filter(*waiter.args)
+                layout_waiter.wait()
+        menu = AutoFilterMenu(parent_widget, source_model, "entity_byname")
+        menu.aboutToShow.emit()
+        assert menu.filter.model().data_set == {"barracuda"}
 
 
 class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
