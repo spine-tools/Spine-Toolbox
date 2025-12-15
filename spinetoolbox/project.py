@@ -11,12 +11,14 @@
 ######################################################################################################################
 
 """Spine Toolbox project class."""
+from collections.abc import Callable
 from enum import Enum, auto, unique
 from itertools import chain
 import json
 import os
+import pathlib
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import networkx as nx
 from PySide6.QtCore import QCoreApplication, Signal, Slot
 from PySide6.QtGui import QColor
@@ -60,7 +62,14 @@ from .metaobject import MetaObject
 from .project_commands import SetProjectDescriptionCommand, SetProjectSettings
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from .project_settings import ProjectSettings
-from .project_upgrader import ProjectUpgrader
+from .project_upgrader import (
+    InvalidProjectDict,
+    ProjectUpgradeFailed,
+    VersionCheck,
+    check_project_dict_valid,
+    check_project_version,
+    upgrade_project,
+)
 from .server.engine_client import EngineClient
 from .spine_engine_worker import SpineEngineWorker
 
@@ -252,12 +261,13 @@ class SpineToolboxProject(MetaObject):
         local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
         local_path.mkdir(parents=True, exist_ok=True)
         serialized_spec_paths = self._save_all_specifications(local_path)
+        connection_dicts = [connection.to_dict() for connection in self._connections]
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "description": self.description,
             "settings": self._settings.to_dict(),
             "specifications": serialized_spec_paths,
-            "connections": [connection.to_dict() for connection in self._connections],
+            "connections": connection_dicts,
             "jumps": [jump.to_dict() for jump in self._jumps],
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
@@ -265,8 +275,11 @@ class SpineToolboxProject(MetaObject):
         saved_dict = {"project": project_dict, "items": items_dict}
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
+        local_data = {
+            "items": local_items_data,
+        }
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
-            self._dump({"items": local_items_data}, fp)
+            self._dump(local_data, fp)
 
     def _save_all_specifications(self, local_path):
         """Writes all specifications except plugins to disk.
@@ -299,14 +312,14 @@ class SpineToolboxProject(MetaObject):
                 self._dump(specifications_local_data, fp)
         return serialized_spec_paths
 
-    def _pop_local_data_from_items_dict(self, items_dict):
+    def _pop_local_data_from_items_dict(self, items_dict: dict[str, Any]) -> dict[str, dict]:
         """Pops local data from project items dict.
 
         Args:
-            items_dict (dict): items dict
+            items_dict: items dict
 
         Returns:
-            dict: local project item data
+            local project item data
         """
         local_data_dict = {}
         for name, item_dict in items_dict.items():
@@ -327,24 +340,51 @@ class SpineToolboxProject(MetaObject):
         """
         json.dump(target_dict, out_stream, indent=4)
 
-    def load(self, spec_factories, item_factories):
+    def load(
+        self, spec_factories: dict, item_factories: dict, confirm_upgrade: Callable[[pathlib.Path | str], bool]
+    ) -> bool:
         """Loads project from its project directory.
 
         Args:
-            spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
-            item_factories (dict): mapping from item type to ProjectItemFactory
+            spec_factories: Dictionary mapping specification name to ProjectItemSpecificationFactory
+            item_factories: mapping from item type to ProjectItemFactory
+            confirm_upgrade: Callable that returns True if it is OK to upgrade the project if it is outdated.
 
         Returns:
-            bool: True if the operation was successful, False otherwise
+            True if the operation was successful, False otherwise
         """
         project_dict = load_project_dict(self.config_dir, self._logger)
         if project_dict is None:
             return False
-        project_info = ProjectUpgrader(self._toolbox).upgrade(project_dict, self.project_dir)
-        if not project_info:
-            return False
+        match check_project_version(project_dict):
+            case VersionCheck.OK:
+                project_info = project_dict
+            case VersionCheck.UPGRADE_REQUIRED:
+                if not confirm_upgrade(self.project_dir):
+                    return False
+                try:
+                    project_info = upgrade_project(
+                        project_dict, self.project_dir, item_factories, self._logger.msg_warning.emit
+                    )
+                except ProjectUpgradeFailed as error:
+                    self._logger.msg_error.emit(str(error))
+                    return False
+            case VersionCheck.TOO_RECENT:
+                version = project_dict["version"]
+                self._logger.msg_warning.emit(
+                    f"Opening project <b>{self.project_dir}</b> failed. The project's version is {version}, while "
+                    f"this version of Spine Toolbox supports project versions up to and "
+                    f"including {LATEST_PROJECT_VERSION}. To open this project, you should "
+                    f"upgrade Spine Toolbox."
+                )
+                return False
+            case _:
+                raise RuntimeError("logic error: check_project_version returned an unknown value")
         # Check project info validity
-        if not ProjectUpgrader(self._toolbox).is_valid(LATEST_PROJECT_VERSION, project_info):
+        try:
+            check_project_dict_valid(LATEST_PROJECT_VERSION, project_info)
+        except InvalidProjectDict as error:
+            self._logger.msg_error.emit(str(error))
             self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
             return False
         local_data_dict = load_local_project_data(self.config_dir, self._logger)
@@ -387,12 +427,12 @@ class SpineToolboxProject(MetaObject):
         return True
 
     @staticmethod
-    def _merge_local_data_to_project_info(local_data_dict, project_info):
+    def _merge_local_data_to_project_info(local_data_dict: dict[str, Any], project_info: dict[str, Any]) -> None:
         """Merges local data into project info.
 
         Args:
-            local_data_dict (dict): local data
-            project_info (dict): project dict
+            local_data_dict: local data
+            project_info: project dict
         """
         local_items = local_data_dict.get("items")
         project_items = project_info.get("items")

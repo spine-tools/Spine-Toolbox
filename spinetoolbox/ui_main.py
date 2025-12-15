@@ -632,7 +632,7 @@ class ToolboxUI(QMainWindow):
         # Populate project model with project items
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
-        success = self._project.load(self._item_specification_factories, self.item_factories)
+        success = self._project.load(self._item_specification_factories, self.item_factories, self._confirm_project_upgrade)
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
@@ -644,6 +644,19 @@ class ToolboxUI(QMainWindow):
         self.update_recent_projects()
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
+
+    def _confirm_project_upgrade(self, project_dir: pathlib.Path | str) -> bool:
+        """Asks user whether to upgrade the project to a new version."""
+        button = QMessageBox.question(
+            self,
+            "Upgrade project?",
+            f"Project <b>{project_dir}</b> needs an upgrade to work "
+            f"with this version of Spine Toolbox. <br><br>Upgrade project?",
+        )
+        if button == QMessageBox.StandardButton.Yes:
+            return True
+        return False
+
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
