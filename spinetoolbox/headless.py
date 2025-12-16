@@ -12,6 +12,8 @@
 
 """Contains facilities to open and execute projects without GUI."""
 from __future__ import annotations
+import argparse
+from collections.abc import Callable
 from copy import deepcopy
 from enum import IntEnum, unique
 import os
@@ -93,31 +95,31 @@ class HeadlessLogger(QObject):
         self._tag_filter = HTMLTagFilter()
 
     @Slot(str)
-    def _log_message(self, message):
+    def _log_message(self, message: str) -> None:
         """Prints an information message."""
         self._print(message, sys.stdout)
 
     @Slot(str)
-    def _log_warning(self, message):
+    def _log_warning(self, message: str) -> None:
         """Prints a warning message."""
         self._print(message, sys.stdout)
 
     @Slot(str)
-    def _log_error(self, message):
+    def _log_error(self, message: str) -> None:
         """Prints an error message."""
         self._print(message, sys.stderr)
 
     @Slot(str, str)
-    def _show_information_box(self, title, message):
+    def _show_information_box(self, title: str, message: str) -> None:
         """Prints an information message with a title."""
         self._print(title + ": " + message, sys.stdout)
 
     @Slot(str, str)
-    def _show_error_box(self, title, message):
+    def _show_error_box(self, title: str, message: str) -> None:
         """Prints an error message with a title."""
         self._print(title + ": " + message, sys.stderr)
 
-    def _print(self, message, out_stream):
+    def _print(self, message: str, out_stream) -> None:
         """Filters HTML tags from message before printing it to given file."""
         self._tag_filter.feed(message)
         print(self._tag_filter.drain(), file=out_stream)
@@ -126,59 +128,59 @@ class HeadlessLogger(QObject):
 class ModifiableProject:
     """A simple project that is available for modification script."""
 
-    def __init__(self, project_dir, items_dict, connection_dicts):
+    def __init__(self, project_dir: pathlib.Path, items_dict: dict, connection_dicts: list[dict]):
         """
         Args:
-            project_dir (Path): project directory
-            items_dict (dict): project item dictionaries
-            connection_dicts (list of dict): connection dictionaries
+            project_dir: project directory
+            items_dict: project item dictionaries
+            connection_dicts: connection dictionaries
         """
         self._project_dir = project_dir
         self._items = deepcopy(items_dict)
         self._connections = [HeadlessConnection.from_dict(d) for d in connection_dicts]
 
     @property
-    def project_dir(self):
+    def project_dir(self) -> pathlib.Path:
         return self._project_dir
 
-    def find_connection(self, source_name, destination_name):
+    def find_connection(self, source_name: str, destination_name: str) -> HeadlessConnection:
         """Searches for a connection between given items.
 
         Args:
-            source_name (str): source item's name
-            destination_name (str): destination item's name
+            source_name: source item's name
+            destination_name: destination item's name
 
         Returns:
-            Connection: connection instance or None if there is no connection
+            connection instance or None if there is no connection
         """
         return next(
             (c for c in self._connections if c.source == source_name and c.destination == destination_name), None
         )
 
-    def find_item(self, name):
+    def find_item(self, name: str) -> dict:
         """Searches for a project item.
 
         Args:
-            name (str): item's name
+            name: item's name
 
         Returns:
-            dict: item dict or None if no such item exists
+            item dict or None if no such item exists
         """
         return self._items.get(name)
 
-    def items_to_dict(self):
+    def items_to_dict(self) -> dict:
         """Stores project items back to dictionaries.
 
         Returns:
-            dict: item dictionaries
+            item dictionaries
         """
         return self._items
 
-    def connections_to_dict(self):
+    def connections_to_dict(self) -> list[dict]:
         """Stores connections back to dictionaries.
 
         Returns:
-            list of dict: connection dictionaries
+            connection dictionaries
         """
         return [c.to_dict() for c in self._connections]
 
@@ -193,12 +195,12 @@ class ActionsWithProject(QObject):
     _start = Signal()
     """A private signal to actually start execution. Not to be used directly. Post a startup event instead."""
 
-    def __init__(self, args, startup_event_type, parent):
+    def __init__(self, args: argparse.Namespace, startup_event_type: int, parent: QObject | None):
         """
         Args:
-            args (argparse.Namespace): parsed command line arguments
-            startup_event_type (int): expected type id for the event that starts this task
-            parent (QObject): a parent object
+            args: parsed command line arguments
+            startup_event_type: expected type id for the event that starts this task
+            parent: a parent object
         """
         super().__init__(parent)
         self._args = args
@@ -206,16 +208,16 @@ class ActionsWithProject(QObject):
         self._startup_event_type = startup_event_type
         self._start.connect(self._execute)
         self._node_messages = {}
-        self._project_dir = None
-        self._app_settings = None
-        self._item_dicts = None
-        self._specification_dicts = None
-        self._plugin_specifications = None
-        self._connection_dicts = None
-        self._jump_dicts = None
-        self._server_config = None
+        self._project_dir: pathlib.Path | None = None
+        self._app_settings: QSettings | None = None
+        self._item_dicts: dict | None = None
+        self._specification_dicts: dict | None = None
+        self._plugin_specifications: dict | None = None
+        self._connection_dicts: list[dict] | None = None
+        self._jump_dicts: list[dict] | None = None
+        self._server_config: dict | None = None
 
-    def _dags(self):
+    def _dags(self) -> list[nx.DiGraph]:
         graph = nx.DiGraph()
         graph.add_nodes_from(self._item_dicts)
         connections = map(HeadlessConnection.from_dict, self._connection_dicts)
@@ -223,7 +225,7 @@ class ActionsWithProject(QObject):
         return [graph.subgraph(nodes) for nodes in nx.weakly_connected_components(graph)]
 
     @Slot()
-    def _execute(self):
+    def _execute(self) -> None:
         """Executes this task."""
         if not self._args.project:
             self._logger.msg_error.emit("project missing from command line arguments.")
@@ -325,11 +327,11 @@ class ActionsWithProject(QObject):
             case _:
                 raise RuntimeError("logic error: check_project_version returned an unknown value")
 
-    def _exec_mod_script(self):
+    def _exec_mod_script(self) -> Status:
         """Executes project modification script given in command line arguments.
 
         Returns:
-             Status: status code
+             status code
         """
         script_path = pathlib.Path(self._args.mod_script)
         if not script_path.exists() or not script_path.is_file():
@@ -344,11 +346,11 @@ class ActionsWithProject(QObject):
         self._connection_dicts = project.connections_to_dict()
         return Status.OK
 
-    def _execute_project(self):
+    def _execute_project(self) -> Status:
         """Executes all DAGs in a project.
 
         Returns:
-            Status: status code
+            status code
         """
         for item_type, plugin_specs in self._plugin_specifications.items():
             for spec in plugin_specs:
@@ -424,18 +426,19 @@ class ActionsWithProject(QObject):
             )
         return Status.OK
 
-    def _process_engine_event(self, event_type, data):
-        handler = {
-            "exec_started": self._handle_node_execution_started,
-            "exec_finished": self._handle_node_execution_finished,
-            "event_msg": self._handle_event_msg,
-            "process_msg": self._handle_process_msg,
-            "standard_execution_msg": self._handle_standard_execution_msg,
-            "persistent_execution_msg": self._handle_persistent_execution_msg,
-            "kernel_execution_msg": self._handle_kernel_execution_msg,
-            "server_status_msg": self._handle_server_status_msg,
-        }.get(event_type)
-        if handler is None:
+    def _process_engine_event(self, event_type: str, data: dict) -> None:
+        try:
+            handler: Callable[[dict], None] = {
+                "exec_started": self._handle_node_execution_started,
+                "exec_finished": self._handle_node_execution_finished,
+                "event_msg": self._handle_event_msg,
+                "process_msg": self._handle_process_msg,
+                "standard_execution_msg": self._handle_standard_execution_msg,
+                "persistent_execution_msg": self._handle_persistent_execution_msg,
+                "kernel_execution_msg": self._handle_kernel_execution_msg,
+                "server_status_msg": self._handle_server_status_msg,
+            }[event_type]
+        except KeyError:
             return
         handler(data)
 
@@ -446,22 +449,22 @@ class ActionsWithProject(QObject):
             return True
         return super().event(e)
 
-    def _handle_node_execution_started(self, data):
+    def _handle_node_execution_started(self, data: dict) -> None:
         """Starts collecting messages from given node.
 
         Args:
-            data (dict): execution start data
+            data: execution start data
         """
         if data["direction"] == ExecutionDirection.BACKWARD:
             # Currently there are no interesting messages when executing backwards.
             return
         self._node_messages[data["item_name"]] = {}
 
-    def _handle_node_execution_finished(self, data):
+    def _handle_node_execution_finished(self, data: dict) -> None:
         """Prints messages for finished nodes.
 
         Args:
-            data (dict): execution end data
+            data: execution end data
         """
         item_name = data["item_name"]
         messages = self._node_messages.get(item_name)
@@ -474,42 +477,42 @@ class ActionsWithProject(QObject):
                 self._logger.msg.emit(line)
         del self._node_messages[item_name]
 
-    def _handle_event_msg(self, data):
+    def _handle_event_msg(self, data: dict) -> None:
         """Stores event messages for later printing.
 
         Args:
-            data (dict): event message data
+            data: event message data
         """
         messages = self._node_messages.get(data["item_name"])
         if messages is None:
             return
         messages.setdefault(data["filter_id"], []).append(data["msg_text"])
 
-    def _handle_process_msg(self, data):
+    def _handle_process_msg(self, data: dict) -> None:
         """Stores process messages for later printing.
 
         Args:
-            data (dict): process message data
+            data: process message data
         """
         messages = self._node_messages.get(data["item_name"])
         if messages is None:
             return
         messages.setdefault(data["filter_id"], []).append(data["msg_text"])
 
-    def _handle_standard_execution_msg(self, data):
+    def _handle_standard_execution_msg(self, data: dict) -> None:
         """Handles standard execution messages.
 
         Currently, these messages are ignored.
 
         Args:
-            data (dict): execution message data
+            data: execution message data
         """
 
-    def _handle_persistent_execution_msg(self, data):
+    def _handle_persistent_execution_msg(self, data: dict) -> None:
         """Handles persistent execution messages.
 
         Args:
-            data (dict): execution message data
+            data: execution message data
         """
         if data["type"] == "stdout" or data["type"] == "stderr":
             messages = self._node_messages.get(data["item_name"])
@@ -517,16 +520,16 @@ class ActionsWithProject(QObject):
                 return
             messages.setdefault(data["filter_id"], []).append(data["data"])
 
-    def _handle_kernel_execution_msg(self, data):
+    def _handle_kernel_execution_msg(self, data: dict) -> None:
         """Handles kernel messages.
 
         Currently, these messages are ignored.
 
         Args:
-            data (dict): message data
+            data: message data
         """
 
-    def _handle_server_status_msg(self, data):
+    def _handle_server_status_msg(self, data: dict) -> None:
         """Handles received remote execution messages."""
         if data["msg_type"] == "success":
             self._logger.msg_success.emit(data["text"])
@@ -537,11 +540,11 @@ class ActionsWithProject(QObject):
         elif data["msg_type"] == "warning":
             self._logger.msg_warning.emit(data["text"])
 
-    def _read_server_config(self):
+    def _read_server_config(self) -> dict | None:
         """Reads the user provided server settings file that the client requires to establish connection.
 
         Returns:
-            dict: Dictionary containing the EngineClient settings or None if the given config file does not exist.
+            Dictionary containing the EngineClient settings or None if the given config file does not exist.
         """
         cfg_file = self._args.execute_remotely[0]
         cfg_fp = os.path.join(self._project_dir, cfg_file)
@@ -563,14 +566,14 @@ class ActionsWithProject(QObject):
         self._logger.msg_error.emit(f"cfg file '{cfg_fp}' missing.")
         return None
 
-    def _insert_remote_engine_settings(self, settings):
+    def _insert_remote_engine_settings(self, settings: dict) -> dict:
         """Inserts remote engine client settings into the settings dictionary that is delivered to the engine.
 
         Args:
-            settings (dict): Original settings dictionary
+            settings: Original settings dictionary
 
         Returns:
-            dict: Settings dictionary containing remote engine client settings
+            Settings dictionary containing remote engine client settings
         """
         settings["engineSettings/remoteHost"] = self._server_config["host"]
         settings["engineSettings/remotePort"] = self._server_config["port"]
@@ -578,14 +581,14 @@ class ActionsWithProject(QObject):
         settings["engineSettings/remoteSecurityFolder"] = self._server_config["security_folder"]
         return settings
 
-    def _prepare_remote_execution(self):
+    def _prepare_remote_execution(self) -> str:
         """If remote execution is enabled, makes an EngineClient for pinging and uploading the project.
         If ping is successful, the project is uploaded to the server. If the upload is successful, the
         server responds with a Job id, which is later used by the client to make a 'start execution'
         request.
 
         Returns:
-            str: Job id if server is ready for remote execution, empty string if something went wrong
+            Job id if server is ready for remote execution, empty string if something went wrong
                 or "1" if local execution is enabled.
         """
         if not self._server_config:
@@ -623,15 +626,15 @@ class ActionsWithProject(QObject):
         return job_id
 
 
-def headless_main(args):
+def headless_main(args: argparse.Namespace) -> int:
     """
     Executes a project using :class:`QCoreApplication`.
 
     Args:
-        args (argparser.Namespace): parsed command line arguments.
+        args: parsed command line arguments.
 
     Returns:
-        int: exit status code; 0 for success, everything else for failure
+        exit status code; 0 for success, everything else for failure
     """
     application = QCoreApplication(sys.argv)
     startup_event_type = QEvent.Type(QEvent.registerEventType())
