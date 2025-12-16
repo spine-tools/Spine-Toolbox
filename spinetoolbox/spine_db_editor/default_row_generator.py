@@ -123,7 +123,10 @@ class DefaultRowGenerator(QObject):
                 if len(alternative_ids) > 1:
                     alternative = multiple_selected
                     break
-                alternative_id = next(iter(alternative_ids))
+                try:
+                    alternative_id = next(iter(alternative_ids))
+                except StopIteration:
+                    continue
                 name = db_map.alternative(id=alternative_id)["name"]
                 if alternative is None:
                     alternative = name
@@ -153,7 +156,10 @@ class DefaultRowGenerator(QObject):
                     class_name = None
                     default_db_map = None
                     break
-                class_id = next(iter(class_selection))
+                try:
+                    class_id = next(iter(class_selection))
+                except StopIteration:
+                    continue
                 name = db_map.entity_class(id=class_id)["name"]
                 if class_name is None:
                     class_name = name
@@ -182,7 +188,10 @@ class DefaultRowGenerator(QObject):
                     if entity_ids is Asterisk or len(entity_ids) > 1:
                         entity_byname = multiple_selected
                         break
-                    entity_id = next(iter(entity_ids))
+                    try:
+                        entity_id = next(iter(entity_ids))
+                    except StopIteration:
+                        continue
                     byname = db_map.entity(id=entity_id)["entity_byname"]
                     if entity_byname is None:
                         entity_byname = byname
