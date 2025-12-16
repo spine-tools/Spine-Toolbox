@@ -113,6 +113,21 @@ class TestDefaultRowGenerator:
                 assert receiver.value_default_row == row_data
                 assert receiver.entity_alternative_default_row == row_data
 
+    def test_entity_class_that_exists_in_a_single_database(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map1:
+            gadget1 = db_map1.add_entity_class(name="Gadget")
+            with DatabaseMapping("sqlite://", create=True) as db_map2:
+                generator = DefaultRowGenerator(parent_object)
+                receiver = Receiver()
+                receiver.connect(generator)
+                generator.update_defaults_from_entity_selection({db_map1: {gadget1["id"]: Asterisk}, db_map2: {}})
+                assert receiver.definition_default_row == DefaultRowData({"entity_class_name": "Gadget"}, db_map1)
+                row_data = DefaultRowData(
+                    {"entity_class_name": "Gadget", "entity_byname": None, "alternative_name": None}, db_map1
+                )
+                assert receiver.value_default_row == row_data
+                assert receiver.entity_alternative_default_row == row_data
+
     def test_single_entity(self, parent_object):
         with DatabaseMapping("sqlite://", create=True) as db_map:
             gadget = db_map.add_entity_class(name="Gadget")
@@ -166,6 +181,25 @@ class TestDefaultRowGenerator:
                 receiver.connect(generator)
                 generator.update_defaults_from_entity_selection(
                     {db_map1: {gadget1["id"]: {wall_clock1["id"]}}, db_map2: {gadget2["id"]: {wall_clock2["id"]}}}
+                )
+                assert receiver.definition_default_row == DefaultRowData({"entity_class_name": "Gadget"}, db_map1)
+                row_data = DefaultRowData(
+                    {"entity_class_name": "Gadget", "entity_byname": ("wall_clock",), "alternative_name": None}, db_map1
+                )
+                assert receiver.value_default_row == row_data
+                assert receiver.entity_alternative_default_row == row_data
+
+    def test_entity_that_exists_in_single_database(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map1:
+            gadget1 = db_map1.add_entity_class(name="Gadget")
+            wall_clock1 = db_map1.add_entity(name="wall_clock", entity_class_name="Gadget")
+            with DatabaseMapping("sqlite://", create=True) as db_map2:
+                gadget2 = db_map2.add_entity_class(name="Gadget")
+                generator = DefaultRowGenerator(parent_object)
+                receiver = Receiver()
+                receiver.connect(generator)
+                generator.update_defaults_from_entity_selection(
+                    {db_map1: {gadget1["id"]: {wall_clock1["id"]}}, db_map2: {gadget2["id"]: set()}}
                 )
                 assert receiver.definition_default_row == DefaultRowData({"entity_class_name": "Gadget"}, db_map1)
                 row_data = DefaultRowData(
@@ -232,6 +266,23 @@ class TestDefaultRowGenerator:
                 assert receiver.definition_default_row is None
                 row_data = DefaultRowData(
                     {"entity_class_name": "Gadget", "entity_byname": None, "alternative_name": "Base"}, db_map1
+                )
+                assert receiver.value_default_row == row_data
+                assert receiver.entity_alternative_default_row == row_data
+
+    def test_alternative_that_exists_in_single_database(self, parent_object):
+        with DatabaseMapping("sqlite://", create=True) as db_map1:
+            gadget = db_map1.add_entity_class(name="Gadget")
+            alternative = db_map1.add_alternative(name="Alternative")
+            with DatabaseMapping("sqlite://", create=True) as db_map2:
+                generator = DefaultRowGenerator(parent_object)
+                generator.update_defaults_from_entity_selection({db_map1: {gadget["id"]: Asterisk}})
+                receiver = Receiver()
+                receiver.connect(generator)
+                generator.update_defaults_from_alternative_selection({db_map2: set(), db_map1: {alternative["id"]}})
+                assert receiver.definition_default_row is None
+                row_data = DefaultRowData(
+                    {"entity_class_name": "Gadget", "entity_byname": None, "alternative_name": "Alternative"}, db_map1
                 )
                 assert receiver.value_default_row == row_data
                 assert receiver.entity_alternative_default_row == row_data
