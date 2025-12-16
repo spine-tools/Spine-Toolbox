@@ -1013,6 +1013,13 @@ class GraphViewMixin:
         self.qsettings.endGroup()
         return file_path
 
+    def tear_down(self):
+        if not super().tear_down():
+            return False
+        self.db_mngr.items_added.disconnect(self._refresh_icons)
+        self.db_mngr.items_updated.disconnect(self._refresh_icons)
+        return True
+
     def closeEvent(self, event):
         """Handle close window.
 
