@@ -24,6 +24,7 @@ from PySide6.QtCore import QCoreApplication, Signal, Slot
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
+from spine_engine.project_item.connection import ResourceConvertingConnection
 from spine_engine.server.util.zip_handler import ZipHandler
 from spine_engine.spine_engine import validate_single_jump
 from spine_engine.utils.helpers import (
@@ -257,12 +258,13 @@ class SpineToolboxProject(MetaObject):
             msg += "cleared"
         self._logger.msg.emit(msg)
 
-    def save(self):
+    def save(self) -> None:
         """Collects project information and objects into a dictionary and writes it to a JSON file."""
         local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
         local_path.mkdir(parents=True, exist_ok=True)
         serialized_spec_paths = self._save_all_specifications(local_path)
         connection_dicts = [connection.to_dict() for connection in self._connections]
+        local_connection_data = self._pop_local_data_from_connections_dict(connection_dicts)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "description": self.description,
@@ -277,6 +279,7 @@ class SpineToolboxProject(MetaObject):
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
         local_data = {
+            "project": {"connections": local_connection_data},
             "items": local_items_data,
         }
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
@@ -330,6 +333,17 @@ class SpineToolboxProject(MetaObject):
             popped = gather_leaf_data(item_dict, local_entries, pop=True)
             local_data_dict.setdefault(name, {}).update(popped)
         return local_data_dict
+
+    @staticmethod
+    def _pop_local_data_from_connections_dict(connection_dicts: list[dict[str, Any]]) -> dict[str, dict[str, dict]]:
+        local_data = {}
+        local_entries = ResourceConvertingConnection.connection_dict_local_entries()
+        for connection_dict in connection_dicts:
+            popped = gather_leaf_data(connection_dict, local_entries, pop=True)
+            source = connection_dict["from"][0]
+            destination = connection_dict["to"][0]
+            local_data.setdefault(source, {})[destination] = popped
+        return local_data
 
     @staticmethod
     def _dump(target_dict, out_stream):

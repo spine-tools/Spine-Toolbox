@@ -89,18 +89,32 @@ class TestLoadLocalProjectDict:
 class TestMergeLocalDictToProjectDict:
     def test_merges_item_data(self):
         local_dict = {"items": {"my item": {"x": 2}}}
-        project_dict = {"items": {"my item": {"x": 1, "y": 3}, "your item": {"x": 4, "y": 5}}}
+        project_dict = {"project": {}, "items": {"my item": {"x": 1, "y": 3}, "your item": {"x": 4, "y": 5}}}
         merge_local_dict_to_project_dict(local_dict, project_dict)
-        assert project_dict == {"items": {"my item": {"x": 2, "y": 3}, "your item": {"x": 4, "y": 5}}}
+        assert project_dict == {"project": {}, "items": {"my item": {"x": 2, "y": 3}, "your item": {"x": 4, "y": 5}}}
 
     def test_local_data_can_omit_items(self):
         local_dict = {}
-        project_dict = {"items": {"my item": {"x": 1}}}
+        project_dict = {"project": {}, "items": {"my item": {"x": 1}}}
         merge_local_dict_to_project_dict(local_dict, project_dict)
-        assert project_dict == {"items": {"my item": {"x": 1}}}
+        assert project_dict == {"project": {}, "items": {"my item": {"x": 1}}}
 
     def test_project_dict_can_omit_items(self):
         local_dict = {"items": {"my item": {"x": 2}}}
-        project_dict = {}
+        project_dict = {"project": {}}
         merge_local_dict_to_project_dict(local_dict, project_dict)
-        assert project_dict == {}
+        assert project_dict == {"project": {}}
+
+    def test_merges_connection_data(self):
+        local_dict = {"project": {"connections": {"source_item": {"destination_item": {"b": 3}}}}}
+        project_dict = {
+            "project": {
+                "connections": [{"from": ["source_item", "top"], "to": ["destination_item", "bottom"], "a": 1, "b": 2}]
+            }
+        }
+        merge_local_dict_to_project_dict(local_dict, project_dict)
+        assert project_dict == {
+            "project": {
+                "connections": [{"from": ["source_item", "top"], "to": ["destination_item", "bottom"], "a": 1, "b": 3}]
+            }
+        }

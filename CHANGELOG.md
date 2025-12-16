@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   When doing so, the table will show the entities that are visible in the selected scenario.
 - The column filters in the tables of Stacked view in Spine Database editor now contain only
   visible items instead of all possible choices.
+- Selected scenarios/alternatives in Link properties are now stored in the local settings file in `.spinetoolbox/local/`.
+  This should make sharing projects more convenient.
 
 ### Deprecated
 
