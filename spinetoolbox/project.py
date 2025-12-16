@@ -51,20 +51,21 @@ from .helpers import (
     busy_effect,
     create_dir,
     erase_dir,
-    load_local_project_data,
-    load_project_dict,
-    load_specification_from_file,
-    load_specification_local_data,
     make_settings_dict_for_engine,
-    merge_dicts,
+)
+from .load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
+from .load_specification import (
+    SpecificationLoadingFailed,
+    load_specification_dict,
+    load_specification_local_data,
+    merge_local_dict_to_specification_dict,
+    specification_from_dict,
 )
 from .metaobject import MetaObject
 from .project_commands import SetProjectDescriptionCommand, SetProjectSettings
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from .project_settings import ProjectSettings
 from .project_upgrader import (
-    InvalidProjectDict,
-    ProjectUpgradeFailed,
     VersionCheck,
     check_project_dict_valid,
     check_project_version,
@@ -353,22 +354,16 @@ class SpineToolboxProject(MetaObject):
         Returns:
             True if the operation was successful, False otherwise
         """
-        project_dict = load_project_dict(self.config_dir, self._logger)
-        if project_dict is None:
-            return False
+        project_dict = load_project_dict(self.project_dir)
         match check_project_version(project_dict):
             case VersionCheck.OK:
                 project_info = project_dict
             case VersionCheck.UPGRADE_REQUIRED:
                 if not confirm_upgrade(self.project_dir):
                     return False
-                try:
-                    project_info = upgrade_project(
-                        project_dict, self.project_dir, item_factories, self._logger.msg_warning.emit
-                    )
-                except ProjectUpgradeFailed as error:
-                    self._logger.msg_error.emit(str(error))
-                    return False
+                project_info = upgrade_project(
+                    project_dict, self.project_dir, item_factories, self._logger.msg_warning.emit
+                )
             case VersionCheck.TOO_RECENT:
                 version = project_dict["version"]
                 self._logger.msg_warning.emit(
@@ -380,15 +375,9 @@ class SpineToolboxProject(MetaObject):
                 return False
             case _:
                 raise RuntimeError("logic error: check_project_version returned an unknown value")
-        # Check project info validity
-        try:
-            check_project_dict_valid(LATEST_PROJECT_VERSION, project_info)
-        except InvalidProjectDict as error:
-            self._logger.msg_error.emit(str(error))
-            self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
-            return False
-        local_data_dict = load_local_project_data(self.config_dir, self._logger)
-        self._merge_local_data_to_project_info(local_data_dict, project_info)
+        check_project_dict_valid(LATEST_PROJECT_VERSION, project_info)
+        local_data_dict = load_local_project_dict(self.project_dir)
+        merge_local_dict_to_project_dict(local_data_dict, project_info)
         # Parse project info
         self.set_description(project_info["project"]["description"])
         self._settings = ProjectSettings.from_dict(project_info["project"]["settings"])
@@ -397,12 +386,15 @@ class SpineToolboxProject(MetaObject):
             deserialize_path(path, self.project_dir) for paths in spec_paths_per_type.values() for path in paths
         ]
         self._logger.msg.emit("Loading specifications...")
-        specification_local_data = load_specification_local_data(self.config_dir)
+        specification_local_data = load_specification_local_data(self.project_dir)
         for path in deserialized_paths:
-            spec = load_specification_from_file(
-                path, specification_local_data, spec_factories, self._app_settings, self._logger
-            )
-            if spec is not None:
+            try:
+                spec_dict = load_specification_dict(path)
+                merge_local_dict_to_specification_dict(specification_local_data, spec_dict)
+                spec = specification_from_dict(spec_dict, spec_factories, self._app_settings, self._logger)
+            except SpecificationLoadingFailed as error:
+                self._logger.msg_error.emit(str(error))
+            else:
                 self.add_specification(spec, save_to_disk=False)
         items_dict = project_info["items"]
         self._logger.msg.emit("Loading project items...")
@@ -425,22 +417,6 @@ class SpineToolboxProject(MetaObject):
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
         return True
-
-    @staticmethod
-    def _merge_local_data_to_project_info(local_data_dict: dict[str, Any], project_info: dict[str, Any]) -> None:
-        """Merges local data into project info.
-
-        Args:
-            local_data_dict: local data
-            project_info: project dict
-        """
-        local_items = local_data_dict.get("items")
-        project_items = project_info.get("items")
-        if local_items is not None and project_items is not None:
-            for item_name, item_dict in project_items.items():
-                local_item_dict = local_items.get(item_name)
-                if local_item_dict is not None:
-                    merge_dicts(local_item_dict, item_dict)
 
     def connection_from_dict(self, connection_dict):
         return LoggingConnection.from_dict(connection_dict, toolbox=self._toolbox)

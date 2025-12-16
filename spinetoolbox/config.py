@@ -45,6 +45,7 @@ PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.jso
 JUPYTER_KERNEL_TIME_TO_DEAD = 20
 
 # Project constants
+PROJECT_CONFIG_DIR_NAME = ".spinetoolbox"
 PROJECT_FILENAME = "project.json"
 PROJECT_LOCAL_DATA_DIR_NAME = "local"
 PROJECT_LOCAL_DATA_FILENAME = "project_local_data.json"
