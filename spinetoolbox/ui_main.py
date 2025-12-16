@@ -66,8 +66,6 @@ from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
-    load_specification_from_file,
-    load_specification_local_data,
     open_url,
     recursive_overwrite,
     same_path,
@@ -78,7 +76,15 @@ from .helpers import (
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
+from .load_project import ProjectLoadingFailed
 from .load_project_items import load_project_items
+from .load_specification import (
+    SpecificationLoadingFailed,
+    load_specification_dict,
+    load_specification_local_data,
+    merge_local_dict_to_specification_dict,
+    specification_from_dict,
+)
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .mvcmodels.project_item_specification_models import FilteredSpecificationModel, ProjectItemSpecificationModel
 from .plugin_manager import PluginManager
@@ -99,6 +105,7 @@ from .project_item.project_item import ProjectItem
 from .project_item.project_item_factory import ProjectItemFactory
 from .project_item_icon import ProjectItemIcon
 from .project_settings import ProjectSettings
+from .project_upgrader import InvalidProjectDict, ProjectUpgradeFailed
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_db_manager import SpineDBManager
 from .spine_engine_manager import make_engine_manager
@@ -632,7 +639,11 @@ class ToolboxUI(QMainWindow):
         # Populate project model with project items
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
-        success = self._project.load(self._item_specification_factories, self.item_factories)
+        try:
+            success = self._project.load(self._item_specification_factories, self.item_factories, self._confirm_project_upgrade)
+        except (ProjectLoadingFailed, ProjectUpgradeFailed, InvalidProjectDict) as error:
+            self.msg_error.emit(str(error))
+            success = False
         if not success:
             self.remove_path_from_recent_projects(self._project.project_dir)
             return False
@@ -644,6 +655,19 @@ class ToolboxUI(QMainWindow):
         self.update_recent_projects()
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
+
+    def _confirm_project_upgrade(self, project_dir: pathlib.Path | str) -> bool:
+        """Asks user whether to upgrade the project to a new version."""
+        button = QMessageBox.question(
+            self,
+            "Upgrade project?",
+            f"Project <b>{project_dir}</b> needs an upgrade to work "
+            f"with this version of Spine Toolbox. <br><br>Upgrade project?",
+        )
+        if button == QMessageBox.StandardButton.Yes:
+            return True
+        return False
+
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
@@ -1066,7 +1090,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=True))
 
     @Slot()
-    def import_specification(self):
+    def import_specification(self) -> None:
         """Opens a file dialog where the user can select an existing specification
         definition file (.json). If file is valid, pushes AddSpecificationCommand to undo stack.
         """
@@ -1081,12 +1105,15 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load specification
-        local_data = load_specification_local_data(self._project.config_dir)
-        specification = load_specification_from_file(
-            def_file, local_data, self._item_specification_factories, self._qsettings, self
-        )
-        if not specification:
-            self.msg_error.emit("Failed to load specification.")
+        local_data = load_specification_local_data(self._project.project_dir)
+        try:
+            specification_dict = load_specification_dict(def_file)
+            merge_local_dict_to_specification_dict(
+                local_data, specification_dict
+            )
+            specification = specification_from_dict(specification_dict, self._item_specification_factories, self._qsettings, self)
+        except SpecificationLoadingFailed as error:
+            self.msg_error.emit(str(error))
             return
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=False))
 

@@ -11,19 +11,16 @@
 ######################################################################################################################
 
 """Unit tests for the helpers module."""
-import json
 from pathlib import Path
 import re
 import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QObject, QSettings, Qt, Signal
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QLineEdit, QWidget
 import pytest
-from spine_engine.load_project_items import load_item_specification_factories
-from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
     DB_ITEM_SEPARATOR,
     HTMLTagFilter,
@@ -44,9 +41,6 @@ from spinetoolbox.helpers import (
     home_dir,
     interpret_icon_id,
     list_to_rich_text,
-    load_local_project_data,
-    load_project_dict,
-    load_specification_from_file,
     make_icon_id,
     merge_dicts,
     normcase_database_url_path,
@@ -381,37 +375,6 @@ class TestHelpers(TestCaseWithQApplication):
             "p (11)",
         )
 
-    def test_load_tool_specification_from_file(self):
-        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
-        spec_path = Path(__file__).parent / "test_resources" / "test_tool_spec.json"
-        specification_factories = load_item_specification_factories("spine_items")
-        logger = MagicMock()
-        app_settings = QSettings("SpineProject", "Spine Toolbox")
-        tool_spec = load_specification_from_file(str(spec_path), {}, specification_factories, app_settings, logger)
-        self.assertIsNotNone(tool_spec)
-        self.assertEqual(tool_spec.name, "Python Tool Specification")
-        app_settings.deleteLater()
-
-    def test_load_project_dict(self):
-        with TemporaryDirectory() as project_dir:
-            project_file = Path(project_dir, PROJECT_FILENAME)
-            with project_file.open("w") as fp:
-                json.dump("don't panic this is a test", fp)
-            logger = MagicMock()
-            project_dict = load_project_dict(project_dir, logger)
-            self.assertEqual(project_dict, "don't panic this is a test")
-
-    def test_load_local_project_data(self):
-        with TemporaryDirectory() as project_dir:
-            local_data_path = Path(project_dir, PROJECT_LOCAL_DATA_DIR_NAME)
-            local_data_path.mkdir()
-            local_data_file = local_data_path / PROJECT_LOCAL_DATA_FILENAME
-            with local_data_file.open("w") as fp:
-                json.dump("don't panic this is a test", fp)
-            logger = MagicMock()
-            project_dict = load_local_project_data(project_dir, logger)
-            self.assertEqual(project_dict, "don't panic this is a test")
-
     def test_merge_dicts_with_empty_source(self):
         target = {}
         merge_dicts({}, target)
@@ -437,7 +400,7 @@ class TestOrderKey:
     def test_order_key(self):
         assert ["Humphrey_Bogart"] == order_key("Humphrey_Bogart")
         assert ["Wes_", "000000001969", "_Anderson"] == order_key("Wes_1969_Anderson")
-        assert ["\U0010FFFF", "000000001899", "_Alfred-", "000000001980", "Hitchcock"] == order_key(
+        assert ["\U0010ffff", "000000001899", "_Alfred-", "000000001980", "Hitchcock"] == order_key(
             "1899_Alfred-1980Hitchcock"
         )
         assert [] == order_key("")
@@ -448,7 +411,7 @@ class TestOrderKeyFromNames:
         assert order_key_from_names([]) == []
         assert order_key_from_names(["c", "b", "a"]) == ["c", "b", "a"]
         assert order_key_from_names(["a", "23b", "c"]) == ["a", "000000000023", "b", "c"]
-        assert order_key_from_names(["23a", "b", "c"]) == ["\U0010FFFF", "000000000023", "a", "b", "c"]
+        assert order_key_from_names(["23a", "b", "c"]) == ["\U0010ffff", "000000000023", "a", "b", "c"]
 
 
 class TestHTMLTagFilter(unittest.TestCase):

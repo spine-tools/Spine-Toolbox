@@ -11,17 +11,20 @@
 ######################################################################################################################
 
 """Spine Toolbox project class."""
+from collections.abc import Callable
 from enum import Enum, auto, unique
 from itertools import chain
 import json
 import os
+import pathlib
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import networkx as nx
 from PySide6.QtCore import QCoreApplication, Signal, Slot
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed
+from spine_engine.project_item.connection import ResourceConvertingConnection
 from spine_engine.server.util.zip_handler import ZipHandler
 from spine_engine.spine_engine import validate_single_jump
 from spine_engine.utils.helpers import (
@@ -49,18 +52,26 @@ from .helpers import (
     busy_effect,
     create_dir,
     erase_dir,
-    load_local_project_data,
-    load_project_dict,
-    load_specification_from_file,
-    load_specification_local_data,
     make_settings_dict_for_engine,
-    merge_dicts,
+)
+from .load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
+from .load_specification import (
+    SpecificationLoadingFailed,
+    load_specification_dict,
+    load_specification_local_data,
+    merge_local_dict_to_specification_dict,
+    specification_from_dict,
 )
 from .metaobject import MetaObject
 from .project_commands import SetProjectDescriptionCommand, SetProjectSettings
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from .project_settings import ProjectSettings
-from .project_upgrader import ProjectUpgrader
+from .project_upgrader import (
+    VersionCheck,
+    check_project_dict_valid,
+    check_project_version,
+    upgrade_project,
+)
 from .server.engine_client import EngineClient
 from .spine_engine_worker import SpineEngineWorker
 
@@ -247,17 +258,19 @@ class SpineToolboxProject(MetaObject):
             msg += "cleared"
         self._logger.msg.emit(msg)
 
-    def save(self):
+    def save(self) -> None:
         """Collects project information and objects into a dictionary and writes it to a JSON file."""
         local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
         local_path.mkdir(parents=True, exist_ok=True)
         serialized_spec_paths = self._save_all_specifications(local_path)
+        connection_dicts = [connection.to_dict() for connection in self._connections]
+        local_connection_data = self._pop_local_data_from_connections_dict(connection_dicts)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "description": self.description,
             "settings": self._settings.to_dict(),
             "specifications": serialized_spec_paths,
-            "connections": [connection.to_dict() for connection in self._connections],
+            "connections": connection_dicts,
             "jumps": [jump.to_dict() for jump in self._jumps],
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
@@ -265,8 +278,12 @@ class SpineToolboxProject(MetaObject):
         saved_dict = {"project": project_dict, "items": items_dict}
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
+        local_data = {
+            "project": {"connections": local_connection_data},
+            "items": local_items_data,
+        }
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
-            self._dump({"items": local_items_data}, fp)
+            self._dump(local_data, fp)
 
     def _save_all_specifications(self, local_path):
         """Writes all specifications except plugins to disk.
@@ -299,14 +316,14 @@ class SpineToolboxProject(MetaObject):
                 self._dump(specifications_local_data, fp)
         return serialized_spec_paths
 
-    def _pop_local_data_from_items_dict(self, items_dict):
+    def _pop_local_data_from_items_dict(self, items_dict: dict[str, Any]) -> dict[str, dict]:
         """Pops local data from project items dict.
 
         Args:
-            items_dict (dict): items dict
+            items_dict: items dict
 
         Returns:
-            dict: local project item data
+            local project item data
         """
         local_data_dict = {}
         for name, item_dict in items_dict.items():
@@ -318,6 +335,17 @@ class SpineToolboxProject(MetaObject):
         return local_data_dict
 
     @staticmethod
+    def _pop_local_data_from_connections_dict(connection_dicts: list[dict[str, Any]]) -> dict[str, dict[str, dict]]:
+        local_data = {}
+        local_entries = ResourceConvertingConnection.connection_dict_local_entries()
+        for connection_dict in connection_dicts:
+            popped = gather_leaf_data(connection_dict, local_entries, pop=True)
+            source = connection_dict["from"][0]
+            destination = connection_dict["to"][0]
+            local_data.setdefault(source, {})[destination] = popped
+        return local_data
+
+    @staticmethod
     def _dump(target_dict, out_stream):
         """Dumps given dict into output stream.
 
@@ -327,28 +355,43 @@ class SpineToolboxProject(MetaObject):
         """
         json.dump(target_dict, out_stream, indent=4)
 
-    def load(self, spec_factories, item_factories):
+    def load(
+        self, spec_factories: dict, item_factories: dict, confirm_upgrade: Callable[[pathlib.Path | str], bool]
+    ) -> bool:
         """Loads project from its project directory.
 
         Args:
-            spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
-            item_factories (dict): mapping from item type to ProjectItemFactory
+            spec_factories: Dictionary mapping specification name to ProjectItemSpecificationFactory
+            item_factories: mapping from item type to ProjectItemFactory
+            confirm_upgrade: Callable that returns True if it is OK to upgrade the project if it is outdated.
 
         Returns:
-            bool: True if the operation was successful, False otherwise
+            True if the operation was successful, False otherwise
         """
-        project_dict = load_project_dict(self.config_dir, self._logger)
-        if project_dict is None:
-            return False
-        project_info = ProjectUpgrader(self._toolbox).upgrade(project_dict, self.project_dir)
-        if not project_info:
-            return False
-        # Check project info validity
-        if not ProjectUpgrader(self._toolbox).is_valid(LATEST_PROJECT_VERSION, project_info):
-            self._logger.msg_error.emit(f"Opening project in directory {self.project_dir} failed")
-            return False
-        local_data_dict = load_local_project_data(self.config_dir, self._logger)
-        self._merge_local_data_to_project_info(local_data_dict, project_info)
+        project_dict = load_project_dict(self.project_dir)
+        match check_project_version(project_dict):
+            case VersionCheck.OK:
+                project_info = project_dict
+            case VersionCheck.UPGRADE_REQUIRED:
+                if not confirm_upgrade(self.project_dir):
+                    return False
+                project_info = upgrade_project(
+                    project_dict, self.project_dir, item_factories, self._logger.msg_warning.emit
+                )
+            case VersionCheck.TOO_RECENT:
+                version = project_dict["version"]
+                self._logger.msg_warning.emit(
+                    f"Opening project <b>{self.project_dir}</b> failed. The project's version is {version}, while "
+                    f"this version of Spine Toolbox supports project versions up to and "
+                    f"including {LATEST_PROJECT_VERSION}. To open this project, you should "
+                    f"upgrade Spine Toolbox."
+                )
+                return False
+            case _:
+                raise RuntimeError("logic error: check_project_version returned an unknown value")
+        check_project_dict_valid(LATEST_PROJECT_VERSION, project_info)
+        local_data_dict = load_local_project_dict(self.project_dir)
+        merge_local_dict_to_project_dict(local_data_dict, project_info)
         # Parse project info
         self.set_description(project_info["project"]["description"])
         self._settings = ProjectSettings.from_dict(project_info["project"]["settings"])
@@ -357,12 +400,15 @@ class SpineToolboxProject(MetaObject):
             deserialize_path(path, self.project_dir) for paths in spec_paths_per_type.values() for path in paths
         ]
         self._logger.msg.emit("Loading specifications...")
-        specification_local_data = load_specification_local_data(self.config_dir)
+        specification_local_data = load_specification_local_data(self.project_dir)
         for path in deserialized_paths:
-            spec = load_specification_from_file(
-                path, specification_local_data, spec_factories, self._app_settings, self._logger
-            )
-            if spec is not None:
+            try:
+                spec_dict = load_specification_dict(path)
+                merge_local_dict_to_specification_dict(specification_local_data, spec_dict)
+                spec = specification_from_dict(spec_dict, spec_factories, self._app_settings, self._logger)
+            except SpecificationLoadingFailed as error:
+                self._logger.msg_error.emit(str(error))
+            else:
                 self.add_specification(spec, save_to_disk=False)
         items_dict = project_info["items"]
         self._logger.msg.emit("Loading project items...")
@@ -385,22 +431,6 @@ class SpineToolboxProject(MetaObject):
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
         return True
-
-    @staticmethod
-    def _merge_local_data_to_project_info(local_data_dict, project_info):
-        """Merges local data into project info.
-
-        Args:
-            local_data_dict (dict): local data
-            project_info (dict): project dict
-        """
-        local_items = local_data_dict.get("items")
-        project_items = project_info.get("items")
-        if local_items is not None and project_items is not None:
-            for item_name, item_dict in project_items.items():
-                local_item_dict = local_items.get(item_name)
-                if local_item_dict is not None:
-                    merge_dicts(local_item_dict, item_dict)
 
     def connection_from_dict(self, connection_dict):
         return LoggingConnection.from_dict(connection_dict, toolbox=self._toolbox)

@@ -14,6 +14,7 @@
 import itertools
 import json
 import os
+import pathlib
 import shutil
 import urllib.error
 from urllib.parse import urljoin
@@ -21,12 +22,15 @@ import urllib.request
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from spine_engine.utils.serialization import deserialize_path, deserialize_remote_path, serialize_path
 from .config import PLUGIN_REGISTRY_URL, PLUGINS_PATH
-from .helpers import (
+from .load_specification import (
+    SpecificationLoadingFailed,
     load_plugin_dict,
-    load_plugin_specifications,
-    load_specification_from_file,
+    load_specification_dict,
     load_specification_local_data,
+    merge_local_dict_to_specification_dict,
+    plugin_specifications_from_dict,
     plugins_dirs,
+    specification_from_dict,
 )
 from .widgets.plugin_manager_widgets import InstallPluginDialog, ManagePluginsDialog
 from .widgets.toolbars import PluginToolBar
@@ -98,47 +102,55 @@ class PluginManager:
         for specs in self._plugin_specs.values():
             yield from specs
 
-    def load_installed_plugins(self):
+    def load_installed_plugins(self) -> None:
         """Loads installed plugins and adds their specifications to toolbars."""
         project = self._toolbox.project()
-        local_data = load_specification_local_data(project.config_dir) if project else {}
+        local_data = load_specification_local_data(project.project_dir) if project else {}
         for plugin_dir in plugins_dirs(self._toolbox.qsettings()):
             self.load_individual_plugin(plugin_dir, local_data)
 
     def reload_plugins_with_local_data(self):
         """Reloads plugins that have project specific local data."""
         project = self._toolbox.project()
-        local_data = load_specification_local_data(project.config_dir) if project else {}
+        local_data = load_specification_local_data(project.project_dir) if project else {}
         specification_factories = self._toolbox.item_specification_factories()
         app_settings = self._toolbox.qsettings()
         for plugin_name, specifications in self._plugin_specs.items():
             for specification in specifications:
                 if not specification.may_have_local_data():
                     continue
-                reloaded = load_specification_from_file(
-                    specification.definition_file_path, local_data, specification_factories, app_settings, self._toolbox
-                )
+                try:
+                    specification_dict = load_specification_dict(specification.definition_file_path)
+                    merge_local_dict_to_specification_dict(local_data, specification_dict)
+                    reloaded = specification_from_dict(
+                        specification_dict, specification_factories, app_settings, self._toolbox
+                    )
+                except SpecificationLoadingFailed as error:
+                    self._toolbox.msg_error.emit(str(error))
+                    continue
                 reloaded.plugin = plugin_name
                 project.replace_specification(reloaded.name, reloaded, save_to_disk=False)
 
-    def load_individual_plugin(self, plugin_dir, specification_local_data):
+    def load_individual_plugin(self, plugin_dir: pathlib.Path | str, specification_local_data: dict) -> None:
         """Loads plugin from directory.
 
         Args:
-            plugin_dir (str): path of plugin dir with "plugin.json" in it.
-            specification_local_data (dict): specification local data
+            plugin_dir: path of plugin dir with "plugin.json" in it.
+            specification_local_data: specification local data
         """
-        plugin_dict = load_plugin_dict(plugin_dir, self._toolbox)
-        if plugin_dict is None:
-            return
-        plugin_specs = load_plugin_specifications(
-            plugin_dict,
-            specification_local_data,
-            self._toolbox.item_specification_factories(),
-            self._toolbox.qsettings(),
-            self._toolbox,
-        )
-        if plugin_specs is None:
+        try:
+            plugin_dict = load_plugin_dict(plugin_dir)
+            if plugin_dict is None:
+                return
+            plugin_specs = plugin_specifications_from_dict(
+                plugin_dict,
+                specification_local_data,
+                self._toolbox.item_specification_factories(),
+                self._toolbox.qsettings(),
+                self._toolbox,
+            )
+        except SpecificationLoadingFailed as error:
+            self._toolbox.msg_error.emit(str(error))
             return
         name = plugin_dict["name"]
         self._installed_plugins[name] = plugin_dict
