@@ -109,7 +109,7 @@ class MultiDBTreeItem(TreeItem):
         return next(iter(ids))
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.db_map_data_field(self.first_db_map, "name", default="")
 
     @property

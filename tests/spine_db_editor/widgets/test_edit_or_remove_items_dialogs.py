@@ -13,9 +13,13 @@
 """Unit tests for edit_or_remove_items_dialogs module."""
 import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel
+from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import EditEntityClassesDialog
+from spinetoolbox.spine_db_editor.mvcmodels.entity_tree_item import EntityClassItem
+from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
+    EditEntityClassesDialog,
+    SelectSuperclassDialog,
+)
 from tests.mock_helpers import mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 
@@ -73,5 +77,20 @@ class TestEditEntityClassesDialog(TestBase):
         self.assertEqual(data_table, expected)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestSelectSuperclassDialog:
+    def test_combobox_content(self, db_editor, db_mngr, db_map):
+        with db_map:
+            db_map.add_entity_class_item(name="Object")
+            db_map.add_entity_class_item(name="Any")
+        entity_model = db_editor.entity_tree_model
+        entity_model.root_item.fetch_more()
+        while not entity_model.root_item.children:
+            QApplication.processEvents()
+        assert len(entity_model.root_item.children) == 2
+        dialog = SelectSuperclassDialog(db_editor, "Object", db_mngr, db_map)
+        tab_widget = dialog._tab_widget
+        assert tab_widget.count() == 1
+        combobox = tab_widget.widget(0)
+        assert combobox.count() == 2
+        for row, expected in enumerate(("(None)", "Any")):
+            assert combobox.itemData(row, Qt.ItemDataRole.DisplayRole) == expected
