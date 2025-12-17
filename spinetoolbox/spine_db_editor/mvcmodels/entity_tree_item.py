@@ -134,7 +134,7 @@ class EntityClassItem(MultiDBTreeItem):
         name = self.name
         superclass_name = self.db_map_data_field(self.first_db_map, "superclass_name")
         if superclass_name:
-            name += f"({superclass_name})"
+            name += f" ({superclass_name})"
         return name
 
     @property
