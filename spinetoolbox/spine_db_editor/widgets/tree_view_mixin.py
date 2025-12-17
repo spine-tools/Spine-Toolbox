@@ -175,7 +175,7 @@ class TreeViewMixin:
         dialog.show()
 
     def show_select_superclass_form(self, entity_class_item):
-        dialog = SelectSuperclassDialog(self, entity_class_item, self.db_mngr, *self.db_maps)
+        dialog = SelectSuperclassDialog(self, entity_class_item.name, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot()

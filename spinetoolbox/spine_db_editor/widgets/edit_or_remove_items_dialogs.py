@@ -11,11 +11,14 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to edit items in databases."""
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QComboBox, QTabWidget, QVBoxLayout
+from spinedb_api import DatabaseMapping
 from ...helpers import DB_ITEM_SEPARATOR, default_icon_id
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ..helpers import bool_to_string, optional_to_string, string_to_bool, string_to_display_icon
+from ...spine_db_manager import SpineDBManager
 from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate, RemoveEntitiesDelegate
 from .custom_qtableview import ManageEntityClassesTable
 from .manage_items_dialogs import (
@@ -25,6 +28,9 @@ from .manage_items_dialogs import (
     ManageItemsDialog,
     ShowIconColorEditorMixin,
 )
+
+if TYPE_CHECKING:
+    from .spine_db_editor import SpineDBEditor
 
 
 class EditOrRemoveItemsDialog(ManageItemsDialog):
@@ -288,18 +294,19 @@ class RemoveEntitiesDialog(EditOrRemoveItemsDialog):
 
 
 class SelectSuperclassDialog(GetEntityClassesMixin, DialogWithButtons):
-    def __init__(self, parent, entity_class_item, db_mngr, *db_maps):
+    def __init__(
+        self, parent: SpineDBEditor, entity_class_name: str, db_mngr: SpineDBManager, *db_maps: DatabaseMapping
+    ):
         super().__init__(parent, db_mngr)
-        self.entity_class_item = entity_class_item
         self.db_maps = db_maps
         self._tab_widget = QTabWidget(self)
-        self._subclass_name = self.entity_class_item.name
+        self._subclass_name = entity_class_name
         self._combobox_superclass_subclass = {}
         for db_map in self.db_maps:
             combobox = QComboBox(self)
             superclass_subclass = db_map.get_item("superclass_subclass", subclass_name=self._subclass_name)
             self._combobox_superclass_subclass[db_map] = (combobox, superclass_subclass)
-            entity_classes = self._entity_class_name_list_from_db_maps(db_map)
+            entity_classes = self._entity_class_name_list_from_db_maps([db_map])
             combobox.addItems(["(None)"] + [x for x in entity_classes if x != self._subclass_name])
             if superclass_subclass:
                 combobox.setCurrentText(superclass_subclass["superclass_name"])
