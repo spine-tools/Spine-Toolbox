@@ -345,6 +345,17 @@ class EntityItem(MultiDBTreeItem):
             self._is_group = False
             self.parent_item.reposition_child(self.child_number())
 
+    def _polish_children(self, children):
+        """See base class."""
+        db_map_entity_element_ids = {
+            db_map: {el_id for ent in self.db_mngr.get_items(db_map, "entity") for el_id in ent["element_id_list"]}
+            for db_map in self.db_maps
+        }
+        for child in children:
+            child.set_has_children_initially(
+                any(child.db_map_id(db_map) in db_map_entity_element_ids.get(db_map, ()) for db_map in child.db_maps)
+            )
+
     def tear_down(self):
         super().tear_down()
         self._entity_group_fetch_parent.set_obsolete(True)
