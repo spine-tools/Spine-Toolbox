@@ -11,7 +11,7 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
-from PySide6.QtCore import QEvent, Qt, Slot
+from PySide6.QtCore import QEvent, QItemSelection, Qt, Slot
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QTreeView
 from ...spine_db_parcel import SpineDBParcel
@@ -54,6 +54,9 @@ class TreeViewMixin:
             view.setModel(model)
             view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
+        for multiselection_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
+            multiselection_view.set_app_settings(self.qsettings)
+            multiselection_view.multitree_selection_clearing_requested.connect(self._clear_tree_selections)
 
     def connect_signals(self):
         """Connects the signals"""
@@ -64,51 +67,12 @@ class TreeViewMixin:
         self.entity_tree_model.dataChanged.connect(self._default_row_generator.entity_or_class_updated)
         self.alternative_model.dataChanged.connect(self._default_row_generator.alternative_updated)
 
-    def handle_mousepress(self, tree_view: QTreeView, event: QMouseEvent) -> QMouseEvent:
-        """Overrides selection behaviour if the user has selected sticky selection in Settings.
-        If sticky selection is enabled, multiple-selection is enabled when selecting items in the Object tree.
-        Pressing the Ctrl-key down, enables single selection.
-
-        Args:
-            tree_view: The treeview where the mouse click was in.
-            event: event
-
-        Returns:
-            Suitable mouse event for further event handling.
-        """
-        if tree_view is self.ui.treeView_parameter_value_list:
-            return event
-        self._clear_tree_selections = True
-        sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
-        if sticky_selection == "false":
-            pos = tree_view.viewport().mapFromGlobal(event.globalPos())
-            index = tree_view.indexAt(pos)
-            modifiers = event.modifiers()
-            if modifiers & Qt.KeyboardModifier.ControlModifier:
-                self._clear_tree_selections = False
-            elif not (tree_view.selectionModel().hasSelection() or index.isValid()):
-                # Ensure selection clearing when empty space is clicked on a tree that doesn't have selections.
-                for other_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
-                    if other_view is tree_view:
-                        continue
-                    other_view.selectionModel().clearSelection()
-            return event
-        local_pos = event.position()
-        window_pos = event.scenePosition()
-        screen_pos = event.globalPosition()
-        button = event.button()
-        buttons = event.buttons()
-        modifiers = event.modifiers()
-        if modifiers & Qt.KeyboardModifier.ControlModifier:
-            modifiers &= ~Qt.KeyboardModifier.ControlModifier
-        else:
-            modifiers |= Qt.KeyboardModifier.ControlModifier
-            self._clear_tree_selections = False
-        source = event.source()
-        new_event = QMouseEvent(
-            QEvent.Type.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
-        )
-        return new_event
+    @Slot(QTreeView)
+    def _clear_tree_selections(self, requester: QTreeView) -> None:
+        for tree_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
+            if tree_view is requester:
+                continue
+            tree_view.selectionModel().clearSelection()
 
     def init_models(self):
         """Initializes models."""

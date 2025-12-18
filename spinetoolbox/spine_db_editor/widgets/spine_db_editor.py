@@ -1003,7 +1003,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.connect_signals()
         self.apply_stacked_style()
         self.set_db_column_visibility(False)
-        self._clear_tree_selections = True
         if db_urls is not None:
             self.load_db_urls(db_urls)
 
@@ -1087,11 +1086,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self._all_empty_models.values(),
         ):
             copy_paste_view.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
-        self.ui.treeView_entity.selectionModel().selectionChanged.connect(self._clear_non_entity_tree_selections)
-        self.ui.alternative_tree_view.selectionModel().selectionChanged.connect(
-            self._clear_non_alternative_tree_selections
-        )
-        self.ui.scenario_tree_view.selectionModel().selectionChanged.connect(self._clear_non_scenario_tree_selections)
 
     def init_models(self):
         super().init_models()
@@ -1161,24 +1155,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.last_view = last_view
         self.qsettings.endGroup()
         self.qsettings.endGroup()
-
-    @Slot(QItemSelection, QItemSelection)
-    def _clear_non_entity_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self._clear_selections_if_required([self.ui.alternative_tree_view, self.ui.scenario_tree_view])
-
-    @Slot(QItemSelection, QItemSelection)
-    def _clear_non_alternative_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self._clear_selections_if_required([self.ui.treeView_entity, self.ui.scenario_tree_view])
-
-    @Slot(QItemSelection, QItemSelection)
-    def _clear_non_scenario_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self._clear_selections_if_required([self.ui.treeView_entity, self.ui.alternative_tree_view])
-
-    def _clear_selections_if_required(self, views: list[QTreeView]) -> None:
-        if self._clear_tree_selections:
-            self._clear_tree_selections = False
-            for view in views:
-                view.selectionModel().clearSelection()
 
     def begin_style_change(self):
         """Begins a style change operation."""

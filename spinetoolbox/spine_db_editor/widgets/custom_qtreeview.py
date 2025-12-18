@@ -11,9 +11,9 @@
 ######################################################################################################################
 
 """Classes for custom QTreeViews and QTreeWidgets."""
-from PySide6.QtCore import QEvent, QItemSelection, QModelIndex, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu, QWidget
+from PySide6.QtCore import QEvent, QItemSelection, QModelIndex, QSettings, QTimer, Signal, Slot
+from PySide6.QtGui import QAction, QIcon, QMouseEvent, Qt
+from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu, QTreeView, QWidget
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import CharIconEngine, busy_effect
@@ -26,7 +26,40 @@ from .custom_delegates import AddEntityButtonDelegate, AlternativeDelegate, Para
 from .scenario_generator import ScenarioGenerator
 
 
-class EntityTreeView(CopyPasteTreeView):
+class MultitreeSelection:
+    multitree_selection_clearing_requested = Signal(QTreeView)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._app_settings: QSettings | None = None
+
+    def set_app_settings(self, app_settings: QSettings) -> None:
+        self._app_settings = app_settings
+
+    def mousePressEvent(self, event):
+        sticky_selection = self._app_settings.value("appSettings/stickySelection", defaultValue="false")
+        if sticky_selection == "true":
+            local_pos = event.position()
+            window_pos = event.scenePosition()
+            screen_pos = event.globalPosition()
+            button = event.button()
+            buttons = event.buttons()
+            modifiers = event.modifiers()
+            if (modifiers & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier:
+                self.multitree_selection_clearing_requested.emit(self)
+                modifiers &= ~Qt.KeyboardModifier.ControlModifier
+            else:
+                modifiers |= Qt.KeyboardModifier.ControlModifier
+            source = event.source()
+            event = QMouseEvent(
+                QEvent.Type.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
+            )
+        elif (event.modifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.NoModifier:
+            self.multitree_selection_clearing_requested.emit(self)
+        super().mousePressEvent(event)
+
+
+class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
     """Tree view for entity classes and entities."""
 
     selection_export_requested = Signal()
@@ -36,6 +69,7 @@ class EntityTreeView(CopyPasteTreeView):
     def __init__(self, parent: QWidget | None):
         """
         Args:
+            app_settings: Application settings.
             parent: parent widget
         """
         super().__init__(parent=parent)
@@ -229,10 +263,6 @@ class EntityTreeView(CopyPasteTreeView):
                 return
         super().mouseDoubleClickEvent(event)
 
-    def mousePressEvent(self, event):
-        new_event = self._spine_db_editor.handle_mousepress(self, event) if self._spine_db_editor else event
-        super().mousePressEvent(new_event)
-
     def update_actions_availability(self):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         item = self._context_item
@@ -320,10 +350,6 @@ class ItemTreeView(CopyPasteTreeView):
         header = self.header()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
-    def mousePressEvent(self, event):
-        new_event = self._spine_db_editor.handle_mousepress(self, event) if self._spine_db_editor else event
-        super().mousePressEvent(new_event)
-
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
         self.resizeColumnToContents(0)
@@ -365,7 +391,7 @@ class ItemTreeView(CopyPasteTreeView):
         self._menu.exec(event.globalPos())
 
 
-class AlternativeTreeView(ItemTreeView):
+class AlternativeTreeView(MultitreeSelection, ItemTreeView):
     """Custom QTreeView for the alternative tree in SpineDBEditor."""
 
     def __init__(self, parent: QWidget | None):
@@ -494,7 +520,7 @@ class AlternativeTreeView(ItemTreeView):
         model.paste_alternative_mime_data(mime_data, item)
 
 
-class ScenarioTreeView(ItemTreeView):
+class ScenarioTreeView(MultitreeSelection, ItemTreeView):
     """Custom QTreeView for the scenario tree in SpineDBEditor."""
 
     def __init__(self, parent: QWidget | None):
