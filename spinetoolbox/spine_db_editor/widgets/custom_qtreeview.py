@@ -340,10 +340,12 @@ class ItemTreeView(CopyPasteTreeView):
             parent: parent widget
         """
         super().__init__(parent=parent)
-        self._spine_db_editor = None
         self._menu = QMenu(self)
         header = self.header()
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+
+    def finish_init(self, copy_action: QAction, paste_action: QAction) -> None:
+        self.populate_context_menu(copy_action, paste_action)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
@@ -357,19 +359,10 @@ class ItemTreeView(CopyPasteTreeView):
         """Updates the visible property of actions according to whether or not they apply to given item."""
         raise NotImplementedError()
 
-    def connect_spine_db_editor(self, spine_db_editor):
-        """Prepares the view to work with the DB editor.
-
-        Args:
-            spine_db_editor (SpineDBEditor): editor instance
-        """
-        self._spine_db_editor = spine_db_editor
-        self.populate_context_menu()
-
-    def populate_context_menu(self):
+    def populate_context_menu(self, copy_action: QAction, paste_action: QAction) -> None:
         """Creates a context menu for this view."""
-        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
-        self._menu.addAction(self._spine_db_editor.ui.actionPaste)
+        self._menu.addAction(copy_action)
+        self._menu.addAction(paste_action)
         self._menu.addAction("Remove", self.remove_selected)
 
     def contextMenuEvent(self, event):
@@ -389,6 +382,8 @@ class ItemTreeView(CopyPasteTreeView):
 class AlternativeTreeView(MultitreeSelection, ItemTreeView):
     """Custom QTreeView for the alternative tree in SpineDBEditor."""
 
+    scenario_generator_requested = Signal(object, list)
+
     def __init__(self, parent: QWidget | None):
         """
         Args:
@@ -396,19 +391,20 @@ class AlternativeTreeView(MultitreeSelection, ItemTreeView):
         """
         super().__init__(parent=parent)
         self._generate_scenarios_action: QAction | None = None
+        self._delegate = AlternativeDelegate(self)
+        self.setItemDelegateForColumn(0, self._delegate)
 
-    def connect_spine_db_editor(self, spine_db_editor):
-        """see base class"""
-        super().connect_spine_db_editor(spine_db_editor)
-        delegate = AlternativeDelegate(self._spine_db_editor)
-        delegate.data_committed.connect(self.model().setData)
-        self.setItemDelegateForColumn(0, delegate)
+    def setModel(self, model):
+        if self.model():
+            self._delegate.data_committed.disconnect(self.model().setData)
+        self._delegate.data_committed.connect(model.setData)
+        super().setModel(model)
 
-    def populate_context_menu(self):
+    def populate_context_menu(self, copy_action: QAction, paste_action: QAction) -> None:
         """See base class."""
         self._generate_scenarios_action = self._menu.addAction("Generate scenarios...", self._open_scenario_generator)
         self._menu.addSeparator()
-        super().populate_context_menu()
+        super().populate_context_menu(copy_action, paste_action)
 
     def remove_selected(self):
         """See base class."""
@@ -456,8 +452,7 @@ class AlternativeTreeView(MultitreeSelection, ItemTreeView):
                 continue
             alternatives.append(alternative_table[alternative_id])
             included_ids.add(alternative_id)
-        generator = ScenarioGenerator(self, db_map, alternatives, self._spine_db_editor)
-        generator.show()
+        self.scenario_generator_requested.emit(db_map, alternatives)
 
     def can_copy(self):
         """See base class."""
@@ -525,17 +520,18 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
         """
         super().__init__(parent=parent)
         self._duplicate_scenario_action: QAction | None = None
+        self._delegate = ScenarioDelegate(self)
+        self.setItemDelegateForColumn(0, self._delegate)
 
-    def connect_spine_db_editor(self, spine_db_editor):
-        """see base class"""
-        super().connect_spine_db_editor(spine_db_editor)
-        delegate = ScenarioDelegate(self._spine_db_editor)
-        delegate.data_committed.connect(self.model().setData)
-        self.setItemDelegateForColumn(0, delegate)
+    def setModel(self, model):
+        if self.model():
+            self._delegate.data_committed.disconnect(self.model().setData)
+        self._delegate.data_committed.connect(model.setData)
+        super().setModel(model)
 
-    def populate_context_menu(self):
+    def populate_context_menu(self, copy_action, paste_action):
         """See base class."""
-        super().populate_context_menu()
+        super().populate_context_menu(copy_action, paste_action)
         self._duplicate_scenario_action = self._menu.addAction("Duplicate", self._duplicate_scenario)
 
     def remove_selected(self):
@@ -658,6 +654,9 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
 class ParameterValueListTreeView(ItemTreeView):
     """Custom QTreeView class for parameter_value_list in SpineDBEditor."""
 
+    parameter_value_editor_requested = Signal(QModelIndex)
+    plain_parameter_value_editor_requested = Signal(QModelIndex)
+
     def __init__(self, parent: QWidget | None):
         """
         Args:
@@ -665,18 +664,19 @@ class ParameterValueListTreeView(ItemTreeView):
         """
         super().__init__(parent=parent)
         self._open_in_editor_action = None
+        self._delegate = ParameterValueListDelegate(self)
+        self._delegate.parameter_value_editor_requested.connect(self.parameter_value_editor_requested)
+        self.setItemDelegateForColumn(0, self._delegate)
 
-    def connect_spine_db_editor(self, spine_db_editor):
-        """see base class"""
-        super().connect_spine_db_editor(spine_db_editor)
-        delegate = ParameterValueListDelegate(self._spine_db_editor)
-        delegate.data_committed.connect(self.model().setData)
-        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
-        self.setItemDelegateForColumn(0, delegate)
+    def setModel(self, model):
+        if self.model():
+            self._delegate.data_committed.disconnect(self.model().setData)
+        self._delegate.data_committed.connect(model.setData)
+        super().setModel(model)
 
-    def populate_context_menu(self):
+    def populate_context_menu(self, copy_action, paste_action):
         """Creates a context menu for this view."""
-        super().populate_context_menu()
+        super().populate_context_menu(copy_action, paste_action)
         self._menu.addSeparator()
         self._open_in_editor_action = self._menu.addAction("Edit...", self.open_in_editor)
 
@@ -687,7 +687,7 @@ class ParameterValueListTreeView(ItemTreeView):
     def open_in_editor(self):
         """Opens the parameter_value editor for the first selected cell."""
         index = self.currentIndex()
-        self._spine_db_editor.show_parameter_value_editor(index, plain=True)
+        self.plain_parameter_value_editor_requested.emit(index)
 
     def remove_selected(self):
         """See base class."""

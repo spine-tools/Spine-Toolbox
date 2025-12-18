@@ -27,7 +27,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QTabBar,
-    QTreeView,
     QWidget,
 )
 from sqlalchemy.engine.url import URL
@@ -713,11 +712,15 @@ class SpineDBEditorBase(QMainWindow):
         """Removes references to purge items dialog."""
         self._purge_items_dialog = None
 
-    @busy_effect
     @Slot(QModelIndex)
-    def show_parameter_value_editor(self, index, plain=False):
+    def show_parameter_value_editor(self, index: QModelIndex) -> None:
         """Shows the parameter_value editor for the given index of given table view."""
-        editor = ParameterValueEditor(index, parent=self, plain=plain)
+        editor = ParameterValueEditor(index, parent=self)
+        editor.show()
+
+    @Slot(QModelIndex)
+    def show_plain_parameter_value_editor(self, index: QModelIndex) -> None:
+        editor = ParameterValueEditor(index, parent=self, plain=True)
         editor.show()
 
     def receive_error_msg(self, db_map_error_log):

@@ -1084,12 +1084,12 @@ class TestAlternativeTreeView:
         alternatives = [db_map.alternative(name="Base")]
         view.setCurrentIndex(alternative_row_index)
         view.selectionModel().select(model.index(0, 1, database_index), QItemSelectionModel.SelectionFlag.Select)
-        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map)
+        self._assert_scenario_generator_initialized_with(alternatives, view, db_map)
         view.selectionModel().select(model.index(1, 0, database_index), QItemSelectionModel.SelectionFlag.Select)
         view.selectionModel().select(model.index(1, 1, database_index), QItemSelectionModel.SelectionFlag.Select)
-        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map)
+        self._assert_scenario_generator_initialized_with(alternatives, view, db_map)
         view.selectionModel().select(database_index, QItemSelectionModel.SelectionFlag.Select)
-        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map)
+        self._assert_scenario_generator_initialized_with(alternatives, view, db_map)
 
     def test_opening_scenario_generator_ignores_alternatives_from_other_databases(self, db_editor, logger, tmp_path):
         fake_db_listener = mock.MagicMock()
@@ -1132,20 +1132,17 @@ class TestAlternativeTreeView:
         )
         db_map1 = database1_index.data(DB_MAP_ROLE)
         alternatives = [db_map1.alternative(name="Base")]
-        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map1)
+        self._assert_scenario_generator_initialized_with(alternatives, view, db_map1)
         view.selectionModel().setCurrentIndex(
             model.index(0, 0, database2_index), QItemSelectionModel.SelectionFlag.Current
         )
         db_map2 = database2_index.data(DB_MAP_ROLE)
         alternatives = [db_map2.alternative(name="Base"), db_map2.alternative(name="Other")]
-        self._assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map2)
+        self._assert_scenario_generator_initialized_with(alternatives, view, db_map2)
 
     @staticmethod
-    def _assert_scenario_generator_initialized_with(alternatives, db_editor, view, db_map):
-        with mock.patch("spinetoolbox.spine_db_editor.widgets.custom_qtreeview.ScenarioGenerator") as mock_init:
-            mock_scenario_generator = mock.MagicMock()
-            mock_init.return_value = mock_scenario_generator
-            mock_scenario_generator.show = mock.MagicMock()
+    def _assert_scenario_generator_initialized_with(alternatives, view, db_map):
+        with mock.patch.object(view, "scenario_generator_requested") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
             view._generate_scenarios_action.trigger()
-            mock_init.assert_called_once_with(view, db_map, alternatives, db_editor)
-            mock_scenario_generator.show.assert_called_once_with()
+            mock_signal.emit.assert_called_once_with(db_map, alternatives)

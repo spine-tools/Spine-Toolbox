@@ -14,6 +14,8 @@
 from PySide6.QtCore import QEvent, QItemSelection, Qt, Slot
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QTreeView
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from ...spine_db_parcel import SpineDBParcel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
@@ -33,6 +35,7 @@ from .edit_or_remove_items_dialogs import (
     RemoveEntitiesDialog,
     SelectSuperclassDialog,
 )
+from .scenario_generator import ScenarioGenerator
 
 
 class TreeViewMixin:
@@ -53,8 +56,6 @@ class TreeViewMixin:
         )
         for view, model in zip(views, models):
             view.setModel(model)
-            if view is not self.ui.treeView_entity:
-                view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
         self.ui.treeView_entity.finish_init(self.ui.actionCopy)
         self.ui.treeView_entity.add_entity_classes_dialog_requested.connect(self.show_add_entity_classes_form)
@@ -64,6 +65,14 @@ class TreeViewMixin:
         self.ui.treeView_entity.manage_elements_dialog_requested.connect(self.show_manage_elements_form)
         self.ui.treeView_entity.manage_members_dialog_requested.connect(self.show_manage_members_form)
         self.ui.treeView_entity.select_superclass_dialog_requested.connect(self.show_select_superclass_form)
+        self.ui.alternative_tree_view.finish_init(self.ui.actionCopy, self.ui.actionPaste)
+        self.ui.alternative_tree_view.scenario_generator_requested.connect(self.show_scenario_generator)
+        self.ui.scenario_tree_view.finish_init(self.ui.actionCopy, self.ui.actionPaste)
+        self.ui.treeView_parameter_value_list.finish_init(self.ui.actionCopy, self.ui.actionPaste)
+        self.ui.treeView_parameter_value_list.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
+        self.ui.treeView_parameter_value_list.plain_parameter_value_editor_requested.connect(
+            self.show_plain_parameter_value_editor
+        )
         for multiselection_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
             multiselection_view.set_app_settings(self.qsettings)
             multiselection_view.multitree_selection_clearing_requested.connect(self._clear_tree_selections)
@@ -93,10 +102,11 @@ class TreeViewMixin:
             self.ui.scenario_tree_view,
             self.ui.treeView_parameter_value_list,
         ):
-            view.model().db_maps = self.db_maps
-            view.model().build_tree()
-            for item in view.model().visit_all():
-                index = view.model().index_from_item(item)
+            model = view.model()
+            model.db_maps = self.db_maps
+            model.build_tree()
+            for item in model.visit_all():
+                index = model.index_from_item(item)
                 view.expand(index)
 
     def _db_map_ids(self, indexes):
@@ -157,6 +167,11 @@ class TreeViewMixin:
     def show_select_superclass_form(self, entity_class_item: MultiDBTreeItem) -> None:
         dialog = SelectSuperclassDialog(self, entity_class_item.name, self.db_mngr, *self.db_maps)
         dialog.show()
+
+    @Slot(object, list)
+    def show_scenario_generator(self, db_map: DatabaseMapping, alternatives: list[PublicItem]) -> None:
+        generator = ScenarioGenerator(self, db_map, alternatives, self)
+        generator.show()
 
     @Slot()
     def _edit_entity_tree_items(self):
