@@ -17,6 +17,7 @@ from PySide6.QtWidgets import QTreeView
 from ...spine_db_parcel import SpineDBParcel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
+from ..mvcmodels.multi_db_tree_item import MultiDBTreeItem
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.scenario_model import ScenarioModel
 from .add_items_dialogs import (
@@ -52,8 +53,17 @@ class TreeViewMixin:
         )
         for view, model in zip(views, models):
             view.setModel(model)
-            view.connect_spine_db_editor(self)
+            if view is not self.ui.treeView_entity:
+                view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
+        self.ui.treeView_entity.finish_init(self.ui.actionCopy)
+        self.ui.treeView_entity.add_entity_classes_dialog_requested.connect(self.show_add_entity_classes_form)
+        self.ui.treeView_entity.add_entities_dialog_requested.connect(self.show_add_entities_form)
+        self.ui.treeView_entity.entity_duplication_requested.connect(self.duplicate_entity)
+        self.ui.treeView_entity.add_entity_group_dialog_requested.connect(self.show_add_entity_group_form)
+        self.ui.treeView_entity.manage_elements_dialog_requested.connect(self.show_manage_elements_form)
+        self.ui.treeView_entity.manage_members_dialog_requested.connect(self.show_manage_members_form)
+        self.ui.treeView_entity.select_superclass_dialog_requested.connect(self.show_select_superclass_form)
         for multiselection_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
             multiselection_view.set_app_settings(self.qsettings)
             multiselection_view.multitree_selection_clearing_requested.connect(self._clear_tree_selections)
@@ -112,33 +122,39 @@ class TreeViewMixin:
         parcel.full_push_entity_ids(db_map_entity_ids)
         self.export_data(parcel.data)
 
-    def show_add_entity_classes_form(self, parent_item):
+    @Slot(object)
+    def show_add_entity_classes_form(self, parent_item: MultiDBTreeItem) -> None:
         """Shows dialog to add new entity classes."""
         dialog = AddEntityClassesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_entities_form(self, parent_item):
+    @Slot(object)
+    def show_add_entities_form(self, parent_item: MultiDBTreeItem) -> None:
         """Shows dialog to add new entities."""
         dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_entity_group_form(self, entity_class_item):
+    @Slot(object)
+    def show_add_entity_group_form(self, entity_class_item: MultiDBTreeItem) -> None:
         """Shows dialog to add new entity group."""
         dialog = AddEntityGroupDialog(self, entity_class_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_manage_members_form(self, entity_item):
+    @Slot(object)
+    def show_manage_members_form(self, entity_item: MultiDBTreeItem) -> None:
         """Shows dialog to manage an entity group."""
         dialog = ManageMembersDialog(self, entity_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_manage_elements_form(self, parent_item):
+    @Slot(object)
+    def show_manage_elements_form(self, parent_item: MultiDBTreeItem) -> None:
         if not parent_item.display_id[1]:  # Don't show for 0-dimensional entity classes
             return
         dialog = ManageElementsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_select_superclass_form(self, entity_class_item):
+    @Slot(object)
+    def show_select_superclass_form(self, entity_class_item: MultiDBTreeItem) -> None:
         dialog = SelectSuperclassDialog(self, entity_class_item.name, self.db_mngr, *self.db_maps)
         dialog.show()
 

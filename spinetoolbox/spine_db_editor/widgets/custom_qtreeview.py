@@ -65,11 +65,17 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
     selection_export_requested = Signal()
     selection_removal_requested = Signal()
     selection_edit_requested = Signal()
+    add_entity_classes_dialog_requested = Signal(object)
+    add_entities_dialog_requested = Signal(object)
+    entity_duplication_requested = Signal(object)
+    add_entity_group_dialog_requested = Signal(object)
+    manage_members_dialog_requested = Signal(object)
+    manage_elements_dialog_requested = Signal(object)
+    select_superclass_dialog_requested = Signal(object)
 
     def __init__(self, parent: QWidget | None):
         """
         Args:
-            app_settings: Application settings.
             parent: parent widget
         """
         super().__init__(parent=parent)
@@ -77,7 +83,6 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
         self.setRootIsDecorated(False)
         self._context_item = None
         self._menu = QMenu(self)
-        self._spine_db_editor = None
         self._fully_expand_action = None
         self._fully_collapse_action = None
         self._add_entity_classes_action = None
@@ -102,16 +107,10 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
         self._entity_index = None
         self._header = self.header()
         self._header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.doubleClicked.connect(self.find_next_entity)
 
-    def connect_spine_db_editor(self, spine_db_editor):
-        """Connects a Spine db editor to work with this view.
-
-        Args:
-             spine_db_editor (SpineDBEditor)
-        """
-        self._spine_db_editor = spine_db_editor
-        self._create_context_menu()
-        self.connect_signals()
+    def finish_init(self, copy_action: QAction) -> None:
+        self._create_context_menu(copy_action)
 
     def set_db_column_visibility(self, visible):
         """Sets the visibility of the db column"""
@@ -142,9 +141,9 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
             QIcon(CharIconEngine("\uf141")), "Find next occurrence", self.find_next_entity
         )
 
-    def _create_context_menu(self):
+    def _create_context_menu(self, copy_action: QAction) -> None:
         """Creates a context menu for this view."""
-        self._menu.addAction(self._spine_db_editor.ui.actionCopy)
+        self._menu.addAction(copy_action)
         self._menu.addSeparator()
         self._add_middle_actions()
         self._menu.addSeparator()
@@ -180,10 +179,6 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
             self.edit_selected()
             return True
         return super().edit(index, trigger, event)
-
-    def connect_signals(self):
-        """Connects signals."""
-        self.doubleClicked.connect(self.find_next_entity)
 
     def rowsInserted(self, parent, start, end):
         super().rowsInserted(parent, start, end)
@@ -297,10 +292,10 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
         self.selection_edit_requested.emit()
 
     def add_entity_classes(self):
-        self._spine_db_editor.show_add_entity_classes_form(self._context_item)
+        self.add_entity_classes_dialog_requested.emit(self._context_item)
 
     def add_entities(self):
-        self._spine_db_editor.show_add_entities_form(self._context_item)
+        self.add_entities_dialog_requested.emit(self._context_item)
 
     def find_next_entity(self):
         """Finds the next occurrence of the relationship at the current index and expands it."""
@@ -321,19 +316,19 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
 
     def duplicate_entity(self):
         """Duplicates the object at the current index using the connected Spine db editor."""
-        self._spine_db_editor.duplicate_entity(self._context_item)
+        self.entity_duplication_requested.emit(self._context_item)
 
     def add_entity_group(self):
-        self._spine_db_editor.show_add_entity_group_form(self._context_item)
+        self.add_entity_group_dialog_requested.emit(self._context_item)
 
     def manage_elements(self):
-        self._spine_db_editor.show_manage_elements_form(self._context_item)
+        self.manage_elements_dialog_requested.emit(self._context_item)
 
     def manage_members(self):
-        self._spine_db_editor.show_manage_members_form(self._context_item)
+        self.manage_members_dialog_requested.emit(self._context_item)
 
     def select_superclass(self):
-        self._spine_db_editor.show_select_superclass_form(self._context_item)
+        self.select_superclass_dialog_requested.emit(self._context_item)
 
 
 class ItemTreeView(CopyPasteTreeView):

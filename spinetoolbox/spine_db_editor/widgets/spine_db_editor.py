@@ -578,6 +578,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
         self.export_data(parcel.data)
 
+    @Slot(object)
     def duplicate_entity(self, entity_item):
         """
         Duplicates an entity.
