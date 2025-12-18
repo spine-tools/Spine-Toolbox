@@ -11,22 +11,17 @@
 ######################################################################################################################
 
 """A base model class to represent items from multiple databases in a tree."""
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, QObject, Qt
+from spinedb_api import DatabaseMapping
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from ...spine_db_manager import SpineDBManager
 
 
 class MultiDBTreeModel(MinimalTreeModel):
     """Base class for all tree models in Spine db editor."""
 
-    def __init__(self, db_editor, db_mngr, *db_maps):
-        """
-        Args:
-            db_editor (SpineDBEditor)
-            db_mngr (SpineDBManager): A manager for the given db_maps
-            *db_maps: DatabaseMapping instances
-        """
-        super().__init__(db_editor)
-        self.db_editor = db_editor
+    def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
+        super().__init__(parent)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._invisible_root_item = TreeItem(self)

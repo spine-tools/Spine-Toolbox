@@ -14,19 +14,19 @@ from spinetoolbox.spine_db_editor.mvcmodels.entity_tree_models import EntityTree
 
 
 class TestEntityTreeModel:
-    def test_superclass_name_displayed_after_subclass_name(self, db_editor, db_mngr, db_map):
+    def test_superclass_name_displayed_after_subclass_name(self, parent_object, app_settings, db_mngr, db_map):
         with db_map:
             db_map.add_entity_class(name="Object")
             db_map.add_entity_class(name="Any")
             db_map.add_superclass_subclass(superclass_name="Any", subclass_name="Object")
-        model = EntityTreeModel(db_editor, db_mngr, db_map)
+        model = EntityTreeModel(parent_object, app_settings, db_mngr, db_map)
         model.build_tree()
         model.root_item.fetch_more()
         while len(model.root_item.children) != 2:
             QApplication.processEvents()
         assert [child.display_data for child in model.root_item.children] == ["Any", "Object (Any)"]
 
-    def test_entity_items_advertise_they_have_children(self, db_editor, db_mngr, db_map):
+    def test_entity_items_advertise_they_have_children(self, parent_object, app_settings, db_mngr, db_map):
         with db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity(entity_class_name="A", name="a")
@@ -36,7 +36,7 @@ class TestEntityTreeModel:
             db_map.add_entity(entity_class_name="A__B", entity_byname=["a", "b"])
             db_map.add_entity_class(dimension_name_list=["A__B", "A__B"])
             db_map.add_entity(entity_class_name="A__B__A__B", entity_byname=["a", "b", "a", "b"])
-        model = EntityTreeModel(db_editor, db_mngr, db_map)
+        model = EntityTreeModel(parent_object, app_settings, db_mngr, db_map)
         model.build_tree()
         model.root_item.fetch_more()
         while len(model.root_item.children) != 4:

@@ -11,23 +11,18 @@
 ######################################################################################################################
 
 """Models to represent things in a tree."""
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, QObject, Qt
+from spinedb_api import DatabaseMapping
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
+from ...spine_db_manager import SpineDBManager
 from .tree_item_utility import StandardTreeItem
 
 
 class TreeModelBase(MinimalTreeModel):
     """A base model to display items in a tree view."""
 
-    def __init__(self, db_editor, db_mngr, *db_maps):
-        """
-        Args:
-            db_editor (SpineDBEditor)
-            db_mngr (SpineDBManager)
-            *db_maps: DatabaseMapping instances
-        """
-        super().__init__(db_editor)
-        self.db_editor = db_editor
+    def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
+        super().__init__(parent)
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self.destroyed.connect(lambda _: self._invisible_root_item.tear_down_recursively())

@@ -40,7 +40,7 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entity_tree_model = EntityTreeModel(self, self.db_mngr)
+        self.entity_tree_model = EntityTreeModel(self, self.qsettings, self.db_mngr)
         self.alternative_model = AlternativeModel(self, self.db_mngr)
         self.scenario_model = ScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
