@@ -592,3 +592,17 @@ class TestScenarioSelectionForFiltering:
             mock_signal.emit.assert_not_called()
             view.selectionModel().select(model.index(1, 0, scenario_index), QItemSelectionModel.SelectionFlag.Select)
             mock_signal.emit.assert_not_called()
+
+    def test_selecting_add_new_scenario_item_does_not_affect_selection(self, db_editor, logger):
+        view = db_editor.ui.scenario_tree_view
+        model = view.model()
+        database_index = model.index(0, 0)
+        assert database_index.data() == "TestScenarioSelectionForFiltering_db"
+        assert model.rowCount(database_index) == 1
+        scenario_index = model.index(0, 0, database_index)
+        assert scenario_index.data() == "Type new scenario name here..."
+        filter_selection = db_editor._scenario_selection_for_filtering
+        with mock.patch.object(filter_selection, "scenario_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            view.selectionModel().select(scenario_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+            mock_signal.emit.assert_not_called()
