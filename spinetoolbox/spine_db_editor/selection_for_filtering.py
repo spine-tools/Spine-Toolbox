@@ -209,6 +209,8 @@ class ScenarioSelectionForFiltering(QObject):
                 continue
             db_map = parent_index.data(DB_MAP_ROLE)
             scenario_id = index.data(ITEM_ID_ROLE)
+            if scenario_id is None:
+                continue
             selection.setdefault(db_map, set()).add(scenario_id)
         if not selection:
             selection = Asterisk
