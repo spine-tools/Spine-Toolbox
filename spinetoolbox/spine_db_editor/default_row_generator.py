@@ -11,11 +11,10 @@
 ######################################################################################################################
 from dataclasses import dataclass
 from typing import Any
-from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
-from spinedb_api import Asterisk, DatabaseMapping
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QObject, Qt, Signal, Slot
+from spinedb_api import DatabaseMapping, SpineDBAPIError
 from spinedb_api.temp_id import TempId
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
-from spinetoolbox.spine_db_editor.selection_for_filtering import AlternativeSelection, EntitySelection
 
 
 @dataclass(frozen=True)
@@ -29,8 +28,17 @@ class DefaultRowGenerator(QObject):
     parameter_value_default_row_updated = Signal(object)
     entity_alternative_default_row_updated = Signal(object)
 
-    def __init__(self, parent: QObject | None = None):
+    def __init__(
+        self,
+        entity_tree_selection_model: QItemSelectionModel,
+        alternative_selection_model: QItemSelectionModel,
+        parent: QObject | None = None,
+    ):
         super().__init__(parent)
+        self._entity_tree_selection_model = entity_tree_selection_model
+        self._entity_tree_selection_model.selectionChanged.connect(self._update_defaults_from_entity_selection)
+        self._alternative_selection_model = alternative_selection_model
+        self._alternative_selection_model.selectionChanged.connect(self._update_defaults_from_alternative_selection)
         self._selected_db_map: DatabaseMapping | None = None
         self._selected_entity_class: str | None = None
         self._selected_entity_class_id: TempId | None = None
@@ -39,15 +47,11 @@ class DefaultRowGenerator(QObject):
         self._selected_alternative: str | None = None
         self._selected_alternative_id: DatabaseMapping | None = None
 
-    @Slot(object)
-    def update_defaults_from_entity_selection(self, entity_selection: EntitySelection) -> None:
-        any_updates = False
-        any_updates |= self._update_selected_entity_class(entity_selection)
-        if any_updates:
-            self._emit_definition_row_update()
-        any_updates |= self._update_selected_entity(entity_selection)
-        if not any_updates:
+    @Slot(QItemSelection, QItemSelection)
+    def _update_defaults_from_entity_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        if not self._update_selected_class_and_entity():
             return
+        self._emit_definition_row_update()
         self._emit_value_and_entity_alternative_row_update()
 
     def _emit_definition_row_update(self):
@@ -110,100 +114,162 @@ class DefaultRowGenerator(QObject):
             self._selected_alternative = name
             self._emit_value_and_entity_alternative_row_update()
 
-    @Slot(object)
-    def update_defaults_from_alternative_selection(self, alternative_selection: AlternativeSelection) -> None:
-        default_db_maps = set()
+    @Slot(QItemSelection, QItemSelection)
+    def _update_defaults_from_alternative_selection(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        alternative_name = None
+        alternative_ids = []
         alternative_id = None
-        if alternative_selection is Asterisk:
-            alternative = None
-        else:
-            alternative = None
-            multiple_selected = object()
-            for db_map, alternative_ids in alternative_selection.items():
-                if len(alternative_ids) > 1:
-                    alternative = multiple_selected
-                    break
+        selection = [index for index in self._alternative_selection_model.selection().indexes() if index.column() == 0]
+        if selection:
+            selected_alternative = None
+            multiple_names_selected = object()
+            selected_ids = []
+            for index in selection:
+                db_map_index = index.parent()
+                if db_map_index.isValid():
+                    selected_id = index.data(ITEM_ID_ROLE)
+                    if selected_id is None:
+                        continue
+                    selected_ids.append((db_map_index.data(DB_MAP_ROLE), index.data(ITEM_ID_ROLE)))
+                    if selected_alternative is None:
+                        selected_alternative = index.data()
+                    elif index.data() != selected_alternative:
+                        selected_alternative = multiple_names_selected
+                        break
+            if selected_alternative is not multiple_names_selected:
+                alternative_name = selected_alternative
+                alternative_ids = selected_ids
+        any_updates = False
+        if alternative_ids:
+            if self._selected_db_map is None:
+                default_i = 0
+                self._selected_db_map = alternative_ids[default_i][0]
+            else:
                 try:
-                    alternative_id = next(iter(alternative_ids))
-                except StopIteration:
-                    continue
-                name = db_map.alternative(id=alternative_id)["name"]
-                if alternative is None:
-                    alternative = name
-                elif name != alternative:
-                    alternative = multiple_selected
-                    break
-                default_db_maps.add(db_map)
-            if alternative is multiple_selected or (
-                self._selected_db_map is not None and self._selected_db_map not in default_db_maps
-            ):
-                alternative = None
-        if alternative == self._selected_alternative:
-            return
-        self._selected_alternative = alternative
-        if self._selected_db_map is None and default_db_maps:
-            self._selected_db_map = next(iter(default_db_maps))
-        self._selected_alternative_id = alternative_id
-        self._emit_value_and_entity_alternative_row_update()
+                    default_i = [i[0] for i in alternative_ids].index(self._selected_db_map)
+                except ValueError:
+                    return
+            any_updates = True
+            alternative_id = alternative_ids[default_i][1]
+        if alternative_name != self._selected_alternative:
+            self._selected_alternative = alternative_name
+            self._selected_alternative_id = alternative_id
+            any_updates = True
+        if any_updates:
+            self._emit_value_and_entity_alternative_row_update()
 
-    def _update_selected_entity_class(self, entity_selection: EntitySelection) -> bool:
+    def _update_selected_class_and_entity(self) -> bool:
         class_name = None
         class_id = None
+        entity_byname = None
+        entity_id = None
         default_db_map = None
-        if entity_selection is not Asterisk:
-            for db_map, class_selection in entity_selection.items():
-                if len(class_selection) > 1:
-                    class_name = None
-                    default_db_map = None
-                    break
-                try:
-                    class_id = next(iter(class_selection))
-                except StopIteration:
-                    continue
-                name = db_map.entity_class(id=class_id)["name"]
-                if class_name is None:
-                    class_name = name
+        selection = [
+            index
+            for index in self._entity_tree_selection_model.selection().indexes()
+            if index.column() == 0 and index.parent().isValid()
+        ]
+        if len(selection) == 1:
+            index = selection[0]
+            db_map_ids = index.data(ITEM_ID_ROLE)
+            default_db_map, item_id = next(iter(db_map_ids.items()))
+            if item_id.item_type == "entity_class":
+                class_name = default_db_map.entity_class(id=item_id)["name"]
+                class_id = item_id
+            else:
+                entity = default_db_map.entity(id=item_id)
+                class_name = entity["entity_class_name"]
+                class_id = entity["class_id"]
+                entity_byname = entity["entity_byname"]
+                entity_id = item_id
+        elif len(selection) > 1:
+            for index in selection:
+                db_map_ids = index.data(ITEM_ID_ROLE)
+                db_map, item_id = next(iter(db_map_ids.items()))
+                if item_id.item_type == "entity_class":
+                    if class_name is not None:
+                        class_name = None
+                        class_id = None
+                        default_db_map = None
+                        break
+                    class_name = db_map.entity_class(id=item_id)["name"]
+                    class_id = item_id
                     default_db_map = db_map
-                elif name != class_name:
-                    class_name = None
-                    default_db_map = None
-                    break
-        if class_name == self._selected_entity_class and default_db_map is self._selected_db_map:
+                elif item_id.item_type == "entity":
+                    entity_item = db_map.entity(id=item_id)
+                    entity_class_name = entity_item["entity_class_name"]
+                    if class_name is not None and entity_class_name != class_name:
+                        class_name = None
+                        class_id = None
+                        default_db_map = None
+                        break
+                    class_name = entity_class_name
+                    class_id = entity_item["class_id"]
+                    default_db_map = db_map
+        if (
+            class_name == self._selected_entity_class
+            and default_db_map is self._selected_db_map
+            and entity_byname == self._selected_entity_byname
+        ):
             return False
         self._selected_db_map = default_db_map
         self._selected_entity_class = class_name
-        self._selected_entity_class_id = class_id if default_db_map is not None and class_name is not None else None
-        return True
-
-    def _update_selected_entity(self, entity_selection: EntitySelection) -> bool:
-        entity_byname = None
-        entity_id = None
-        multiple_selected = object()
-        if entity_selection is not Asterisk:
-            for db_map, class_selection in entity_selection.items():
-                if len(class_selection) > 1:
-                    entity_byname = multiple_selected
-                    break
-                for class_id, entity_ids in class_selection.items():
-                    if entity_ids is Asterisk or len(entity_ids) > 1:
-                        entity_byname = multiple_selected
-                        break
-                    try:
-                        entity_id = next(iter(entity_ids))
-                    except StopIteration:
-                        continue
-                    byname = db_map.entity(id=entity_id)["entity_byname"]
-                    if entity_byname is None:
-                        entity_byname = byname
-                    elif byname != entity_byname:
-                        entity_byname = multiple_selected
-                        break
-                if entity_byname is multiple_selected:
-                    break
-            if entity_byname is multiple_selected:
-                entity_byname = None
-        if entity_byname == self._selected_entity_byname:
-            return False
+        self._selected_entity_class_id = class_id if class_name is not None else None
         self._selected_entity_byname = entity_byname
         self._selected_entity_id = entity_id if entity_byname is not None else None
         return True
+
+    @Slot(object)
+    def update_defaults_from_secondary_entity_selection(self, entity_ids: dict[DatabaseMapping, list[TempId]]) -> None:
+        if not entity_ids:
+            self._update_defaults_from_entity_selection(QItemSelection(), QItemSelection())
+            return
+        class_name = None
+        class_id = None
+        entity_byname = None
+        entity_id = None
+        default_db_map = None
+        for db_map, ids in entity_ids.items():
+            entity_table = db_map.mapped_table("entity")
+            multiple_selected = False
+            for current_id in ids:
+                entity = entity_table[current_id]
+                if entity_byname is None:
+                    default_db_map = db_map
+                    entity_byname = entity["entity_byname"]
+                    entity_id = current_id
+                    class_name = entity["entity_class_name"]
+                    class_id = entity["class_id"]
+                elif entity_byname != entity["entity_byname"] or class_name != entity["entity_class_name"]:
+                    class_name = None
+                    class_id = None
+                    entity_byname = None
+                    entity_id = None
+                    default_db_map = None
+                    multiple_selected = True
+                    break
+            if multiple_selected:
+                break
+        if class_name != self._selected_entity_class or default_db_map is not self._selected_db_map:
+            self._selected_db_map = default_db_map
+            self._ensure_alternative_in_default_db_map()
+            self._selected_entity_class = class_name
+            self._selected_entity_class_id = class_id if class_name is not None else None
+            self._emit_definition_row_update()
+        if entity_byname != self._selected_entity_byname:
+            self._selected_entity_byname = entity_byname
+            self._selected_entity_id = entity_id if entity_byname is not None else None
+            self._emit_value_and_entity_alternative_row_update()
+
+    def _ensure_alternative_in_default_db_map(self):
+        if self._selected_db_map is None or self._selected_alternative_id is None:
+            return
+        try:
+            alternative = self._selected_db_map.alternative(id=self._selected_alternative_id)
+        except SpineDBAPIError:
+            forget_selected = True
+        else:
+            forget_selected = alternative["name"] != self._selected_alternative
+        if forget_selected:
+            self._selected_alternative = None
+            self._selected_alternative_id = None

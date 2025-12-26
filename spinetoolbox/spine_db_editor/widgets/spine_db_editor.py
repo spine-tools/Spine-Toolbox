@@ -1034,6 +1034,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.graphicsView.graph_selection_changed.connect(
             self._entity_selection_for_filtering.update_secondary_entity_selection
         )
+        self.ui.graphicsView.graph_selection_changed.connect(
+            self._default_row_generator.update_defaults_from_secondary_entity_selection
+        )
         self._entity_selection_for_filtering.entity_selection_changed.connect(
             self._set_entity_selection_filter_for_stacked_tables
         )
@@ -1042,9 +1045,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
             self._set_entity_selection_filter_for_stacked_tables
-        )
-        self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
-            self._default_row_generator.update_defaults_from_entity_selection
         )
         self._alternative_selection_for_filtering.alternative_selection_changed.connect(
             self._set_alternative_selection_filter_for_stacked_tables
@@ -1057,12 +1057,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self._scenario_selection_for_filtering.scenario_selection_changed.connect(
             self._set_scenario_selection_filter_for_graph
-        )
-        self._entity_selection_for_filtering.entity_selection_changed.connect(
-            self._default_row_generator.update_defaults_from_entity_selection
-        )
-        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
-            self._default_row_generator.update_defaults_from_alternative_selection
         )
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
