@@ -13,7 +13,7 @@
 """Models to represent items in a tree."""
 from __future__ import annotations
 from typing import Optional
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, Qt
 
 
 class TreeItem:
@@ -234,13 +234,8 @@ class TreeItem:
 class MinimalTreeModel(QAbstractItemModel):
     """Base class for all tree models."""
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (SpineDBEditor)
-        """
+    def __init__(self, parent: QObject):
         super().__init__(parent)
-        self._parent = parent
         self._invisible_root_item = TreeItem(self)
 
     def visit_all(self, index=QModelIndex(), view=None):

@@ -27,7 +27,6 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QTabBar,
-    QTreeView,
     QWidget,
 )
 from sqlalchemy.engine.url import URL
@@ -578,6 +577,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
         self.export_data(parcel.data)
 
+    @Slot(object)
     def duplicate_entity(self, entity_item):
         """
         Duplicates an entity.
@@ -712,11 +712,15 @@ class SpineDBEditorBase(QMainWindow):
         """Removes references to purge items dialog."""
         self._purge_items_dialog = None
 
-    @busy_effect
     @Slot(QModelIndex)
-    def show_parameter_value_editor(self, index, plain=False):
+    def show_parameter_value_editor(self, index: QModelIndex) -> None:
         """Shows the parameter_value editor for the given index of given table view."""
-        editor = ParameterValueEditor(index, parent=self, plain=plain)
+        editor = ParameterValueEditor(index, parent=self)
+        editor.show()
+
+    @Slot(QModelIndex)
+    def show_plain_parameter_value_editor(self, index: QModelIndex) -> None:
+        editor = ParameterValueEditor(index, parent=self, plain=True)
         editor.show()
 
     def receive_error_msg(self, db_map_error_log):
@@ -1003,7 +1007,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.connect_signals()
         self.apply_stacked_style()
         self.set_db_column_visibility(False)
-        self._clear_tree_selections = True
         if db_urls is not None:
             self.load_db_urls(db_urls)
 
@@ -1031,6 +1034,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.graphicsView.graph_selection_changed.connect(
             self._entity_selection_for_filtering.update_secondary_entity_selection
         )
+        self.ui.graphicsView.graph_selection_changed.connect(
+            self._default_row_generator.update_defaults_from_secondary_entity_selection
+        )
         self._entity_selection_for_filtering.entity_selection_changed.connect(
             self._set_entity_selection_filter_for_stacked_tables
         )
@@ -1039,9 +1045,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
             self._set_entity_selection_filter_for_stacked_tables
-        )
-        self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
-            self._default_row_generator.update_defaults_from_entity_selection
         )
         self._alternative_selection_for_filtering.alternative_selection_changed.connect(
             self._set_alternative_selection_filter_for_stacked_tables
@@ -1054,12 +1057,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self._scenario_selection_for_filtering.scenario_selection_changed.connect(
             self._set_scenario_selection_filter_for_graph
-        )
-        self._entity_selection_for_filtering.entity_selection_changed.connect(
-            self._default_row_generator.update_defaults_from_entity_selection
-        )
-        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
-            self._default_row_generator.update_defaults_from_alternative_selection
         )
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
@@ -1087,11 +1084,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self._all_empty_models.values(),
         ):
             copy_paste_view.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
-        self.ui.treeView_entity.selectionModel().selectionChanged.connect(self._clear_non_entity_tree_selections)
-        self.ui.alternative_tree_view.selectionModel().selectionChanged.connect(
-            self._clear_non_alternative_tree_selections
-        )
-        self.ui.scenario_tree_view.selectionModel().selectionChanged.connect(self._clear_non_scenario_tree_selections)
 
     def init_models(self):
         super().init_models()
@@ -1161,24 +1153,6 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.last_view = last_view
         self.qsettings.endGroup()
         self.qsettings.endGroup()
-
-    @Slot(QItemSelection, QItemSelection)
-    def _clear_non_entity_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self._clear_selections_if_required([self.ui.alternative_tree_view, self.ui.scenario_tree_view])
-
-    @Slot(QItemSelection, QItemSelection)
-    def _clear_non_alternative_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self._clear_selections_if_required([self.ui.treeView_entity, self.ui.scenario_tree_view])
-
-    @Slot(QItemSelection, QItemSelection)
-    def _clear_non_scenario_tree_selections(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self._clear_selections_if_required([self.ui.treeView_entity, self.ui.alternative_tree_view])
-
-    def _clear_selections_if_required(self, views: list[QTreeView]) -> None:
-        if self._clear_tree_selections:
-            self._clear_tree_selections = False
-            for view in views:
-                view.selectionModel().clearSelection()
 
     def begin_style_change(self):
         """Begins a style change operation."""

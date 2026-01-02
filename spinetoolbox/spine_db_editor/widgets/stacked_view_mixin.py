@@ -95,7 +95,9 @@ class StackedViewMixin:
         ):
             contents_widget.height_changed.connect(lambda: empty_table_view.updateGeometry())
         self._entity_ids_with_visible_values: dict[DatabaseMapping, set[TempId]] | None = {}
-        self._default_row_generator = DefaultRowGenerator(self)
+        self._default_row_generator = DefaultRowGenerator(
+            self.ui.treeView_entity.selectionModel(), self.ui.alternative_tree_view.selectionModel(), self
+        )
 
     def connect_signals(self):
         """Connects signals to slots."""

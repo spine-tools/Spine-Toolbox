@@ -11,16 +11,18 @@
 ######################################################################################################################
 
 """Models to represent entities in a tree."""
+from PySide6.QtCore import QObject, QSettings
+from spinedb_api import DatabaseMapping
+from ...spine_db_manager import SpineDBManager
 from .entity_tree_item import EntityTreeRootItem
 from .multi_db_tree_model import MultiDBTreeModel
 
 
 class EntityTreeModel(MultiDBTreeModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._hide_empty_classes = (
-            self.db_editor.qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
-        )
+    def __init__(self, parent: QObject, app_settings: QSettings, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
+        super().__init__(parent, db_mngr, *db_maps)
+        self._app_settings = app_settings
+        self._hide_empty_classes = app_settings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
 
     @property
     def root_item_type(self):
@@ -58,7 +60,7 @@ class EntityTreeModel(MultiDBTreeModel):
 
     def save_hide_empty_classes(self):
         hide_empty_classes = "true" if self.hide_empty_classes else "false"
-        self.db_editor.qsettings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
+        self._app_settings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
 
     @property
     def hide_empty_classes(self):

@@ -725,6 +725,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
             editor.set_data(value)
             return editor
         self.parameter_value_editor_requested.emit(index)
+        return None
 
     def _close_editor(self, editor, index):
         """Closes editor.

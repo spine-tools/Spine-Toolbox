@@ -11,12 +11,15 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
-from PySide6.QtCore import QEvent, Qt, Slot
+from PySide6.QtCore import QEvent, QItemSelection, Qt, Slot
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QTreeView
+from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from ...spine_db_parcel import SpineDBParcel
 from ..mvcmodels.alternative_model import AlternativeModel
 from ..mvcmodels.entity_tree_models import EntityTreeModel, group_items_by_db_map
+from ..mvcmodels.multi_db_tree_item import MultiDBTreeItem
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..mvcmodels.scenario_model import ScenarioModel
 from .add_items_dialogs import (
@@ -32,6 +35,7 @@ from .edit_or_remove_items_dialogs import (
     RemoveEntitiesDialog,
     SelectSuperclassDialog,
 )
+from .scenario_generator import ScenarioGenerator
 
 
 class TreeViewMixin:
@@ -39,7 +43,7 @@ class TreeViewMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entity_tree_model = EntityTreeModel(self, self.db_mngr)
+        self.entity_tree_model = EntityTreeModel(self, self.qsettings, self.db_mngr)
         self.alternative_model = AlternativeModel(self, self.db_mngr)
         self.scenario_model = ScenarioModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr)
@@ -52,8 +56,26 @@ class TreeViewMixin:
         )
         for view, model in zip(views, models):
             view.setModel(model)
-            view.connect_spine_db_editor(self)
             view.header().setResizeContentsPrecision(self.visible_rows)
+        self.ui.treeView_entity.finish_init(self.ui.actionCopy)
+        self.ui.treeView_entity.add_entity_classes_dialog_requested.connect(self.show_add_entity_classes_form)
+        self.ui.treeView_entity.add_entities_dialog_requested.connect(self.show_add_entities_form)
+        self.ui.treeView_entity.entity_duplication_requested.connect(self.duplicate_entity)
+        self.ui.treeView_entity.add_entity_group_dialog_requested.connect(self.show_add_entity_group_form)
+        self.ui.treeView_entity.manage_elements_dialog_requested.connect(self.show_manage_elements_form)
+        self.ui.treeView_entity.manage_members_dialog_requested.connect(self.show_manage_members_form)
+        self.ui.treeView_entity.select_superclass_dialog_requested.connect(self.show_select_superclass_form)
+        self.ui.alternative_tree_view.finish_init(self.ui.actionCopy, self.ui.actionPaste)
+        self.ui.alternative_tree_view.scenario_generator_requested.connect(self.show_scenario_generator)
+        self.ui.scenario_tree_view.finish_init(self.ui.actionCopy, self.ui.actionPaste)
+        self.ui.treeView_parameter_value_list.finish_init(self.ui.actionCopy, self.ui.actionPaste)
+        self.ui.treeView_parameter_value_list.parameter_value_editor_requested.connect(self.show_parameter_value_editor)
+        self.ui.treeView_parameter_value_list.plain_parameter_value_editor_requested.connect(
+            self.show_plain_parameter_value_editor
+        )
+        for multiselection_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
+            multiselection_view.set_app_settings(self.qsettings)
+            multiselection_view.multitree_selection_clearing_requested.connect(self._clear_tree_selections)
 
     def connect_signals(self):
         """Connects the signals"""
@@ -64,51 +86,12 @@ class TreeViewMixin:
         self.entity_tree_model.dataChanged.connect(self._default_row_generator.entity_or_class_updated)
         self.alternative_model.dataChanged.connect(self._default_row_generator.alternative_updated)
 
-    def handle_mousepress(self, tree_view: QTreeView, event: QMouseEvent) -> QMouseEvent:
-        """Overrides selection behaviour if the user has selected sticky selection in Settings.
-        If sticky selection is enabled, multiple-selection is enabled when selecting items in the Object tree.
-        Pressing the Ctrl-key down, enables single selection.
-
-        Args:
-            tree_view: The treeview where the mouse click was in.
-            event: event
-
-        Returns:
-            Suitable mouse event for further event handling.
-        """
-        if tree_view is self.ui.treeView_parameter_value_list:
-            return event
-        self._clear_tree_selections = True
-        sticky_selection = self.qsettings.value("appSettings/stickySelection", defaultValue="false")
-        if sticky_selection == "false":
-            pos = tree_view.viewport().mapFromGlobal(event.globalPos())
-            index = tree_view.indexAt(pos)
-            modifiers = event.modifiers()
-            if modifiers & Qt.KeyboardModifier.ControlModifier:
-                self._clear_tree_selections = False
-            elif not (tree_view.selectionModel().hasSelection() or index.isValid()):
-                # Ensure selection clearing when empty space is clicked on a tree that doesn't have selections.
-                for other_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
-                    if other_view is tree_view:
-                        continue
-                    other_view.selectionModel().clearSelection()
-            return event
-        local_pos = event.position()
-        window_pos = event.scenePosition()
-        screen_pos = event.globalPosition()
-        button = event.button()
-        buttons = event.buttons()
-        modifiers = event.modifiers()
-        if modifiers & Qt.KeyboardModifier.ControlModifier:
-            modifiers &= ~Qt.KeyboardModifier.ControlModifier
-        else:
-            modifiers |= Qt.KeyboardModifier.ControlModifier
-            self._clear_tree_selections = False
-        source = event.source()
-        new_event = QMouseEvent(
-            QEvent.Type.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
-        )
-        return new_event
+    @Slot(QTreeView)
+    def _clear_tree_selections(self, requester: QTreeView) -> None:
+        for tree_view in (self.ui.treeView_entity, self.ui.alternative_tree_view, self.ui.scenario_tree_view):
+            if tree_view is requester:
+                continue
+            tree_view.selectionModel().clearSelection()
 
     def init_models(self):
         """Initializes models."""
@@ -119,10 +102,11 @@ class TreeViewMixin:
             self.ui.scenario_tree_view,
             self.ui.treeView_parameter_value_list,
         ):
-            view.model().db_maps = self.db_maps
-            view.model().build_tree()
-            for item in view.model().visit_all():
-                index = view.model().index_from_item(item)
+            model = view.model()
+            model.db_maps = self.db_maps
+            model.build_tree()
+            for item in model.visit_all():
+                index = model.index_from_item(item)
                 view.expand(index)
 
     def _db_map_ids(self, indexes):
@@ -148,35 +132,46 @@ class TreeViewMixin:
         parcel.full_push_entity_ids(db_map_entity_ids)
         self.export_data(parcel.data)
 
-    def show_add_entity_classes_form(self, parent_item):
+    @Slot(object)
+    def show_add_entity_classes_form(self, parent_item: MultiDBTreeItem) -> None:
         """Shows dialog to add new entity classes."""
         dialog = AddEntityClassesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_entities_form(self, parent_item):
+    @Slot(object)
+    def show_add_entities_form(self, parent_item: MultiDBTreeItem) -> None:
         """Shows dialog to add new entities."""
         dialog = AddEntitiesDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_add_entity_group_form(self, entity_class_item):
+    @Slot(object)
+    def show_add_entity_group_form(self, entity_class_item: MultiDBTreeItem) -> None:
         """Shows dialog to add new entity group."""
         dialog = AddEntityGroupDialog(self, entity_class_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_manage_members_form(self, entity_item):
+    @Slot(object)
+    def show_manage_members_form(self, entity_item: MultiDBTreeItem) -> None:
         """Shows dialog to manage an entity group."""
         dialog = ManageMembersDialog(self, entity_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_manage_elements_form(self, parent_item):
+    @Slot(object)
+    def show_manage_elements_form(self, parent_item: MultiDBTreeItem) -> None:
         if not parent_item.display_id[1]:  # Don't show for 0-dimensional entity classes
             return
         dialog = ManageElementsDialog(self, parent_item, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def show_select_superclass_form(self, entity_class_item):
+    @Slot(object)
+    def show_select_superclass_form(self, entity_class_item: MultiDBTreeItem) -> None:
         dialog = SelectSuperclassDialog(self, entity_class_item.name, self.db_mngr, *self.db_maps)
         dialog.show()
+
+    @Slot(object, list)
+    def show_scenario_generator(self, db_map: DatabaseMapping, alternatives: list[PublicItem]) -> None:
+        generator = ScenarioGenerator(self, db_map, alternatives, self)
+        generator.show()
 
     @Slot()
     def _edit_entity_tree_items(self):
