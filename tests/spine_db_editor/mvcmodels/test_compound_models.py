@@ -75,7 +75,8 @@ class TestCompoundParameterDefinitionModel(TestBase):
         fetch_model(model)
         self.assertEqual(model.rowCount(), 3)
         model.set_entity_selection_for_filtering({self._db_map: {entity_class_2["id"]: Asterisk}})
-        model.refresh()
+        while model.rowCount() == 3:
+            QApplication.processEvents()
         self.assertEqual(model.rowCount(), 2)
         self._db_mngr.remove_items({self._db_map: {"entity_class": [entity_class_2["id"]]}})
         while model.rowCount() == 2:

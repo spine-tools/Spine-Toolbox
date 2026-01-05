@@ -183,6 +183,7 @@ class SpineDBWorker(QObject):
     def _handle_query_advanced(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
         self._db_mngr.update_icons(self._db_map, item_type, chunk)
+        self._db_mngr.more_data_fetched.emit(self._db_map, item_type)
         parents = self._parents_fetching.pop(item_type, ())
         if parents and not self._db_map.closed:
             self._query_advanced.emit(parents)

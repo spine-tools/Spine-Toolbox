@@ -87,19 +87,17 @@ class SingleModelBase(HalfSortedTableModel):
         self.committed = committed
 
     def __lt__(self, other):
-        if self.entity_class_name == other.entity_class_name:
+        entity_class = self.db_map.mapped_table("entity_class")[self.entity_class_id]
+        class_name = entity_class["name"]
+        other_entity_class = other.db_map.mapped_table("entity_class")[other.entity_class_id]
+        other_class_name = other_entity_class["name"]
+        if class_name == other_class_name:
             return self.db_mngr.name_registry.display_name(
                 self.db_map.sa_url
             ) < self.db_mngr.name_registry.display_name(other.db_map.sa_url)
-        keys = {}
-        for side, model in {"left": self, "right": other}.items():
-            dim = len(model.dimension_id_list)
-            class_name = model.entity_class_name
-            keys[side] = (
-                dim,
-                class_name,
-            )
-        return keys["left"] < keys["right"]
+        keys = (len(entity_class["dimension_id_list"]), class_name)
+        other_keys = (len(other_entity_class["dimension_id_list"]), other_class_name)
+        return keys < other_keys
 
     @property
     def item_type(self) -> str:
@@ -126,24 +124,14 @@ class SingleModelBase(HalfSortedTableModel):
     def _references(self) -> dict[str, tuple[str, str | None]]:
         raise NotImplementedError()
 
-    @property
-    def entity_class_name(self) -> str:
-        entity_class_table = self.db_map.mapped_table("entity_class")
-        return entity_class_table[self.entity_class_id]["name"]
-
-    @property
-    def dimension_id_list(self) -> list[TempId]:
-        entity_class_table = self.db_map.mapped_table("entity_class")
-        return entity_class_table[self.entity_class_id]["dimension_id_list"]
-
     def item_id(self, row: int) -> TempId:
-        """Returns parameter id for row.
+        """Returns item's id for row.
 
         Args:
             row: row index
 
         Returns:
-            parameter id
+            item's id
         """
         return self._main_data[row]
 
@@ -287,12 +275,13 @@ class FilterEntityMixin:
         return True
 
     def filter_accepts_item(self, item: PublicItem) -> bool:
-        """Reimplemented to also account for the entity and alternative filter."""
+        """Reimplemented to also account for the entity filter."""
         if self._filter_entity_ids is Asterisk:
             return super().filter_accepts_item(item)
-        entity_accepts = item[
-            self._ENTITY_ID_FIELD
-        ] in self._filter_entity_ids or not self._filter_entity_ids.isdisjoint(item["element_id_list"])
+        entity_id = item[self._ENTITY_ID_FIELD]
+        entity_accepts = entity_id in self._filter_entity_ids or self.db_mngr.relationship_graph.is_any_id_reachable(
+            self.db_map, entity_id, self._filter_entity_ids
+        )
         return entity_accepts and super().filter_accepts_item(item)
 
 
@@ -314,7 +303,7 @@ class FilterAlternativeMixin:
         return True
 
     def filter_accepts_item(self, item: PublicItem) -> bool:
-        """Reimplemented to also account for the entity and alternative filter."""
+        """Reimplemented to also account for the alternative filter."""
         if self._filter_alternative_ids is Asterisk:
             return super().filter_accepts_item(item)
         return item["alternative_id"] in self._filter_alternative_ids and super().filter_accepts_item(item)
@@ -445,7 +434,7 @@ class EntityMixin:
 
     def update_items_in_db(self, items: list[dict]) -> None:
         """Overridden to create entities on the fly first."""
-        class_name = self.entity_class_name
+        class_name = self.db_map.mapped_table("entity_class")[self.entity_class_id]["name"]
         for item in items:
             item["entity_class_name"] = class_name
         entities = []

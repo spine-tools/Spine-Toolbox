@@ -59,7 +59,7 @@ class CompoundStackedModel(CompoundTableModel):
     _ENTITY_CLASS_ID_FIELD: ClassVar[str] = "entity_class_id"
     FIELDS_REQUIRING_FILTER_DATA_CONVERSION: ClassVar[set[str]] = set()
 
-    def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps):
+    def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
         """
         Args:
             parent: the parent object
@@ -218,7 +218,9 @@ class CompoundStackedModel(CompoundTableModel):
         if model.db_map not in self._filter_class_ids:
             return False
         class_ids = self._filter_class_ids[model.db_map]
-        return model.entity_class_id in class_ids or not class_ids.isdisjoint(model.dimension_id_list)
+        if model.entity_class_id in class_ids:
+            return True
+        return self.db_mngr.relationship_class_graph.is_any_id_reachable(model.db_map, model.entity_class_id, class_ids)
 
     def stop_invalidating_filter(self) -> None:
         """Stops invalidating the filter."""
