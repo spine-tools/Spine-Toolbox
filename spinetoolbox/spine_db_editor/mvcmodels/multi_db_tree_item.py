@@ -11,8 +11,12 @@
 ######################################################################################################################
 
 """Base classes to represent items from multiple databases in a tree."""
+from __future__ import annotations
+from collections.abc import Callable
+from typing import ClassVar
 from PySide6.QtCore import Qt
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FetchIndex, FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
@@ -23,9 +27,9 @@ from ...mvcmodels.shared import ITEM_ID_ROLE
 class MultiDBTreeItem(TreeItem):
     """A tree item that may belong in multiple databases."""
 
-    item_type = None
+    item_type: ClassVar[ItemType] = None
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
-    visual_key = ["name"]
+    visual_key: ClassVar[list[str]] = ["name"]
 
     def __init__(self, model: MinimalTreeModel, db_map_ids: dict[DatabaseMapping, TempId] | None = None):
         """
@@ -295,8 +299,16 @@ class MultiDBTreeItem(TreeItem):
             self.insert_children(pos, chunk)
 
     @property
-    def _children_sort_key(self):
-        return lambda item: (len(item.display_id[1]), order_key(item.display_id[0].casefold()), item.display_id[1:])
+    def _children_sort_key(self) -> Callable[[MultiDBTreeItem], tuple]:
+        def sort_key(item):
+            display_id = item.display_id
+            return (
+                len(display_id[1]),
+                order_key(display_id[0].casefold()),
+                tuple(value if value is not None else "" for value in display_id[1:]),
+            )
+
+        return sort_key
 
     @property
     def fetch_item_type(self):

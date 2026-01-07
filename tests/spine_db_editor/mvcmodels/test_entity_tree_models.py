@@ -10,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from PySide6.QtWidgets import QApplication
+from spinedb_api import DatabaseMapping
 from spinetoolbox.spine_db_editor.mvcmodels.entity_tree_models import EntityTreeModel
 
 
@@ -61,3 +62,29 @@ class TestEntityTreeModel:
             QApplication.processEvents()
         assert [relationship.display_data for relationship in relationship_a_b.children] == ["٭ ǀ ٭ ǀ ٭ ǀ ٭"]
         assert all(not relationship.has_children() for relationship in relationship_a_b.children)
+
+    def test_same_class_in_two_databases_but_one_has_superclass(
+        self, parent_object, app_settings, db_mngr, logger, tmp_path
+    ):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.commit_session("Add entity class.")
+        url_with_superclass = "sqlite:///" + str(tmp_path / "db_with_superclass.sqlite")
+        with DatabaseMapping(url_with_superclass, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity_class(name="Superclass")
+            db_map.add_superclass_subclass(superclass_name="Superclass", subclass_name="A")
+            db_map.commit_session("Add entity class and superclass.")
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_mngr.get_db_map(url, logger),
+            db_mngr.get_db_map(url_with_superclass, logger),
+        )
+        model.build_tree()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 3:
+            QApplication.processEvents()
+        assert [child.display_data for child in model.root_item.children] == ["A", "A (Superclass)", "Superclass"]
