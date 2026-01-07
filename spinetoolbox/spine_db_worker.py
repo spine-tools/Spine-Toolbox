@@ -135,8 +135,8 @@ class SpineDBWorker(QObject):
             parent (FetchParent): fetch parent
         """
         self.register_fetch_parent(parent)
-        if not parent.is_busy:
-            parent.set_busy(True)
+        if not parent.is_busy(self._db_map):
+            parent.set_busy(self._db_map, True)
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):  # pylint: disable=method-hidden
@@ -202,7 +202,7 @@ class SpineDBWorker(QObject):
                     if not parent.is_obsolete:
                         parent.set_obsolete(True)
             while any(
-                parent.is_busy and not parent.is_fetched(self._db_map)
+                parent.is_busy(self._db_map) and not parent.is_fetched(self._db_map)
                 for parents in self._parents_by_type.values()
                 for parent in parents
             ):

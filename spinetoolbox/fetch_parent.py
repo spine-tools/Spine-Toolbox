@@ -53,7 +53,7 @@ class FetchParent(QObject):
         ] = {}
         self._obsolete = False
         self._fetched: dict[DatabaseMapping, bool] = {}
-        self._busy = False
+        self._busy_db_maps: set[DatabaseMapping] = set()
         self._position: dict[DatabaseMapping, int] = {}
         self._timer = QTimer()
         self._timer.setSingleShot(True)
@@ -86,7 +86,7 @@ class FetchParent(QObject):
         self._timer.stop()
         self._changes_by_db_map.clear()
         self._fetched.clear()
-        self._busy = False
+        self._busy_db_maps.clear()
         self._position.clear()
 
     def position(self, db_map: DatabaseMapping) -> int:
@@ -112,7 +112,7 @@ class FetchParent(QObject):
                 items = [item]
                 last_handler = handler
             last_handler({db_map: items})
-        QTimer.singleShot(0, lambda: self.set_busy(False))
+            QTimer.singleShot(0, lambda db_map=db_map: self.set_busy(db_map, False))
 
     def bind_item(self, item: PublicItem, db_map: DatabaseMapping) -> None:
         # NOTE: If `item` is in the process of calling callbacks in another thread,
@@ -197,7 +197,7 @@ class FetchParent(QObject):
             obsolete: whether parent has become obsolete
         """
         if obsolete:
-            self.set_busy(False)
+            self._busy_db_maps.clear()
         self._obsolete = obsolete
 
     def is_fetched(self, db_map: DatabaseMapping) -> bool:
@@ -211,20 +211,23 @@ class FetchParent(QObject):
             fetched: whether parent has been fetched completely
         """
         if fetched:
-            self.set_busy(False)
+            self.set_busy(db_map, False)
         self._fetched[db_map] = fetched
 
-    @property
-    def is_busy(self) -> bool:
-        return self._busy
+    def is_busy(self, db_map: DatabaseMapping) -> bool:
+        return db_map in self._busy_db_maps
 
-    def set_busy(self, busy: bool) -> None:
+    def set_busy(self, db_map: DatabaseMapping, busy: bool) -> None:
         """Sets the busy status.
 
         Args:
+            db_map: Database mapping where busy status has changed.
             busy: whether parent is busy fetching
         """
-        self._busy = busy
+        if busy:
+            self._busy_db_maps.add(db_map)
+        else:
+            self._busy_db_maps.discard(db_map)
 
     def handle_items_added(self, db_map_data: DBMapMixedItems) -> None:
         """
