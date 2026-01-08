@@ -255,7 +255,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
-        url = "sqlite:///" + os.path.normcase(file_path)
+        url = "sqlite:///" + file_path
         self.load_db_urls([url])
 
     @Slot(bool)
@@ -267,7 +267,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
-        url = "sqlite:///" + os.path.normcase(file_path)
+        url = "sqlite:///" + file_path
         self.load_db_urls(self.db_urls + [url])
 
     @Slot()
@@ -283,7 +283,7 @@ class SpineDBEditorBase(QMainWindow):
             os.remove(file_path)
         except OSError:
             pass
-        url = "sqlite:///" + os.path.normcase(file_path)
+        url = "sqlite:///" + file_path
         self.load_db_urls([url], create=True)
 
     @Slot()

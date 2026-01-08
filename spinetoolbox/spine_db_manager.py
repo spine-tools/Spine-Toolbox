@@ -62,7 +62,7 @@ from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
 from .database_display_names import NameRegistry
 from .fetch_parent import FetchParent
-from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, plain_to_tool_tip
+from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, normcase_database_url_path, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
 from .parameter_type_validation import ParameterTypeValidator
 from .spine_db_commands import (
@@ -297,6 +297,7 @@ class SpineDBManager(QObject):
         """
         if isinstance(url, URL):
             url = url.render_as_string(hide_password=False)
+        url = normcase_database_url_path(url)
         return self._db_maps.get(url)
 
     def create_new_spine_database(self, url: str, logger: LoggerInterface, overwrite: bool = False):
@@ -324,6 +325,7 @@ class SpineDBManager(QObject):
 
     def close_session(self, url: str) -> None:
         """Pops any db map on the given url and closes its connection."""
+        url = normcase_database_url_path(url)
         self._no_prompt_urls.discard(url)
         try:
             db_map = self._db_maps.pop(url)
@@ -364,6 +366,7 @@ class SpineDBManager(QObject):
         """
         if isinstance(url, URL):
             url = url.render_as_string(hide_password=False)
+        url = normcase_database_url_path(url)
         db_map = self._db_maps.get(url)
         if db_map is not None:
             return db_map
@@ -1433,7 +1436,10 @@ class SpineDBManager(QObject):
             raise ValueError()
 
     def _is_url_available(self, url: Union[URL, str], logger: LoggerInterface) -> bool:
-        if str(url) in self.db_urls:
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
+        url = normcase_database_url_path(url)
+        if url in self.db_urls:
             message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
             logger.msg_error.emit(message)
             return False
