@@ -16,9 +16,10 @@ import os
 from PySide6.QtCore import QPoint, Slot
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
+from sqlalchemy.engine.url import URL
 from ...config import MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL
 from ...font import TOOLBOX_FONT
-from ...helpers import CharIconEngine, open_url
+from ...helpers import CharIconEngine, normcase_database_url_path, open_url
 from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 from ..editors import db_editor_registry
@@ -241,7 +242,12 @@ def open_db_editor(db_urls, db_mngr, reuse_existing_editor):
         if multi_db_editor.tab_load_success:
             multi_db_editor.show()
         return
-    existing = _get_existing_spine_db_editor(list(map(str, db_urls)))
+    normcased_urls = []
+    for url in db_urls:
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
+        normcased_urls.append(normcase_database_url_path(url))
+    existing = _get_existing_spine_db_editor(normcased_urls)
     if existing is None:
         multi_db_editor.add_new_tab(db_urls)
     else:

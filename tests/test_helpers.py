@@ -551,6 +551,7 @@ class TestDisplayByteSize:
 class TestNormcaseDatabaseUrlPath:
     def test_correctness(self):
         assert normcase_database_url_path("mysql://example.com/Path/MY_DB") == "mysql://example.com/Path/MY_DB"
+        assert normcase_database_url_path("sqlite://") == "sqlite://"
         if sys.platform == "win32":
             assert (
                 normcase_database_url_path("sqlite:///C:\\Users\\SansSerif\\in.sqlite")

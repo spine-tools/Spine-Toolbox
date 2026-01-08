@@ -1779,7 +1779,7 @@ def display_byte_size(size_bytes: int) -> tuple[float | int, str]:
 
 
 def normcase_database_url_path(url: str) -> str:
-    if not url.startswith("sqlite://"):
+    if not url.startswith("sqlite:///"):
         return url
     path = url[len("sqlite:///") :]
     return "sqlite:///" + os.path.normcase(path)

@@ -17,6 +17,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QPoint, QSettings
 from PySide6.QtWidgets import QApplication
+from spinetoolbox.helpers import normcase_database_url_path
 from spinetoolbox.multi_tab_windows import MultiTabWindowRegistry
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor, open_db_editor
 from spinetoolbox.spine_db_manager import SpineDBManager
@@ -93,7 +94,7 @@ class TestOpenDBEditor(TestCaseWithQApplication):
                 "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
                 self._db_editor_registry,
             ),
-            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show") as mock_show,
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
         ):
             self.assertFalse(self._db_editor_registry.has_windows())
             window = MultiSpineDBEditor(self._db_mngr, [])
@@ -103,5 +104,5 @@ class TestOpenDBEditor(TestCaseWithQApplication):
             open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
             self.assertEqual(window.tab_widget.count(), 2)
             tab = window.tab_widget.widget(1)
-            self.assertEqual(tab.db_urls, [self._db_url])
+            self.assertEqual(tab.db_urls, [normcase_database_url_path(self._db_url)])
             self._close_windows()
