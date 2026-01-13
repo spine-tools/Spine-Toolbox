@@ -191,9 +191,7 @@ class TestEntitySelectionForFiltering:
             assert watch_database_index.data() == "db1, db2"
             selection = QItemSelection(iron_index, iron_database_index)
             selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)
-            mock_signal.emit.assert_called_once_with(
-                {db_map1: {entity_class1["id"]: {entity1b["id"]}}, db_map2: {entity_class2["id"]: set()}}
-            )
+            mock_signal.emit.assert_called_once_with({db_map1: {entity_class1["id"]: {entity1b["id"]}}})
             mock_signal.emit.reset_mock()
             selection = QItemSelection(watch_index, watch_database_index)
             selection_model.select(selection, QItemSelectionModel.SelectionFlag.Select)

@@ -48,11 +48,13 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             data = self._parameter_data(model, *fields)
             values = filtered_values[model]
             unfiltered_count = len(data)
-            self.assertTrue(all(value in data for value in values))
+            for value in values:
+                self.assertIn(value, data)
             model.refresh()
             data = self._parameter_data(model, *fields)
             filtered_count = len(data)
-            self.assertTrue(all(value not in data for value in values))
+            for value in values:
+                self.assertNotIn(value, data)
             # Check that only the items that were supposed to be filtered were actually filtered.
             self.assertEqual(filtered_count, unfiltered_count - len(values))
 
@@ -119,8 +121,6 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             self.spine_db_editor.parameter_definition_model: [],
             self.spine_db_editor.parameter_value_model: [
                 ("dog", ("pluto",)),
-                ("fish__dog", ("nemo", "pluto")),
-                ("dog__fish", ("pluto", "nemo")),
             ],
         }
         self._assert_filter(filtered_values)

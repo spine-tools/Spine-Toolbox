@@ -749,25 +749,25 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
             self.assertEqual({i.name for i in data}, {"object_class_2"})
 
     def test_removing_element_removes_corresponding_entity(self):
-        object_tree_view = self._db_editor.ui.treeView_entity
-        object_model = object_tree_view.model()
-        root_index = object_model.index(0, 0)
-        object_model.fetchMore(root_index)
-        while object_model.rowCount(root_index) != 3:
-            QApplication.processEvents()
-        class_index = object_model.index(1, 0, root_index)
-        self.assertEqual(class_index.data(), "object_class_2")
-        object_model.fetchMore(class_index)
-        while object_model.rowCount(class_index) != 2:
-            QApplication.processEvents()
-        object_index = object_model.index(0, 0, class_index)
-        self.assertEqual(object_index.data(), "object_21")
-        object_tree_view.selectionModel().setCurrentIndex(
-            object_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
-        )
-        _remove_entity(object_tree_view)
         view = self._db_editor.ui.treeView_entity
         model = view.model()
+        root_index = model.index(0, 0)
+        model.fetchMore(root_index)
+        while model.rowCount(root_index) != 3:
+            QApplication.processEvents()
+        class_index = model.index(1, 0, root_index)
+        self.assertEqual(class_index.data(), "object_class_2")
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 2:
+            QApplication.processEvents()
+        object_index = model.index(0, 0, class_index)
+        self.assertEqual(object_index.data(), "object_21")
+        view.selectionModel().setCurrentIndex(object_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        while self._db_editor.entity_model.rowCount() != 2:
+            QApplication.processEvents()
+        _remove_entity(view)
+        while self._db_editor.entity_model.rowCount() != 0:
+            QApplication.processEvents()
         root_index = model.index(0, 0)
         model.fetchMore(root_index)
         while model.rowCount(root_index) != 3:
