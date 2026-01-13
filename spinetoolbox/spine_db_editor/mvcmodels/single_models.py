@@ -257,18 +257,11 @@ class FilterEntityMixin:
                     entity_ids = selected_entities_by_class[self.entity_class_id]
                 else:
                     entity_ids = set()
-                    dimension_id_list = self.db_map.mapped_table("entity_class")[self.entity_class_id][
-                        "dimension_id_list"
-                    ]
-                    for dimension_id in dimension_id_list:
-                        if dimension_id not in selected_entities_by_class:
-                            continue
-                        selected_entities = selected_entities_by_class[dimension_id]
-                        if selected_entities is Asterisk:
-                            continue
-                        entity_ids |= selected_entities
-                    if dimension_id_list and not entity_ids:
-                        entity_ids = Asterisk
+                    for class_id, entity_selection in selected_entities_by_class.items():
+                        if entity_selection is Asterisk:
+                            entity_ids = Asterisk
+                            break
+                        entity_ids.update(entity_selection)
         if entity_ids == self._filter_entity_ids:
             return False
         self._filter_entity_ids = entity_ids

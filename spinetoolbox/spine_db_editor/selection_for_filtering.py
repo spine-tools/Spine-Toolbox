@@ -39,7 +39,7 @@ class EntitySelectionForFiltering(QObject):
         class_ids = {}
         entity_ids = {}
         selection = self._selection_model.selection().indexes()
-        for index in _include_parents(selection):
+        for index in selection:
             if index.column() != 0:
                 continue
             if not index.parent().isValid():
@@ -105,18 +105,6 @@ def _remove_surplus_entity_id_asterisks(entity_selection: EntitySelection) -> No
         for class_id, entity_ids in class_selection.items():
             if entity_ids is Asterisk and class_table[class_id]["name"] in classes_with_non_asterisk_entity_selection:
                 class_selection[class_id] = set()
-
-
-def _include_parents(indexes: Iterable[QModelIndex]) -> Iterator[QModelIndex]:
-    parents = {}
-    for index in indexes:
-        yield index
-        parent = index.parent()
-        if not parent.isValid() or parent.data() == "root":
-            continue
-        parents[(parent.row(), parent.column(), id(parent.internalPointer()))] = parent
-    if parents:
-        yield from _include_parents(parents.values())
 
 
 class AlternativeSelectionForFiltering(QObject):
