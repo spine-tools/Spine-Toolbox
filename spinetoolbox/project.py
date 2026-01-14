@@ -263,12 +263,14 @@ class SpineToolboxProject(MetaObject):
         local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
         local_path.mkdir(parents=True, exist_ok=True)
         serialized_spec_paths = self._save_all_specifications(local_path)
+        settings_dict = self._settings.to_dict()
+        local_settings_data = gather_leaf_data(settings_dict, ProjectSettings.dict_local_entries(), pop=True)
         connection_dicts = [connection.to_dict() for connection in self._connections]
         local_connection_data = self._pop_local_data_from_connections_dict(connection_dicts)
         project_dict = {
             "version": LATEST_PROJECT_VERSION,
             "description": self.description,
-            "settings": self._settings.to_dict(),
+            "settings": settings_dict,
             "specifications": serialized_spec_paths,
             "connections": connection_dicts,
             "jumps": [jump.to_dict() for jump in self._jumps],
@@ -279,7 +281,7 @@ class SpineToolboxProject(MetaObject):
         with open(self.config_file, "w") as fp:
             self._dump(saved_dict, fp)
         local_data = {
-            "project": {"connections": local_connection_data},
+            "project": {"settings": local_settings_data, "connections": local_connection_data},
             "items": local_items_data,
         }
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:

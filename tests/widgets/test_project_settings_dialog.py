@@ -34,6 +34,30 @@ class TestProjectSettingsDialog:
         assert project.description == "Changed the description."
         dialog.close()
 
+    def test_from_author_mode_to_consumer_mode(self, spine_toolbox_with_project, parent_widget):
+        project = spine_toolbox_with_project.project()
+        assert project.settings.mode == "author"
+        dialog = ProjectSettingsDialog(parent_widget, project)
+        assert dialog._ui.author_mode_button.isChecked()
+        assert not dialog._ui.consumer_mode_button.isChecked()
+        dialog._ui.consumer_mode_button.setChecked(True)
+        dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
+        assert dialog.isHidden()
+        assert project.settings.mode == "consumer"
+        dialog.close()
+
+    def test_from_consumer_mode_to_author_mode(self, spine_toolbox_with_project, parent_widget):
+        project = spine_toolbox_with_project.project()
+        project.settings.mode = "consumer"
+        dialog = ProjectSettingsDialog(parent_widget, project)
+        assert not dialog._ui.author_mode_button.isChecked()
+        assert dialog._ui.consumer_mode_button.isChecked()
+        dialog._ui.author_mode_button.setChecked(True)
+        dialog._ui.button_box.button(QDialogButtonBox.StandardButton.Ok).click()
+        assert dialog.isHidden()
+        assert project.settings.mode == "author"
+        dialog.close()
+
     def test_disable_execute_all_action(self, spine_toolbox_with_project, parent_widget):
         project = spine_toolbox_with_project.project()
         assert project.settings.enable_execute_all

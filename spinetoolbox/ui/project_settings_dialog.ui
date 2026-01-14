@@ -19,7 +19,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>315</width>
     <height>300</height>
    </rect>
   </property>
@@ -36,6 +36,13 @@
        </property>
       </widget>
      </item>
+     <item row="0" column="1">
+      <widget class="QLineEdit" name="name_line_edit">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
      <item row="1" column="0">
       <widget class="QLabel" name="label_3">
        <property name="text">
@@ -47,6 +54,29 @@
       <widget class="QPlainTextEdit" name="description_text_edit"/>
      </item>
      <item row="2" column="1">
+      <widget class="QRadioButton" name="author_mode_button">
+       <property name="toolTip">
+        <string>In Author mode, changes will be saved to the regular &lt;project dir&gt;/.spinetoolbox/project.json file.</string>
+       </property>
+       <property name="text">
+        <string>&amp;Author mode</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QRadioButton" name="consumer_mode_button">
+       <property name="toolTip">
+        <string>In Consumer mode, changes will be saved to &lt;project dir&gt;/.spinetoolbox/local/ directory.</string>
+       </property>
+       <property name="text">
+        <string>&amp;Consumer mode</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
       <widget class="QCheckBox" name="enable_execute_all_check_box">
        <property name="text">
         <string>&amp;Enable &quot;Execute All&quot; button</string>
@@ -56,14 +86,7 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QLineEdit" name="name_line_edit">
-       <property name="readOnly">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item row="3" column="1">
+     <item row="5" column="1">
       <widget class="QCheckBox" name="store_paths_as_relative_check_box">
        <property name="text">
         <string>&amp;Store all paths as relative to project dir</string>
@@ -113,11 +136,13 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>name_line_edit</tabstop>
   <tabstop>description_text_edit</tabstop>
+  <tabstop>author_mode_button</tabstop>
+  <tabstop>consumer_mode_button</tabstop>
   <tabstop>enable_execute_all_check_box</tabstop>
   <tabstop>store_paths_as_relative_check_box</tabstop>
   <tabstop>delete_item_files_button</tabstop>
-  <tabstop>name_line_edit</tabstop>
  </tabstops>
  <resources/>
  <connections/>

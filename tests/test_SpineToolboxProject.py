@@ -586,8 +586,25 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:
             local_data_dict = json.load(fp)
         self.assertEqual(
-            local_data_dict, {"project": {"connections": {}}, "items": {"test item": {"a": {"b": 1, "d": 3}}}}
+            local_data_dict,
+            {
+                "project": {"settings": {"in_creator_mode": True}, "connections": {}},
+                "items": {"test item": {"a": {"b": 1, "d": 3}}},
+            },
         )
+
+    def test_load_when_storing_project_settings_local_data(self):
+        project = self.toolbox.project()
+        project.settings.in_creator_mode = False
+        project.save()
+        self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
+        with (
+            mock.patch.object(self.toolbox, "update_recent_projects"),
+            mock.patch.object(self.toolbox, "project_item_properties_ui"),
+            mock.patch.object(self.toolbox, "project_item_icon"),
+        ):
+            self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+        self.assertFalse(self.toolbox.project().settings.in_creator_mode)
 
     def test_load_when_storing_item_local_data(self):
         project = self.toolbox.project()

@@ -71,6 +71,8 @@ def merge_local_dict_to_project_dict(local_dict: dict[str, Any], project_dict: d
         local_dict: local data dict
         project_dict: project dict
     """
+    local_settings = local_dict.get("project", {}).get("settings", {})
+    merge_dicts(local_settings, project_dict["project"].get("settings", {}))
     local_connections = local_dict.get("project", {}).get("connections")
     connections = project_dict["project"].get("connections")
     if local_connections is not None and connections is not None:

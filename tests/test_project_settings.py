@@ -14,10 +14,24 @@ from spinetoolbox.project_settings import ProjectSettings
 
 class TestProjectSettings:
     def test_serialization(self):
-        settings = ProjectSettings(False, True)
+        settings = ProjectSettings(False, True, "consumer")
         serialized = settings.to_dict()
         assert ProjectSettings.from_dict(serialized) == settings
 
     def test_deserialize_v1(self):
         serialized = {"enable_execute_all": False}
         assert ProjectSettings.from_dict(serialized) == ProjectSettings(enable_execute_all=False)
+
+    def test_deserialize_v2(self):
+        serialized = {"enable_execute_all": False, "store_external_paths_as_relative": True}
+        assert ProjectSettings.from_dict(serialized) == ProjectSettings(
+            enable_execute_all=False, store_external_paths_as_relative=True
+        )
+
+    def test_local_entries_are_settings_fields(self):
+        settings = ProjectSettings()
+        for path in ProjectSettings.dict_local_entries():
+            obj = settings
+            for component in path:
+                assert hasattr(obj, component)
+                obj = getattr(obj, component)

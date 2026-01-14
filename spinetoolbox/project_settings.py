@@ -13,6 +13,7 @@
 """Contains project-specific settings."""
 from __future__ import annotations
 import dataclasses
+from typing import Literal
 
 
 @dataclasses.dataclass
@@ -21,6 +22,7 @@ class ProjectSettings:
 
     enable_execute_all: bool = True
     store_external_paths_as_relative: bool = False
+    mode: Literal["author", "consumer"] = "author"
 
     def to_dict(self) -> dict:
         """Serializes the settings into a dictionary.
@@ -41,3 +43,7 @@ class ProjectSettings:
             deserialized settings
         """
         return ProjectSettings(**settings_dict)
+
+    @staticmethod
+    def dict_local_entries() -> list[tuple[str, ...]]:
+        return [("mode",)]
