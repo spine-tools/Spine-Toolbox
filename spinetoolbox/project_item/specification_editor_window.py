@@ -217,6 +217,7 @@ class SpecificationEditorWindowBase(Generic[UI], QMainWindow):
         self.setWindowTitle(title)
         self.windowTitleChanged.emit(self.windowTitle())
 
+    @Slot(bool)
     def _save(self, exiting: bool = False) -> bool:
         """Saves spec.
 
