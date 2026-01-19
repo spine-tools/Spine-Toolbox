@@ -55,7 +55,6 @@ class ProjectItemIcon(QGraphicsPathItem):
         self._icon_color = icon_color
         self._moved_on_scene = False
         self.previous_pos = QPointF()
-        self.icon_group = {self}
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem(self)
         self.svg_item.setZValue(100)
@@ -366,7 +365,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         Returns:
              Whatever super() does with the value parameter
         """
-        if change == QGraphicsItem.ItemScenePositionHasChanged:
+        if change == QGraphicsItem.GraphicsItemChange.ItemScenePositionHasChanged:
             self._moved_on_scene = True
             self._reposition_name_item()
             self.update_links_geometry()

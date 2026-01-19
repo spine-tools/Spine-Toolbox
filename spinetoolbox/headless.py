@@ -19,6 +19,7 @@ from enum import IntEnum, unique
 import os
 import pathlib
 import sys
+from typing import Any
 import networkx as nx
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, QSettings, Signal, Slot
 from spine_engine import SpineEngineState
@@ -28,7 +29,13 @@ from spine_engine.logger_interface import LoggerInterface
 from spine_engine.server.util.zip_handler import ZipHandler
 from spine_engine.utils.helpers import ExecutionDirection, get_file_size
 from spine_engine.utils.serialization import deserialize_path
-from .config import LATEST_PROJECT_VERSION, PROJECT_ZIP_FILENAME
+from .config import (
+    LATEST_PROJECT_VERSION,
+    PROJECT_CONFIG_DIR_NAME,
+    PROJECT_CONSUMER_REPLAY_FILENAME,
+    PROJECT_LOCAL_DATA_DIR_NAME,
+    PROJECT_ZIP_FILENAME,
+)
 from .helpers import (
     HTMLTagFilter,
     make_settings_dict_for_engine,
@@ -50,6 +57,7 @@ from .load_specification import (
     plugins_dirs,
 )
 from .project_item.logging_connection import HeadlessConnection
+from .project_settings import ProjectSettings
 from .project_upgrader import (
     InvalidProjectDict,
     ProjectUpgradeFailed,
@@ -296,9 +304,21 @@ class ActionsWithProject(QObject):
             self._logger.msg_error.emit(str(error))
             return Status.ERROR
         merge_local_dict_to_project_dict(local_data_dict, project_dict)
-        self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts = open_project(
-            project_dict, self._project_dir, specification_local_data, self._logger
+        settings_dict, self._item_dicts, self._specification_dicts, self._connection_dicts, self._jump_dicts = (
+            open_project(project_dict, self._project_dir, specification_local_data, self._logger)
         )
+        settings = ProjectSettings.from_dict(settings_dict)
+        if settings.mode == "consumer":
+            replay_file_path = pathlib.Path(
+                self._project_dir,
+                PROJECT_CONFIG_DIR_NAME,
+                PROJECT_LOCAL_DATA_DIR_NAME,
+                PROJECT_CONSUMER_REPLAY_FILENAME,
+            )
+            if replay_file_path.exists():
+                self._logger.msg_warning.emit(
+                    "Warning: changes made to project in Consumer mode are not supported in headless mode."
+                )
         return Status.OK
 
     def _ensure_project_is_up_to_date(self, project_dict: dict) -> dict:
@@ -645,7 +665,7 @@ def headless_main(args: argparse.Namespace) -> int:
 
 def open_project(
     project_dict: dict, project_dir: pathlib.Path, local_specification_data: dict, logger: LoggerInterface
-) -> tuple[dict[str, dict], dict[str, list[dict]], list[dict], list[dict]]:
+) -> tuple[dict[str, Any], dict[str, dict], dict[str, list[dict]], list[dict], list[dict]]:
     """
     Opens a project.
 
@@ -660,6 +680,7 @@ def open_project(
     """
     specification_dicts = _specification_dicts(project_dict, project_dir, local_specification_data, logger)
     return (
+        project_dict["project"]["settings"],
         project_dict["items"],
         specification_dicts,
         project_dict["project"]["connections"],

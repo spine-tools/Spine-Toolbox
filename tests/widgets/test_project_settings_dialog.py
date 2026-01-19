@@ -98,3 +98,11 @@ class TestProjectSettingsDialog:
         assert not data_file.exists()
         assert item_dir.exists()
         dialog.close()
+
+    def test_consumer_mode_disabled_if_original_project_not_available(
+        self, spine_toolbox_with_project, parent_widget, monkeypatch
+    ):
+        project = spine_toolbox_with_project.project()
+        monkeypatch.setattr(project, "is_consumer_mode_possible", lambda: False)
+        dialog = ProjectSettingsDialog(parent_widget, project)
+        assert not dialog._ui.consumer_mode_button.isEnabled()

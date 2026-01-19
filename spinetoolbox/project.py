@@ -17,7 +17,6 @@ from itertools import chain
 import json
 import os
 import pathlib
-from pathlib import Path
 from typing import Any, Optional
 import networkx as nx
 from PySide6.QtCore import QCoreApplication, Signal, Slot
@@ -42,6 +41,7 @@ from .config import (
     FG_COLOR,
     INVALID_CHARS,
     LATEST_PROJECT_VERSION,
+    PROJECT_CONSUMER_REPLAY_FILENAME,
     PROJECT_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
@@ -72,6 +72,7 @@ from .project_upgrader import (
     check_project_version,
     upgrade_project,
 )
+from .pydantic_models.consumer_replay import CommandStack, build_command_list, set_superseded_commands_obsolete
 from .server.engine_client import EngineClient
 from .spine_engine_worker import SpineEngineWorker
 
@@ -145,6 +146,8 @@ class SpineToolboxProject(MetaObject):
         self._settings = settings
         self._engine_workers = []
         self._execution_in_progress = False
+        self._consumer_replay: CommandStack | None = None
+        self._first_consumer_index: int = 0
         self.project_dir: Optional[str] = None  # Full path to project directory
         self.config_dir: Optional[str] = None  # Full path to .spinetoolbox directory
         self.items_dir: Optional[str] = None  # Full path to items directory
@@ -177,6 +180,9 @@ class SpineToolboxProject(MetaObject):
     def set_settings(self, settings: ProjectSettings) -> None:
         self._settings = settings
         self.settings_updated.emit()
+
+    def is_consumer_mode_possible(self) -> bool:
+        return self._first_consumer_index <= self._toolbox.undo_stack.index()
 
     def has_items(self):
         """Returns True if project has project items.
@@ -259,9 +265,21 @@ class SpineToolboxProject(MetaObject):
         self._logger.msg.emit(msg)
 
     def save(self) -> None:
-        """Collects project information and objects into a dictionary and writes it to a JSON file."""
-        local_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+        """Collects project information and objects writes them to disk."""
+        local_path = pathlib.Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
         local_path.mkdir(parents=True, exist_ok=True)
+        if self._settings.mode == "consumer":
+            if self._first_consumer_index > self._toolbox.undo_stack.index():
+                # We should never reach this block, as you would need to undo the Author -> Consumer mode
+                # change before the stack index becomes less than first_consumer_index.
+                # Keeping it here as a safeguard; seeing the error box in real life should be considered a bug.
+                self._logger.error_box(
+                    "Saving project failed",
+                    "There are changes to the original project that cannot be saved in Consumer mode. "
+                    "Switch to Author mode in File -> Project settings... and try again.",
+                )
+                return
+            self._save_replay(local_path)
         serialized_spec_paths = self._save_all_specifications(local_path)
         settings_dict = self._settings.to_dict()
         local_settings_data = gather_leaf_data(settings_dict, ProjectSettings.dict_local_entries(), pop=True)
@@ -277,9 +295,11 @@ class SpineToolboxProject(MetaObject):
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
-        saved_dict = {"project": project_dict, "items": items_dict}
-        with open(self.config_file, "w") as fp:
-            self._dump(saved_dict, fp)
+        if self._settings.mode == "author":
+            saved_dict = {"project": project_dict, "items": items_dict}
+            with open(self.config_file, "w") as fp:
+                self._dump(saved_dict, fp)
+            self._reset_replay(local_path)
         local_data = {
             "project": {"settings": local_settings_data, "connections": local_connection_data},
             "items": local_items_data,
@@ -287,16 +307,32 @@ class SpineToolboxProject(MetaObject):
         with (local_path / PROJECT_LOCAL_DATA_FILENAME).open("w") as fp:
             self._dump(local_data, fp)
 
-    def _save_all_specifications(self, local_path):
+    def _save_replay(self, local_path: pathlib.Path) -> None:
+        commands = build_command_list(self._toolbox.undo_stack, self._first_consumer_index)
+        if self._consumer_replay is not None:
+            commands = [command.model_copy() for command in self._consumer_replay.commands] + commands
+        if not commands:
+            return
+        set_superseded_commands_obsolete(commands)
+        replay = CommandStack(commands=[command for command in commands if not command.is_obsolete])
+        with (local_path / PROJECT_CONSUMER_REPLAY_FILENAME).open("w") as fp:
+            self._dump(replay.model_dump(), fp)
+
+    def _reset_replay(self, local_path: pathlib.Path) -> None:
+        self._consumer_replay = None
+        self._first_consumer_index = self._toolbox.undo_stack.index()
+        (local_path / PROJECT_CONSUMER_REPLAY_FILENAME).unlink(missing_ok=True)
+
+    def _save_all_specifications(self, local_path: pathlib.Path) -> dict:
         """Writes all specifications except plugins to disk.
 
         Local specification data is also written to disk, including local data from plugins.
 
         Args:
-            local_path (Path):
+            local_path: Path to project's local data directory.
 
         Returns:
-            dict: specification local data that is supposed to be stored in a project specific place
+            specification local data that is supposed to be stored in a project specific place
         """
         serialized_spec_paths = {}
         specifications_local_data = {}
@@ -432,6 +468,15 @@ class SpineToolboxProject(MetaObject):
         jump_dicts = project_info["project"].get("jumps", [])
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
+        if self._settings.mode == "consumer":
+            replay_file_path = pathlib.Path(
+                self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_CONSUMER_REPLAY_FILENAME
+            )
+            if replay_file_path.exists():
+                with replay_file_path.open() as fp:
+                    self._consumer_replay = CommandStack.model_validate_json(fp.read())
+                for command in self._consumer_replay.commands:
+                    command.replay(self)
         return True
 
     def connection_from_dict(self, connection_dict):
@@ -440,7 +485,7 @@ class SpineToolboxProject(MetaObject):
     def jump_from_dict(self, jump_dict):
         return LoggingJump.from_dict(jump_dict, toolbox=self._toolbox)
 
-    def serialize_path(self, path: str | Path) -> PathDict:
+    def serialize_path(self, path: str | pathlib.Path) -> PathDict:
         is_relative = True if self._settings.store_external_paths_as_relative else None
         return serialize_path(path, self.project_dir, is_relative)
 
@@ -609,7 +654,7 @@ class SpineToolboxProject(MetaObject):
             local_data (dict): local data serialized into dict
             previous_name (str, optional): specification's earlier name if it has been renamed/replaced
         """
-        local_data_path = Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
+        local_data_path = pathlib.Path(self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
         if local_data_path.exists():
             with open(local_data_path) as local_data_file:
                 specification_local_data = json.load(local_data_file)

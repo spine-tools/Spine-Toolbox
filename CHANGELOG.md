@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Projects now have two modes: **Author** and **Consumer**.
+  The mode can be changed from **File -> Project settings...**.
+  In the Author mode (the default), everything works as before.
+  The Consumer mode, on the other hand, can be used when working with a shared project (a Git repository)
+  where you do not want to make any changes to `<project dir>/.spinetoolbox/project.json`.
+
+  - Currently, only project items' *x* and *y* coordinates are tracked in Consumer mode.
+  - Modifications to properties that get stored in `<project dir>/.spinetoolbox/local/` directory
+    still get saved.
+  - Modifications to specifications still modify the specification files.
+  - **Any other changes to the project that would go to `<project dir>/.spinetoolbox/project.json`
+    will be lost when the project is closed.**
+  - Headless mode does not support changes that have been made in the Consumer mode.
+    Currently, this is not an issue as item coordinates are not used during execution.
+
 ### Changed
 
 - The Entity table in Spine Database editor can now be properly filtered by selecting scenarios

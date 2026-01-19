@@ -18,7 +18,7 @@ from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QButtonGroup, QDialog, QDialogButtonBox, QMessageBox, QWidget
 from spinetoolbox.file_size_aggregator import AggregatorProcess
-from spinetoolbox.helpers import display_byte_size
+from spinetoolbox.helpers import display_byte_size, plain_to_rich
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.project_settings import ProjectSettings
 
@@ -43,6 +43,14 @@ class ProjectSettingsDialog(QDialog):
         self._ui.description_text_edit.setPlainText(self._project.description)
         if self._project.settings.mode == "author":
             self._ui.author_mode_button.setChecked(True)
+            consumer_mode_enabled = self._project.is_consumer_mode_possible()
+            self._ui.consumer_mode_button.setEnabled(consumer_mode_enabled)
+            if not consumer_mode_enabled:
+                self._ui.consumer_mode_button.setToolTip(
+                    plain_to_rich(
+                        "Consumer mode temporarily disabled. Enable it by redoing undone changes or save the project."
+                    )
+                )
         else:
             self._ui.consumer_mode_button.setChecked(True)
         self._ui.enable_execute_all_check_box.setChecked(self._project.settings.enable_execute_all)

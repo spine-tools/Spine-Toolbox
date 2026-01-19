@@ -41,6 +41,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    parameter_value_editor
    data_import_export
    spine_engine_server
+   best_practices
    terminology
    contribution_guide
    developer_documentation
