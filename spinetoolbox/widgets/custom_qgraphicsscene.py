@@ -71,6 +71,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self.connect_signals()
 
     def clear_icons_and_links(self):
+        self.icon_group.clear()
         for item in self.items():
             if isinstance(item, (Link, JumpLink, ProjectItemIcon)):
                 self.removeItem(item)

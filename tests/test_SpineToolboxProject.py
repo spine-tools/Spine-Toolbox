@@ -740,6 +740,7 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         icon = item.get_icon()
         self.assertEqual(icon.pos(), new_position)
         icon.scene().icon_group.add(icon)
+        self.assertEqual(len(icon.scene().icon_group), 1)
         new_position = QPointF(-2.3, 3.2)
         icon.setPos(new_position)
         self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
