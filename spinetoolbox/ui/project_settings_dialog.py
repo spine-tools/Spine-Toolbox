@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'project_settings_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.10.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,14 +28,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox, QDialogButtonBox,
     QFormLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPlainTextEdit, QPushButton, QSizePolicy, QSpacerItem,
-    QVBoxLayout, QWidget)
+    QPlainTextEdit, QPushButton, QRadioButton, QSizePolicy,
+    QSpacerItem, QVBoxLayout, QWidget)
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(400, 300)
+        Form.resize(315, 300)
         self.verticalLayout = QVBoxLayout(Form)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.formLayout = QFormLayout()
@@ -44,6 +44,12 @@ class Ui_Form(object):
         self.label.setObjectName(u"label")
 
         self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label)
+
+        self.name_line_edit = QLineEdit(Form)
+        self.name_line_edit.setObjectName(u"name_line_edit")
+        self.name_line_edit.setReadOnly(True)
+
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.name_line_edit)
 
         self.label_3 = QLabel(Form)
         self.label_3.setObjectName(u"label_3")
@@ -55,22 +61,27 @@ class Ui_Form(object):
 
         self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.description_text_edit)
 
+        self.author_mode_button = QRadioButton(Form)
+        self.author_mode_button.setObjectName(u"author_mode_button")
+        self.author_mode_button.setChecked(True)
+
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.author_mode_button)
+
+        self.consumer_mode_button = QRadioButton(Form)
+        self.consumer_mode_button.setObjectName(u"consumer_mode_button")
+
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.consumer_mode_button)
+
         self.enable_execute_all_check_box = QCheckBox(Form)
         self.enable_execute_all_check_box.setObjectName(u"enable_execute_all_check_box")
         self.enable_execute_all_check_box.setChecked(True)
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.enable_execute_all_check_box)
-
-        self.name_line_edit = QLineEdit(Form)
-        self.name_line_edit.setObjectName(u"name_line_edit")
-        self.name_line_edit.setReadOnly(True)
-
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.name_line_edit)
+        self.formLayout.setWidget(4, QFormLayout.ItemRole.FieldRole, self.enable_execute_all_check_box)
 
         self.store_paths_as_relative_check_box = QCheckBox(Form)
         self.store_paths_as_relative_check_box.setObjectName(u"store_paths_as_relative_check_box")
 
-        self.formLayout.setWidget(3, QFormLayout.ItemRole.FieldRole, self.store_paths_as_relative_check_box)
+        self.formLayout.setWidget(5, QFormLayout.ItemRole.FieldRole, self.store_paths_as_relative_check_box)
 
 
         self.verticalLayout.addLayout(self.formLayout)
@@ -100,10 +111,12 @@ class Ui_Form(object):
 
         self.verticalLayout.addWidget(self.button_box)
 
-        QWidget.setTabOrder(self.description_text_edit, self.enable_execute_all_check_box)
+        QWidget.setTabOrder(self.name_line_edit, self.description_text_edit)
+        QWidget.setTabOrder(self.description_text_edit, self.author_mode_button)
+        QWidget.setTabOrder(self.author_mode_button, self.consumer_mode_button)
+        QWidget.setTabOrder(self.consumer_mode_button, self.enable_execute_all_check_box)
         QWidget.setTabOrder(self.enable_execute_all_check_box, self.store_paths_as_relative_check_box)
         QWidget.setTabOrder(self.store_paths_as_relative_check_box, self.delete_item_files_button)
-        QWidget.setTabOrder(self.delete_item_files_button, self.name_line_edit)
 
         self.retranslateUi(Form)
 
@@ -114,6 +127,14 @@ class Ui_Form(object):
         Form.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.label.setText(QCoreApplication.translate("Form", u"Name:", None))
         self.label_3.setText(QCoreApplication.translate("Form", u"Description:", None))
+#if QT_CONFIG(tooltip)
+        self.author_mode_button.setToolTip(QCoreApplication.translate("Form", u"In Author mode, changes will be saved to the regular <project dir>/.spinetoolbox/project.json file.", None))
+#endif // QT_CONFIG(tooltip)
+        self.author_mode_button.setText(QCoreApplication.translate("Form", u"&Author mode", None))
+#if QT_CONFIG(tooltip)
+        self.consumer_mode_button.setToolTip(QCoreApplication.translate("Form", u"In Consumer mode, changes will be saved to <project dir>/.spinetoolbox/local/ directory.", None))
+#endif // QT_CONFIG(tooltip)
+        self.consumer_mode_button.setText(QCoreApplication.translate("Form", u"&Consumer mode", None))
         self.enable_execute_all_check_box.setText(QCoreApplication.translate("Form", u"&Enable \"Execute All\" button", None))
         self.store_paths_as_relative_check_box.setText(QCoreApplication.translate("Form", u"&Store all paths as relative to project dir", None))
         self.item_directory_size_label.setText(QCoreApplication.translate("Form", u"Calculating item directory sizes...", None))

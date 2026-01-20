@@ -12,6 +12,7 @@
 
 """Unit tests for the SpineToolboxProject class."""
 from contextlib import contextmanager
+from dataclasses import replace
 import json
 import os.path
 from pathlib import Path
@@ -20,20 +21,28 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 import networkx as nx
-from PySide6.QtCore import QVariantAnimation
+from PySide6.QtCore import QPointF, QVariantAnimation
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QGraphicsRectItem, QMessageBox
+from zmq.backend import second
 from spine_engine.project_item.executable_item_base import ExecutableItemBase
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.spine_engine import ItemExecutionFinishState
 from spine_engine.utils.helpers import shorten
-from spinetoolbox.config import LATEST_PROJECT_VERSION, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
+from spinetoolbox.config import (
+    LATEST_PROJECT_VERSION,
+    PROJECT_CONSUMER_REPLAY_FILENAME,
+    PROJECT_LOCAL_DATA_DIR_NAME,
+    PROJECT_LOCAL_DATA_FILENAME,
+)
 from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.project import node_successors
+from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.project_settings import ProjectSettings
+from spinetoolbox.pydantic_models.consumer_replay import CommandStack, MoveItem
 from tests.mock_helpers import (
     TestCaseWithQApplication,
     add_data_transformer,
@@ -586,8 +595,26 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         with Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME).open() as fp:
             local_data_dict = json.load(fp)
         self.assertEqual(
-            local_data_dict, {"project": {"connections": {}}, "items": {"test item": {"a": {"b": 1, "d": 3}}}}
+            local_data_dict,
+            {
+                "project": {"settings": {"mode": "author"}, "connections": {}},
+                "items": {"test item": {"a": {"b": 1, "d": 3}}},
+            },
         )
+
+    def test_load_when_storing_project_settings_local_data(self):
+        project = self.toolbox.project()
+        project.save()
+        project.settings.mode = "consumer"
+        project.save()
+        self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
+        with (
+            mock.patch.object(self.toolbox, "update_recent_projects"),
+            mock.patch.object(self.toolbox, "project_item_properties_ui"),
+            mock.patch.object(self.toolbox, "project_item_icon"),
+        ):
+            self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+        self.assertEqual(self.toolbox.project().settings.mode, "consumer")
 
     def test_load_when_storing_item_local_data(self):
         project = self.toolbox.project()
@@ -608,6 +635,147 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
             self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
         item = self.toolbox.project().get_item("test item")
         self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
+
+    def test_saving_item_movement_in_consumer_mode(self):
+        project = self.toolbox.project()
+        add_dc(project, self.toolbox.item_factories, "My connection")
+        item = project.get_item("My connection")
+        project.save()
+        with open(project.config_file) as fp:
+            project_data = fp.read()
+        icon = item.get_icon()
+        icon.scene().icon_group.add(icon)
+        new_position = QPointF(23.0, -55.5)
+        icon.setPos(new_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.update_settings(settings=replace(project.settings, mode="consumer"))
+        project.save()
+        with open(project.config_file) as fp:
+            self.assertEqual(fp.read(), project_data)
+        local_dir = Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+        replay_file_path = local_dir / PROJECT_CONSUMER_REPLAY_FILENAME
+        self.assertTrue(replay_file_path.exists())
+        with replay_file_path.open() as fp:
+            replay_data = CommandStack.model_validate_json(fp.read())
+        self.assertEqual(replay_data.commands, [MoveItem(item_name="My connection", x=23.0, y=-55.5)])
+
+    def test_saving_in_author_mode_after_consumer_mode_deletes_replay_file(self):
+        project = self.toolbox.project()
+        add_dc(project, self.toolbox.item_factories, "My connection")
+        item = project.get_item("My connection")
+        project.save()
+        icon = item.get_icon()
+        icon.scene().icon_group.add(icon)
+        new_position = QPointF(23.0, -55.5)
+        icon.setPos(new_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.update_settings(settings=replace(project.settings, mode="consumer"))
+        project.save()
+        local_dir = Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+        replay_file_path = local_dir / PROJECT_CONSUMER_REPLAY_FILENAME
+        self.assertTrue(replay_file_path.exists())
+        project.update_settings(settings=replace(project.settings, mode="author"))
+        project.save()
+        self.assertFalse(replay_file_path.exists())
+
+    def test_replay_is_recorded_from_latest_author_save(self):
+        project = self.toolbox.project()
+        add_dc(project, self.toolbox.item_factories, "My connection")
+        item = project.get_item("My connection")
+        icon = item.get_icon()
+        icon.scene().icon_group.add(icon)
+        first_position = QPointF(23.0, -55.5)
+        icon.setPos(first_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.save()
+        second_position = QPointF(5.0, 23.0)
+        icon.setPos(second_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.update_settings(settings=replace(project.settings, mode="consumer"))
+        project.save()
+        local_dir = Path(project.config_dir, PROJECT_LOCAL_DATA_DIR_NAME)
+        replay_file_path = local_dir / PROJECT_CONSUMER_REPLAY_FILENAME
+        self.assertTrue(replay_file_path.exists())
+        with replay_file_path.open() as fp:
+            replay_data = CommandStack.model_validate_json(fp.read())
+        self.assertEqual(replay_data.commands, [MoveItem(item_name="My connection", x=5.0, y=23.0)])
+
+    def test_load_project_with_replay_data(self):
+        project = self.toolbox.project()
+        add_dc(project, self.toolbox.item_factories, "My connection")
+        item = project.get_item("My connection")
+        project.save()
+        icon = item.get_icon()
+        icon.scene().icon_group.add(icon)
+        new_position = QPointF(23.0, -55.5)
+        icon.setPos(new_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.update_settings(settings=replace(project.settings, mode="consumer"))
+        project.save()
+        self.toolbox.close_project(ask_confirmation=False)
+        self.toolbox.open_project(project.project_dir)
+        project = self.toolbox.project()
+        item = project.get_item("My connection")
+        icon = item.get_icon()
+        self.assertEqual(icon.pos(), new_position)
+
+    def test_record_more_replay_data_on_top_of_existing_replay(self):
+        project = self.toolbox.project()
+        add_dc(project, self.toolbox.item_factories, "My connection")
+        item = project.get_item("My connection")
+        project.save()
+        with open(project.config_file) as fp:
+            project_data = fp.read()
+        icon = item.get_icon()
+        icon.scene().icon_group.add(icon)
+        new_position = QPointF(23.0, -55.5)
+        icon.setPos(new_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.update_settings(settings=replace(project.settings, mode="consumer"))
+        project.save()
+        self.toolbox.close_project(ask_confirmation=False)
+        self.toolbox.open_project(project.project_dir)
+        project = self.toolbox.project()
+        item = project.get_item("My connection")
+        icon = item.get_icon()
+        self.assertEqual(icon.pos(), new_position)
+        icon.scene().icon_group.add(icon)
+        self.assertEqual(len(icon.scene().icon_group), 1)
+        new_position = QPointF(-2.3, 3.2)
+        icon.setPos(new_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        project.save()
+        with open(project.config_file) as fp:
+            self.assertEqual(fp.read(), project_data)
+        self.toolbox.close_project(ask_confirmation=False)
+        self.toolbox.open_project(project.project_dir)
+        project = self.toolbox.project()
+        item = project.get_item("My connection")
+        icon = item.get_icon()
+        self.assertEqual(icon.pos(), new_position)
+
+    def test_only_changes_until_undo_stack_index_are_included_in_replay(self):
+        project = self.toolbox.project()
+        add_dc(project, self.toolbox.item_factories, "My connection")
+        item = project.get_item("My connection")
+        project.save()
+        icon = item.get_icon()
+        icon.scene().icon_group.add(icon)
+        first_position = QPointF(23.0, -55.5)
+        icon.setPos(first_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        second_position = QPointF(23.0, -55.5)
+        icon.setPos(second_position)
+        self.toolbox.undo_stack.push(MoveIconCommand(icon, project))
+        self.toolbox.undo_stack.undo()
+        project.update_settings(settings=replace(project.settings, mode="consumer"))
+        project.save()
+        self.toolbox.close_project(ask_confirmation=False)
+        self.toolbox.open_project(project.project_dir)
+        project = self.toolbox.project()
+        item = project.get_item("My connection")
+        icon = item.get_icon()
+        self.assertEqual(icon.pos(), first_position)
 
     def test_add_and_save_specification(self):
         project = self.toolbox.project()
@@ -758,6 +926,16 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         self.toolbox.undo_stack.undo()
         self.assertEqual(project.settings, ProjectSettings())
 
+    def test_is_consumer_mode_possible(self):
+        project = self.toolbox.project()
+        self.assertTrue(project.is_consumer_mode_possible())
+        project.update_settings(settings=replace(project.settings, enable_execute_all=False))
+        self.assertTrue(project.is_consumer_mode_possible())
+        project.save()
+        self.assertTrue(project.is_consumer_mode_possible())
+        self.toolbox.undo_stack.undo()
+        self.assertFalse(project.is_consumer_mode_possible())
+
     def _make_mock_executable(self, item):
         item_name = item.name
         item = self.toolbox.project().get_item(item_name)
@@ -865,7 +1043,3 @@ def temp_connection(source, source_position, target, target_position, toolbox):
         yield connection
     finally:
         connection.tear_down()
-
-
-if __name__ == "__main__":
-    unittest.main()

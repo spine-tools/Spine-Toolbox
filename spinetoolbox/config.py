@@ -45,12 +45,13 @@ PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.jso
 JUPYTER_KERNEL_TIME_TO_DEAD = 20
 
 # Project constants
-PROJECT_CONFIG_DIR_NAME = ".spinetoolbox"
-PROJECT_FILENAME = "project.json"
-PROJECT_LOCAL_DATA_DIR_NAME = "local"
-PROJECT_LOCAL_DATA_FILENAME = "project_local_data.json"
-SPECIFICATION_LOCAL_DATA_FILENAME = "specification_local_data.json"
-PROJECT_ZIP_FILENAME = "project_package"  # ZIP-file name for remote execution
+PROJECT_CONFIG_DIR_NAME: Literal[".spinetoolbox"] = ".spinetoolbox"
+PROJECT_FILENAME: Literal["project.json"] = "project.json"
+PROJECT_LOCAL_DATA_DIR_NAME: Literal["local"] = "local"
+PROJECT_LOCAL_DATA_FILENAME: Literal["project_local_data.json"] = "project_local_data.json"
+PROJECT_CONSUMER_REPLAY_FILENAME: Literal["consumer_replay.json"] = "consumer_replay.json"
+SPECIFICATION_LOCAL_DATA_FILENAME: Literal["specification_local_data.json"] = "specification_local_data.json"
+PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file name for remote execution
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; border-width: 1px; border-color: gray; border-style: groove;}"

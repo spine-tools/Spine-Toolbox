@@ -28,6 +28,7 @@ dependencies = [
     "pyzmq >=21.0",
     "spine_items>=0.24.3",
     "pywin32; os_name == 'nt'",
+    "pydantic>=2.12",
 ]
 
 [project.urls]
