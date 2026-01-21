@@ -215,7 +215,7 @@ class StackedViewMixin:
     def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
         self._clear_table_related_caches()
 
-    @Slot(list, QAbstractItemModel.LayoutChangeHint)
+    @Slot(list, int)
     def _handle_value_model_layout_changed(
         self, parents: list[QPersistentModelIndex], hint: QAbstractItemModel.LayoutChangeHint
     ) -> None:

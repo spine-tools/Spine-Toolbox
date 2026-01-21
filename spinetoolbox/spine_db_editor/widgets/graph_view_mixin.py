@@ -622,6 +622,7 @@ class GraphViewMixin:
         self.collapsed_db_map_entity_ids.clear()
         self.build_graph(force=force)
 
+    @Slot()
     def build_graph(self, persistent: bool = False, force: bool = False) -> None:
         """Builds graph from current selection of items.
 
