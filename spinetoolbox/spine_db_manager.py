@@ -157,7 +157,7 @@ class SpineDBManager(QObject):
         self.relationship_class_graph = RelationshipClassGraph(self)
         self.relationship_graph = RelationshipGraph(self)
         for graph in (self.relationship_class_graph, self.relationship_class_graph):
-            for signal in (self.items_added, self.items_updated, self.items_removed):
+            for signal in (self.items_updated, self.items_removed):
                 signal.connect(graph.maybe_invalidate_caches_after_data_changed)
             for signal in (self.database_refreshed, self.database_reset):
                 signal.connect(graph.invalidate_caches)
@@ -1135,6 +1135,13 @@ class SpineDBManager(QObject):
         self, item_type: ItemType, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
     ) -> None:
         """Pushes commands to add items to undo stack."""
+        if item_type == "entity_class" or item_type == "superclass_subclass":
+            for db_map in db_map_data:
+                self.relationship_class_graph.invalidate_caches(db_map)
+                self.relationship_graph.invalidate_caches(db_map)
+        elif item_type == "entity":
+            for db_map in db_map_data:
+                self.relationship_graph.invalidate_caches(db_map)
         if identifier is None:
             identifier = self.get_command_identifier()
         for db_map, data in db_map_data.items():
