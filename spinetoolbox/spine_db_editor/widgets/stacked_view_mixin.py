@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
-from typing import Optional
 from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt, Slot
 from PySide6.QtGui import QColor
 from spinedb_api import DatabaseMapping
