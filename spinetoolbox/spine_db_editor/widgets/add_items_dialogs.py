@@ -11,7 +11,9 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add items to databases."""
+from __future__ import annotations
 from itertools import product
+from typing import TYPE_CHECKING
 from PySide6.QtCore import QModelIndex, QSize, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -37,6 +39,7 @@ from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import name_from_dimensions, name_from_elements
 from ...helpers import DB_ITEM_SEPARATOR, DBMapDictItems, disconnect
 from ...mvcmodels.minimal_table_model import MinimalTableModel
+from ...spine_db_manager import SpineDBManager
 from ..mvcmodels.compound_table_model import CompoundTableModel
 from ..mvcmodels.empty_models import EmptyAddEntityOrClassRowModel
 from .custom_delegates import ManageEntitiesDelegate, ManageEntityClassesDelegate
@@ -49,19 +52,21 @@ from .manage_items_dialogs import (
     ShowIconColorEditorMixin,
 )
 
+if TYPE_CHECKING:
+    from .spine_db_editor import SpineDBEditor
+
 
 class AddReadyEntitiesDialog(DialogWithTableAndButtons):
     """A dialog to let the user add new 'ready' multidimensional entities."""
 
-    def __init__(self, parent, entity_class, entities, db_mngr, *db_maps):
-        """
-        Args:
-            parent (SpineDBEditor)
-            entity_class (dict)
-            entities (list(list(str))
-            db_mngr (SpineDBManager)
-            *db_maps: DatabaseMapping instances
-        """
+    def __init__(
+        self,
+        parent: SpineDBEditor,
+        entity_class: dict,
+        entities: list[tuple[str, ...]],
+        db_mngr: SpineDBManager,
+        *db_maps: DatabaseMapping,
+    ):
         super().__init__(parent, db_mngr)
         self.entity_class = entity_class
         self.entities = entities
@@ -80,7 +85,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
     def make_table_view(self):
         return QTableWidget(self)
 
-    def populate_table_view(self):
+    def populate_table_view(self) -> None:
         dimension_name_list = self.entity_class["dimension_name_list"]
         self.table_view.setRowCount(len(self.entities))
         self.table_view.setColumnCount(len(dimension_name_list) + 1)
@@ -104,12 +109,12 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
         self.table_view.cellClicked.connect(self._handle_table_view_cell_clicked)
         self.table_view.selectionModel().currentChanged.connect(self._handle_table_view_current_changed)
 
-    def _handle_table_view_cell_clicked(self, row, column):
+    def _handle_table_view_cell_clicked(self, row: int, column: int) -> None:
         item = self.table_view.item(row, 0)
         check_state = Qt.CheckState.Unchecked if item.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked
         item.setCheckState(check_state)
 
-    def _handle_table_view_current_changed(self, current, _previous):
+    def _handle_table_view_current_changed(self, current: QModelIndex, _previous: QModelIndex) -> None:
         if current.isValid():
             self.table_view.selectionModel().clearCurrentIndex()
 
@@ -123,7 +128,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
         self.db_mngr.add_items("entity", db_map_data)
         super().accept()
 
-    def get_db_map_data(self):
+    def get_db_map_data(self) -> DBMapDictItems:
         data = []
         for row in range(self.table_view.rowCount()):
             if self.table_view.item(row, 0).checkState() != Qt.CheckState.Checked:
@@ -137,13 +142,7 @@ class AddReadyEntitiesDialog(DialogWithTableAndButtons):
 class AddItemsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new db items."""
 
-    def __init__(self, parent, db_mngr, *db_maps):
-        """
-        Args:
-            parent (SpineDBEditor)
-            db_mngr (SpineDBManager)
-            *db_maps: DatabaseMapping instances
-        """
+    def __init__(self, parent: SpineDBEditor, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
         super().__init__(parent, db_mngr)
         self.db_maps = db_maps
         self.keyed_db_maps = db_mngr.name_registry.map_display_names_to_db_maps(db_maps)
@@ -160,13 +159,13 @@ class AddItemsDialog(ManageItemsDialog):
         self.remove_rows_button.clicked.connect(self.remove_selected_rows)
 
     @Slot(bool)
-    def remove_selected_rows(self, checked=True):
+    def remove_selected_rows(self, checked: bool = True) -> None:
         indexes = self.table_view.selectedIndexes()
         rows = list(set(ind.row() for ind in indexes))
         for row in sorted(rows, reverse=True):
             self.model.removeRows(row, 1)
 
-    def all_databases(self, row):
+    def all_databases(self, row: int) -> list[str]:
         """Returns a list of db names available for a given row."""
         return [self.db_mngr.name_registry.display_name(x.sa_url) for x in self.db_maps]
 
