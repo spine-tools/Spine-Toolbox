@@ -17,6 +17,7 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
     AddEntitiesDialog,
     AddEntityClassesDialog,
@@ -24,7 +25,7 @@ from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import (
 )
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from spinetoolbox.spine_db_manager import SpineDBManager
-from tests.mock_helpers import TestCaseWithQApplication, mock_clipboard_patch
+from tests.mock_helpers import TestCaseWithQApplication, assert_table_model_data, mock_clipboard_patch
 from tests.spine_db_editor.helpers import TestBase
 
 
@@ -452,6 +453,97 @@ class TestAddEntitiesDialog(TestBase):
         dialog = AddEntitiesDialog(self._db_editor, root_item, self._db_mngr, self._db_map)
         self.assertEqual(dialog.get_db_map_data(), {})
 
+    def test_entity_name_is_constructed_correctly_for_relationships_of_relationships(self):
+        self._db_mngr.add_items(
+            "entity_class",
+            {
+                self._db_map: [
+                    {"name": "A"},
+                    {"name": "B"},
+                    {"dimension_name_list": ["A", "B"]},
+                    {"dimension_name_list": ["A__B", "B"]},
+                ]
+            },
+        )
+        self._db_mngr.add_items(
+            "entity",
+            {
+                self._db_map: [
+                    {"entity_class_name": "A", "name": "a"},
+                    {"entity_class_name": "B", "name": "b"},
+                    {"entity_class_name": "A__B", "entity_byname": ("a", "b")},
+                    {"entity_class_name": "A__B__B", "entity_byname": ("a", "b", "b")},
+                ]
+            },
+        )
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        relationship_class_index = self._db_editor.entity_tree_model.index(3, 0, root_index)
+        self.assertEqual(relationship_class_index.data(), "A__B__B")
+        relationship_class_item = self._db_editor.entity_tree_model.item_from_index(relationship_class_index)
+        dialog = AddEntitiesDialog(self._db_editor, relationship_class_item, self._db_mngr, self._db_map)
+        model = dialog.model
+        model.fetchMore(QModelIndex())
+        self.assertEqual(model.columnCount(), 6)
+        self.assertEqual(model.headerData(0), "A__B")
+        self.assertEqual(model.headerData(1), "B")
+        self.assertEqual(model.headerData(2), "entity name")
+        self.assertEqual(model.headerData(3), "alternative")
+        self.assertEqual(model.headerData(4), "entity group")
+        self.assertEqual(model.headerData(5), "databases")
+        expected = [[None, None, None, "", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
+        a_b = DB_ITEM_SEPARATOR.join(("a", "b"))
+        model_index = model.index(0, 0)
+        model.setData(model_index, a_b)
+        expected = [[a_b, None, "a__b", "", None, self.db_codename], [None, None, None, "", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
+        model_index = model.index(0, 1)
+        model.setData(model_index, "b")
+        expected = [[a_b, "b", "a__b__b", "", None, self.db_codename], [None, None, None, "", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_entity_name_is_constructed_correctly_for_relationships_of_relationships_with_batch_set_data(self):
+        self._db_mngr.add_items(
+            "entity_class",
+            {
+                self._db_map: [
+                    {"name": "A"},
+                    {"name": "B"},
+                    {"dimension_name_list": ["A", "B"]},
+                    {"dimension_name_list": ["A__B", "B"]},
+                ]
+            },
+        )
+        self._db_mngr.add_items(
+            "entity",
+            {
+                self._db_map: [
+                    {"entity_class_name": "A", "name": "a"},
+                    {"entity_class_name": "B", "name": "b"},
+                    {"entity_class_name": "A__B", "entity_byname": ("a", "b")},
+                    {"entity_class_name": "A__B__B", "entity_byname": ("a", "b", "b")},
+                ]
+            },
+        )
+        root_index = self._db_editor.entity_tree_model.index(0, 0)
+        relationship_class_index = self._db_editor.entity_tree_model.index(3, 0, root_index)
+        self.assertEqual(relationship_class_index.data(), "A__B__B")
+        relationship_class_item = self._db_editor.entity_tree_model.item_from_index(relationship_class_index)
+        dialog = AddEntitiesDialog(self._db_editor, relationship_class_item, self._db_mngr, self._db_map)
+        model = dialog.model
+        model.fetchMore(QModelIndex())
+        self.assertEqual(model.columnCount(), 6)
+        self.assertEqual(model.headerData(0), "A__B")
+        self.assertEqual(model.headerData(1), "B")
+        self.assertEqual(model.headerData(2), "entity name")
+        self.assertEqual(model.headerData(3), "alternative")
+        self.assertEqual(model.headerData(4), "entity group")
+        self.assertEqual(model.headerData(5), "databases")
+        expected = [[None, None, None, "", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
+        a_b = DB_ITEM_SEPARATOR.join(("a", "b"))
+        model_index_1 = model.index(0, 0)
+        model_index_2 = model.index(0, 1)
+        model.batch_set_data([model_index_1, model_index_2], [a_b, "b"])
+        expected = [[a_b, "b", "a__b__b", "", None, self.db_codename], [None, None, None, "", None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
