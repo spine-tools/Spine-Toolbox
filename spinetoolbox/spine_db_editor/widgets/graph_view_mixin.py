@@ -1017,8 +1017,10 @@ class GraphViewMixin:
     def tear_down(self) -> bool:
         if not super().tear_down():
             return False
+        self._stop_layout_generators()
         self._thread_pool.clear()
         self._thread_pool.waitForDone(-1)
+        self.layout_gens.clear()
         return True
 
     def closeEvent(self, event):
