@@ -15,7 +15,6 @@ import gc
 import itertools
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
@@ -276,7 +275,3 @@ class TestMetadataTableModel(TestCaseWithQApplication):
         self.assertEqual(self._model.index(row, Column.NAME).data(), "")
         self.assertEqual(self._model.index(row, Column.VALUE).data(), "")
         self.assertEqual(self._model.index(row, Column.DB_MAP).data(), "database")
-
-
-if __name__ == "__main__":
-    unittest.main()
