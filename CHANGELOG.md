@@ -3,10 +3,11 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.5]
 
 ### Added
 
+- Python 3.14 is now supported.
 - Projects now have two modes: **Author** and **Consumer**.
   The mode can be changed from **File -> Project settings...**.
   In the Author mode (the default), everything works as before.
@@ -31,14 +32,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   visible items instead of all possible choices.
 - Selected scenarios/alternatives in Link properties are now stored in the local settings file in `.spinetoolbox/local/`.
   This should make sharing projects more convenient.
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.10.4]
 
