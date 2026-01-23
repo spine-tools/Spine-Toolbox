@@ -121,7 +121,7 @@ class GraphViewMixin:
         self._pvs_by_pname = {}
         self._val_ranges_by_pname = {}
         self._persisted_positions = {}
-        self._thread_pool = QThreadPool()
+        self._thread_pool = QThreadPool(self)
         self.layout_gens = {}
         self._layout_gen_id = None
         self._entity_fetch_parent = FlexibleFetchParent(
@@ -1013,6 +1013,13 @@ class GraphViewMixin:
         )
         self.qsettings.endGroup()
         return file_path
+
+    def tear_down(self) -> bool:
+        if not super().tear_down():
+            return False
+        self._thread_pool.clear()
+        self._thread_pool.waitForDone(-1)
+        return True
 
     def closeEvent(self, event):
         """Handle close window.
