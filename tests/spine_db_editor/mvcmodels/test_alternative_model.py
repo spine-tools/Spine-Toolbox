@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for :class:`AlternativeModel`."""
+import gc
 from pathlib import Path
 import pickle
 from tempfile import TemporaryDirectory
@@ -150,6 +151,7 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
         while not self._db_map1.closed and not self._db_map2.closed:
             QApplication.processEvents()
         self._db_mngr.clean_up()
+        gc.collect()
         self._db_editor.deleteLater()
 
     def test_paste_alternative_mime_data(self):
@@ -199,7 +201,3 @@ def _fetch_all_recursively(model):
         while item.can_fetch_more():
             item.fetch_more()
             qApp.processEvents()  # pylint: disable=undefined-variable
-
-
-if __name__ == "__main__":
-    unittest.main()
