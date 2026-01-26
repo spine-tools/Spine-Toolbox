@@ -34,7 +34,13 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
 )
 from ...font import TOOLBOX_FONT
 from ...helpers import DB_ITEM_SEPARATOR, object_icon
-from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import (
+    DB_MAP_ROLE,
+    HAS_METADATA_ROLE,
+    INVALID_TYPE,
+    PARAMETER_TYPE_VALIDATION_ROLE,
+    PARSED_ROLE,
+)
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
@@ -391,11 +397,9 @@ class TypeValidationIndicatorMixin:
             width = rect.width()
             height = rect.height()
             indicator_left = left + width - self.INDICATOR_WIDTH
-            indicator_rect = QRect(indicator_left, rect.y(), self.INDICATOR_WIDTH, height)
+            indicator_rect = QRect(indicator_left - 5, rect.y() + 5, self.INDICATOR_WIDTH, height)
             rect.setRight(indicator_left)
             text_position = indicator_rect.center()
-            text_position.setY(text_position.y() + 5)
-            text_position.setX(text_position.x() - 5)
             painter.setFont(self._exclamation_font)
             painter.setPen(self.EXCLAMATION_COLOR)
             painter.drawText(text_position, "\uf06a")
@@ -471,6 +475,23 @@ class EntityClassNameDelegate(TableDelegate):
         return editor
 
 
+class MetadataIndicatorMixin:
+    INDICATOR_WIDTH: ClassVar[int] = 18
+    ICON: ClassVar[QIcon] = QIcon(":icons/metadata-indicator.svg")
+
+    def paint(self, painter, option, index):
+        if index.data(HAS_METADATA_ROLE):
+            rect = option.rect
+            left = rect.x()
+            width = rect.width()
+            height = rect.height()
+            indicator_left = left + width - self.INDICATOR_WIDTH
+            indicator_rect = QRect(indicator_left, rect.y(), self.INDICATOR_WIDTH, height)
+            rect.setRight(indicator_left)
+            self.ICON.paint(painter, indicator_rect)
+        super().paint(painter, option, index)
+
+
 class ParameterNameDelegate(TableDelegate):
     """A delegate for the entity parameter name."""
 
@@ -491,6 +512,10 @@ class ParameterNameDelegate(TableDelegate):
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
+
+
+class ParameterNameDelegateWithIndicator(MetadataIndicatorMixin, ParameterNameDelegate):
+    pass
 
 
 class EntityBynameDelegate(TableDelegate):
@@ -688,6 +713,10 @@ class PlainTextDelegate(TableDelegate):
     def createEditor(self, parent, option, index):
         editor = CustomLineEditor(parent)
         return editor
+
+
+class PlainTextDelegateWithMetadataIndicator(MetadataIndicatorMixin, TableDelegate):
+    pass
 
 
 class PlainNumberDelegate(TableDelegate):

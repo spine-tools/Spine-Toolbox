@@ -77,10 +77,12 @@ from .custom_delegates import (
     MetadataDelegate,
     ParameterDefaultValueDelegate,
     ParameterNameDelegate,
+    ParameterNameDelegateWithIndicator,
     ParameterTypeListDelegate,
     ParameterValueDelegate,
     PlainNumberDelegate,
     PlainTextDelegate,
+    PlainTextDelegateWithMetadataIndicator,
     TableDelegate,
     ValueDelegateWithIndicator,
     ValueListDelegate,
@@ -538,7 +540,6 @@ class ParameterValueTableViewBase(ParameterTableView):
     def create_delegates(self):
         super().create_delegates()
         model = self.model()
-        self._make_delegate(model.field_to_header("parameter_definition_name"), ParameterNameDelegate)
         self._make_delegate(model.field_to_header("alternative_name"), AlternativeNameDelegate)
         delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
@@ -550,6 +551,7 @@ class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, P
 
     def create_delegates(self):
         super().create_delegates()
+        self._make_delegate(self.model().field_to_header("parameter_definition_name"), ParameterNameDelegate)
         delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
@@ -567,6 +569,9 @@ class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilt
 
     def create_delegates(self):
         super().create_delegates()
+        self._make_delegate(
+            self.model().field_to_header("parameter_definition_name"), ParameterNameDelegateWithIndicator
+        )
         delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
@@ -670,7 +675,7 @@ class EntityTableView(UsesAutoFilter, StackedTableView):
     def create_delegates(self):
         super().create_delegates()
         model = self.model()
-        self._make_delegate(model.field_to_header("name"), PlainTextDelegate)
+        self._make_delegate(model.field_to_header("name"), PlainTextDelegateWithMetadataIndicator)
         delegate = self._make_delegate(model.field_to_header("entity_byname"), EntityBynameDelegate)
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
         self._make_delegate(model.field_to_header("description"), PlainTextDelegate)
