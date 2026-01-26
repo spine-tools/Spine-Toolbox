@@ -15,8 +15,8 @@ from numbers import Number
 import re
 from typing import ClassVar
 from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QRegularExpressionValidator
-from PySide6.QtWidgets import QStyledItemDelegate, QWidget
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QRegularExpressionValidator
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
 from spinedb_api import DatabaseMapping, to_database
 from spinedb_api.parameter_value import join_value_and_type
 from spinedb_api.temp_id import TempId
@@ -305,8 +305,6 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
     """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
-    EXCLAMATION_COLOR: ClassVar[QColor] = QColor("red")
-    INDICATOR_WIDTH: ClassVar[int] = 18
 
     def __init__(self, parent, db_mngr):
         """
@@ -315,25 +313,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
             db_mngr (SpineDBManager): database manager
         """
         super().__init__(parent, db_mngr)
-        self._exclamation_font = _make_exclamation_font()
         self._db_value_list_lookup = {}
-
-    def paint(self, painter, option, index):
-        validation_state = index.data(PARAMETER_TYPE_VALIDATION_ROLE)
-        if validation_state == INVALID_TYPE:
-            left = option.rect.x()
-            width = option.rect.width()
-            height = option.rect.height()
-            indicator_left = left + width - self.INDICATOR_WIDTH
-            indicator_rect = QRect(indicator_left, option.rect.y(), self.INDICATOR_WIDTH, height)
-            option.rect.setRight(indicator_left)
-            text_position = indicator_rect.center()
-            text_position.setY(text_position.y() + 5)
-            text_position.setX(text_position.x() - 5)
-            painter.setFont(self._exclamation_font)
-            painter.setPen(self.EXCLAMATION_COLOR)
-            painter.drawText(text_position, "\uf06a")
-        super().paint(painter, option, index)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -395,6 +375,33 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
         return self._create_or_request_parameter_value_editor(parent, index)
 
 
+class TypeValidationIndicatorMixin:
+    EXCLAMATION_COLOR: ClassVar[QColor] = QColor("red")
+    INDICATOR_WIDTH: ClassVar[int] = 18
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._exclamation_font = _make_exclamation_font()
+
+    def paint(self, painter, option, index):
+        validation_state = index.data(PARAMETER_TYPE_VALIDATION_ROLE)
+        if validation_state == INVALID_TYPE:
+            rect = option.rect
+            left = rect.x()
+            width = rect.width()
+            height = rect.height()
+            indicator_left = left + width - self.INDICATOR_WIDTH
+            indicator_rect = QRect(indicator_left, rect.y(), self.INDICATOR_WIDTH, height)
+            rect.setRight(indicator_left)
+            text_position = indicator_rect.center()
+            text_position.setY(text_position.y() + 5)
+            text_position.setX(text_position.x() - 5)
+            painter.setFont(self._exclamation_font)
+            painter.setPen(self.EXCLAMATION_COLOR)
+            painter.drawText(text_position, "\uf06a")
+        super().paint(painter, option, index)
+
+
 class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the default value."""
 
@@ -406,6 +413,10 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
         if len(value_lists) == 1:
             return value_lists[0]["id"]
         return None
+
+
+class DefaultValueDelegateWithIndicator(TypeValidationIndicatorMixin, ParameterDefaultValueDelegate):
+    pass
 
 
 class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
@@ -424,6 +435,10 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
         return None
+
+
+class ValueDelegateWithIndicator(TypeValidationIndicatorMixin, ParameterValueDelegate):
+    pass
 
 
 class ValueListDelegate(TableDelegate):

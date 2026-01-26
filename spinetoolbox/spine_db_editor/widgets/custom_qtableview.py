@@ -82,6 +82,7 @@ from .custom_delegates import (
     PlainNumberDelegate,
     PlainTextDelegate,
     TableDelegate,
+    ValueDelegateWithIndicator,
     ValueListDelegate,
 )
 from .custom_menus import AutoFilterMenu
@@ -498,6 +499,11 @@ class WithUndoStack:
 
 class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
 
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+
     def _plot_selection(self, selection, plot_widget=None):
         return
 
@@ -505,6 +511,11 @@ class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoSta
 class ParameterDefinitionTableView(
     AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, ParameterDefinitionTableViewBase
 ):
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
@@ -537,6 +548,11 @@ class ParameterValueTableViewBase(ParameterTableView):
 
 class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
 
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+
     def _plot_selection(self, selection, plot_widget=None):
         return
 
@@ -548,6 +564,11 @@ class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilt
         field_header("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP),
         field_header("alternative_name", PARAMETER_VALUE_FIELD_MAP),
     )
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
