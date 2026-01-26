@@ -13,11 +13,13 @@
 """Custom item delegates."""
 from numbers import Number
 import re
+from typing import ClassVar
 from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QRegularExpressionValidator
-from PySide6.QtWidgets import QStyledItemDelegate
-from spinedb_api import to_database
+from PySide6.QtWidgets import QStyledItemDelegate, QWidget
+from spinedb_api import DatabaseMapping, to_database
 from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.temp_id import TempId
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
     CheckListEditor,
@@ -233,16 +235,16 @@ class TableDelegate(QStyledItemDelegate):
     """Base class for all custom stacked table delegates.
 
     Attributes:
-        db_mngr (SpineDBManager): database manager
+        db_mngr: database manager
     """
 
     data_committed = Signal(QModelIndex, object)
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent: QWidget, db_mngr: SpineDBManager):
         """
         Args:
-            parent (QWidget): parent widget
-            db_mngr (SpineDBManager): database manager
+            parent: parent widget
+            db_mngr: database manager
         """
         super().__init__(parent)
         self.db_mngr = db_mngr
@@ -259,12 +261,12 @@ class TableDelegate(QStyledItemDelegate):
         if isinstance(editor, (SearchBarEditor, CheckListEditor)):
             editor.update_geometry(option)
 
-    def _close_editor(self, editor, index):
+    def _close_editor(self, editor: QWidget, index: QModelIndex) -> None:
         """Closes editor. Needed by SearchBarEditor."""
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
-    def _get_db_map(self, index):
+    def _get_db_map(self, index: QModelIndex) -> DatabaseMapping:
         """Returns the db_map for the database at given index or None if not set yet."""
         model = index.model()
         header = model.horizontal_header_labels()
@@ -303,8 +305,8 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
     """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
-    EXCLAMATION_COLOR = QColor("red")
-    INDICATOR_WIDTH = 18
+    EXCLAMATION_COLOR: ClassVar[QColor] = QColor("red")
+    INDICATOR_WIDTH: ClassVar[int] = 18
 
     def __init__(self, parent, db_mngr):
         """
@@ -359,15 +361,15 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
             return editor
         self.parameter_value_editor_requested.emit(index)
 
-    def _get_value_list_id(self, index, db_map):
+    def _get_value_list_id(self, index: QModelIndex, db_map: DatabaseMapping) -> TempId | None:
         """Returns a value list id for the given index and db_map.
 
         Args:
-            index (QModelIndex): value list's index
-            db_map (DatabaseMapping): database mapping
+            index: value list's index
+            db_map: database mapping
 
         Returns:
-            int: value list id
+            value list id
         """
         raise NotImplementedError()
 
@@ -380,7 +382,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
         if not db_map:
             return None
         value_list_id = self._get_value_list_id(index, db_map)
-        if value_list_id:
+        if value_list_id is not None:
             display_value_list = self.db_mngr.get_parameter_value_list(
                 db_map, value_list_id, Qt.ItemDataRole.DisplayRole
             )
@@ -403,6 +405,7 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
         value_lists = self.db_mngr.get_items_by_field(db_map, "parameter_value_list", "name", value_list_name)
         if len(value_lists) == 1:
             return value_lists[0]["id"]
+        return None
 
 
 class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
@@ -420,6 +423,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         }
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
+        return None
 
 
 class ValueListDelegate(TableDelegate):
@@ -453,7 +457,7 @@ class EntityClassNameDelegate(TableDelegate):
 
 
 class ParameterNameDelegate(TableDelegate):
-    """A delegate for the object parameter name."""
+    """A delegate for the entity parameter name."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
