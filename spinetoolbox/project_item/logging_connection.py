@@ -12,6 +12,7 @@
 
 """Contains logging connection and jump classes."""
 from spine_engine.project_item.connection import ConnectionBase, FilterSettings, Jump, ResourceConvertingConnection
+from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from spinedb_api.filters.alternative_filter import ALTERNATIVE_FILTER_TYPE
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
@@ -120,18 +121,19 @@ class HeadlessConnection(ResourceConvertingConnection):
         if self._legacy_resource_filter_ids is not None:
             self._convert_legacy_resource_filter_ids_to_filter_settings()
 
-    def replace_resources_from_source(self, old, new):
+    def replace_resources_from_source(self, old: list[ProjectItemResource], new: list[ProjectItemResource]) -> None:
         """Replaces existing resources by new ones.
 
         Args:
-            old (list of ProjectItemResource): old resources
-            new (list of ProjectItemResource): new resources
+            old: old resources
+            new: new resources
         """
         for old_resource, new_resource in zip(old, new):
             self._resources.discard(old_resource)
             old_filters = self._filter_settings.known_filters.pop(old_resource.label, None)
             if new_resource.type_ == "database":
-                self._resources.add(new_resource)
+                if new_resource.filterable:
+                    self._resources.add(new_resource)
                 if old_filters is not None:
                     self._filter_settings.known_filters[new_resource.label] = old_filters
 

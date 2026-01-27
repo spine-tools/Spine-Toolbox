@@ -48,6 +48,18 @@ class TestLoggingConnection(unittest.TestCase):
         )
         connection.tear_down()
 
+    def test_replace_resource_from_source_with_non_filterable_database_resource(self):
+        toolbox = MagicMock()
+        connection = LoggingConnection("source", "bottom", "destination", "top", toolbox=toolbox)
+        connection.link = MagicMock()
+        original = database_resource("source", "sqlite:///db.sqlite", label="database", filterable=False)
+        connection.receive_resources_from_source([original])
+        self.assertEqual(connection.database_resources, set())
+        modified = database_resource("source", "sqlite:///db2.sqlite", label="new database", filterable=False)
+        connection.replace_resources_from_source([original], [modified])
+        self.assertEqual(connection.database_resources, set())
+        connection.tear_down()
+
     def test_set_filter_default_online_status(self):
         toolbox = MagicMock()
         filter_settings = FilterSettings()
