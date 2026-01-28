@@ -394,7 +394,13 @@ in Spine Database API documentation.
 Viewing Item Metadata
 =====================
 
-You can find metadata for currently selected entities or parameter values under **Item metadata**:
+The entities and parameter values that have metadata associated with them get a metadata tag next to their names
+in **Entity** and **Parameter value** tables:
+
+.. image:: img/entity_metadata_indicator.png
+   :align: center
+
+**Item metadata** shows the associated metadata when any cell on a tagged row is selected:
 
 .. image:: img/item_metadata.png
    :align: center
