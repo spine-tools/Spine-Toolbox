@@ -17,6 +17,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
+import pytest
 from spinedb_api import Array, Asterisk, Map, TimeSeriesVariableResolution
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
@@ -44,6 +45,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         ]
         header = [model.headerData(i) for i in range(model.columnCount())]
         self.assertEqual(header, expected_header)
+        model.tear_down()
 
     def test_data_for_single_parameter_definition(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -53,6 +55,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             QApplication.processEvents()
         expected = [["oc", "p", None, None, "None", None, self.db_codename]]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -63,6 +66,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             QApplication.processEvents()
         expected = [["rc", "p", None, None, "None", None, self.db_codename]]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_model_updates_when_entity_class_is_removed(self):
         self._db_map.add_entity_class(name="oc1")
@@ -82,6 +86,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         while model.rowCount() == 2:
             QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
+        model.tear_down()
 
     def test_index_name_returns_sane_label(self):
         self._db_map.add_entity_class(name="Object")
@@ -90,6 +95,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         fetch_model(model)
         index = model.index(0, 3)
         self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - Object - x")
+        model.tear_down()
 
     def test_updating_definition_triggers_value_type_validation(self):
         with self._db_map:
@@ -120,6 +126,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             )
         while self._db_mngr.parameter_type_validator._sent_task_count != 0:
             QApplication.processEvents()
+        model.tear_down()
 
     def test_restore_db_maps(self):
         model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
@@ -145,6 +152,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             assert_table_model_data(model, expected, self)
             self._db_mngr.close_session(url)
             gc.collect()
+        model.tear_down()
 
     def test_signals_when_non_committed_data_is_added(self):
         with self._db_map:
@@ -177,6 +185,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             ["Gadget", "Y", None, None, "None", None, self.db_codename],
         ]
         assert_table_model_data_pytest(model, expected)
+        model.tear_down()
 
     def test_set_auto_filter_in_default_value_column_with_empty_data_and_null_values(self):
         with self._db_map:
@@ -195,6 +204,49 @@ class TestCompoundParameterDefinitionModel(TestBase):
             ["Gadget", "Z", None, None, "None", None, self.db_codename],
         ]
         assert_table_model_data_pytest(model, expected)
+        model.tear_down()
+
+    def test_adding_metadata_emits_data_changed(self):
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items(
+            "parameter_value",
+            {
+                self._db_map: [
+                    {
+                        "parameter_definition_name": "p",
+                        "parsed_value": 23.0,
+                        "entity_byname": ("o",),
+                        "entity_class_name": "oc",
+                        "alternative_name": "Base",
+                    }
+                ]
+            },
+        )
+        self._db_mngr.add_items("metadata", {self._db_map: [{"name": "author", "value": "A. Uthor"}]})
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        with signal_waiter(model.dataChanged) as waiter:
+            self._db_mngr.add_items(
+                "parameter_value_metadata",
+                {
+                    self._db_map: [
+                        {
+                            "entity_class_name": "oc",
+                            "entity_byname": ("o",),
+                            "parameter_definition_name": "p",
+                            "alternative_name": "Base",
+                            "metadata_name": "author",
+                            "metadata_value": "A. Uthor",
+                        }
+                    ]
+                },
+            )
+            waiter.wait()
+            self.assertEqual(waiter.args, (model.index(0, 2), model.index(0, 2), [Qt.ItemDataRole.DisplayRole]))
+        model.tear_down()
 
 
 class TestCompoundParameterValueModel(TestBase):
@@ -210,6 +262,7 @@ class TestCompoundParameterValueModel(TestBase):
         ]
         header = [model.headerData(i) for i in range(model.columnCount())]
         self.assertEqual(header, expected_header)
+        model.tear_down()
 
     def test_data_for_single_parameter(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -234,6 +287,7 @@ class TestCompoundParameterValueModel(TestBase):
             QApplication.processEvents()
         expected = [["oc", "o", "p", "Base", "23.0", self.db_codename]]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_data_for_single_parameter_in_multidimensional_entity(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
@@ -262,6 +316,7 @@ class TestCompoundParameterValueModel(TestBase):
             QApplication.processEvents()
         expected = [["rc", "o", "p", "Base", "23.0", self.db_codename]]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_index_name_returns_sane_label(self):
         self._db_map.add_entity_class(name="Object")
@@ -280,6 +335,7 @@ class TestCompoundParameterValueModel(TestBase):
         self.assertEqual(
             model.index_name(index), "TestCompoundParameterValueModel_db - Object - mysterious cube - x - Base"
         )
+        model.tear_down()
 
     def test_removing_first_of_two_rows(self):
         self._db_map.add_entity_class(name="Object")
@@ -323,6 +379,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_removing_second_of_two_uncommitted_rows(self):
         self._db_map.add_entity_class(name="Object")
@@ -357,6 +414,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_restoring_removed_item_keeps_empty_row_last(self):
         self._db_map.add_entity_class(name="Object")
@@ -397,6 +455,7 @@ class TestCompoundParameterValueModel(TestBase):
             QApplication.processEvents()
         self.assertEqual(model.rowCount(), 0)
         self.assertEqual(model.sub_models, [])
+        model.tear_down()
 
     def test_removing_value_from_another_alternative_that_is_selected_for_filtering_works(self):
         self._db_map.add_entity_class(name="Object")
@@ -433,6 +492,7 @@ class TestCompoundParameterValueModel(TestBase):
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_restoring_removed_value_from_another_alternative_that_is_selected_for_filtering_works(self):
         self._db_map.add_entity_class(name="Object")
@@ -471,6 +531,7 @@ class TestCompoundParameterValueModel(TestBase):
         assert_table_model_data(model, expected, self)
         value_in_base.restore()
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_remove_every_other_row(self):
         self._db_map.add_entity_class(name="Object")
@@ -525,6 +586,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_remove_item_from_another_entity_class_than_selected(self):
         object_class = self._db_map.add_entity_class(name="Object")
@@ -575,6 +637,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_remove_visible_and_hidden_items(self):
         alternative = self._db_map.add_alternative(name="alt")
@@ -635,6 +698,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_updates_when_not_all_entities_are_visible(self):
         self._db_map.add_alternative(name="alt")
@@ -698,6 +762,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_updating_definition_triggers_value_type_validation(self):
         with self._db_map:
@@ -730,7 +795,6 @@ class TestCompoundParameterValueModel(TestBase):
             self._db_mngr.update_items(
                 "parameter_definition", {self._db_map: [{"id": weight["id"], "parameter_type_list": ("float",)}]}
             )
-
             waiter.wait()
             args_as_dict = dict(zip(*waiter.args))
             self.assertEqual(
@@ -741,6 +805,7 @@ class TestCompoundParameterValueModel(TestBase):
             )
         while self._db_mngr.parameter_type_validator._sent_task_count != 0:
             QApplication.processEvents()
+        model.tear_down()
 
     def test_update_parameter_value(self):
         with self._db_map:
@@ -766,6 +831,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Widget", "gadget", "weight", "Base", "too much", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
     def test_set_auto_filter_in_value_column(self):
         with self._db_map:
@@ -830,6 +896,7 @@ class TestCompoundParameterValueModel(TestBase):
             ["Widget", "object", "map", "Base", "Map", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
 
 
 class TestCompoundEntityAlternativeModel:
@@ -844,6 +911,7 @@ class TestCompoundEntityAlternativeModel:
         ]
         header = [model.headerData(i) for i in range(model.columnCount())]
         assert header == expected_header
+        model.tear_down()
 
     def test_data_for_single_entity_alternative(self, db_mngr, db_map, db_name, parent_object):
         with db_map:
@@ -856,6 +924,7 @@ class TestCompoundEntityAlternativeModel:
         fetch_model(model)
         expected = [["Widget", "gadget", "Base", True, db_name]]
         assert_table_model_data_pytest(model, expected)
+        model.tear_down()
 
     def test_updating_byname_to_non_existing_entity_fails(self, db_editor, db_mngr, db_map, db_name, parent_object):
         with db_map:
@@ -876,6 +945,7 @@ class TestCompoundEntityAlternativeModel:
             assert waiter.args == (
                 "<ul><li>From TestCompoundEntityAlternativeModel_db: <ul><li>no entity matching {'entity_class_name': 'Widget', 'entity_byname': ('non-existent',)}</li></ul></li></ul>",
             )
+        model.tear_down()
 
     def test_auto_filter_need_not_be_updated(self, db_mngr, db_map, db_name, parent_object):
         with db_map:
@@ -903,11 +973,18 @@ class TestCompoundEntityAlternativeModel:
         with mock.patch.object(model, "column_filter_changed") as mock_signal:
             model.set_auto_filter("active", {True})
             mock_signal.assert_not_called()
+        model.tear_down()
+
+
+@pytest.fixture()
+def compound_entity_model(db_mngr, db_map, parent_object):
+    model = CompoundEntityModel(parent_object, db_mngr, db_map)
+    yield model
+    model.tear_down()
 
 
 class TestCompoundEntityModel:
-    def test_horizontal_header(self, db_mngr, db_map, parent_object):
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
+    def test_horizontal_header(self, compound_entity_model):
         expected_header = [
             "class",
             "name",
@@ -920,38 +997,36 @@ class TestCompoundEntityModel:
             "shape blob",
             "database",
         ]
-        header = [model.headerData(i) for i in range(model.columnCount())]
+        header = [compound_entity_model.headerData(i) for i in range(compound_entity_model.columnCount())]
         assert header == expected_header
 
-    def test_data_for_single_entity_alternative(self, db_mngr, db_map, db_name, parent_object):
+    def test_data_for_single_entity_alternative(self, compound_entity_model, db_map, db_name):
         with db_map:
             db_map.add_entity_class(name="Widget")
             db_map.add_entity(entity_class_name="Widget", name="gadget", description="Gadget is a widget.")
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
+        fetch_model(compound_entity_model)
         expected = [["Widget", "gadget", "gadget", "Gadget is a widget.", None, None, None, None, None, db_name]]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
 
-    def test_filtering_by_entity(self, db_mngr, db_map, db_name, parent_object):
+    def test_filtering_by_entity(self, compound_entity_model, db_map, db_name):
         with db_map:
             gadget = db_map.add_entity_class(name="Gadget")
             db_map.add_entity(entity_class_name="Gadget", name="flashlight")
             microphone = db_map.add_entity(entity_class_name="Gadget", name="microphone")
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
+        fetch_model(compound_entity_model)
         expected = [
             ["Gadget", "flashlight", "flashlight", None, None, None, None, None, None, db_name],
             ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
-        model.set_entity_selection_for_filtering({db_map: {gadget["id"]: {microphone["id"]}}})
-        model.refresh()
+        assert_table_model_data_pytest(compound_entity_model, expected)
+        compound_entity_model.set_entity_selection_for_filtering({db_map: {gadget["id"]: {microphone["id"]}}})
+        compound_entity_model.refresh()
         expected = [
             ["Gadget", "microphone", "microphone", None, None, None, None, None, None, db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
 
-    def test_filtering_by_scenario(self, db_mngr, db_map, db_name, parent_object):
+    def test_filtering_by_scenario(self, compound_entity_model, db_map, db_name):
         with db_map:
             scenario = db_map.add_scenario(name="Scenario")
             db_map.add_scenario_alternative(scenario_name="Scenario", alternative_name="Base", rank=0)
@@ -978,8 +1053,7 @@ class TestCompoundEntityModel:
                 alternative_name="Base",
                 active=False,
             )
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
+        fetch_model(compound_entity_model)
         expected = [
             ["Visible", "active_visible", "active_visible", None, None, None, None, None, None, db_name],
             ["Visible", "inactive_visible", "inactive_visible", None, None, None, None, None, None, db_name],
@@ -999,71 +1073,68 @@ class TestCompoundEntityModel:
                 db_name,
             ],
         ]
-        assert_table_model_data_pytest(model, expected)
-        model.set_scenario_selection_for_filtering({db_map: {scenario["id"]}})
-        model.refresh()
+        assert_table_model_data_pytest(compound_entity_model, expected)
+        compound_entity_model.set_scenario_selection_for_filtering({db_map: {scenario["id"]}})
+        compound_entity_model.refresh()
         expected = [
             ["Visible", "active_visible", "active_visible", None, None, None, None, None, None, db_name],
             ["Visible", "indeterminate_visible", "indeterminate_visible", None, None, None, None, None, None, db_name],
             ["Invisible", "active_invisible", "active_invisible", None, None, None, None, None, None, db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
-        model.set_scenario_selection_for_filtering({})
-        model.refresh()
-        assert model.rowCount() == 0
+        assert_table_model_data_pytest(compound_entity_model, expected)
+        compound_entity_model.set_scenario_selection_for_filtering({})
+        compound_entity_model.refresh()
+        assert compound_entity_model.rowCount() == 0
 
-    def test_update_entity_with_location_and_shape_information(self, db_mngr, db_map, db_name, parent_object):
+    def test_update_entity_with_location_and_shape_information(self, compound_entity_model, db_map, db_name):
         with db_map:
             db_map.add_entity_class(name="Widget")
             gadget = db_map.add_entity(entity_class_name="Widget", name="gadget")
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
+        fetch_model(compound_entity_model)
         expected = [["Widget", "gadget", "gadget", None, None, None, None, None, None, db_name]]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
         gadget.update(lat=1.1, lon=2.2, alt=3.3, shape_name="region", shape_blob="{}")
         expected = [["Widget", "gadget", "gadget", None, "1.1", "2.2", "3.3", "region", "<geojson>", db_name]]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
 
-    def test_update_entity_byname(self, db_mngr, db_map, db_name, parent_object):
+    def test_update_entity_byname(self, compound_entity_model, db_map, db_name):
         with db_map:
             db_map.add_entity_class(name="Widget")
             db_map.add_entity(entity_class_name="Widget", name="clock")
             db_map.add_entity(entity_class_name="Widget", name="calendar")
             db_map.add_entity_class(dimension_name_list=["Widget"])
             db_map.add_entity(entity_class_name="Widget__", entity_byname=("calendar",))
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
+        fetch_model(compound_entity_model)
         expected = [
             ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],
             ["Widget", "clock", "clock", None, None, None, None, None, None, db_name],
             ["Widget__", "calendar__", "calendar", None, None, None, None, None, None, db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
-        index = model.index(2, 2)
-        assert model.batch_set_data([index], [("clock",)])
+        assert_table_model_data_pytest(compound_entity_model, expected)
+        index = compound_entity_model.index(2, 2)
+        assert compound_entity_model.batch_set_data([index], [("clock",)])
         expected = [
             ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],
             ["Widget", "clock", "clock", None, None, None, None, None, None, db_name],
             ["Widget__", "calendar__", "clock", None, None, None, None, None, None, db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
 
-    def test_set_auto_filter(self, db_mngr, db_map, db_name, parent_object):
+    def test_set_auto_filter(self, compound_entity_model, db_map, db_name):
         with db_map:
             db_map.add_entity_class(name="Widget")
             db_map.add_entity(entity_class_name="Widget", name="clock")
             db_map.add_entity(entity_class_name="Widget", name="calendar")
             db_map.add_entity_class(dimension_name_list=["Widget"])
             db_map.add_entity(entity_class_name="Widget__", entity_byname=("calendar",))
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
-        with signal_waiter(model.layoutChanged) as waiter:
-            model.set_auto_filter("entity_class_name", {"Widget__"})
+        fetch_model(compound_entity_model)
+        with signal_waiter(compound_entity_model.layoutChanged) as waiter:
+            compound_entity_model.set_auto_filter("entity_class_name", {"Widget__"})
             waiter.wait()
         expected = [["Widget__", "calendar__", "calendar", None, None, None, None, None, None, db_name]]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
 
-    def test_set_auto_filter_to_all_selected(self, db_mngr, db_map, db_name, parent_object):
+    def test_set_auto_filter_to_all_selected(self, compound_entity_model, db_map, db_name):
         with db_map:
             db_map.add_entity_class(name="Widget")
             db_map.add_entity(
@@ -1073,36 +1144,142 @@ class TestCompoundEntityModel:
             db_map.add_entity(entity_class_name="Widget", name="calendar")
             db_map.add_entity_class(dimension_name_list=["Widget"])
             db_map.add_entity(entity_class_name="Widget__", entity_byname=("calendar",))
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
-        with signal_waiter(model.layoutChanged) as waiter:
-            model.set_auto_filter("entity_class_name", {"Widget__"})
+        fetch_model(compound_entity_model)
+        with signal_waiter(compound_entity_model.layoutChanged) as waiter:
+            compound_entity_model.set_auto_filter("entity_class_name", {"Widget__"})
             waiter.wait()
         expected = [["Widget__", "calendar__", "calendar", None, None, None, None, None, None, db_name]]
-        assert_table_model_data_pytest(model, expected)
-        with signal_waiter(model.layoutChanged) as waiter:
-            model.set_auto_filter("entity_class_name", None)
+        assert_table_model_data_pytest(compound_entity_model, expected)
+        with signal_waiter(compound_entity_model.layoutChanged) as waiter:
+            compound_entity_model.set_auto_filter("entity_class_name", None)
             waiter.wait()
         expected = [
             ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],
             ["Widget", "clock", "clock", None, None, None, None, None, None, db_name],
             ["Widget__", "calendar__", "calendar", None, None, None, None, None, None, db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
 
-    def test_set_auto_filter_in_shape_blob_column(self, db_mngr, db_map, db_name, parent_object):
+    def test_set_auto_filter_in_shape_blob_column(self, compound_entity_model, db_map, db_name):
         with db_map:
             db_map.add_entity_class(name="Widget")
             db_map.add_entity(entity_class_name="Widget", name="clock", shape_blob='{"a": 1}')
             db_map.add_entity(entity_class_name="Widget", name="calendar")
             db_map.add_entity(entity_class_name="Widget", name="tablet", shape_blob='{"b": []}')
-        model = CompoundEntityModel(parent_object, db_mngr, db_map)
-        fetch_model(model)
-        with signal_waiter(model.layoutChanged) as waiter:
-            model.set_auto_filter("shape_blob", {"<geojson>"})
+        fetch_model(compound_entity_model)
+        with signal_waiter(compound_entity_model.layoutChanged) as waiter:
+            compound_entity_model.set_auto_filter("shape_blob", {"<geojson>"})
             waiter.wait()
         expected = [
             ["Widget", "clock", "clock", None, None, None, None, None, "<geojson>", db_name],
             ["Widget", "tablet", "tablet", None, None, None, None, None, "<geojson>", db_name],
         ]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data_pytest(compound_entity_model, expected)
+
+    def test_adding_entity_metadata_item_emits_data_changed_for_name_column(
+        self, compound_entity_model, db_mngr, db_map, db_name, monkeypatch
+    ):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="clock")
+            db_map.add_metadata(name="author", value="A. Uthor")
+        fetch_model(compound_entity_model)
+        with signal_waiter(compound_entity_model.dataChanged) as waiter:
+            db_mngr.add_items(
+                "entity_metadata",
+                {
+                    db_map: [
+                        {
+                            "entity_class_name": "Widget",
+                            "entity_byname": ("clock",),
+                            "metadata_name": "author",
+                            "metadata_value": "A. Uthor",
+                        }
+                    ]
+                },
+            )
+            waiter.wait()
+            assert waiter.args == (
+                compound_entity_model.index(0, 1),
+                compound_entity_model.index(0, 1),
+                [Qt.ItemDataRole.DisplayRole],
+            )
+
+    def test_adding_multiple_entity_metadata_items_emits_data_changed_for_name_column(
+        self, compound_entity_model, db_mngr, db_map, db_name, monkeypatch
+    ):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="clock")
+            db_map.add_entity(entity_class_name="Widget", name="calendar")
+            db_map.add_entity(entity_class_name="Widget", name="tablet")
+            db_map.add_metadata(name="author", value="A. Uthor")
+        fetch_model(compound_entity_model)
+        expected = [
+            ["Widget", "calendar", "calendar", None, None, None, None, None, None, db_name],
+            ["Widget", "clock", "clock", None, None, None, None, None, None, db_name],
+            ["Widget", "tablet", "tablet", None, None, None, None, None, None, db_name],
+        ]
+        assert_table_model_data_pytest(compound_entity_model, expected)
+        with signal_waiter(compound_entity_model.dataChanged) as waiter:
+            db_mngr.add_items(
+                "entity_metadata",
+                {
+                    db_map: [
+                        {
+                            "entity_class_name": "Widget",
+                            "entity_byname": ("clock",),
+                            "metadata_name": "author",
+                            "metadata_value": "A. Uthor",
+                        },
+                        {
+                            "entity_class_name": "Widget",
+                            "entity_byname": ("calendar",),
+                            "metadata_name": "author",
+                            "metadata_value": "A. Uthor",
+                        },
+                        {
+                            "entity_class_name": "Widget",
+                            "entity_byname": ("tablet",),
+                            "metadata_name": "author",
+                            "metadata_value": "A. Uthor",
+                        },
+                    ]
+                },
+            )
+            waiter.wait()
+            assert waiter.args == (
+                compound_entity_model.index(0, 1),
+                compound_entity_model.index(2, 1),
+                [Qt.ItemDataRole.DisplayRole],
+            )
+
+    def test_removing_entity_metadata_item_emits_data_changed_for_name_column(
+        self, compound_entity_model, db_mngr, db_map, db_name, monkeypatch
+    ):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            db_map.add_entity(entity_class_name="Widget", name="clock")
+            db_map.add_metadata(name="author", value="A. Uthor")
+        fetch_model(compound_entity_model)
+        db_mngr.add_items(
+            "entity_metadata",
+            {
+                db_map: [
+                    {
+                        "entity_class_name": "Widget",
+                        "entity_byname": ("clock",),
+                        "metadata_name": "author",
+                        "metadata_value": "A. Uthor",
+                    }
+                ]
+            },
+        )
+        with signal_waiter(compound_entity_model.dataChanged) as waiter:
+            db_mngr.undo_stack[db_map].undo()
+            waiter.wait()
+            assert waiter.args == (
+                compound_entity_model.index(0, 1),
+                compound_entity_model.index(0, 1),
+                [Qt.ItemDataRole.DisplayRole],
+            )

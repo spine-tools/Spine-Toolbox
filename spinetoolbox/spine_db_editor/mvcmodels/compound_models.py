@@ -20,7 +20,7 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, QTimer
 from PySide6.QtGui import QFont
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
-from spinedb_api.helpers import AsteriskType
+from spinedb_api.helpers import AsteriskType, ItemType
 from spinedb_api.parameter_value import join_value_and_type
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
@@ -530,6 +530,9 @@ class CompoundStackedModel(CompoundTableModel):
             return None, None
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
+    def tear_down(self) -> None:
+        return
+
 
 class FilterEntityMixin:
     """Provides the interface to filter by entity."""
@@ -655,6 +658,54 @@ class EditParameterValueMixin:
         )
 
 
+class MetadataIndicatorMixin:
+    METADATA_ITEM_TYPE: ClassVar[str] = NotImplemented
+    METADATA_INDICATOR_COLUMN: ClassVar[int] = NotImplemented
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.db_mngr.items_added.connect(self._handle_metadata_added_or_removed)
+        self.db_mngr.items_removed.connect(self._handle_metadata_added_or_removed)
+
+    @Slot(str, object)
+    def _handle_metadata_added_or_removed(
+        self, item_type: ItemType, db_map_data: dict[DatabaseMapping, list[PublicItem]]
+    ) -> None:
+        if item_type != self.METADATA_ITEM_TYPE:
+            return
+        top_row = None
+        bottom_row = None
+        for db_map, items in db_map_data.items():
+            for metadata in items:
+                for sub_model in self.sub_models:
+                    if sub_model.db_map is not db_map or not self.filter_accepts_model(sub_model):
+                        continue
+                    sub_row = sub_model.row_for_associated_metadata_item(metadata)
+                    if sub_row is None:
+                        continue
+                    try:
+                        row = self._inv_row_map[(sub_model, sub_row)]
+                    except KeyError:
+                        continue
+                    if top_row is None:
+                        top_row = row
+                        bottom_row = row
+                    elif row < top_row:
+                        top_row = row
+                    elif row > bottom_row:
+                        bottom_row = row
+        if top_row is None:
+            return
+        top_left = self.index(top_row, self.METADATA_INDICATOR_COLUMN)
+        bottom_right = self.index(bottom_row, self.METADATA_INDICATOR_COLUMN)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
+
+    def tear_down(self) -> None:
+        super().tear_down()
+        self.db_mngr.items_added.disconnect(self._handle_metadata_added_or_removed)
+        self.db_mngr.items_removed.disconnect(self._handle_metadata_added_or_removed)
+
+
 class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedModel):
     """A model that concatenates several single parameter_definition models and one empty parameter_definition model."""
 
@@ -667,7 +718,7 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedM
 
 
 class CompoundParameterValueModel(
-    FilterAlternativeMixin, FilterEntityMixin, EditParameterValueMixin, CompoundStackedModel
+    MetadataIndicatorMixin, FilterAlternativeMixin, FilterEntityMixin, EditParameterValueMixin, CompoundStackedModel
 ):
     """A model that concatenates several single parameter_value models and one empty parameter_value model."""
 
@@ -677,13 +728,16 @@ class CompoundParameterValueModel(
     FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {
         "entity_byname",
     }
+    METADATA_ITEM_TYPE = "parameter_value_metadata"
+    METADATA_INDICATOR_COLUMN = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_mngr.items_updated.connect(self._handle_parameter_definitions_updated)
 
+    @Slot(str, object)
     def _handle_parameter_definitions_updated(
-        self, item_type: str, db_map_data: dict[DatabaseMapping, list[PublicItem]]
+        self, item_type: ItemType, db_map_data: dict[DatabaseMapping, list[PublicItem]]
     ) -> None:
         if item_type != "parameter_definition":
             return
@@ -711,6 +765,10 @@ class CompoundParameterValueModel(
                     break
                 definition_items = leftover_definition_items
 
+    def tear_down(self) -> None:
+        super().tear_down()
+        self.db_mngr.items_updated.disconnect(self._handle_parameter_definitions_updated)
+
 
 class CompoundEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, CompoundStackedModel):
 
@@ -726,12 +784,14 @@ class CompoundEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, 
         return super().auto_filter_data_map(column_i)
 
 
-class CompoundEntityModel(FilterEntityMixin, CompoundStackedModel):
+class CompoundEntityModel(MetadataIndicatorMixin, FilterEntityMixin, CompoundStackedModel):
     item_type = "entity"
     field_map = ENTITY_FIELD_MAP
     _single_model_type = SingleEntityModel
     _ENTITY_CLASS_ID_FIELD = "class_id"
     FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {"entity_byname", "lat", "lon", "alt"}
+    METADATA_ITEM_TYPE = "entity_metadata"
+    METADATA_INDICATOR_COLUMN = field_index("name", ENTITY_FIELD_MAP)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

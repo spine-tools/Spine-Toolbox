@@ -289,6 +289,8 @@ class StackedViewMixin:
     def closeEvent(self, event):
         super().closeEvent(event)
         if event.isAccepted():
+            for model in self._all_stacked_models:
+                model.tear_down()
             for view in self._all_empty_models.values():
                 view.request_replace_undo_redo_actions.disconnect(self._replace_undo_redo_actions)
                 view.request_reset_undo_redo_actions.disconnect(self.update_undo_redo_actions)
