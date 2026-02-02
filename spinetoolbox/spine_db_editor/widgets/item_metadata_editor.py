@@ -12,6 +12,7 @@
 
 """Contains machinery to deal with item metadata editor."""
 from PySide6.QtCore import QModelIndex, Slot
+from PySide6.scripts.metaobjectdump import QOBJECT_DERIVED
 from ..mvcmodels.entity_tree_item import EntityItem
 from ..mvcmodels.item_metadata_table_model import ItemMetadataTableModel
 
@@ -41,7 +42,12 @@ class ItemMetadataEditor:
         Args:
             ui (Ui_MainWindow): DB editor's user interface
         """
-        ui.treeView_entity.selectionModel().currentChanged.connect(self._reload_entity_metadata)
+        ui.treeView_entity.selectionModel().currentChanged.connect(
+            self._reload_entity_metadata_for_entity_tree_selection
+        )
+        ui.entity_table_view.selectionModel().currentChanged.connect(
+            self._reload_entity_metadata_for_entity_table_selection
+        )
         ui.tableView_parameter_value.selectionModel().currentChanged.connect(self._reload_value_metadata)
 
     def init_models(self, db_maps):
@@ -53,12 +59,14 @@ class ItemMetadataEditor:
         self._item_metadata_table_model.set_db_maps(db_maps)
 
     @Slot(QModelIndex, QModelIndex)
-    def _reload_entity_metadata(self, current_index, previous_index):
+    def _reload_entity_metadata_for_entity_tree_selection(
+        self, current_index: QModelIndex, previous_index: QModelIndex
+    ) -> None:
         """Loads entity metadata for selected object or relationship.
 
         Args:
-            current_index (QModelIndex): currently selected index in object/relationship tree
-            previous_index (QModelIndex): unused
+            current_index: currently selected index in object/relationship tree
+            previous_index: unused
         """
         self._item_metadata_table_view.setEnabled(False)
         self._item_metadata_table_model.clear()
@@ -71,20 +79,31 @@ class ItemMetadataEditor:
         self._item_metadata_table_view.setEnabled(True)
 
     @Slot(QModelIndex, QModelIndex)
-    def _reload_value_metadata(self, current_index, previous_index):
+    def _reload_entity_metadata_for_entity_table_selection(
+        self, current_index: QModelIndex, previous_index: QModelIndex
+    ) -> None:
+        self._item_metadata_table_view.setEnabled(False)
+        self._item_metadata_table_model.clear()
+        if not current_index.isValid():
+            return
+        db_map, id_ = current_index.model().db_map_id(current_index)
+        db_map_ids = {db_map: id_}
+        self._item_metadata_table_model.set_entity_ids(db_map_ids)
+        self._item_metadata_table_view.setEnabled(True)
+
+    @Slot(QModelIndex, QModelIndex)
+    def _reload_value_metadata(self, current_index: QModelIndex, previous_index: QModelIndex) -> None:
         """Loads parameter value metadata for selected value.
 
         Args:
-            current_index (QModelIndex): currently selected index in object/relationship parameter value table
-            previous_index (QModelIndex): unused
+            current_index: currently selected index in object/relationship parameter value table
+            previous_index: unused
         """
         self._item_metadata_table_view.setEnabled(False)
         self._item_metadata_table_model.clear()
         if not current_index.isValid():
             return
         db_map, id_ = current_index.model().db_map_id(current_index)
-        if id_ is None:
-            return
         db_map_ids = {db_map: id_}
         self._item_metadata_table_model.set_parameter_value_ids(db_map_ids)
         self._item_metadata_table_view.setEnabled(True)

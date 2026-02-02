@@ -77,11 +77,14 @@ from .custom_delegates import (
     MetadataDelegate,
     ParameterDefaultValueDelegate,
     ParameterNameDelegate,
+    ParameterNameDelegateWithIndicator,
     ParameterTypeListDelegate,
     ParameterValueDelegate,
     PlainNumberDelegate,
     PlainTextDelegate,
+    PlainTextDelegateWithMetadataIndicator,
     TableDelegate,
+    ValueDelegateWithIndicator,
     ValueListDelegate,
 )
 from .custom_menus import AutoFilterMenu
@@ -498,6 +501,11 @@ class WithUndoStack:
 
 class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
 
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+
     def _plot_selection(self, selection, plot_widget=None):
         return
 
@@ -505,6 +513,11 @@ class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoSta
 class ParameterDefinitionTableView(
     AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, ParameterDefinitionTableViewBase
 ):
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
@@ -527,7 +540,6 @@ class ParameterValueTableViewBase(ParameterTableView):
     def create_delegates(self):
         super().create_delegates()
         model = self.model()
-        self._make_delegate(model.field_to_header("parameter_definition_name"), ParameterNameDelegate)
         self._make_delegate(model.field_to_header("alternative_name"), AlternativeNameDelegate)
         delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
@@ -536,6 +548,12 @@ class ParameterValueTableViewBase(ParameterTableView):
 
 
 class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate(self.model().field_to_header("parameter_definition_name"), ParameterNameDelegate)
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def _plot_selection(self, selection, plot_widget=None):
         return
@@ -548,6 +566,14 @@ class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilt
         field_header("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP),
         field_header("alternative_name", PARAMETER_VALUE_FIELD_MAP),
     )
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate(
+            self.model().field_to_header("parameter_definition_name"), ParameterNameDelegateWithIndicator
+        )
+        delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
@@ -649,7 +675,7 @@ class EntityTableView(UsesAutoFilter, StackedTableView):
     def create_delegates(self):
         super().create_delegates()
         model = self.model()
-        self._make_delegate(model.field_to_header("name"), PlainTextDelegate)
+        self._make_delegate(model.field_to_header("name"), PlainTextDelegateWithMetadataIndicator)
         delegate = self._make_delegate(model.field_to_header("entity_byname"), EntityBynameDelegate)
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
         self._make_delegate(model.field_to_header("description"), PlainTextDelegate)

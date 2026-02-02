@@ -21,7 +21,14 @@ from spinedb_api.helpers import AsteriskType
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
-from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE, ITEM_ROLE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...mvcmodels.shared import (
+    DB_MAP_ROLE,
+    HAS_METADATA_ROLE,
+    ITEM_ID_ROLE,
+    ITEM_ROLE,
+    PARAMETER_TYPE_VALIDATION_ROLE,
+    PARSED_ROLE,
+)
 from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
@@ -489,12 +496,29 @@ class SingleParameterValueModel(
     parameter_definition_id_key = "parameter_id"
     _AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES = {"value"}
 
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == HAS_METADATA_ROLE:
+            metadata_table = self.db_map.mapped_table("parameter_value_metadata")
+            value_id = self._main_data[index.row()]
+            return any(
+                metadata_item["parameter_value_id"] == value_id
+                for metadata_item in metadata_table.values()
+                if metadata_item.is_valid()
+            )
+        return super().data(index, role)
+
     def _sort_key(self, item_id):
         item = self._mapped_table[item_id]
         byname = order_key_from_names(item["entity_byname"])
         parameter_name = order_key(item["parameter_name"])
         alt_name = order_key(item["alternative_name"])
         return byname, parameter_name, alt_name
+
+    def row_for_associated_metadata_item(self, metadata_item: PublicItem) -> int | None:
+        try:
+            return self._main_data.index(metadata_item["parameter_value_id"])
+        except ValueError:
+            return None
 
 
 class SingleEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, SingleModelBase):
@@ -559,6 +583,14 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         column = index.column()
+        if role == HAS_METADATA_ROLE:
+            metadata_table = self.db_map.mapped_table("entity_metadata")
+            entity_id = self._main_data[index.row()]
+            return any(
+                metadata_item["entity_id"] == entity_id
+                for metadata_item in metadata_table.values()
+                if metadata_item.is_valid()
+            )
         if column in self._NUMERICAL_COLUMNS:
             if role == Qt.ItemDataRole.DisplayRole:
                 data = super().data(index, role)
@@ -616,3 +648,9 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
 
     def _display_value_for_forced_comparison(self, item):
         return "<geojson>" if item["shape_blob"] is not None else None
+
+    def row_for_associated_metadata_item(self, metadata_item: PublicItem) -> int | None:
+        try:
+            return self._main_data.index(metadata_item["entity_id"])
+        except ValueError:
+            return None
