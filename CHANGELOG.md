@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Database editor now shows a little metadata tag next to entity or parameter name
+  if there is metadata available for the item.
+  The tag is shown in Entity and Parameter value tables.
+
 ### Changed
 
 ### Deprecated
