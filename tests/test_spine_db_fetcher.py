@@ -18,7 +18,7 @@ from PySide6.QtGui import QIcon
 from spinedb_api import DatabaseMapping, to_database
 from spinedb_api.import_functions import import_data
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, q_object
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, q_object
 
 
 class ExampleItemTypeFetchParent(ItemTypeFetchParent):
@@ -272,6 +272,7 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             "default_value": None,
             "default_type": None,
             "description": None,
+            "parameter_group_id": None,
             "commit_id": 2,
             "list_value_id": None,
         }

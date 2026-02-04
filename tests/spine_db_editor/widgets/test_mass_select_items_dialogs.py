@@ -54,6 +54,7 @@ class TestMassRemoveItemsDialog(TestCaseWithQApplication):
                 "entity_alternative": False,
                 "entity_class": True,
                 "parameter_definition": False,
+                "parameter_group": False,
                 "parameter_type": False,
                 "parameter_value": False,
                 "parameter_value_list": False,

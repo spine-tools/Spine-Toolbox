@@ -19,9 +19,9 @@ from typing import ClassVar, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import ItemType
 from spinedb_api.parameter_value import load_db_value
 from spinedb_api.temp_id import TempId
-from ...fetch_parent import FlexibleFetchParent
 from ...helpers import (
     DB_ITEM_SEPARATOR,
     DBMapDictItems,
@@ -60,11 +60,7 @@ class EmptyModelBase(EmptyRowModel):
         self._db_maps: list[DatabaseMapping] = []
         self._undo_stack: Optional[QUndoStack] = None
         self.entity_class_id: Optional[TempId] = None
-        self._fetch_parent = FlexibleFetchParent(
-            self.item_type,
-            handle_items_added=self.handle_items_added,
-            owner=self,
-        )
+        self.db_mngr.items_added.connect(self.handle_items_added, Qt.ConnectionType.QueuedConnection)
 
     @classmethod
     @cache
@@ -148,8 +144,11 @@ class EmptyModelBase(EmptyRowModel):
     def accepted_rows(self) -> Iterator[int]:
         yield from range(self.rowCount())
 
-    def handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
+    @Slot(str, object)
+    def handle_items_added(self, item_type: ItemType, db_map_data: DBMapPublicItems) -> None:
         """Finds and removes model items that were successfully added to the db."""
+        if item_type != self.item_type:
+            return
         added_ids = set()
         for db_map, items in db_map_data.items():
             database = self.db_mngr.name_registry.display_name(db_map.sa_url)
@@ -289,15 +288,10 @@ class EmptyModelBase(EmptyRowModel):
             self._undo_stack.clear()
 
     def reset_db_maps(self, db_maps: list[DatabaseMapping]) -> None:
-        self._fetch_parent.set_obsolete(False)
-        self._fetch_parent.reset()
-        for db_map in self._db_maps:
-            if db_map not in db_maps:
-                self.db_mngr.unregister_fetch_parent(db_map, self._fetch_parent)
-        for db_map in db_maps:
-            if db_map not in self._db_maps:
-                self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
         self._db_maps = db_maps
+
+    def tear_down(self):
+        self.db_mngr.items_added.disconnect(self.handle_items_added)
 
 
 class _TempDBMapCache:
@@ -447,9 +441,6 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     _entity_class_column: ClassVar[int] = field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP)
     _database_column: ClassVar[int] = field_index("database", PARAMETER_DEFINITION_FIELD_MAP)
 
-    def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(db_mngr, parent)
-
     def index_name(self, index: QModelIndex) -> str:
         """Generates a name for data at given index.
 
@@ -489,9 +480,6 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
     _entity_class_column = field_index("entity_class_name", PARAMETER_VALUE_FIELD_MAP)
     _entity_byname_column = field_index("entity_byname", PARAMETER_VALUE_FIELD_MAP)
     _database_column = field_index("database", PARAMETER_VALUE_FIELD_MAP)
-
-    def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(db_mngr, parent)
 
     def index_name(self, index: QModelIndex) -> str:
         """Generates a name for data at given index.
@@ -547,9 +535,6 @@ class EmptyEntityAlternativeModel(EntityMixin, EmptyModelBase):
     _entity_byname_column = field_index("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP)
     _entity_class_column = field_index("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP)
     _database_column = field_index("database", ENTITY_ALTERNATIVE_FIELD_MAP)
-
-    def __init__(self, db_mngr: SpineDBManager, parent: Optional[QObject]):
-        super().__init__(db_mngr, parent)
 
     @staticmethod
     def _check_item(item):

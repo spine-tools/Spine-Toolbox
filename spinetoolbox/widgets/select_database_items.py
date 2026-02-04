@@ -74,6 +74,7 @@ class SelectDatabaseItems(QWidget):
         "list_value",
         "parameter_definition",
         "parameter_type",
+        "parameter_group",
     )
 
     def __init__(self, checked_states=None, parent=None):
