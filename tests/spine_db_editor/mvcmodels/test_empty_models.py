@@ -21,6 +21,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     DelayedDataSetter,
     EmptyEntityAlternativeModel,
     EmptyModelBase,
+    EmptyModelWithEntityClass,
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
 )
@@ -34,7 +35,7 @@ from tests.mock_helpers import (
 )
 
 
-class ExampleEmptyModel(EmptyModelBase):
+class ExampleEmptyModel(EmptyModelWithEntityClass):
     field_map = {field: field for field in ["entity_class_name", "name", "description", "database"]}
     _entity_class_column = 0
     _database_column = 3
@@ -138,7 +139,6 @@ class TestExampleEmptyModel(TestCaseWithQApplication):
         model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
-        model.reset_db_maps([self._db_map])
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 4)
@@ -173,7 +173,6 @@ class TestExampleEmptyModel(TestCaseWithQApplication):
         model = ExampleEmptyModel(self._db_mngr, parent=self._db_mngr)
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
-        model.reset_db_maps([self._db_map])
         fetch_model(model)
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.columnCount(), 4)
@@ -195,7 +194,6 @@ class TestExampleEmptyModel(TestCaseWithQApplication):
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model.set_default_row(database="mock_db")
-        model.reset_db_maps([self._db_map])
         fetch_model(model)
         with (
             mock.patch.object(model, "_convert_to_db") as convert_to_db,
@@ -231,7 +229,6 @@ class TestExampleEmptyModel(TestCaseWithQApplication):
         model.item_type = "entity"
         model.set_undo_stack(self._undo_stack)
         model.set_default_row(database="mock_db")
-        model.reset_db_maps([self._db_map])
         fetch_model(model)
         with (
             mock.patch.object(model, "_convert_to_db") as convert_to_db,
@@ -335,10 +332,10 @@ class TestEmptyParameterDefinitionModel:
         undo_stack = QUndoStack(model)
         model.set_undo_stack(undo_stack)
         model.append_empty_row()
-        indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 6)]
+        indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 7)]
         data = ["my class", "my parameter", "my database"]
         assert model.batch_set_data(indexes, data)
-        index = model.index(0, model.columnCount() - 2)
+        index = model.index(0, model.columnCount() - 3)
         assert model.index_name(index) == "my database - my class - my parameter"
 
     def test_change_db_maps_by_reset_db_maps(
@@ -355,7 +352,6 @@ class TestEmptyParameterDefinitionModel:
         with mock.patch.object(model, "handle_items_added") as mock_handler:
             undo_stack = QUndoStack(model)
             model.set_undo_stack(undo_stack)
-            model.reset_db_maps([db_map])
             model.set_default_row(entity_class_name="my class", database=db_name)
             model.append_empty_row()
             indexes = [model.index(0, 1)]
@@ -367,8 +363,7 @@ class TestEmptyParameterDefinitionModel:
                 {db_map: [db_map.parameter_definition(entity_class_name="my class", name="my parameter")]},
             )
             mock_handler.reset_mock()
-            model.reset_db_maps([db_map2])
-            indexes = [model.index(0, 1), model.index(0, 6)]
+            indexes = [model.index(0, 1), model.index(0, 7)]
             data = ["your parameter", "the other database"]
             assert model.batch_set_data(indexes, data)
             QApplication.processEvents()
@@ -401,7 +396,7 @@ class TestEmptyParameterValueModel:
         undo_stack = QUndoStack(model)
         model.set_undo_stack(undo_stack)
         model.append_empty_row()
-        indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 2), model.index(0, 3), model.index(0, 5)]
+        indexes = [model.index(0, 1), model.index(0, 2), model.index(0, 3), model.index(0, 4), model.index(0, 6)]
         data = ["my class", ("my entity",), "my parameter", "my alternative", "my database"]
         assert model.batch_set_data(indexes, data)
         index = model.index(0, model.columnCount() - 2)
@@ -423,7 +418,6 @@ class TestEmptyEntityAlternativeModel:
         model = empty_entity_alternative_model
         undo_stack = QUndoStack(model)
         model.set_undo_stack(undo_stack)
-        model.reset_db_maps([db_map])
         model.set_default_row(entity_class_name="my class", database=db_name)
         model.append_empty_row()
         indexes = [model.index(0, 1), model.index(0, 2), model.index(0, 3)]

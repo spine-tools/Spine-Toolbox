@@ -458,7 +458,7 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 waiter.wait()
             assert_table_model_data(
                 self.spine_db_editor.ui.tableView_parameter_value.model(),
-                [["A__B", "aa ǀ ba", "par_A__B", "Alt2", "3.0", "database"]],
+                [[None, "A__B", "aa ǀ ba", "par_A__B", "Alt2", "3.0", "database"]],
                 self,
             )
             self._refresh_graph()

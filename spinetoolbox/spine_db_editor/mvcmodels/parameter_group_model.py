@@ -9,16 +9,13 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
+from typing import ClassVar
+from spinedb_api.helpers import ItemType
+from spinetoolbox.spine_db_editor.mvcmodels.db_item_table_model import DBItemTableModel
+from spinetoolbox.spine_db_editor.mvcmodels.utils import PARAMETER_GROUP_FIELD_MAP
 
-"""Miscellaneous mixins for parameter models."""
-from spinedb_api.parameter_value import split_value_and_type
 
-
-class SplitValueAndTypeMixin:
-    def _convert_to_db(self, item: dict) -> dict:
-        item = super()._convert_to_db(item)
-        if self.value_field in item:
-            value, value_type = split_value_and_type(item[self.value_field])
-            item[self.value_field] = value
-            item[self.type_field] = value_type
-        return item
+class ParameterGroupModel(DBItemTableModel):
+    ITEM_TYPE: ClassVar[ItemType] = "parameter_group"
+    HEADER: ClassVar[list[str]] = list(PARAMETER_GROUP_FIELD_MAP)
+    HEADER_TO_FIELD: ClassVar[dict[str, str]] = PARAMETER_GROUP_FIELD_MAP

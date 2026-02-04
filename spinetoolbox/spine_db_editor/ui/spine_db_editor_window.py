@@ -33,9 +33,10 @@ from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplicat
     QSpacerItem, QVBoxLayout, QWidget)
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterValueTableView, EntityAlternativeTableView,
-    EntityTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
-    ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterGroupTableView, EmptyParameterValueTableView,
+    EntityAlternativeTableView, EntityTableView, FrozenTableView, ItemMetadataTableView,
+    MetadataTableView, ParameterDefinitionTableView, ParameterGroupTableView, ParameterValueTableView,
+    PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
 from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, ResizeSignallingWidget, TimeLineWidget)
 from spinetoolbox import resources_icons_rc
@@ -568,6 +569,43 @@ class Ui_MainWindow(object):
 
         self.entity_dock_widget.setWidget(self.dockWidgetContents_4)
         MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.entity_dock_widget)
+        self.parameter_group_dock_widget = QDockWidget(MainWindow)
+        self.parameter_group_dock_widget.setObjectName(u"parameter_group_dock_widget")
+        self.parameter_group_contents_widget = ResizeSignallingWidget()
+        self.parameter_group_contents_widget.setObjectName(u"parameter_group_contents_widget")
+        self.verticalLayout_6 = QVBoxLayout(self.parameter_group_contents_widget)
+        self.verticalLayout_6.setSpacing(0)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.parameter_group_table_view = ParameterGroupTableView(self.parameter_group_contents_widget)
+        self.parameter_group_table_view.setObjectName(u"parameter_group_table_view")
+        self.parameter_group_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.parameter_group_table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.parameter_group_table_view.setTabKeyNavigation(False)
+        self.parameter_group_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.parameter_group_table_view.horizontalHeader().setHighlightSections(False)
+        self.parameter_group_table_view.verticalHeader().setVisible(False)
+        self.parameter_group_table_view.verticalHeader().setHighlightSections(False)
+
+        self.verticalLayout_6.addWidget(self.parameter_group_table_view)
+
+        self.empty_parameter_group_table_view = EmptyParameterGroupTableView(self.parameter_group_contents_widget)
+        self.empty_parameter_group_table_view.setObjectName(u"empty_parameter_group_table_view")
+        sizePolicy1.setHeightForWidth(self.empty_parameter_group_table_view.sizePolicy().hasHeightForWidth())
+        self.empty_parameter_group_table_view.setSizePolicy(sizePolicy1)
+        self.empty_parameter_group_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.empty_parameter_group_table_view.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.empty_parameter_group_table_view.setTabKeyNavigation(False)
+        self.empty_parameter_group_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.empty_parameter_group_table_view.horizontalHeader().setVisible(False)
+        self.empty_parameter_group_table_view.horizontalHeader().setHighlightSections(False)
+        self.empty_parameter_group_table_view.verticalHeader().setVisible(False)
+        self.empty_parameter_group_table_view.verticalHeader().setHighlightSections(False)
+
+        self.verticalLayout_6.addWidget(self.empty_parameter_group_table_view)
+
+        self.parameter_group_dock_widget.setWidget(self.parameter_group_contents_widget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.parameter_group_dock_widget)
 
         self.menuBar.addAction(self.menuFile_2.menuAction())
         self.menuBar.addAction(self.menuEdit.menuAction())
@@ -758,5 +796,6 @@ class Ui_MainWindow(object):
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Sess&ion", None))
         self.menuFile_2.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity (Alt+5)", None))
+        self.parameter_group_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter group", None))
     # retranslateUi
 

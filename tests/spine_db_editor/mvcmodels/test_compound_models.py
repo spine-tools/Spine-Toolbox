@@ -16,11 +16,13 @@ import pathlib
 from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 import pytest
 from spinedb_api import Array, Asterisk, Map, TimeSeriesVariableResolution
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
+from spinetoolbox.spine_db_editor.mvcmodels.colors import FIXED_FIELD_COLOR
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
     CompoundEntityModel,
@@ -41,6 +43,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             "value list",
             "default value",
             "description",
+            "group",
             "database",
         ]
         header = [model.headerData(i) for i in range(model.columnCount())]
@@ -53,7 +56,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
         while model.rowCount() != 1:
             QApplication.processEvents()
-        expected = [["oc", "p", None, None, "None", None, self.db_codename]]
+        expected = [["oc", "p", None, None, "None", None, None, self.db_codename]]
         assert_table_model_data(model, expected, self)
         model.tear_down()
 
@@ -64,7 +67,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "rc"}]})
         while model.rowCount() != 1:
             QApplication.processEvents()
-        expected = [["rc", "p", None, None, "None", None, self.db_codename]]
+        expected = [["rc", "p", None, None, "None", None, None, self.db_codename]]
         assert_table_model_data(model, expected, self)
         model.tear_down()
 
@@ -111,13 +114,13 @@ class TestCompoundParameterDefinitionModel(TestBase):
                 waiter.args,
                 ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [True]),
             )
-        expected = [["Widget", "weight", None, None, "a lot", None, self.db_codename]]
+        expected = [["Widget", "weight", None, None, "a lot", None, None, self.db_codename]]
         assert_table_model_data(model, expected, self)
         while self._db_mngr.parameter_type_validator._sent_task_count != 0:
             QApplication.processEvents()
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             model.setData(model.index(0, 2), ("float",), Qt.ItemDataRole.EditRole)
-            expected = [["Widget", "weight", "float", None, "a lot", None, self.db_codename]]
+            expected = [["Widget", "weight", "float", None, "a lot", None, None, self.db_codename]]
             assert_table_model_data(model, expected, self)
             waiter.wait()
             self.assertEqual(
@@ -134,7 +137,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
         self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p1", "entity_class_name": "oc"}]})
         while model.rowCount() != 1:
             QApplication.processEvents()
-        expected = [["oc", "p1", None, None, "None", None, self.db_codename]]
+        expected = [["oc", "p1", None, None, "None", None, None, self.db_codename]]
         assert_table_model_data(model, expected, self)
         with TemporaryDirectory() as tmp_dir:
             url = "sqlite:///" + str(pathlib.Path(tmp_dir, "other_db.sqlite"))
@@ -148,7 +151,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             self.assertEqual(model.rowCount(), 0)
             self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p2", "entity_class_name": "oc"}]})
             fetch_model(model)
-            expected = [["Object", "X", None, None, "None", "X marks the spot.", "other_db"]]
+            expected = [["Object", "X", None, None, "None", "X marks the spot.", None, "other_db"]]
             assert_table_model_data(model, expected, self)
             self._db_mngr.close_session(url)
             gc.collect()
@@ -167,7 +170,7 @@ class TestCompoundParameterDefinitionModel(TestBase):
             fetch_model(model)
             begin_signal.emit.assert_not_called()
             end_signal.emit.assert_not_called()
-        expected = [["Gadget", "X", None, None, "None", None, self.db_codename]]
+        expected = [["Gadget", "X", None, None, "None", None, None, self.db_codename]]
         assert_table_model_data_pytest(model, expected)
         with (
             mock.patch.object(model, "non_committed_items_about_to_be_added") as begin_signal,
@@ -181,10 +184,10 @@ class TestCompoundParameterDefinitionModel(TestBase):
             begin_signal.emit.assert_called_once_with()
             end_signal.emit.assert_called_once_with()
         expected = [
-            ["Gadget", "X", None, None, "None", None, self.db_codename],
-            ["Gadget", "Y", None, None, "None", None, self.db_codename],
+            ["Gadget", "X", None, None, "None", None, None, self.db_codename],
+            ["Gadget", "Y", None, None, "None", None, None, self.db_codename],
         ]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data(model, expected, self)
         model.tear_down()
 
     def test_set_auto_filter_in_default_value_column_with_empty_data_and_null_values(self):
@@ -199,53 +202,32 @@ class TestCompoundParameterDefinitionModel(TestBase):
             model.set_auto_filter("default_value", {"None"})
             waiter.wait()
         expected = [
-            ["Gadget", "X", None, None, "None", None, self.db_codename],
-            ["Gadget", "Y", None, None, "None", None, self.db_codename],
-            ["Gadget", "Z", None, None, "None", None, self.db_codename],
+            ["Gadget", "X", None, None, "None", None, None, self.db_codename],
+            ["Gadget", "Y", None, None, "None", None, None, self.db_codename],
+            ["Gadget", "Z", None, None, "None", None, None, self.db_codename],
         ]
-        assert_table_model_data_pytest(model, expected)
+        assert_table_model_data(model, expected, self)
         model.tear_down()
 
-    def test_adding_metadata_emits_data_changed(self):
-        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
-        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
-        self._db_mngr.add_items(
-            "parameter_value",
-            {
-                self._db_map: [
-                    {
-                        "parameter_definition_name": "p",
-                        "parsed_value": 23.0,
-                        "entity_byname": ("o",),
-                        "entity_class_name": "oc",
-                        "alternative_name": "Base",
-                    }
-                ]
-            },
-        )
-        self._db_mngr.add_items("metadata", {self._db_map: [{"name": "author", "value": "A. Uthor"}]})
-        while model.rowCount() == 0:
-            QApplication.processEvents()
+    def test_update_definitions_group(self):
+        with self._db_map:
+            self._db_map.add_parameter_group(name="Group B", color="beefaf", priority=23)
+            self._db_map.add_entity_class(name="Gadget")
+            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
+        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+        fetch_model(model)
+        expected = [
+            ["Gadget", "X", None, None, "None", None, None, self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
         with signal_waiter(model.dataChanged) as waiter:
-            self._db_mngr.add_items(
-                "parameter_value_metadata",
-                {
-                    self._db_map: [
-                        {
-                            "entity_class_name": "oc",
-                            "entity_byname": ("o",),
-                            "parameter_definition_name": "p",
-                            "alternative_name": "Base",
-                            "metadata_name": "author",
-                            "metadata_value": "A. Uthor",
-                        }
-                    ]
-                },
-            )
+            model.batch_set_data([model.index(0, 6)], ["Group B"])
             waiter.wait()
-            self.assertEqual(waiter.args, (model.index(0, 2), model.index(0, 2), [Qt.ItemDataRole.DisplayRole]))
+            self.assertEqual(waiter.args, (model.index(0, 6), model.index(0, 6), []))
+        expected = [
+            ["Gadget", "X", None, None, "None", None, "Group B", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
         model.tear_down()
 
 
@@ -253,6 +235,7 @@ class TestCompoundParameterValueModel(TestBase):
     def test_horizontal_header(self):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         expected_header = [
+            "group",
             "class",
             "entity byname",
             "parameter name",
@@ -285,7 +268,7 @@ class TestCompoundParameterValueModel(TestBase):
         )
         while model.rowCount() == 0:
             QApplication.processEvents()
-        expected = [["oc", "o", "p", "Base", "23.0", self.db_codename]]
+        expected = [[None, "oc", "o", "p", "Base", "23.0", self.db_codename]]
         assert_table_model_data(model, expected, self)
         model.tear_down()
 
@@ -314,7 +297,7 @@ class TestCompoundParameterValueModel(TestBase):
         )
         while model.rowCount() == 0:
             QApplication.processEvents()
-        expected = [["rc", "o", "p", "Base", "23.0", self.db_codename]]
+        expected = [[None, "rc", "o", "p", "Base", "23.0", self.db_codename]]
         assert_table_model_data(model, expected, self)
         model.tear_down()
 
@@ -360,8 +343,8 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
@@ -375,8 +358,8 @@ class TestCompoundParameterValueModel(TestBase):
         while model.rowCount() == 0:
             QApplication.processEvents()
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -403,15 +386,15 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_not_in_base.remove()
         while model.rowCount() == 2:
             QApplication.processEvents()
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -439,15 +422,15 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
         while model.rowCount() == 2:
             QApplication.processEvents()
         expected = [
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_not_in_base.remove()
@@ -480,14 +463,14 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.set_alternative_selection_for_filtering({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
         expected = [
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
@@ -517,14 +500,14 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.set_alternative_selection_for_filtering({self._db_map: {not_base_alternative["id"]}})
         model.refresh()
         expected = [
-            ["Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "not-Base", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         value_in_base.remove()
@@ -572,18 +555,18 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "alt", "23.0", self.db_codename],
-            ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "del", "-23.0", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "alt", "23.0", self.db_codename],
+            [None, "Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "del", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         self._db_map.remove_items("parameter_value", alt_value["id"], del_value["id"])
         while model.rowCount() == 4:
             QApplication.processEvents()
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "ctrl", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -621,20 +604,20 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Immaterial", "ghost", "Y", "Base", "-2.3", self.db_codename],
-            ["Immaterial", "ghost", "Z", "Base", "23.0", self.db_codename],
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Immaterial", "ghost", "Y", "Base", "-2.3", self.db_codename],
+            [None, "Immaterial", "ghost", "Z", "Base", "23.0", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.set_entity_selection_for_filtering({self._db_map: {object_class["id"]: Asterisk}})
         model.refresh()
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         z_value.remove()
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -677,17 +660,17 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
-            ["Object", "mystic cube", "X", "Base", "23.0", self.db_codename],
-            ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
+            [None, "Object", "mystic cube", "X", "Base", "23.0", self.db_codename],
+            [None, "Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.set_alternative_selection_for_filtering({self._db_map: {alternative["id"]}})
         model.refresh()
         expected = [
-            ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
-            ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
+            [None, "Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
+            [None, "Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         spherical_value_in_base.remove()
@@ -695,7 +678,7 @@ class TestCompoundParameterValueModel(TestBase):
         while model.rowCount() == 2:
             QApplication.processEvents()
         expected = [
-            ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
+            [None, "Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -738,17 +721,17 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
-            ["Object", "mystic cube", "X", "Base", "23.0", self.db_codename],
-            ["Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
+            [None, "Object", "mystic cube", "X", "Base", "23.0", self.db_codename],
+            [None, "Object", "mystic cube", "X", "alt", "-23.0", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.set_entity_selection_for_filtering({self._db_map: {object_class["id"]: {curious_sphere["id"]}}})
         model.refresh()
         expected = [
-            ["Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
-            ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         with signal_waiter(model.dataChanged, timeout=1.0) as waiter:
@@ -758,8 +741,8 @@ class TestCompoundParameterValueModel(TestBase):
             waiter.args, (model.index(0, 0), model.index(0, model.columnCount() - 1), [Qt.ItemDataRole.DisplayRole])
         )
         expected = [
-            ["Object", "curious sphere", "X", "Base", "55.5", self.db_codename],
-            ["Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
+            [None, "Object", "curious sphere", "X", "Base", "55.5", self.db_codename],
+            [None, "Object", "curious sphere", "X", "alt", "-2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -779,7 +762,7 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             fetch_model(model)
-            expected = [["Widget", "gadget", "weight", "Base", "a lot", self.db_codename]]
+            expected = [[None, "Widget", "gadget", "weight", "Base", "a lot", self.db_codename]]
             assert_table_model_data(model, expected, self)
             waiter.wait()
             args_as_dict = dict(zip(*waiter.args))
@@ -822,13 +805,13 @@ class TestCompoundParameterValueModel(TestBase):
         model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
         fetch_model(model)
         expected = [
-            ["Widget", "gadget", "weight", "Base", "a lot", self.db_codename],
+            [None, "Widget", "gadget", "weight", "Base", "a lot", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
-        index = model.index(0, 4)
+        index = model.index(0, 5)
         self.assertTrue(model.batch_set_data([index], ["too much"]))
         expected = [
-            ["Widget", "gadget", "weight", "Base", "too much", self.db_codename],
+            [None, "Widget", "gadget", "weight", "Base", "too much", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         model.tear_down()
@@ -885,17 +868,152 @@ class TestCompoundParameterValueModel(TestBase):
             model.set_auto_filter("value", {"2.3"})
             waiter.wait()
         expected = [
-            ["Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
             model.set_auto_filter("value", {"Map"})
             waiter.wait()
         expected = [
-            ["Widget", "gadget", "map", "Base", "Map", self.db_codename],
-            ["Widget", "object", "map", "Base", "Map", self.db_codename],
+            [None, "Widget", "gadget", "map", "Base", "Map", self.db_codename],
+            [None, "Widget", "object", "map", "Base", "Map", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_adding_metadata_emits_data_changed(self):
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
+        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items("entity", {self._db_map: [{"name": "o", "entity_class_name": "oc"}]})
+        self._db_mngr.add_items(
+            "parameter_value",
+            {
+                self._db_map: [
+                    {
+                        "parameter_definition_name": "p",
+                        "parsed_value": 23.0,
+                        "entity_byname": ("o",),
+                        "entity_class_name": "oc",
+                        "alternative_name": "Base",
+                    }
+                ]
+            },
+        )
+        self._db_mngr.add_items("metadata", {self._db_map: [{"name": "author", "value": "A. Uthor"}]})
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        with signal_waiter(model.dataChanged) as waiter:
+            self._db_mngr.add_items(
+                "parameter_value_metadata",
+                {
+                    self._db_map: [
+                        {
+                            "entity_class_name": "oc",
+                            "entity_byname": ("o",),
+                            "parameter_definition_name": "p",
+                            "alternative_name": "Base",
+                            "metadata_name": "author",
+                            "metadata_value": "A. Uthor",
+                        }
+                    ]
+                },
+            )
+            waiter.wait()
+            self.assertEqual(waiter.args, (model.index(0, 3), model.index(0, 3), [Qt.ItemDataRole.DisplayRole]))
+        model.tear_down()
+
+    def test_group_data(self):
+        with self._db_map:
+            self._db_map.add_parameter_group(name="Group A", color="102030", priority=3)
+            self._db_map.add_parameter_group(name="Group B", color="090807", priority=2)
+            self._db_map.add_entity_class(name="Widget")
+            self._db_map.add_entity(entity_class_name="Widget", name="gadget")
+            self._db_map.add_entity(entity_class_name="Widget", name="object")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="X", parameter_group_name="Group A")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="Y", parameter_group_name="Group B")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="N", parameter_group_name="Group A")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="P", parameter_group_name="Group B")
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+                parsed_value="too low",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="Y",
+                alternative_name="Base",
+                parsed_value="too high",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="N",
+                alternative_name="Base",
+                parsed_value="too few",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="P",
+                alternative_name="Base",
+                parsed_value="too many",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("object",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+                parsed_value="too much",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("object",),
+                parameter_definition_name="Y",
+                alternative_name="Base",
+                parsed_value="not enough",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("object",),
+                parameter_definition_name="N",
+                alternative_name="Base",
+                parsed_value="too large",
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("object",),
+                parameter_definition_name="P",
+                alternative_name="Base",
+                parsed_value="too small",
+            )
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        fetch_model(model)
+        expected = [
+            ["Group B", "Widget", "gadget", "P", "Base", "too many", self.db_codename],
+            ["Group B", "Widget", "gadget", "Y", "Base", "too high", self.db_codename],
+            ["Group A", "Widget", "gadget", "N", "Base", "too few", self.db_codename],
+            ["Group A", "Widget", "gadget", "X", "Base", "too low", self.db_codename],
+            ["Group B", "Widget", "object", "P", "Base", "too small", self.db_codename],
+            ["Group B", "Widget", "object", "Y", "Base", "not enough", self.db_codename],
+            ["Group A", "Widget", "object", "N", "Base", "too large", self.db_codename],
+            ["Group A", "Widget", "object", "X", "Base", "too much", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        expected = [
+            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+        ]
+        assert_table_model_data(model, expected, self, Qt.ItemDataRole.BackgroundRole)
         model.tear_down()
 
 

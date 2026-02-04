@@ -135,7 +135,6 @@ class StackedViewMixin:
             model.init_model()
             model.reset_db_maps(self.db_maps)
         for model in self._all_empty_models:
-            model.reset_db_maps(self.db_maps)
             self._set_stacked_model_default_data(DefaultRowData({}, None), model)
 
     @Slot(QModelIndex, object, object)

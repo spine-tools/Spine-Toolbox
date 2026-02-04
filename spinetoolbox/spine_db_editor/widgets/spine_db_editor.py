@@ -37,7 +37,6 @@ from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xls
 from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 from ...helpers import (
     add_keyboard_shortcuts_to_action_tool_tips,
-    busy_effect,
     call_on_focused_widget,
     format_string_list,
     get_open_file_name_in_last_dir,
@@ -62,6 +61,7 @@ from .graph_view_mixin import GraphViewMixin
 from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassExportItemsDialog, MassRemoveItemsDialog
 from .metadata_editor import MetadataEditor
+from .parameter_group_editor import ParameterGroupEditor
 from .stacked_view_mixin import StackedViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .toolbar import DBEditorToolBar
@@ -991,6 +991,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self._item_metadata_editor = ItemMetadataEditor(
             self.ui.item_metadata_table_view, self, self._metadata_editor, db_mngr
         )
+        self._parameter_group_editor = ParameterGroupEditor(
+            self.ui.parameter_group_table_view,
+            self.ui.empty_parameter_group_table_view,
+            self.ui.parameter_group_contents_widget,
+            self.ui.actionCopy,
+            self.ui.actionPaste,
+            db_mngr,
+            preferred_row_height(self),
+            self,
+        )
         self._alternative_selection_for_filtering = AlternativeSelectionForFiltering(
             self.ui.alternative_tree_view.selectionModel(), self.ui.scenario_tree_view.selectionModel(), self
         )
@@ -1079,6 +1089,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 self.ui.pivot_table,
                 self.ui.metadata_table_view,
                 self.ui.item_metadata_table_view,
+                self.ui.parameter_group_table_view,
+                self.ui.empty_parameter_group_table_view,
             ),
             self._all_stacked_models.values(),
             self._all_empty_models.values(),
@@ -1089,6 +1101,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         super().init_models()
         self._metadata_editor.init_models(self.db_maps)
         self._item_metadata_editor.init_models(self.db_maps)
+        self._parameter_group_editor.init_models(self.db_maps)
 
     @Slot(bool)
     def _restart_timer_refresh_tab_order(self, _visible: bool = False) -> None:
@@ -1201,6 +1214,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self.tabify_and_raise([self.ui.dockWidget_parameter_value_list, self.ui.metadata_dock_widget])
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
+        self.tabify_and_raise([self.ui.item_metadata_dock_widget, self.ui.parameter_group_dock_widget])
         self.ui.dockWidget_parameter_value_list.raise_()
         # center
         self.tabify_and_raise(
@@ -1243,6 +1257,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.entity_dock_widget.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
+        self.ui.parameter_group_dock_widget.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
@@ -1271,3 +1286,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.end_style_change()
         self.restore_ui(self.last_view)
         self.ui.graphicsView.reset_zoom()
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if not event.isAccepted():
+            return
+        self._parameter_group_editor.tear_down()

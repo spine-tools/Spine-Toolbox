@@ -83,7 +83,7 @@ class TestItemMetadataEditor:
         value_model = value_table.model()
         while value_model.rowCount() != 1:
             QApplication.processEvents()
-        class_index = value_model.index(0, 0)
+        class_index = value_model.index(0, 1)
         assert class_index.data() == "Gadget"
         value_table.setCurrentIndex(class_index)
         metadata_view = db_editor.ui.item_metadata_table_view

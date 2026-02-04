@@ -730,10 +730,16 @@ class CompoundParameterValueModel(
     }
     METADATA_ITEM_TYPE = "parameter_value_metadata"
     METADATA_INDICATOR_COLUMN = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
+    _PARAMETER_GROUP_COLUMN = field_index("parameter_group_name", PARAMETER_VALUE_FIELD_MAP)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_mngr.items_updated.connect(self._handle_parameter_definitions_updated)
+
+    def flags(self, index):
+        if index.column() == self._PARAMETER_GROUP_COLUMN:
+            return Qt.ItemFlag.ItemIsEnabled
+        return super().flags(index)
 
     @Slot(str, object)
     def _handle_parameter_definitions_updated(

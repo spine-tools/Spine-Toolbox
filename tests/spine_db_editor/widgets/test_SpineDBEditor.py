@@ -70,9 +70,9 @@ class TestSpineDBEditor(DBEditorTestBase):
         while self.spine_db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         model = self.spine_db_editor.parameter_value_model
-        index = model.index(0, 1)
+        index = model.index(0, 2)
         self.assertEqual(index.data(), "nemo ǀ pluto")
-        self.assertEqual(model.index(1, 1).data(), "nemo ǀ scooby")
+        self.assertEqual(model.index(1, 2).data(), "nemo ǀ scooby")
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.stacked_view_mixin.ElementNameListEditor"
         ) as editor_constructor:
@@ -142,8 +142,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["dog", None, None, None, None, None, self.db_codename],
-            ["dog", None, None, None, None, self.db_codename],
+            ["dog", None, None, None, None, None, None, self.db_codename],
+            [None, "dog", None, None, None, None, self.db_codename],
             ["dog", None, None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -172,8 +172,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["wolf", None, None, None, None, None, self.db_codename],
-            ["wolf", None, None, None, None, self.db_codename],
+            ["wolf", None, None, None, None, None, None, self.db_codename],
+            [None, "wolf", None, None, None, None, self.db_codename],
             ["wolf", None, None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -205,8 +205,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["fish", None, None, None, None, None, self.db_codename],
-            ["fish", "nemo", None, None, None, self.db_codename],
+            ["fish", None, None, None, None, None, None, self.db_codename],
+            [None, "fish", "nemo", None, None, None, self.db_codename],
             ["fish", "nemo", None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -241,8 +241,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["fish", None, None, None, None, None, self.db_codename],
-            ["fish", "emon", None, None, None, self.db_codename],
+            ["fish", None, None, None, None, None, None, self.db_codename],
+            [None, "fish", "emon", None, None, None, self.db_codename],
             ["fish", "emon", None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):

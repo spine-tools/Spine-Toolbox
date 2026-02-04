@@ -348,3 +348,9 @@ To add a new link metadata for an item,
 select an entity from one of the entity trees
 or a parameter value from one of the parameter value tables.
 Then go to **Item metadata** and select the appropriate metadata name and value on the last row.
+
+
+Adding Parameter Groups
+=======================
+
+To add a new parameter group go to **Parameter group** and fill in the empty rows.
