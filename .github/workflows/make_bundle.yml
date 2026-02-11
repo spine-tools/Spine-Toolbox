@@ -51,6 +51,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install -r dev-requirements.txt
+          python -m pip install PySide6==6.10.0  # Temporary solution; unit tests fail inexplicably on 6.10.1
       - name: Run tests
         if: steps.commit.outputs.is_tag == 'false'
         run: |
