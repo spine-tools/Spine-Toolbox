@@ -151,3 +151,9 @@ Removing Item Metadata
 
 Select the corresponding items in **Item metadata**, right-click on the selection and choose **Remove row(s)**
 from the context menu.
+
+Removing Parameter Groups
+=========================
+
+Select corresponding items in **Parameter group**, right-click on the selection and choose **Remove row(s)**
+from the context menu. Alternatively, press **Ctrl+Del**.

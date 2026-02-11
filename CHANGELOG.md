@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Added Parameter group dock to Database editor.
+  You can add, edit and remove parameter groups from the dock.
+- Added *group* column to Parameter definition table in Database editor.
+  You can select parameter's group from the column.
+- Added *group* column to Parameter value table in Database editor.
+  The read-only column shows the group of the value.
 - Database editor now shows a little metadata tag next to entity or parameter name
   if there is metadata available for the item.
   The tag is shown in Entity and Parameter value tables.

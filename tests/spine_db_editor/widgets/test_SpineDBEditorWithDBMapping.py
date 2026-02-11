@@ -19,7 +19,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, assert_table_model_data
 
 
 class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
@@ -98,16 +98,7 @@ class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
         while self.spine_db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         expected = [
-            ["fish", "nemo", "color", "Base", "orange", "db"],
-            ["fish", "nemo (1)", "color", "Base", "orange", "db"],
+            [None, "fish", "nemo", "color", "Base", "orange", "db"],
+            [None, "fish", "nemo (1)", "color", "Base", "orange", "db"],
         ]
-        for row in range(2):
-            for column in range(self.spine_db_editor.parameter_value_model.columnCount()):
-                with self.subTest(row=row, column=column):
-                    self.assertEqual(
-                        self.spine_db_editor.parameter_value_model.index(row, column).data(), expected[row][column]
-                    )
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert_table_model_data(self.spine_db_editor.parameter_value_model, expected, self)

@@ -16,7 +16,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QKeySequence, QUndoStack
+from PySide6.QtGui import QAction, QContextMenuEvent, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import (
     DB_ITEM_SEPARATOR,
@@ -63,23 +63,28 @@ from ..mvcmodels.utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
+    PARAMETER_GROUP_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
     field_header,
+    field_index,
 )
 from ..stacked_table_seam import AboveSeam, BelowSeam
 from .custom_delegates import (
     AlternativeNameDelegate,
     BooleanValueDelegate,
+    ColorPickerDelegate,
     DatabaseNameDelegate,
     EntityBynameDelegate,
     EntityClassNameDelegate,
     ItemMetadataDelegate,
     MetadataDelegate,
     ParameterDefaultValueDelegate,
+    ParameterGroupDelegate,
     ParameterNameDelegate,
     ParameterNameDelegateWithIndicator,
     ParameterTypeListDelegate,
     ParameterValueDelegate,
+    PlainIntegerDelegate,
     PlainNumberDelegate,
     PlainTextDelegate,
     PlainTextDelegateWithMetadataIndicator,
@@ -505,6 +510,9 @@ class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoSta
         super().create_delegates()
         delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self._make_delegate(
+            field_header("parameter_group_name", PARAMETER_DEFINITION_FIELD_MAP), ParameterGroupDelegate
+        )
 
     def _plot_selection(self, selection, plot_widget=None):
         return
@@ -518,6 +526,9 @@ class ParameterDefinitionTableView(
         super().create_delegates()
         delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self._make_delegate(
+            field_header("parameter_group_name", PARAMETER_DEFINITION_FIELD_MAP), ParameterGroupDelegate
+        )
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
@@ -1511,3 +1522,42 @@ class ManageEntityClassesTable(CopyPasteTableView):
         if header == "active by default":
             return string_to_bool(str_value)
         return super()._convert_pasted(row, column, str_value, model)
+
+
+class ParameterGroupTableView(AboveSeam, CopyPasteTableView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setItemDelegateForColumn(field_index("color", PARAMETER_GROUP_FIELD_MAP), ColorPickerDelegate(self))
+        self.setItemDelegateForColumn(field_index("priority", PARAMETER_GROUP_FIELD_MAP), PlainIntegerDelegate(self))
+        self._menu: QMenu | None = None
+
+    def remove_selected(self) -> None:
+        """Removes selected indexes."""
+        selection = self.selectionModel().selection()
+        model = self.model()
+        for selection_range in selection:
+            top = selection_range.top()
+            bottom = selection_range.bottom()
+            model.removeRows(top, bottom - top + 1)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        event.accept()
+        if self._menu is None:
+            self._menu = QMenu(self)
+            self._menu.addAction(self._copy_action)
+            self._menu.addAction(self._paste_action)
+            self._menu.addSeparator()
+            remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
+            remove_rows_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))
+            remove_rows_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+            self.addAction(remove_rows_action)
+        self._menu.exec(event.globalPos())
+
+
+class EmptyParameterGroupTableView(BelowSeam, SizeHintProvided, WithUndoStack, CopyPasteTableView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        color_column = field_index("color", PARAMETER_GROUP_FIELD_MAP)
+        self.setItemDelegateForColumn(color_column, ColorPickerDelegate(self))
+        priority_column = field_index("priority", PARAMETER_GROUP_FIELD_MAP)
+        self.setItemDelegateForColumn(priority_column, PlainIntegerDelegate(self))

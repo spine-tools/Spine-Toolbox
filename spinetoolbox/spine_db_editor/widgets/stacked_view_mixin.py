@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
+from itertools import chain
 from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt, Slot
 from PySide6.QtGui import QColor
 from spinedb_api import DatabaseMapping
@@ -134,7 +135,6 @@ class StackedViewMixin:
             model.init_model()
             model.reset_db_maps(self.db_maps)
         for model in self._all_empty_models:
-            model.reset_db_maps(self.db_maps)
             self._set_stacked_model_default_data(DefaultRowData({}, None), model)
 
     @Slot(QModelIndex, object, object)
@@ -289,7 +289,7 @@ class StackedViewMixin:
     def closeEvent(self, event):
         super().closeEvent(event)
         if event.isAccepted():
-            for model in self._all_stacked_models:
+            for model in chain(self._all_stacked_models, self._all_empty_models):
                 model.tear_down()
             for view in self._all_empty_models.values():
                 view.request_replace_undo_redo_actions.disconnect(self._replace_undo_redo_actions)

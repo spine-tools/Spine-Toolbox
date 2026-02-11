@@ -14,10 +14,11 @@
 from numbers import Number
 import re
 from typing import ClassVar
-from PySide6.QtCore import QEvent, QModelIndex, QRect, QSize, Qt, Signal
+from PySide6.QtCore import QAbstractItemModel, QEvent, QModelIndex, QRect, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QRegularExpressionValidator
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from PySide6.QtWidgets import QColorDialog, QStyledItemDelegate, QStyleOptionViewItem, QWidget
 from spinedb_api import DatabaseMapping, to_database
+from spinedb_api.helpers import COLOR_RE
 from spinedb_api.parameter_value import join_value_and_type
 from spinedb_api.temp_id import TempId
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
@@ -125,7 +126,7 @@ class ScenarioAlternativeTableDelegate(PivotTableDelegateMixin, RankDelegate):
     @staticmethod
     def _is_scenario_alternative_index(index):
         """
-        Checks whether or not the given index corresponds to a scenario alternative,
+        Checks whether the given index corresponds to a scenario alternative,
         in which case we need to use the rank delegate.
 
         Returns:
@@ -461,7 +462,7 @@ class ValueListDelegate(TableDelegate):
 
 
 class EntityClassNameDelegate(TableDelegate):
-    """A delegate for the object_class name."""
+    """A delegate for the entity class name."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -471,6 +472,21 @@ class EntityClassNameDelegate(TableDelegate):
         editor = SearchBarEditor(self.parent(), parent)
         object_classes = self.db_mngr.get_items(db_map, "entity_class")
         editor.set_data(index.data(Qt.ItemDataRole.EditRole), [x["name"] for x in object_classes])
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
+        return editor
+
+
+class ParameterGroupDelegate(TableDelegate):
+    """A delegate for the parameter group."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        if not db_map:
+            return None
+        editor = SearchBarEditor(self.parent(), parent)
+        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "parameter_group")]
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
@@ -738,6 +754,28 @@ class PlainNumberDelegate(TableDelegate):
     def createEditor(self, parent, option, index):
         editor = CustomLineEditor(parent)
         editor.setValidator(QRegularExpressionValidator(self._NUMBER_REGEXP, editor))
+        return editor
+
+
+class PlainIntegerDelegate(QStyledItemDelegate):
+    """A delegate for non-localized numeric columns."""
+
+    _INTEGER_REGEXP = r"^[+-]?[0-9]*$"
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        text = editor.text()
+        data = int(text) if text else None
+        model.setData(index, data)
+
+    def setEditorData(self, editor, index):
+        data = index.data(Qt.ItemDataRole.EditRole)
+        text = str(data) if data is not None else ""
+        editor.setText(text)
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        editor.setValidator(QRegularExpressionValidator(self._INTEGER_REGEXP, editor))
         return editor
 
 
@@ -1060,7 +1098,7 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
 
     @staticmethod
     def get_text_width_and_icon_size(option, index):
-        text = index.data(Qt.DisplayRole)
+        text = index.data(Qt.ItemDataRole.DisplayRole)
         font_metrics = QFontMetrics(option.font)
         text_width = font_metrics.horizontalAdvance(text)
         # For some reason the longer the text, the more its length is underestimated. Manual correction
@@ -1123,3 +1161,42 @@ class ParameterTypeListDelegate(QStyledItemDelegate):
         editor.setGeometry(
             popup_position.x(), popup_position.y(), max(option.rect.width(), size_hint.width()), size_hint.height()
         )
+
+
+class ColorPickerDelegate(QStyledItemDelegate):
+    RADIUS: ClassVar[int] = 7
+
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+        color = index.data()
+        if color and COLOR_RE.fullmatch(color) is not None:
+            initial_color = QColor("#" + color)
+        else:
+            initial_color = QColor("grey")
+        return QColorDialog(initial_color, parent)
+
+    def setEditorData(self, editor: QColorDialog, index: QModelIndex) -> None:
+        color = index.data()
+        if color and COLOR_RE.fullmatch(color) is not None:
+            editor.setCurrentColor(QColor("#" + color))
+
+    def setModelData(self, editor: QColorDialog, model: QAbstractItemModel, index: QModelIndex) -> None:
+        color = editor.currentColor().name()[1:]
+        model.setData(index, color)
+
+    def paint(self, painter, option, index):
+        color = index.data()
+        if color and COLOR_RE.fullmatch(color) is not None:
+            rect = option.rect
+            left = rect.x()
+            width = rect.width()
+            new_width = width - 2 * (self.RADIUS + 2)
+            indicator_rect = rect.adjusted(new_width, 0, 0, 0)
+            rect.setRight(left + new_width)
+            indicator_center = indicator_rect.center()
+            circle_rect = QRect(indicator_center, indicator_center)
+            circle_rect.adjust(-self.RADIUS, -self.RADIUS, self.RADIUS, self.RADIUS)
+            color = QColor("#" + color)
+            painter.setPen(QColor("black"))
+            painter.setBrush(color)
+            painter.drawEllipse(circle_rect)
+        super().paint(painter, option, index)

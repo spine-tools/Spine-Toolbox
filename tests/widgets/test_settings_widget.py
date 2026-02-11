@@ -31,7 +31,8 @@ class TestSettingsWidget(TestCaseWithQApplication):
 
     def test_defaults_for_initially_empty_app_settings(self):
         widget = SettingsWidget(self._toolbox)
-        widget.save_and_close()
+        self.assertTrue(widget.save_settings())
+        widget.close()
         widget.deleteLater()
         self._settings.beginGroup("appSettings")
         try:

@@ -1177,7 +1177,7 @@ class SpineDBManager(QObject):
 
     def remove_items(
         self,
-        db_map_typed_ids: dict[DatabaseMapping, dict[str, set[TempId]]],
+        db_map_typed_ids: dict[DatabaseMapping, dict[ItemType, set[TempId]]],
         identifier: Optional[int] = None,
         **kwargs,
     ) -> None:

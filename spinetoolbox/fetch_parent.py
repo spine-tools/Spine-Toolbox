@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Optional, TypeAlias
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import MappedItemBase, PublicItem
+from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from .helpers import busy_effect
 
@@ -295,7 +296,7 @@ class ItemTypeFetchParent(FetchParent):
 class FlexibleFetchParent(ItemTypeFetchParent):
     def __init__(
         self,
-        fetch_item_type: str,
+        fetch_item_type: ItemType,
         handle_items_added: Optional[Callable[[DBMapMixedItems], None]] = None,
         handle_items_removed: Optional[Callable[[DBMapMixedItems], None]] = None,
         handle_items_updated: Optional[Callable[[DBMapMixedItems], None]] = None,

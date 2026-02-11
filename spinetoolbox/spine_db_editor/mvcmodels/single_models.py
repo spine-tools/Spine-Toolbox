@@ -13,11 +13,13 @@
 """Single models for parameter definitions and values (as 'for a single entity')."""
 from __future__ import annotations
 from collections.abc import Iterable, Iterator
+import math
 from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
+from PySide6.QtGui import QColor
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
-from spinedb_api.helpers import AsteriskType
+from spinedb_api.helpers import AsteriskType, ItemType
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -323,7 +325,7 @@ class ParameterMixin:
         self.destroyed.connect(self._stop_waiting_validation)
 
     @property
-    def _references(self) -> dict[str, tuple[str, str | None]]:
+    def _references(self) -> dict[str, tuple[str, ItemType | None]]:
         return {
             "entity_class_name": ("entity_class_id", "entity_class"),
             "entity_byname": ("entity_id", "entity"),
@@ -334,6 +336,7 @@ class ParameterMixin:
             "default_value": ("id", "parameter_definition"),
             "database": ("database", None),
             "alternative_name": ("alternative_id", "alternative"),
+            "parameter_group": ("parameter_group_id", "parameter_group"),
         }
 
     def reset_model(self, main_data: list[TempId] | None = None) -> None:
@@ -495,6 +498,7 @@ class SingleParameterValueModel(
     type_field = "type"
     parameter_definition_id_key = "parameter_id"
     _AUTO_FILTER_FORCE_COMPARE_DISPLAY_VALUES = {"value"}
+    _PARAMETER_GROUP_COLUMN = field_index("parameter_group_name", PARAMETER_VALUE_FIELD_MAP)
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == HAS_METADATA_ROLE:
@@ -505,14 +509,27 @@ class SingleParameterValueModel(
                 for metadata_item in metadata_table.values()
                 if metadata_item.is_valid()
             )
+        if role == Qt.ItemDataRole.BackgroundRole and index.column() == self._PARAMETER_GROUP_COLUMN:
+            group_id = self._mapped_table[self._main_data[index.row()]]["parameter_group_id"]
+            if group_id is None:
+                return None
+            group = self.db_map.mapped_table("parameter_group")[group_id]
+            return QColor("#" + group["color"])
         return super().data(index, role)
 
     def _sort_key(self, item_id):
         item = self._mapped_table[item_id]
         byname = order_key_from_names(item["entity_byname"])
+        parameter_group_id = item["parameter_group_id"]
+        group_priority = math.inf
+        if parameter_group_id is not None:
+            group = self.db_map.mapped_table("parameter_group")[parameter_group_id]
+            if group.is_valid():
+                group_priority = group["priority"]
+
         parameter_name = order_key(item["parameter_name"])
         alt_name = order_key(item["alternative_name"])
-        return byname, parameter_name, alt_name
+        return byname, group_priority, parameter_name, alt_name
 
     def row_for_associated_metadata_item(self, metadata_item: PublicItem) -> int | None:
         try:

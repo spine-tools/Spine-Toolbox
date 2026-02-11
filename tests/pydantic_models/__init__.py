@@ -9,16 +9,3 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-
-"""Miscellaneous mixins for parameter models."""
-from spinedb_api.parameter_value import split_value_and_type
-
-
-class SplitValueAndTypeMixin:
-    def _convert_to_db(self, item: dict) -> dict:
-        item = super()._convert_to_db(item)
-        if self.value_field in item:
-            value, value_type = split_value_and_type(item[self.value_field])
-            item[self.value_field] = value
-            item[self.type_field] = value_type
-        return item

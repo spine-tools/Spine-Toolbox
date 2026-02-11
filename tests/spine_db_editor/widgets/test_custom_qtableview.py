@@ -129,7 +129,7 @@ class TestParameterDefinitionTableView(TestBase):
         ):
             self.assertTrue(table_view.paste())
         expected = [
-            ["Object", "X", "bool" + DB_ITEM_SEPARATOR + "str", None, "None", None, self.db_codename],
+            ["Object", "X", "bool" + DB_ITEM_SEPARATOR + "str", None, "None", None, None, self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
@@ -161,13 +161,13 @@ class TestParameterValueTableView(TestBase):
             self.assertTrue(table_view.paste())
         expected = {
             Qt.ItemDataRole.DisplayRole: [
-                ["Object", "my_object", "X", "Base", "2.3", self.db_codename],
+                [None, "Object", "my_object", "X", "Base", "2.3", self.db_codename],
             ],
             Qt.ItemDataRole.ToolTipRole: [
-                ["Object", "my_object", "X", "<qt>Base alternative</qt>", None, self.db_codename],
+                [None, "Object", "my_object", "X", "<qt>Base alternative</qt>", None, self.db_codename],
             ],
             Qt.ItemDataRole.EditRole: [
-                ["Object", ("my_object",), "X", "Base", "2.3", self.db_codename],
+                [None, "Object", ("my_object",), "X", "Base", "2.3", self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
@@ -190,11 +190,11 @@ class TestParameterValueTableView(TestBase):
         while model.rowCount() != 1:
             QApplication.processEvents()
         expected = [
-            ["Object", "pencil", "y", "Base", "2.3", self.db_codename],
+            [None, "Object", "pencil", "y", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
         while model.rowCount() != 0:
             QApplication.processEvents()
@@ -215,32 +215,40 @@ class TestParameterValueTableView(TestBase):
         empty_model = empty_table_view.model()
         self.assertEqual(empty_model.rowCount(), 1)
         _set_row_data(
-            empty_table_view, empty_model, 0, ["an_object_class", ("object_1",), "a_parameter", "Base"], delegate_mock
+            empty_table_view,
+            empty_model,
+            0,
+            [None, "an_object_class", ("object_1",), "a_parameter", "Base"],
+            delegate_mock,
         )
         delegate_mock.reset()
-        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
+        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 5), "value_1")
         _set_row_data(
-            empty_table_view, empty_model, 1, ["an_object_class", ("object_2",), "a_parameter", "Base"], delegate_mock
+            empty_table_view,
+            empty_model,
+            1,
+            [None, "an_object_class", ("object_2",), "a_parameter", "Base"],
+            delegate_mock,
         )
         delegate_mock.reset()
-        delegate_mock.write_to_index(empty_table_view, empty_model.index(1, 4), "value_2")
+        delegate_mock.write_to_index(empty_table_view, empty_model.index(1, 5), "value_2")
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         expected = [
-            ["an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
-            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
+            [None, "an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
+            [None, "an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
         while model.rowCount() == 0:
             QApplication.processEvents()
         assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
         while model.rowCount() == 2:
             QApplication.processEvents()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
-            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
+            [None, "an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
@@ -258,16 +266,20 @@ class TestParameterValueTableView(TestBase):
         empty_model = empty_table_view.model()
         self.assertEqual(empty_model.rowCount(), 1)
         _set_row_data(
-            empty_table_view, empty_model, 0, ["an_object_class", ("an_object",), "a_parameter", "Base"], delegate_mock
+            empty_table_view,
+            empty_model,
+            0,
+            [None, "an_object_class", ("an_object",), "a_parameter", "Base"],
+            delegate_mock,
         )
         delegate_mock.reset()
-        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
+        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 5), "value_1")
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         while model.rowCount() == 0:
             QApplication.processEvents()
         expected = [
-            ["an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
+            [None, "an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
@@ -291,21 +303,21 @@ class TestParameterValueTableView(TestBase):
             empty_table_view,
             empty_model,
             0,
-            ["object_1_class", ("an_object_1",), "parameter_1", "Base", "a_value"],
+            [None, "object_1_class", ("an_object_1",), "parameter_1", "Base", "a_value"],
             delegate_mock,
         )
         _set_row_data(
             empty_table_view,
             empty_model,
             1,
-            ["object_2_class", ("an_object_2",), "parameter_2", "Base", "b_value"],
+            [None, "object_2_class", ("an_object_2",), "parameter_2", "Base", "b_value"],
             delegate_mock,
         )
         _set_row_data(
             empty_table_view,
             empty_model,
             2,
-            ["object_1_class", ("another_object_1",), "parameter_1", "Base", "c_value"],
+            [None, "object_1_class", ("another_object_1",), "parameter_1", "Base", "c_value"],
             delegate_mock,
         )
         table_view = self._db_editor.ui.tableView_parameter_value
@@ -313,9 +325,9 @@ class TestParameterValueTableView(TestBase):
         while model.rowCount() == 0:
             QApplication.processEvents()
         expected = [
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
+            [None, "object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
+            [None, "object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
+            [None, "object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
@@ -335,7 +347,7 @@ class TestParameterValueTableView(TestBase):
         fetch_model(model)
         while model.rowCount() == 0:
             QApplication.processEvents()
-        index = model.index(0, 4)
+        index = model.index(0, 5)
         plot_widget = table_view._plot_selection([index])
         try:
             self.assertEqual(
@@ -470,13 +482,21 @@ class TestParameterValueTableWithExistingData(TestBase):
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = [
-            ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+            [
+                None,
+                "object_class",
+                f"object_{object_n}",
+                f"parameter_{parameter_n}",
+                "Base",
+                "a_value",
+                self.db_codename,
+            ]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
@@ -504,13 +524,21 @@ class TestParameterValueTableWithExistingData(TestBase):
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = [
-            ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+            [
+                None,
+                "object_class",
+                f"object_{object_n}",
+                f"parameter_{parameter_n}",
+                "Base",
+                "a_value",
+                self.db_codename,
+            ]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
@@ -551,6 +579,7 @@ class TestParameterValueTableWithExistingData(TestBase):
             for parameter_n in range(self._n_parameters):
                 expected.append(
                     [
+                        None,
                         "object_class",
                         f"object_{object_n}",
                         f"parameter_{parameter_n}",
@@ -562,14 +591,30 @@ class TestParameterValueTableWithExistingData(TestBase):
             if object_n < 2:
                 expected.extend(
                     [
-                        ["object_class", f"object_{object_n}", "0parameter_", "Base", "a_value", self.db_codename],
-                        ["object_class", f"object_{object_n}", "1parameter_", "Base", "a_value", self.db_codename],
+                        [
+                            None,
+                            "object_class",
+                            f"object_{object_n}",
+                            "0parameter_",
+                            "Base",
+                            "a_value",
+                            self.db_codename,
+                        ],
+                        [
+                            None,
+                            "object_class",
+                            f"object_{object_n}",
+                            "1parameter_",
+                            "Base",
+                            "a_value",
+                            self.db_codename,
+                        ],
                     ]
                 )
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
@@ -636,8 +681,8 @@ class TestEmptyParameterDefinitionTableView:
         with mock_clipboard_patch("bool", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
             assert table_view.paste()
         expected = [
-            [None, None, "bool", None, None, None, "TestEmptyParameterDefinitionTableView_db"],
-            [None, None, None, None, None, None, "TestEmptyParameterDefinitionTableView_db"],
+            [None, None, "bool", None, None, None, None, "TestEmptyParameterDefinitionTableView_db"],
+            [None, None, None, None, None, None, None, "TestEmptyParameterDefinitionTableView_db"],
         ]
         assert_table_model_data_pytest(model, expected)
 
@@ -660,32 +705,19 @@ class TestEmptyParameterValueTableView(TestBase):
         table_view = self._db_editor.ui.empty_parameter_value_table_view
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
-        index = model.index(0, 0)
+        index = model.index(0, 1)
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(table_view, index, "an_object_class")
-        self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.columnCount(), 6)
-        self.assertEqual(model.index(0, 0).data(), "an_object_class")
-        self.assertEqual(model.index(0, 1).data(), None)
-        self.assertEqual(model.index(0, 2).data(), None)
-        self.assertEqual(model.index(0, 3).data(), None)
-        self.assertEqual(model.index(0, 4).data(), None)
-        self.assertEqual(model.index(0, 5).data(), self.db_codename)
-        self.assertEqual(model.index(1, 0).data(), None)
-        self.assertEqual(model.index(1, 1).data(), None)
-        self.assertEqual(model.index(1, 2).data(), None)
-        self.assertEqual(model.index(1, 3).data(), None)
-        self.assertEqual(model.index(1, 4).data(), None)
-        self.assertEqual(model.index(1, 5).data(), self.db_codename)
+        expected = [
+            [None, "an_object_class", None, None, None, None, self.db_codename],
+            [None, None, None, None, None, None, self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
         selection_model.select(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
-        self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.index(0, 0).data(), None)
-        self.assertEqual(model.index(0, 1).data(), None)
-        self.assertEqual(model.index(0, 2).data(), None)
-        self.assertEqual(model.index(0, 3).data(), None)
-        self.assertEqual(model.index(0, 4).data(), None)
+        expected = [[None, None, None, None, None, None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
         self.assertFalse(selection_model.hasSelection())
 
     def test_paste_empty_string_to_entity_byname_column(self):
@@ -699,13 +731,13 @@ class TestEmptyParameterValueTableView(TestBase):
             self.assertTrue(table_view.paste())
         expected = {
             Qt.ItemDataRole.DisplayRole: [
-                [None, None, None, None, None, self.db_codename],
+                [None, None, None, None, None, None, self.db_codename],
             ],
             Qt.ItemDataRole.ToolTipRole: [
-                [None, None, None, None, None, None],
+                [None, None, None, None, None, None, None],
             ],
             Qt.ItemDataRole.EditRole: [
-                [None, (), None, None, None, self.db_codename],
+                [None, None, (), None, None, None, self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
@@ -723,22 +755,22 @@ class TestEmptyParameterValueTableView(TestBase):
             table_view,
             model,
             model.rowCount() - 1,
-            ["object_class", ("object_1",), "parameter_1", "Base"],
+            [None, "object_class", ("object_1",), "parameter_1", "Base"],
             delegate_mock,
         )
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         expected = {
             Qt.ItemDataRole.DisplayRole: [
-                ["object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
-                [None, None, None, None, None, self.db_codename],
+                [None, "object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
+                [None, None, None, None, None, None, self.db_codename],
             ],
             Qt.ItemDataRole.ToolTipRole: [
-                [None, None, None, None, None, None],
-                [None, None, None, None, None, None],
+                [None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None],
             ],
             Qt.ItemDataRole.EditRole: [
-                ["object_class", ("object_1",), "parameter_1", "Base", None, self.db_codename],
-                [None, None, None, None, None, self.db_codename],
+                [None, "object_class", ("object_1",), "parameter_1", "Base", None, self.db_codename],
+                [None, None, None, None, None, None, self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():

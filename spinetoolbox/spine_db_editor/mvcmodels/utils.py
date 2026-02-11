@@ -26,16 +26,18 @@ if TYPE_CHECKING:
 
 FilterIds: TypeAlias = dict[tuple[DatabaseMapping, TempId], set[TempId]]
 
-PARAMETER_DEFINITION_FIELD_MAP = {
+PARAMETER_DEFINITION_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",
     "parameter name": "name",
     "valid types": "parameter_type_list",
     "value list": "parameter_value_list_name",
     "default value": "default_value",
     "description": "description",
+    "group": "parameter_group_name",
     "database": "database",
 }
-PARAMETER_VALUE_FIELD_MAP = {
+PARAMETER_VALUE_FIELD_MAP: dict[str, str] = {
+    "group": "parameter_group_name",
     "class": "entity_class_name",
     "entity byname": "entity_byname",
     "parameter name": "parameter_definition_name",
@@ -43,14 +45,14 @@ PARAMETER_VALUE_FIELD_MAP = {
     "value": "value",
     "database": "database",
 }
-ENTITY_ALTERNATIVE_FIELD_MAP = {
+ENTITY_ALTERNATIVE_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",
     "entity byname": "entity_byname",
     "alternative": "alternative_name",
     "active": "active",
     "database": "database",
 }
-ENTITY_FIELD_MAP = {
+ENTITY_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",
     "name": "name",
     "byname": "entity_byname",
@@ -60,6 +62,13 @@ ENTITY_FIELD_MAP = {
     "altitude": "alt",
     "shape name": "shape_name",
     "shape blob": "shape_blob",
+    "database": "database",
+}
+
+PARAMETER_GROUP_FIELD_MAP: dict[str, str] = {
+    "name": "name",
+    "color": "color",
+    "priority": "priority",
     "database": "database",
 }
 

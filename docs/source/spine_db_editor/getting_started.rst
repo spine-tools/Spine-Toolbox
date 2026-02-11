@@ -171,17 +171,18 @@ Views and Trees
 Spine Database Editor has the following main UI components:
 
 - *Entity tree*:
-  they present the structure of entities in all databases in the shape of a tree.
+  presents the structure of entities in all databases in the shape of a tree.
 - *Table views* (*Parameter value*, *Parameter definition*, *Entity alternative*, *Entity*):
-  they present entity data in the form of stacked tables.
-- *Pivot table* and *Frozen table*: they present data in the form of a pivot table,
+  present entity data in the form of stacked tables.
+- *Pivot table* and *Frozen table*: present data in the form of a pivot table,
   optionally with frozen dimensions.
-- *Graph view*: it presents the structure of classes and entities in the shape of a graph.
-- *Parameter value list*: it presents parameter value lists available in the databases.
-- *Alternative*: it presents alternatives defined in the databases in the shape of a tree.
-- *Scenario tree*: it presents scenarios defined in the databases in the shape of a tree.
+- *Graph view*: presents the structure of classes and entities in the shape of a graph.
+- *Parameter value list*: presents parameter value lists available in the databases.
+- *Alternative*: presents alternatives defined in the databases in the shape of a tree.
+- *Scenario tree*: presents scenarios defined in the databases in the shape of a tree.
 - *Metadata*: presents metadata defined in the databases.
 - *Item metadata*: shows metadata associated with the currently selected entities or parameter values.
+- *Parameter group*: presents data on parameter groups.
 
 .. tip:: You can customize the UI from the **View** section in the **Menu bar** by enabling and disabling
          the different UI components listed above.

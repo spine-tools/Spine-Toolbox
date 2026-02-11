@@ -404,3 +404,13 @@ in **Entity** and **Parameter value** tables:
 
 .. image:: img/item_metadata.png
    :align: center
+
+Viewing Parameter Groups
+========================
+
+You can find parameter groups from all databases under **Parameter group**:
+
+.. image:: img/parameter_group.png
+   :align: center
+
+The view works very similar to the other table views.

@@ -1400,8 +1400,8 @@ def inquire_index_name(model, column, title, parent_widget):
     model.setHeaderData(column, Qt.Orientation.Horizontal, new_name)
 
 
-def preferred_row_height(widget: QWidget, factor: float = 1.5) -> float:
-    return factor * widget.fontMetrics().lineSpacing()
+def preferred_row_height(widget: QWidget, factor: float = 1.5) -> int:
+    return int(factor * widget.fontMetrics().lineSpacing())
 
 
 def restore_ui(window: QMainWindow, app_settings: QSettings, settings_group: str) -> None:
