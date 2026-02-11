@@ -86,7 +86,7 @@ in the **Entity Tree**. This way the class will be preselected from the list and
 other classes that are relevant to the selected class.
 
 Enter the names of the entities under **entity name**. The column **alternative** is optional. It defaults to the
-first alternative in the **Alternative** -dock widget (normally *Base* will automatically set the entity active in the
+first alternative in the **Alternative** dock widget (normally *Base* will automatically set the entity active in the
 selected alternative. The cell under **entity group** is also optional. By filling it, the entity will be automatically
 added to the group that is specified in the cell. If the entity group doesn't exist, it will also be created. Finally,
 select the databases where you want to add the entities under **databases**. When you're ready, press **Ok**. Rows can
@@ -167,8 +167,8 @@ From **Table View**
 ~~~~~~~~~~~~~~~~~~~~
 
 To add new parameter definitions for an entity class, just fill the empty row of *Parameter definition*.
-Only two of the fields are required when creating a new parameter definition: *entity_class_name* and
-*parameter_name*. Enter the name of the class under *entity_class_name*. To display a list of available
+Only two of the fields are required when creating a new parameter definition: *class* and
+*parameter name*. Enter the name of the class under *class*. To display a list of available
 entity classes, start typing in the empty cell or double click it. For the name of the parameter choose
 something that isn't already defined for the specified entity class. Optionally, you can also
 specify valid value types, a parameter value list, a default value and a description.
@@ -176,23 +176,26 @@ specify valid value types, a parameter value list, a default value and a descrip
 The *valid types* column defines value types that are valid for the parameter.
 An empty field means that all types are valid.
 All values are validated against this column and non-valid types are marked invalid
-in the *default_value* and *value* (in Parameter value table) columns.
+in the *default value* and *value* (in Parameter value table) columns.
 Valid types are not enforced, however, so it is still possible to commit values of invalid type to the database.
 
-In the column *value_list_name* a name for a parameter value list can be selected. Leaving this field empty
+In the column *value list* a name for a parameter value list can be selected. Leaving this field empty
 means that later on when creating parameter values with this definition, the values are arbitrary. Meaning that
 the value could for example be a string or an integer. When the parameter value list is defined in the parameter
 definition, only the values in the list will be allowed to be chosen. For the creation of parameter value lists,
 see :ref:`parameter_value_list`.
 
-In the *default_value* field, the default value can be set. The default value can be used in cases where the value
-is not specified. The usage of *default_value* is really tool dependent, meaning that the Spine Database Editor
+In the *default value* field, the default value can be set. The default value can be used in cases where the value
+is not specified. The usage of *default value* is really tool dependent, meaning that the Spine Database Editor
 doesn't use the information of the default value anywhere, but it is instead left to the tool creators on how to
 utilize the default value.
 
 A short description for the parameter can be written in the *description* column.
 
-The parameter is added when the background of the cells under *entity_class_name* and *database* become gray.
+A parameter can be a member of parameter group which can be selected in the *group* column.
+
+The parameter is added when the row "jumps" to the existing parameter table above
+and the background of the cells under *class* and *database* become gray.
 
 
 From **Pivot View**
@@ -213,18 +216,19 @@ From **Table View**
 ~~~~~~~~~~~~~~~~~~~
 
 To add new parameter values for an entity, just fill the empty row of the *Parameter value* table.
-Enter the name of the class under *entity_class_name*, the name of the entity under *entity_byname*,
-the name of the parameter under *parameter_name*, and the name of the alternative under *alternative_name*.
+Enter the name of the class under *class*, the name of the entity under *entity byname*,
+the name of the parameter under *parameter name*, and the name of the alternative under *alternative*.
 Optionally, you can also specify the parameter value right away under the *value* column. The database where
 the value will be added to is displayed in the last column of the table (if multiple databases open at once).
 To display a list of available entity classes, entities, parameters, or alternatives, just start typing or
-double click under the appropriate column. The parameter value is added when the background of the cells under
-*entity_class_name* and *database* become gray.
+double click under the appropriate column.
+The parameter value is added when the row "jumps" to the existing values table above and the background of the cells under
+*class* and *database* become gray.
 
 .. note:: To add parameter values for an entity, the entity doesn't have to exist beforehand.
-   If the entity in question is one dimensional, you can just type in a new name into the cell under *entity_byname*.
+   If the entity in question is one dimensional, you can just type in a new name into the cell under *entity byname*.
    If the entity in question has more dimensions, you can specify any valid combination of elements by double
-   clicking the cell, which opens up the *Select elements* -dialog. In both cases, the specified entity will be
+   clicking the cell, which opens up the *Select elements* dialog. In both cases, the specified entity will be
    created if it doesn't yet exist.
 
 From **Pivot View**
@@ -244,14 +248,15 @@ Then, enter the parameter value in the corresponding cell in the table body.
 Adding Entity Alternatives
 ==========================
 
-To add an entity alternative, open the **Entity Alternative** **Table View**. There under *entity_class_name* select
-the class. Under *entity_byname* select the specific entity from that class and from *alternative_name* select the
-alternative. Then set the value of the *active* -column to either true or false by double clicking it. The background
-of the cells under *entity_class_name* and *database* should become gray, indicating that the entity alternative has
+To add an entity alternative, open the **Entity Alternative** **Table View**. There under *class* select
+the class. Under *entity byname* select the specific entity from that class and from *alternative* select the
+alternative. Then set the value of the *active* column to either true or false by double clicking it.
+The row "jumps" to the table for existing entity alternatives above
+and the background of the cells under *class* and *database* become gray, indicating that the entity alternative has
 been added.
 
 .. tip:: Like with the parameter values, new entities can be created on the fly by filling out the cell below
-         *entity_byname* with either text or a valid combination of elements.
+         *entity byname* with either text or a valid combination of elements.
 
 Adding Alternatives
 ===================
@@ -295,7 +300,7 @@ copy and paste scenarios between databases.
    the value from the alternative with the higher rank takes precedence.
 
 .. note:: As noted in the tooltip, scenario names longer than 20 characters may become shortened in generated files.
-   This can happen for example when exporting the scenarios using the Exporter -project item. This can lead to confusion
+   This can happen for example when exporting the scenarios using the Exporter project item. This can lead to confusion
    later on if the first 20 characters of the scenario names are identical. Therefore it is recommended to have a unique
    identifier for each scenario in the first 20 characters of its name.
 
