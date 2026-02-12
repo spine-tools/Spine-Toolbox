@@ -260,7 +260,7 @@ class TestAddItems(TestCaseWithQApplication):
         with db_map:
             import_functions.import_entity_classes(db_map, ("my_class",))
             import_functions.import_entities(db_map, (("my_class", "my_object"),))
-            import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
+            import_functions.import_metadata(db_map, [("metaname", "metavalue")])
             db_map.commit_session("Add test data.")
             entity_id = db_map.entity(entity_class_name="my_class", name="my_object")["id"]
             metadata_id = db_map.metadata(name="metaname", value="metavalue")["id"]
