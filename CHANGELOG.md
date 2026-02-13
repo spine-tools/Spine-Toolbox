@@ -16,12 +16,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 - Database editor now shows a little metadata tag next to entity or parameter name
   if there is metadata available for the item.
   The tag is shown in Entity and Parameter value tables.
+- Importer: added new mapping types for metadata:
+
+    - The Metadata type imports basic metadata name-value pairs.
+    - The Entity metadata type imports metadata for entities.
+    - The Parameter value metadata type imports metadata for parameter values.
 
 ### Changed
 
 ### Deprecated
 
 ### Removed
+
+- Importer: Entity and Parameter value metadata entries in Entity class type import mappings are gone.
+  Use the new Metadata, Entity metadata or Parameter value metadata mapping types instead.
 
 ### Fixed
 
