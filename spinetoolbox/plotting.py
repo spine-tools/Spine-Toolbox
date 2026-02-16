@@ -15,7 +15,7 @@ from itertools import starmap
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot, column
 from bokeh.resources import INLINE
-from bokeh.models import ColumnDataSource, HoverTool, Legend, RangeTool
+from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, RangeTool
 from bokeh.palettes import TolRainbow
 from bokeh.plotting import figure
 from contextlib import contextmanager
@@ -31,7 +31,6 @@ import numpy as np
 from PySide6.QtCore import QSize, Qt, QUrl
 from spinedb_api import DateTime, IndexedValue
 from spinedb_api.dataframes import to_dataframe
-from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT
 from .mvcmodels.shared import PARAMETER_VALUE_ROLE, PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
 
@@ -128,23 +127,23 @@ def parse_time(df: pd.DataFrame) -> pd.DataFrame:
 
 def squeeze_df(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     """Remove dataframe columns that have a single value, and return name, value as dict."""
-    counts = df.nunique(axis=0, dropna=True)
+    # last 2 columns are required for all plots, and may have duplicates
+    counts = df.iloc[:, :-1].nunique(axis=0, dropna=True)
+
+    if counts.empty:
+        return df, {}
+
     common_idxs = {c: df[c].iloc[0] for c, v in counts.items() if v == 1}
     cols = [c for c in df.columns if c not in common_idxs]
     return df.loc[:, cols], common_idxs
 
 
-def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
+def check_columns(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
     """Check if list of dataframes have matching x-label and compatible column types.
 
     If `_raise` is `True`, `ValueError` is raised on failure.
 
     """
-
-    # check if shapes match
-    shapes = [d.shape for d in dfs]
-    if not functools.reduce(lambda i, j: i if i == j else False, shapes):
-        raise PlottingError(f"incompatible shapes: {shapes}")
 
     # check if column types match
     def _get_type(i) -> str:
@@ -180,15 +179,27 @@ def check_dimensions(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
     return True
 
 
-def is_sequence(col_dtype: np.dtype) -> bool:
-    if col_dtype.kind in ("i", "f", "M"):  # sequence, raw timestamp, timestamp
+def check_shapes(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
+    # check if shapes match
+    shapes = [d.shape for d in dfs]
+    if functools.reduce(lambda i, j: i if i == j else False, shapes):
         return True
+    elif _raise:
+        raise PlottingError(f"incompatible shapes: {shapes}")
+    else:
+        return False
 
+
+seq_t = TypeVar("seq_t", int, pd.Timestamp, datetime.datetime)
+
+
+def is_sequence(col_dtype: np.dtype) -> bool:
     # FIXME: for some mad reason `True` for string `object` type!
     # if col_dtype.kind == "O":
     #     return col_dtype == datetime.datetime
 
-    return False
+    # sequence, timestamp; to include raw timestamp, add "f" below
+    return col_dtype.kind in ("i", "M")
 
 
 def get_variants(sdf: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -208,6 +219,8 @@ def get_variants(sdf: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     # TODO: check for implicit sequence: no explicit sequential
     # x-axis; in this case len(sdf) != len(idx_cols_df)
     seq_col_indexer = idx_cols_df.dtypes.apply(is_sequence)
+    if seq_col_indexer.sum() > 1:
+        raise PlottingError(f"multiple sequence columns (x axis): {', '.join(seq_col_indexer.index)}")
     nplots = idx_cols_df.loc[:, idx_cols_df.columns[~seq_col_indexer]].drop_duplicates().reset_index(drop=True)
     # NOTE: seq_cols will be as long as the longest seq for any non-seq index value
     seq_cols = idx_cols_df.loc[:, seq_col_indexer].drop_duplicates().reset_index(drop=True)
@@ -227,7 +240,7 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
         a PlotWidget object
     """
     dfs = [parse_time(df) for df in dfs]
-    check_dimensions(dfs, _raise=True)
+    check_columns(dfs, _raise=True)
 
     pprint(dfs, max_length=5)
     # combine all dfs to determine type of plot we need
@@ -239,28 +252,25 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
 
     nplots, seq_cols = get_variants(sdf)
 
-    # debug
-    print("sdf")
-    sdf.info()
-    pprint(sdf, max_length=3)
-    print("nplots")
-    pprint(nplots)
-    print("common_indexes")
-    pprint(common)
+    plot_title = "|".join(starmap(lambda k, v: f"{k}={v}", common.items()))
+
+    match nplots.empty, nplots.shape, seq_cols.empty, seq_cols.shape:
+        case True, _, False, (seq_len, _):
+            plot = plot_overlayed(sdf, nplots, plot_title)
+        case False, (_, ncols), False, (seq_len, _) if seq_len > 5:
+            plot = plot_overlayed(sdf, nplots, plot_title)
+        case False, (_, ncols), False, (seq_len, _):
+            plot = plot_barchart(sdf, plot_title)
+        case False, (_, ncols), True, _:
+            plot = plot_barchart(sdf, plot_title)
+        case _:
+            raise ValueError(f"unhandled case:\n{nplots=}\n{seq_cols=}")
 
     if plot_widget is None:
         plot_widget = PlotWidget()
     else:
         # FIXME: redo for bokeh
         plot_widget.canvas.setContent(b"")
-
-    plot_title = "|".join(starmap(lambda k, v: f"{k}={v}", common.items()))
-
-    if seq_cols.empty:
-        plot = plot_barchart(sdf, nplots, plot_title)
-    else:
-        # plot = plot_faceted(sdf, nplots, plot_title)
-        plot = plot_overlayed(sdf, nplots, plot_title)
 
     html = file_html(plot, INLINE, plot_title)
     print(html, file=plot_widget.html_path)
@@ -298,81 +308,53 @@ def pad_num(num: float | int, frac: float = 0.05) -> float:
     return num * ((1 + frac) if num > 0 else (1 - frac))
 
 
-def get_yrange(sdf: pd.DataFrame, idxcols: list) -> tuple:
+def get_ranges(
+    sdf: pd.DataFrame, idxcols: list, max_points: int = 1_000
+) -> tuple[tuple[seq_t, seq_t], tuple[float, float]]:
     """Calculate a common range that includes all ranges.
 
-    `sdf` is a DataFrame with the data.
+    Parameters
+    ----------
+    sdf: pd.DataFrame
+       DataFrame with the data.
 
-    `idxcols` is a list of column names that are treated as categorical indices.
+    idxcols: list[str]
+        List of column names that are treated as categorical indices.
+
+    max_points: int
+        Maximum number of points visible at a time on the default plot.
 
     """
-    col: str = sdf.columns[-1]
-    ranges = sdf.groupby(idxcols).agg({col: ["min", "max"]})[col]
-    # tolerance = 0.01% of min
-    empty = (ranges["max"] - ranges["min"]).abs().lt(1e-4 * ranges["min"])
-    ranges = ranges[~empty]
-
-    lo = pad_num(ranges["min"].min(), -0.05)
-    if (_hi := ranges["max"].max()) < 1:
-        hi = 1
+    x_label: str
+    col: str
+    x_label, col = sdf.columns[-2:]
+    agg_fns = {x_label: ["min", "max", "count"], col: ["min", "max"]}
+    if len(idxcols) > 0:
+        range_df = sdf.groupby(idxcols).agg(agg_fns)
     else:
-        hi = pad_num(_hi, 0.05) + 1
+        range_df = pd.DataFrame([sdf.agg(agg_fns).unstack(level=0)])
+    # tolerance = 0.01% of min
+    empty = np.less(np.abs((range_df[col]["max"] - range_df[col]["min"])), 1e-4 * range_df[col]["min"])
 
-    return np.floor_divide(lo, 1), np.floor_divide(hi, 1)
+    def _y_range() -> tuple[float, float]:
+        y_ranges = range_df[~empty][col]
+        lo = pad_num(np.min(y_ranges["min"]), -0.05)
+        if (_hi := np.max(y_ranges["max"])) <= 1:
+            hi = 1
+        else:
+            hi = pad_num(_hi, 0.05) + 1
+        return np.floor_divide(lo, 1), np.floor_divide(hi, 1)
 
+    def _x_range() -> tuple[seq_t, seq_t]:
+        x_ranges = range_df[~empty][x_label]
+        lo = np.min(x_ranges["min"])
+        hi = np.max(x_ranges["max"])
+        if (points := np.max(x_ranges["count"])) > max_points:
+            return lo, lo + (hi - lo) * (max_points / points)
+        else:
+            return lo, hi
 
-def fmt_query(names: pd.Series, *, sep: str = "&&") -> str:
-    return sep.join([f"{k}=={v!r}" for k, v in names.items()])
-
-
-def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 10_000):
-    x_range = (0, max_points // len(nplots))
-    y_range = get_yrange(sdf, nplots.columns.to_list())
-
-    print("ranges:")
-    print(x_range)
-    print(y_range)
-
-    # TODO:
-    # - x_axis_type="datetime"/...
-    # - flexible plot dimensions
-    # - tooltips
-    seq_cols = sdf.columns.difference(nplots.columns)
-    if len(seq_cols) > 2:
-        print(f"extra sequence columns: {seq_cols.tolist()}")
-    x_label, y_label = sdf.columns[-2:]
-
-    fig_options = {
-        "title": title,
-        "width": 800,
-        "height": 400,
-        "x_axis_label": x_label,
-        "y_axis_label": y_label,
-        "x_range": x_range,
-        "y_range": y_range,
-        "x_axis_type": "datetime" if sdf[x_label].dtype.kind == "M" else "linear",
-    }
-    fig = figure(**fig_options)
-
-    palette = Palette(len(nplots))
-    sources = []
-    legend_items = {}
-    for idx, (_, row) in enumerate(nplots.iterrows()):
-        _df = sdf.query(fmt_query(row)).drop(row.index, axis=1)
-        cds = ColumnDataSource(data=_df)
-        line = fig.line(x_label, y_label, source=cds, color=palette[idx])
-        point = fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
-        sources.append(cds)
-        # TODO: derive key robustly
-        legend_items[fmt_query(row, sep="\n")] = [line, point]
-
-    legend = Legend(items=list(legend_items.items()))
-    fig.add_layout(legend, "right")
-    fig.legend.click_policy = "hide"
-
-    longest: ColumnDataSource = functools.reduce(lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources)
-    select = get_window_selector(fig, x_label, y_label, longest)
-    return column(fig, select)
+    return _x_range(), _y_range()
 
 
 def get_window_selector(fig: figure, x_label: str, y_label: str, cds: ColumnDataSource) -> figure:
@@ -395,68 +377,108 @@ def get_window_selector(fig: figure, x_label: str, y_label: str, cds: ColumnData
     return select
 
 
-def plot_faceted(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
-    palette = Palette(len(nplots))
-    # TODO:
-    # - resolve x_label & y_label if they don't match
-    # - x_axis_type="datetime"/...
-    # - flexible plot dimensions
-    # - tooltips
+def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 1_000):
+    match sdf.shape:
+        case _, 2:
+            sources = {"value": ColumnDataSource(data=sdf)}
+        case _, 3:
+            col = sdf.columns[0]
+            grouped = sdf.groupby(col)
+            sources = {
+                f"{col}={v}": ColumnDataSource(data=sdf.loc[idx, sdf.columns[1:]]) for v, idx in grouped.groups.items()
+            }
+        case _, ncols if ncols > 3:
+            # FIXME: probably doesn't work for ncols == 4
+            grouped = sdf.groupby(sdf.columns[:-3].to_list())
+            figs = [
+                plot_overlayed(
+                    sdf.loc[idx, sdf.columns[-3:]],
+                    nplots,
+                    "|".join([title, *(f"{k}={v}" for k, v in zip(sdf.columns[:-3], vals))]),
+                    max_points=max_points,
+                )
+                for vals, idx in grouped.groups.items()
+            ]
+            return gridplot(figs, ncols=2)
+        case _:
+            raise RuntimeError()
+
     x_label, y_label = sdf.columns[-2:]
-    tooltips = [(col.capitalize(), f"@{col}") for col in sdf.columns]
-
-    figs, sources = [], []
-    for idx, (_, row) in enumerate(nplots.iterrows()):
-        query = fmt_query(row)
-        cds = ColumnDataSource(data=sdf.query(query))
-        sources.append(cds)
-        if idx == 0:
-            x_range = (0, len(cds.data["index"]) // 10)
-        else:
-            x_range = figs[0].x_range
-        fig = figure(
-            x_axis_label=x_label,
-            y_axis_label=y_label,
-            title=query,
-            height=200,
-            width=400,
-            x_range=x_range,
-            tooltips=tooltips,
-        )
-        fig.line(x_label, y_label, source=cds, color=palette[idx])
-        fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
-        # TODO: derive key robustly
-        figs.append(fig)
-
-    select = get_window_selector(figs[0], x_label, y_label, sources[0])
-    # grid_size = math.ceil(math.sqrt(nplots))
-    # plots = gridplot([figs[i : i + grid_size] for i in range(0, nplots, grid_size)])
-    plots = gridplot([figs[i : i + 2] for i in range(0, len(nplots), 2)])
-    return column(select, plots)
-
-
-def plot_barchart(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str):
-    # TODO:
-    # - resolve x_label & y_label if they don't match
-    # - x_axis_type="datetime"/...
-    # - flexible plot dimensions
-    # - tooltips
-    x_label, y_label = sdf.columns[-2:]
-    tooltips = [(col.capitalize(), f"@{col}") for col in sdf.columns]
-
+    x_range, y_range = get_ranges(sdf, nplots.columns.to_list(), max_points)
     fig = figure(
+        title=title,
+        width=800,
+        height=400,
         x_axis_label=x_label,
         y_axis_label=y_label,
-        title=title,
-        height=600,
-        width=800,
-        x_range=sdf[x_label].to_list(),
-        tooltips=tooltips,
+        x_range=x_range,
+        y_range=y_range,
+        x_axis_type="datetime" if sdf[x_label].dtype.kind == "M" else "linear",
     )
-    fig.vbar(x=x_label, top=y_label, source=sdf)
-    fig.y_range.start = -100
-    # major_label_orientation: "vertical" or angle in radians
-    fig.xaxis.major_label_orientation = np.pi / 3
+    palette = Palette(len(nplots))
+
+    def _draw(cds: ColumnDataSource, idx: int):
+        line = fig.line(x_label, y_label, source=cds, color=palette[idx])
+        point = fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
+        return [line, point]
+
+    legend_items = [(key, _draw(cds, idx)) for idx, (key, cds) in enumerate(sources.items())]
+    legend = Legend(items=legend_items)
+    fig.add_layout(legend, "right")
+    fig.legend.click_policy = "hide"
+
+    longest: ColumnDataSource = functools.reduce(
+        lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources.values()
+    )
+    select = get_window_selector(fig, x_label, y_label, longest)
+    return column(fig, select)
+
+
+def plot_barchart(sdf: pd.DataFrame, title: str):
+    # NOTE: {x,y}_label is also used to refer to the data in the
+    # source (df, grouped df, cds)
+    y_label = sdf.columns[-1]
+    tooltips = [(col.capitalize(), f"@{col}") for col in sdf.columns]
+    fig_opts = {
+        "y_axis_label": y_label,
+        "title": title,
+        "height": 600,
+        "width": 800,
+        "tooltips": tooltips,
+    }
+    match sdf.shape:
+        case _, 2:
+            x_label = sdf.columns[0]
+            source = sdf
+            fig = figure(x_axis_label=x_label, x_range=sdf.iloc[:, 0].to_list(), **fig_opts)
+            # major_label_orientation: "vertical" or angle in radians
+            fig.xaxis.major_label_orientation = np.pi / 3
+        case _, 3:
+            x_label = "_".join(sdf.columns[:-1])
+            _data = {
+                x_label: [tuple(map(str, row)) for row in sdf.iloc[:, :-1].values],
+                str(y_label): sdf[y_label].to_list(),
+            }
+            source = ColumnDataSource(data=_data)
+            x_range = FactorRange(*sorted(_data[x_label], key=lambda i: i[0]))
+            fig = figure(x_range=x_range, **fig_opts)
+            fig.xaxis.group_label_orientation = np.pi / 2
+        case _, ncols if ncols > 3:
+            # FIXME: probably doesn't work for ncols == 4
+            grouped = sdf.groupby(sdf.columns[:-3].to_list())
+            figs = [
+                plot_barchart(
+                    sdf.loc[idx, sdf.columns[-3:]],
+                    "|".join([title, *(f"{k}={v}" for k, v in zip(sdf.columns[:-3], vals))]),
+                )
+                for vals, idx in grouped.groups.items()
+            ]
+            return gridplot(figs, ncols=2)
+        case _:
+            raise RuntimeError()
+
+    fig.vbar(x=str(x_label), top=str(y_label), source=source)
+    fig.y_range.start = -10
     return fig
 
 
