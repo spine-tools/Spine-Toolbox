@@ -559,8 +559,11 @@ def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, header_columns[i + 1])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node, None))
-    return plot_data(data_list, plot_widget)
+    dfs = [
+        to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
+        for i in sorted(model_indexes, key=methodcaller("row"))
+    ]
+    return plot_data(dfs, plot_widget)
 
 
 def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
@@ -606,8 +609,11 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, index_names[i])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node, 1))
-    return plot_data(data_list, plot_widget)
+    dfs = [
+        to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
+        for i in sorted(model_indexes, key=methodcaller("row"))
+    ]
+    return plot_data(dfs, plot_widget)
 
 
 def plot_db_mngr_items(items, db_maps, db_name_registry, plot_widget=None):
@@ -646,8 +652,11 @@ def plot_db_mngr_items(items, db_maps, db_name_registry, plot_widget=None):
         for i, index in enumerate(indexes[:-1]):
             node = _set_default_node(node, index, index_names[i])
         node.content[indexes[-1]] = leaf_content
-    data_list = list(turn_node_to_xy_data(root_node, 1))
-    return plot_data(data_list, plot_widget)
+    dfs = [
+        to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
+        for i in sorted(model_indexes, key=methodcaller("row"))
+    ]
+    return plot_data(dfs, plot_widget)
 
 
 def _has_x_column(model, source_model):
