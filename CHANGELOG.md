@@ -22,6 +22,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
     - The Entity metadata type imports metadata for entities.
     - The Parameter value metadata type imports metadata for parameter values.
 
+- Exporter: added new mapping types for metadata. The types are the same as listed for Importer above,
+  except for exporting.
+
 ### Changed
 
 ### Deprecated
