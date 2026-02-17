@@ -11,12 +11,12 @@
 ######################################################################################################################
 
 """Unit tests for ToolboxUI class."""
-import sys
 from contextlib import contextmanager
 import json
 import os
 import pathlib
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
@@ -24,13 +24,13 @@ from PySide6.QtCore import QMimeData, QPoint, QPointF, QSettings, Qt
 from PySide6.QtGui import QDropEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox
-from spinetoolbox.ui_main import ToolboxUI
 from spinetoolbox.link import Link
 from spinetoolbox.project import SpineToolboxProject
 from spinetoolbox.project_item.project_item import ProjectItem
 from spinetoolbox.resources_icons_rc import qInitResources
 import spinetoolbox.ui_main
-from spinetoolbox.widgets.persistent_console_widget import PersistentConsoleWidget, ConsoleWindow
+from spinetoolbox.ui_main import ToolboxUI
+from spinetoolbox.widgets.persistent_console_widget import ConsoleWindow, PersistentConsoleWidget
 from spinetoolbox.widgets.project_item_drag import NiceButton, ProjectItemDragMixin
 from .mock_helpers import (
     TestCaseWithQApplication,
@@ -588,27 +588,27 @@ class TestToolboxUI(TestCaseWithQApplication):
         """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
         This test is done with a 'mock' project so MUST call QSettings.value() twice."""
         self.toolbox._project = 1  # Just make sure project is not None
-        self.toolbox.undo_stack = mock.Mock()
-        self.toolbox.undo_stack.isClean.return_value = False
-        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_1
-        tasks = self.toolbox._tasks_before_exit()
-        self.assertEqual(1, self.toolbox._qsettings.value.call_count)
-        self.assertEqual(tasks, ["prompt save"])
-        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_2
-        self.toolbox._qsettings.value.call_count = 0
-        tasks = self.toolbox._tasks_before_exit()
-        self.assertEqual(1, self.toolbox._qsettings.value.call_count)
-        self.assertEqual(tasks, ["prompt save"])
-        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_5
-        self.toolbox._qsettings.value.call_count = 0
-        tasks = self.toolbox._tasks_before_exit()
-        self.assertEqual(2, self.toolbox._qsettings.value.call_count)
-        self.assertEqual(tasks, ["save"])
-        self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_6
-        self.toolbox._qsettings.value.call_count = 0
-        tasks = self.toolbox._tasks_before_exit()
-        self.assertEqual(2, self.toolbox._qsettings.value.call_count)
-        self.assertEqual(tasks, ["prompt exit", "save"])
+        with mock.patch.object(self.toolbox.undo_stack, "isClean") as mock_is_clean:
+            mock_is_clean.return_value = False
+            self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_1
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(1, self.toolbox._qsettings.value.call_count)
+            self.assertEqual(tasks, ["prompt save"])
+            self.toolbox._qsettings.value.reset_mock()
+            self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_2
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(1, self.toolbox._qsettings.value.call_count)
+            self.assertEqual(tasks, ["prompt save"])
+            self.toolbox._qsettings.value.reset_mock()
+            self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_5
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, self.toolbox._qsettings.value.call_count)
+            self.assertEqual(tasks, ["save"])
+            self.toolbox._qsettings.value.reset_mock()
+            self.toolbox._qsettings.value.side_effect = self._tasks_before_exit_scenario_6
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, self.toolbox._qsettings.value.call_count)
+            self.assertEqual(tasks, ["prompt exit", "save"])
         self.toolbox._project = None
 
     def test_copy_project_item_to_clipboard(self):
