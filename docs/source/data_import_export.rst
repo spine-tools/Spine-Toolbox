@@ -160,7 +160,7 @@ The image below shows different font styles used in the table:
    :align: center
 
 The tables that exist in the input source, such as the 'Widgets' table above, are shown with normal text in the list.
-Tables that are defined in the specification but are missing in the source are geyed like the 'Objects' table.
+Tables that are defined in the specification but are missing in the source are greyed like the 'Objects' table.
 New tables that have not been mapped before are tagged with ``(new)``.
 
 Greyed tables can be removed by selecting them (use **Shift** or **Ctrl** to select multiple)
@@ -182,7 +182,7 @@ Be careful not to press this button unless you want to wipe the whole specificat
           you can undo previous changes for the specification from the hamburger menu or by pressing **Ctrl+Z**.
           To redo actions, or press **Crl+Y**.
 
-When a table is selected, it's data and a preview of how the selected mapping will
+When a table is selected, its data and a preview of how the selected mapping will
 import the data will be presented under the options widget. An important aspect of data import is
 whether each item in the input data should be read as a string, a number,
 a time stamp or something else. In other words, the importer should know the data types of the input data.
@@ -215,14 +215,41 @@ time step and time of the first integer.
 
 Under **Mappings** you can manage mappings by adding new ones, removing or duplicating existing ones
 and reordering by dragging and dropping.
-Each table has it's own mappings and every mapping has its own options. In **Mappings** you can select the mapping
+Each table has its own mappings and every mapping has its own options. In **Mappings** you can select the mapping
 that you want to start modifying. Having multiple mappings for a single table allows to for example import
 multiple item types at the same time from a single table in a file.
 
 Underneath **Mappings** there are options that help the importer get a feel for what kind of data it will be importing.
-The available *item type* options are *Entity class, Entity group, Alternative, Scenario,
-Scenario alternative* and *Parameter value list*. The other available
-options are dependent on the Item type.
+The available *item type* options are:
+
+*Entity class*
+    For importing entities, relationships (multidimensional entities) and associated parameters.
+
+*Entity group"
+    Groups entities under a specific group entity.
+
+*Alternative*
+    Imports alternative names.
+
+*Scenario*
+    Imports scenario names.
+
+*Scenario alternative*
+    Builds scenarios from alternatives.
+
+*Parameter value list*
+    Imports parameter value lists, also known as enumerations.
+
+*Metadata*
+    Imports metadata name-value pairs.
+
+*Entity metadata*
+    Associates metadata name-value pairs with entities.
+
+*Parameter value metadata*
+    Associates metadata name-value pairs with parameter values.
+
+The other available options are dependent on the Item type.
 *Parameter type* is used to specify what type of parameters, if any, the table contains. It has options
 *Value, Definition* and *None*. If *Value* or *Definition* is selected
 the value or respectively the default value type can be set from the *Value* drop-down list.
@@ -404,19 +431,57 @@ Mapping Options
 The currently selected mapping is edited using the controls in *Mapping options* and *Mapping specification* docks.
 The *Mapping options* dock contains controls that apply to the mapping as a whole, e.g. what data the output tables
 contain. It is important to choose *Item type* correctly since it determines what database items the mapping outputs
-and also dictates the mapping types that will be visible in the *Mapping specification* dock widget. It has options
-*Entity class, Entity class with dimension parameter, Entity group, Alternative, Scenario,
-Scenario alternative* and *Parameter value list*. The rest of the
-options besides *Group function* are item type specific and may not be available for all selections.
+and also dictates the mapping types that will be visible in the *Mapping specification* dock widget.
+Currently available item types are:
+
+*Entity class*
+    Exports entities, relationships (multidimensional entities) and associated parameters.
+
+*Entity class with dimension parameter*
+    Exports relationships (multidimensional entities) with a twist:
+    instead of exporting the relationship's parameters, this item type exports
+    parameters from one of the relationship's dimensions.
+    The dimension is selected with the *Selected dimension* spin box.
+    For example, when exporting ``unit__node`` with this item type,
+    and with dimension 1 selected,
+    parameters from ``unit`` class will be exported.
+    Selecting dimension 2 would export parameters from ``node``.
+
+*Entity group*
+    Exports entity group information.
+
+*Alternative*
+    Exports alternative names and descriptions.
+
+*Scenario*
+    Exports scenario names and descriptions.
+
+*Scenario alternative*
+    Exports scenarios and the alternatives they consist of.
+
+*Parameter value list*
+    Exports parameter value lists.
+
+*Metadata*
+    Exports metadata name-value pairs.
+
+*Entity metadata*
+    Exports metadata name-value pairs associated with entities.
+
+*Parameter value metadata*
+    Exports metadata name-value pairs associated with parameter values.
+
+The rest of the options besides *Group function* are item type specific
+and may not be available for all selections.
 
 .. image:: img/exporter_mapping_options_dock.png
    :align: center
 
 Checking the *Always export header* checkbox outputs a table that has fixed headers even if the table is
-otherwise empty. If *Item type* is Entity class, the *Entity dimensions* spinbox can be used
+otherwise empty. If *Item type* supports it, the *Entity dimensions* spinbox can be used
 to specify the maximum number of entity's dimensions that the mapping is able to handle.
-*Selected dimensions* option is only available for the *Entity class with dimension parameter* item
-type and it is used to specify the entity dimension where the entity parameters are selected from.
+*Selected dimension* option is only available for the *Entity class with dimension parameter* item
+type and it is used to specify the entity dimension where the entity parameters are exported from.
 Parameters can be outputted by choosing their value type using the *Parameter type* combobox. The *Value*
 choice adds rows to *Mapping specification* for parameter values associated with individual entities while
 *Default value* allows outputting parameters' default values. The maximum number of value dimensions in
