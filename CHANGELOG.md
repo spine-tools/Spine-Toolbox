@@ -24,6 +24,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - Exporter: added new mapping types for metadata. The types are the same as listed for Importer above,
   except for exporting.
+- Exporter: support for exporting descriptions have been extended.
+  It is now possible to export entity class, entity and parameter descriptions
+  in addition to scenario and alternative descriptions.
+  Note, that the feature is not available for existing mappings.
+  You need to create new *Entity class* or type mappings with *Parameter type* set to None or Default value.
+
 
 ### Changed
 
