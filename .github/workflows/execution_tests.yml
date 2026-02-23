@@ -29,6 +29,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository }}
+          fetch-depth: 0
+      - name: Version from Git tags
+        run: git describe --tags
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@v5
         with:
