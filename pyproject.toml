@@ -40,13 +40,12 @@ spinetoolbox = "spinetoolbox.main:main"
 spine-db-editor = "spinetoolbox.spine_db_editor.main:main"
 
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm[toml]>=6.2", "wheel", "build"]
+requires = ["setuptools>=80", "setuptools_scm>=8", "wheel", "build"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 version_file = "spinetoolbox/_version.py"
-# default: guess-next-dev, alternatives: post-release, no-guess-dev
-version_scheme = "release-branch-semver"
+version_scheme = "guess-next-dev"
 
 [tool.setuptools]
 zip-safe = false
