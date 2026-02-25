@@ -269,6 +269,7 @@ def plot_data(dfs, plot_widget: PlotWidget | None = None):
         case _:
             raise ValueError(f"unhandled case:\n{nplots=}\n{seq_cols=}")
 
+    plot_widget.set_download_data(sdf)
     plot_widget.write(file_html(plot, INLINE, plot_title))
     if plot.width and plot.height:
         plot_widget.resize(QSize(plot.width + 50, plot.height + 50))
@@ -413,21 +414,13 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     # TODO Generate file name based on data, instead of hard-coding
     save_tool.filename = "plot.jpg"  # default filename, suppress file name dialog from bokeh
 
-    # Download data as file
-    # TODO Generate file name based on data, instead of hard-coding
-    sdf_text: str = sdf.to_csv(index=False, sep=",", header=True)
-    download_callback: CustomJS = CustomJS(args=dict(file_content=sdf_text), code="""
-    const blob = new Blob([file_content], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'plot_data.csv';
-    link.style.display = 'none';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    # Download data as file via QWebChannel bridge (CSV is generated on demand in Python)
+    download_callback: CustomJS = CustomJS(code="""
+    if (window.bridge) {
+        window.bridge.downloadCsv();
+    } else {
+        console.error("QWebChannel bridge not available");
+    }
 """)
     download_action: CustomAction = CustomAction(
         # Opacity is currently hard-coded to match the other icons

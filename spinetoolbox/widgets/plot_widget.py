@@ -10,14 +10,48 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""A Qt widget showing a toolbar and a matplotlib plotting canvas."""
+"""A Qt widget showing a toolbar and a plotting canvas."""
 from pathlib import Path
 import tempfile
 
-from PySide6.QtCore import QMetaObject, Qt, QUrl, QSize, Slot
-from PySide6.QtWebEngineCore import QWebEngineDownloadRequest
+import pandas as pd
+from PySide6.QtCore import QMetaObject, QObject, QStandardPaths, Qt, QUrl, QSize, Slot
+from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFileDialog, QVBoxLayout, QWidget
+
+
+class DownloadBridge(QObject):
+    """Bridge object exposed to JavaScript via QWebChannel for on-demand CSV download."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._data: pd.DataFrame | None = None
+        self._parent_widget: QWidget | None = None
+
+    def set_data(self, data: pd.DataFrame):
+        """Store the DataFrame to be exported on demand."""
+        self._data = data
+
+    def set_parent_widget(self, widget: QWidget):
+        """Set the parent widget for file dialogs."""
+        self._parent_widget = widget
+
+    @Slot()
+    def downloadCsv(self):
+        """Called from JavaScript when the user clicks the download button."""
+        if self._data is None:
+            return
+        csv_text = self._data.to_csv(index=False, sep=",", header=True)
+        path, _ = QFileDialog.getSaveFileName(
+            self._parent_widget,
+            caption="Save Data as CSV",
+            dir=str(Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)) / "plot_data.csv"),
+            filter="CSV Files (*.csv)",
+        )
+        if path:
+            Path(path).write_text(csv_text, encoding="utf-8")
 
 
 class PlotWidget(QWidget):
@@ -42,11 +76,43 @@ class PlotWidget(QWidget):
         self.html_path = tempfile.NamedTemporaryFile(suffix=".html")
         print(self)
         print(self.html_path.name)
+
+        # Set up QWebChannel so JavaScript can call back into Python
+        self._bridge = DownloadBridge(self)
+        self._bridge.set_parent_widget(self)
+        self._channel = QWebChannel(self)
+        self._channel.registerObject("bridge", self._bridge)
+        self.canvas.page().setWebChannel(self._channel)
+
+        # Inject qwebchannel.js (shipped with Qt) so the page can use QWebChannel
+        qwebchannel_script = QWebEngineScript()
+        qwebchannel_script.setName("qwebchannel")
+        qwebchannel_script.setSourceUrl(QUrl("qrc:///qtwebchannel/qwebchannel.js"))
+        qwebchannel_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+        qwebchannel_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+        self.canvas.page().scripts().insert(qwebchannel_script)
+
+        # Inject a small init script that establishes the bridge on window.bridge
+        init_script = QWebEngineScript()
+        init_script.setName("bridge_init")
+        init_script.setSourceCode(
+            "new QWebChannel(qt.webChannelTransport, function(channel) {"
+            "    window.bridge = channel.objects.bridge;"
+            "});"
+        )
+        init_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
+        init_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+        self.canvas.page().scripts().insert(init_script)
+
         self.canvas.setUrl(QUrl.fromLocalFile(self.html_path.name))
         self._layout.addWidget(self.canvas)
         self.resize(QSize(900, 600))
         self.canvas.page().profile().downloadRequested.connect(self.save_as_prompt)
         QMetaObject.connectSlotsByName(self)
+
+    def set_download_data(self, data: pd.DataFrame):
+        """Set the DataFrame that will be exported when the user clicks the CSV download button."""
+        self._bridge.set_data(data)
 
     def write(self, html_content: str):
         Path(self.html_path.name).write_bytes(bytes(html_content, "utf8"))
@@ -55,20 +121,11 @@ class PlotWidget(QWidget):
     @Slot(QWebEngineDownloadRequest)
     def save_as_prompt(self, download: QWebEngineDownloadRequest):
         download_dir: Path = Path(download.downloadDirectory())
-
-        # Downloading the plot as image and downloading data currently share
-        # the same code for saving.
-        # TODO Disentangle download code and put it closer to the elements that use it.
-        if download.suggestedFileName().endswith('.csv'):
-            filter: str = "CSV Files (*.csv)"
-        else:
-            filter: str = "Images (*.svg *.png *.jpg)"
-
         path, _ = QFileDialog.getSaveFileName(
                 self,
                 caption="Save File",
                 dir=str(download_dir / download.suggestedFileName()),
-                filter=filter)
+                filter="Images (*.svg *.png *.jpg)")
         if path:
             download.setDownloadFileName(path)
             download.accept()
