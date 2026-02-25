@@ -346,7 +346,9 @@ def get_ranges(
     return _x_range(), _y_range()
 
 
-def get_window_selector(fig: figure, x_label: str, y_label: str, cds: ColumnDataSource) -> figure:
+def get_window_selector(
+    fig: figure, x_label: str, y_label: str, x_axis_type: Literal["linear"] | Literal["datetime"], cds: ColumnDataSource
+) -> figure:
     # TODO: get width from `fig`
     select = figure(
         title="Select time range",
@@ -356,6 +358,7 @@ def get_window_selector(fig: figure, x_label: str, y_label: str, cds: ColumnData
         tools="",
         toolbar_location=None,
         y_range=(0, 100),
+        x_axis_type=x_axis_type,
     )
     range_tool = RangeTool(x_range=fig.x_range, start_gesture="pan")
     range_tool.overlay.fill_color = "navy"
@@ -393,6 +396,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
             raise RuntimeError()
 
     x_label, y_label = sdf.columns[-2:]
+    x_axis_type = "datetime" if sdf[x_label].dtype.kind == "M" else "linear"
     x_range, y_range = get_ranges(sdf, nplots.columns.to_list(), max_points)
     fig = figure(
         title=title,
@@ -402,7 +406,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
         y_axis_label=y_label,
         x_range=x_range,
         y_range=y_range,
-        x_axis_type="datetime" if sdf[x_label].dtype.kind == "M" else "linear",
+        x_axis_type=x_axis_type,
     )
     palette = Palette(len(nplots))
 
@@ -419,7 +423,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     longest: ColumnDataSource = functools.reduce(
         lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources.values()
     )
-    select = get_window_selector(fig, x_label, y_label, longest)
+    select = get_window_selector(fig, x_label, y_label, x_axis_type, longest)
     return column(fig, select)
 
 
