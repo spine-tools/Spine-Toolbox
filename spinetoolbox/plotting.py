@@ -15,7 +15,7 @@ from itertools import starmap
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot, column
 from bokeh.resources import INLINE
-from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, RangeTool, SaveTool
+from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, RangeTool, SaveTool, CustomAction, CustomJS
 from bokeh.palettes import TolRainbow
 from bokeh.plotting import figure
 from contextlib import contextmanager
@@ -410,7 +410,47 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
         tools="pan,box_zoom,wheel_zoom,save,reset",
     )
     save_tool: SaveTool = fig.select_one(SaveTool)
-    save_tool.filename = "dummy"  # to suppress file name dialog from bokeh
+    # TODO Generate file name based on data, instead of hard-coding
+    save_tool.filename = "plot.jpg"  # default filename, suppress file name dialog from bokeh
+
+    # Download data as file
+    # TODO Generate file name based on data, instead of hard-coding
+    sdf_text: str = sdf.to_csv(index=False, sep=",", header=True)
+    download_callback: CustomJS = CustomJS(args=dict(file_content=sdf_text), code="""
+    const blob = new Blob([file_content], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plot_data.csv';
+    link.style.display = 'none';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+""")
+    download_action: CustomAction = CustomAction(
+        # Opacity is currently hard-coded to match the other icons
+        # TODO Find a way to match icon colors automatically.
+        icon="""data:image/svg+xml;utf8,
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" opacity="0.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m 4,17 v 2 a 2,2 0 0 0 2,2 h 12 a 2,2 0 0 0 2,-2 v -2" />
+        <polyline points="7 11 12 16 17 11" transform="translate(0,1.1807315)" />
+        <line x1="12" y1="5.1807313" x2="12" y2="17.180731" />
+        <path d="M 7.9021726,8.7586207 V 4" id="path4" />
+        <path d="M 7.9021726,4 6.1435519,5.7586207" />
+        <ellipse cx="16.87956" cy="6.3793101" rx="1.715098" ry="2.3953953" />
+        </svg>
+        """,
+        callback=download_callback,
+        description="Download Data as CSV"       # tooltip on hover
+    )
+
+    # Add the data download button _under_ the graph save button.
+    tools = fig.toolbar.tools
+    save_tool = next(t for t in tools if isinstance(t, SaveTool))
+    save_index = tools.index(save_tool)
+    tools.insert(save_index+1, download_action)
 
     palette = Palette(len(nplots))
 
