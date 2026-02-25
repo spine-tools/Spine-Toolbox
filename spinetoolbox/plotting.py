@@ -19,16 +19,16 @@ from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, Range
 from bokeh.palettes import TolRainbow
 from bokeh.plotting import figure
 from contextlib import contextmanager
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 import datetime
 from enum import auto, Enum, unique
 import functools
 from operator import attrgetter, methodcaller
 import re
 import pandas as pd
-from typing import Dict, Iterable, List, Optional, TypeAlias, TypeVar, Union, cast
+from typing import Dict, Iterable, List, Literal, Optional, TypeVar, Union
 import numpy as np
-from PySide6.QtCore import QSize, Qt, QUrl
+from PySide6.QtCore import QSize, Qt
 from spinedb_api import DateTime, IndexedValue
 from spinedb_api.dataframes import to_dataframe
 from .mvcmodels.shared import PARAMETER_VALUE_ROLE, PARSED_ROLE
