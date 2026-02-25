@@ -15,7 +15,7 @@ from itertools import starmap
 from bokeh.embed import file_html
 from bokeh.layouts import gridplot, column
 from bokeh.resources import INLINE
-from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, RangeTool
+from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, RangeTool, SaveTool
 from bokeh.palettes import TolRainbow
 from bokeh.plotting import figure
 from contextlib import contextmanager
@@ -407,7 +407,11 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
         x_range=x_range,
         y_range=y_range,
         x_axis_type=x_axis_type,
+        tools="pan,box_zoom,wheel_zoom,save,reset",
     )
+    save_tool: SaveTool = fig.select_one(SaveTool)
+    save_tool.filename = "dummy"  # to suppress file name dialog from bokeh
+
     palette = Palette(len(nplots))
 
     def _draw(cds: ColumnDataSource, idx: int):
