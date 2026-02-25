@@ -227,7 +227,7 @@ def get_variants(sdf: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return nplots, seq_cols
 
 
-def plot_data(dfs, plot_widget=None, plot_type=None):
+def plot_data(dfs, plot_widget: PlotWidget | None = None):
     """
     Returns a plot widget with plots of the given data.
 
@@ -239,6 +239,9 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
     Returns:
         a PlotWidget object
     """
+    if plot_widget is None:
+        plot_widget = PlotWidget()
+
     dfs = [parse_time(df) for df in dfs]
     check_columns(dfs, _raise=True)
 
@@ -266,24 +269,10 @@ def plot_data(dfs, plot_widget=None, plot_type=None):
         case _:
             raise ValueError(f"unhandled case:\n{nplots=}\n{seq_cols=}")
 
-    if plot_widget is None:
-        plot_widget = PlotWidget()
-    else:
-        # FIXME: redo for bokeh
-        plot_widget.canvas.setContent(b"")
-
-    html = file_html(plot, INLINE, plot_title)
-    print(html, file=plot_widget.html_path)
+    plot_widget.write(file_html(plot, INLINE, plot_title))
     if plot.width and plot.height:
         plot_widget.resize(QSize(plot.width + 50, plot.height + 50))
 
-    # # TODO: tick orientation
-    # for data in data_list:
-    #     if type(data.x[0]) not in (float, np.float64, int):
-    #         plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
-
-    # if needs_redraw:
-    #     plot_widget.canvas.draw()
     return plot_widget
 
 
