@@ -770,34 +770,3 @@ def add_row_to_exception(row, display_row):
         yield None
     except PlottingError as error:
         raise PlottingError(f"Failed to plot row {display_row(row)}: {error}") from error
-
-
-def add_array_plot(plot_widget, value):
-    """
-    Adds an array plot to a plot widget.
-
-    Args:
-        plot_widget (PlotWidget): a plot widget to modify
-        value (Array): the array to plot
-    """
-    plot_widget.canvas.axes.plot(value.indexes, value.values, **_LINE_PLOT_SETTINGS, **_BASE_SETTINGS)
-    plot_widget.canvas.axes.set_xlabel(value.index_name)
-
-
-def add_time_series_plot(plot_widget, value):
-    """
-    Adds a time series step plot to a plot widget.
-
-    Args:
-        plot_widget (PlotWidget): a plot widget to modify
-        value (TimeSeries): the time series to plot
-    """
-    plot_widget.canvas.axes.step(
-        value.indexes, value.values, **_make_time_series_settings(_LINE_PLOT_SETTINGS), **_BASE_SETTINGS
-    )
-    plot_widget.canvas.axes.set_xlabel(value.index_name)
-    # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
-    left, _ = plot_widget.canvas.axes.get_xlim()
-    if left < 1.0:
-        # 1.0 corresponds to 0001-01-01T00:00
-        plot_widget.canvas.axes.set_xlim(left=1.0)

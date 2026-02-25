@@ -11,12 +11,13 @@
 ######################################################################################################################
 
 """Contains logic for the variable resolution time series editor widget."""
+import pandas as pd
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from ..helpers import inquire_index_name
 from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
-from ..plotting import add_time_series_plot
+from ..plotting import plot_data
 from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 
@@ -80,10 +81,11 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updates the plot widget."""
-        self._ui.plot_widget.canvas.axes.cla()
-        add_time_series_plot(self._ui.plot_widget, self._model.value)
-        self._ui.plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
-        self._ui.plot_widget.canvas.draw()
+        value = self._model.value
+        x_label = "x" if value.index_name is None else value.index_name
+        df = pd.DataFrame({x_label: value.indexes, "value": value.values})
+        plot_data([df], self._ui.plot_widget)
+        # self._ui.plot_widget.show()
 
     def value(self):
         """Return the time series currently being edited."""

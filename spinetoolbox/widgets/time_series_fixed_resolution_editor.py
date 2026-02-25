@@ -12,6 +12,7 @@
 
 """Contains logic for the fixed step time series editor widget."""
 from datetime import datetime
+import pandas as pd
 from PySide6.QtCore import QDate, QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QCalendarWidget, QHeaderView, QWidget
 from spinedb_api import (
@@ -22,7 +23,7 @@ from spinedb_api import (
 )
 from ..helpers import inquire_index_name
 from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
-from ..plotting import add_time_series_plot
+from ..plotting import plot_data
 from .indexed_value_table_context_menu import IndexedValueTableContextMenu
 
 
@@ -158,10 +159,15 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
-        self._ui.plot_widget.canvas.axes.cla()
-        add_time_series_plot(self._ui.plot_widget, self._model.value)
-        self._ui.plot_widget.canvas.axes.tick_params(axis="x", labelrotation=30)
-        self._ui.plot_widget.canvas.draw()
+        from rich.pretty import pprint
+
+        value = self._model.value
+        pprint(value.to_dict(), max_length=5, max_depth=3)
+        x_label = "x" if value.index_name is None else value.index_name
+        df = pd.DataFrame({x_label: value.indexes, "value": value.values})
+        pprint(df, max_length=5, max_depth=3)
+        plot_data([df], self._ui.plot_widget)
+        # self._ui.plot_widget.show()
 
     def value(self):
         """Returns the parameter_value currently being edited."""

@@ -11,12 +11,13 @@
 ######################################################################################################################
 
 """Contains an editor widget for array type parameter values."""
+import pandas as pd
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import DateTime, Duration, ParameterValueFormatError
 from ..helpers import inquire_index_name
 from ..mvcmodels.array_model import ArrayModel
-from ..plotting import add_array_plot
+from ..plotting import plot_data
 from ..spine_db_editor.widgets.custom_delegates import ParameterValueElementDelegate
 from .array_value_editor import ArrayValueEditor
 from .indexed_value_table_context_menu import ArrayTableContextMenu
@@ -128,12 +129,14 @@ class ArrayEditor(QWidget):
         """Updates the plot widget."""
         if self._ui.value_type_combo_box.currentText() != "Float":
             return
-        self._ui.plot_widget.canvas.axes.cla()
         try:
-            add_array_plot(self._ui.plot_widget, self._model.array())
+            arr = self._model.array()
+            x_label = "x" if arr.index_name is None else arr.index_name
+            df = pd.DataFrame({x_label: arr.indexes, "value": arr.values})
+            plot_data([df], self._ui.plot_widget)
+            # self._ui.plot_widget.show()
         except ParameterValueFormatError:
             return
-        self._ui.plot_widget.canvas.draw()
 
     @Slot(int)
     def _open_header_editor(self, column):
