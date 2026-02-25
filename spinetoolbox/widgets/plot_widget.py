@@ -54,8 +54,21 @@ class PlotWidget(QWidget):
 
     @Slot(QWebEngineDownloadRequest)
     def save_as_prompt(self, download: QWebEngineDownloadRequest):
-        default_dir = download.downloadDirectory()
-        path, _ = QFileDialog.getSaveFileName(self, "Save File", default_dir, "Images (*.svg *.png *.jpg)")
+        download_dir: Path = Path(download.downloadDirectory())
+
+        # Downloading the plot as image and downloading data currently share
+        # the same code for saving.
+        # TODO Disentangle download code and put it closer to the elements that use it.
+        if download.suggestedFileName().endswith('.csv'):
+            filter: str = "CSV Files (*.csv)"
+        else:
+            filter: str = "Images (*.svg *.png *.jpg)"
+
+        path, _ = QFileDialog.getSaveFileName(
+                self,
+                caption="Save File",
+                dir=str(download_dir / download.suggestedFileName()),
+                filter=filter)
         if path:
             download.setDownloadFileName(path)
             download.accept()
