@@ -414,10 +414,31 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     # TODO Generate file name based on data, instead of hard-coding
     save_tool.filename = "plot.jpg"  # default filename, suppress file name dialog from bokeh
 
-    # Download data as file via QWebChannel bridge (CSV is generated on demand in Python)
-    download_callback: CustomJS = CustomJS(code="""
+    palette = Palette(len(nplots))
+
+    def _draw(cds: ColumnDataSource, idx: int):
+        line = fig.line(x_label, y_label, source=cds, color=palette[idx])
+        point = fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
+        return [line, point]
+
+    legend_items = [(key, _draw(cds, idx)) for idx, (key, cds) in enumerate(sources.items())]
+    legend = Legend(items=legend_items)
+    fig.add_layout(legend, "right")
+    fig.legend.click_policy = "hide"
+
+    # Download data as file via QWebChannel bridge (CSV is generated on demand in Python).
+    # The callback inspects legend item visibility so that only data series currently
+    # shown in the plot (not toggled off via legend click) are included in the export.
+    download_callback: CustomJS = CustomJS(args={"legend": legend}, code="""
+    var visibleKeys = [];
+    for (var i = 0; i < legend.items.length; i++) {
+        var item = legend.items[i];
+        if (item.renderers[0].visible) {
+            visibleKeys.push(item.label.value);
+        }
+    }
     if (window.bridge) {
-        window.bridge.downloadCsv();
+        window.bridge.downloadFilteredCsv(JSON.stringify(visibleKeys));
     } else {
         console.error("QWebChannel bridge not available");
     }
@@ -444,18 +465,6 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     save_tool = next(t for t in tools if isinstance(t, SaveTool))
     save_index = tools.index(save_tool)
     tools.insert(save_index+1, download_action)
-
-    palette = Palette(len(nplots))
-
-    def _draw(cds: ColumnDataSource, idx: int):
-        line = fig.line(x_label, y_label, source=cds, color=palette[idx])
-        point = fig.scatter(x_label, y_label, source=cds, color=palette[idx], size=3)
-        return [line, point]
-
-    legend_items = [(key, _draw(cds, idx)) for idx, (key, cds) in enumerate(sources.items())]
-    legend = Legend(items=legend_items)
-    fig.add_layout(legend, "right")
-    fig.legend.click_policy = "hide"
 
     longest: ColumnDataSource = functools.reduce(
         lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources.values()

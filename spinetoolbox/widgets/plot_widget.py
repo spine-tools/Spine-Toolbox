@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A Qt widget showing a toolbar and a plotting canvas."""
+import json
 from pathlib import Path
 import tempfile
 
@@ -38,12 +39,32 @@ class DownloadBridge(QObject):
         """Set the parent widget for file dialogs."""
         self._parent_widget = widget
 
-    @Slot()
-    def downloadCsv(self):
-        """Called from JavaScript when the user clicks the download button."""
+    @Slot(str)
+    def downloadFilteredCsv(self, visible_keys_json: str):
+        """Called from JavaScript with the list of currently visible legend labels.
+
+        Filters the stored DataFrame to include only the data series that are
+        visible in the plot (i.e. not toggled off via the legend), then prompts
+        the user to save as CSV.
+        """
         if self._data is None:
             return
-        csv_text = self._data.to_csv(index=False, sep=",", header=True)
+        visible_keys = json.loads(visible_keys_json)
+        if not visible_keys:
+            # All legend items are hidden — nothing to export
+            return
+
+        # Legend labels are formatted as "col=value"; strip the prefix to get raw values
+        raw_values = [k.split("=", 1)[1] if "=" in k else k for k in visible_keys]
+
+        filter_col = self._data.columns[0]
+        filtered = self._data[self._data[filter_col].astype(str).isin(raw_values)]
+
+        if filtered.empty:
+            # No match after filtering (e.g. single-series plot with key "value") — export all data
+            filtered = self._data
+
+        csv_text = filtered.to_csv(index=False, sep=",", header=True)
         path, _ = QFileDialog.getSaveFileName(
             self._parent_widget,
             caption="Save Data as CSV",
