@@ -369,6 +369,60 @@ def get_window_selector(
     select.add_tools(range_tool)
     return select
 
+def add_download_buttons(fig, legend=None):
+    save_tool: SaveTool = fig.select_one(SaveTool)
+    save_tool.filename = "plot.jpg"
+
+    # Download data as file via QWebChannel bridge (CSV is generated on demand in Python).
+    # The callback inspects legend item visibility so that only data series currently
+    # shown in the plot (not toggled off via legend click) are included in the export.
+    # If no legend is provided (e.g. bar chart), we assume all data is to be downloaded.
+
+    args = {"legend": legend} if legend else {}
+    code = """
+    var visibleKeys = [];
+    if (typeof legend !== 'undefined' && legend != null) {
+        for (var i = 0; i < legend.items.length; i++) {
+            var item = legend.items[i];
+            if (item.renderers[0].visible) {
+                visibleKeys.push(item.label.value);
+            }
+        }
+    } else {
+        visibleKeys.push("ALL");
+    }
+    if (window.bridge) {
+        window.bridge.downloadFilteredCsv(JSON.stringify(visibleKeys));
+    } else {
+        alert("QWebChannel bridge not available");
+        console.error("QWebChannel bridge not available");
+    }
+    """
+
+    # TODO for the error messages, maybe we can hook into the spine console instead
+    download_callback: CustomJS = CustomJS(args=args, code=code)
+    download_action: CustomAction = CustomAction(
+        # Opacity is currently hard-coded to match the other icons
+        # TODO Find a way to match icon colors automatically.
+        icon="""data:image/svg+xml;utf8,
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" opacity="0.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="m 4,17 v 2 a 2,2 0 0 0 2,2 h 12 a 2,2 0 0 0 2,-2 v -2" />
+        <polyline points="7 11 12 16 17 11" transform="translate(0,1.1807315)" />
+        <line x1="12" y1="5.1807313" x2="12" y2="17.180731" />
+        <path d="M 7.9021726,8.7586207 V 4" id="path4" />
+        <path d="M 7.9021726,4 6.1435519,5.7586207" />
+        <ellipse cx="16.87956" cy="6.3793101" rx="1.715098" ry="2.3953953" />
+        </svg>
+        """,
+        callback=download_callback,
+        description="Download Data as CSV"       # tooltip on hover
+    )
+
+    # Add the data download button _under_ the graph save button.
+    tools = fig.toolbar.tools
+    save_tool = next(t for t in tools if isinstance(t, SaveTool))
+    save_index = tools.index(save_tool)
+    tools.insert(save_index+1, download_action)
 
 def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 1_000):
     match sdf.shape:
@@ -410,9 +464,6 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
         x_axis_type=x_axis_type,
         tools="pan,box_zoom,wheel_zoom,save,reset",
     )
-    save_tool: SaveTool = fig.select_one(SaveTool)
-    # TODO Generate file name based on data, instead of hard-coding
-    save_tool.filename = "plot.jpg"  # default filename, suppress file name dialog from bokeh
 
     palette = Palette(len(nplots))
 
@@ -426,45 +477,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     fig.add_layout(legend, "right")
     fig.legend.click_policy = "hide"
 
-    # Download data as file via QWebChannel bridge (CSV is generated on demand in Python).
-    # The callback inspects legend item visibility so that only data series currently
-    # shown in the plot (not toggled off via legend click) are included in the export.
-    download_callback: CustomJS = CustomJS(args={"legend": legend}, code="""
-    var visibleKeys = [];
-    for (var i = 0; i < legend.items.length; i++) {
-        var item = legend.items[i];
-        if (item.renderers[0].visible) {
-            visibleKeys.push(item.label.value);
-        }
-    }
-    if (window.bridge) {
-        window.bridge.downloadFilteredCsv(JSON.stringify(visibleKeys));
-    } else {
-        console.error("QWebChannel bridge not available");
-    }
-""")
-    download_action: CustomAction = CustomAction(
-        # Opacity is currently hard-coded to match the other icons
-        # TODO Find a way to match icon colors automatically.
-        icon="""data:image/svg+xml;utf8,
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" opacity="0.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m 4,17 v 2 a 2,2 0 0 0 2,2 h 12 a 2,2 0 0 0 2,-2 v -2" />
-        <polyline points="7 11 12 16 17 11" transform="translate(0,1.1807315)" />
-        <line x1="12" y1="5.1807313" x2="12" y2="17.180731" />
-        <path d="M 7.9021726,8.7586207 V 4" id="path4" />
-        <path d="M 7.9021726,4 6.1435519,5.7586207" />
-        <ellipse cx="16.87956" cy="6.3793101" rx="1.715098" ry="2.3953953" />
-        </svg>
-        """,
-        callback=download_callback,
-        description="Download Data as CSV"       # tooltip on hover
-    )
-
-    # Add the data download button _under_ the graph save button.
-    tools = fig.toolbar.tools
-    save_tool = next(t for t in tools if isinstance(t, SaveTool))
-    save_index = tools.index(save_tool)
-    tools.insert(save_index+1, download_action)
+    add_download_buttons(fig, legend=legend)
 
     longest: ColumnDataSource = functools.reduce(
         lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources.values()
@@ -518,6 +531,7 @@ def plot_barchart(sdf: pd.DataFrame, title: str):
 
     fig.vbar(x=str(x_label), top=str(y_label), source=source)
     fig.y_range.start = -10
+    add_download_buttons(fig)
     return fig
 
 
