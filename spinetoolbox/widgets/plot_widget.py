@@ -23,58 +23,6 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QFileDialog, QVBoxLayout, QWidget
 
 
-class DownloadBridge(QObject):
-    """Bridge object exposed to JavaScript via QWebChannel for on-demand CSV download."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._data: pd.DataFrame | None = None
-        self._parent_widget: QWidget | None = None
-
-    def set_data(self, data: pd.DataFrame):
-        """Store the DataFrame to be exported on demand."""
-        self._data = data
-
-    def set_parent_widget(self, widget: QWidget):
-        """Set the parent widget for file dialogs."""
-        self._parent_widget = widget
-
-    @Slot(str)
-    def downloadFilteredCsv(self, visible_keys_json: str):
-        """Called from JavaScript with the list of currently visible legend labels.
-
-        Filters the stored DataFrame to include only the data series that are
-        visible in the plot (i.e. not toggled off via the legend), then prompts
-        the user to save as CSV.
-        """
-        if self._data is None:
-            return
-        visible_keys = json.loads(visible_keys_json)
-        if not visible_keys:
-            # All legend items are hidden — nothing to export
-            return
-
-        # Legend labels are formatted as "col=value"; strip the prefix to get raw values
-        raw_values = [k.split("=", 1)[1] if "=" in k else k for k in visible_keys]
-
-        filter_col = self._data.columns[0]
-        filtered = self._data[self._data[filter_col].astype(str).isin(raw_values)]
-
-        if filtered.empty:
-            # No match after filtering (e.g. single-series plot with key "value") — export all data
-            filtered = self._data
-
-        csv_text = filtered.to_csv(index=False, sep=",", header=True)
-        path, _ = QFileDialog.getSaveFileName(
-            self._parent_widget,
-            caption="Save Data as CSV",
-            dir=str(Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)) / "plot_data.csv"),
-            filter="CSV Files (*.csv)",
-        )
-        if path:
-            Path(path).write_text(csv_text, encoding="utf-8")
-
-
 class PlotWidget(QWidget):
     """
     A widget that contains a toolbar and a plotting canvas.
@@ -82,6 +30,53 @@ class PlotWidget(QWidget):
     Attributes:
         canvas (PlotCanvas): the plotting canvas
     """
+
+    class DownloadBridge(QObject):
+        """Bridge object exposed to JavaScript via QWebChannel for on-demand CSV download."""
+
+        def __init__(self, plot_widget):
+            super().__init__(plot_widget)
+            self._plot_widget = plot_widget
+
+        @Slot(str)
+        def downloadFilteredCsv(self, visible_keys_json: str):
+            """Called from JavaScript with the list of currently visible legend labels.
+
+            Filters the stored DataFrame to include only the data series that are
+            visible in the plot (i.e. not toggled off via the legend), then prompts
+            the user to save as CSV.
+            """
+            data = self._plot_widget._data
+            if data is None:
+                return
+            visible_keys = json.loads(visible_keys_json)
+            if not visible_keys:
+                # All legend items are hidden — nothing to export
+                return
+
+            # Legend labels are formatted as "col=value"; strip the prefix to get raw values
+            raw_values = [k.split("=", 1)[1] if "=" in k else k for k in visible_keys]
+
+            filter_col = data.columns[0]
+            # Check if the first value is "ALL" (used when no legend is present, e.g. bar charts)
+            if "ALL" in visible_keys:
+                filtered = data
+            else:
+                filtered = data[data[filter_col].astype(str).isin(raw_values)]
+
+            if filtered.empty:
+                # No match after filtering (e.g. single-series plot with key "value") — export all data
+                filtered = data
+
+            csv_text = filtered.to_csv(index=False, sep=",", header=True)
+            path, _ = QFileDialog.getSaveFileName(
+                self._plot_widget,
+                caption="Save Data as CSV",
+                dir=str(Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)) / "plot_data.csv"),
+                filter="CSV Files (*.csv)",
+            )
+            if path:
+                Path(path).write_text(csv_text, encoding="utf-8")
 
     plot_windows = {}
     """A global list of plot windows."""
@@ -92,6 +87,7 @@ class PlotWidget(QWidget):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
+        self._data: pd.DataFrame | None = None
         self._layout = QVBoxLayout(self)
         self.canvas = QWebEngineView()
         self.html_path = tempfile.NamedTemporaryFile(suffix=".html")
@@ -99,8 +95,7 @@ class PlotWidget(QWidget):
         print(self.html_path.name)
 
         # Set up QWebChannel so JavaScript can call back into Python
-        self._bridge = DownloadBridge(self)
-        self._bridge.set_parent_widget(self)
+        self._bridge = self.DownloadBridge(self)
         self._channel = QWebChannel(self)
         self._channel.registerObject("bridge", self._bridge)
         self.canvas.page().setWebChannel(self._channel)
@@ -133,7 +128,7 @@ class PlotWidget(QWidget):
 
     def set_download_data(self, data: pd.DataFrame):
         """Set the DataFrame that will be exported when the user clicks the CSV download button."""
-        self._bridge.set_data(data)
+        self._data = data
 
     def write(self, html_content: str):
         Path(self.html_path.name).write_bytes(bytes(html_content, "utf8"))
