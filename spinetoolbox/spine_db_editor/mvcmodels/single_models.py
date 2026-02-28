@@ -521,7 +521,7 @@ class SingleParameterValueModel(
         item = self._mapped_table[item_id]
         byname = order_key_from_names(item["entity_byname"])
         parameter_group_id = item["parameter_group_id"]
-        group_priority = math.inf
+        group_priority = -math.inf
         if parameter_group_id is not None:
             group = self.db_map.mapped_table("parameter_group")[parameter_group_id]
             if group.is_valid():
@@ -529,7 +529,7 @@ class SingleParameterValueModel(
 
         parameter_name = order_key(item["parameter_name"])
         alt_name = order_key(item["alternative_name"])
-        return byname, group_priority, parameter_name, alt_name
+        return byname, -group_priority, parameter_name, alt_name
 
     def row_for_associated_metadata_item(self, metadata_item: PublicItem) -> int | None:
         try:
