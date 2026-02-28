@@ -731,7 +731,7 @@ class PlainTextDelegate(TableDelegate):
         return editor
 
 
-class PlainTextDelegateWithMetadataIndicator(MetadataIndicatorMixin, TableDelegate):
+class PlainTextDelegateWithMetadataIndicator(MetadataIndicatorMixin, PlainTextDelegate):
     pass
 
 
