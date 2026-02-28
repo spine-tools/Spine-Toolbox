@@ -925,8 +925,8 @@ class TestCompoundParameterValueModel(TestBase):
 
     def test_group_data(self):
         with self._db_map:
-            self._db_map.add_parameter_group(name="Group A", color="102030", priority=3)
-            self._db_map.add_parameter_group(name="Group B", color="090807", priority=2)
+            self._db_map.add_parameter_group(name="Group A", color="102030", priority=2)
+            self._db_map.add_parameter_group(name="Group B", color="090807", priority=3)
             self._db_map.add_entity_class(name="Widget")
             self._db_map.add_entity(entity_class_name="Widget", name="gadget")
             self._db_map.add_entity(entity_class_name="Widget", name="object")
