@@ -379,8 +379,9 @@ class NamedCustomAction(CustomAction):
     in the right-click context menu, instead of the default "Custom Action".
     """
 
-    # resources.files(str(Path(__file__).parent), "resources/named_custom_action.ts").decode("utf-8")
-    __implementation__ = TypeScript((Path(__file__).parent / "plotting_resources/named_custom_action.ts").read_text())
+    _resources = resources.files("spinetoolbox.plotting_resources")
+    ts_src, *_ = (f for f in _resources.iterdir() if f.name == "named_custom_action.ts")
+    __implementation__ = TypeScript(ts_src.read_text())
 
     tool_label = String(
         default="Custom Action",
