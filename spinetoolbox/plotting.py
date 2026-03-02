@@ -115,7 +115,7 @@ compat_types = {
 }
 
 # Regex pattern to indentify numerical sequences encoded as string
-SEQ_PAT = re.compile(r"^(t|p)([0-9]+)$")
+SEQ_PAT = re.compile(r"^([a-zA-Z])([0-9]+)$")
 
 
 def parse_time(df: pd.DataFrame) -> pd.DataFrame:
