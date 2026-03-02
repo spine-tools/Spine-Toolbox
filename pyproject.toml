@@ -63,6 +63,9 @@ exclude = [
     "tool_specifications*"
 ]
 
+[tool.setuptools.package-data]
+spinetoolbox = ["plotting_resources/*.ts"]
+
 [tool.coverage.run]
 source = ["spinetoolbox"]
 branch = true
