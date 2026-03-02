@@ -11,32 +11,33 @@
 ######################################################################################################################
 
 """Functions for plotting on PlotWidget."""
-from itertools import starmap
-from bokeh.embed import file_html
-from bokeh.layouts import gridplot, column
-from bokeh.resources import INLINE
-from bokeh.models import ColumnDataSource, FactorRange, HoverTool, Legend, RangeTool, SaveTool, CustomAction, CustomJS
-from bokeh.palettes import TolRainbow
-from bokeh.plotting import figure
+
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 import datetime
-from enum import auto, Enum, unique
+from enum import Enum, auto, unique
 import functools
+from importlib import resources
+from itertools import starmap
 from operator import attrgetter, methodcaller
+from pathlib import Path
 import re
-import pandas as pd
 from typing import Dict, Iterable, List, Literal, Optional, TypeVar, Union
+from bokeh.core.properties import String
+from bokeh.embed import file_html
+from bokeh.layouts import column, gridplot
+from bokeh.models import ColumnDataSource, CustomAction, CustomJS, FactorRange, HoverTool, Legend, RangeTool, SaveTool
+from bokeh.palettes import TolRainbow
+from bokeh.plotting import figure
+from bokeh.resources import INLINE
+from bokeh.util.compiler import TypeScript
 import numpy as np
+import pandas as pd
 from PySide6.QtCore import QSize, Qt
 from spinedb_api import DateTime, IndexedValue
 from spinedb_api.dataframes import to_dataframe
 from .mvcmodels.shared import PARAMETER_VALUE_ROLE, PARSED_ROLE
 from .widgets.plot_widget import PlotWidget
-
-import inspect
-from rich.pretty import pprint
-
 
 LEGEND_PLACEMENT_THRESHOLD = 8
 
@@ -369,9 +370,28 @@ def get_window_selector(
     select.add_tools(range_tool)
     return select
 
+
+class NamedCustomAction(CustomAction):
+    """
+    A CustomAction tool with a configurable label for the context menu.
+
+    The `tool_label` property allows you to customize the text that appears
+    in the right-click context menu, instead of the default "Custom Action".
+    """
+
+    # resources.files(str(Path(__file__).parent), "resources/named_custom_action.ts").decode("utf-8")
+    __implementation__ = TypeScript((Path(__file__).parent / "plotting_resources/named_custom_action.ts").read_text())
+
+    tool_label = String(
+        default="Custom Action",
+        help="Label shown in the right-click context menu for this tool",
+    )
+
+
 def add_download_buttons(fig, legend=None):
     save_tool: SaveTool = fig.select_one(SaveTool)
     save_tool.filename = "plot.jpg"
+    save_tool.description = "Save as image"
 
     # Download data as file via QWebChannel bridge (CSV is generated on demand in Python).
     # The callback inspects legend item visibility so that only data series currently
@@ -399,9 +419,8 @@ def add_download_buttons(fig, legend=None):
     }
     """
 
-    # TODO for the error messages, maybe we can hook into the spine console instead
-    download_callback: CustomJS = CustomJS(args=args, code=code)
-    download_action: CustomAction = CustomAction(
+    # TODO: for the error messages, maybe we can hook into the spine console instead
+    download_action: CustomAction = NamedCustomAction(
         # Opacity is currently hard-coded to match the other icons
         # TODO Find a way to match icon colors automatically.
         icon="""data:image/svg+xml;utf8,
@@ -414,15 +433,17 @@ def add_download_buttons(fig, legend=None):
         <ellipse cx="16.87956" cy="6.3793101" rx="1.715098" ry="2.3953953" />
         </svg>
         """,
-        callback=download_callback,
-        description="Download Data as CSV"       # tooltip on hover
+        tool_label="Export data",
+        description="Export data as CSV",  # tooltip on hover
+        callback=CustomJS(args=args, code=code),
     )
 
     # Add the data download button _under_ the graph save button.
     tools = fig.toolbar.tools
     save_tool = next(t for t in tools if isinstance(t, SaveTool))
     save_index = tools.index(save_tool)
-    tools.insert(save_index+1, download_action)
+    tools.insert(save_index + 1, download_action)
+
 
 def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 1_000):
     match sdf.shape:
