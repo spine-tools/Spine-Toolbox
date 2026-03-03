@@ -270,7 +270,7 @@ def plot_data(dfs, plot_widget: PlotWidget | None = None):
         case _:
             raise ValueError(f"unhandled case:\n{nplots=}\n{seq_cols=}")
 
-    plot_widget.set_download_data(sdf)
+    plot_widget.dataframe = sdf
     plot_widget.write(file_html(plot, INLINE, plot_title))
     if plot.width and plot.height:
         plot_widget.resize(QSize(plot.width + 50, plot.height + 50))
@@ -372,11 +372,12 @@ def get_window_selector(
 
 
 class NamedCustomAction(CustomAction):
-    """
-    A CustomAction tool with a configurable label for the context menu.
+    """A CustomAction tool with a configurable label for the context
+    menu.
 
     The `tool_label` property allows you to customize the text that appears
     in the right-click context menu, instead of the default "Custom Action".
+
     """
 
     _resources = resources.files("spinetoolbox.plotting_resources")
@@ -452,7 +453,8 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
             col = sdf.columns[0]
             grouped = sdf.groupby(col)
             sources = {
-                f"{col}={v}": ColumnDataSource(data=sdf.loc[idx, sdf.columns[1:]]) for v, idx in grouped.groups.items()
+                f"{col}=={v!r}": ColumnDataSource(data=sdf.loc[idx, sdf.columns[1:]])
+                for v, idx in grouped.groups.items()
             }
         case _, ncols if ncols > 3:
             # FIXME: probably doesn't work for ncols == 4

@@ -24,62 +24,16 @@ from PySide6.QtWidgets import QFileDialog, QVBoxLayout, QWidget
 
 
 class PlotWidget(QWidget):
-    """
-    A widget that contains a toolbar and a plotting canvas.
+    """Plotting widget, w/ a webview canvas, and a webchannel.
 
     Attributes:
-        canvas (PlotCanvas): the plotting canvas
+        canvas (QWebEngineView): webview plotting canvas
+
+        html_path (NamedTemporaryFile): managed temporary HTML file rendered by the canvas.
+
+        channel (WebChannel): webchannel for communication from javascript
+
     """
-
-    class DownloadBridge(QObject):
-        """Bridge object exposed to JavaScript via QWebChannel for on-demand CSV download."""
-
-        def __init__(self, plot_widget):
-            super().__init__(plot_widget)
-            self._plot_widget = plot_widget
-
-        @Slot(str)
-        def downloadFilteredCsv(self, visible_keys_json: str):
-            """Called from JavaScript with the list of currently visible legend labels.
-
-            Filters the stored DataFrame to include only the data series that are
-            visible in the plot (i.e. not toggled off via the legend), then prompts
-            the user to save as CSV.
-            """
-            data = self._plot_widget._data
-            if data is None:
-                return
-            visible_keys = json.loads(visible_keys_json)
-            if not visible_keys:
-                # All legend items are hidden — nothing to export
-                return
-
-            # Legend labels are formatted as "col=value"; strip the prefix to get raw values
-            raw_values = [k.split("=", 1)[1] if "=" in k else k for k in visible_keys]
-
-            filter_col = data.columns[0]
-            # Check if the first value is "ALL" (used when no legend is present, e.g. bar charts)
-            if "ALL" in visible_keys:
-                filtered = data
-            else:
-                filtered = data[data[filter_col].astype(str).isin(raw_values)]
-
-            if filtered.empty:
-                # No match after filtering (e.g. single-series plot with key "value") — export all data
-                filtered = data
-
-            csv_text = filtered.to_csv(index=False, sep=",", header=True)
-            path, _ = QFileDialog.getSaveFileName(
-                self._plot_widget,
-                caption="Save Data as CSV",
-                dir=str(Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)) / "plot_data.csv"),
-                filter="CSV Files (*.csv)",
-            )
-            if path:
-                Path(path).write_text(csv_text, encoding="utf-8")
-
-    plot_windows = {}
-    """A global list of plot windows."""
 
     def __init__(self, parent=None):
         """
@@ -87,48 +41,34 @@ class PlotWidget(QWidget):
             parent (QWidget, optional): parent widget
         """
         super().__init__(parent)
-        self._data: pd.DataFrame | None = None
+
         self._layout = QVBoxLayout(self)
         self.canvas = QWebEngineView()
         self.html_path = tempfile.NamedTemporaryFile(suffix=".html")
-        print(self)
-        print(self.html_path.name)
-
-        # Set up QWebChannel so JavaScript can call back into Python
-        self._bridge = self.DownloadBridge(self)
-        self._channel = QWebChannel(self)
-        self._channel.registerObject("bridge", self._bridge)
-        self.canvas.page().setWebChannel(self._channel)
-
-        # Inject qwebchannel.js (shipped with Qt) so the page can use QWebChannel
-        qwebchannel_script = QWebEngineScript()
-        qwebchannel_script.setName("qwebchannel")
-        qwebchannel_script.setSourceUrl(QUrl("qrc:///qtwebchannel/qwebchannel.js"))
-        qwebchannel_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
-        qwebchannel_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
-        self.canvas.page().scripts().insert(qwebchannel_script)
-
-        # Inject a small init script that establishes the bridge on window.bridge
-        init_script = QWebEngineScript()
-        init_script.setName("bridge_init")
-        init_script.setSourceCode(
-            "new QWebChannel(qt.webChannelTransport, function(channel) {"
-            "    window.bridge = channel.objects.bridge;"
-            "});"
-        )
-        init_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
-        init_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
-        self.canvas.page().scripts().insert(init_script)
-
         self.canvas.setUrl(QUrl.fromLocalFile(self.html_path.name))
         self._layout.addWidget(self.canvas)
         self.resize(QSize(900, 600))
+
+        # save plot as image
         self.canvas.page().profile().downloadRequested.connect(self.save_as_prompt)
+
+        # Set up QWebChannel so JavaScript can call back into Python
+        self._bridge = DownloadBridge(self)
+        self._channel = WebChannel("plot_widget", self._bridge)
+        self._channel.setup_js_api(self.canvas)
+
         QMetaObject.connectSlotsByName(self)
 
-    def set_download_data(self, data: pd.DataFrame):
-        """Set the DataFrame that will be exported when the user clicks the CSV download button."""
-        self._data = data
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        """Underlying dataframe for the plot, only used for export."""
+        if self._df is None:
+            raise RuntimeError("underlying dataframe not set, cannot export data")
+        return self._df
+
+    @dataframe.setter
+    def dataframe(self, df: pd.DataFrame):
+        self._df = df
 
     def write(self, html_content: str):
         Path(self.html_path.name).write_bytes(bytes(html_content, "utf8"))
@@ -138,10 +78,76 @@ class PlotWidget(QWidget):
     def save_as_prompt(self, download: QWebEngineDownloadRequest):
         download_dir: Path = Path(download.downloadDirectory())
         path, _ = QFileDialog.getSaveFileName(
-                self,
-                caption="Save File",
-                dir=str(download_dir / download.suggestedFileName()),
-                filter="Images (*.svg *.png *.jpg)")
+            self,
+            caption="Save File",
+            dir=str(download_dir / download.suggestedFileName()),
+            filter="Images (*.svg *.png *.jpg)",
+        )
         if path:
             download.setDownloadFileName(path)
             download.accept()
+
+
+class DownloadBridge(QObject):
+    """QWebChannel bridge exposed via JavaScript for CSV download."""
+
+    def __init__(self, plot_widget):
+        super().__init__()
+        self._plot = plot_widget
+
+    @Slot(str)
+    def downloadFilteredCsv(self, visible_keys_json: str):
+        """Called from JavaScript with the list of currently visible legend labels.
+
+        Filters the stored DataFrame to include only the data series that are
+        visible in the plot (i.e. not toggled off via the legend), then prompts
+        the user to save as CSV.
+        """
+        match json.loads(visible_keys_json):
+            case ([] | ["ALL"]) as visible_keys:
+                # - all legend items are hidden, export all w/ warning (FIXME)
+                # - first value is "ALL" when no legend is present, e.g. bar charts
+                filtered = self._plot.dataframe
+            case [str(), *_] as visible_keys:
+                filtered = self._plot.dataframe.query("|".join(visible_keys))
+                if filtered.empty:
+                    # FIXME: warn user
+                    filtered = self._plot.dataframe
+            case keys:
+                raise RuntimeError(f"webchannel returned {keys}, something went terribly wrong!")
+
+        download_dir = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation))
+        path, _ = QFileDialog.getSaveFileName(
+            self._plot, caption="Save Data as CSV", dir=str(download_dir / "plot_data.csv"), filter="CSV Files (*.csv)"
+        )
+        if path:
+            filtered.to_csv(path, index=False, sep=",", header=True)
+
+
+class WebChannel(QWebChannel):
+    def __init__(self, name: str, obj: QObject, parent: QObject | None = None):
+        super().__init__(parent)
+        self._name = name
+        self.registerObject(name, obj)
+
+    def setup_js_api(self, webview: QWebEngineView):
+        # Inject qwebchannel.js (shipped with Qt) so the page can use QWebChannel
+        qwebchannel_script = QWebEngineScript()
+        qwebchannel_script.setName("qwebchannel")
+        qwebchannel_script.setSourceUrl(QUrl("qrc:///qtwebchannel/qwebchannel.js"))
+        qwebchannel_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+        qwebchannel_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+        webview.page().scripts().insert(qwebchannel_script)
+
+        # Inject a small init script that establishes the bridge on window.bridge
+        init_script = QWebEngineScript()
+        init_script.setName("bridge_init")
+        init_script.setSourceCode(
+            "new QWebChannel(qt.webChannelTransport, function(channel) {"
+            f"    window.bridge = channel.objects.{self._name};"
+            "});"
+        )
+        init_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
+        init_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+        webview.page().scripts().insert(init_script)
+        webview.page().setWebChannel(self)
