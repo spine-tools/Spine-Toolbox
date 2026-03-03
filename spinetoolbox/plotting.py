@@ -420,20 +420,13 @@ def add_download_buttons(fig, legend=None):
     }
     """
 
+    save_data_icon_file = Path(__file__).parent / "plotting_resources/icon-csv.svg"
+    save_data_icon_file_text = save_data_icon_file.read_text()
     # TODO: for the error messages, maybe we can hook into the spine console instead
     download_action: CustomAction = NamedCustomAction(
         # Opacity is currently hard-coded to match the other icons
         # TODO Find a way to match icon colors automatically.
-        icon="""data:image/svg+xml;utf8,
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" opacity="0.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <path d="m 4,17 v 2 a 2,2 0 0 0 2,2 h 12 a 2,2 0 0 0 2,-2 v -2" />
-        <polyline points="7 11 12 16 17 11" transform="translate(0,1.1807315)" />
-        <line x1="12" y1="5.1807313" x2="12" y2="17.180731" />
-        <path d="M 7.9021726,8.7586207 V 4" id="path4" />
-        <path d="M 7.9021726,4 6.1435519,5.7586207" />
-        <ellipse cx="16.87956" cy="6.3793101" rx="1.715098" ry="2.3953953" />
-        </svg>
-        """,
+        icon="data:image/svg+xml;utf8," + save_data_icon_file_text,
         tool_label="Export data",
         description="Export data as CSV",  # tooltip on hover
         callback=CustomJS(args=args, code=code),
@@ -442,6 +435,11 @@ def add_download_buttons(fig, legend=None):
     # Add the data download button _under_ the graph save button.
     tools = fig.toolbar.tools
     save_tool = next(t for t in tools if isinstance(t, SaveTool))
+    # Opacity is currently hard-coded to match the other icons
+    # TODO Find a way to match icon colors automatically.
+    save_image_icon_file = Path(__file__).parent / "plotting_resources/icon-image.svg"
+    save_image_icon_file_text = save_image_icon_file.read_text()
+    save_tool.icon = "data:image/svg+xml;utf8," + save_image_icon_file_text
     save_index = tools.index(save_tool)
     tools.insert(save_index + 1, download_action)
 
