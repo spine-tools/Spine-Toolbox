@@ -371,6 +371,12 @@ def get_window_selector(
     return select
 
 
+def get_resource(name: str) -> str:
+    _resources = resources.files("spinetoolbox.plotting_resources")
+    path, *_ = (f for f in _resources.iterdir() if f.name == name)
+    return path.read_text()
+
+
 class NamedCustomAction(CustomAction):
     """A CustomAction tool with a configurable label for the context
     menu.
@@ -380,9 +386,7 @@ class NamedCustomAction(CustomAction):
 
     """
 
-    _resources = resources.files("spinetoolbox.plotting_resources")
-    ts_src, *_ = (f for f in _resources.iterdir() if f.name == "named_custom_action.ts")
-    __implementation__ = TypeScript(ts_src.read_text())
+    __implementation__ = TypeScript(get_resource("named_custom_action.ts"))
 
     tool_label = String(
         default="Custom Action",
@@ -394,12 +398,14 @@ def add_download_buttons(fig, legend=None):
     save_tool: SaveTool = fig.select_one(SaveTool)
     save_tool.filename = "plot.jpg"
     save_tool.description = "Save as image"
+    # Opacity is currently hard-coded to match the other icons.  TODO:
+    # Find a way to match icon colors automatically; same for below
+    save_tool.icon = "data:image/svg+xml;utf8," + get_resource("icon-image.svg")
 
     # Download data as file via QWebChannel bridge (CSV is generated on demand in Python).
     # The callback inspects legend item visibility so that only data series currently
     # shown in the plot (not toggled off via legend click) are included in the export.
     # If no legend is provided (e.g. bar chart), we assume all data is to be downloaded.
-
     args = {"legend": legend} if legend else {}
     code = """
     var visibleKeys = [];
@@ -421,13 +427,9 @@ def add_download_buttons(fig, legend=None):
     }
     """
 
-    save_data_icon_file = Path(__file__).parent / "plotting_resources/icon-csv.svg"
-    save_data_icon_file_text = save_data_icon_file.read_text()
     # TODO: for the error messages, maybe we can hook into the spine console instead
     download_action: CustomAction = NamedCustomAction(
-        # Opacity is currently hard-coded to match the other icons
-        # TODO Find a way to match icon colors automatically.
-        icon="data:image/svg+xml;utf8," + save_data_icon_file_text,
+        icon="data:image/svg+xml;utf8," + get_resource("icon-csv.svg"),
         tool_label="Export data",
         description="Export data as CSV",  # tooltip on hover
         callback=CustomJS(args=args, code=code),
@@ -435,14 +437,7 @@ def add_download_buttons(fig, legend=None):
 
     # Add the data download button _under_ the graph save button.
     tools = fig.toolbar.tools
-    save_tool = next(t for t in tools if isinstance(t, SaveTool))
-    # Opacity is currently hard-coded to match the other icons
-    # TODO Find a way to match icon colors automatically.
-    save_image_icon_file = Path(__file__).parent / "plotting_resources/icon-image.svg"
-    save_image_icon_file_text = save_image_icon_file.read_text()
-    save_tool.icon = "data:image/svg+xml;utf8," + save_image_icon_file_text
-    save_index = tools.index(save_tool)
-    tools.insert(save_index + 1, download_action)
+    tools.insert(tools.index(save_tool) + 1, download_action)
 
 
 def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 1_000):
