@@ -14,13 +14,27 @@
 import json
 from pathlib import Path
 import tempfile
-
 import pandas as pd
-from PySide6.QtCore import QMetaObject, QObject, QStandardPaths, Qt, QUrl, QSize, Slot
+from PySide6.QtCore import QMetaObject, QObject, QSize, QStandardPaths, Qt, QUrl, Slot
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QFileDialog, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QLabel, QVBoxLayout, QWidget
+
+
+class WarnUser(QDialog):
+    def __init__(self, msg: str, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Warning!")
+        self.buttonbox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        self.buttonbox.accepted.connect(self.accept)
+
+        layout = QVBoxLayout()
+        self.message = QLabel(msg)
+        layout.addWidget(self.message)
+        layout.addWidget(self.buttonbox)
+        self.setLayout(layout)
 
 
 class PlotWidget(QWidget):
@@ -108,11 +122,18 @@ class DownloadBridge(QObject):
                 # - all legend items are hidden, export all w/ warning (FIXME)
                 # - first value is "ALL" when no legend is present, e.g. bar charts
                 filtered = self._plot.dataframe
+                if len(visible_keys) == 0:
+                    warn_user = WarnUser(
+                        "All legend items are hidden, ignoring selection and exporting all data.", self._plot
+                    )
+                    warn_user.exec()
             case [str(), *_] as visible_keys:
                 filtered = self._plot.dataframe.query("|".join(visible_keys))
                 if filtered.empty:
                     # FIXME: warn user
                     filtered = self._plot.dataframe
+                    warn_user = WarnUser("Empty selection, ignoring and exporting all data.", self._plot)
+                    warn_user.exec()
             case keys:
                 raise RuntimeError(f"webchannel returned {keys}, something went terribly wrong!")
 
