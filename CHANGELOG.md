@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
     - The Entity metadata type imports metadata for entities.
     - The Parameter value metadata type imports metadata for parameter values.
 
+- Importer: added support for importing descriptions.
+  It is now possible to import entity class, entity and parameter definition descriptions
+  as well as scenario and alternative descriptions.
+  Note that the feature is not available for existing mappings.
+  You need to create new mappings to import descriptions.
 - Exporter: added new mapping types for metadata. The types are the same as listed for Importer above,
   except for exporting.
 - Exporter: support for exporting descriptions have been extended.
