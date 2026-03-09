@@ -42,7 +42,20 @@ def parent_widget(application):
 
 @pytest.fixture
 def app_settings():
-    return mock.MagicMock()
+    class MockSettings:
+        @staticmethod
+        def value(*args, **kwargs):
+            return 0
+
+        @staticmethod
+        def beginGroup(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def endGroup(*args, **kwargs):
+            pass
+
+    return MockSettings()
 
 
 @pytest.fixture

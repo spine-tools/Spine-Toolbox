@@ -59,13 +59,12 @@ def alternative_tree_view(empty_alternative_tree_view, db_map):
 
 
 @pytest.fixture
-def db_editor(db_mngr, db_map, logger):
+def db_editor(db_mngr, db_map, logger, monkeypatch):
     with (
         mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
         mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
     ):
-        mock_settings = mock.MagicMock()
-        mock_settings.value.side_effect = lambda *args, **kwargs: 0
+        monkeypatch.setattr(SpineDBEditor, "restoreState", lambda *args, **kwargs: None)
         db_editor = SpineDBEditor(db_mngr, [db_map.db_url])
     QApplication.processEvents()
     yield db_editor
