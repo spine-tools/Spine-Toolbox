@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the TimePatternModel class."""
-import unittest
 import numpy as np
 import numpy.testing
 from PySide6.QtCore import Qt
@@ -114,7 +113,3 @@ class TestTimePatternModel(TestCaseWithQApplication):
         expected = TimePattern(["D1-7", "M1-6", "M4-9"], [-5.0, 55.5, -55.5])
         self.assertEqual(model.value, expected)
         model.deleteLater()
-
-
-if __name__ == "__main__":
-    unittest.main()

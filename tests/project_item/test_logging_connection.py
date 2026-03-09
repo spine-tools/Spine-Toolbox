@@ -197,7 +197,3 @@ class _DataStorePropertiesWidget(PropertiesWidgetBase):
     def __init__(self, toolbox):
         super().__init__(toolbox)
         self.ui = object()
-
-
-if __name__ == "__main__":
-    unittest.main()

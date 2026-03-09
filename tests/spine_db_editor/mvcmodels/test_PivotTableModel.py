@@ -12,16 +12,15 @@
 
 """Unit tests for `pivot_table_models` module."""
 import itertools
-import unittest
 from unittest.mock import patch
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Map
-from tests.mock_helpers import fetch_model
-from tests.spine_db_editor.helpers import TestBase
+from tests.mock_helpers import assert_table_model_data_pytest, fetch_model
 
 
-class TestParameterValuePivotTableModel(TestBase):
-    def _fill_model_with_data(self):
+class TestParameterValuePivotTableModel:
+    @staticmethod
+    def _fill_model_with_data(db_map, db_mngr, db_editor):
         data = {
             "entity_classes": (("class1",),),
             "parameter_definitions": (("class1", "parameter1"), ("class1", "parameter2")),
@@ -33,11 +32,12 @@ class TestParameterValuePivotTableModel(TestBase):
                 ("class1", "object2", "parameter2", 7.0),
             ),
         }
-        self._db_mngr.import_data({self._db_map: data}, "Import initial test data.")
-        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+        db_mngr.import_data({db_map: data}, "Import initial test data.")
+        while db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
 
-    def _start(self):
+    @staticmethod
+    def _start(db_mngr, db_editor):
         get_item_exceptions = []
 
         def guarded_get_item(db_map, item_type, id_):
@@ -47,141 +47,113 @@ class TestParameterValuePivotTableModel(TestBase):
                 get_item_exceptions.append(error)
                 return None
 
-        object_class_index = self._db_editor.entity_tree_model.index(0, 0)
-        fetch_model(self._db_editor.entity_tree_model)
-        index = self._db_editor.entity_tree_model.index(0, 0, object_class_index)
-        self._db_editor._update_class_attributes(index)
-        with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+        object_class_index = db_editor.entity_tree_model.index(0, 0)
+        fetch_model(db_editor.entity_tree_model)
+        index = db_editor.entity_tree_model.index(0, 0, object_class_index)
+        db_editor._update_class_attributes(index)
+        with patch.object(db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
-            self._db_editor.do_reload_pivot_table()
-        model = self._db_editor.pivot_table_model
-        with patch.object(self._db_mngr, "get_item") as get_item:
+            db_editor.do_reload_pivot_table()
+        model = db_editor.pivot_table_model
+        with patch.object(db_mngr, "get_item") as get_item:
             get_item.side_effect = guarded_get_item
             model.beginResetModel()
             model.endResetModel()
-            qApp.processEvents()  # pylint: disable=undefined-variable
-            self.assertEqual(get_item_exceptions, [])
+            QApplication.processEvents()
+            assert get_item_exceptions == []
         return model
 
-    def _model_data(self, model):
-        data = []
-        for row in range(model.rowCount()):
-            row_data = []
-            for column in range(model.columnCount()):
-                row_data.append(model.index(row, column).data())
-            data.append(row_data)
-        return data
-
-    def test_x_flag(self):
-        self._fill_model_with_data()
-        model = self._start()
-        self.assertIsNone(model.plot_x_column)
+    def test_x_flag(self, db_map, db_mngr, db_editor):
+        self._fill_model_with_data(db_map, db_mngr, db_editor)
+        model = self._start(db_mngr, db_editor)
+        assert model.plot_x_column is None
         model.set_plot_x_column(1, True)
-        self.assertEqual(model.plot_x_column, 1)
+        assert model.plot_x_column == 1
         model.set_plot_x_column(1, False)
-        self.assertIsNone(model.plot_x_column)
+        assert model.plot_x_column is None
 
-    def test_header_name(self):
-        self._fill_model_with_data()
-        model = self._start()
-        self.assertEqual(model.rowCount(), 5)
-        self.assertEqual(model.columnCount(), 4)
-        self.assertEqual(model.header_name(model.index(2, 0)), "object1")
-        self.assertEqual(model.header_name(model.index(0, 1)), "parameter1")
-        self.assertEqual(model.header_name(model.index(3, 0)), "object2")
-        self.assertEqual(model.header_name(model.index(0, 2)), "parameter2")
+    def test_header_name(self, db_map, db_mngr, db_editor):
+        self._fill_model_with_data(db_map, db_mngr, db_editor)
+        model = self._start(db_mngr, db_editor)
+        assert model.rowCount() == 5
+        assert model.columnCount() == 4
+        assert model.header_name(model.index(2, 0)) == "object1"
+        assert model.header_name(model.index(0, 1)) == "parameter1"
+        assert model.header_name(model.index(3, 0)) == "object2"
+        assert model.header_name(model.index(0, 2)) == "parameter2"
 
-    def test_data(self):
-        self._fill_model_with_data()
-        model = self._start()
-        self.assertEqual(model.rowCount(), 5)
-        self.assertEqual(model.columnCount(), 4)
-        self.assertEqual(model.index(0, 0).data(), "parameter")
-        self.assertEqual(model.index(1, 0).data(), "class1")
-        self.assertEqual(model.index(2, 0).data(), "object1")
-        self.assertEqual(model.index(3, 0).data(), "object2")
-        self.assertIsNone(model.index(4, 0).data())
-        self.assertEqual(model.index(0, 1).data(), "parameter1")
-        self.assertIsNone(model.index(1, 1).data())
-        self.assertEqual(model.index(2, 1).data(), str(1.0))
-        self.assertEqual(model.index(3, 1).data(), str(3.0))
-        self.assertIsNone(model.index(4, 1).data())
-        self.assertEqual(model.index(0, 2).data(), "parameter2")
-        self.assertIsNone(model.index(1, 2).data())
-        self.assertEqual(model.index(2, 2).data(), str(5.0))
-        self.assertEqual(model.index(3, 2).data(), str(7.0))
-        self.assertIsNone(model.index(4, 2).data())
-        self.assertIsNone(model.index(0, 3).data())
-        self.assertIsNone(model.index(1, 3).data())
-        self.assertIsNone(model.index(2, 3).data())
-        self.assertIsNone(model.index(3, 3).data())
-        self.assertIsNone(model.index(4, 3).data())
+    def test_data(self, db_map, db_mngr, db_editor):
+        self._fill_model_with_data(db_map, db_mngr, db_editor)
+        model = self._start(db_mngr, db_editor)
+        expected = [
+            ["parameter", "parameter1", "parameter2", None],
+            ["class1", None, None, None],
+            ["object1", str(1.0), str(5.0), None],
+            ["object2", str(3.0), str(7.0), None],
+            [None, None, None, None],
+        ]
+        assert_table_model_data_pytest(model, expected)
 
-    def test_header_row_count(self):
-        self._fill_model_with_data()
-        model = self._start()
-        self.assertEqual(model.headerRowCount(), 2)
+    def test_header_row_count(self, db_map, db_mngr, db_editor):
+        self._fill_model_with_data(db_map, db_mngr, db_editor)
+        model = self._start(db_mngr, db_editor)
+        assert model.headerRowCount() == 2
 
-    def test_model_works_even_without_entities(self):
+    def test_model_works_even_without_entities(self, db_map, db_mngr, db_editor):
         data = {
             "entity_classes": (("class1",),),
         }
-        self._db_mngr.import_data({self._db_map: data}, "Import entity class.")
-        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+        db_mngr.import_data({db_map: data}, "Import entity class.")
+        while db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        model = self._start()
-        self.assertEqual(model.rowCount(), 3)
-        self.assertEqual(model.columnCount(), 2)
-        self.assertEqual(model.index(0, 0).data(), "parameter")
-        self.assertEqual(model.index(1, 0).data(), "class1")
-        self.assertIsNone(model.index(2, 0).data())
-        self.assertIsNone(model.index(0, 1).data())
-        self.assertIsNone(model.index(1, 1).data())
-        self.assertIsNone(model.index(2, 1).data())
+        model = self._start(db_mngr, db_editor)
+        expected = [
+            ["parameter", None],
+            ["class1", None],
+            [None, None],
+        ]
+        assert_table_model_data_pytest(model, expected)
 
-    def test_single_entity_creates_half_finished_pivot(self):
+    def test_single_entity_creates_half_finished_pivot(self, db_map, db_mngr, db_editor):
         initial_data = {
             "entity_classes": (("Object",),),
             "entities": (("Object", "spatula"),),
         }
-        self._db_mngr.import_data({self._db_map: initial_data}, "Import test data")
-        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+        db_mngr.import_data({db_map: initial_data}, "Import test data")
+        while db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        model = self._start()
+        model = self._start(db_mngr, db_editor)
         expected = [["parameter", None], ["Object", None], ["spatula", None], [None, None]]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
+        assert_table_model_data_pytest(model, expected)
 
-    def test_single_entity_and_parameter_definition_create_empty_value_cell(self):
+    def test_single_entity_and_parameter_definition_create_empty_value_cell(self, db_map, db_mngr, db_editor):
         initial_data = {
             "entity_classes": (("Object",),),
             "parameter_definitions": (("Object", "x"),),
             "entities": (("Object", "spatula"),),
         }
-        self._db_mngr.import_data({self._db_map: initial_data}, "Import test data.")
-        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+        db_mngr.import_data({db_map: initial_data}, "Import test data.")
+        while db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        model = self._start()
+        model = self._start(db_mngr, db_editor)
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", None, None], [None, None, None]]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
+        assert_table_model_data_pytest(model, expected)
 
-    def test_removing_value_from_model_sets_value_cell_to_none(self):
+    def test_removing_value_from_model_sets_value_cell_to_none(self, db_map, db_mngr, db_editor):
         initial_data = {
             "entity_classes": (("Object",),),
             "entities": (("Object", "spatula"),),
             "parameter_definitions": (("Object", "x"),),
             "parameter_values": (("Object", "spatula", "x", 2.3),),
         }
-        self._db_mngr.import_data({self._db_map: initial_data}, "Import test data.")
-        while self._db_editor.entity_tree_model._root_item.row_count() == 0:
+        db_mngr.import_data({db_map: initial_data}, "Import test data.")
+        while db_editor.entity_tree_model._root_item.row_count() == 0:
             QApplication.processEvents()
-        model = self._start()
+        model = self._start(db_mngr, db_editor)
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", str(2.3), None], [None, None, None]]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
-        with self._db_map:
-            value_item = self._db_map.get_parameter_value_item(
+        assert_table_model_data_pytest(model, expected)
+        with db_map:
+            value_item = db_map.get_parameter_value_item(
                 entity_class_name="Object",
                 entity_byname=("spatula",),
                 parameter_definition_name="x",
@@ -189,77 +161,61 @@ class TestParameterValuePivotTableModel(TestBase):
             )
             value_item.remove()
         expected = [["parameter", "x", None], ["Object", None, None], ["spatula", None, None], [None, None, None]]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
+        assert_table_model_data_pytest(model, expected)
 
-    def test_drag_and_drop_database_from_frozen_table(self):
-        self._fill_model_with_data()
-        model = self._start()
-        for frozen_column in range(self._db_editor.frozen_table_model.columnCount()):
-            frozen_index = self._db_editor.frozen_table_model.index(0, frozen_column)
+    def test_drag_and_drop_database_from_frozen_table(self, db_map, db_name, db_mngr, db_editor):
+        self._fill_model_with_data(db_map, db_mngr, db_editor)
+        model = self._start(db_mngr, db_editor)
+        for frozen_column in range(db_editor.frozen_table_model.columnCount()):
+            frozen_index = db_editor.frozen_table_model.index(0, frozen_column)
             if frozen_index.data() == "database":
                 break
         else:
             raise RuntimeError("No 'database' column found in frozen table")
-        frozen_table_header_widget = self._db_editor.ui.frozen_table.indexWidget(frozen_index)
+        frozen_table_header_widget = db_editor.ui.frozen_table.indexWidget(frozen_index)
         for row, column in itertools.product(
-            range(self._db_editor.pivot_table_proxy.rowCount()), range(self._db_editor.pivot_table_proxy.columnCount())
+            range(db_editor.pivot_table_proxy.rowCount()), range(db_editor.pivot_table_proxy.columnCount())
         ):
-            index_widget = self._db_editor.ui.pivot_table.indexWidget(
-                self._db_editor.pivot_table_proxy.index(row, column)
-            )
+            index_widget = db_editor.ui.pivot_table.indexWidget(db_editor.pivot_table_proxy.index(row, column))
             if index_widget.identifier == "parameter":
                 break
         else:
             raise RuntimeError("No 'parameter' header found")
-        self._db_editor.handle_header_dropped(frozen_table_header_widget, index_widget)
+        db_editor.handle_header_dropped(frozen_table_header_widget, index_widget)
         QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 6)
-        self.assertEqual(model.columnCount(), 4)
         expected = [
-            ["database", self.db_codename, self.db_codename, self.db_codename, None],
+            ["database", db_name, db_name, db_name],
             ["parameter", "parameter1", "parameter2", None],
             ["class1", None, None, None],
             ["object1", "1.0", "5.0", None],
             ["object2", "3.0", "7.0", None],
             [None, None, None, None],
         ]
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            with self.subTest(row=row, column=column):
-                self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data_pytest(model, expected)
 
 
-class TestIndexExpansionPivotTableModel(TestBase):
-    def _start(self, initial_data):
-        self._db_mngr.import_data({self._db_map: initial_data}, "Import initial test data.")
-        object_class_index = self._db_editor.entity_tree_model.index(0, 0)
-        fetch_model(self._db_editor.entity_tree_model)
-        index = self._db_editor.entity_tree_model.index(0, 0, object_class_index)
-        for action in self._db_editor.pivot_action_group.actions():
-            if action.text() == self._db_editor._INDEX_EXPANSION:
+class TestIndexExpansionPivotTableModel:
+    @staticmethod
+    def _start(initial_data, db_map, db_mngr, db_editor):
+        db_mngr.import_data({db_map: initial_data}, "Import initial test data.")
+        object_class_index = db_editor.entity_tree_model.index(0, 0)
+        fetch_model(db_editor.entity_tree_model)
+        index = db_editor.entity_tree_model.index(0, 0, object_class_index)
+        for action in db_editor.pivot_action_group.actions():
+            if action.text() == db_editor._INDEX_EXPANSION:
                 action.trigger()
                 break
-        self._db_editor._update_class_attributes(index)
-        with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+        db_editor._update_class_attributes(index)
+        with patch.object(db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
-            self._db_editor.do_reload_pivot_table()
-        model = self._db_editor.pivot_table_model
+            db_editor.do_reload_pivot_table()
+        model = db_editor.pivot_table_model
         model.beginResetModel()
         model.endResetModel()
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        QApplication.processEvents()
         return model
 
-    @staticmethod
-    def _model_data(model):
-        data = []
-        for row in range(model.rowCount()):
-            row_data = []
-            for column in range(model.columnCount()):
-                row_data.append(model.index(row, column).data())
-            data.append(row_data)
-        return data
-
-    def test_data(self):
+    def test_data(self, db_map, db_mngr, db_editor):
         initial_data = {
             "entity_classes": (("class1",),),
             "parameter_definitions": (("class1", "parameter1"), ("class1", "parameter2")),
@@ -271,10 +227,7 @@ class TestIndexExpansionPivotTableModel(TestBase):
                 ("class1", "object2", "parameter2", Map(["A", "B"], [-1.2, -2.2])),
             ),
         }
-        model = self._start(initial_data)
-        self.assertEqual(model.rowCount(), 10)
-        self.assertEqual(model.columnCount(), 4)
-        model_data = self._model_data(model)
+        model = self._start(initial_data, db_map, db_mngr, db_editor)
         expected = [
             [None, "parameter", "parameter1", "parameter2"],
             ["class1", "index", None, None],
@@ -287,39 +240,37 @@ class TestIndexExpansionPivotTableModel(TestBase):
             ["object2", "C", str(1.2), None],
             ["object2", "D", str(2.2), None],
         ]
-        self.assertEqual(model_data, expected)
+        assert_table_model_data_pytest(model, expected)
 
-    def test_entity_without_parameter_values_does_not_show(self):
+    def test_entity_without_parameter_values_does_not_show(self, db_map, db_mngr, db_editor):
         initial_data = {
             "entity_classes": (("Object",),),
             "parameter_definitions": (("Object", "x"),),
             "entities": (("Object", "spatula"),),
         }
-        model = self._start(initial_data)
+        model = self._start(initial_data, db_map, db_mngr, db_editor)
         expected = [
             [None, "parameter"],
             ["Object", "index"],
         ]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
+        assert_table_model_data_pytest(model, expected)
 
-    def test_removing_value_from_model_removes_it_from_model(self):
+    def test_removing_value_from_model_removes_it_from_model(self, db_map, db_mngr, db_editor):
         initial_data = {
             "entity_classes": (("Object",),),
             "entities": (("Object", "spatula"),),
             "parameter_definitions": (("Object", "x"),),
             "parameter_values": (("Object", "spatula", "x", 2.3),),
         }
-        model = self._start(initial_data)
+        model = self._start(initial_data, db_map, db_mngr, db_editor)
         expected = [
             [None, "parameter", "x"],
             ["Object", "index", None],
             ["spatula", "", str(2.3)],
         ]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
-        with self._db_map:
-            value_item = self._db_map.get_parameter_value_item(
+        assert_table_model_data_pytest(model, expected)
+        with db_map:
+            value_item = db_map.get_parameter_value_item(
                 entity_class_name="Object",
                 entity_byname=("spatula",),
                 parameter_definition_name="x",
@@ -327,9 +278,4 @@ class TestIndexExpansionPivotTableModel(TestBase):
             )
             value_item.remove()
         expected = [[None, "parameter"], ["Object", "index"]]
-        data = self._model_data(model)
-        self.assertEqual(data, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert_table_model_data_pytest(model, expected)
