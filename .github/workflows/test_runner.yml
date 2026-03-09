@@ -19,14 +19,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, ubuntu-latest]
         include:
           - os: macos-latest
-            python-version: "3.13"
-        exclude:
-          - os: windows-latest
-            python-version: "3.13"
+            python-version: "3.14"
     uses: ./.github/workflows/unit_tests.yml
     with:
       host-os: ${{ matrix.os }}
@@ -37,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, ubuntu-latest]
         include:
           - os: macos-latest
