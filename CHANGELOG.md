@@ -34,7 +34,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   in addition to scenario and alternative descriptions.
   Note, that the feature is not available for existing mappings.
   You need to create new *Entity class* or type mappings with *Parameter type* set to None or Default value.
-
+- Light and dark mode support
 
 ### Changed
 
