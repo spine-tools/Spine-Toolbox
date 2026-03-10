@@ -31,6 +31,7 @@ from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
     QKeySequence,
+    QPalette,
     QUndoStack,
     QWindow,
 )
@@ -55,14 +56,13 @@ from spine_engine.project_item.project_item_specification_factory import Project
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
     add_keyboard_shortcuts_to_action_tool_tips,
     basic_console_icon,
     busy_effect,
     clear_qsettings,
-    color_from_index,
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
@@ -124,6 +124,43 @@ from .widgets.properties_widget import PropertiesWidgetBase
 from .widgets.settings_widget import SettingsWidget
 
 
+def _make_dark_palette():
+    """Creates a dark QPalette suitable for the Fusion style."""
+    palette = QPalette()
+    # Window/background colors
+    palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(127, 127, 127))
+    # Text
+    palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+    # Button
+    palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
+    # Highlight/Selection
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    # Links
+    palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.ColorRole.LinkVisited, QColor(150, 100, 200))
+    # Disabled state
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(127, 127, 127))
+    # Midpoint colors (for borders, separators)
+    palette.setColor(QPalette.ColorRole.Light, QColor(80, 80, 80))
+    palette.setColor(QPalette.ColorRole.Midlight, QColor(65, 65, 65))
+    palette.setColor(QPalette.ColorRole.Dark, QColor(35, 35, 35))
+    palette.setColor(QPalette.ColorRole.Mid, QColor(48, 48, 48))
+    palette.setColor(QPalette.ColorRole.Shadow, QColor(20, 20, 20))
+    return palette
+
+
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
@@ -165,8 +202,6 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._add_item_edit_actions()
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
-        # Set style sheets
-        self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_properties_uis: dict[str, PropertiesWidgetBase] = {}
@@ -339,11 +374,23 @@ class ToolboxUI(QMainWindow):
 
     @staticmethod
     def set_app_style():
-        """Sets app style on Windows to 'windowsvista' or to a default if not available."""
+        """Sets application style appropriate for each platform.
+
+        On Windows, uses 'windowsvista' style which adapts to dark/light mode natively.
+        On macOS, the default native style adapts to dark/light mode automatically.
+        On Linux, uses 'Fusion' style with a dark palette if the system prefers dark mode.
+        """
         if sys.platform == "win32":
+            # The 'windowsvista' style adapts to dark/light mode natively on Windows.
             if "windowsvista" not in QStyleFactory.keys():
                 return
             QApplication.setStyle("windowsvista")
+        elif sys.platform != "darwin":
+            # Linux and other platforms: use Fusion style.
+            # Fusion does not auto-adapt to dark mode, so we apply a dark palette manually.
+            QApplication.setStyle("Fusion")
+            if QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark:
+                QApplication.setPalette(_make_dark_palette())
 
     @staticmethod
     def set_error_mode():
@@ -707,14 +754,17 @@ class ToolboxUI(QMainWindow):
         self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
-        """Set toolbars' color using the highest possible contrast."""
+        """Set toolbars' color using subtle palette-derived shades."""
+        base = QApplication.palette().color(QPalette.ColorRole.Button)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
-            color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
+            # Create subtle variations: slightly lighter or darker than base
+            factor = 100 + (k - len(all_toolbars) // 2) * 5  # e.g., 90, 95, 100, 105, 110
+            color = base.lighter(factor) if factor >= 100 else base.darker(200 - factor)
             toolbar.set_color(color)
             if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
                 self.addToolBar(Qt.TopToolBarArea, toolbar)
-        self.execute_toolbar.set_color(QColor("silver"))
+        self.execute_toolbar.set_color(QApplication.palette().color(QPalette.ColorRole.Button))
         if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
             self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
 

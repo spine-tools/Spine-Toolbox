@@ -10,9 +10,21 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Color constants for models."""
-from PySide6.QtGui import QColor
+"""Color functions for models that read from the active palette at call time."""
+from PySide6.QtGui import QPalette
+from PySide6.QtWidgets import QApplication
 
-PIVOT_TABLE_HEADER_COLOR = QColor("#efefef")
-FIXED_FIELD_COLOR = QColor("lightGray")
-SELECTED_COLOR = QColor.fromString("paleturquoise")
+
+def pivot_table_header_color():
+    """Returns the header background color from the current palette."""
+    return QApplication.palette().color(QPalette.ColorRole.Button)
+
+
+def fixed_field_color():
+    """Returns a slightly different background for fixed fields."""
+    return QApplication.palette().color(QPalette.ColorRole.Button)
+
+
+def selected_color():
+    """Returns the selection/highlight color from the current palette."""
+    return QApplication.palette().color(QPalette.ColorRole.Highlight)

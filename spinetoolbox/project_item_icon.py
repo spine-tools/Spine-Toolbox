@@ -13,7 +13,17 @@
 """Classes for drawing graphics items on QGraphicsScene."""
 import math
 from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
-from PySide6.QtGui import QBrush, QColor, QFont, QPainterPath, QPen, QRadialGradient, QTextBlockFormat, QTextCursor
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QPainterPath,
+    QPalette,
+    QPen,
+    QRadialGradient,
+    QTextBlockFormat,
+    QTextCursor,
+)
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
 from PySide6.QtWidgets import (
@@ -445,9 +455,13 @@ class ProjectItemIcon(QGraphicsPathItem):
 class ConnectorButton(QGraphicsPathItem):
     """Connector button graphics item. Used for Link drawing between project items."""
 
-    # Regular and hover brushes
-    brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
-    hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
+    @staticmethod
+    def _default_brush():
+        return QBrush(QApplication.palette().color(QPalette.ColorRole.Base))
+
+    @staticmethod
+    def _hover_brush():
+        return QBrush(QApplication.palette().color(QPalette.ColorRole.Highlight))
 
     def __init__(self, toolbox, parent, position="left"):
         """
@@ -461,7 +475,7 @@ class ConnectorButton(QGraphicsPathItem):
         self._toolbox = toolbox
         self.position = position
         self.links = []
-        self.setBrush(self.brush)
+        self.setBrush(self._default_brush())
         parent_rect = parent.rect()
         extent = 0.2 * parent_rect.width()
         self._rect = QRectF(0, 0, extent, extent)
@@ -534,13 +548,13 @@ class ConnectorButton(QGraphicsPathItem):
         """
         for conn in self._parent.connectors.values():
             conn.setEnabled(enabled)
-            conn.setBrush(conn.brush)  # Remove hover brush from src connector that was clicked
+            conn.setBrush(conn._default_brush())  # Remove hover brush from src connector that was clicked
 
     def set_hover_brush(self):
-        self.setBrush(self.hover_brush)
+        self.setBrush(self._hover_brush())
 
     def set_normal_brush(self):
-        self.setBrush(self.brush)
+        self.setBrush(self._default_brush())
 
     def hoverEnterEvent(self, event):
         """Sets a darker shade to connector button when mouse enters its boundaries.
@@ -729,7 +743,7 @@ class RankIcon(QGraphicsTextItem):
         self._parent = parent
         self._rect = parent.component_rect
         self.bg = QGraphicsPathItem(self)
-        bg_brush = QBrush(QColor(Qt.GlobalColor.white))
+        bg_brush = QBrush(QApplication.palette().color(QPalette.ColorRole.Base))
         self.bg.setBrush(bg_brush)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)

@@ -14,6 +14,11 @@
 import asyncio
 import multiprocessing
 import os
+import warnings
+
+# Suppress harmless version mismatch between requests and chardet/urllib3.
+# spinedb-api requires chardet>=7 while requests 2.32.x expects chardet<6.
+warnings.filterwarnings("ignore", message="urllib3.*chardet.*charset_normalizer")
 import PySide6
 
 dirname = os.path.dirname(PySide6.__file__)

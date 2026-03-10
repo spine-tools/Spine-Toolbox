@@ -1,20 +1,9 @@
 # -*- coding: utf-8 -*-
-######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
-# Copyright Spine Toolbox contributors
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
-######################################################################################################################
 
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.1
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,7 +25,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScro
     QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_combobox import CustomQComboBox
-from spinetoolbox import resources_icons_rc
+import resources_icons_rc
 
 class Ui_SettingsForm(object):
     def setupUi(self, SettingsForm):
@@ -49,7 +38,7 @@ class Ui_SettingsForm(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(SettingsForm.sizePolicy().hasHeightForWidth())
         SettingsForm.setSizePolicy(sizePolicy)
-        SettingsForm.setMinimumSize(QSize(500, 350))
+        SettingsForm.setMinimumSize(QSize(700, 750))
         SettingsForm.setMaximumSize(QSize(16777215, 16777215))
         SettingsForm.setMouseTracking(False)
         SettingsForm.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -253,6 +242,7 @@ class Ui_SettingsForm(object):
 
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setVerticalSpacing(6)
         self.label_7 = QLabel(self.groupBox_ui)
         self.label_7.setObjectName(u"label_7")
 
@@ -264,7 +254,7 @@ class Ui_SettingsForm(object):
         self.frame_2.setFrameShadow(QFrame.Shadow.Sunken)
         self.horizontalLayout_4 = QHBoxLayout(self.frame_2)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_4.setContentsMargins(4, 4, 4, 4)
         self.radioButton_bg_grid = QRadioButton(self.frame_2)
         self.radioButton_bg_grid.setObjectName(u"radioButton_bg_grid")
 
@@ -311,7 +301,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_17 = QHBoxLayout(self.frame_1)
         self.horizontalLayout_17.setSpacing(0)
         self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
-        self.horizontalLayout_17.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_17.setContentsMargins(4, 4, 4, 4)
         self.label_5 = QLabel(self.frame_1)
         self.label_5.setObjectName(u"label_5")
 

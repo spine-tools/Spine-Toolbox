@@ -22,7 +22,7 @@ import pytest
 from spinedb_api import Array, Asterisk, Map, TimeSeriesVariableResolution
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
-from spinetoolbox.spine_db_editor.mvcmodels.colors import FIXED_FIELD_COLOR
+from spinetoolbox.spine_db_editor.mvcmodels.colors import fixed_field_color
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundEntityAlternativeModel,
     CompoundEntityModel,
@@ -1004,14 +1004,14 @@ class TestCompoundParameterValueModel(TestBase):
         ]
         assert_table_model_data(model, expected, self)
         expected = [
-            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#090807"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
-            [QColor("#102030"), FIXED_FIELD_COLOR, None, None, None, None, FIXED_FIELD_COLOR],
+            [QColor("#090807"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#090807"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#102030"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#102030"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#090807"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#090807"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#102030"), fixed_field_color(), None, None, None, None, fixed_field_color()],
+            [QColor("#102030"), fixed_field_color(), None, None, None, None, fixed_field_color()],
         ]
         assert_table_model_data(model, expected, self, Qt.ItemDataRole.BackgroundRole)
         model.tear_down()

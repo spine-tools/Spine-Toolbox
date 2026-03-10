@@ -14,7 +14,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction, QBrush, QFontDatabase, QPalette, QTextBlockFormat, QTextCursor, QTextFrameFormat
 from PySide6.QtWidgets import QMenu, QTextBrowser
-from ..config import TEXTBROWSER_SS
 from ..helpers import scrolling_to_bottom
 
 
@@ -31,7 +30,6 @@ class CustomQTextBrowser(QTextBrowser):
         super().__init__(parent=parent)
         self._toolbox = None
         self.document().setMaximumBlockCount(2000)
-        self.setStyleSheet(TEXTBROWSER_SS)
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
         self._executions_menu = QMenu(self)
@@ -233,6 +231,5 @@ class MonoSpaceFontTextBrowser(QTextBrowser):
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
-        self.setStyleSheet(TEXTBROWSER_SS)
         font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         self.setFont(font)

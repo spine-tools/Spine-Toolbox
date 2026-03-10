@@ -32,7 +32,7 @@ from ..widgets.custom_delegates import (
     RelationshipPivotTableDelegate,
     ScenarioAlternativeTableDelegate,
 )
-from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
+from .colors import fixed_field_color, pivot_table_header_color
 from .pivot_model import PivotModel
 
 if TYPE_CHECKING:
@@ -770,11 +770,11 @@ class PivotTableModelBase(QAbstractTableModel):
         is_top = index.row() < self.headerRowCount()
         is_left = index.column() < self.headerColumnCount()
         if is_top and is_left:
-            return PIVOT_TABLE_HEADER_COLOR
+            return pivot_table_header_color()
         if is_top or is_left:
             id_ = self.top_left_id(index)
             if id_ is not None and isinstance(self.top_left_headers[id_], TopLeftDatabaseHeaderItem):
-                return FIXED_FIELD_COLOR
+                return fixed_field_color()
         return None
 
     def _text_alignment_data(self, index):

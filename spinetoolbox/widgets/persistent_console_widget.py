@@ -26,12 +26,13 @@ from PySide6.QtGui import (
     QFont,
     QFontDatabase,
     QKeySequence,
+    QPalette,
     QTextBlockFormat,
     QTextCharFormat,
     QTextCursor,
     QTextOption,
 )
-from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QPlainTextEdit, QSizePolicy, QVBoxLayout, QWidget
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.execution_managers.persistent_execution_manager import (
     JuliaPersistentExecutionManager,
@@ -405,8 +406,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if self._text_buffer:
             address = uuid.uuid4().hex
             char_format = cursor.charFormat()
-            char_format.setBackground(QColor("white"))
-            char_format.setForeground(QColor("blue"))
+            char_format.setBackground(QApplication.palette().color(QPalette.ColorRole.Base))
+            char_format.setForeground(QApplication.palette().color(QPalette.ColorRole.Link))
             char_format.setAnchor(True)
             char_format.setAnchorHref(address)
             self._skipped[address] = self._text_buffer[-self._MAX_LINES_COUNT :]

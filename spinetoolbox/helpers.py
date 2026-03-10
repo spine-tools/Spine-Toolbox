@@ -584,7 +584,7 @@ class ColoredIconEngine(QIconEngine):
         self.set_colored(colored)
 
     def color(self, mode: QIcon.Mode = QIcon.Mode.Normal) -> QColor:
-        color = self._icon_color if self._colored else QColor("black")
+        color = self._icon_color if self._colored else QApplication.palette().color(QPalette.ColorRole.WindowText)
         if mode == QIcon.Mode.Disabled:
             r, g, b, a = color.getRgbF()
             tint = 0.37255

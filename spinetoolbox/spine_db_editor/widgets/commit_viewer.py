@@ -203,7 +203,7 @@ class _CommitItem(QWidget):
         date = QLabel(str(commit["date"]))
         layout = QGridLayout()
         self.setLayout(layout)
-        ss = "QLabel{color:gray; font: italic;}"
+        ss = "QLabel{font: italic;}"
         user.setStyleSheet(ss)
         date.setStyleSheet(ss)
         layout.addWidget(comment, 0, 0, 1, -1)

@@ -34,7 +34,7 @@ from ...mvcmodels.shared import (
 from ...parameter_type_validation import ValidationKey
 from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
-from .colors import FIXED_FIELD_COLOR
+from .colors import fixed_field_color
 from .utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
     ENTITY_FIELD_MAP,
@@ -203,7 +203,7 @@ class SingleModelBase(HalfSortedTableModel):
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         column = index.column()
         if role == Qt.ItemDataRole.BackgroundRole and column in self.fixed_columns:
-            return FIXED_FIELD_COLOR
+            return fixed_field_color()
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole):
             if column == self.database_column:
                 return self.db_mngr.name_registry.display_name(self.db_map.sa_url)
@@ -622,7 +622,7 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
             and role == Qt.ItemDataRole.BackgroundRole
             and self._entity_class_dimensions == 0
         ):
-            return FIXED_FIELD_COLOR
+            return fixed_field_color()
         return super().data(index, role)
 
     def _sort_key(self, item_id: TempId) -> list[str]:

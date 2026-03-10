@@ -13,8 +13,8 @@
 """Custom QGraphicsScene used in the Design View."""
 import math
 from PySide6.QtCore import QEvent, QPointF, Qt, Signal, Slot
-from PySide6.QtGui import QBrush, QColor, QPen
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtGui import QBrush, QColor, QPalette, QPen
+from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsScene
 from ..helpers import LinkType
 from ..link import ConnectionLinkDrawer, JumpLink, JumpLinkDrawer, Link
 from ..project_item_icon import ProjectItemIcon
@@ -60,8 +60,7 @@ class DesignGraphicsScene(CustomGraphicsScene):
         # Set background attributes
         settings = toolbox.qsettings()
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
-        bg_color = settings.value("appSettings/bgColor", defaultValue="false")
-        self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
+        self.bg_color = QApplication.palette().color(QPalette.ColorRole.Base)
         self._connection_drawer = ConnectionLinkDrawer(toolbox)
         self._connection_drawer.hide()
         self._jump_drawer = JumpLinkDrawer(toolbox)

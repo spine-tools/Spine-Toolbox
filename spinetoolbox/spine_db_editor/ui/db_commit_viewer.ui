@@ -41,9 +41,7 @@
      </widget>
      <widget class="QFrame" name="verticalFrame">
       <property name="styleSheet">
-       <string notr="true">QFrame {
-  background-color: white;
-}</string>
+       <string notr="true"></string>
       </property>
       <property name="frameShape">
        <enum>QFrame::Shape::Box</enum>
