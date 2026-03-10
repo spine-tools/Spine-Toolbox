@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'time_series_fixed_resolution_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -55,7 +55,7 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.start_time_label = QLabel(self.verticalLayoutWidget)
         self.start_time_label.setObjectName(u"start_time_label")
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.start_time_label)
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.start_time_label)
 
         self.verticalLayout_2 = QVBoxLayout()
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
@@ -80,12 +80,12 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.verticalLayout_2.addWidget(self.start_time_format_label)
 
 
-        self.formLayout.setLayout(0, QFormLayout.ItemRole.FieldRole, self.verticalLayout_2)
+        self.formLayout.setLayout(0, QFormLayout.FieldRole, self.verticalLayout_2)
 
         self.resolution_label = QLabel(self.verticalLayoutWidget)
         self.resolution_label.setObjectName(u"resolution_label")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.resolution_label)
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.resolution_label)
 
         self.verticalLayout_3 = QVBoxLayout()
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
@@ -100,7 +100,7 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.verticalLayout_3.addWidget(self.resolution_format_label)
 
 
-        self.formLayout.setLayout(1, QFormLayout.ItemRole.FieldRole, self.verticalLayout_3)
+        self.formLayout.setLayout(1, QFormLayout.FieldRole, self.verticalLayout_3)
 
 
         self.left_layout.addLayout(self.formLayout)

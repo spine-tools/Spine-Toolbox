@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'datetime_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -41,7 +41,7 @@ class Ui_DatetimeEditor(object):
         self.datetime_edit_label = QLabel(DatetimeEditor)
         self.datetime_edit_label.setObjectName(u"datetime_edit_label")
 
-        self.layout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.datetime_edit_label)
+        self.layout.setWidget(0, QFormLayout.LabelRole, self.datetime_edit_label)
 
         self.edit_layout = QVBoxLayout()
         self.edit_layout.setObjectName(u"edit_layout")
@@ -57,7 +57,7 @@ class Ui_DatetimeEditor(object):
         self.edit_layout.addWidget(self.format_label)
 
 
-        self.layout.setLayout(0, QFormLayout.ItemRole.FieldRole, self.edit_layout)
+        self.layout.setLayout(0, QFormLayout.FieldRole, self.edit_layout)
 
 
         self.verticalLayout.addLayout(self.layout)

@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'duration_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -41,7 +41,7 @@ class Ui_DurationEditor(object):
         self.duration_edit_label = QLabel(DurationEditor)
         self.duration_edit_label.setObjectName(u"duration_edit_label")
 
-        self.layout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.duration_edit_label)
+        self.layout.setWidget(0, QFormLayout.LabelRole, self.duration_edit_label)
 
         self.edit_layout = QVBoxLayout()
         self.edit_layout.setObjectName(u"edit_layout")
@@ -56,7 +56,7 @@ class Ui_DurationEditor(object):
         self.edit_layout.addWidget(self.units_hint)
 
 
-        self.layout.setLayout(0, QFormLayout.ItemRole.FieldRole, self.edit_layout)
+        self.layout.setLayout(0, QFormLayout.FieldRole, self.edit_layout)
 
 
         self.verticalLayout_2.addLayout(self.layout)

@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'scenario_generator.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.7.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -49,33 +49,33 @@ class Ui_Form(object):
         self.scenario_prefix_label = QLabel(Form)
         self.scenario_prefix_label.setObjectName(u"scenario_prefix_label")
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.scenario_prefix_label)
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.scenario_prefix_label)
 
         self.scenario_prefix_edit = QLineEdit(Form)
         self.scenario_prefix_edit.setObjectName(u"scenario_prefix_edit")
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.scenario_prefix_edit)
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.scenario_prefix_edit)
 
         self.operation_label = QLabel(Form)
         self.operation_label.setObjectName(u"operation_label")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.operation_label)
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.operation_label)
 
         self.operation_combo_box = QComboBox(Form)
         self.operation_combo_box.setObjectName(u"operation_combo_box")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.operation_combo_box)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.operation_combo_box)
 
         self.use_base_alternative_check_box = QCheckBox(Form)
         self.use_base_alternative_check_box.setObjectName(u"use_base_alternative_check_box")
         self.use_base_alternative_check_box.setChecked(True)
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.use_base_alternative_check_box)
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.use_base_alternative_check_box)
 
         self.base_alternative_combo_box = QComboBox(Form)
         self.base_alternative_combo_box.setObjectName(u"base_alternative_combo_box")
 
-        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.base_alternative_combo_box)
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.base_alternative_combo_box)
 
 
         self.verticalLayout.addLayout(self.formLayout)
