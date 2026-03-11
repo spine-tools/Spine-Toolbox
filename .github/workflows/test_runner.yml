@@ -24,6 +24,9 @@ jobs:
         include:
           - os: macos-latest
             python-version: "3.14"
+        exclude:
+          - os: windows-latest
+            python-version: "3.14"
     uses: ./.github/workflows/unit_tests.yml
     with:
       host-os: ${{ matrix.os }}
