@@ -441,9 +441,6 @@ class MultiDBTreeItem(TreeItem):
         Returns:
             bool: True if children were inserted successfully, False otherwise
         """
-        bad_types = [type(child) for child in children if not isinstance(child, MultiDBTreeItem)]
-        if bad_types:
-            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
         if not super().insert_children(position, children):
             return False
         self.refresh_child_map()
