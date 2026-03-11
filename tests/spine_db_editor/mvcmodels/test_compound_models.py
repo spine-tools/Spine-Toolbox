@@ -11,9 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``compound_models`` module."""
-import gc
-import pathlib
-from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -128,7 +125,7 @@ class TestCompoundParameterDefinitionModel:
             QApplication.processEvents()
         model.tear_down()
 
-    def test_restore_db_maps(self, db_map, db_name, db_mngr, db_editor):
+    def test_restore_db_maps(self, db_map, db_name, db_map_generator, db_mngr, db_editor):
         model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         db_mngr.add_items("entity_class", {db_map: [{"name": "oc"}]})
         db_mngr.add_items("parameter_definition", {db_map: [{"name": "p1", "entity_class_name": "oc"}]})
@@ -136,22 +133,22 @@ class TestCompoundParameterDefinitionModel:
             QApplication.processEvents()
         expected = [["oc", "p1", None, None, "None", None, None, db_name]]
         assert_table_model_data_pytest(model, expected)
-        with TemporaryDirectory() as tmp_dir:
-            url = "sqlite:///" + str(pathlib.Path(tmp_dir, "other_db.sqlite"))
-            logger = mock.MagicMock()
-            db_map = db_mngr.get_db_map(url, logger, create=True)
-            with db_map:
-                db_map.add_entity_class(name="Object")
-                db_map.add_parameter_definition(entity_class_name="Object", name="X", description="X marks the spot.")
-            model.init_model()
-            model.reset_db_maps([db_map])
-            assert model.rowCount() == 0
-            db_mngr.add_items("parameter_definition", {db_map: [{"name": "p2", "entity_class_name": "oc"}]})
-            fetch_model(model)
-            expected = [["Object", "X", None, None, "None", "X marks the spot.", None, "other_db"]]
-            assert_table_model_data_pytest(model, expected)
-            db_mngr.close_session(url)
-            gc.collect()
+        permanent_db_map = db_map_generator()
+        with permanent_db_map:
+            permanent_db_map.add_entity_class(name="Object")
+            permanent_db_map.add_parameter_definition(
+                entity_class_name="Object", name="X", description="X marks the spot."
+            )
+        model.init_model()
+        model.reset_db_maps([permanent_db_map])
+        assert model.rowCount() == 0
+        db_mngr.add_items("parameter_definition", {permanent_db_map: [{"name": "p2", "entity_class_name": "oc"}]})
+        fetch_model(model)
+        expected = [
+            ["Object", "X", None, None, "None", "X marks the spot.", None, "TestCompoundParameterDefinitionModel_db_1"]
+        ]
+        assert_table_model_data_pytest(model, expected)
+        db_mngr.close_session(permanent_db_map.db_url)
         model.tear_down()
 
     def test_signals_when_non_committed_data_is_added(self, db_map, db_name, db_mngr, db_editor):
