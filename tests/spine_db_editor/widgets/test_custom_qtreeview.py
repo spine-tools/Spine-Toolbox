@@ -11,12 +11,10 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTreeView`` classes."""
-import gc
-import os.path
-from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication
+import pytest
 from spinedb_api import (
     DatabaseMapping,
     from_database,
@@ -32,7 +30,7 @@ from spinetoolbox.spine_db_editor.widgets.edit_or_remove_items_dialogs import (
     EditEntityClassesDialog,
     RemoveEntitiesDialog,
 )
-from tests.spine_db_editor.helpers import TestBase
+from tests.spine_db_editor.helpers import TestBase, commit_changes_to_database
 from tests.spine_db_editor.widgets.helpers import (
     EditorDelegateMocking,
     add_entity,
@@ -144,7 +142,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(class_index.data(), "an_entity_class")
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add entity class.")
+        commit_changes_to_database("Add entity class.", self._db_editor)
         with self._db_map:
             data = self._db_map.query(self._db_map.entity_class_sq).all()
         self.assertEqual(len(data), 1)
@@ -163,7 +161,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(class_index.data(), "a_relationship_class")
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add entity classes.")
+        commit_changes_to_database("Add entity classes.", self._db_editor)
         with self._db_map:
             entity_class = (
                 self._db_map.query(self._db_map.wide_entity_class_sq)
@@ -190,7 +188,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(entity_index.data(), "an_entity")
         entity_database_index = model.index(0, 1, class_index)
         self.assertEqual(entity_database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add entity.")
+        commit_changes_to_database("Add entity.", self._db_editor)
         with self._db_map:
             data = self._db_map.query(self._db_map.entity_class_sq).all()
             self.assertEqual(len(data), 1)
@@ -225,7 +223,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(entity_index.data(), "an_entity")
         entity_database_index = model.index(0, 1, class_index)
         self.assertEqual(entity_database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add entity.")
+        commit_changes_to_database("Add entity.", self._db_editor)
         with self._db_map:
             data = self._db_map.query(self._db_map.entity_class_sq).all()
             self.assertEqual(len(data), 1)
@@ -263,7 +261,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(entity_index.data(), "wine")
         entity_database_index = model.index(0, 1, class_index)
         self.assertEqual(entity_database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add entity.")
+        commit_changes_to_database("Add entity.", self._db_editor)
         with self._db_map:
             data = self._db_map.query(self._db_map.entity_class_sq).all()
             self.assertEqual(len(data), 1)
@@ -294,7 +292,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(entity_index.data(), "an_entity")
         database_index = model.index(0, 1, class_index)
         self.assertEqual(database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add an entities.")
+        commit_changes_to_database("Add an entities.", self._db_editor)
         with self._db_map:
             class_id = (
                 self._db_map.query(self._db_map.entity_class_sq)
@@ -331,7 +329,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(class_index.data(), "my_first_dimension_is_an_entity_class")
         class_database_index = model.index(0, 1, root_index)
         self.assertEqual(class_database_index.data(), self.db_codename)
-        self._commit_changes_to_database("Add entity classes.")
+        commit_changes_to_database("Add entity classes.", self._db_editor)
         with self._db_map:
             data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
         self.assertEqual(len(data), 2)
@@ -356,177 +354,170 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         add_entity_tree_item(item_names, self._db_editor.ui.treeView_entity, "Add entities...", AddEntitiesDialog)
 
 
-class TestEntityTreeViewWithExistingZeroDimensionalEntities(TestBase):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+@pytest.fixture()
+def entity_tree_model(db_editor):
+    view = db_editor.ui.treeView_entity
+    model = view.model()
+    root_index = model.index(0, 0)
+    while model.rowCount(root_index) == 0:
+        QApplication.processEvents()
+    return model
+
+
+class TestEntityTreeViewWithExistingZeroDimensionalEntities:
+    @pytest.fixture()
+    def db_map(self, db_name, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("entity_class_1",),))
             import_entities(db_map, (("entity_class_1", "entity_1"), ("entity_class_1", "entity_2")))
             db_map.commit_session("Add entities.")
-        db_map.close()
-        self._common_setup(url, create=False)
-        model = self._db_editor.ui.treeView_entity.model()
-        root_index = model.index(0, 0)
-        while model.rowCount(root_index) != 1:
-            # Wait for fetching to finish.
-            QApplication.processEvents()
+        unfetched_db_map = db_mngr.get_db_map(url, logger)
+        db_mngr.name_registry.register(unfetched_db_map.sa_url, db_name)
+        return unfetched_db_map
 
-    def tearDown(self):
-        self._common_tear_down()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_database_contents_shown_correctly(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_database_contents_shown_correctly(self, entity_tree_model, db_name):
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 1:
-            QApplication.processEvents()
-        self.assertEqual(model.columnCount(root_index), 2)
-        self.assertEqual(root_index.data(), "root")
-        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "name")
-        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "database")
+        assert model.columnCount(root_index) == 2
+        assert root_index.data() == "root"
+        assert model.headerData(0, Qt.Orientation.Horizontal) == "name"
+        assert model.headerData(1, Qt.Orientation.Horizontal) == "database"
         class_index = model.index(0, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
-        self.assertEqual(model.columnCount(class_index), 2)
-        self.assertEqual(class_index.data(), "entity_class_1")
+        assert model.columnCount(class_index) == 2
+        assert class_index.data() == "entity_class_1"
         database_index = model.index(0, 1, root_index)
-        self.assertEqual(database_index.data(), self.db_codename)
+        assert database_index.data() == db_name
         entity_index = model.index(0, 0, class_index)
-        self.assertEqual(model.rowCount(entity_index), 0)
-        self.assertEqual(model.columnCount(entity_index), 2)
-        self.assertEqual(entity_index.data(), "entity_1")
+        assert model.rowCount(entity_index) == 0
+        assert model.columnCount(entity_index) == 2
+        assert entity_index.data() == "entity_1"
         database_index = model.index(0, 1, class_index)
-        self.assertEqual(database_index.data(), self.db_codename)
+        assert database_index.data() == db_name
         entity_index = model.index(1, 0, class_index)
-        self.assertEqual(model.rowCount(entity_index), 0)
-        self.assertEqual(model.columnCount(entity_index), 2)
-        self.assertEqual(entity_index.data(), "entity_2")
+        assert model.rowCount(entity_index) == 0
+        assert model.columnCount(entity_index) == 2
+        assert entity_index.data() == "entity_2"
         database_index = model.index(1, 1, class_index)
-        self.assertEqual(database_index.data(), self.db_codename)
+        assert database_index.data() == db_name
 
-    def test_rename_entity_class(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_rename_entity_class(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
         view.setCurrentIndex(class_index)
-        self._rename_entity_class("renamed_class")
+        self._rename_entity_class("renamed_class", db_editor)
         class_index = model.index(0, 0, root_index)
-        self.assertEqual(class_index.data(), "renamed_class")
-        self._commit_changes_to_database("Rename entity class.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.entity_class_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual(data[0].name, "renamed_class")
+        assert class_index.data() == "renamed_class"
+        commit_changes_to_database("Rename entity class.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.entity_class_sq).all()
+            assert len(data) == 1
+            assert data[0].name == "renamed_class"
 
-    def test_rename_entity(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_rename_entity(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 1:
-            QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
         view.setCurrentIndex(entity_index)
-        self._rename_entity("renamed_entity")
+        self._rename_entity("renamed_entity", db_editor)
         QApplication.processEvents()  # Fixes a "silent" Traceback
         entity_index = model.index(0, 0, class_index)
-        self.assertEqual(entity_index.data(), "renamed_entity")
-        self._commit_changes_to_database("Rename entity.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.entity_sq).all()
-            self.assertEqual(len(data), 2)
-            self.assertEqual(data[0].name, "renamed_entity")
+        assert entity_index.data() == "renamed_entity"
+        commit_changes_to_database("Rename entity.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.entity_sq).all()
+            assert len(data) == 2
+            assert data[0].name == "renamed_entity"
 
-    def test_remove_entity_class(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_remove_entity_class(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
         class_index = model.index(0, 0, root_index)
         view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         _remove_entity_class(view)
-        self.assertEqual(model.rowCount(root_index), 0)
-        self._commit_changes_to_database("Remove entity class.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.entity_class_sq).all()
-            self.assertEqual(len(data), 0)
+        assert model.rowCount(root_index) == 0
+        commit_changes_to_database("Remove entity class.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.entity_class_sq).all()
+            assert len(data) == 0
 
-    def test_remove_entity(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_remove_entity(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 1:
-            QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
-        model.fetchMore(class_index)
-        while model.rowCount(class_index) != 2:
+        assert class_index.data() == "entity_class_1"
+        while model.rowCount(class_index) == 0:
+            model.fetchMore(class_index)
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
+        assert entity_index.data() == "entity_1"
         view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         _remove_entity(view)
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(class_index), 1)
+        assert model.rowCount(class_index) == 1
         entity_index = model.index(0, 0, class_index)
-        self.assertEqual(entity_index.data(), "entity_2")
-        self._commit_changes_to_database("Remove entity.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.entity_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual(data[0].name, "entity_2")
+        assert entity_index.data() == "entity_2"
+        commit_changes_to_database("Remove entity.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.entity_sq).all()
+            assert len(data) == 1
+            assert data[0].name == "entity_2"
 
-    def test_set_db_column_visibility(self):
-        view = self._db_editor.ui.treeView_entity
-        self.assertTrue(view._header.isSectionHidden(1))
+    def test_set_db_column_visibility(self, db_editor):
+        view = db_editor.ui.treeView_entity
+        assert view._header.isSectionHidden(1)
         view.set_db_column_visibility(True)
-        self.assertFalse(view._header.isSectionHidden(1))
+        assert not view._header.isSectionHidden(1)
 
-    def test_reload_database_while_entity_is_selected_does_not_produce_traceback(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_reload_database_while_entity_is_selected_does_not_produce_traceback(
+        self, entity_tree_model, db_map, db_mngr, db_editor
+    ):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 1:
-            QApplication.processEvents()
         class_index = model.index(0, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
         view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        with DatabaseMapping(self._db_map.db_url) as db_map:
-            db_map.add_entity_item(name="entity_3", entity_class_name="entity_class_1")
-            db_map.commit_session("Add external data.")
-        db_map.close()
-        with mock.patch.object(self._db_editor, "_set_stacked_model_default_data") as expected_callable:
+        with DatabaseMapping(db_map.db_url) as another_db_map:
+            another_db_map.add_entity_item(name="entity_3", entity_class_name="entity_class_1")
+            another_db_map.commit_session("Add external data.")
+        with mock.patch.object(db_editor, "_set_stacked_model_default_data") as expected_callable:
             with signal_waiter(view.selectionModel().selectionChanged, timeout=1.0) as waiter:
-                self._db_mngr.refresh_session(self._db_map)
+                db_mngr.refresh_session(db_map)
                 waiter.wait()
-            self.assertEqual(expected_callable.call_count, 2 * len(self._db_editor._all_empty_models))
+            assert expected_callable.call_count == 2 * len(db_editor._all_empty_models)
 
-    def _rename_entity_class(self, class_name):
-        view = self._db_editor.ui.treeView_entity
+    @staticmethod
+    def _rename_entity_class(class_name, db_editor):
+        view = db_editor.ui.treeView_entity
         _edit_entity_tree_item({0: class_name}, view, "Edit...", EditEntityClassesDialog)
 
-    def _rename_entity(self, entity_name):
-        view = self._db_editor.ui.treeView_entity
+    @staticmethod
+    def _rename_entity(entity_name, db_editor):
+        view = db_editor.ui.treeView_entity
         _edit_entity_tree_item({0: entity_name}, view, "Edit...", EditEntitiesDialog)
 
 
-class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+class TestEntityTreeViewWithExistingMultidimensionalEntities:
+    @pytest.fixture()
+    def db_map(self, db_name, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("object_class_1",), ("object_class_2",)))
             import_entities(
@@ -547,114 +538,86 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
                 ),
             )
             db_map.commit_session("Add relationships.")
-        db_map.close()
-        self._common_setup(url, create=False)
-        model = self._db_editor.ui.treeView_entity.model()
-        root_index = model.index(0, 0)
-        while model.rowCount(root_index) != 3:
-            # Wait for fetching to finish.
-            QApplication.processEvents()
+        unfetched_db_map = db_mngr.get_db_map(url, logger)
+        db_mngr.name_registry.register(unfetched_db_map.sa_url, db_name)
+        return unfetched_db_map
 
-    def tearDown(self):
-        self._common_tear_down()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_database_contents_shown_correctly(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_database_contents_shown_correctly(self, entity_tree_model, db_name):
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
-        self.assertEqual(model.columnCount(root_index), 2)
-        self.assertEqual(root_index.data(), "root")
-        self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "name")
-        self.assertEqual(model.headerData(1, Qt.Orientation.Horizontal), "database")
+        assert model.columnCount(root_index) == 2
+        assert root_index.data() == "root"
+        assert model.headerData(0, Qt.Orientation.Horizontal) == "name"
+        assert model.headerData(1, Qt.Orientation.Horizontal) == "database"
         class_index = model.index(2, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
-        self.assertEqual(model.columnCount(class_index), 2)
-        self.assertEqual(class_index.data(), "relationship_class")
+        assert model.columnCount(class_index) == 2
+        assert class_index.data() == "relationship_class"
         database_index = model.index(0, 1, root_index)
-        self.assertEqual(database_index.data(), self.db_codename)
+        assert database_index.data() == db_name
         entity_ndex = model.index(0, 0, class_index)
-        self.assertEqual(model.rowCount(entity_ndex), 0)
-        self.assertEqual(model.columnCount(entity_ndex), 2)
-        self.assertEqual(entity_ndex.data(), "object_11 ǀ object_21")
+        assert model.rowCount(entity_ndex) == 0
+        assert model.columnCount(entity_ndex) == 2
+        assert entity_ndex.data() == "object_11 ǀ object_21"
         database_index = model.index(0, 1, class_index)
-        self.assertEqual(database_index.data(), self.db_codename)
+        assert database_index.data() == db_name
         entity_ndex = model.index(1, 0, class_index)
-        self.assertEqual(model.rowCount(entity_ndex), 0)
-        self.assertEqual(model.columnCount(entity_ndex), 2)
-        self.assertEqual(entity_ndex.data(), "object_11 ǀ object_22")
+        assert model.rowCount(entity_ndex) == 0
+        assert model.columnCount(entity_ndex) == 2
+        assert entity_ndex.data() == "object_11 ǀ object_22"
         database_index = model.index(1, 1, class_index)
-        self.assertEqual(database_index.data(), self.db_codename)
+        assert database_index.data() == db_name
 
-    def test_rename_multidimensional_entity_class(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_rename_multidimensional_entity_class(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
         class_index = model.index(2, 0, root_index)
         view.setCurrentIndex(class_index)
-        self._rename_class("renamed_class")
+        self._rename_class("renamed_class", db_editor)
         class_index = model.index(2, 0, root_index)
-        self.assertEqual(class_index.data(), "renamed_class")
-        self._commit_changes_to_database("Rename relationship class.")
-        with self._db_map:
+        assert class_index.data() == "renamed_class"
+        commit_changes_to_database("Rename relationship class.", db_editor)
+        with db_map:
             entity_class = (
-                self._db_map.query(self._db_map.entity_class_sq)
-                .filter(self._db_map.entity_class_sq.c.name == "renamed_class")
-                .one()
+                db_map.query(db_map.entity_class_sq).filter(db_map.entity_class_sq.c.name == "renamed_class").one()
             )
-            self.assertIsNotNone(entity_class)
-            self.assertEqual(entity_class.name, "renamed_class")
+            assert entity_class is not None
+            assert entity_class.name == "renamed_class"
 
-    def test_rename_multidimensional_entity(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_rename_multidimensional_entity(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
         class_index = model.index(2, 0, root_index)
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
         view.setCurrentIndex(entity_index)
-        self._rename_entity("renamed_relationship")
+        self._rename_entity("renamed_relationship", db_editor)
         QApplication.processEvents()  # Fixes a "silent" Traceback.
-        self._commit_changes_to_database("Rename relationship.")
-        with self._db_map:
+        commit_changes_to_database("Rename relationship.", db_editor)
+        with db_map:
             class_id = (
-                self._db_map.query(self._db_map.entity_class_sq)
-                .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
+                db_map.query(db_map.entity_class_sq)
+                .filter(db_map.entity_class_sq.c.name == "relationship_class")
                 .one()
                 .id
             )
-            data = (
-                self._db_map.query(self._db_map.wide_entity_sq)
-                .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
-                .all()
-            )
-            self.assertEqual(len(data), 2)
+            data = db_map.query(db_map.wide_entity_sq).filter(db_map.wide_entity_sq.c.class_id == class_id).all()
+            assert len(data) == 2
             names = {i.name for i in data}
-            self.assertEqual(names, {"renamed_relationship", "object_11__object_22"})
+            assert names == {"renamed_relationship", "object_11__object_22"}
 
-    def test_modify_entitys_elements(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_modify_entitys_elements(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
         class_index = model.index(2, 0, root_index)
-        self.assertEqual(model.item_from_index(class_index).display_data, "relationship_class")
+        assert model.item_from_index(class_index).display_data == "relationship_class"
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
@@ -662,111 +625,97 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         view.setCurrentIndex(entity_index)
         _edit_entity_tree_item({0: "object_12"}, view, "Edit...", EditEntitiesDialog)
         QApplication.processEvents()  # Fixes "silent" Traceback.
-        self.assertEqual(entity_index.data(), "object_12 ǀ object_21")
-        self._commit_changes_to_database("Change relationship's objects.")
-        with self._db_map:
+        assert entity_index.data() == "object_12 ǀ object_21"
+        commit_changes_to_database("Change relationship's objects.", db_editor)
+        with db_map:
             class_id = (
-                self._db_map.query(self._db_map.entity_class_sq)
-                .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
+                db_map.query(db_map.entity_class_sq)
+                .filter(db_map.entity_class_sq.c.name == "relationship_class")
                 .one()
                 .id
             )
-            data = self._db_map.query(self._db_map.wide_entity_sq).all()
-            self.assertEqual(len(data), 6)
+            data = db_map.query(db_map.wide_entity_sq).all()
+            assert len(data) == 6
             objects = {i.element_name_list for i in data if i.class_id == class_id}
-            self.assertEqual(objects, {"object_12,object_21", "object_11,object_22"})
+            assert objects == {"object_12,object_21", "object_11,object_22"}
 
-    def test_remove_multidimensional_entity_class(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_remove_multidimensional_entity_class(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
         class_index = model.index(2, 0, root_index)
-        self.assertEqual(model.item_from_index(class_index).display_data, "relationship_class")
+        assert model.item_from_index(class_index).display_data == "relationship_class"
         view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        self._remove_class()
-        self.assertEqual(model.rowCount(root_index), 2)
-        self._commit_changes_to_database("Remove relationship class.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
-            self.assertEqual(len(data), 2)
-            self.assertEqual({i.name for i in data}, {"object_class_1", "object_class_2"})
+        self._remove_class(db_editor)
+        assert model.rowCount(root_index) == 2
+        commit_changes_to_database("Remove relationship class.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.wide_entity_class_sq).all()
+            assert len(data) == 2
+            assert {i.name for i in data} == {"object_class_1", "object_class_2"}
 
-    def test_remove_multidimensional_entity(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_remove_multidimensional_entity(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
         class_index = model.index(2, 0, root_index)
-        self.assertEqual(model.item_from_index(class_index).display_data, "relationship_class")
+        assert model.item_from_index(class_index).display_data, "relationship_class"
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
         view.selectionModel().setCurrentIndex(entity_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        self._remove_entity()
+        self._remove_entity(db_editor)
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
-        self._commit_changes_to_database("Remove relationship.")
-        with self._db_map:
+        commit_changes_to_database("Remove relationship.", db_editor)
+        with db_map:
             class_id = (
-                self._db_map.query(self._db_map.entity_class_sq)
-                .filter(self._db_map.entity_class_sq.c.name == "relationship_class")
+                db_map.query(db_map.entity_class_sq)
+                .filter(db_map.entity_class_sq.c.name == "relationship_class")
                 .one()
                 .id
             )
-            record = (
-                self._db_map.query(self._db_map.wide_entity_sq)
-                .filter(self._db_map.wide_entity_sq.c.class_id == class_id)
-                .one()
-            )
-            self.assertEqual(record.name, "object_11__object_22")
+            record = db_map.query(db_map.wide_entity_sq).filter(db_map.wide_entity_sq.c.class_id == class_id).one()
+            assert record.name, "object_11__object_22"
 
-    def test_removing_dimension_class_removes_corresponding_multidimensional_entity_class(self):
-        object_tree_view = self._db_editor.ui.treeView_entity
-        object_model = object_tree_view.model()
-        root_index = object_model.index(0, 0)
-        object_model.fetchMore(root_index)
-        while object_model.rowCount(root_index) != 3:
-            QApplication.processEvents()
-        class_index = object_model.index(0, 0, root_index)
+    def test_removing_dimension_class_removes_corresponding_multidimensional_entity_class(
+        self, entity_tree_model, db_map, db_editor
+    ):
+        object_tree_view = db_editor.ui.treeView_entity
+        model = entity_tree_model
+        root_index = model.index(0, 0)
+        class_index = model.index(0, 0, root_index)
         object_tree_view.selectionModel().setCurrentIndex(class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         _remove_entity_class(object_tree_view)
-        view = self._db_editor.ui.treeView_entity
+        view = db_editor.ui.treeView_entity
         model = view.model()
         root_index = model.index(0, 0)
         model.fetchMore(root_index)
         QApplication.processEvents()
-        self.assertEqual(model.rowCount(root_index), 1)
-        self._commit_changes_to_database("Remove object class.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.wide_entity_class_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual({i.name for i in data}, {"object_class_2"})
+        assert model.rowCount(root_index) == 1
+        commit_changes_to_database("Remove object class.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.wide_entity_class_sq).all()
+            assert len(data) == 1
+            assert {i.name for i in data} == {"object_class_2"}
 
-    def test_removing_element_removes_corresponding_entity(self):
-        view = self._db_editor.ui.treeView_entity
-        model = view.model()
+    def test_removing_element_removes_corresponding_entity(self, entity_tree_model, db_map, db_editor):
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
         root_index = model.index(0, 0)
-        model.fetchMore(root_index)
-        while model.rowCount(root_index) != 3:
-            QApplication.processEvents()
         class_index = model.index(1, 0, root_index)
-        self.assertEqual(class_index.data(), "object_class_2")
+        assert class_index.data() == "object_class_2"
         model.fetchMore(class_index)
         while model.rowCount(class_index) != 2:
             QApplication.processEvents()
         object_index = model.index(0, 0, class_index)
-        self.assertEqual(object_index.data(), "object_21")
+        assert object_index.data() == "object_21"
         view.selectionModel().setCurrentIndex(object_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        while self._db_editor.entity_model.rowCount() != 2:
+        while db_editor.entity_model.rowCount() != 2:
             QApplication.processEvents()
         _remove_entity(view)
-        while self._db_editor.entity_model.rowCount() != 0:
+        while db_editor.entity_model.rowCount() != 0:
             QApplication.processEvents()
         root_index = model.index(0, 0)
         model.fetchMore(root_index)
@@ -777,36 +726,40 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities(TestBase):
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
-        self.assertEqual(entity_index.data(), "object_11 ǀ object_22")
-        self._commit_changes_to_database("Remove object.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.entity_sq).all()
-            self.assertEqual(len(data), 4)
-            self.assertEqual({i.name for i in data}, {"object_11", "object_12", "object_22", "object_11__object_22"})
+        assert entity_index.data() == "object_11 ǀ object_22"
+        commit_changes_to_database("Remove object.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.entity_sq).all()
+            assert len(data) == 4
+            assert {i.name for i in data} == {"object_11", "object_12", "object_22", "object_11__object_22"}
 
-    def _rename_class(self, class_name):
-        view = self._db_editor.ui.treeView_entity
+    @staticmethod
+    def _rename_class(class_name, db_editor):
+        view = db_editor.ui.treeView_entity
         _edit_entity_tree_item({0: class_name}, view, "Edit...", EditEntityClassesDialog)
 
-    def _rename_entity(self, name):
-        view = self._db_editor.ui.treeView_entity
+    @staticmethod
+    def _rename_entity(name, db_editor):
+        view = db_editor.ui.treeView_entity
         _edit_entity_tree_item({2: name}, view, "Edit...", EditEntitiesDialog)
 
-    def _remove_class(self):
-        view = self._db_editor.ui.treeView_entity
+    @staticmethod
+    def _remove_class(db_editor):
+        view = db_editor.ui.treeView_entity
         _remove_entity_tree_item(view, "Remove...", RemoveEntitiesDialog)
 
-    def _remove_entity(self):
-        view = self._db_editor.ui.treeView_entity
+    @staticmethod
+    def _remove_entity(db_editor):
+        view = db_editor.ui.treeView_entity
         _remove_entity_tree_item(view, "Remove...", RemoveEntitiesDialog)
 
 
-class TestEntityTreeViewSorting(TestBase):
+class TestEntityTreeViewSorting:
     """Tests that the entity tree is sorted correctly"""
 
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+    @pytest.fixture()
+    def db_map(self, db_name, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("entity_class",), ("P_entity_class",), ("P_entity_class (1)",)))
             import_entities(
@@ -826,28 +779,34 @@ class TestEntityTreeViewSorting(TestBase):
                 (("entity_class_ND", ("entity_11", "entity_2")), ("entity_class_ND", ("entity_12", "entity_1"))),
             )
             db_map.commit_session("Add entities.")
-        self._common_setup(url, create=False)
-        model = self._db_editor.ui.treeView_entity.model()
-        self.root_item = model.root_item
+        unfetched_db_map = db_mngr.get_db_map(url, logger)
+        db_mngr.name_registry.register(unfetched_db_map.sa_url, db_name)
+        return unfetched_db_map
+
+    def test_tree_item_sorting(self, entity_tree_model):
+        model = entity_tree_model
         for item in model.visit_all():
             while item.can_fetch_more():
                 item.fetch_more()
                 QApplication.processEvents()
-
-    def tearDown(self):
-        self._common_tear_down()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_tree_item_sorting(self):
-        result = [tuple((i.name, [x.name for x in i.children])) for i in self.root_item.children]
+        result = [tuple((i.name, [x.name for x in i.children])) for i in model.root_item.children]
         expected = [
             ("entity_class", ["entity_11", "entity_12"]),
             ("P_entity_class", ["entity_1", "entity_2"]),
             ("P_entity_class (1)", ["entity_1 (1)", "entity_2 (1)"]),
             ("entity_class_ND", ["entity_11__entity_2", "entity_12__entity_1"]),
         ]
-        self.assertEqual(expected, result)
+        assert expected == result
+
+
+@pytest.fixture()
+def parameter_value_list_model(db_editor):
+    view = db_editor.ui.treeView_parameter_value_list
+    model = view.model()
+    root_index = model.index(0, 0)
+    while model.rowCount(root_index) == 0:
+        QApplication.processEvents()
+    return model
 
 
 class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
@@ -906,7 +865,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
         while model.rowCount(list_name_index) != 3:
             QApplication.processEvents()
         self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
-        self._commit_changes_to_database("Add parameter value list.")
+        commit_changes_to_database("Add parameter value list.", self._db_editor)
         with self._db_map:
             data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
             self.assertEqual(len(data), 1)
@@ -917,132 +876,134 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
                 self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
 
 
-class TestParameterValueListTreeViewWithExistingData(TestBase):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+class TestParameterValueListTreeViewWithExistingData:
+    @pytest.fixture()
+    def db_map(self, db_name, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_parameter_value_lists(db_map, (("value_list_1", "value_1"), ("value_list_1", "value_2")))
             db_map.commit_session("Add parameter value list.")
-        self._common_setup(url, create=False)
+        unfetched_db_map = db_mngr.get_db_map(url, logger)
+        db_mngr.name_registry.register(unfetched_db_map.sa_url, db_name)
+        return unfetched_db_map
 
-        view = self._db_editor.ui.treeView_parameter_value_list
-        self._edits = _ParameterValueListEdits(view)
-        model = view.model()
+    def test_tree_has_correct_initial_contents(self, parameter_value_list_model):
+        model = parameter_value_list_model
         root_index = model.index(0, 0)
-        while model.rowCount(root_index) != 2:
-            # Wait for fetching to finish.
-            QApplication.processEvents()
+        assert model.rowCount(root_index) == 2
         list_name_index = model.index(0, 0, root_index)
         model.fetchMore(list_name_index)
-        while model.rowCount(list_name_index) != 3:
+        while model.rowCount(list_name_index) == 1:
             QApplication.processEvents()
-
-    def tearDown(self):
-        self._common_tear_down()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_tree_has_correct_initial_contents(self):
-        model = self._db_editor.ui.treeView_parameter_value_list.model()
-        root_index = model.index(0, 0)
-        self.assertEqual(model.rowCount(root_index), 2)
-        list_name_index = model.index(0, 0, root_index)
-        self.assertEqual(list_name_index.data(), "value_list_1")
-        self.assertEqual(model.rowCount(list_name_index), 3)
-        self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
-        self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
-        self.assertEqual(model.index(2, 0, list_name_index).data(), "Enter new list value here...")
+        assert list_name_index.data() == "value_list_1"
+        assert model.rowCount(list_name_index) == 3
+        assert model.index(0, 0, list_name_index).data() == "value_1"
+        assert model.index(1, 0, list_name_index).data() == "value_2"
+        assert model.index(2, 0, list_name_index).data() == "Enter new list value here..."
         list_name_index = model.index(1, 0, root_index)
-        self.assertEqual(list_name_index.data(), "Type new list name here...")
+        assert list_name_index.data() == "Type new list name here..."
 
-    def test_remove_value(self):
-        view = self._db_editor.ui.treeView_parameter_value_list
-        model = view.model()
+    def test_remove_value(self, parameter_value_list_model, db_map, db_editor):
+        model = parameter_value_list_model
+        view = db_editor.ui.treeView_parameter_value_list
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
+        model.fetchMore(list_name_index)
+        while model.rowCount(list_name_index) == 1:
+            QApplication.processEvents()
         value_index = model.index(0, 0, list_name_index)
+        assert value_index.data() == "value_1"
         view.selectionModel().setCurrentIndex(value_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         view.remove_selected()
         QApplication.processEvents()
         root_index = model.index(0, 0)
-        self.assertEqual(model.rowCount(root_index), 2)
+        assert model.rowCount(root_index) == 2
         list_name_index = model.index(0, 0, root_index)
-        self.assertEqual(list_name_index.data(), "value_list_1")
-        self.assertEqual(model.rowCount(list_name_index), 2)
-        self.assertEqual(model.index(0, 0, list_name_index).data(), "value_2")
-        self.assertEqual(model.index(1, 0, list_name_index).data(), "Enter new list value here...")
+        assert list_name_index.data() == "value_list_1"
+        assert model.rowCount(list_name_index) == 2
+        assert model.index(0, 0, list_name_index).data() == "value_2"
+        assert model.index(1, 0, list_name_index).data() == "Enter new list value here..."
         list_name_index = model.index(1, 0, root_index)
-        self.assertEqual(list_name_index.data(), "Type new list name here...")
-        self._commit_changes_to_database("Remove parameter value list value.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual(data[0].name, "value_list_1")
-            data = self._db_map.query(self._db_map.list_value_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual(from_database(data[0].value, data[0].type), "value_2")
+        assert list_name_index.data() == "Type new list name here..."
+        commit_changes_to_database("Remove parameter value list value.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.parameter_value_list_sq).all()
+            assert len(data) == 1
+            assert data[0].name == "value_list_1"
+            data = db_map.query(db_map.list_value_sq).all()
+            assert len(data) == 1
+            assert from_database(data[0].value, data[0].type) == "value_2"
 
-    def test_remove_list(self):
-        view = self._db_editor.ui.treeView_parameter_value_list
-        model = view.model()
+    def test_remove_list(self, parameter_value_list_model, db_map, db_editor):
+        model = parameter_value_list_model
+        view = db_editor.ui.treeView_parameter_value_list
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
+        assert list_name_index.data() == "value_list_1"
         view.selectionModel().setCurrentIndex(list_name_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         view.remove_selected()
         root_index = model.index(0, 0)
-        self.assertEqual(model.rowCount(root_index), 1)
+        assert model.rowCount(root_index) == 1
         list_name_index = model.index(0, 0, root_index)
-        self.assertEqual(model.rowCount(list_name_index), 0)
-        self.assertEqual(list_name_index.data(), "Type new list name here...")
-        self._commit_changes_to_database("Remove parameter value list.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-            self.assertEqual(len(data), 0)
+        assert model.rowCount(list_name_index) == 0
+        assert list_name_index.data() == "Type new list name here..."
+        commit_changes_to_database("Remove parameter value list.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.parameter_value_list_sq).all()
+            assert len(data) == 0
 
-    def test_change_value(self):
-        view = self._db_editor.ui.treeView_parameter_value_list
-        model = view.model()
+    def test_change_value(self, parameter_value_list_model, db_map, db_editor):
+        model = parameter_value_list_model
+        view = db_editor.ui.treeView_parameter_value_list
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
+        model.fetchMore(list_name_index)
+        while model.rowCount(list_name_index) == 1:
+            QApplication.processEvents()
         value_index1 = model.index(0, 0, list_name_index)
-        self._edits.view_editor.write_to_index(view, value_index1, "new_value")
-        self.assertEqual(model.index(0, 0, list_name_index).data(), "new_value")
-        self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
-        self._commit_changes_to_database("Update parameter value list value.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual(data[0].name, "value_list_1")
-            data = self._db_map.query(self._db_map.list_value_sq).all()
-            self.assertEqual(len(data), 2)
+        assert value_index1.data() == "value_1"
+        edits = _ParameterValueListEdits(view)
+        edits.view_editor.write_to_index(view, value_index1, "new_value")
+        assert model.index(0, 0, list_name_index).data() == "new_value"
+        assert model.index(1, 0, list_name_index).data() == "value_2"
+        commit_changes_to_database("Update parameter value list value.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.parameter_value_list_sq).all()
+            assert len(data) == 1
+            assert data[0].name == "value_list_1"
+            data = db_map.query(db_map.list_value_sq).all()
+            assert len(data) == 2
             for i, expected_value in enumerate(("new_value", "value_2")):
-                self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
+                assert from_database(data[i].value, data[i].type) == expected_value
 
-    def test_rename_list(self):
-        view = self._db_editor.ui.treeView_parameter_value_list
-        model = view.model()
+    def test_rename_list(self, parameter_value_list_model, db_map, db_editor):
+        model = parameter_value_list_model
+        view = db_editor.ui.treeView_parameter_value_list
         root_index = model.index(0, 0)
         list_name_index = model.index(0, 0, root_index)
-        self._edits.view_editor.write_to_index(view, list_name_index, "new_list_name")
-        self.assertEqual(model.rowCount(root_index), 2)
+        edits = _ParameterValueListEdits(view)
+        edits.view_editor.write_to_index(view, list_name_index, "new_list_name")
+        assert model.rowCount(root_index) == 2
         list_name_index = model.index(0, 0, root_index)
-        self.assertEqual(list_name_index.data(), "new_list_name")
-        self.assertEqual(model.rowCount(list_name_index), 3)
-        self.assertEqual(model.index(0, 0, list_name_index).data(), "value_1")
-        self.assertEqual(model.index(1, 0, list_name_index).data(), "value_2")
-        self.assertEqual(model.index(2, 0, list_name_index).data(), "Enter new list value here...")
+        assert list_name_index.data() == "new_list_name"
+        model.fetchMore(list_name_index)
+        while model.rowCount(list_name_index) == 1:
+            QApplication.processEvents()
+        assert model.rowCount(list_name_index) == 3
+        assert model.index(0, 0, list_name_index).data() == "value_1"
+        assert model.index(1, 0, list_name_index).data() == "value_2"
+        assert model.index(2, 0, list_name_index).data() == "Enter new list value here..."
         list_name_index = model.index(1, 0, root_index)
-        self.assertEqual(list_name_index.data(), "Type new list name here...")
-        self._commit_changes_to_database("Rename parameter value list.")
-        with self._db_map:
-            data = self._db_map.query(self._db_map.parameter_value_list_sq).all()
-            self.assertEqual(len(data), 1)
-            self.assertEqual(data[0].name, "new_list_name")
-            data = self._db_map.query(self._db_map.list_value_sq).all()
-            self.assertEqual(len(data), 2)
+        assert list_name_index.data() == "Type new list name here..."
+        commit_changes_to_database("Rename parameter value list.", db_editor)
+        with db_map:
+            data = db_map.query(db_map.parameter_value_list_sq).all()
+            assert len(data) == 1
+            assert data[0].name == "new_list_name"
+            data = db_map.query(db_map.list_value_sq).all()
+            assert len(data) == 2
             for i, expected_value in enumerate(("value_1", "value_2")):
-                self.assertEqual(from_database(data[i].value, data[i].type), expected_value)
+                assert from_database(data[i].value, data[i].type) == expected_value
 
 
 class TestAlternativeTreeView:

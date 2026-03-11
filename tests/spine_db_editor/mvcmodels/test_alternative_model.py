@@ -11,11 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for :class:`AlternativeModel`."""
-import gc
-from pathlib import Path
 import pickle
-from tempfile import TemporaryDirectory
-import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
@@ -125,48 +121,20 @@ class TestAlternativeModel(TestCaseWithQApplication):
         self.assertEqual(alternative_data, {self._db_mngr.db_map_key(self._db_map): ["Base"]})
 
 
-class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
-    db_codename = "alternative_model_with_two_databases_test_db"
-
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = MockSpineDBManager(app_settings, None)
-        self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, create=True)
-        url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db2.sqlite"))
-        self._db_map2 = self._db_mngr.get_db_map(url2, logger, create=True)
-        self._db_mngr.name_registry.register(self._db_map1.sa_url, "test_db_1")
-        self._db_mngr.name_registry.register(self._db_map2.sa_url, self.db_codename)
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr)
-
-    def tearDown(self):
-        with (
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
-        ):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map1.closed and not self._db_map2.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        gc.collect()
-        self._db_editor.deleteLater()
-
-    def test_paste_alternative_mime_data(self):
-        self._db_mngr.add_items(
-            "alternative", {self._db_map1: [{"name": "my_alternative", "description": "My test alternative"}]}
-        )
-        model = AlternativeModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
+class TestAlternativeModelWithTwoDatabases:
+    def test_paste_alternative_mime_data(self, db_map_generator, db_mngr, db_editor):
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_mngr.add_items("alternative", {db_map1: [{"name": "my_alternative", "description": "My test alternative"}]})
+        model = AlternativeModel(db_editor, db_mngr, db_map1, db_map2)
         model.build_tree()
         _fetch_all_recursively(model)
         root_index = model.index(0, 0)
         source_index = model.index(1, 0, root_index)
-        self.assertEqual(source_index.data(), "my_alternative")
+        assert source_index.data() == "my_alternative"
         mime_data = model.mimeData([source_index])
         target_index = model.index(1, 0)
-        self.assertEqual(target_index.data(), self.db_codename)
+        assert target_index.data() == "TestAlternativeModelWithTwoDatabases_db_2"
         target_item = model.item_from_index(target_index)
         model.paste_alternative_mime_data(mime_data, target_item)
         _fetch_all_recursively(model)
@@ -174,7 +142,7 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
         expected = [
             [
                 {
-                    "test_db_1": [
+                    "TestAlternativeModelWithTwoDatabases_db_1": [
                         ["Base", "Base alternative"],
                         ["my_alternative", "My test alternative"],
                         ["Type new alternative name here...", ""],
@@ -184,7 +152,7 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
             ],
             [
                 {
-                    self.db_codename: [
+                    "TestAlternativeModelWithTwoDatabases_db_2": [
                         ["Base", "Base alternative"],
                         ["my_alternative", "My test alternative"],
                         ["Type new alternative name here...", ""],
@@ -193,11 +161,11 @@ class TestAlternativeModelWithTwoDatabases(TestCaseWithQApplication):
                 None,
             ],
         ]
-        self.assertEqual(data, expected)
+        assert data == expected
 
 
 def _fetch_all_recursively(model):
     for item in model.visit_all():
         while item.can_fetch_more():
             item.fetch_more()
-            qApp.processEvents()  # pylint: disable=undefined-variable
+            QApplication.processEvents()
