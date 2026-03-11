@@ -11,12 +11,10 @@
 ######################################################################################################################
 from unittest import mock
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QApplication
 import pytest
 from spinetoolbox.spine_db_editor.mvcmodels.alternative_model import AlternativeModel
 from spinetoolbox.spine_db_editor.mvcmodels.entity_tree_models import EntityTreeModel
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import AlternativeTreeView, EntityTreeView
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 
 
 @pytest.fixture()
@@ -56,23 +54,3 @@ def alternative_tree_view(empty_alternative_tree_view, db_map):
     model.db_maps = [db_map]
     model.build_tree()
     yield empty_alternative_tree_view
-
-
-@pytest.fixture
-def db_editor(db_mngr, db_map, logger, monkeypatch):
-    with (
-        mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
-        mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
-    ):
-        monkeypatch.setattr(SpineDBEditor, "restoreState", lambda *args, **kwargs: None)
-        db_editor = SpineDBEditor(db_mngr, [db_map.db_url])
-    QApplication.processEvents()
-    yield db_editor
-    with (
-        mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-        mock.patch.object(db_editor.qsettings, "value") as commit_at_exit_setting,
-        mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
-    ):
-        commit_at_exit_setting.return_value = "0"  # Discard changes and close.
-        db_editor.close()
-    db_editor.deleteLater()
