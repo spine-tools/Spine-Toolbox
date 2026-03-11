@@ -145,8 +145,7 @@ class ProjectItemIcon(QGraphicsPathItem):
         path = QPainterPath()
         path.addRoundedRect(self._rect.adjusted(-margin, -margin, margin, margin), radius + margin, radius + margin)
         self._selection_halo.setPath(path)
-        selection_pen = QPen(Qt.DashLine)
-        selection_pen.setWidthF(pen_width)
+        selection_pen = QPen(QApplication.palette().color(QPalette.ColorRole.WindowText), pen_width, Qt.DashLine)
         self._selection_halo.setPen(selection_pen)
 
     def finalize(self, name: str, x: float, y: float):
