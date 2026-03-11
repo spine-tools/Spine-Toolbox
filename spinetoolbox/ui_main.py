@@ -379,18 +379,36 @@ class ToolboxUI(QMainWindow):
         On Windows, uses 'windowsvista' style which adapts to dark/light mode natively.
         On macOS, the default native style adapts to dark/light mode automatically.
         On Linux, uses 'Fusion' style with a dark palette if the system prefers dark mode.
+
+        The user can override the theme via appSettings/theme ("os", "light", or "dark").
         """
+        theme = QSettings("SpineProject", "Spine Toolbox").value("appSettings/theme", defaultValue="os")
         if sys.platform == "win32":
             # The 'windowsvista' style adapts to dark/light mode natively on Windows.
             if "windowsvista" not in QStyleFactory.keys():
                 return
             QApplication.setStyle("windowsvista")
+            if theme == "dark":
+                QApplication.setStyle("Fusion")
+                QApplication.setPalette(_make_dark_palette())
+            elif theme == "light":
+                QApplication.setStyle("Fusion")
         elif sys.platform != "darwin":
             # Linux and other platforms: use Fusion style.
             # Fusion does not auto-adapt to dark mode, so we apply a dark palette manually.
             QApplication.setStyle("Fusion")
-            if QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark:
+            if theme == "dark":
                 QApplication.setPalette(_make_dark_palette())
+            elif theme == "os":
+                if QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark:
+                    QApplication.setPalette(_make_dark_palette())
+        else:
+            # macOS: native style adapts automatically, but allow manual override.
+            if theme == "dark":
+                QApplication.setStyle("Fusion")
+                QApplication.setPalette(_make_dark_palette())
+            elif theme == "light":
+                QApplication.setStyle("Fusion")
 
     @staticmethod
     def set_error_mode():
@@ -1103,7 +1121,7 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
         color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
-        ss = f"QWidget{{background: {color.name()};}}"
+        ss = f"QWidget{{background: {color.name()}; color: black;}}"
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.show()
         self._button_item_dir.setToolTip(f"<html>Open <b>{self.active_project_item.name}</b> directory.</html>")
@@ -1118,7 +1136,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
         color = self.link_properties_widgets[type(self.active_link_item)].fg_color
-        ss = f"QWidget{{background: {color.name()};}}"
+        ss = f"QWidget{{background: {color.name()}; color: black;}}"
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.hide()
 

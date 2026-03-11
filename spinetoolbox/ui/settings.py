@@ -1,20 +1,9 @@
 # -*- coding: utf-8 -*-
-######################################################################################################################
-# Copyright (C) 2017-2022 Spine project consortium
-# Copyright Spine Toolbox contributors
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
-######################################################################################################################
 
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.8.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,7 +25,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScro
     QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_combobox import CustomQComboBox
-from spinetoolbox import resources_icons_rc
+from . import resources_icons_rc
 
 class Ui_SettingsForm(object):
     def setupUi(self, SettingsForm):
@@ -147,14 +136,14 @@ class Ui_SettingsForm(object):
         self.label_2 = QLabel(self.groupBox_general)
         self.label_2.setObjectName(u"label_2")
 
-        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_2)
+        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.label_2)
 
         self.project_save_options_combo_box = QComboBox(self.groupBox_general)
         self.project_save_options_combo_box.addItem("")
         self.project_save_options_combo_box.addItem("")
         self.project_save_options_combo_box.setObjectName(u"project_save_options_combo_box")
 
-        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.FieldRole, self.project_save_options_combo_box)
+        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.project_save_options_combo_box)
 
 
         self.gridLayout.addLayout(self.formLayout_2, 5, 0, 1, 1)
@@ -257,7 +246,7 @@ class Ui_SettingsForm(object):
         self.label_7 = QLabel(self.groupBox_ui)
         self.label_7.setObjectName(u"label_7")
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_7)
+        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_7)
 
         self.frame_2 = QFrame(self.groupBox_ui)
         self.frame_2.setObjectName(u"frame_2")
@@ -298,12 +287,12 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_4.addWidget(self.toolButton_bg_color)
 
 
-        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.frame_2)
+        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.frame_2)
 
         self.label_4 = QLabel(self.groupBox_ui)
         self.label_4.setObjectName(u"label_4")
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_4)
+        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_4)
 
         self.frame_1 = QFrame(self.groupBox_ui)
         self.frame_1.setObjectName(u"frame_1")
@@ -339,7 +328,48 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_17.addWidget(self.label_8)
 
 
-        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.frame_1)
+        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.frame_1)
+
+        self.label_theme = QLabel(self.groupBox_ui)
+        self.label_theme.setObjectName(u"label_theme")
+
+        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_theme)
+
+        self.frame_theme = QFrame(self.groupBox_ui)
+        self.frame_theme.setObjectName(u"frame_theme")
+        self.frame_theme.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_theme.setFrameShadow(QFrame.Shadow.Sunken)
+        self.horizontalLayout_theme = QHBoxLayout(self.frame_theme)
+        self.horizontalLayout_theme.setObjectName(u"horizontalLayout_theme")
+        self.horizontalLayout_theme.setContentsMargins(4, 4, 4, 4)
+        self.radioButton_theme_os = QRadioButton(self.frame_theme)
+        self.radioButton_theme_os.setObjectName(u"radioButton_theme_os")
+        self.radioButton_theme_os.setChecked(True)
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_os)
+
+        self.radioButton_theme_light = QRadioButton(self.frame_theme)
+        self.radioButton_theme_light.setObjectName(u"radioButton_theme_light")
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_light)
+
+        self.radioButton_theme_dark = QRadioButton(self.frame_theme)
+        self.radioButton_theme_dark.setObjectName(u"radioButton_theme_dark")
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_dark)
+
+        self.label_theme_restart = QLabel(self.frame_theme)
+        self.label_theme_restart.setObjectName(u"label_theme_restart")
+        self.label_theme_restart.setEnabled(True)
+
+        self.horizontalLayout_theme.addWidget(self.label_theme_restart)
+
+        self.horizontalSpacer_theme = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_theme.addItem(self.horizontalSpacer_theme)
+
+
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.frame_theme)
 
 
         self.gridLayout_2.addLayout(self.formLayout, 8, 0, 1, 1)
@@ -1191,6 +1221,11 @@ class Ui_SettingsForm(object):
         self.label_4.setText(QCoreApplication.translate("SettingsForm", u"Link flash speed", None))
         self.label_5.setText(QCoreApplication.translate("SettingsForm", u"Slow", None))
         self.label_8.setText(QCoreApplication.translate("SettingsForm", u"Fast", None))
+        self.label_theme.setText(QCoreApplication.translate("SettingsForm", u"Light/dark theme", None))
+        self.radioButton_theme_os.setText(QCoreApplication.translate("SettingsForm", u"OS", None))
+        self.radioButton_theme_light.setText(QCoreApplication.translate("SettingsForm", u"Light", None))
+        self.radioButton_theme_dark.setText(QCoreApplication.translate("SettingsForm", u"Dark", None))
+        self.label_theme_restart.setText(QCoreApplication.translate("SettingsForm", u"(Requires restart)", None))
         self.checkBox_drag_to_draw_links.setText(QCoreApplication.translate("SettingsForm", u"Drag to draw links", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))

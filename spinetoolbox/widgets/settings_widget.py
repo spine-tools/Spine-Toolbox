@@ -732,6 +732,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
+        theme = self._qsettings.value("appSettings/theme", defaultValue="os")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_julia_jupyter_console = int(self._qsettings.value("appSettings/useJuliaKernel", defaultValue="0"))
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
@@ -775,6 +776,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
+        if theme == "light":
+            self.ui.radioButton_theme_light.setChecked(True)
+        elif theme == "dark":
+            self.ui.radioButton_theme_dark.setChecked(True)
+        else:
+            self.ui.radioButton_theme_os.setChecked(True)
         self.update_bg_color()
         self.ui.lineEdit_gams_path.setPlaceholderText(resolve_gams_executable(""))
         self.ui.lineEdit_gams_path.setText(gams_path)
@@ -898,6 +905,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        if self.ui.radioButton_theme_light.isChecked():
+            theme = "light"
+        elif self.ui.radioButton_theme_dark.isChecked():
+            theme = "dark"
+        else:
+            theme = "os"
+        self._qsettings.setValue("appSettings/theme", theme)
         save_spec = str(self.ui.checkBox_save_spec_before_closing.checkState().value)
         self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)
         spec_show_undo = str(self.ui.checkBox_spec_show_undo.checkState().value)
