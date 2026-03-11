@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'plain_parameter_value_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -45,40 +45,40 @@ class Ui_PlainParameterValueEditor(object):
         self.radioButton_number_or_string = QRadioButton(self.groupBox)
         self.radioButton_number_or_string.setObjectName(u"radioButton_number_or_string")
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.radioButton_number_or_string)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.radioButton_number_or_string)
 
         self.value_edit = QLineEdit(self.groupBox)
         self.value_edit.setObjectName(u"value_edit")
         self.value_edit.setEnabled(False)
         self.value_edit.setMaximumSize(QSize(16777215, 23))
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.value_edit)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.value_edit)
 
         self.radioButton_string = QRadioButton(self.groupBox)
         self.radioButton_string.setObjectName(u"radioButton_string")
 
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.radioButton_string)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.radioButton_string)
 
         self.radioButton_true = QRadioButton(self.groupBox)
         self.radioButton_true.setObjectName(u"radioButton_true")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.radioButton_true)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.radioButton_true)
 
         self.radioButton_false = QRadioButton(self.groupBox)
         self.radioButton_false.setObjectName(u"radioButton_false")
 
-        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.radioButton_false)
+        self.formLayout.setWidget(3, QFormLayout.ItemRole.LabelRole, self.radioButton_false)
 
         self.radioButton_null = QRadioButton(self.groupBox)
         self.radioButton_null.setObjectName(u"radioButton_null")
 
-        self.formLayout.setWidget(4, QFormLayout.LabelRole, self.radioButton_null)
+        self.formLayout.setWidget(4, QFormLayout.ItemRole.LabelRole, self.radioButton_null)
 
         self.string_value_edit = QLineEdit(self.groupBox)
         self.string_value_edit.setObjectName(u"string_value_edit")
         self.string_value_edit.setEnabled(False)
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.string_value_edit)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.string_value_edit)
 
 
         self.verticalLayout.addWidget(self.groupBox)

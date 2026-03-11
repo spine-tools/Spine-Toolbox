@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
+######################################################################################################################
+# Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -25,7 +36,7 @@ from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QAbstractScro
     QVBoxLayout, QWidget)
 
 from spinetoolbox.widgets.custom_combobox import CustomQComboBox
-from . import resources_icons_rc
+from spinetoolbox import resources_icons_rc
 
 class Ui_SettingsForm(object):
     def setupUi(self, SettingsForm):
@@ -136,14 +147,14 @@ class Ui_SettingsForm(object):
         self.label_2 = QLabel(self.groupBox_general)
         self.label_2.setObjectName(u"label_2")
 
-        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.label_2)
+        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_2)
 
         self.project_save_options_combo_box = QComboBox(self.groupBox_general)
         self.project_save_options_combo_box.addItem("")
         self.project_save_options_combo_box.addItem("")
         self.project_save_options_combo_box.setObjectName(u"project_save_options_combo_box")
 
-        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.project_save_options_combo_box)
+        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.FieldRole, self.project_save_options_combo_box)
 
 
         self.gridLayout.addLayout(self.formLayout_2, 5, 0, 1, 1)
@@ -246,7 +257,7 @@ class Ui_SettingsForm(object):
         self.label_7 = QLabel(self.groupBox_ui)
         self.label_7.setObjectName(u"label_7")
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_7)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_7)
 
         self.frame_2 = QFrame(self.groupBox_ui)
         self.frame_2.setObjectName(u"frame_2")
@@ -287,12 +298,12 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_4.addWidget(self.toolButton_bg_color)
 
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.frame_2)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.frame_2)
 
         self.label_4 = QLabel(self.groupBox_ui)
         self.label_4.setObjectName(u"label_4")
 
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_4)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_4)
 
         self.frame_1 = QFrame(self.groupBox_ui)
         self.frame_1.setObjectName(u"frame_1")
@@ -328,12 +339,12 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_17.addWidget(self.label_8)
 
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.frame_1)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.frame_1)
 
         self.label_theme = QLabel(self.groupBox_ui)
         self.label_theme.setObjectName(u"label_theme")
 
-        self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_theme)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_theme)
 
         self.frame_theme = QFrame(self.groupBox_ui)
         self.frame_theme.setObjectName(u"frame_theme")
@@ -369,7 +380,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_theme.addItem(self.horizontalSpacer_theme)
 
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.frame_theme)
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.frame_theme)
 
 
         self.gridLayout_2.addLayout(self.formLayout, 8, 0, 1, 1)
