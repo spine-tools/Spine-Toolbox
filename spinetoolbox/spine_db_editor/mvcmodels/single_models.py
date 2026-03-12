@@ -657,8 +657,11 @@ class SingleEntityModel(FilterEntityMixin, SingleModelBase):
         if not self._filter_scenario_ids:
             return False
         active_by_default = self.db_map.mapped_table("entity_class")[self.entity_class_id]["active_by_default"]
+        entity_id = item["id"]
         for scenario_id in self._filter_scenario_ids:
-            is_active = self.db_map.item_active_in_scenario(item, scenario_id)
+            is_active = self.db_mngr.entity_scenario_activity_graph.is_entity_active(
+                self.db_map, entity_id, scenario_id
+            )
             if is_active is False or (is_active is None and not active_by_default):
                 return False
         return super().filter_accepts_item(item)
