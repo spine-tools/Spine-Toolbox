@@ -22,7 +22,6 @@ class EmptyRowModel(MinimalTableModel):
     def __init__(self, parent: Optional[QObject] = None, header: Optional[list[str]] = None):
         super().__init__(parent, header=header)
         self.default_row = {}  # A row of default values to put in any newly inserted row
-        self.force_default = False  # Whether default values are editable
         self._fetched = False
         self.dataChanged.connect(self._handle_data_changed)
         self.rowsInserted.connect(self._handle_rows_inserted)
@@ -33,17 +32,6 @@ class EmptyRowModel(MinimalTableModel):
     def fetchMore(self, parent):
         self.insertRows(self.rowCount(), 1, parent)
         self._fetched = True
-
-    def flags(self, index):
-        """Returns default flags except if forcing defaults."""
-        if self.force_default:
-            try:
-                name = self.header[index.column()]
-                if name in self.default_row:
-                    return super().flags(index) & ~Qt.ItemFlag.ItemIsEditable
-            except IndexError:
-                pass
-        return super().flags(index)
 
     def set_default_row(self, **kwargs) -> None:
         """Sets default row data."""
