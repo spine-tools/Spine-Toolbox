@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the MinimalTableModel class."""
-import unittest
 from PySide6.QtCore import Qt
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from tests.mock_helpers import TestCaseWithQApplication
@@ -277,7 +276,3 @@ class TestMinimalTableModel(TestCaseWithQApplication):
             for column, value in enumerate(row_data):
                 index = model.index(row, column)
                 self.assertEqual(model.data(index), value)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -12,7 +12,6 @@
 
 """Unit tests for :class:`SpecificationEditorWindowBase` and its supports."""
 from tempfile import TemporaryDirectory
-import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 from PySide6.QtGui import QColor, QUndoStack
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
@@ -210,7 +209,3 @@ class _MockProjectItem(ProjectItem):
 
     def get_icon(self):
         return ProjectItemIcon(self._toolbox, ":/icons/item_icons/hammer.svg", QColor("white"))
-
-
-if __name__ == "__main__":
-    unittest.main()

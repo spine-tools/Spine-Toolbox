@@ -18,6 +18,7 @@ from matplotlib.gridspec import GridSpec
 import numpy
 from PySide6.QtCore import QItemSelectionModel, QModelIndex, QObject
 from PySide6.QtWidgets import QApplication
+import pytest
 from spinedb_api import (
     Array,
     DateTime,
@@ -43,19 +44,19 @@ from spinetoolbox.plotting import (
     turn_node_to_xy_data,
 )
 from tests.mock_helpers import TestCaseWithQApplication
-from tests.spine_db_editor.helpers import TestBase
 
 
-class TestPlotPivotTableSelection(TestBase):
-    def _add_object_parameter_values(self, values):
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "class", "id": 1}]})
-        self._db_mngr.add_items(
+class TestPlotPivotTableSelection:
+    @staticmethod
+    def _add_object_parameter_values(values, db_map, db_mngr):
+        db_mngr.add_items("entity_class", {db_map: [{"name": "class", "id": 1}]})
+        db_mngr.add_items(
             "parameter_definition",
-            {self._db_map: [{"entity_class_id": 1, "name": name, "id": i + 1} for i, name in enumerate(values)]},
+            {db_map: [{"entity_class_id": 1, "name": name, "id": i + 1} for i, name in enumerate(values)]},
         )
         object_count = max(len(x) for x in values.values())
-        self._db_mngr.add_items(
-            "entity", {self._db_map: [{"class_id": 1, "name": f"o{i + 1}", "id": i + 1} for i in range(object_count)]}
+        db_mngr.add_items(
+            "entity", {db_map: [{"class_id": 1, "name": f"o{i + 1}", "id": i + 1} for i in range(object_count)]}
         )
         db_values = {name: list(map(to_database, value_list)) for name, value_list in values.items()}
         value_items = [
@@ -70,32 +71,33 @@ class TestPlotPivotTableSelection(TestBase):
             for param_i, values_and_types in enumerate(db_values.values())
             for i, (db_value, type_) in enumerate(values_and_types)
         ]
-        self._db_mngr.add_items("parameter_value", {self._db_map: value_items})
+        db_mngr.add_items("parameter_value", {db_map: value_items})
 
-    def _select_object_class_in_tree_view(self):
-        object_tree_model = self._db_editor.ui.treeView_entity.model()
+    @staticmethod
+    def _select_object_class_in_tree_view(db_editor):
+        object_tree_model = db_editor.ui.treeView_entity.model()
         root_index = object_tree_model.index(0, 0)
         if object_tree_model.canFetchMore(root_index):
             object_tree_model.fetchMore(root_index)
-        self.assertEqual(object_tree_model.rowCount(root_index), 1)
+        assert object_tree_model.rowCount(root_index) == 1
         class_index = object_tree_model.index(0, 0, root_index)
-        refreshing_models = [self._db_editor.parameter_value_model, self._db_editor.parameter_definition_model]
+        refreshing_models = [db_editor.parameter_value_model, db_editor.parameter_definition_model]
         with multi_signal_waiter([model.layoutChanged for model in refreshing_models]) as at_filter_refresh:
-            self._db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
-                class_index, QItemSelectionModel.ClearAndSelect
+            db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
+                class_index, QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
             at_filter_refresh.wait()
 
-    def _fill_pivot(self, values):
-        self._add_object_parameter_values(values)
-        self.assertEqual(self._db_editor.current_input_type, self._db_editor._PARAMETER_VALUE)
-        self._select_object_class_in_tree_view()
-        with patch.object(self._db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
+    def _fill_pivot(self, values, db_map, db_mngr, db_editor):
+        self._add_object_parameter_values(values, db_map, db_mngr)
+        assert db_editor.current_input_type == db_editor._PARAMETER_VALUE
+        self._select_object_class_in_tree_view(db_editor)
+        with patch.object(db_editor.ui.dockWidget_pivot_table, "isVisible") as mock_is_visible:
             mock_is_visible.return_value = True
-            self._db_editor.do_reload_pivot_table()
-        if self._db_editor.pivot_table_model.canFetchMore(QModelIndex()):
-            self._db_editor.pivot_table_model.fetchMore(QModelIndex())
-        model = self._db_editor.pivot_table_proxy
+            db_editor.do_reload_pivot_table()
+        if db_editor.pivot_table_model.canFetchMore(QModelIndex()):
+            db_editor.pivot_table_model.fetchMore(QModelIndex())
+        model = db_editor.pivot_table_proxy
         object_count = max(len(x) for x in values.values())
         while model.rowCount() != 2 + object_count + 1:
             QApplication.processEvents()
@@ -106,286 +108,284 @@ class TestPlotPivotTableSelection(TestBase):
         data_rows_end = model.sourceModel().rowCount()
         return [model.index(row, column) for row in range(first_data_row, data_rows_end)]
 
-    def test_floats(self):
-        self._fill_pivot({"floats": [1.1, 1.2, 1.3]})
-        model = self._db_editor.pivot_table_proxy
+    def test_floats(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"floats": [1.1, 1.2, 1.3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | floats")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | floats"
+            assert plot_widget.canvas.axes.get_xlabel() == "alternative_name"
+            assert plot_widget.canvas.axes.get_ylabel() == "floats"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
+            assert legend_texts == ["o1", "o2", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
-            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.2])
-            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [1.3])
+            assert len(lines) == 3
+            assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [1.1]
+            assert list(lines[1].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[1].get_ydata(orig=True)) == [1.2]
+            assert list(lines[2].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[2].get_ydata(orig=True)) == [1.3]
         finally:
             plot_widget.deleteLater()
 
-    def test_ints(self):
-        self._fill_pivot({"ints": [-3, -1, 2]})
-        model = self._db_editor.pivot_table_proxy
+    def test_ints(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"ints": [-3, -1, 2]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | ints")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | ints"
+            assert plot_widget.canvas.axes.get_xlabel() == "alternative_name"
+            assert plot_widget.canvas.axes.get_ylabel() == "ints"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
+            assert legend_texts == ["o1", "o2", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
-            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
-            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
+            assert len(lines) == 3
+            assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [-3.0]
+            assert list(lines[1].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[1].get_ydata(orig=True)) == [-1.0]
+            assert list(lines[2].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[2].get_ydata(orig=True)) == [2.0]
         finally:
             plot_widget.deleteLater()
 
-    def test_time_series(self):
+    def test_time_series(self, db_map, db_mngr, db_editor):
         ts1 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [2.3, 5.0], False, False)
         ts2 = TimeSeriesFixedResolution("2019-07-10T13:00", "20m", [3.3, 4.0], False, False)
         ts3 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [4.3, 3.0], False, False)
-        self._fill_pivot({"series": [ts1, ts2, ts3]})
-        model = self._db_editor.pivot_table_proxy
+        self._fill_pivot({"series": [ts1, ts2, ts3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | series | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "series")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | series | Base"
+            assert plot_widget.canvas.axes.get_xlabel() == "t"
+            assert plot_widget.canvas.axes.get_ylabel() == "series"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
+            assert legend_texts == ["o1", "o2", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(
-                list(lines[0].get_xdata(orig=True)),
-                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
-            )
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.0])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.0])
-            self.assertEqual(
-                list(lines[1].get_xdata(orig=True)),
-                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
-            )
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [4.3, 3.0])
-            self.assertEqual(
-                list(lines[2].get_xdata(orig=True)),
-                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
-            )
+            assert len(lines) == 3
+            assert list(lines[0].get_xdata(orig=True)) == [
+                numpy.datetime64("2019-07-10T13:00:00"),
+                numpy.datetime64("2019-07-10T13:20:00"),
+            ]
+            assert list(lines[0].get_ydata(orig=True)) == [2.3, 5.0]
+            assert list(lines[1].get_ydata(orig=True)) == [3.3, 4.0]
+            assert list(lines[1].get_xdata(orig=True)) == [
+                numpy.datetime64("2019-07-10T13:00:00"),
+                numpy.datetime64("2019-07-10T13:20:00"),
+            ]
+            assert list(lines[2].get_ydata(orig=True)) == [4.3, 3.0]
+            assert list(lines[2].get_xdata(orig=True)) == [
+                numpy.datetime64("2019-07-10T13:00:00"),
+                numpy.datetime64("2019-07-10T13:20:00"),
+            ]
         finally:
             plot_widget.deleteLater()
 
-    def test_row_filtering(self):
-        self._fill_pivot({"floats": [1.1, 1.2, 1.3]})
-        model = self._db_editor.pivot_table_proxy
-        id1 = self._db_map.get_entity_item(id=1)["id"]
-        id3 = self._db_map.get_entity_item(id=3)["id"]
-        model.set_filter("class", {(self._db_map, id1), (self._db_map, id3)})
+    def test_row_filtering(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"floats": [1.1, 1.2, 1.3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
+        id1 = db_map.get_entity_item(id=1)["id"]
+        id3 = db_map.get_entity_item(id=3)["id"]
+        model.set_filter("class", {(db_map, id1), (db_map, id3)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | floats")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | floats"
+            assert plot_widget.canvas.axes.get_xlabel() == "alternative_name"
+            assert plot_widget.canvas.axes.get_ylabel() == "floats"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o3"])
+            assert legend_texts == ["o1", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
-            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.3])
+            assert len(lines) == 2
+            assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [1.1]
+            assert list(lines[1].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[1].get_ydata(orig=True)) == [1.3]
         finally:
             plot_widget.deleteLater()
 
-    def test_column_filtering(self):
-        self._fill_pivot({"floats": [1.1, 1.2, 1.3], "ints": [-3, -1, 2]})
-        model = self._db_editor.pivot_table_proxy
-        p_id = self._db_map.get_parameter_definition_item(id=2)["id"]
-        model.set_filter("parameter", {(self._db_map, p_id)})
+    def test_column_filtering(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"floats": [1.1, 1.2, 1.3], "ints": [-3, -1, 2]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
+        p_id = db_map.get_parameter_definition_item(id=2)["id"]
+        model.set_filter("parameter", {(db_map, p_id)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | ints")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "ints")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | ints"
+            assert plot_widget.canvas.axes.get_xlabel() == "alternative_name"
+            assert plot_widget.canvas.axes.get_ylabel() == "ints"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
+            assert legend_texts == ["o1", "o2", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
-            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
-            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
+            assert len(lines) == 3
+            assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [-3.0]
+            assert list(lines[1].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[1].get_ydata(orig=True)) == [-1.0]
+            assert list(lines[2].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[2].get_ydata(orig=True)) == [2.0]
         finally:
             plot_widget.deleteLater()
 
-    def test_multiple_columns_selected_plots_on_two_y_axes(self):
-        self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]})
-        model = self._db_editor.pivot_table_proxy
+    def test_multiple_columns_selected_plots_on_two_y_axes(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"ints": [-3, -1, 2], "floats": [1.1, 1.2, 1.3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         selected_indexes = [model.index(row, column) for column in range(1, 3) for row in range(2, 5)]
         plot_widget = plot_pivot_table_selection(model, selected_indexes)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "floats")
-            self.assertTrue(plot_widget.canvas.has_twinned_axes())
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db"
+            assert plot_widget.canvas.axes.get_xlabel() == "alternative_name"
+            assert plot_widget.canvas.axes.get_ylabel() == "floats"
+            assert plot_widget.canvas.has_twinned_axes()
             twinned = plot_widget.canvas.twinned_axes()
-            self.assertEqual(len(twinned), 1)
-            self.assertEqual(twinned[0].get_ylabel(), "ints")
+            assert len(twinned) == 1
+            assert twinned[0].get_ylabel() == "ints"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(
-                legend_texts, ["floats | o1", "floats | o2", "floats | o3", "ints | o1", "ints | o2", "ints | o3"]
-            )
+            assert legend_texts == ["floats | o1", "floats | o2", "floats | o3", "ints | o1", "ints | o2", "ints | o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
+            assert len(lines) == 3
             for _ in range(3):
-                self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [1.1])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [1.2])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [1.3])
+                assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [1.1]
+            assert list(lines[1].get_ydata(orig=True)) == [1.2]
+            assert list(lines[2].get_ydata(orig=True)) == [1.3]
             lines = twinned[0].get_lines()
-            self.assertEqual(len(lines), 3)
+            assert len(lines) == 3
             for _ in range(3):
-                self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
+                assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [-3.0]
+            assert list(lines[1].get_ydata(orig=True)) == [-1.0]
+            assert list(lines[2].get_ydata(orig=True)) == [2.0]
         finally:
             plot_widget.deleteLater()
 
-    def test_x_column(self):
-        self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]})
-        model = self._db_editor.pivot_table_proxy
+    def test_x_column(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         model.sourceModel().set_plot_x_column(2, True)
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | a-ints | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "b-floats")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "a-ints")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | a-ints | Base"
+            assert plot_widget.canvas.axes.get_xlabel() == "b-floats"
+            assert plot_widget.canvas.axes.get_ylabel() == "a-ints"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
+            assert legend_texts == ["o1", "o2", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), [1.1])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
-            self.assertEqual(list(lines[1].get_xdata(orig=True)), [1.2])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
-            self.assertEqual(list(lines[2].get_xdata(orig=True)), [1.3])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
+            assert len(lines) == 3
+            assert list(lines[0].get_xdata(orig=True)) == [1.1]
+            assert list(lines[0].get_ydata(orig=True)) == [-3.0]
+            assert list(lines[1].get_xdata(orig=True)) == [1.2]
+            assert list(lines[1].get_ydata(orig=True)) == [-1.0]
+            assert list(lines[2].get_xdata(orig=True)) == [1.3]
+            assert list(lines[2].get_ydata(orig=True)) == [2.0]
         finally:
             plot_widget.deleteLater()
 
-    def test_hidden_x_column_should_disable_it(self):
-        self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]})
-        model = self._db_editor.pivot_table_proxy
+    def test_hidden_x_column_should_disable_it(self, db_map, db_mngr, db_editor):
+        self._fill_pivot({"a-ints": [-3, -1, 2], "b-floats": [1.1, 1.2, 1.3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         model.sourceModel().set_plot_x_column(2, True)
-        p_id = self._db_map.get_parameter_definition_item(id=1)["id"]
-        model.set_filter("parameter", {(self._db_map, p_id)})
+        p_id = db_map.get_parameter_definition_item(id=1)["id"]
+        model.set_filter("parameter", {(db_map, p_id)})
         selection = self._select_column(1, model)
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | a-ints")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "alternative_name")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "a-ints")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | a-ints"
+            assert plot_widget.canvas.axes.get_xlabel() == "alternative_name"
+            assert plot_widget.canvas.axes.get_ylabel() == "a-ints"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2", "o3"])
+            assert legend_texts == ["o1", "o2", "o3"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 3)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-3.0])
-            self.assertEqual(list(lines[1].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-1.0])
-            self.assertEqual(list(lines[2].get_xdata(orig=True)), ["Base"])
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [2.0])
+            assert len(lines) == 3
+            assert list(lines[0].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[0].get_ydata(orig=True)) == [-3.0]
+            assert list(lines[1].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[1].get_ydata(orig=True)) == [-1.0]
+            assert list(lines[2].get_xdata(orig=True)) == ["Base"]
+            assert list(lines[2].get_ydata(orig=True)) == [2.0]
         finally:
             plot_widget.deleteLater()
 
-    def test_add_to_existing_plot(self):
+    def test_add_to_existing_plot(self, db_map, db_mngr, db_editor):
         ts1 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [2.3, 5.0], False, False)
         ts2 = TimeSeriesFixedResolution("2019-07-10T13:00", "20m", [3.3, 4.0], False, False)
-        self._fill_pivot({"series": [ts1, ts2]})
-        model = self._db_editor.pivot_table_proxy
+        self._fill_pivot({"series": [ts1, ts2]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         first_data_row = model.sourceModel().headerRowCount()
         selection = [model.index(first_data_row, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         selection = [model.index(first_data_row + 1, 1)]
         plot_pivot_table_selection(model, selection, plot_widget)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | series | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "series")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | series | Base"
+            assert plot_widget.canvas.axes.get_xlabel() == "t"
+            assert plot_widget.canvas.axes.get_ylabel() == "series"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["o1", "o2"])
+            assert legend_texts == ["o1", "o2"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(
-                list(lines[0].get_xdata(orig=True)),
-                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
-            )
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [2.3, 5.0])
-            self.assertEqual(
-                list(lines[1].get_xdata(orig=True)),
-                [numpy.datetime64("2019-07-10T13:00:00"), numpy.datetime64("2019-07-10T13:20:00")],
-            )
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [3.3, 4.0])
+            assert len(lines) == 2
+            assert list(lines[0].get_xdata(orig=True)) == [
+                numpy.datetime64("2019-07-10T13:00:00"),
+                numpy.datetime64("2019-07-10T13:20:00"),
+            ]
+            assert list(lines[0].get_ydata(orig=True)) == [2.3, 5.0]
+            assert list(lines[1].get_xdata(orig=True)) == [
+                numpy.datetime64("2019-07-10T13:00:00"),
+                numpy.datetime64("2019-07-10T13:20:00"),
+            ]
+            assert list(lines[1].get_ydata(orig=True)) == [3.3, 4.0]
         finally:
             plot_widget.deleteLater()
 
-    def test_incompatible_data_types_on_existing_plot_raises(self):
+    def test_incompatible_data_types_on_existing_plot_raises(self, db_map, db_mngr, db_editor):
         ts1 = TimeSeriesVariableResolution(["2019-07-10T13:00", "2019-07-10T13:20"], [2.3, 5.0], False, False)
-        self._fill_pivot({"series": [ts1], "floats": [1.1, 1.2, 1.3]})
-        model = self._db_editor.pivot_table_proxy
+        self._fill_pivot({"series": [ts1], "floats": [1.1, 1.2, 1.3]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         first_data_row = model.sourceModel().headerRowCount()
         selection = [model.index(first_data_row, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            with self.assertRaises(PlottingError):
+            with pytest.raises(PlottingError):
                 selection = self._select_column(2, model)
                 plot_pivot_table_selection(model, selection, plot_widget)
         finally:
             plot_widget.deleteLater()
 
-    def test_simple_map(self):
+    def test_simple_map(self, db_map, db_mngr, db_editor):
         """Test that a selection containing a single plain number gets plotted."""
-        self._fill_pivot({"maps": [Map(["a", "b"], [-1.1, -2.2])]})
-        model = self._db_editor.pivot_table_proxy
+        self._fill_pivot({"maps": [Map(["a", "b"], [-1.1, -2.2])]}, db_map, db_mngr, db_editor)
+        model = db_editor.pivot_table_proxy
         selection = [model.index(2, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
-            self.assertIsNone(plot_widget.canvas.legend_axes.get_legend())
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | maps | o1 | Base"
+            assert plot_widget.canvas.axes.get_xlabel() == "x"
+            assert plot_widget.canvas.axes.get_ylabel() == "maps"
+            assert plot_widget.canvas.legend_axes.get_legend() is None
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 1)
-            self.assertEqual(list(lines[0].get_xdata(orig=True)), ["a", "b"])
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
+            assert len(lines) == 1
+            assert list(lines[0].get_xdata(orig=True)) == ["a", "b"]
+            assert list(lines[0].get_ydata(orig=True)) == [-1.1, -2.2]
         finally:
             plot_widget.deleteLater()
 
-    def test_nested_map(self):
+    def test_nested_map(self, db_map, db_mngr, db_editor):
         """Test that a selection containing a single plain number gets plotted."""
         self._fill_pivot(
             {
@@ -398,34 +398,37 @@ class TestPlotPivotTableSelection(TestBase):
                         ],
                     )
                 ]
-            }
+            },
+            db_map,
+            db_mngr,
+            db_editor,
         )
-        model = self._db_editor.pivot_table_proxy
+        model = db_editor.pivot_table_proxy
         selection = [model.index(2, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "x")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | maps | o1 | Base"
+            assert plot_widget.canvas.axes.get_xlabel() == "x"
+            assert plot_widget.canvas.axes.get_ylabel() == "maps"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(legend_texts, ["a", "b"])
+            assert legend_texts == ["a", "b"]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 2)
-            self.assertEqual(
-                list(lines[0].get_xdata(orig=True)),
-                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
-            )
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
-            self.assertEqual(
-                list(lines[1].get_xdata(orig=True)),
-                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
-            )
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-3.3, -4.4])
+            assert len(lines) == 2
+            assert list(lines[0].get_xdata(orig=True)) == [
+                numpy.datetime64("2020-11-13T11:00:00"),
+                numpy.datetime64("2020-11-13T12:00:00"),
+            ]
+            assert list(lines[0].get_ydata(orig=True)) == [-1.1, -2.2]
+            assert list(lines[1].get_xdata(orig=True)) == [
+                numpy.datetime64("2020-11-13T11:00:00"),
+                numpy.datetime64("2020-11-13T12:00:00"),
+            ]
+            assert list(lines[1].get_ydata(orig=True)) == [-3.3, -4.4]
         finally:
             plot_widget.deleteLater()
 
-    def test_nested_map_containing_time_series(self):
+    def test_nested_map_containing_time_series(self, db_map, db_mngr, db_editor):
         """Test that a selection containing a single plain number gets plotted."""
         self._fill_pivot(
             {
@@ -458,48 +461,48 @@ class TestPlotPivotTableSelection(TestBase):
                         ],
                     )
                 ]
-            }
+            },
+            db_map,
+            db_mngr,
+            db_editor,
         )
-        model = self._db_editor.pivot_table_proxy
+        model = db_editor.pivot_table_proxy
         selection = [model.index(2, 1)]
         plot_widget = plot_pivot_table_selection(model, selection)
         try:
-            self.assertEqual(plot_widget.canvas.axes.get_title(), "TestPlotPivotTableSelection_db | maps | o1 | Base")
-            self.assertEqual(plot_widget.canvas.axes.get_xlabel(), "t")
-            self.assertEqual(plot_widget.canvas.axes.get_ylabel(), "maps")
+            assert plot_widget.canvas.axes.get_title() == "TestPlotPivotTableSelection_db | maps | o1 | Base"
+            assert plot_widget.canvas.axes.get_xlabel() == "t"
+            assert plot_widget.canvas.axes.get_ylabel() == "maps"
             legend = plot_widget.canvas.legend_axes.get_legend()
             legend_texts = [text_patch.get_text() for text_patch in legend.get_texts()]
-            self.assertEqual(
-                legend_texts,
-                [
-                    "a | 2020-11-13T11:00:00",
-                    "a | 2020-11-13T12:00:00",
-                    "b | 2020-11-13T11:00:00",
-                    "b | 2020-11-13T12:00:00",
-                ],
-            )
+            assert legend_texts == [
+                "a | 2020-11-13T11:00:00",
+                "a | 2020-11-13T12:00:00",
+                "b | 2020-11-13T11:00:00",
+                "b | 2020-11-13T12:00:00",
+            ]
             lines = plot_widget.canvas.axes.get_lines()
-            self.assertEqual(len(lines), 4)
-            self.assertEqual(
-                list(lines[0].get_xdata(orig=True)),
-                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
-            )
-            self.assertEqual(list(lines[0].get_ydata(orig=True)), [-1.1, -2.2])
-            self.assertEqual(
-                list(lines[1].get_xdata(orig=True)),
-                [numpy.datetime64("2020-11-13T12:00:00"), numpy.datetime64("2020-11-13T13:00:00")],
-            )
-            self.assertEqual(list(lines[1].get_ydata(orig=True)), [-3.3, -4.4])
-            self.assertEqual(
-                list(lines[2].get_xdata(orig=True)),
-                [numpy.datetime64("2020-11-13T11:00:00"), numpy.datetime64("2020-11-13T12:00:00")],
-            )
-            self.assertEqual(list(lines[2].get_ydata(orig=True)), [-5.5, -6.6])
-            self.assertEqual(
-                list(lines[3].get_xdata(orig=True)),
-                [numpy.datetime64("2020-11-13T12:00:00"), numpy.datetime64("2020-11-13T13:00:00")],
-            )
-            self.assertEqual(list(lines[3].get_ydata(orig=True)), [-7.7, -8.8])
+            assert len(lines) == 4
+            assert list(lines[0].get_xdata(orig=True)) == [
+                numpy.datetime64("2020-11-13T11:00:00"),
+                numpy.datetime64("2020-11-13T12:00:00"),
+            ]
+            assert list(lines[0].get_ydata(orig=True)) == [-1.1, -2.2]
+            assert list(lines[1].get_xdata(orig=True)) == [
+                numpy.datetime64("2020-11-13T12:00:00"),
+                numpy.datetime64("2020-11-13T13:00:00"),
+            ]
+            assert list(lines[1].get_ydata(orig=True)) == [-3.3, -4.4]
+            assert list(lines[2].get_xdata(orig=True)) == [
+                numpy.datetime64("2020-11-13T11:00:00"),
+                numpy.datetime64("2020-11-13T12:00:00"),
+            ]
+            assert list(lines[2].get_ydata(orig=True)) == [-5.5, -6.6]
+            assert list(lines[3].get_xdata(orig=True)) == [
+                numpy.datetime64("2020-11-13T12:00:00"),
+                numpy.datetime64("2020-11-13T13:00:00"),
+            ]
+            assert list(lines[3].get_ydata(orig=True)) == [-7.7, -8.8]
         finally:
             plot_widget.deleteLater()
 
@@ -980,7 +983,3 @@ def multi_signal_waiter(signals):
         for signal in signals:
             signal.disconnect(waiter.trigger)
         waiter.deleteLater()
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -11,12 +11,11 @@
 ######################################################################################################################
 
 """Unit tests for the ``logging_connection`` module."""
-import gc
-from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtGui import QColor
+import pytest
 from spine_engine.project_item.connection import FilterSettings
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
@@ -27,6 +26,17 @@ from spinetoolbox.project_item.project_item_factory import ProjectItemFactory
 from spinetoolbox.project_item_icon import ProjectItemIcon
 from spinetoolbox.widgets.properties_widget import PropertiesWidgetBase
 from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
+
+
+@pytest.fixture()
+def url(tmp_path):
+    return "sqlite:///" + str(tmp_path / "db.sqlite")
+
+
+@pytest.fixture()
+def db_map(url, spine_toolbox_with_project):
+    toolbox = spine_toolbox_with_project
+    return toolbox.db_mngr.get_db_map(url, toolbox, create=True)
 
 
 class TestLoggingConnection(unittest.TestCase):
@@ -103,52 +113,47 @@ class TestLoggingConnectionWithToolbox(TestCaseWithQApplication):
         connection.tear_down()
 
 
-class TestLoggingConnectionWithDatabaseManager(TestCaseWithQApplication):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-        self._toolbox.item_factories[_DataStore.item_type()] = _DataStoreFactory
-        self._toolbox._item_properties_uis[_DataStore.item_type()] = _DataStoreFactory.make_properties_widget(self)
-        project = self._toolbox.project()
+class TestLoggingConnectionWithDatabaseManager:
+    @staticmethod
+    def add_data_stores(toolbox):
+        toolbox.item_factories[_DataStore.item_type()] = _DataStoreFactory
+        toolbox._item_properties_uis[_DataStore.item_type()] = _DataStoreFactory.make_properties_widget(toolbox)
+        project = toolbox.project()
         store_1 = _DataStore("Store 1", project)
         project.add_item(store_1)
         store_2 = _DataStore("Store 2", project)
         project.add_item(store_2)
-        self._db_mngr_logger = MagicMock()
-        self._url = "sqlite:///" + str(Path(self._temp_dir.name, "test_database.sqlite"))
-        self._db_map = self._toolbox.db_mngr.get_db_map(self._url, self._db_mngr_logger, create=True)
 
-    def tearDown(self):
-        clean_up_toolbox(self._toolbox)
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_has_filters_when_database_has_an_unknown_scenario(self):
-        with signal_waiter(self._toolbox.db_mngr.items_added) as waiter:
-            self._toolbox.db_mngr.add_items("scenario", {self._db_map: [{"name": "Base", "id": 1}]})
+    def test_has_filters_when_database_has_an_unknown_scenario(self, spine_toolbox_with_project, db_map):
+        toolbox = spine_toolbox_with_project
+        self.add_data_stores(toolbox)
+        with signal_waiter(toolbox.db_mngr.items_added) as waiter:
+            toolbox.db_mngr.add_items("scenario", {db_map: [{"name": "Base", "id": 1}]})
             waiter.wait()
-        connection = LoggingConnection("Store 1", "right", "Store 2", "left", toolbox=self._toolbox)
+        connection = LoggingConnection("Store 1", "right", "Store 2", "left", toolbox=toolbox)
         connection.link = MagicMock()
         connection.receive_resources_from_source(
-            [database_resource("Store 1", self._url, label="database@Store 1", filterable=True)]
+            [database_resource("Store 1", db_map.db_url, label="database@Store 1", filterable=True)]
         )
-        self.assertTrue(connection.has_filters())
+        assert connection.has_filters()
         connection.tear_down()
 
-    def test_set_online(self):
-        with signal_waiter(self._toolbox.db_mngr.items_added) as waiter:
-            self._toolbox.db_mngr.add_items("scenario", {self._db_map: [{"name": "Base", "id": 1}]})
+    def test_set_online(self, spine_toolbox_with_project, db_map):
+        toolbox = spine_toolbox_with_project
+        self.add_data_stores(toolbox)
+        with signal_waiter(toolbox.db_mngr.items_added) as waiter:
+            toolbox.db_mngr.add_items("scenario", {db_map: [{"name": "Base", "id": 1}]})
             waiter.wait()
         filter_settings = FilterSettings({"database@Store 1": {"scenario_filter": {"Base": False}}})
         connection = LoggingConnection(
-            "Store 1", "bottom", "Store 2", "top", toolbox=self._toolbox, filter_settings=filter_settings
+            "Store 1", "bottom", "Store 2", "top", toolbox=toolbox, filter_settings=filter_settings
         )
         connection.link = MagicMock()
         connection.receive_resources_from_source(
-            [database_resource("Store 1", self._url, label="database@Store 1", filterable=True)]
+            [database_resource("Store 1", db_map.db_url, label="database@Store 1", filterable=True)]
         )
         connection.set_online("database@Store 1", "scenario_filter", {"Base": True})
-        self.assertEqual(connection.online_filters("database@Store 1", "scenario_filter"), {"Base": True})
+        assert connection.online_filters("database@Store 1", "scenario_filter") == {"Base": True}
         connection.tear_down()
 
 
@@ -197,7 +202,3 @@ class _DataStorePropertiesWidget(PropertiesWidgetBase):
     def __init__(self, toolbox):
         super().__init__(toolbox)
         self.ui = object()
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -65,7 +65,8 @@ class TestBase(TestCaseWithQApplication):
         self._db_editor.deleteLater()
         self._db_editor = None  # pylint: disable=attribute-defined-outside-init
 
-    def _commit_changes_to_database(self, commit_message):
-        with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
-            commit_msg.return_value = commit_message
-            self._db_editor.ui.actionCommit.trigger()
+
+def commit_changes_to_database(commit_message: str, db_editor: SpineDBEditor) -> None:
+    with mock.patch.object(db_editor, "_get_commit_msg") as commit_msg:
+        commit_msg.return_value = commit_message
+        db_editor.ui.actionCommit.trigger()

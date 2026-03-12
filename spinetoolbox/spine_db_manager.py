@@ -60,12 +60,12 @@ from spinedb_api.parameter_value import (
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
+from .cache_graphs import EntityScenarioActivityGraph, RelationshipClassGraph, RelationshipGraph
 from .database_display_names import NameRegistry
 from .fetch_parent import FetchParent
 from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, normcase_database_url_path, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
 from .parameter_type_validation import ParameterTypeValidator
-from .relationship_graphs import RelationshipClassGraph, RelationshipGraph
 from .spine_db_commands import (
     AddItemsCommand,
     AddUpdateItemsCommand,
@@ -154,9 +154,10 @@ class SpineDBManager(QObject):
         self._lock_lock = RLock()
         self._db_locks: dict[DatabaseMapping, RLock] = {}
         self.listeners: dict[DatabaseMapping, set[object]] = {}
-        self.relationship_class_graph = RelationshipClassGraph(self)
-        self.relationship_graph = RelationshipGraph(self)
-        for graph in (self.relationship_class_graph, self.relationship_class_graph):
+        self.relationship_class_graph = RelationshipClassGraph()
+        self.relationship_graph = RelationshipGraph()
+        self.entity_scenario_activity_graph = EntityScenarioActivityGraph()
+        for graph in (self.relationship_class_graph, self.relationship_graph, self.entity_scenario_activity_graph):
             for signal in (self.items_updated, self.items_removed):
                 signal.connect(graph.maybe_invalidate_caches_after_data_changed)
             for signal in (self.database_refreshed, self.database_reset):
@@ -365,8 +366,8 @@ class SpineDBManager(QObject):
                 del self._db_locks[db_map]
         del self._validated_values["parameter_definition"][id(db_map)]
         del self._validated_values["parameter_value"][id(db_map)]
-        self.relationship_class_graph.invalidate_caches(db_map)
-        self.relationship_graph.invalidate_caches(db_map)
+        for graph in (self.relationship_class_graph, self.relationship_graph, self.entity_scenario_activity_graph):
+            graph.invalidate_caches(db_map)
         self.undo_stack[db_map].cleanChanged.disconnect()
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
@@ -1142,6 +1143,9 @@ class SpineDBManager(QObject):
         elif item_type == "entity":
             for db_map in db_map_data:
                 self.relationship_graph.invalidate_caches(db_map)
+        elif item_type in {"scenario_alternative", "entity_alternative"}:
+            for db_map in db_map_data:
+                self.entity_scenario_activity_graph.invalidate_caches(db_map)
         if identifier is None:
             identifier = self.get_command_identifier()
         for db_map, data in db_map_data.items():

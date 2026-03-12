@@ -11,98 +11,75 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
-import gc
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QPoint, QSettings
+from unittest.mock import patch
+from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.helpers import normcase_database_url_path
 from spinetoolbox.multi_tab_windows import MultiTabWindowRegistry
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor, open_db_editor
-from spinetoolbox.spine_db_manager import SpineDBManager
-from tests.mock_helpers import FakeDataStore, TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
-from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
+from tests.mock_helpers import FakeDataStore
 
 
-class TestMultiSpineDBEditor(DBEditorTestBase):
-    def setUp(self):
-        super().setUp()
-        self._temp_dir = TemporaryDirectory()
-        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-
-    def tearDown(self):
-        super().tearDown()
-        clean_up_toolbox(self._toolbox)
-        self._temp_dir.cleanup()
-
-    def test_multi_spine_db_editor(self):
-        self.db_mngr.setParent(self._toolbox)
-        multieditor = MultiSpineDBEditor(self.db_mngr)
+class TestMultiSpineDBEditor:
+    def test_multi_spine_db_editor(self, db_mngr, spine_toolbox_with_project):
+        toolbox = spine_toolbox_with_project
+        db_mngr.setParent(toolbox)
+        multieditor = MultiSpineDBEditor(db_mngr)
         multieditor.add_new_tab([])
-        self.assertEqual(1, multieditor.tab_widget.count())
+        assert multieditor.tab_widget.count() == 1
         multieditor.make_context_menu(0)
         multieditor.show_plus_button_context_menu(QPoint(0, 0))
         # Add fake data stores to project
-        self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
+        toolbox.project()._project_items = {"a": FakeDataStore("a")}
         multieditor.show_plus_button_context_menu(QPoint(0, 0))
         multieditor._take_tab(0)
 
 
-class TestOpenDBEditor(TestCaseWithQApplication):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        db_path = Path(self._temp_dir.name, "db.sqlite")
-        self._db_url = "sqlite:///" + str(db_path)
-        self._db_mngr = SpineDBManager(QSettings(), None)
-        self._logger = MagicMock()
-        self._db_editor_registry = MultiTabWindowRegistry()
-
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def _close_windows(self):
-        for editor in self._db_editor_registry.windows():
+class TestOpenDBEditor:
+    @staticmethod
+    def _close_windows(db_editor_registry):
+        for editor in db_editor_registry.windows():
             QApplication.processEvents()
             editor.close()
-        self.assertFalse(self._db_editor_registry.has_windows())
+        assert not db_editor_registry.has_windows()
 
-    def test_open_db_editor(self):
+    def test_open_db_editor(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
         with (
             patch(
                 "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
-                self._db_editor_registry,
+                db_editor_registry,
             ),
             patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show") as mock_show,
         ):
-            self.assertFalse(self._db_editor_registry.has_windows())
-            open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
+            assert not db_editor_registry.has_windows()
+            open_db_editor([db_map.db_url], db_mngr, reuse_existing_editor=True)
             mock_show.assert_called_once()
-            self.assertEqual(len(self._db_editor_registry.windows()), 1)
-            open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
-            self.assertEqual(len(self._db_editor_registry.windows()), 1)
-            editor = self._db_editor_registry.windows()[0]
-            self.assertEqual(editor.tab_widget.count(), 1)
-            self._close_windows()
+            assert len(db_editor_registry.windows()) == 1
+            open_db_editor([db_map.db_url], db_mngr, reuse_existing_editor=True)
+            assert len(db_editor_registry.windows()) == 1
+            editor = db_editor_registry.windows()[0]
+            assert editor.tab_widget.count() == 1
+            self._close_windows(db_editor_registry)
 
-    def test_open_db_in_tab_when_editor_has_an_empty_tab(self):
+    def test_open_db_in_tab_when_editor_has_an_empty_tab(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
         with (
             patch(
                 "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
-                self._db_editor_registry,
+                db_editor_registry,
             ),
             patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
         ):
-            self.assertFalse(self._db_editor_registry.has_windows())
-            window = MultiSpineDBEditor(self._db_mngr, [])
-            self.assertEqual(window.tab_widget.count(), 1)
+            assert not db_editor_registry.has_windows()
+            window = MultiSpineDBEditor(db_mngr, [])
+            assert window.tab_widget.count() == 1
             tab = window.tab_widget.widget(0)
-            self.assertEqual(tab.db_urls, [])
-            open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
-            self.assertEqual(window.tab_widget.count(), 2)
+            assert tab.db_urls == []
+            open_db_editor([db_map.db_url], db_mngr, reuse_existing_editor=True)
+            assert window.tab_widget.count() == 2
             tab = window.tab_widget.widget(1)
-            self.assertEqual(tab.db_urls, [normcase_database_url_path(self._db_url)])
-            self._close_windows()
+            assert tab.db_urls == [normcase_database_url_path(db_map.db_url)]
+            self._close_windows(db_editor_registry)

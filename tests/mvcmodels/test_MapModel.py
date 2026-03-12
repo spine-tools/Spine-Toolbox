@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for MapModel class."""
-import unittest
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QColor
 from spinedb_api import Array, DateTime, Duration, Map, ParameterValueFormatError
@@ -566,7 +565,3 @@ class TestMapModel(TestCaseWithQApplication):
         self.assertEqual(model.index(1, 1).data(), "")
         self.assertEqual(model.index(1, 2).data(), "")
         self.assertEqual(model.index(1, 3).data(), "")
-
-
-if __name__ == "__main__":
-    unittest.main()

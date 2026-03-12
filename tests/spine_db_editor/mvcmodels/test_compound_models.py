@@ -11,9 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``compound_models`` module."""
-import gc
-import pathlib
-from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
@@ -33,9 +30,9 @@ from tests.mock_helpers import assert_table_model_data, assert_table_model_data_
 from ..helpers import TestBase
 
 
-class TestCompoundParameterDefinitionModel(TestBase):
-    def test_horizontal_header(self):
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+class TestCompoundParameterDefinitionModel:
+    def test_horizontal_header(self, db_map, db_mngr, db_editor):
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         expected_header = [
             "class",
             "parameter name",
@@ -47,122 +44,119 @@ class TestCompoundParameterDefinitionModel(TestBase):
             "database",
         ]
         header = [model.headerData(i) for i in range(model.columnCount())]
-        self.assertEqual(header, expected_header)
+        assert header == expected_header
         model.tear_down()
 
-    def test_data_for_single_parameter_definition(self):
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "oc"}]})
+    def test_data_for_single_parameter_definition(self, db_map, db_name, db_mngr, db_editor):
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
+        db_mngr.add_items("entity_class", {db_map: [{"name": "oc"}]})
+        db_mngr.add_items("parameter_definition", {db_map: [{"name": "p", "entity_class_name": "oc"}]})
         while model.rowCount() != 1:
             QApplication.processEvents()
-        expected = [["oc", "p", None, None, "None", None, None, self.db_codename]]
-        assert_table_model_data(model, expected, self)
+        expected = [["oc", "p", None, None, "None", None, None, db_name]]
+        assert_table_model_data_pytest(model, expected)
         model.tear_down()
 
-    def test_data_for_single_parameter_definition_in_multidimensional_entity_class(self):
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p", "entity_class_name": "rc"}]})
+    def test_data_for_single_parameter_definition_in_multidimensional_entity_class(
+        self, db_map, db_name, db_mngr, db_editor
+    ):
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
+        db_mngr.add_items("entity_class", {db_map: [{"name": "oc"}]})
+        db_mngr.add_items("entity_class", {db_map: [{"name": "rc", "dimension_name_list": ["oc"]}]})
+        db_mngr.add_items("parameter_definition", {db_map: [{"name": "p", "entity_class_name": "rc"}]})
         while model.rowCount() != 1:
             QApplication.processEvents()
-        expected = [["rc", "p", None, None, "None", None, None, self.db_codename]]
-        assert_table_model_data(model, expected, self)
+        expected = [["rc", "p", None, None, "None", None, None, db_name]]
+        assert_table_model_data_pytest(model, expected)
         model.tear_down()
 
-    def test_model_updates_when_entity_class_is_removed(self):
-        self._db_map.add_entity_class(name="oc1")
-        self._db_map.add_parameter_definition(entity_class_name="oc1", name="x")
-        entity_class_2 = self._db_map.add_entity_class(name="oc2")
-        self._db_map.add_parameter_definition(entity_class_name="oc2", name="x")
-        self._db_map.add_entity_class(name="rc", dimension_name_list=("oc1", "oc2"))
-        self._db_map.add_parameter_definition(entity_class_name="rc", name="x")
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+    def test_model_updates_when_entity_class_is_removed(self, db_map, db_mngr, db_editor):
+        db_map.add_entity_class(name="oc1")
+        db_map.add_parameter_definition(entity_class_name="oc1", name="x")
+        entity_class_2 = db_map.add_entity_class(name="oc2")
+        db_map.add_parameter_definition(entity_class_name="oc2", name="x")
+        db_map.add_entity_class(name="rc", dimension_name_list=("oc1", "oc2"))
+        db_map.add_parameter_definition(entity_class_name="rc", name="x")
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         fetch_model(model)
-        self.assertEqual(model.rowCount(), 3)
-        model.set_entity_selection_for_filtering({self._db_map: {entity_class_2["id"]: Asterisk}})
+        assert model.rowCount() == 3
+        model.set_entity_selection_for_filtering({db_map: {entity_class_2["id"]: Asterisk}})
         while model.rowCount() == 3:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 2)
-        self._db_mngr.remove_items({self._db_map: {"entity_class": [entity_class_2["id"]]}})
+        assert model.rowCount() == 2
+        db_mngr.remove_items({db_map: {"entity_class": [entity_class_2["id"]]}})
         while model.rowCount() == 2:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 0)
+        assert model.rowCount() == 0
         model.tear_down()
 
-    def test_index_name_returns_sane_label(self):
-        self._db_map.add_entity_class(name="Object")
-        self._db_map.add_parameter_definition(name="x", entity_class_name="Object", parsed_value=Array([2.3]))
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+    def test_index_name_returns_sane_label(self, db_map, db_mngr, db_editor):
+        db_map.add_entity_class(name="Object")
+        db_map.add_parameter_definition(name="x", entity_class_name="Object", parsed_value=Array([2.3]))
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         fetch_model(model)
         index = model.index(0, 3)
-        self.assertEqual(model.index_name(index), "TestCompoundParameterDefinitionModel_db - Object - x")
+        assert model.index_name(index) == "TestCompoundParameterDefinitionModel_db - Object - x"
         model.tear_down()
 
-    def test_updating_definition_triggers_value_type_validation(self):
-        with self._db_map:
-            self._db_map.add_entity_class(name="Widget")
-            weight = self._db_map.add_parameter_definition(
-                entity_class_name="Widget", name="weight", parsed_value="a lot"
-            )
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+    def test_updating_definition_triggers_value_type_validation(self, db_map, db_name, db_mngr, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Widget")
+            weight = db_map.add_parameter_definition(entity_class_name="Widget", name="weight", parsed_value="a lot")
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
+        with signal_waiter(db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             fetch_model(model)
             waiter.wait()
-            self.assertEqual(
-                waiter.args,
-                ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [True]),
-            )
-        expected = [["Widget", "weight", None, None, "a lot", None, None, self.db_codename]]
-        assert_table_model_data(model, expected, self)
-        while self._db_mngr.parameter_type_validator._sent_task_count != 0:
+            assert waiter.args == ([ValidationKey("parameter_definition", id(db_map), weight["id"].private_id)], [True])
+        expected = [["Widget", "weight", None, None, "a lot", None, None, db_name]]
+        assert_table_model_data_pytest(model, expected)
+        while db_mngr.parameter_type_validator._sent_task_count != 0:
             QApplication.processEvents()
-        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+        with signal_waiter(db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
             model.setData(model.index(0, 2), ("float",), Qt.ItemDataRole.EditRole)
-            expected = [["Widget", "weight", "float", None, "a lot", None, None, self.db_codename]]
-            assert_table_model_data(model, expected, self)
+            expected = [["Widget", "weight", "float", None, "a lot", None, None, db_name]]
+            assert_table_model_data_pytest(model, expected)
             waiter.wait()
-            self.assertEqual(
-                waiter.args,
-                ([ValidationKey("parameter_definition", id(self._db_map), weight["id"].private_id)], [False]),
+            assert waiter.args == (
+                [ValidationKey("parameter_definition", id(db_map), weight["id"].private_id)],
+                [False],
             )
-        while self._db_mngr.parameter_type_validator._sent_task_count != 0:
+        while db_mngr.parameter_type_validator._sent_task_count != 0:
             QApplication.processEvents()
         model.tear_down()
 
-    def test_restore_db_maps(self):
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "oc"}]})
-        self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p1", "entity_class_name": "oc"}]})
+    def test_restore_db_maps(self, db_map, db_name, db_map_generator, db_mngr, db_editor):
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
+        db_mngr.add_items("entity_class", {db_map: [{"name": "oc"}]})
+        db_mngr.add_items("parameter_definition", {db_map: [{"name": "p1", "entity_class_name": "oc"}]})
         while model.rowCount() != 1:
             QApplication.processEvents()
-        expected = [["oc", "p1", None, None, "None", None, None, self.db_codename]]
-        assert_table_model_data(model, expected, self)
-        with TemporaryDirectory() as tmp_dir:
-            url = "sqlite:///" + str(pathlib.Path(tmp_dir, "other_db.sqlite"))
-            logger = mock.MagicMock()
-            db_map = self._db_mngr.get_db_map(url, logger, create=True)
-            with db_map:
-                db_map.add_entity_class(name="Object")
-                db_map.add_parameter_definition(entity_class_name="Object", name="X", description="X marks the spot.")
-            model.init_model()
-            model.reset_db_maps([db_map])
-            self.assertEqual(model.rowCount(), 0)
-            self._db_mngr.add_items("parameter_definition", {self._db_map: [{"name": "p2", "entity_class_name": "oc"}]})
-            fetch_model(model)
-            expected = [["Object", "X", None, None, "None", "X marks the spot.", None, "other_db"]]
-            assert_table_model_data(model, expected, self)
-            self._db_mngr.close_session(url)
-            gc.collect()
+        expected = [["oc", "p1", None, None, "None", None, None, db_name]]
+        assert_table_model_data_pytest(model, expected)
+        permanent_db_map = db_map_generator()
+        with permanent_db_map:
+            permanent_db_map.add_entity_class(name="Object")
+            permanent_db_map.add_parameter_definition(
+                entity_class_name="Object", name="X", description="X marks the spot."
+            )
+        model.init_model()
+        model.reset_db_maps([permanent_db_map])
+        assert model.rowCount() == 0
+        db_mngr.add_items("parameter_definition", {permanent_db_map: [{"name": "p2", "entity_class_name": "oc"}]})
+        fetch_model(model)
+        expected = [
+            ["Object", "X", None, None, "None", "X marks the spot.", None, "TestCompoundParameterDefinitionModel_db_1"]
+        ]
+        assert_table_model_data_pytest(model, expected)
+        db_mngr.close_session(permanent_db_map.db_url)
         model.tear_down()
 
-    def test_signals_when_non_committed_data_is_added(self):
-        with self._db_map:
-            self._db_map.add_entity_class(name="Gadget")
-            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
-            self._db_map.commit_session("Mark items as committed.")
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+    def test_signals_when_non_committed_data_is_added(self, db_map, db_name, db_mngr, db_editor):
+        with db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
+            db_map.commit_session("Mark items as committed.")
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         with (
             mock.patch.object(model, "non_committed_items_about_to_be_added") as begin_signal,
             mock.patch.object(model, "non_committed_items_added") as end_signal,
@@ -170,64 +164,64 @@ class TestCompoundParameterDefinitionModel(TestBase):
             fetch_model(model)
             begin_signal.emit.assert_not_called()
             end_signal.emit.assert_not_called()
-        expected = [["Gadget", "X", None, None, "None", None, None, self.db_codename]]
+        expected = [["Gadget", "X", None, None, "None", None, None, db_name]]
         assert_table_model_data_pytest(model, expected)
         with (
             mock.patch.object(model, "non_committed_items_about_to_be_added") as begin_signal,
             mock.patch.object(model, "non_committed_items_added") as end_signal,
         ):
-            self._db_mngr.add_items(
-                "parameter_definition", {self._db_map: [{"entity_class_name": "Gadget", "name": "Y"}]}
-            )
+            db_mngr.add_items("parameter_definition", {db_map: [{"entity_class_name": "Gadget", "name": "Y"}]})
             while model.rowCount() == 1:
                 QApplication.processEvents()
             begin_signal.emit.assert_called_once_with()
             end_signal.emit.assert_called_once_with()
         expected = [
-            ["Gadget", "X", None, None, "None", None, None, self.db_codename],
-            ["Gadget", "Y", None, None, "None", None, None, self.db_codename],
+            ["Gadget", "X", None, None, "None", None, None, db_name],
+            ["Gadget", "Y", None, None, "None", None, None, db_name],
         ]
-        assert_table_model_data(model, expected, self)
+        assert_table_model_data_pytest(model, expected)
         model.tear_down()
 
-    def test_set_auto_filter_in_default_value_column_with_empty_data_and_null_values(self):
-        with self._db_map:
-            self._db_map.add_entity_class(name="Gadget")
-            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="X", parsed_value=None)
-            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="Y")
-            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="Z", parsed_value=None)
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+    def test_set_auto_filter_in_default_value_column_with_empty_data_and_null_values(
+        self, db_map, db_name, db_mngr, db_editor
+    ):
+        with db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="X", parsed_value=None)
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="Y")
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="Z", parsed_value=None)
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         fetch_model(model)
         with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
             model.set_auto_filter("default_value", {"None"})
             waiter.wait()
         expected = [
-            ["Gadget", "X", None, None, "None", None, None, self.db_codename],
-            ["Gadget", "Y", None, None, "None", None, None, self.db_codename],
-            ["Gadget", "Z", None, None, "None", None, None, self.db_codename],
+            ["Gadget", "X", None, None, "None", None, None, db_name],
+            ["Gadget", "Y", None, None, "None", None, None, db_name],
+            ["Gadget", "Z", None, None, "None", None, None, db_name],
         ]
-        assert_table_model_data(model, expected, self)
+        assert_table_model_data_pytest(model, expected)
         model.tear_down()
 
-    def test_update_definitions_group(self):
-        with self._db_map:
-            self._db_map.add_parameter_group(name="Group B", color="beefaf", priority=23)
-            self._db_map.add_entity_class(name="Gadget")
-            self._db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
-        model = CompoundParameterDefinitionModel(self._db_editor, self._db_mngr, self._db_map)
+    def test_update_definitions_group(self, db_map, db_name, db_mngr, db_editor):
+        with db_map:
+            db_map.add_parameter_group(name="Group B", color="beefaf", priority=23)
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
+        model = CompoundParameterDefinitionModel(db_editor, db_mngr, db_map)
         fetch_model(model)
         expected = [
-            ["Gadget", "X", None, None, "None", None, None, self.db_codename],
+            ["Gadget", "X", None, None, "None", None, None, db_name],
         ]
-        assert_table_model_data(model, expected, self)
+        assert_table_model_data_pytest(model, expected)
         with signal_waiter(model.dataChanged) as waiter:
             model.batch_set_data([model.index(0, 6)], ["Group B"])
             waiter.wait()
-            self.assertEqual(waiter.args, (model.index(0, 6), model.index(0, 6), []))
+            assert waiter.args == (model.index(0, 6), model.index(0, 6), [])
         expected = [
-            ["Gadget", "X", None, None, "None", None, "Group B", self.db_codename],
+            ["Gadget", "X", None, None, "None", None, "Group B", db_name],
         ]
-        assert_table_model_data(model, expected, self)
+        assert_table_model_data_pytest(model, expected)
         model.tear_down()
 
 
