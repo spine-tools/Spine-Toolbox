@@ -57,28 +57,6 @@ class Receiver:
         )
 
 
-class DBMapGenerator:
-    def __init__(self, db_mngr, tmp_path, name_prefix, logger):
-        self._db_mngr = db_mngr
-        self._tmp_path = tmp_path
-        self._name_prefix = name_prefix
-        self._logger = logger
-        self._next_id = 1
-
-    def __call__(self):
-        name = f"{self._name_prefix}_{self._next_id}"
-        self._next_id += 1
-        url = "sqlite:///" + str(self._tmp_path / f"{name}.sqlite")
-        db_map = self._db_mngr.get_db_map(url, self._logger, create=True)
-        self._db_mngr.name_registry.register(db_map.sa_url, name)
-        return db_map
-
-
-@pytest.fixture()
-def db_map_generator(db_mngr, tmp_path, db_name, logger):
-    return DBMapGenerator(db_mngr, tmp_path, db_name, logger)
-
-
 def add_db_maps(db_maps, entity_view, alternative_view):
     for view in (entity_view, alternative_view):
         model = view.model()

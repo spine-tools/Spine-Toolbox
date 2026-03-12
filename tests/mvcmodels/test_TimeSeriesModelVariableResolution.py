@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the TimeSeriesModelVariableResolution class."""
-import unittest
 import numpy
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import TimeSeriesVariableResolution
@@ -241,7 +240,3 @@ class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
             ["2018-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, 55.5, -55.5], True, False
         )
         self.assertEqual(model.value, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the TimeSeriesModelFixedResolution class."""
-import unittest
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 import numpy as np
@@ -219,7 +218,3 @@ class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
         expected = TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, 55.5, -55.5], True, False)
         self.assertEqual(model.value, expected)
         model.deleteLater()
-
-
-if __name__ == "__main__":
-    unittest.main()

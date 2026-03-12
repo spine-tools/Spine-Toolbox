@@ -12,15 +12,12 @@
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
 import csv
-import gc
 import io
 import itertools
-import os
-from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication, QMessageBox
+import pytest
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
@@ -372,31 +369,40 @@ class TestParameterValueTableView(TestBase):
         self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
 
 
-class TestParameterValueTableWithExistingData(TestBase):
+class TestParameterValueTableWithExistingData:
     _CHUNK_SIZE = 100  # This has to be large enough, so the chunk won't 'fit' into the table view.
 
-    @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=_CHUNK_SIZE)
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+    @pytest.fixture()
+    def limited_chunk_size(self, monkeypatch):
+        monkeypatch.setattr(
+            "spinetoolbox.spine_db_worker._CHUNK_SIZE", TestParameterValueTableWithExistingData._CHUNK_SIZE
+        )
+
+    @pytest.fixture()
+    def db_map(self, db_name, db_mngr, logger, tmp_path, limited_chunk_size):
+        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             # 1-D entity class
             self._n_entities = 12
             self._n_parameters = 12
-            import_functions.import_entity_classes(db_map, (("object_class",),))
+            _, errors = import_functions.import_entity_classes(db_map, (("object_class",),))
+            assert errors == []
             object_data = [("object_class", f"object_{n}") for n in range(self._n_entities)]
-            import_functions.import_entities(db_map, object_data)
+            _, errors = import_functions.import_entities(db_map, object_data)
+            assert errors == []
             parameter_definition_data = (("object_class", f"parameter_{n}") for n in range(self._n_parameters))
-            import_functions.import_object_parameters(db_map, parameter_definition_data)
+            _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
+            assert errors == []
             parameter_value_data = (
                 ("object_class", f"object_{object_n}", f"parameter_{parameter_n}", "a_value")
                 for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
             )
-            import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            _, errors = import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            assert errors == []
             # 2-D entity class
             self._n_ND_entities = 2
             self._n_ND_parameters = 2
-            import_functions.import_entity_classes(
+            _, errors = import_functions.import_entity_classes(
                 db_map,
                 (
                     (
@@ -408,13 +414,16 @@ class TestParameterValueTableWithExistingData(TestBase):
                     ),
                 ),
             )
+            assert errors == []
             nd_entity_names = [
                 (f"object_{i}", f"object_{j}") for i, j in itertools.permutations(range(self._n_ND_entities), 2)
             ]
             object_data = [("multi_d_class", byname) for byname in nd_entity_names]
-            import_functions.import_entities(db_map, object_data)
+            _, errors = import_functions.import_entities(db_map, object_data)
+            assert errors == []
             parameter_definition_data = (("multi_d_class", f"parameter_{n}") for n in range(self._n_ND_parameters))
-            import_functions.import_object_parameters(db_map, parameter_definition_data)
+            _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
+            assert errors == []
             parameter_value_data = [
                 (
                     "multi_d_class",
@@ -424,59 +433,53 @@ class TestParameterValueTableWithExistingData(TestBase):
                 )
                 for byname, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
-            import_functions.import_parameter_values(db_map, parameter_value_data)
+            _, errors = import_functions.import_parameter_values(db_map, parameter_value_data)
+            assert errors == []
             db_map.commit_session("Add test data.")
-        self._common_setup(url, create=False)
-        model = self._db_editor.ui.tableView_parameter_value.model()
-        while model.rowCount() != self._CHUNK_SIZE:
-            # Wait for fetching to finish.
-            QApplication.processEvents()
+        unfetched_db_map = db_mngr.get_db_map(url, logger)
+        db_mngr.name_registry.register(unfetched_db_map.sa_url, db_name)
+        return unfetched_db_map
 
-    def tearDown(self):
-        self._common_tear_down()
-        gc.collect()
-        self._temp_dir.cleanup()
+    @pytest.fixture()
+    def model(self, db_editor):
+        table_view = db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        return model
 
     def _whole_model_rowcount(self):
         return self._n_entities * self._n_parameters + self._n_ND_entities * self._n_ND_parameters
 
-    def test_purging_value_data_removes_all_rows(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+    def test_purging_value_data_removes_all_rows(self, model, db_map, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
         while model.rowCount() == self._CHUNK_SIZE:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 0)
+        assert model.rowCount() == 0
 
-    def test_purging_value_data_clears_table(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+    def test_purging_value_data_clears_table(self, model, db_map, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
         while model.rowCount() == self._CHUNK_SIZE:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 0)
+        assert model.rowCount() == 0
 
-    def test_remove_fetched_rows(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
+    def test_remove_fetched_rows(self, model, db_map, db_name, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
         ids = [model.index(row, 0).data(ITEM_ID_ROLE) for row in range(0, model.rowCount() - 1, 2)]
-        self._db_mngr.remove_items({self._db_map: {"parameter_value": set(ids)}})
+        db_mngr.remove_items({db_map: {"parameter_value": set(ids)}})
         while model.rowCount() == self._CHUNK_SIZE:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount() - self._CHUNK_SIZE // 2)
+        assert model.rowCount() == self._whole_model_rowcount() - self._CHUNK_SIZE // 2
 
-    def test_undoing_purge(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+    def test_undoing_purge(self, model, db_map, db_name, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
         while model.rowCount() == self._CHUNK_SIZE:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 0)
-        self._db_mngr.undo_stack[self._db_map].undo()
+        assert model.rowCount() == 0
+        db_mngr.undo_stack[db_map].undo()
         while model.rowCount() != self._whole_model_rowcount():
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())
@@ -489,36 +492,32 @@ class TestParameterValueTableWithExistingData(TestBase):
                 f"parameter_{parameter_n}",
                 "Base",
                 "a_value",
-                self.db_codename,
+                db_name,
             ]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", db_name]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount())
-        assert_table_model_data(model, expected, self)
+        assert model.rowCount() == self._whole_model_rowcount()
+        assert_table_model_data_pytest(model, expected)
 
-    def test_rolling_back_purge(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        while model.rowCount() == 0:
-            QApplication.processEvents()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
+    def test_rolling_back_purge(self, model, db_map, db_name, db_mngr, db_editor):
+        assert model.rowCount(), self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
         while model.rowCount() == self._CHUNK_SIZE:
             QApplication.processEvents()
-        self.assertEqual(model.rowCount(), 0)
+        assert model.rowCount() == 0
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
             roll_back_dialog.StandardButton.Ok = QMessageBox.StandardButton.Ok
             instance = roll_back_dialog.return_value
             instance.exec.return_value = QMessageBox.StandardButton.Ok
-            self._db_editor.ui.actionRollback.trigger()
-            self._db_editor.rollback_session()
+            db_editor.ui.actionRollback.trigger()
+            db_editor.rollback_session()
         while model.rowCount() != self._whole_model_rowcount():
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())
@@ -531,31 +530,30 @@ class TestParameterValueTableWithExistingData(TestBase):
                 f"parameter_{parameter_n}",
                 "Base",
                 "a_value",
-                self.db_codename,
+                db_name,
             ]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", db_name]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
         QApplication.processEvents()
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount())
-        assert_table_model_data(model, expected, self)
+        assert model.rowCount() == self._whole_model_rowcount()
+        assert_table_model_data_pytest(model, expected)
 
-    def test_sorting(self):
+    def test_sorting(self, db_map, db_name, db_mngr, db_editor, tmp_path):
         """Test that the parameter value table sorts in an expected order."""
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        with DatabaseMapping(url) as db_map:
+        with db_map:
             parameter_definition_data = (
                 ("object_class", "0parameter_"),
                 ("object_class", "1parameter_"),
             )
             _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
-            self.assertEqual(errors, [])
+            assert errors == []
             parameter_value_data = (
                 ("object_class", "object_0", "0parameter_", "a_value"),
                 ("object_class", "object_0", "1parameter_", "a_value"),
@@ -563,14 +561,14 @@ class TestParameterValueTableWithExistingData(TestBase):
                 ("object_class", "object_1", "1parameter_", "a_value"),
             )
             _, errors = import_functions.import_object_parameter_values(db_map, parameter_value_data)
-            self.assertEqual(errors, [])
+            assert errors == []
             db_map.commit_session("Add test data.")
-        db_map.close()
-        table_view = self._db_editor.ui.tableView_parameter_value
+        table_view = db_editor.ui.tableView_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.refresh_session(self._db_map)
-        fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        assert model.rowCount() == self._whole_model_rowcount() + len(parameter_value_data)
+        db_mngr.refresh_session(db_map)
         while model.rowCount() == 0:
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
@@ -585,7 +583,7 @@ class TestParameterValueTableWithExistingData(TestBase):
                         f"parameter_{parameter_n}",
                         "Base",
                         "a_value",
-                        self.db_codename,
+                        db_name,
                     ]
                 )
             if object_n < 2:
@@ -598,7 +596,7 @@ class TestParameterValueTableWithExistingData(TestBase):
                             "0parameter_",
                             "Base",
                             "a_value",
-                            self.db_codename,
+                            db_name,
                         ],
                         [
                             None,
@@ -607,18 +605,18 @@ class TestParameterValueTableWithExistingData(TestBase):
                             "1parameter_",
                             "Base",
                             "a_value",
-                            self.db_codename,
+                            db_name,
                         ],
                     ]
                 )
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", db_name]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        assert_table_model_data(model, expected, self)
+        assert_table_model_data_pytest(model, expected)
 
 
 class TestEntityAlternativeTableView(TestBase):
@@ -1187,7 +1185,3 @@ class TestPivotTableView(TestBase):
             [None, None, None, None, None, None, None],
         ]
         assert_table_model_data(pivot_model, expected, self)
-
-
-if __name__ == "__main__":
-    unittest.main()

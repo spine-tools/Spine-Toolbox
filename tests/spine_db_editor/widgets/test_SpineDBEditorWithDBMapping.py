@@ -11,94 +11,53 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
-import gc
-import os.path
-from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, assert_table_model_data
+from tests.mock_helpers import assert_table_model_data_pytest
 
 
-class TestSpineDBEditorWithDBMapping(TestCaseWithQApplication):
-    def setUp(self):
-        """Overridden method. Runs before each test. Makes instances of SpineDBEditor classes."""
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test.sqlite")
-        with (
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
-            mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
-        ):
-            mock_settings = mock.MagicMock()
-            mock_settings.value = mock.MagicMock()
-            mock_settings.value.side_effect = lambda *args, **kwards: 0
-            self.db_mngr = MockSpineDBManager(mock_settings, None)
-            logger = mock.MagicMock()
-            self.db_map = self.db_mngr.get_db_map(url, logger, create=True)
-            self.spine_db_editor = SpineDBEditor(self.db_mngr, [url])
-            self.db_mngr.name_registry.register(self.db_map.sa_url, "db")
-            self.spine_db_editor.pivot_table_model = mock.MagicMock()
+def fetch_entity_tree_model(db_editor):
+    for item in db_editor.entity_tree_model.visit_all():
+        while item.can_fetch_more():
+            item.fetch_more()
+            QApplication.processEvents()
 
-    def tearDown(self):
-        """Overridden method. Runs after each test.
-        Use this to free resources after a test if needed.
-        """
-        with (
-            mock.patch(
-                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"
-            ) as mock_save_w_s,
-            mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
-        ):
-            self.spine_db_editor.close()
-            mock_save_w_s.assert_called_once()
-        QApplication.removePostedEvents(None)  # Clean up unfinished fetcher signals
-        self.db_mngr.close_all_sessions()
-        self.db_mngr.clean_up()
-        self.db_mngr = None  # Ensure the database file is closed to allow the temporary directory to be removed.
-        self.spine_db_editor.deleteLater()
-        self.spine_db_editor = None
-        gc.collect()
-        self._temp_dir.cleanup()
 
-    def fetch_entity_tree_model(self):
-        for item in self.spine_db_editor.entity_tree_model.visit_all():
-            while item.can_fetch_more():
-                item.fetch_more()
-                QApplication.processEvents()
+class TestSpineDBEditorWithDBMapping:
 
-    def test_duplicate_zero_dimensional_entity_in_entity_tree_model(self):
+    def test_duplicate_zero_dimensional_entity_in_entity_tree_model(self, db_map, db_name, db_mngr, db_editor):
         data = {
             "entity_classes": [("fish",), ("dog",), ("fish__dog", ("fish", "dog"))],
             "entities": [("fish", "nemo"), ("dog", "pluto"), ("fish__dog", ("nemo", "pluto"))],
             "parameter_definitions": [("fish", "color")],
             "parameter_values": [("fish", "nemo", "color", "orange")],
         }
-        self.db_mngr.import_data({self.db_map: data}, "Import test data.")
-        self.fetch_entity_tree_model()
-        root_item = self.spine_db_editor.entity_tree_model.root_item
+        db_mngr.import_data({db_map: data}, "Import test data.")
+        QApplication.processEvents()
+        fetch_entity_tree_model(db_editor)
+        root_item = db_editor.entity_tree_model.root_item
         fish_item = next(iter(item for item in root_item.children if item.display_data == "fish"))
         nemo_item = fish_item.child(0)
-        with mock.patch.object(self.db_mngr, "error_msg") as error_msg_signal:
-            self.spine_db_editor.duplicate_entity(nemo_item)
+        with mock.patch.object(db_mngr, "error_msg") as error_msg_signal:
+            db_editor.duplicate_entity(nemo_item)
             error_msg_signal.emit.assert_not_called()
-        self.assertEqual(fish_item.row_count(), 2)
+        assert fish_item.row_count() == 2
         nemo_dupe = fish_item.child(1)
-        self.assertEqual(nemo_dupe.display_data, "nemo (1)")
+        assert nemo_dupe.display_data == "nemo (1)"
         fish_dog_item = next(iter(item for item in root_item.children if item.display_data == "fish__dog"))
         fish_dog_item.fetch_more()
-        self.assertEqual(fish_dog_item.row_count(), 2)
+        assert fish_dog_item.row_count() == 2
         nemo_pluto_dupe = fish_dog_item.child(1)
-        self.assertEqual(nemo_pluto_dupe.display_data, "nemo (1) ǀ pluto")
-        root_index = self.spine_db_editor.entity_tree_model.index_from_item(root_item)
-        self.spine_db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
+        assert nemo_pluto_dupe.display_data == "nemo (1) ǀ pluto"
+        root_index = db_editor.entity_tree_model.index_from_item(root_item)
+        db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
             root_index, QItemSelectionModel.SelectionFlags.ClearAndSelect
         )
-        while self.spine_db_editor.parameter_value_model.rowCount() != 2:
+        while db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         expected = [
-            [None, "fish", "nemo", "color", "Base", "orange", "db"],
-            [None, "fish", "nemo (1)", "color", "Base", "orange", "db"],
+            [None, "fish", "nemo", "color", "Base", "orange", db_name],
+            [None, "fish", "nemo (1)", "color", "Base", "orange", db_name],
         ]
-        assert_table_model_data(self.spine_db_editor.parameter_value_model, expected, self)
+        assert_table_model_data_pytest(db_editor.parameter_value_model, expected)

@@ -11,72 +11,44 @@
 ######################################################################################################################
 
 """Unit tests for ``scenario_model`` module."""
-import gc
-from pathlib import Path
 import pickle
-from tempfile import TemporaryDirectory
-import unittest
-from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QByteArray, QMimeData, Qt
 from PySide6.QtWidgets import QApplication
+import pytest
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels import mime_types
 from spinetoolbox.spine_db_editor.mvcmodels.scenario_model import ScenarioModel
-from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, model_data_to_dict
+from tests.mock_helpers import model_data_to_dict
 
 
-class _TestBase(TestCaseWithQApplication):
-
-    @staticmethod
-    def _fetch_recursively(model):
-        for item in model.visit_all():
-            while item.can_fetch_more():
-                item.fetch_more()
-                QApplication.processEvents()
-
-
-class TestScenarioModel(_TestBase):
-    db_codename = "scenario_model_test_db"
-
-    def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = MockSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
-        self._db_mngr.name_registry.register(self._db_map.db_url, self.db_codename)
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": self.db_codename})
-
-    def tearDown(self):
-        with (
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
-        ):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.closed:
+def _fetch_recursively(model):
+    for item in model.visit_all():
+        while item.can_fetch_more():
+            item.fetch_more()
             QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
 
-    def test_initial_state(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
+
+@pytest.fixture()
+def model(db_map, db_editor, db_mngr):
+    model = ScenarioModel(db_editor, db_mngr, db_map)
+    model.build_tree()
+    return model
+
+
+class TestScenarioModel:
+    def test_initial_state(self, model, db_name):
         data = model_data_to_dict(model)
-        expected = [[{self.db_codename: [["Type new scenario name here...", ""]]}, None]]
-        self.assertEqual(data, expected)
+        expected = [[{db_name: [["Type new scenario name here...", ""]]}, None]]
+        assert data == expected
 
-    def test_add_scenario(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
-        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+    def test_add_scenario(self, model, db_map, db_name, db_mngr):
+        _fetch_recursively(model)
+        db_mngr.add_items("scenario", {db_map: [{"name": "scenario_1", "description": "Just a test."}]})
         data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [{"scenario_1": [["Type scenario alternative name here...", ""]]}, "Just a test."],
                         ["Type new scenario name here...", ""],
                     ]
@@ -84,23 +56,21 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(data, expected)
+        assert data == expected
 
-    def test_update_scenario(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
-        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
-        scenario_id = self._db_map.scenario(name="scenario_1")["id"]
-        self._db_mngr.update_items(
+    def test_update_scenario(self, model, db_map, db_name, db_mngr):
+        _fetch_recursively(model)
+        db_mngr.add_items("scenario", {db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        scenario_id = db_map.scenario(name="scenario_1")["id"]
+        db_mngr.update_items(
             "scenario",
-            {self._db_map: [{"name": "scenario_2.0", "description": "More than just a test.", "id": scenario_id}]},
+            {db_map: [{"name": "scenario_2.0", "description": "More than just a test.", "id": scenario_id}]},
         )
         data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [{"scenario_2.0": [["Type scenario alternative name here...", ""]]}, "More than just a test."],
                         ["Type new scenario name here...", ""],
                     ]
@@ -108,79 +78,73 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(data, expected)
+        assert data == expected
 
-    def test_remove_scenario(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
-        self._db_mngr.add_items("scenario", {self._db_map: [{"name": "scenario_1", "description": "Just a test."}]})
-        scenario_id = self._db_map.scenario(name="scenario_1")["id"]
-        self._db_mngr.remove_items({self._db_map: {"scenario": {scenario_id}}})
+    def test_remove_scenario(self, model, db_map, db_name, db_mngr):
+        _fetch_recursively(model)
+        db_mngr.add_items("scenario", {db_map: [{"name": "scenario_1", "description": "Just a test."}]})
+        scenario_id = db_map.scenario(name="scenario_1")["id"]
+        db_mngr.remove_items({db_map: {"scenario": {scenario_id}}})
         data = model_data_to_dict(model)
-        expected = [[{self.db_codename: [["Type new scenario name here...", ""]]}, None]]
-        self.assertEqual(data, expected)
+        expected = [[{db_name: [["Type new scenario name here...", ""]]}, None]]
+        assert data == expected
 
-    def test_mimeData(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
+    def test_mimeData(self, model, db_map, db_name, db_mngr):
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         add_alternative_index = model.index(0, 0, scenario_index)
-        self.assertEqual(add_alternative_index.data(), "Type scenario alternative name here...")
-        with signal_waiter(self._db_mngr.items_added, timeout=5.0) as waiter:
-            self.assertTrue(model.setData(add_alternative_index, 1, Qt.ItemDataRole.EditRole))
+        assert add_alternative_index.data() == "Type scenario alternative name here..."
+        with signal_waiter(db_mngr.items_added, timeout=5.0) as waiter:
+            assert model.setData(add_alternative_index, 1, Qt.ItemDataRole.EditRole)
             waiter.wait()
-        self._fetch_recursively(model)
-        self.assertEqual(model.rowCount(scenario_index), 2)
+        _fetch_recursively(model)
+        assert model.rowCount(scenario_index) == 2
         alternative_index = model.index(0, 0, scenario_index)
-        self.assertEqual(alternative_index.data(), "Base")
+        assert alternative_index.data() == "Base"
         description_index = model.index(0, 1, scenario_index)
         mime_data = model.mimeData([alternative_index, description_index])
-        self.assertTrue(mime_data.hasText())
-        self.assertEqual(mime_data.text(), "Base\tBase alternative\r\n")
-        self.assertTrue(mime_data.hasFormat(mime_types.ALTERNATIVE_DATA))
+        assert mime_data.hasText()
+        assert mime_data.text() == "Base\tBase alternative\r\n"
+        assert mime_data.hasFormat(mime_types.ALTERNATIVE_DATA)
         data = pickle.loads(mime_data.data(mime_types.ALTERNATIVE_DATA).data())
-        id_ = self._db_map.get_alternative_item(id=1)["id"]
-        self.assertEqual(data, {self._db_mngr.db_map_key(self._db_map): [id_]})
+        id_ = db_map.get_alternative_item(id=1)["id"]
+        assert data == {db_mngr.db_map_key(db_map): [id_]}
 
-    def test_canDropMimeData_returns_true_when_dropping_alternative_to_empty_scenario(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
+    def test_canDropMimeData_returns_true_when_dropping_alternative_to_empty_scenario(
+        self, model, db_map, db_name, db_mngr
+    ):
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["Base"]}
+        data = {db_mngr.db_map_key(db_map): ["Base"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
-        self.assertTrue(model.canDropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index))
+        assert model.canDropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index)
 
-    def test_dropMimeData_adds_alternative_to_model(self):
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
+    def test_dropMimeData_adds_alternative_to_model(self, model, db_map, db_name, db_mngr):
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["Base"]}
+        data = {db_mngr.db_map_key(db_map): ["Base"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
-        self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index))
-        self._fetch_recursively(model)
+        assert model.dropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -196,28 +160,26 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
 
-    def test_dropMimeData_reorders_alternatives(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
+    def test_dropMimeData_reorders_alternatives(self, model, db_map, db_name, db_mngr):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["Base"]}
+        data = {db_mngr.db_map_key(db_map): ["Base"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
-        self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index))
-        self._fetch_recursively(model)
+        assert model.dropMimeData(mime_data, Qt.DropAction.CopyAction, -1, -1, scenario_index)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -233,17 +195,17 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["alternative_1"]}
+        data = {db_mngr.db_map_key(db_map): ["alternative_1"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
-        self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index))
-        self._fetch_recursively(model)
+        assert model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -260,15 +222,15 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
         mime_data = model.mimeData([model.index(1, 0, scenario_index)])
-        self.assertTrue(model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index))
-        self._fetch_recursively(model)
+        assert model.dropMimeData(mime_data, Qt.DropAction.CopyAction, 0, 0, scenario_index)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -285,30 +247,28 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
 
-    def test_paste_alternative_mime_data(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
+    def test_paste_alternative_mime_data(self, model, db_map, db_name, db_mngr):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
-        self.assertEqual(root_index.data(), self.db_codename)
+        assert root_index.data() == db_name
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["alternative_1"]}
+        data = {db_mngr.db_map_key(db_map): ["alternative_1"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, -1, scenario_item)
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [{"my_scenario": [["alternative_1", ""], ["Type scenario alternative name here...", ""]]}, ""],
                         ["Type new scenario name here...", ""],
                     ]
@@ -316,30 +276,28 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
 
-    def test_paste_alternative_mime_data_ranks_alternatives(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
-        model.build_tree()
-        self._fetch_recursively(model)
+    def test_paste_alternative_mime_data_ranks_alternatives(self, model, db_map, db_name, db_mngr):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
-        self.assertEqual(root_index.data(), self.db_codename)
+        assert root_index.data() == db_name
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map): ["Base"]}
+        data = {db_mngr.db_map_key(db_map): ["Base"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, -1, scenario_item)
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -355,17 +313,17 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
-        data = {self._db_mngr.db_map_key(self._db_map): ["alternative_1"]}
+        assert model_data == expected
+        data = {db_mngr.db_map_key(db_map): ["alternative_1"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, 0, scenario_item)
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -382,32 +340,30 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
 
-    def test_duplicate_scenario(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        self._db_mngr.add_items(
-            "scenario", {self._db_map: [{"name": "my_scenario", "description": "My test scenario"}]}
+    def test_duplicate_scenario(self, model, db_map, db_name, db_mngr, db_editor):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        db_mngr.add_items("scenario", {db_map: [{"name": "my_scenario", "description": "My test scenario"}]})
+        scenario_id = db_map.scenario(name="my_scenario")["id"]
+        base_alternative_id = db_map.alternative(name="Base")["id"]
+        alternative_1_id = db_map.alternative(name="alternative_1")["id"]
+        db_mngr.set_scenario_alternatives(
+            {db_map: [{"id": scenario_id, "alternative_id_list": [alternative_1_id, base_alternative_id]}]}
         )
-        scenario_id = self._db_map.scenario(name="my_scenario")["id"]
-        base_alternative_id = self._db_map.alternative(name="Base")["id"]
-        alternative_1_id = self._db_map.alternative(name="alternative_1")["id"]
-        self._db_mngr.set_scenario_alternatives(
-            {self._db_map: [{"id": scenario_id, "alternative_id_list": [alternative_1_id, base_alternative_id]}]}
-        )
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map)
+        model = ScenarioModel(db_editor, db_mngr, db_map)
         model.build_tree()
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         root_index = model.index(0, 0)
         scenario_index = model.index(0, 0, root_index)
         scenario_item = model.item_from_index(scenario_index)
         model.duplicate_scenario(scenario_item)
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    self.db_codename: [
+                    db_name: [
                         [
                             {
                                 "my_scenario": [
@@ -434,60 +390,33 @@ class TestScenarioModel(_TestBase):
                 None,
             ]
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
 
-
-class TestScenarioModelWithTwoDatabases(_TestBase):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = MockSpineDBManager(app_settings, None)
-        self._db_map1 = self._db_mngr.get_db_map("sqlite://", logger, create=True)
-        self._db_mngr.name_registry.register(self._db_map1.sa_url, "test_db_1")
-        url2 = "sqlite:///" + str(Path(self._temp_dir.name, "db_2.sqlite"))
-        self._db_map2 = self._db_mngr.get_db_map(url2, logger, create=True)
-        self._db_mngr.name_registry.register(self._db_map2.sa_url, "test_db_2")
-        with patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"):
-            self._db_editor = SpineDBEditor(self._db_mngr, {"sqlite://": "test_db_1", url2: "test_db_2"})
-
-    def tearDown(self):
-        with (
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
-            patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox"),
-        ):
-            self._db_editor.close()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map1.closed and self._db_map2.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        self._db_editor.deleteLater()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_paste_alternative_mime_data_doesnt_paste_across_databases(self):
-        self._db_mngr.add_items("alternative", {self._db_map1: [{"name": "alternative_1"}]})
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
+    def test_paste_alternative_mime_data_doesnt_paste_across_databases(self, db_map_generator, db_mngr, db_editor):
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_mngr.add_items("alternative", {db_map1: [{"name": "alternative_1"}]})
+        model = ScenarioModel(db_editor, db_mngr, db_map1, db_map2)
         model.build_tree()
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         root_index = model.index(1, 0)
-        self.assertEqual(root_index.data(), "test_db_2")
+        assert root_index.data() == "TestScenarioModel_db_2"
         edit_index = model.index(0, 0, root_index)
         model.setData(edit_index, "my_scenario", Qt.ItemDataRole.EditRole)
         scenario_index = model.index(0, 0, root_index)
-        self.assertEqual(scenario_index.data(), "my_scenario")
+        assert scenario_index.data() == "my_scenario"
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map1): ["alternative_1"]}
+        data = {db_mngr.db_map_key(db_map1): ["alternative_1"]}
         mime_data.setData(mime_types.ALTERNATIVE_DATA, QByteArray(pickle.dumps(data)))
         scenario_item = model.item_from_index(scenario_index)
         model.paste_alternative_mime_data(mime_data, -1, scenario_item)
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
-            [{"test_db_1": [["Type new scenario name here...", ""]]}, None],
+            [{"TestScenarioModel_db_1": [["Type new scenario name here...", ""]]}, None],
             [
                 {
-                    "test_db_2": [
+                    "TestScenarioModel_db_2": [
                         [{"my_scenario": [["Type scenario alternative name here...", ""]]}, ""],
                         ["Type new scenario name here...", ""],
                     ]
@@ -495,31 +424,33 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
                 None,
             ],
         ]
-        self.assertEqual(model_data, expected)
+        assert model_data == expected
 
-    def test_paste_scenario_mime_data(self):
-        self._db_mngr.add_items("scenario", {self._db_map1: [{"name": "my_scenario"}]})
-        self._db_mngr.add_items("alternative", {self._db_map1: [{"name": "alternative_1"}]})
-        scenario_id = self._db_map1.scenario(name="my_scenario")["id"]
-        self._db_mngr.set_scenario_alternatives(
-            {self._db_map1: [{"id": scenario_id, "alternative_name_list": ["alternative_1", "Base"]}]}
+    def test_paste_scenario_mime_data(self, db_map_generator, db_mngr, db_editor):
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_mngr.add_items("scenario", {db_map1: [{"name": "my_scenario"}]})
+        db_mngr.add_items("alternative", {db_map1: [{"name": "alternative_1"}]})
+        scenario_id = db_map1.scenario(name="my_scenario")["id"]
+        db_mngr.set_scenario_alternatives(
+            {db_map1: [{"id": scenario_id, "alternative_name_list": ["alternative_1", "Base"]}]}
         )
-        model = ScenarioModel(self._db_editor, self._db_mngr, self._db_map1, self._db_map2)
+        model = ScenarioModel(db_editor, db_mngr, db_map1, db_map2)
         model.build_tree()
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         mime_data = QMimeData()
-        data = {self._db_mngr.db_map_key(self._db_map1): ["my_scenario"]}
+        data = {db_mngr.db_map_key(db_map1): ["my_scenario"]}
         mime_data.setData(mime_types.SCENARIO_DATA, QByteArray(pickle.dumps(data)))
         root_index = model.index(1, 0)
-        self.assertEqual(root_index.data(), "test_db_2")
+        assert root_index.data() == "TestScenarioModel_db_2"
         db_item = model.item_from_index(root_index)
         model.paste_scenario_mime_data(mime_data, db_item)
-        self._fetch_recursively(model)
+        _fetch_recursively(model)
         model_data = model_data_to_dict(model)
         expected = [
             [
                 {
-                    "test_db_1": [
+                    "TestScenarioModel_db_1": [
                         [
                             {
                                 "my_scenario": [
@@ -537,7 +468,7 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
             ],
             [
                 {
-                    "test_db_2": [
+                    "TestScenarioModel_db_2": [
                         [
                             {
                                 "my_scenario": [
@@ -554,8 +485,4 @@ class TestScenarioModelWithTwoDatabases(_TestBase):
                 None,
             ],
         ]
-        self.assertEqual(model_data, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert model_data == expected

@@ -11,7 +11,6 @@
 ######################################################################################################################
 
 """Unit tests for the ArrayModel class."""
-import unittest
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel
@@ -121,7 +120,3 @@ class TestArrayModel(TestCaseWithQApplication):
         self.assertTrue(model.setHeaderData(0, Qt.Orientation.Horizontal, "new index"))
         self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "new index")
         self.assertEqual(model.array().index_name, "new index")
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -116,7 +116,9 @@ class StackedViewMixin:
             invisible_scroll_bar.valueChanged.connect(visible_scroll_bar.setValue)
         for model in self._all_stacked_models:
             model.column_filter_changed.connect(self._handle_column_filters)
-        self.parameter_value_model.layoutChanged.connect(self._handle_value_model_layout_changed)
+        # Unit tests segfault with PySide6 6.10 when layoutChanged is connected directly to a slot
+        # in this class. Consider the lambda to be a workaround.
+        self.parameter_value_model.layoutChanged.connect(lambda *args: self._clear_table_related_caches())
         self.parameter_value_model.rowsInserted.connect(self._handle_values_inserted)
         self.empty_parameter_value_model.entities_added.connect(self._notify_about_added_entities)
         self.empty_entity_alternative_model.entities_added.connect(self._notify_about_added_entities)
@@ -212,12 +214,6 @@ class StackedViewMixin:
 
     @Slot(QModelIndex, int, int)
     def _handle_values_inserted(self, parent: QModelIndex, first: int, last: int) -> None:
-        self._clear_table_related_caches()
-
-    @Slot(list, int)
-    def _handle_value_model_layout_changed(
-        self, parents: list[QPersistentModelIndex], hint: QAbstractItemModel.LayoutChangeHint
-    ) -> None:
         self._clear_table_related_caches()
 
     def _clear_table_related_caches(self) -> None:

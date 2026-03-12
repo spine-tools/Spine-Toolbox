@@ -140,9 +140,6 @@ class TreeItem:
         Returns:
             bool: True if the children were inserted successfully, False otherwise
         """
-        bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
-        if bad_types:
-            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self).__name__}")
         if position < 0 or position > self.child_count():
             return False
         self._polish_children(children)

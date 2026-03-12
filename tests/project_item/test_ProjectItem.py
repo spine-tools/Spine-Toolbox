@@ -12,7 +12,6 @@
 
 """Unit tests for ProjectItem base class."""
 from tempfile import TemporaryDirectory
-import unittest
 from unittest.mock import MagicMock, NonCallableMagicMock
 from spinetoolbox.project_item.project_item import ProjectItem
 from ..mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
@@ -53,7 +52,3 @@ class TestProjectItem(TestCaseWithQApplication):
         item_dict = item.item_dict()
         expected = {"type": "item type", "description": "Item's description.", "x": -2.3, "y": 5.5}
         self.assertEqual(item_dict, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()
