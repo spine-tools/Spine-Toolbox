@@ -83,7 +83,10 @@ ValidatedValueCache = dict[str, dict[int, dict[int, bool]]]
 @busy_effect
 def do_create_new_spine_database(url: str) -> None:
     """Creates a new spine database at the given url."""
-    create_new_spine_database(url)
+    try:
+        create_new_spine_database(url)
+    except Exception as e:
+        raise e
 
 
 class SpineDBManager(QObject):

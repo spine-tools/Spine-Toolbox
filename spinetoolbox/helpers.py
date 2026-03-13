@@ -18,6 +18,7 @@ from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
 import functools
+import gc
 import glob
 from html.parser import HTMLParser
 import itertools
@@ -31,7 +32,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Type, Union  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -88,18 +89,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from spine_engine.logger_interface import LoggerInterface
-from spine_engine.utils.serialization import deserialize_path
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
-    PLUGINS_PATH,
-    PROJECT_FILENAME,
-    PROJECT_LOCAL_DATA_DIR_NAME,
-    PROJECT_LOCAL_DATA_FILENAME,
-    SPECIFICATION_LOCAL_DATA_FILENAME,
 )
 from .font import TOOLBOX_FONT
 
@@ -208,6 +203,7 @@ def rename_dir(old_dir: str, new_dir: str, toolbox: ToolboxUI, box_title: str) -
     Returns:
         True if operation was successful, False otherwise
     """
+    gc.collect()
     if os.path.exists(new_dir):
         msg = f"Directory <b>{new_dir}</b> already exists.<br/><br/>Would you like to overwrite its contents?"
         box = QMessageBox(
