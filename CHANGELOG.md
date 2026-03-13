@@ -3,7 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.6]
 
 ### Added
 
@@ -35,19 +35,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   Note, that the feature is not available for existing mappings.
   You need to create new *Entity class* or type mappings with *Parameter type* set to None or Default value.
 
-
-### Changed
-
-### Deprecated
-
 ### Removed
 
 - Importer: Entity and Parameter value metadata entries in Entity class type import mappings are gone.
   Use the new Metadata, Entity metadata or Parameter value metadata mapping types instead.
-
-### Fixed
-
-### Security
 
 ## [0.10.5]
 
