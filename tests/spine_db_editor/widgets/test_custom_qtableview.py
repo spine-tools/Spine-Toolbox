@@ -21,6 +21,7 @@ import pytest
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
+from spinetoolbox.spine_db_editor.mvcmodels.empty_models import NO_VALUE
 from tests.mock_helpers import (
     assert_table_model_data,
     assert_table_model_data_pytest,
@@ -735,7 +736,7 @@ class TestEmptyParameterValueTableView(TestBase):
                 [None, None, None, None, None, None, None],
             ],
             Qt.ItemDataRole.EditRole: [
-                [None, None, (), None, None, None, self.db_codename],
+                [None, None, (), None, None, NO_VALUE, self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
@@ -767,8 +768,8 @@ class TestEmptyParameterValueTableView(TestBase):
                 [None, None, None, None, None, None, None],
             ],
             Qt.ItemDataRole.EditRole: [
-                [None, "object_class", ("object_1",), "parameter_1", "Base", None, self.db_codename],
-                [None, None, None, None, None, None, self.db_codename],
+                [None, "object_class", ("object_1",), "parameter_1", "Base", NO_VALUE, self.db_codename],
+                [None, None, None, None, None, NO_VALUE, self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
