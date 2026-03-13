@@ -15,12 +15,12 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Iterator
 from functools import cache
-from typing import ClassVar, Optional
+from typing import Any, ClassVar, Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Signal, Slot
 from PySide6.QtGui import QUndoStack
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import ItemType
-from spinedb_api.parameter_value import load_db_value
+from spinedb_api.parameter_value import load_db_value, split_value_and_type
 from ...helpers import (
     DB_ITEM_SEPARATOR,
     DBMapDictItems,
@@ -33,7 +33,6 @@ from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import DB_MAP_ROLE, PARSED_ROLE
 from ...spine_db_manager import SpineDBManager
 from ..commands import AppendEmptyRow, InsertEmptyModelRow, RemoveEmptyModelRow, UpdateEmptyModel
-from .single_and_empty_model_mixins import SplitValueAndTypeMixin
 from .utils import (
     ENTITY_ALTERNATIVE_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
@@ -226,9 +225,12 @@ class EmptyModelBase(EmptyRowModel):
             db_map = db_map_cache.get(database)
             if db_map is None:
                 continue
-            item = {k: v for k, v in item.items() if v is not None}
+            item = self._filter_empty_fields(item)
             db_map_data.setdefault(db_map, []).append(item)
         return db_map_data
+
+    def _filter_empty_fields(self, item: dict[str, Any]) -> dict[str, Any]:
+        return {k: v for k, v in item.items() if v is not None}
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if role == DB_MAP_ROLE:
@@ -265,7 +267,7 @@ class EmptyModelBase(EmptyRowModel):
             super().set_default_row(**candidate)
             self._undo_stack.clear()
 
-    def tear_down(self):
+    def tear_down(self) -> None:
         self.db_mngr.items_added.disconnect(self.handle_items_added)
 
 
@@ -278,7 +280,7 @@ class EmptyModelWithEntityClass(EmptyModelBase):
         modified_data = []
         data_by_row = defaultdict(dict)
         for index, cell_data in zip(indexes, data):
-            if index.data() == cell_data:
+            if index.data(Qt.ItemDataRole.EditRole) == cell_data:
                 continue
             modified_indexes.append(index)
             modified_data.append(cell_data)
@@ -328,20 +330,38 @@ class _TempDBMapCache:
         return db_map
 
 
+class NoValue:
+    pass
+
+
+NO_VALUE = NoValue()
+
+
 class ParameterMixin:
+
     value_field: ClassVar[str] = NotImplemented
+    _VALUE_COLUMN: ClassVar[int] = NotImplemented
     type_field: ClassVar[str] = NotImplemented
     _parameter_name_column: ClassVar[int] = NotImplemented
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.default_row[self.field_to_header(self.value_field)] = NO_VALUE
+
+    def _filter_empty_fields(self, item: dict[str, Any]) -> dict[str, Any]:
+        return {k: v for k, v in item.items() if v is not None or k == self.value_field}
+
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if self.header[index.column()] == self.value_field and role in {
+        if index.column() == self._VALUE_COLUMN and role in {
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.ToolTipRole,
             Qt.ItemDataRole.TextAlignmentRole,
             PARSED_ROLE,
         }:
             data = super().data(index, role=Qt.ItemDataRole.EditRole)
-            return self.db_mngr.get_value_from_data(data, role)
+            if data is NO_VALUE:
+                return None
+            return self.db_mngr.format_value(data, role)
         return super().data(index, role)
 
     @classmethod
@@ -356,6 +376,10 @@ class ParameterMixin:
         even if the model changes.
         """
         return DelayedDataSetter(self, index)
+
+    def set_default_row(self, **kwargs) -> None:
+        kwargs[self.value_field] = NO_VALUE
+        super().set_default_row(**kwargs)
 
 
 class DelayedDataSetter:
@@ -445,12 +469,13 @@ class EntityMixin:
         return [x["entity_class_name"] for x in db_map.find_entities(entity_byname=byname)]
 
 
-class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, EmptyModelWithEntityClass):
+class EmptyParameterDefinitionModel(ParameterMixin, EmptyModelWithEntityClass):
     """An empty parameter_definition model."""
 
     item_type = "parameter_definition"
     field_map = PARAMETER_DEFINITION_FIELD_MAP
     value_field = "default_value"
+    _VALUE_COLUMN = field_index("default_value", PARAMETER_DEFINITION_FIELD_MAP)
     type_field = "default_type"
     group_columns = {field_index("parameter_type_list", PARAMETER_DEFINITION_FIELD_MAP)}
     _parameter_name_column = field_index("name", PARAMETER_DEFINITION_FIELD_MAP)
@@ -483,13 +508,25 @@ class EmptyParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Empt
     def _entity_class_name_candidates(self, db_map, row_data):
         return self._entity_class_name_candidates_by_parameter(db_map, row_data)
 
+    def _convert_to_db(self, item: dict) -> dict:
+        item = super()._convert_to_db(item)
+        if self.value_field in item:
+            item_value = item[self.value_field]
+            if isinstance(item_value, NoValue):
+                item_value = None
+            value, value_type = split_value_and_type(item_value)
+            item[self.value_field] = value
+            item[self.type_field] = value_type
+        return item
 
-class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMixin, EmptyModelWithEntityClass):
+
+class EmptyParameterValueModel(ParameterMixin, EntityMixin, EmptyModelWithEntityClass):
     """A self-contained empty parameter_value model."""
 
     item_type = "parameter_value"
     field_map = PARAMETER_VALUE_FIELD_MAP
     value_field = "value"
+    _VALUE_COLUMN = field_index("value", PARAMETER_VALUE_FIELD_MAP)
     type_field = "type"
     group_columns = {field_index("entity_byname", PARAMETER_VALUE_FIELD_MAP)}
     _parameter_name_column = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
@@ -548,6 +585,16 @@ class EmptyParameterValueModel(SplitValueAndTypeMixin, ParameterMixin, EntityMix
         if not candidates_by_entity:
             return candidates_by_parameter
         return list(set(candidates_by_parameter) & set(candidates_by_entity))
+
+    def _convert_to_db(self, item: dict) -> dict:
+        item = super()._convert_to_db(item)
+        if self.value_field in item:
+            item_value = item.pop(self.value_field)
+            if not isinstance(item_value, NoValue):
+                value, value_type = split_value_and_type(item_value)
+                item[self.value_field] = value
+                item[self.type_field] = value_type
+        return item
 
 
 class EmptyEntityAlternativeModel(EntityMixin, EmptyModelWithEntityClass):

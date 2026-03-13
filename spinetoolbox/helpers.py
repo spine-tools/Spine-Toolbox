@@ -31,7 +31,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Optional, Sequence, Type, Union  # pylint: disable=unused-import
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -1284,14 +1284,14 @@ def disconnect(signal, *slots):
             signal.connect(slot)
 
 
-class SignalWaiter(QObject):
+class SignalWaiter:
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
-    def __init__(self, condition=None, timeout=None):
+    def __init__(self, condition: Callable[[...], bool] | None = None, timeout: float | None = None):
         """
         Args:
-            condition (function, optional): receiving the self.args and returning whether to stop waiting.
-            timeout (float, optional): timeout in seconds; wait will raise after timeout
+            condition: receiving the self.args and returning whether to stop waiting.
+            timeout: timeout in seconds; wait will raise after timeout
         """
         super().__init__()
         self._triggered = False
@@ -1304,14 +1304,14 @@ class SignalWaiter(QObject):
     def triggered(self) -> bool:
         return self._triggered
 
-    def trigger(self, *args):
+    def trigger(self, *args) -> None:
         """Signal receiving slot."""
         if self._triggered:
             return
         self._triggered = True if self._condition is None else self._condition(*args)
         self.args = args
 
-    def wait(self):
+    def wait(self) -> None:
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
@@ -1320,16 +1320,18 @@ class SignalWaiter(QObject):
 
 
 @contextmanager
-def signal_waiter(signal, condition=None, timeout=None):
+def signal_waiter(
+    signal: Any, condition: Callable[[...], bool] | None = None, timeout: float | None = None
+) -> Iterator[SignalWaiter]:
     """Gives a context manager that waits for the emission of given Qt signal.
 
     Args:
-        signal (Any): signal to wait
-        condition (Callable, optional): a callable that takes the signal's parameters and returns True to stop waiting
-        timeout (float, optional): timeout in seconds; if None, wait indefinitely
+        signal: signal to wait
+        condition: a callable that takes the signal's parameters and returns True to stop waiting
+        timeout: timeout in seconds; if None, wait indefinitely
 
     Yields:
-        SignalWaiter: waiter instance
+        waiter instance
     """
     waiter = SignalWaiter(condition=condition, timeout=timeout)
     signal.connect(waiter.trigger)
@@ -1337,7 +1339,6 @@ def signal_waiter(signal, condition=None, timeout=None):
         yield waiter
     finally:
         signal.disconnect(waiter.trigger)
-        waiter.deleteLater()
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):

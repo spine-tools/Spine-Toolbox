@@ -51,7 +51,6 @@ class ParameterValueEditor(ParameterValueEditorBase):
             )
         super().__init__(index, editors, parent)
         model = index.model()
-        self._index = index
         self.set_data_delayed = model.get_set_data_delayed(index)
         self.setWindowTitle(f"Edit value    -- {model.index_name(index)} --")
         value = deep_copy_value(index.data(PARSED_ROLE))
