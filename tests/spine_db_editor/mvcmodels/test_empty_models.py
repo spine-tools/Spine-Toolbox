@@ -11,11 +11,12 @@
 ######################################################################################################################
 import unittest
 from unittest import mock
-from PySide6.QtCore import QModelIndex
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication
 import pytest
-from spinedb_api import to_database
+from spinedb_api import TimeSeriesVariableResolution, to_database
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     DelayedDataSetter,
@@ -376,6 +377,55 @@ class TestEmptyParameterDefinitionModel:
             QApplication.processEvents()
             mock_handler.assert_not_called()
 
+    def test_set_default_value_to_null_displays_none_on_it(self, empty_parameter_definition_model):
+        model = empty_parameter_definition_model
+        undo_stack = QUndoStack(model)
+        model.set_undo_stack(undo_stack)
+        model.append_empty_row()
+        default_value_column = EmptyParameterDefinitionModel._VALUE_COLUMN
+        indexes = [model.index(0, default_value_column)]
+        data = [None]
+        with signal_waiter(model.rowsInserted) as waiter:
+            assert model.batch_set_data(indexes, data)
+            waiter.wait()
+            assert waiter.args == (QModelIndex(), 1, 1)
+        assert model.index(0, default_value_column).data() == "None"
+
+    def test_setting_default_value_to_a_string_that_looks_like_time_series_still_works(
+        self, empty_parameter_definition_model
+    ):
+        model = empty_parameter_definition_model
+        undo_stack = QUndoStack(model)
+        model.set_undo_stack(undo_stack)
+        model.append_empty_row()
+        default_value_column = EmptyParameterDefinitionModel._VALUE_COLUMN
+        indexes = [model.index(0, default_value_column)]
+        series = TimeSeriesVariableResolution(["2026-03-12T14:15"], [2.3], ignore_year=False, repeat=False)
+        data = [series]
+        assert model.batch_set_data(indexes, data)
+        assert model.index(0, default_value_column).data() == "Time series"
+        assert model.index(0, default_value_column).data(Qt.ItemDataRole.EditRole) == series
+        data = ["Time series"]
+        assert model.batch_set_data(indexes, data)
+        assert model.index(0, default_value_column).data() == "Time series"
+        assert model.index(0, default_value_column).data(Qt.ItemDataRole.EditRole) == "Time series"
+
+    def test_add_data_to_database(self, empty_parameter_definition_model, db_map, db_name):
+        with db_map:
+            db_map.add_entity_class(name="Gadget")
+        model = empty_parameter_definition_model
+        undo_stack = QUndoStack(model)
+        model.set_undo_stack(undo_stack)
+        model.append_empty_row()
+        indexes = [model.index(0, 0), model.index(0, 1), model.index(0, 7)]
+        data = ["Gadget", "X", db_name]
+        assert model.batch_set_data(indexes, data)
+        while model.rowCount() == 2:
+            QApplication.processEvents()
+        assert model.rowCount() == 1
+        assert db_map.parameter_definition(entity_class_name="Gadget", name="X")["parsed_value"] is None
+        assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None, None]])
+
 
 @pytest.fixture
 def empty_parameter_value_model(db_mngr, parent_object):
@@ -401,6 +451,72 @@ class TestEmptyParameterValueModel:
         assert model.batch_set_data(indexes, data)
         index = model.index(0, model.columnCount() - 2)
         assert model.index_name(index) == "my database - my class - my entity - my parameter - my alternative"
+
+    def test_add_data_to_database(self, empty_parameter_value_model, db_map, db_name):
+        with db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_entity(entity_class_name="Gadget", name="pocket_watch")
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
+        model = empty_parameter_value_model
+        undo_stack = QUndoStack(model)
+        model.set_undo_stack(undo_stack)
+        model.append_empty_row()
+        indexes = [
+            model.index(0, 1),
+            model.index(0, 2),
+            model.index(0, 3),
+            model.index(0, 4),
+            model.index(0, 5),
+            model.index(0, 6),
+        ]
+        data = ["Gadget", ("pocket_watch",), "X", "Base", 2.3, db_name]
+        assert model.batch_set_data(indexes, data)
+        while model.rowCount() == 2:
+            QApplication.processEvents()
+        assert model.rowCount() == 1
+        assert (
+            db_map.parameter_value(
+                entity_class_name="Gadget",
+                entity_byname=("pocket_watch",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+            )["parsed_value"]
+            == 2.3
+        )
+        assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
+
+    def test_add_data_to_database_with_null_value(self, empty_parameter_value_model, db_map, db_name):
+        with db_map:
+            db_map.add_entity_class(name="Gadget")
+            db_map.add_entity(entity_class_name="Gadget", name="pocket_watch")
+            db_map.add_parameter_definition(entity_class_name="Gadget", name="X")
+        model = empty_parameter_value_model
+        undo_stack = QUndoStack(model)
+        model.set_undo_stack(undo_stack)
+        model.append_empty_row()
+        indexes = [
+            model.index(0, 1),
+            model.index(0, 2),
+            model.index(0, 3),
+            model.index(0, 4),
+            model.index(0, 5),
+            model.index(0, 6),
+        ]
+        data = ["Gadget", ("pocket_watch",), "X", "Base", None, db_name]
+        assert model.batch_set_data(indexes, data)
+        while model.rowCount() == 2:
+            QApplication.processEvents()
+        assert model.rowCount() == 1
+        assert (
+            db_map.parameter_value(
+                entity_class_name="Gadget",
+                entity_byname=("pocket_watch",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+            )["parsed_value"]
+            is None
+        )
+        assert_table_model_data_pytest(model, [[None, None, None, None, None, None, None]])
 
 
 @pytest.fixture

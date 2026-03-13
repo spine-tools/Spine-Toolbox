@@ -1253,6 +1253,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             return None
         db_map, id_ = data[0][0]
         item = self.db_mngr.get_item(db_map, "parameter_value", id_)
+        if item is None:
+            return None
         return self.db_mngr.get_value(db_map, item, role)
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
