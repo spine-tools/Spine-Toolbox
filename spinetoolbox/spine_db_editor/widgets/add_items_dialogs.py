@@ -173,19 +173,17 @@ class AddItemsDialog(ManageItemsDialog):
 class AddEntityClassesDialog(ShowIconColorEditorMixin, GetEntityClassesMixin, AddItemsDialog):
     """A dialog to query user's preferences for new entity classes."""
 
-    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
+    def __init__(self, parent, item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor)
             item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DatabaseMapping instances
-            force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.setWindowTitle("Add entity classes")
         self.model = EmptyAddEntityOrClassRowModel(self)
-        self.model.force_default = force_default
         self.model.rowsInserted.connect(self._focus_on_table)
         self.table_view.setModel(self.model)
         self.dimension_count_widget = QWidget(self)
@@ -465,14 +463,13 @@ class AddEntitiesOrManageElementsDialog(GetEntityClassesMixin, GetEntitiesMixin,
 class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
     """A dialog to query user's preferences for new entities."""
 
-    def __init__(self, parent, item, db_mngr, *db_maps, force_default=False):
+    def __init__(self, parent, item, db_mngr, *db_maps):
         """
         Args:
             parent (SpineDBEditor)
             item (MultiDBTreeItem)
             db_mngr (SpineDBManager)
             *db_maps: DatabaseMapping instances
-            force_default (bool): if True, defaults are non-editable
         """
         super().__init__(parent, db_mngr, *db_maps)
         self.entity_names_by_class_name = {}
@@ -485,10 +482,8 @@ class AddEntitiesDialog(AddEntitiesOrManageElementsDialog):
                 self.class_key = item.parent_item.display_id
         elif item.item_type == "entity_class":
             self.class_key = item.display_id
-        self.model.force_default = force_default
         self.setWindowTitle("Add entities")
         self.table_view.setItemDelegate(ManageEntitiesDelegate(self))
-        self.ent_cls_combo_box.setEnabled(not force_default)
         db_maps_by_keys = {}
         for db_map, entity_classes in self.db_map_ent_cls_lookup.items():
             for key, ent_cls in entity_classes.items():

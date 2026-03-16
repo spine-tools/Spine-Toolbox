@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Added light and dark themes. Detected from OS settings.
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [0.10.6]
+
+### Added
+
 - Added Parameter group dock to Database editor.
   You can add, edit and remove parameter groups from the dock.
 - Added *group* column to Parameter definition table in Database editor.
@@ -34,7 +50,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   in addition to scenario and alternative descriptions.
   Note, that the feature is not available for existing mappings.
   You need to create new *Entity class* or type mappings with *Parameter type* set to None or Default value.
-- Added light and dark themes. Detected from OS settings.
 
 ### Changed
 
@@ -44,10 +59,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - Importer: Entity and Parameter value metadata entries in Entity class type import mappings are gone.
   Use the new Metadata, Entity metadata or Parameter value metadata mapping types instead.
-
-### Fixed
-
-### Security
 
 ## [0.10.5]
 

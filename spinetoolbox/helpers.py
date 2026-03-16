@@ -18,6 +18,7 @@ from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
 import functools
+import gc
 import glob
 from html.parser import HTMLParser
 import itertools
@@ -225,6 +226,7 @@ def rename_dir(old_dir: str, new_dir: str, toolbox: ToolboxUI, box_title: str) -
     Returns:
         True if operation was successful, False otherwise
     """
+    gc.collect()
     if os.path.exists(new_dir):
         msg = f"Directory <b>{new_dir}</b> already exists.<br/><br/>Would you like to overwrite its contents?"
         box = QMessageBox(
@@ -1301,14 +1303,14 @@ def disconnect(signal, *slots):
             signal.connect(slot)
 
 
-class SignalWaiter(QObject):
+class SignalWaiter:
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
-    def __init__(self, condition=None, timeout=None):
+    def __init__(self, condition: Callable[[...], bool] | None = None, timeout: float | None = None):
         """
         Args:
-            condition (function, optional): receiving the self.args and returning whether to stop waiting.
-            timeout (float, optional): timeout in seconds; wait will raise after timeout
+            condition: receiving the self.args and returning whether to stop waiting.
+            timeout: timeout in seconds; wait will raise after timeout
         """
         super().__init__()
         self._triggered = False
@@ -1321,14 +1323,14 @@ class SignalWaiter(QObject):
     def triggered(self) -> bool:
         return self._triggered
 
-    def trigger(self, *args):
+    def trigger(self, *args) -> None:
         """Signal receiving slot."""
         if self._triggered:
             return
         self._triggered = True if self._condition is None else self._condition(*args)
         self.args = args
 
-    def wait(self):
+    def wait(self) -> None:
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
@@ -1337,16 +1339,18 @@ class SignalWaiter(QObject):
 
 
 @contextmanager
-def signal_waiter(signal, condition=None, timeout=None):
+def signal_waiter(
+    signal: Any, condition: Callable[[...], bool] | None = None, timeout: float | None = None
+) -> Iterator[SignalWaiter]:
     """Gives a context manager that waits for the emission of given Qt signal.
 
     Args:
-        signal (Any): signal to wait
-        condition (Callable, optional): a callable that takes the signal's parameters and returns True to stop waiting
-        timeout (float, optional): timeout in seconds; if None, wait indefinitely
+        signal: signal to wait
+        condition: a callable that takes the signal's parameters and returns True to stop waiting
+        timeout: timeout in seconds; if None, wait indefinitely
 
     Yields:
-        SignalWaiter: waiter instance
+        waiter instance
     """
     waiter = SignalWaiter(condition=condition, timeout=timeout)
     signal.connect(waiter.trigger)
@@ -1354,7 +1358,6 @@ def signal_waiter(signal, condition=None, timeout=None):
         yield waiter
     finally:
         signal.disconnect(waiter.trigger)
-        waiter.deleteLater()
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):

@@ -90,6 +90,8 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
             return "Enter new list value here..."
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole, PARSED_ROLE):
             item = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+            if item is None:
+                return None
             return self.db_mngr.get_value(self.db_map, item, role=role)
         return super().data(column, role)
 

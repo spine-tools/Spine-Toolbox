@@ -20,6 +20,7 @@ from PySide6.QtGui import QColor
 from spinedb_api import Asterisk, DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import AsteriskType, ItemType
+from spinedb_api.parameter_value import split_value_and_type
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
 from ...mvcmodels.minimal_table_model import MinimalTableModel
@@ -32,7 +33,6 @@ from ...mvcmodels.shared import (
     PARSED_ROLE,
 )
 from ...parameter_type_validation import ValidationKey
-from ..mvcmodels.single_and_empty_model_mixins import SplitValueAndTypeMixin
 from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from .colors import fixed_field_color
 from .utils import (
@@ -432,6 +432,14 @@ class ParameterMixin:
     def _display_value_for_forced_comparison(self, item):
         return self.db_mngr.get_value(self.db_map, item, Qt.ItemDataRole.DisplayRole)
 
+    def _convert_to_db(self, item: dict) -> dict:
+        item = super()._convert_to_db(item)
+        if self.value_field in item:
+            value, value_type = split_value_and_type(item[self.value_field])
+            item[self.value_field] = value
+            item[self.type_field] = value_type
+        return item
+
 
 class EntityMixin:
 
@@ -455,7 +463,7 @@ class EntityMixin:
         super().update_items_in_db(items)
 
 
-class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, SingleModelBase):
+class SingleParameterDefinitionModel(ParameterMixin, SingleModelBase):
     """A parameter_definition model for a single entity_class."""
 
     entity_class_column = field_index("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP)
@@ -477,7 +485,6 @@ class SingleParameterDefinitionModel(SplitValueAndTypeMixin, ParameterMixin, Sin
 
 
 class SingleParameterValueModel(
-    SplitValueAndTypeMixin,
     ParameterMixin,
     EntityMixin,
     FilterAlternativeMixin,

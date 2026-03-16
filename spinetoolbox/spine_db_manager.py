@@ -83,7 +83,10 @@ ValidatedValueCache = dict[str, dict[int, dict[int, bool]]]
 @busy_effect
 def do_create_new_spine_database(url: str) -> None:
     """Creates a new spine database at the given url."""
-    create_new_spine_database(url)
+    try:
+        create_new_spine_database(url)
+    except Exception as e:
+        raise e
 
 
 class SpineDBManager(QObject):
@@ -823,8 +826,6 @@ class SpineDBManager(QObject):
         Returns:
             value corresponding to role
         """
-        if not item:
-            return None
         if role == PARAMETER_TYPE_VALIDATION_ROLE:
             try:
                 is_valid = self._validated_values[item.item_type][id(db_map)][item["id"].private_id]
@@ -850,16 +851,14 @@ class SpineDBManager(QObject):
             return self._format_list_value(db_map, item.item_type, complex_types[item[type_field]], list_value_id)
         if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
-        return self._format_value(item["parsed_value"], role=role)
+        return self.format_value(item["parsed_value"], role=role)
 
     def get_value_from_data(
         self, data: Optional[str], role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
     ) -> Optional[Union[str, int]]:
         """Returns the value or default value of a parameter directly from data."""
-        if data is None:
-            return None
         parsed_value = self._parse_value(*split_value_and_type(data))
-        return self._format_value(parsed_value, role=role)
+        return self.format_value(parsed_value, role=role)
 
     @staticmethod
     def _parse_value(db_value: bytes, type_: Optional[str] = None) -> Value:
@@ -868,7 +867,7 @@ class SpineDBManager(QObject):
         except ParameterValueFormatError as error:
             return str(error)
 
-    def _format_value(
+    def format_value(
         self, parsed_value: Value, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
     ) -> Optional[Union[str, int]]:
         """Formats the given value for the given role."""
