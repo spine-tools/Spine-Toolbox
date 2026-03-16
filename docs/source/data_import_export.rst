@@ -225,7 +225,7 @@ The available *item type* options are:
 *Entity class*
     For importing entities, relationships (multidimensional entities) and associated parameters.
 
-*Entity group"
+*Entity group*
     Groups entities under a specific group entity.
 
 *Alternative*
