@@ -59,6 +59,7 @@ from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient,
 from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
+    MessageType,
     add_keyboard_shortcuts_to_action_tool_tips,
     basic_console_icon,
     busy_effect,
@@ -1526,7 +1527,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg, self.show_datetime)
+        message = format_log_message("msg", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1536,7 +1537,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_success", msg, self.show_datetime)
+        message = format_log_message("msg_success", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1546,7 +1547,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg, self.show_datetime)
+        message = format_log_message("msg_error", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1556,7 +1557,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_warning", msg, self.show_datetime)
+        message = format_log_message("msg_warning", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1566,7 +1567,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg)
+        message = format_log_message("msg", msg, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1576,7 +1577,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg)
+        message = format_log_message("msg_error", msg, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.append(message)
 
     def override_console_and_execution_list(self):
@@ -2689,12 +2690,14 @@ class ToolboxUI(QMainWindow):
         """
         self.ui.textBrowser_eventlog.make_log_entry_point(timestamp)
 
-    def add_log_message(self, item_name, filter_id, message):
+    def add_log_message(self, item_name: str, filter_id: str, msg_type: MessageType, message: str) -> None:
         """Adds a message to an item's execution log.
 
         Args:
-            item_name (str): item name
-            filter_id (str): filter identifier
-            message (str): formatted message
+            item_name: item name
+            filter_id: filter identifier
+            msg_type: Type of the message.
+            message: Message to log.
         """
+        message = format_log_message(msg_type, message, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)

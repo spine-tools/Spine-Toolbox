@@ -18,7 +18,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QObject, Qt, Signal
-from PySide6.QtGui import QAction, QKeySequence, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QAction, QKeySequence, QPalette, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QLineEdit, QWidget
 import pytest
 from spinetoolbox.helpers import (
@@ -65,25 +65,6 @@ from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestHelpers(TestCaseWithQApplication):
-
-    def test_format_log_message(self):
-        stamp_pattern = re.compile(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
-        message = "test msg"
-
-        def test_correctness(message_type, expected_color):
-            formatted = format_log_message(message_type, message)
-            stamp_start = formatted.find("[")
-            stamp_end = formatted.find("]")
-            without_stamp = formatted[:stamp_start] + formatted[stamp_end + 1 :]
-            stamp = formatted[stamp_start : stamp_end + 1]
-            expected = f"<span style='color:{expected_color};white-space: pre-wrap;'> {message}</span>"
-            self.assertEqual(without_stamp, expected)
-            self.assertIsNotNone(stamp_pattern.match(stamp))
-
-        test_correctness("msg", "white")
-        test_correctness("msg_success", "#00ff00")
-        test_correctness("msg_error", "#ff3333")
-        test_correctness("msg_warning", "yellow")
 
     def test_make_icon_id(self):
         icon_id = make_icon_id(3, 7)
@@ -394,6 +375,47 @@ class TestHelpers(TestCaseWithQApplication):
         target = {"a": {"b": 1}}
         merge_dicts({"a": {"b": 2}}, target)
         self.assertEqual(target, {"a": {"b": 2}})
+
+
+class TestFormatLogMessage:
+    STAMP_PATTERN = re.compile(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
+
+    @pytest.mark.parametrize(
+        "msg_type,expected_text_color",
+        [("msg", None), ("msg_success", "#0bc20a"), ("msg_error", "#c20a0a"), ("msg_warning", "#c1c20a")],
+    )
+    def test_with_black_text(self, msg_type, expected_text_color, parent_widget):
+        self._set_text_color(parent_widget, Qt.GlobalColor.black)
+        self._assert(msg_type, "test msg", parent_widget, expected_text_color)
+
+    @pytest.mark.parametrize(
+        "msg_type,expected_text_color",
+        [("msg", None), ("msg_success", "#6ef76e"), ("msg_error", "#f76e6e"), ("msg_warning", "#f7f76e")],
+    )
+    def test_with_white_text(self, msg_type, expected_text_color, parent_widget):
+        self._set_text_color(parent_widget, Qt.GlobalColor.white)
+        self._assert(msg_type, "test msg", parent_widget, expected_text_color)
+
+    @staticmethod
+    def _set_text_color(widget, color):
+        palette = widget.palette()
+        palette.setColor(QPalette.ColorRole.Text, color)
+        widget.setPalette(palette)
+
+    @staticmethod
+    def _assert(message_type, message, widget, expected_color):
+        formatted = format_log_message(message_type, message, widget)
+        stamp_start = formatted.find("[")
+        stamp_end = formatted.find("]")
+        without_stamp = formatted[:stamp_start] + formatted[stamp_end + 1 :]
+        stamp = formatted[stamp_start : stamp_end + 1]
+        if expected_color is not None:
+            color_tag = f"color:{expected_color};"
+        else:
+            color_tag = ""
+        expected = f"<span style='{color_tag}white-space:pre-wrap;'> {message}</span>"
+        assert without_stamp == expected
+        assert TestFormatLogMessage.STAMP_PATTERN.match(stamp) is not None
 
 
 class TestOrderKey:

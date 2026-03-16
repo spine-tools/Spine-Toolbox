@@ -11,37 +11,27 @@
 ######################################################################################################################
 
 """Contains LogMixin."""
-from .helpers import format_log_message
+from .helpers import MessageType
 
 
 class LogMixin:
-    def add_log_message(self, filter_id, message):
+
+    def add_event_message(self, filter_id: str, msg_type: MessageType, msg_text: str) -> None:
         """Adds a message to the log document.
 
         Args:
-            filter_id (str): filter identifier
-            message (str): formatted message
+            filter_id: filter identifier
+            msg_type: message type
+            msg_text: message text
         """
-        self._toolbox.add_log_message(self.name, filter_id, message)
+        self._toolbox.add_log_message(self.name, filter_id, msg_type, msg_text)
 
-    def add_event_message(self, filter_id, msg_type, msg_text):
+    def add_process_message(self, filter_id: str, msg_type: MessageType, msg_text: str) -> None:
         """Adds a message to the log document.
 
         Args:
-            filter_id (str): filter identifier
-            msg_type (str): message type
-            msg_text (str): message text
+            filter_id: filter identifier
+            msg_type: message type
+            msg_text: message text
         """
-        message = format_log_message(msg_type, msg_text)
-        self.add_log_message(filter_id, message)
-
-    def add_process_message(self, filter_id, msg_type, msg_text):
-        """Adds a message to the log document.
-
-        Args:
-            filter_id (str): filter identifier
-            msg_type (str): message type
-            msg_text (str): message text
-        """
-        message = format_log_message(msg_type, msg_text, show_datetime=False)
-        self.add_log_message(filter_id, message)
+        self._toolbox.add_log_message(self.name, filter_id, msg_type, msg_text)

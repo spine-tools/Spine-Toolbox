@@ -31,7 +31,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeAlias, Union
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -88,18 +88,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from spine_engine.logger_interface import LoggerInterface
-from spine_engine.utils.serialization import deserialize_path
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
-    PLUGINS_PATH,
-    PROJECT_FILENAME,
-    PROJECT_LOCAL_DATA_DIR_NAME,
-    PROJECT_LOCAL_DATA_FILENAME,
-    SPECIFICATION_LOCAL_DATA_FILENAME,
 )
 from .font import TOOLBOX_FONT
 
@@ -139,19 +133,42 @@ def home_dir() -> str:
     return str(pathlib.Path.home())
 
 
-def format_log_message(msg_type: str, message: str, show_datetime: bool = True) -> str:
+MessageType: TypeAlias = Literal["msg", "msg_success", "msg_error", "msg_warning"]
+
+
+def format_log_message(msg_type: MessageType, message: str, widget: QWidget, show_datetime: bool = True) -> str:
     """Adds color tags and optional time stamp to message.
 
     Args:
-        msg_type: message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
+        msg_type: message's type
         message: message to format
+        widget: widget where the message will be shown
         show_datetime: True to add time stamp, False to omit it
 
     Returns:
         formatted message
     """
-    color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
-    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
+    if msg_type == "msg":
+        color_tag = ""
+    else:
+        lightness = widget.palette().color(QPalette.ColorRole.Text).lightnessF()
+        match msg_type:
+            case "msg_success":
+                hue = 0.333
+            case "msg_error":
+                hue = 0.0
+            case "msg_warning":
+                hue = 0.167
+            case _:
+                raise RuntimeError(f"logic error: no such message type {msg_type}")
+        saturation = 0.9
+        if lightness < 0.5:
+            lightness = 0.4
+        else:
+            lightness = 0.7
+        color = QColor.fromHslF(hue, saturation, lightness).name()
+        color_tag = f"color:{color};"
+    open_tag = f"<span style='{color_tag}white-space:pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
 
