@@ -1188,8 +1188,8 @@ class PivotTableView(CopyPasteTableView):
             header_table.show()
             header_table.verticalHeader().hide()
             header_table.horizontalHeader().hide()
-            header_table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-            header_table.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+            header_table.setHorizontalScrollMode(self.horizontalScrollMode())
+            header_table.setVerticalScrollMode(self.verticalScrollMode())
             header_table.setStyleSheet("QTableView { border: none;}")
             self.viewport().stackUnder(header_table)
         for header_table in (self._top_header_table, self._left_header_table):
