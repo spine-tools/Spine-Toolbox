@@ -1034,6 +1034,7 @@ class GraphViewMixin:
             return
         self.db_mngr.items_added.disconnect(self._refresh_icons)
         self.db_mngr.items_updated.disconnect(self._refresh_icons)
+        self.scene.selectionChanged.disconnect(self.ui.graphicsView.handle_scene_selection_changed)
         if self.scene is not None:
             self.scene.deleteLater()
         # Make sure the fetch parent isn't used to remove discarded changes after we've deleted the graph scene.
