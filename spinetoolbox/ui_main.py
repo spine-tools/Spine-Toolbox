@@ -128,7 +128,6 @@ from .widgets.settings_widget import SettingsWidget
 def _make_dark_palette():
     """Creates a dark QPalette suitable for the Fusion style."""
     palette = QPalette()
-    # Window/background colors
     palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
     palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
     palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
@@ -136,24 +135,18 @@ def _make_dark_palette():
     palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
     palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
     palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(127, 127, 127))
-    # Text
     palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
     palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
-    # Button
     palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
     palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
-    # Highlight/Selection
     palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
     palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
-    # Links
     palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
     palette.setColor(QPalette.ColorRole.LinkVisited, QColor(150, 100, 200))
-    # Disabled state
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(127, 127, 127))
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(127, 127, 127))
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(127, 127, 127))
     palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(127, 127, 127))
-    # Midpoint colors (for borders, separators)
     palette.setColor(QPalette.ColorRole.Light, QColor(80, 80, 80))
     palette.setColor(QPalette.ColorRole.Midlight, QColor(65, 65, 65))
     palette.setColor(QPalette.ColorRole.Dark, QColor(35, 35, 35))
@@ -377,39 +370,24 @@ class ToolboxUI(QMainWindow):
     def set_app_style():
         """Sets application style appropriate for each platform.
 
-        On Windows, uses 'windowsvista' style which adapts to dark/light mode natively.
-        On macOS, the default native style adapts to dark/light mode automatically.
-        On Linux, uses 'Fusion' style with a dark palette if the system prefers dark mode.
-
         The user can override the theme via appSettings/theme ("os", "light", or "dark").
+        Fusion style is used on all platforms for dark mode since native styles
+        (windowsvista, macOS) do not support programmatic dark palettes.
         """
         theme = QSettings("SpineProject", "Spine Toolbox").value("appSettings/theme", defaultValue="os")
         if sys.platform == "win32":
-            # The 'windowsvista' style adapts to dark/light mode natively on Windows.
-            if "windowsvista" not in QStyleFactory.keys():
-                return
-            QApplication.setStyle("windowsvista")
-            if theme == "dark":
-                QApplication.setStyle("Fusion")
-                QApplication.setPalette(_make_dark_palette())
-            elif theme == "light":
-                QApplication.setStyle("Fusion")
+            if "windowsvista" in QStyleFactory.keys():
+                QApplication.setStyle("windowsvista")
         elif sys.platform != "darwin":
-            # Linux and other platforms: use Fusion style.
-            # Fusion does not auto-adapt to dark mode, so we apply a dark palette manually.
             QApplication.setStyle("Fusion")
-            if theme == "dark":
-                QApplication.setPalette(_make_dark_palette())
-            elif theme == "os":
-                if QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark:
-                    QApplication.setPalette(_make_dark_palette())
-        else:
-            # macOS: native style adapts automatically, but allow manual override.
-            if theme == "dark":
-                QApplication.setStyle("Fusion")
-                QApplication.setPalette(_make_dark_palette())
-            elif theme == "light":
-                QApplication.setStyle("Fusion")
+        use_dark = theme == "dark" or (
+            theme == "os" and QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark
+        )
+        if use_dark:
+            QApplication.setStyle("Fusion")
+            QApplication.setPalette(_make_dark_palette())
+        elif theme == "light" and sys.platform != "darwin":
+            QApplication.setStyle("Fusion")
 
     @staticmethod
     def set_error_mode():
@@ -777,8 +755,7 @@ class ToolboxUI(QMainWindow):
         base = QApplication.palette().color(QPalette.ColorRole.Button)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
-            # Create subtle variations: slightly lighter or darker than base
-            factor = 100 + (k - len(all_toolbars) // 2) * 5  # e.g., 90, 95, 100, 105, 110
+            factor = 100 + (k - len(all_toolbars) // 2) * 5
             color = base.lighter(factor) if factor >= 100 else base.darker(200 - factor)
             toolbar.set_color(color)
             if self.toolBarArea(toolbar) == Qt.NoToolBarArea:

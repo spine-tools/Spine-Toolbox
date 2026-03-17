@@ -53,7 +53,6 @@ class _TitleWidget(QWidget):
         painter.setFont(self.font())
         path = QPainterPath()
         path.addText(pos, self.font(), self._title)
-        # Use a subtle outline for legibility
         pen_color = self.palette().color(QPalette.ColorRole.Mid)
         painter.setPen(QPen(pen_color, 0.5))
         painter.drawPath(path)

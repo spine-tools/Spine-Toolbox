@@ -56,14 +56,4 @@ PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file
 # Stylesheets
 STATUSBAR_SS = ""
 
-BG_COLOR = "#19232D"
 FG_COLOR = "#F0F0F0"
-
-SETTINGS_SS = ""
-
-# ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
-# ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
-
-TEXTBROWSER_SS = ""
-
-MAINWINDOW_SS = ""

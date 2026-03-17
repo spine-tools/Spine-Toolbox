@@ -265,7 +265,7 @@ class Ui_SettingsForm(object):
         self.frame_2.setFrameShadow(QFrame.Shadow.Sunken)
         self.horizontalLayout_4 = QHBoxLayout(self.frame_2)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalLayout_4.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.radioButton_bg_grid = QRadioButton(self.frame_2)
         self.radioButton_bg_grid.setObjectName(u"radioButton_bg_grid")
 
@@ -312,7 +312,7 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_17 = QHBoxLayout(self.frame_1)
         self.horizontalLayout_17.setSpacing(0)
         self.horizontalLayout_17.setObjectName(u"horizontalLayout_17")
-        self.horizontalLayout_17.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_17.setContentsMargins(0, 0, 0, 0)
         self.label_5 = QLabel(self.frame_1)
         self.label_5.setObjectName(u"label_5")
 
@@ -352,7 +352,7 @@ class Ui_SettingsForm(object):
         self.frame_theme.setFrameShadow(QFrame.Shadow.Sunken)
         self.horizontalLayout_theme = QHBoxLayout(self.frame_theme)
         self.horizontalLayout_theme.setObjectName(u"horizontalLayout_theme")
-        self.horizontalLayout_theme.setContentsMargins(4, 4, 4, 4)
+        self.horizontalLayout_theme.setContentsMargins(0, 0, 0, 0)
         self.radioButton_theme_os = QRadioButton(self.frame_theme)
         self.radioButton_theme_os.setObjectName(u"radioButton_theme_os")
         self.radioButton_theme_os.setChecked(True)

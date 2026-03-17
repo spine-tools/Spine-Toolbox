@@ -85,12 +85,24 @@ class OpenFileButton(QWidget):
             f"""
             QToolButton {{
                 padding-left: 16px; padding-right: {16 + menu_button_size}px; padding-top: 6px; padding-bottom: 6px;
+                border: 1px solid;
+                border-style: outset;
+            }}
+            QToolButton:pressed {{
+                border-style: inset;
             }}
             QToolButton::menu-button {{
+                border: 1px solid;
+                border-style: outset;
                 width: {menu_button_size}px;
+            }}
+            QToolButton::menu-button:pressed {{
+                border-style: inset;
             }}
             QProgressBar {{
                 text-align: center;
+                border: 1px solid;
+                border-style: inset;
             }}
             """
         )

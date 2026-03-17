@@ -60,7 +60,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
         # Set background attributes
         settings = toolbox.qsettings()
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
-        self.bg_color = QApplication.palette().color(QPalette.ColorRole.Window)
+        bg_color = settings.value("appSettings/bgColor", defaultValue="false")
+        self.bg_color = QApplication.palette().color(QPalette.ColorRole.Window) if bg_color == "false" else bg_color
         self._connection_drawer = ConnectionLinkDrawer(toolbox)
         self._connection_drawer.hide()
         self._jump_drawer = JumpLinkDrawer(toolbox)
