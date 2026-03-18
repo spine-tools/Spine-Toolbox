@@ -406,33 +406,11 @@ def add_download_buttons(fig, legend=None):
     # The callback inspects legend item visibility so that only data series currently
     # shown in the plot (not toggled off via legend click) are included in the export.
     # If no legend is provided (e.g. bar chart), we assume all data is to be downloaded.
-    args = {"legend": legend} if legend else {}
-    code = """
-    var visibleKeys = [];
-    if (typeof legend !== 'undefined' && legend != null) {
-        for (var i = 0; i < legend.items.length; i++) {
-            var item = legend.items[i];
-            if (item.renderers[0].visible) {
-                visibleKeys.push(item.label.value);
-            }
-        }
-    } else {
-        visibleKeys.push("ALL");
-    }
-    if (window.bridge) {
-        window.bridge.downloadFilteredCsv(JSON.stringify(visibleKeys));
-    } else {
-        alert("QWebChannel bridge not available");
-        console.error("QWebChannel bridge not available");
-    }
-    """
-
-    # TODO: for the error messages, maybe we can hook into the spine console instead
     download_action: CustomAction = NamedCustomAction(
         icon="data:image/svg+xml;utf8," + get_resource("icon-csv.svg"),
         tool_label="Export data",
         description="Export data as CSV",  # tooltip on hover
-        callback=CustomJS(args=args, code=code),
+        callback=CustomJS(args={"legend": legend} if legend else {}, code=get_resource("download_action_cb.js")),
     )
 
     # Add the data download button _under_ the graph save button.
