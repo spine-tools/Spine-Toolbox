@@ -67,9 +67,9 @@ class PlotWidget(QWidget):
         self.canvas.page().profile().downloadRequested.connect(self.save_as_prompt)
 
         # Set up QWebChannel so JavaScript can call back into Python
-        self._bridge = DownloadBridge(self)
-        self._channel = WebChannel("plot_widget", self._bridge)
-        self._channel.setup_js_api(self.canvas)
+        self._bridge = PlotActions(self)
+        # NOTE: the proxy is made available as "window.bridge" in JS
+        self._channel = WebChannel(self.canvas, "bridge", self._bridge)
 
         QMetaObject.connectSlotsByName(self)
 
@@ -102,7 +102,7 @@ class PlotWidget(QWidget):
             download.accept()
 
 
-class DownloadBridge(QObject):
+class PlotActions(QObject):
     """QWebChannel bridge exposed via JavaScript for CSV download."""
 
     def __init__(self, plot_widget):
@@ -146,29 +146,42 @@ class DownloadBridge(QObject):
 
 
 class WebChannel(QWebChannel):
-    def __init__(self, name: str, obj: QObject, parent: QObject | None = None):
+    def __init__(self, webview: QWebEngineView, name: str, obj: QObject, parent: QObject | None = None):
         super().__init__(parent)
-        self._name = name
-        self.registerObject(name, obj)
+        self._bridge_name = name
+        self.setup_js_api(webview)
+        self.register_and_init(webview, name, obj)
 
     def setup_js_api(self, webview: QWebEngineView):
-        # Inject qwebchannel.js (shipped with Qt) so the page can use QWebChannel
+        # inject qwebchannel.js (shipped with Qt) so the page can use QWebChannel
         qwebchannel_script = QWebEngineScript()
         qwebchannel_script.setName("qwebchannel")
         qwebchannel_script.setSourceUrl(QUrl("qrc:///qtwebchannel/qwebchannel.js"))
         qwebchannel_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
         qwebchannel_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
         webview.page().scripts().insert(qwebchannel_script)
+        webview.page().setWebChannel(self)
 
-        # Inject a small init script that establishes the bridge on window.bridge
+    def register_and_init(self, webview: QWebEngineView, name: str, obj: QObject):
+        """Register and initialise a bridge.
+
+        NOTE: that this only registers a single `QObject` as the
+        bridge.  If you want to register multiple objects, this method
+        has to be updated to use QWebChannel.registerObjects(objects:
+        dict[str, QObject]), and update the script accordingly.
+
+        """
+        self.registerObject(name, obj)
+
+        # inject a small init script that establishes the bridge on window.bridge
         init_script = QWebEngineScript()
         init_script.setName("bridge_init")
         init_script.setSourceCode(
             "new QWebChannel(qt.webChannelTransport, function(channel) {"
-            f"    window.bridge = channel.objects.{self._name};"
+            f"    window.{name} = channel.objects.{name};"
             "});"
         )
         init_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
         init_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+
         webview.page().scripts().insert(init_script)
-        webview.page().setWebChannel(self)
