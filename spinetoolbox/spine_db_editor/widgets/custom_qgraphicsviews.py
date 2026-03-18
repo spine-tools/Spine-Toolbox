@@ -21,7 +21,7 @@ import tempfile
 from typing import Any, ClassVar, Optional
 import numpy as np
 from PySide6.QtCore import QRectF, QRunnable, QSettings, Qt, QThreadPool, QTimeLine, Signal, Slot
-from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QPageSize, QPainter, QPixmap, QShortcut
+from PySide6.QtGui import QAction, QCursor, QIcon, QKeySequence, QPageSize, QPainter, QPalette, QPixmap, QShortcut
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtSvg import QSvgGenerator
 from PySide6.QtWidgets import (
@@ -741,7 +741,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             legend_rect = QRectF(
                 0.5 * (size.width() - legend_width), size.height() - legend_height, legend_width, legend_height
             )
-            painter.fillRect(legend_rect, Qt.white)
+            painter.fillRect(legend_rect, self.palette().color(QPalette.ColorRole.Base))
             self._spine_db_editor.ui.legend_widget.paint(painter, legend_rect)
         if index is not None:
             height = 0.375 * margin
@@ -751,7 +751,7 @@ class EntityQGraphicsView(CustomQGraphicsView):
             text = str(index)
             rect = painter.boundingRect(source, text)
             left = 0.5 * (size.width() - rect.width())
-            painter.fillRect(left, 0, rect.width(), rect.height(), Qt.white)
+            painter.fillRect(left, 0, rect.width(), rect.height(), self.palette().color(QPalette.ColorRole.Base))
             painter.drawText(left, rect.height(), str(index))
         painter.end()
 

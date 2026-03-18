@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -45,13 +45,13 @@ class Ui_Form(object):
         Form.setSizePolicy(sizePolicy)
         palette = QPalette()
         brush = QBrush(QColor(255, 255, 255, 255))
-        brush.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.Base, brush)
-        palette.setBrush(QPalette.Active, QPalette.Window, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Base, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Window, brush)
-        palette.setBrush(QPalette.Disabled, QPalette.Base, brush)
-        palette.setBrush(QPalette.Disabled, QPalette.Window, brush)
+        brush.setStyle(Qt.BrushStyle.SolidPattern)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, brush)
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, brush)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, brush)
         Form.setPalette(palette)
         Form.setAutoFillBackground(True)
         self.verticalLayout_2 = QVBoxLayout(Form)
@@ -85,14 +85,14 @@ class Ui_Form(object):
         self.frame_9.setSizePolicy(sizePolicy)
         self.frame_9.setMaximumSize(QSize(199, 215))
         palette1 = QPalette()
-        palette1.setBrush(QPalette.Active, QPalette.Base, brush)
+        palette1.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Base, brush)
         brush1 = QBrush(QColor(0, 74, 194, 255))
-        brush1.setStyle(Qt.SolidPattern)
-        palette1.setBrush(QPalette.Active, QPalette.Window, brush1)
-        palette1.setBrush(QPalette.Inactive, QPalette.Base, brush)
-        palette1.setBrush(QPalette.Inactive, QPalette.Window, brush1)
-        palette1.setBrush(QPalette.Disabled, QPalette.Base, brush1)
-        palette1.setBrush(QPalette.Disabled, QPalette.Window, brush1)
+        brush1.setStyle(Qt.BrushStyle.SolidPattern)
+        palette1.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, brush1)
+        palette1.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Base, brush)
+        palette1.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, brush1)
+        palette1.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, brush1)
+        palette1.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, brush1)
         self.frame_9.setPalette(palette1)
         self.frame_9.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.frame_9.setAutoFillBackground(True)
@@ -119,7 +119,7 @@ class Ui_Form(object):
         font.setBold(False)
         font.setStyleStrategy(QFont.PreferDefault)
         self.label_spine_toolbox.setFont(font)
-        self.label_spine_toolbox.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_spine_toolbox.setStyleSheet(u"")
         self.label_spine_toolbox.setScaledContents(True)
         self.label_spine_toolbox.setAlignment(Qt.AlignCenter)
 
@@ -134,7 +134,7 @@ class Ui_Form(object):
         font1.setPointSize(6)
         font1.setStyleStrategy(QFont.PreferDefault)
         self.label_spinedb_api.setFont(font1)
-        self.label_spinedb_api.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_spinedb_api.setStyleSheet(u"")
         self.label_spinedb_api.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spinedb_api)
@@ -144,7 +144,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_spine_engine.sizePolicy().hasHeightForWidth())
         self.label_spine_engine.setSizePolicy(sizePolicy2)
         self.label_spine_engine.setFont(font1)
-        self.label_spine_engine.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_spine_engine.setStyleSheet(u"")
         self.label_spine_engine.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_engine)
@@ -154,7 +154,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_spine_items.sizePolicy().hasHeightForWidth())
         self.label_spine_items.setSizePolicy(sizePolicy2)
         self.label_spine_items.setFont(font1)
-        self.label_spine_items.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_spine_items.setStyleSheet(u"")
         self.label_spine_items.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_items)
@@ -164,7 +164,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_python.sizePolicy().hasHeightForWidth())
         self.label_python.setSizePolicy(sizePolicy2)
         self.label_python.setFont(font1)
-        self.label_python.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_python.setStyleSheet(u"")
         self.label_python.setAlignment(Qt.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_python)

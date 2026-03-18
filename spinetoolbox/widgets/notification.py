@@ -12,9 +12,8 @@
 
 """Contains a notification widget."""
 from PySide6.QtCore import Property, QObject, QPropertyAnimation, Qt, QTimer, Slot
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QLayout, QPushButton, QSizePolicy
-from spinetoolbox.helpers import color_from_index
 
 
 class Notification(QFrame):
@@ -62,12 +61,16 @@ class Notification(QFrame):
         self.adjustSize()
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setObjectName("Notification")
-        self._background_color = "#e6ffc2b3"
+        palette = self.palette()
+        bg = palette.color(QPalette.ColorRole.ToolTipBase)
+        bg.setAlpha(230)
+        self._background_color = bg.name(QColor.NameFormat.HexArgb)
+        border_color = palette.color(QPalette.ColorRole.Mid)
         ss = (
             "QFrame#Notification{"
             f"background-color: {self._background_color};"
             "border-width: 2px;"
-            "border-color: #ffebe6;"
+            f"border-color: {border_color.name()};"
             "border-style: groove; border-radius: 8px;}"
         )
         self.setStyleSheet(ss)
@@ -157,18 +160,17 @@ class ButtonNotification(Notification):
         self.layout().addWidget(button)
         button.clicked.connect(button_slot)
         button.clicked.connect(self.start_self_destruction)
-        # Style button: We try hard to programmatically find good contrasting colors
-        label_bg_color = QColor(self._background_color)
-        base_hue = label_bg_color.hsvHueF()
-        saturation = label_bg_color.hsvSaturationF()
-        bg_color = color_from_index(1, 2, base_hue=base_hue, saturation=saturation)
+        # Style button using palette colors for dark/light mode compatibility
+        palette = self.palette()
+        bg_color = palette.color(QPalette.ColorRole.Button)
+        text_color = palette.color(QPalette.ColorRole.ButtonText)
+        border_color = palette.color(QPalette.ColorRole.Mid)
         pressed_bg_color = bg_color.darker(110)
         hover_bg_color = bg_color.lighter(110)
-        border_color = QColor("#F0F0F0")
         pressed_border_color = border_color.darker(110)
         ss = (
             "QPushButton{"
-            f"background-color: {bg_color.name()}; color: #0F0F0F; "
+            f"background-color: {bg_color.name()}; color: {text_color.name()}; "
             f"border: 2px solid {border_color.name()}; border-style: groove; border-radius: 4px;}}"
             f"QPushButton:hover{{background-color: {hover_bg_color.name()};}}"
             f"QPushButton:pressed{{background-color: {pressed_bg_color.name()};"

@@ -32,7 +32,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeAlias, Union
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -134,19 +134,42 @@ def home_dir() -> str:
     return str(pathlib.Path.home())
 
 
-def format_log_message(msg_type: str, message: str, show_datetime: bool = True) -> str:
+MessageType: TypeAlias = Literal["msg", "msg_success", "msg_error", "msg_warning"]
+
+
+def format_log_message(msg_type: MessageType, message: str, widget: QWidget, show_datetime: bool = True) -> str:
     """Adds color tags and optional time stamp to message.
 
     Args:
-        msg_type: message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
+        msg_type: message's type
         message: message to format
+        widget: widget where the message will be shown
         show_datetime: True to add time stamp, False to omit it
 
     Returns:
         formatted message
     """
-    color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
-    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
+    if msg_type == "msg":
+        color_tag = ""
+    else:
+        lightness = widget.palette().color(QPalette.ColorRole.Text).lightnessF()
+        match msg_type:
+            case "msg_success":
+                hue = 0.333
+            case "msg_error":
+                hue = 0.0
+            case "msg_warning":
+                hue = 0.167
+            case _:
+                raise RuntimeError(f"logic error: no such message type {msg_type}")
+        saturation = 0.9
+        if lightness < 0.5:
+            lightness = 0.4
+        else:
+            lightness = 0.7
+        color = QColor.fromHslF(hue, saturation, lightness).name()
+        color_tag = f"color:{color};"
+    open_tag = f"<span style='{color_tag}white-space:pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
 
@@ -543,7 +566,7 @@ class CharIconEngine(TransparentIconEngine):
         size = int(0.875 * round(min(rect.width(), rect.height())))
         self.font.setPixelSize(max(1, size))
         painter.setFont(self.font)
-        if self.color:
+        if self.color.isValid():
             color = self.color
         else:
             palette = QPalette(QApplication.palette())
@@ -558,8 +581,8 @@ class CharIconEngine(TransparentIconEngine):
 
 
 class ColoredIcon(QIcon):
-    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size, colored: bool = False):
-        self._engine = ColoredIconEngine(icon_file_name, icon_color, icon_size, colored=colored)
+    def __init__(self, icon_or_file_name, icon_color: QColor, icon_size, colored: bool = False):
+        self._engine = ColoredIconEngine(icon_or_file_name, icon_color, icon_size, colored=colored)
         super().__init__(self._engine)
 
     def set_colored(self, colored: bool) -> None:
@@ -570,9 +593,9 @@ class ColoredIcon(QIcon):
 
 
 class ColoredIconEngine(QIconEngine):
-    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size: QSize, colored: bool = False):
+    def __init__(self, icon_or_file_name, icon_color: QColor, icon_size: QSize, colored: bool = False):
         super().__init__()
-        self._icon = QIcon(icon_file_name)
+        self._icon = icon_or_file_name if isinstance(icon_or_file_name, QIcon) else QIcon(icon_or_file_name)
         self._icon_color = icon_color
         self._base_pixmap = self._icon.pixmap(icon_size)
         self._colored = False
@@ -580,7 +603,7 @@ class ColoredIconEngine(QIconEngine):
         self.set_colored(colored)
 
     def color(self, mode: QIcon.Mode = QIcon.Mode.Normal) -> QColor:
-        color = self._icon_color if self._colored else QColor("black")
+        color = self._icon_color if self._colored else QApplication.palette().color(QPalette.ColorRole.WindowText)
         if mode == QIcon.Mode.Disabled:
             r, g, b, a = color.getRgbF()
             tint = 0.37255
@@ -615,6 +638,27 @@ def color_pixmap(pixmap: QPixmap, color: QColor) -> QPixmap:
             color.setAlpha(img.pixelColor(x, y).alpha())
             img.setPixelColor(x, y, color)
     return QPixmap.fromImage(img)
+
+
+def make_icons_theme_aware(widget):
+    """Replaces static SVG icons on all child widgets and actions with theme-aware ColoredIcon versions.
+
+    Args:
+        widget (QWidget): parent widget whose children will be processed
+    """
+    from PySide6.QtWidgets import QAbstractButton  # pylint: disable=import-outside-toplevel
+
+    icon_size = QSize(16, 16)
+    for button in widget.findChildren(QAbstractButton):
+        icon = button.icon()
+        if icon.isNull() or isinstance(icon, ColoredIcon):
+            continue
+        button.setIcon(ColoredIcon(icon, None, button.iconSize()))
+    for action in widget.findChildren(QAction):
+        icon = action.icon()
+        if icon.isNull() or isinstance(icon, ColoredIcon):
+            continue
+        action.setIcon(ColoredIcon(icon, None, icon_size))
 
 
 def make_icon_id(icon_code: int, color_code: int) -> int:

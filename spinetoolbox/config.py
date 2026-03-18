@@ -54,66 +54,6 @@ SPECIFICATION_LOCAL_DATA_FILENAME: Literal["specification_local_data.json"] = "s
 PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file name for remote execution
 
 # Stylesheets
-STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; border-width: 1px; border-color: gray; border-style: groove;}"
+STATUSBAR_SS = ""
 
-BG_COLOR = "#19232D"
 FG_COLOR = "#F0F0F0"
-
-SETTINGS_SS = (
-    "#SettingsForm{background-color: ghostwhite;}"
-    "QLabel{color: black;}"
-    "QGroupBox{border: 2px solid gray; "
-    "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #80B0FF, stop: 1 #e6efff);"
-    "font-size: 14px;"
-    "border-radius: 5px;"
-    "margin-top: 0.5em;}"
-    "QGroupBox:title{border-radius: 2px; "
-    "background-color: white;"
-    "border-radius: 5px;"
-    "subcontrol-origin: margin;"
-    "subcontrol-position: top center;"
-    "padding-top: 0px;"
-    "padding-bottom: 0px;"
-    "padding-right: 3px;"
-    "padding-left: 3px;}"
-    "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}"
-    f"QPushButton{{background-color: #505F69; border: 1px solid #29353d; color: {FG_COLOR}; border-radius: 4px; padding: 3px; outline: none; min-width:80px}}"
-    "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
-    "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
-    "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
-    f"QPushButton:hover{{border: 1px solid #148CD2; color: {FG_COLOR};}}"
-    f"QPushButton:pressed{{background-color: {BG_COLOR}; border: 1px solid {BG_COLOR};}}"
-    "QSlider::groove:horizontal{background: #e1e1e1; border: 1px solid #a4a4a4; height: 5px; margin: 2px 0; border-radius: 2px;}"
-    "QSlider::handle:horizontal{background: #fafafa; border: 1px solid #a4a4a4; width: 12px; margin: -5px 0; border-radius: 2px;}"
-    "QSlider::add-page:horizontal{background: transparent;}"
-    "QSlider::sub-page:horizontal{background: transparent;}"
-)
-
-# ICON_BACKGROUND = "qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
-# ICON_TOOLBAR_SS = f"QToolBar{{spacing: 6px; background: {ICON_BACKGROUND}; padding: 3px; border-style: solid;}}"
-
-TEXTBROWSER_SS = (
-    f"QTextBrowser {{background-color: {BG_COLOR}; border: 1px solid #32414B; color: {FG_COLOR}; border-radius: 2px;}}"
-    "QTextBrowser:hover,"
-    "QTextBrowser:selected,"
-    "QTextBrowser:pressed {border: 1px solid #668599;}"
-)
-
-# ToolboxUI stylesheet. A lot of widgets inherit this sheet.
-MAINWINDOW_SS = (
-    "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
-    f"QPushButton{{background-color: #505F69; border: 1px solid #29353d; color: {FG_COLOR}; border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}}"
-    "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
-    "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
-    "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
-    f"QPushButton:hover{{border: 1px solid #148CD2; color: {FG_COLOR};}}"
-    f"QPushButton:pressed{{background-color: {BG_COLOR}; border: 1px solid {BG_COLOR};}}"
-    "QToolButton:focus{border-color: black; border-width: 1px; border-style: ridge;}"
-    "QToolButton:pressed{background-color: #f2f2f2;}"
-    "QToolButton::menu-indicator{width: 0px;}"
-    "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}"
-    "QComboBox QAbstractItemView{border: 1px solid darkgray; selection-background-color: lightgray;}"
-    "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
-    "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
-    "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
-)

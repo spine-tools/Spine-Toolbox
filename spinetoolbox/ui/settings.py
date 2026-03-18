@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.9.1
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -49,7 +49,7 @@ class Ui_SettingsForm(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(SettingsForm.sizePolicy().hasHeightForWidth())
         SettingsForm.setSizePolicy(sizePolicy)
-        SettingsForm.setMinimumSize(QSize(500, 350))
+        SettingsForm.setMinimumSize(QSize(700, 750))
         SettingsForm.setMaximumSize(QSize(16777215, 16777215))
         SettingsForm.setMouseTracking(False)
         SettingsForm.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -253,6 +253,7 @@ class Ui_SettingsForm(object):
 
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setVerticalSpacing(6)
         self.label_7 = QLabel(self.groupBox_ui)
         self.label_7.setObjectName(u"label_7")
 
@@ -339,6 +340,47 @@ class Ui_SettingsForm(object):
 
 
         self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.frame_1)
+
+        self.label_theme = QLabel(self.groupBox_ui)
+        self.label_theme.setObjectName(u"label_theme")
+
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_theme)
+
+        self.frame_theme = QFrame(self.groupBox_ui)
+        self.frame_theme.setObjectName(u"frame_theme")
+        self.frame_theme.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_theme.setFrameShadow(QFrame.Shadow.Sunken)
+        self.horizontalLayout_theme = QHBoxLayout(self.frame_theme)
+        self.horizontalLayout_theme.setObjectName(u"horizontalLayout_theme")
+        self.horizontalLayout_theme.setContentsMargins(0, 0, 0, 0)
+        self.radioButton_theme_os = QRadioButton(self.frame_theme)
+        self.radioButton_theme_os.setObjectName(u"radioButton_theme_os")
+        self.radioButton_theme_os.setChecked(True)
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_os)
+
+        self.radioButton_theme_light = QRadioButton(self.frame_theme)
+        self.radioButton_theme_light.setObjectName(u"radioButton_theme_light")
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_light)
+
+        self.radioButton_theme_dark = QRadioButton(self.frame_theme)
+        self.radioButton_theme_dark.setObjectName(u"radioButton_theme_dark")
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_dark)
+
+        self.label_theme_restart = QLabel(self.frame_theme)
+        self.label_theme_restart.setObjectName(u"label_theme_restart")
+        self.label_theme_restart.setEnabled(True)
+
+        self.horizontalLayout_theme.addWidget(self.label_theme_restart)
+
+        self.horizontalSpacer_theme = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_theme.addItem(self.horizontalSpacer_theme)
+
+
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.frame_theme)
 
 
         self.gridLayout_2.addLayout(self.formLayout, 8, 0, 1, 1)
@@ -1190,6 +1232,11 @@ class Ui_SettingsForm(object):
         self.label_4.setText(QCoreApplication.translate("SettingsForm", u"Link flash speed", None))
         self.label_5.setText(QCoreApplication.translate("SettingsForm", u"Slow", None))
         self.label_8.setText(QCoreApplication.translate("SettingsForm", u"Fast", None))
+        self.label_theme.setText(QCoreApplication.translate("SettingsForm", u"Light/dark theme", None))
+        self.radioButton_theme_os.setText(QCoreApplication.translate("SettingsForm", u"OS", None))
+        self.radioButton_theme_light.setText(QCoreApplication.translate("SettingsForm", u"Light", None))
+        self.radioButton_theme_dark.setText(QCoreApplication.translate("SettingsForm", u"Dark", None))
+        self.label_theme_restart.setText(QCoreApplication.translate("SettingsForm", u"(Requires restart)", None))
         self.checkBox_drag_to_draw_links.setText(QCoreApplication.translate("SettingsForm", u"Drag to draw links", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))

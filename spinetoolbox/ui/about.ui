@@ -301,7 +301,7 @@
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">QLabel {color: rgb(255, 255, 255);}</string>
+           <string notr="true"></string>
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Spine Toolbox&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -330,7 +330,7 @@
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">QLabel {color: rgb(255, 255, 255);}</string>
+           <string notr="true"></string>
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;spinedb_api&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -356,7 +356,7 @@
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">QLabel {color: rgb(255, 255, 255);}</string>
+           <string notr="true"></string>
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;spine_engine&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -382,7 +382,7 @@
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">QLabel {color: rgb(255, 255, 255);}</string>
+           <string notr="true"></string>
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;spine_items&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -408,7 +408,7 @@
            </font>
           </property>
           <property name="styleSheet">
-           <string notr="true">QLabel {color: rgb(255, 255, 255);}</string>
+           <string notr="true"></string>
           </property>
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

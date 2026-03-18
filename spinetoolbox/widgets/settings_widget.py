@@ -15,7 +15,7 @@ import os
 import pathlib
 import shutil
 from PySide6.QtCore import QEvent, QPoint, QSettings, QSize, Qt, QUrl, Slot
-from PySide6.QtGui import QDesktopServices, QIcon, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
     get_julia_env,
@@ -24,7 +24,7 @@ from spine_engine.utils.helpers import (
     resolve_default_julia_executable,
     resolve_gams_executable,
 )
-from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
+from ..config import DEFAULT_WORK_DIR
 from ..file_size_aggregator import AggregatorProcess
 from ..helpers import (
     dir_is_valid,
@@ -65,7 +65,9 @@ class SettingsWidgetBase(QWidget):
         self.ui = Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.CustomizeWindowHint)
-        self.setStyleSheet(SETTINGS_SS)
+        self.setStyleSheet(
+            "QGroupBox { margin-top: 0.5em; }" "QGroupBox::title { top: -8px; left: 10px; padding: 0 3px; }"
+        )
         self._mouse_press_pos = None
         self._mouse_release_pos = None
         self._mouse_move_pos = None
@@ -730,7 +732,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
-        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
+        theme = self._qsettings.value("appSettings/theme", defaultValue="os")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_julia_jupyter_console = int(self._qsettings.value("appSettings/useJuliaKernel", defaultValue="0"))
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
@@ -774,10 +776,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
-        if bg_color == "false":
-            pass
+        if theme == "light":
+            self.ui.radioButton_theme_light.setChecked(True)
+        elif theme == "dark":
+            self.ui.radioButton_theme_dark.setChecked(True)
         else:
-            self.bg_color = bg_color
+            self.ui.radioButton_theme_os.setChecked(True)
         self.update_bg_color()
         self.ui.lineEdit_gams_path.setPlaceholderText(resolve_gams_executable(""))
         self.ui.lineEdit_gams_path.setText(gams_path)
@@ -901,6 +905,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        if self.ui.radioButton_theme_light.isChecked():
+            theme = "light"
+        elif self.ui.radioButton_theme_dark.isChecked():
+            theme = "dark"
+        else:
+            theme = "os"
+        self._qsettings.setValue("appSettings/theme", theme)
         save_spec = str(self.ui.checkBox_save_spec_before_closing.checkState().value)
         self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)
         spec_show_undo = str(self.ui.checkBox_spec_show_undo.checkState().value)
@@ -1088,7 +1099,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
-        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         self.set_toolbar_colored_icons(color_toolbar_icons == "true")
         self.update_links_geometry(curved_links == "true")
@@ -1100,8 +1110,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         self.update_scene_bg()
-        if not bg_color == "false":
-            self.bg_color = bg_color
         self.update_bg_color()
 
     @Slot(str)

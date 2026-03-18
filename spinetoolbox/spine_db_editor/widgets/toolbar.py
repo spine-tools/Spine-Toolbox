@@ -14,7 +14,7 @@
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QAction, QIcon, QKeySequence, QTextCursor
 from PySide6.QtWidgets import QDialog, QSizePolicy, QTextEdit, QToolBar, QToolButton, QVBoxLayout, QWidget
-from spinetoolbox.helpers import CharIconEngine, add_keyboard_shortcut_to_tool_tip, plain_to_rich
+from spinetoolbox.helpers import CharIconEngine, ColoredIcon, add_keyboard_shortcut_to_tool_tip, plain_to_rich
 
 
 class DBEditorToolBar(QToolBar):
@@ -42,6 +42,7 @@ class DBEditorToolBar(QToolBar):
 
     def _add_actions(self):
         """Creates buttons for the actions and adds them to the toolbar"""
+        self._make_icons_theme_aware()
         self.create_button_for_action(self._db_editor.ui.actionNew_db_file)
         self.create_button_for_action(self._db_editor.ui.actionAdd_db_file)
         self.create_button_for_action(self._db_editor.ui.actionOpen_db_file)
@@ -70,6 +71,28 @@ class DBEditorToolBar(QToolBar):
         self.create_button_for_action(self.show_url_action)
         self.addSeparator()
         self.create_button_for_action(self.show_toolbox_action)
+
+    def _make_icons_theme_aware(self):
+        """Replaces static SVG icons on UI actions with theme-aware ColoredIcon versions."""
+        icon_size = self.iconSize()
+        ui = self._db_editor.ui
+        _action_icons = {
+            ui.actionNew_db_file: ":/icons/menu_icons/file.svg",
+            ui.actionAdd_db_file: ":/icons/menu_icons/folder-open-solid.svg",
+            ui.actionOpen_db_file: ":/icons/menu_icons/folder-open-solid.svg",
+            ui.actionUndo: ":/icons/menu_icons/undo.svg",
+            ui.actionRedo: ":/icons/menu_icons/redo.svg",
+            ui.actionCommit: ":/icons/menu_icons/check.svg",
+            ui.actionMass_remove_items: ":/icons/menu_icons/bolt-lightning.svg",
+            ui.actionStacked_style: ":/icons/menu_icons/table.svg",
+            ui.actionGraph_style: ":/icons/project-diagram.svg",
+            ui.actionValue: ":/icons/menu_icons/hashtag.svg",
+            ui.actionIndex: ":/icons/menu_icons/index.svg",
+            ui.actionElement: ":/icons/menu_icons/element.svg",
+            ui.actionScenario: ":/icons/menu_icons/scenario.svg",
+        }
+        for action, icon_path in _action_icons.items():
+            action.setIcon(ColoredIcon(icon_path, None, icon_size))
 
     def _connect_signals(self):
         """Connects signals"""

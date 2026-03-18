@@ -11,8 +11,7 @@
 ######################################################################################################################
 
 """Custom QWidgets for Filtering and Zooming."""
-from collections.abc import Callable
-from typing import Concatenate, Generic, ParamSpec, TypeVar
+from typing import Generic, ParamSpec, TypeVar
 from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
     QAction,
@@ -26,6 +25,7 @@ from PySide6.QtGui import (
     QUndoStack,
 )
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QDialogButtonBox,
     QFrame,
@@ -291,7 +291,7 @@ class ToolBarWidgetBase(QWidget):
         layout.addStretch()
         layout.addWidget(self.tool_bar)
         # pylint: disable=undefined-variable
-        icon_extent = qApp.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
+        icon_extent = QApplication.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
         self.tool_bar.setIconSize(QSize(icon_extent, icon_extent))
         self.tool_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
@@ -322,7 +322,7 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
             self.tool_bar.setFixedHeight(self.option.rect.height())
         text_width = self.option.fontMetrics.horizontalAdvance(self._text)
         # pylint: disable=undefined-variable
-        icon_width = qApp.style().pixelMetric(QStyle.PixelMetric.PM_ToolBarIconSize)
+        icon_width = QApplication.style().pixelMetric(QStyle.PixelMetric.PM_ToolBarIconSize)
         spacing = text_width + 3 * icon_width
         self.option.rect.setWidth(spacing)
         self.layout().insertSpacing(0, spacing)
@@ -602,23 +602,23 @@ class QWizardProcessPage(QWizardPage):
     @Slot(bool)
     def _handle_copy_clicked(self, _=False):
         self._label_copy.show()
-        qApp.clipboard().setText(self._log.toPlainText())  # pylint: disable=undefined-variable
+        QApplication.clipboard().setText(self._log.toPlainText())
 
     @Slot(str)
     def _add_msg(self, msg):
-        self._log.append(format_log_message("msg", msg, show_datetime=False))
+        self._log.append(format_log_message("msg", msg, self._log, show_datetime=False))
 
     @Slot(str)
     def _add_msg_warning(self, msg):
-        self._log.append(format_log_message("msg_warning", msg, show_datetime=False))
+        self._log.append(format_log_message("msg_warning", msg, self._log, show_datetime=False))
 
     @Slot(str)
     def _add_msg_error(self, msg):
-        self._log.append(format_log_message("msg_error", msg, show_datetime=False))
+        self._log.append(format_log_message("msg_error", msg, self._log, show_datetime=False))
 
     @Slot(str)
     def _add_msg_success(self, msg):
-        self._log.append(format_log_message("msg_success", msg, show_datetime=False))
+        self._log.append(format_log_message("msg_success", msg, self._log, show_datetime=False))
 
     def isComplete(self):
         return self._exec_mngr is None
@@ -649,7 +649,7 @@ class LabelWithCopyButton(QWidget):
         layout.addWidget(line_edit)
         layout.addWidget(button)
         # pylint: disable=undefined-variable
-        button.clicked.connect(lambda _=False, le=line_edit: qApp.clipboard().setText(le.text()))
+        button.clicked.connect(lambda _=False, le=line_edit: QApplication.clipboard().setText(le.text()))
 
 
 class ElidedLabel(ElidedTextMixin, QLabel):

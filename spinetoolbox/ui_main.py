@@ -22,7 +22,7 @@ import threading
 from typing import Optional
 from zipfile import ZipFile
 import numpy as np
-from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, QSize, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -31,6 +31,7 @@ from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
     QKeySequence,
+    QPalette,
     QUndoStack,
     QWindow,
 )
@@ -55,17 +56,19 @@ from spine_engine.project_item.project_item_specification_factory import Project
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
+    ColoredIcon,
+    MessageType,
     add_keyboard_shortcuts_to_action_tool_tips,
     basic_console_icon,
     busy_effect,
     clear_qsettings,
-    color_from_index,
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
+    make_icons_theme_aware,
     open_url,
     recursive_overwrite,
     same_path,
@@ -124,6 +127,36 @@ from .widgets.properties_widget import PropertiesWidgetBase
 from .widgets.settings_widget import SettingsWidget
 
 
+def _make_dark_palette():
+    """Creates a dark QPalette suitable for the Fusion style."""
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+    palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.ColorRole.LinkVisited, QColor(150, 100, 200))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorRole.Light, QColor(80, 80, 80))
+    palette.setColor(QPalette.ColorRole.Midlight, QColor(65, 65, 65))
+    palette.setColor(QPalette.ColorRole.Dark, QColor(35, 35, 35))
+    palette.setColor(QPalette.ColorRole.Mid, QColor(48, 48, 48))
+    palette.setColor(QPalette.ColorRole.Shadow, QColor(20, 20, 20))
+    return palette
+
+
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
 
@@ -165,8 +198,6 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._add_item_edit_actions()
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
-        # Set style sheets
-        self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
         self._item_properties_uis: dict[str, PropertiesWidgetBase] = {}
@@ -228,6 +259,8 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
+        for widget in self.link_properties_widgets.values():
+            make_icons_theme_aware(widget)
         self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingConnection], "Link properties")
         self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingJump], "Loop properties")
         self._plugin_manager = PluginManager(self)
@@ -339,11 +372,32 @@ class ToolboxUI(QMainWindow):
 
     @staticmethod
     def set_app_style():
-        """Sets app style on Windows to 'windowsvista' or to a default if not available."""
+        """Sets application style appropriate for each platform.
+
+        The user can override the theme via appSettings/theme ("os", "light", or "dark").
+        Fusion style is used on all platforms for dark mode since native styles
+        (windowsvista, macOS) do not support programmatic dark palettes.
+        """
+        theme = QSettings("SpineProject", "Spine Toolbox").value("appSettings/theme", defaultValue="os")
         if sys.platform == "win32":
-            if "windowsvista" not in QStyleFactory.keys():
-                return
-            QApplication.setStyle("windowsvista")
+            if "windowsvista" in QStyleFactory.keys():
+                QApplication.setStyle("windowsvista")
+        elif sys.platform != "darwin":
+            QApplication.setStyle("Fusion")
+        use_dark = theme == "dark" or (
+            theme == "os" and QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark
+        )
+        if use_dark:
+            QApplication.setStyle("Fusion")
+            QApplication.setPalette(_make_dark_palette())
+            QApplication.instance().setStyleSheet(
+                "QDockWidget {"
+                "    titlebar-close-icon: url(:/icons/menu_icons/times-white.svg);"
+                "    titlebar-normal-icon: url(:/icons/menu_icons/float-white.svg);"
+                "}"
+            )
+        elif theme == "light" and sys.platform != "darwin":
+            QApplication.setStyle("Fusion")
 
     @staticmethod
     def set_error_mode():
@@ -707,14 +761,16 @@ class ToolboxUI(QMainWindow):
         self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
-        """Set toolbars' color using the highest possible contrast."""
+        """Set toolbars' color using subtle palette-derived shades."""
+        base = QApplication.palette().color(QPalette.ColorRole.Button)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
-            color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
+            factor = 100 + (k - len(all_toolbars) // 2) * 5
+            color = base.lighter(factor) if factor >= 100 else base.darker(200 - factor)
             toolbar.set_color(color)
             if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
                 self.addToolBar(Qt.TopToolBarArea, toolbar)
-        self.execute_toolbar.set_color(QColor("silver"))
+        self.execute_toolbar.set_color(QApplication.palette().color(QPalette.ColorRole.Button))
         if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
             self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
 
@@ -838,7 +894,10 @@ class ToolboxUI(QMainWindow):
 
     def init_specification_model(self):
         """Initializes specification model."""
-        factory_icons = {item_type: QIcon(factory.icon()) for item_type, factory in self.item_factories.items()}
+        factory_icons = {
+            item_type: ColoredIcon(factory.icon(), None, QSize(16, 16))
+            for item_type, factory in self.item_factories.items()
+        }
         self.specification_model = ProjectItemSpecificationModel(factory_icons)
         for item_type in self.item_factories:
             model = self.filtered_spec_factory_models[item_type] = FilteredSpecificationModel(item_type)
@@ -848,6 +907,7 @@ class ToolboxUI(QMainWindow):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
             properties_ui.set_color_and_icon(factory.icon_color(), factory.icon())
+            make_icons_theme_aware(properties_ui)
             self.ui.tabWidget_item_properties.addTab(properties_ui, item_type)
 
     def add_project_items(self, items_dict):
@@ -1053,7 +1113,7 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
         color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
-        ss = f"QWidget{{background: {color.name()};}}"
+        ss = f"QWidget{{background: {color.name()}; color: black;}}"
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.show()
         self._button_item_dir.setToolTip(f"<html>Open <b>{self.active_project_item.name}</b> directory.</html>")
@@ -1068,7 +1128,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
         color = self.link_properties_widgets[type(self.active_link_item)].fg_color
-        ss = f"QWidget{{background: {color.name()};}}"
+        ss = f"QWidget{{background: {color.name()}; color: black;}}"
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.hide()
 
@@ -1458,7 +1518,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg, self.show_datetime)
+        message = format_log_message("msg", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1468,7 +1528,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_success", msg, self.show_datetime)
+        message = format_log_message("msg_success", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1478,7 +1538,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg, self.show_datetime)
+        message = format_log_message("msg_error", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1488,7 +1548,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_warning", msg, self.show_datetime)
+        message = format_log_message("msg_warning", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1498,7 +1558,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg)
+        message = format_log_message("msg", msg, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1508,7 +1568,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg)
+        message = format_log_message("msg_error", msg, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.append(message)
 
     def override_console_and_execution_list(self):
@@ -2621,12 +2681,14 @@ class ToolboxUI(QMainWindow):
         """
         self.ui.textBrowser_eventlog.make_log_entry_point(timestamp)
 
-    def add_log_message(self, item_name, filter_id, message):
+    def add_log_message(self, item_name: str, filter_id: str, msg_type: MessageType, message: str) -> None:
         """Adds a message to an item's execution log.
 
         Args:
-            item_name (str): item name
-            filter_id (str): filter identifier
-            message (str): formatted message
+            item_name: item name
+            filter_id: filter identifier
+            msg_type: Type of the message.
+            message: Message to log.
         """
+        message = format_log_message(msg_type, message, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)

@@ -50,9 +50,7 @@ class Ui_DBCommitViewer(object):
         self.splitter.addWidget(self.commit_list)
         self.verticalFrame = QFrame(self.splitter)
         self.verticalFrame.setObjectName(u"verticalFrame")
-        self.verticalFrame.setStyleSheet(u"QFrame {\n"
-"  background-color: white;\n"
-"}")
+        self.verticalFrame.setStyleSheet(u"")
         self.verticalFrame.setFrameShape(QFrame.Shape.Box)
         self.verticalLayout = QVBoxLayout(self.verticalFrame)
         self.verticalLayout.setSpacing(3)
