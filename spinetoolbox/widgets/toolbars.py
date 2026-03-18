@@ -449,7 +449,19 @@ class ExecuteToolBar(ToolBar):
         super().__init__("Execute", parent)  # Inherits stylesheet from ToolboxUI
 
     def setup(self):
+        self._make_execute_icons_theme_aware()
         self._add_buttons()
+
+    def _make_execute_icons_theme_aware(self):
+        """Replaces static SVG icons on execute actions with theme-aware ColoredIcon versions."""
+        icon_size = self.iconSize()
+        ui = self._toolbox.ui
+        for action, icon_path in (
+            (ui.actionExecute_project, ":/icons/menu_icons/play-circle-solid.svg"),
+            (ui.actionExecute_selection, ":/icons/menu_icons/play-circle-regular.svg"),
+            (ui.actionStop_execution, ":/icons/menu_icons/stop-circle-regular.svg"),
+        ):
+            action.setIcon(ColoredIcon(icon_path, None, icon_size))
 
     def _add_button_from_action(self, action):
         button = NiceButton()

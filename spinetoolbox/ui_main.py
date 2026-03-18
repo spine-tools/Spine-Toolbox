@@ -22,7 +22,7 @@ import threading
 from typing import Optional
 from zipfile import ZipFile
 import numpy as np
-from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, QSize, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -59,6 +59,7 @@ from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient,
 from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
+    ColoredIcon,
     MessageType,
     add_keyboard_shortcuts_to_action_tool_tips,
     basic_console_icon,
@@ -67,6 +68,7 @@ from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
+    make_icons_theme_aware,
     open_url,
     recursive_overwrite,
     same_path,
@@ -257,6 +259,8 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
+        for widget in self.link_properties_widgets.values():
+            make_icons_theme_aware(widget)
         self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingConnection], "Link properties")
         self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingJump], "Loop properties")
         self._plugin_manager = PluginManager(self)
@@ -386,6 +390,12 @@ class ToolboxUI(QMainWindow):
         if use_dark:
             QApplication.setStyle("Fusion")
             QApplication.setPalette(_make_dark_palette())
+            QApplication.instance().setStyleSheet(
+                "QDockWidget {"
+                "    titlebar-close-icon: url(:/icons/menu_icons/times-white.svg);"
+                "    titlebar-normal-icon: url(:/icons/menu_icons/float-white.svg);"
+                "}"
+            )
         elif theme == "light" and sys.platform != "darwin":
             QApplication.setStyle("Fusion")
 
@@ -884,7 +894,10 @@ class ToolboxUI(QMainWindow):
 
     def init_specification_model(self):
         """Initializes specification model."""
-        factory_icons = {item_type: QIcon(factory.icon()) for item_type, factory in self.item_factories.items()}
+        factory_icons = {
+            item_type: ColoredIcon(factory.icon(), None, QSize(16, 16))
+            for item_type, factory in self.item_factories.items()
+        }
         self.specification_model = ProjectItemSpecificationModel(factory_icons)
         for item_type in self.item_factories:
             model = self.filtered_spec_factory_models[item_type] = FilteredSpecificationModel(item_type)
@@ -894,6 +907,7 @@ class ToolboxUI(QMainWindow):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
             properties_ui.set_color_and_icon(factory.icon_color(), factory.icon())
+            make_icons_theme_aware(properties_ui)
             self.ui.tabWidget_item_properties.addTab(properties_ui, item_type)
 
     def add_project_items(self, items_dict):

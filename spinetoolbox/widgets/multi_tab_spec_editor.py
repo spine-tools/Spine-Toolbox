@@ -11,9 +11,10 @@
 ######################################################################################################################
 
 """Contains the MultiTabSpecEditor class."""
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QMenu
+from ..helpers import ColoredIcon
 from .multi_tab_window import MultiTabWindow
 
 
@@ -24,7 +25,7 @@ class MultiTabSpecEditor(MultiTabWindow):
         self._toolbox = toolbox
         self.item_type = item_type
         self.setWindowTitle(f"{item_type} specification editor".capitalize())
-        icon = QIcon(self._toolbox.item_factories[item_type].icon())
+        icon = ColoredIcon(self._toolbox.item_factories[item_type].icon(), None, QSize(16, 16))
         self.setWindowIcon(icon)
 
     def _make_other(self):

@@ -566,7 +566,7 @@ class CharIconEngine(TransparentIconEngine):
         size = int(0.875 * round(min(rect.width(), rect.height())))
         self.font.setPixelSize(max(1, size))
         painter.setFont(self.font)
-        if self.color:
+        if self.color.isValid():
             color = self.color
         else:
             palette = QPalette(QApplication.palette())
@@ -581,8 +581,8 @@ class CharIconEngine(TransparentIconEngine):
 
 
 class ColoredIcon(QIcon):
-    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size, colored: bool = False):
-        self._engine = ColoredIconEngine(icon_file_name, icon_color, icon_size, colored=colored)
+    def __init__(self, icon_or_file_name, icon_color: QColor, icon_size, colored: bool = False):
+        self._engine = ColoredIconEngine(icon_or_file_name, icon_color, icon_size, colored=colored)
         super().__init__(self._engine)
 
     def set_colored(self, colored: bool) -> None:
@@ -593,9 +593,9 @@ class ColoredIcon(QIcon):
 
 
 class ColoredIconEngine(QIconEngine):
-    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size: QSize, colored: bool = False):
+    def __init__(self, icon_or_file_name, icon_color: QColor, icon_size: QSize, colored: bool = False):
         super().__init__()
-        self._icon = QIcon(icon_file_name)
+        self._icon = icon_or_file_name if isinstance(icon_or_file_name, QIcon) else QIcon(icon_or_file_name)
         self._icon_color = icon_color
         self._base_pixmap = self._icon.pixmap(icon_size)
         self._colored = False
@@ -638,6 +638,27 @@ def color_pixmap(pixmap: QPixmap, color: QColor) -> QPixmap:
             color.setAlpha(img.pixelColor(x, y).alpha())
             img.setPixelColor(x, y, color)
     return QPixmap.fromImage(img)
+
+
+def make_icons_theme_aware(widget):
+    """Replaces static SVG icons on all child widgets and actions with theme-aware ColoredIcon versions.
+
+    Args:
+        widget (QWidget): parent widget whose children will be processed
+    """
+    from PySide6.QtWidgets import QAbstractButton  # pylint: disable=import-outside-toplevel
+
+    icon_size = QSize(16, 16)
+    for button in widget.findChildren(QAbstractButton):
+        icon = button.icon()
+        if icon.isNull() or isinstance(icon, ColoredIcon):
+            continue
+        button.setIcon(ColoredIcon(icon, None, button.iconSize()))
+    for action in widget.findChildren(QAction):
+        icon = action.icon()
+        if icon.isNull() or isinstance(icon, ColoredIcon):
+            continue
+        action.setIcon(ColoredIcon(icon, None, icon_size))
 
 
 def make_icon_id(icon_code: int, color_code: int) -> int:

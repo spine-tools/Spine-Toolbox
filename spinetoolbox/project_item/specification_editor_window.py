@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
-from ..helpers import CharIconEngine, SealCommand, restore_ui, save_ui
+from ..helpers import CharIconEngine, SealCommand, make_icons_theme_aware, restore_ui, save_ui
 from ..widgets.notification import ChangeNotifier, Notification
 from .project_item import ProjectItem
 
@@ -139,6 +139,7 @@ class SpecificationEditorWindowBase(Generic[UI], QMainWindow):
         # Setup UI from Qt Designer file
         self._ui: UI = self._make_ui()
         self._ui.setupUi(self)
+        make_icons_theme_aware(self)
         self._ui_error = QErrorMessage(self)
         self._ui_error.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
         self._ui_error.setWindowTitle("Error")

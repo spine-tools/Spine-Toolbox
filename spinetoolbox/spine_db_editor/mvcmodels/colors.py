@@ -22,7 +22,7 @@ def pivot_table_header_color():
 
 def fixed_field_color():
     """Returns a slightly different background for fixed fields."""
-    return QApplication.palette().color(QPalette.ColorRole.Button)
+    return QApplication.palette().color(QPalette.ColorRole.Midlight)
 
 
 def selected_color():
