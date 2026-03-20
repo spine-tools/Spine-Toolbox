@@ -117,11 +117,24 @@ class EntityScenarioActivityGraph(GraphBase):
                 continue
             activity = graph.edges[alternative_id, entity_id]["active"]
             max_rank = rank
+        if activity is None:
+            class_table = db_map.mapped_table("entity_class")
+            entity_table = db_map.mapped_table("entity")
+            entity = entity_table[entity_id]
+            for element_id in entity["element_id_list"]:
+                element_activity = self.is_entity_active(db_map, element_id, scenario_id)
+                if element_activity is False:
+                    return False
+                elif element_activity is None:
+                    entity_class = class_table[entity_table[element_id]["class_id"]]
+                    if not entity_class["active_by_default"]:
+                        return False
         return activity
 
     @staticmethod
     def _build_graph(db_map: DatabaseMapping) -> nx.DiGraph:
         graph = nx.DiGraph()
+        db_map.fetch_all("scenario_alternative")
         for scenario_alternative in db_map.mapped_table("scenario_alternative").values():
             if not scenario_alternative.is_valid():
                 continue

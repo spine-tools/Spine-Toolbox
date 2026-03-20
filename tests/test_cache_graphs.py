@@ -187,7 +187,7 @@ class TestEntityScenarioActivityGraph:
         graph = EntityScenarioActivityGraph()
         assert graph.is_entity_active(db_map, entity["id"], scenario["id"]) is None
 
-    def test_entity_alternative_for_alternative_thats_not_in_scenario(self, db_map):
+    def test_entity_alternative_for_alternative_that_is_not_in_scenario(self, db_map):
         base_alternative = db_map.alternative(name="Base")
         with db_map:
             db_map.add_entity_class(name="Widget")
@@ -245,3 +245,30 @@ class TestEntityScenarioActivityGraph:
             db_map.add_scenario_alternative(scenario_id=scenario["id"], alternative_id=top_alternative["id"], rank=1)
         graph = EntityScenarioActivityGraph()
         assert graph.is_entity_active(db_map, entity["id"], scenario["id"]) is True
+
+    @pytest.mark.parametrize("element_active,expected", [(True, None), (False, False)])
+    def test_element_of_nd_entity_is_active(self, db_map, element_active, expected):
+        with db_map:
+            alternative_id = db_map.alternative(name="Base")["id"]
+            db_map.add_entity_class(name="Widget")
+            toolbar = db_map.add_entity(entity_class_name="Widget", name="toolbar")
+            db_map.add_entity_alternative(entity_id=toolbar["id"], alternative_id=alternative_id, active=element_active)
+            db_map.add_entity_class(dimension_name_list=["Widget"])
+            toolbar_relationship = db_map.add_entity(entity_class_name="Widget__", entity_byname=("toolbar",))
+            scenario = db_map.add_scenario(name="Scenario")
+            db_map.add_scenario_alternative(scenario_id=scenario["id"], alternative_id=alternative_id, rank=0)
+        graph = EntityScenarioActivityGraph()
+        assert graph.is_entity_active(db_map, toolbar_relationship["id"], scenario["id"]) is expected
+
+    @pytest.mark.parametrize("active_by_default,expected", [(True, None), (False, False)])
+    def test_default_activity_of_nd_entitys_element(self, db_map, active_by_default, expected):
+        with db_map:
+            alternative_id = db_map.alternative(name="Base")["id"]
+            db_map.add_entity_class(name="Widget", active_by_default=active_by_default)
+            db_map.add_entity(entity_class_name="Widget", name="toolbar")
+            db_map.add_entity_class(dimension_name_list=["Widget"])
+            toolbar_relationship = db_map.add_entity(entity_class_name="Widget__", entity_byname=("toolbar",))
+            scenario = db_map.add_scenario(name="Scenario")
+            db_map.add_scenario_alternative(scenario_id=scenario["id"], alternative_id=alternative_id, rank=0)
+        graph = EntityScenarioActivityGraph()
+        assert graph.is_entity_active(db_map, toolbar_relationship["id"], scenario["id"]) is expected
