@@ -14,7 +14,6 @@
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
-from ..config import STATUSBAR_SS
 
 
 class MainStatusBar(QStatusBar):
@@ -29,7 +28,6 @@ class MainStatusBar(QStatusBar):
         """
         super().__init__(toolbox)
         self._toolbox = toolbox
-        self.setStyleSheet(STATUSBAR_SS)
         self._executions_menu = QMenu(self)
         self.executions_button = QToolButton(self)
         self.reset_executions_button_text()

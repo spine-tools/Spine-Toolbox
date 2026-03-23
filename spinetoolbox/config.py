@@ -53,7 +53,4 @@ PROJECT_CONSUMER_REPLAY_FILENAME: Literal["consumer_replay.json"] = "consumer_re
 SPECIFICATION_LOCAL_DATA_FILENAME: Literal["specification_local_data.json"] = "specification_local_data.json"
 PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file name for remote execution
 
-# Stylesheets
-STATUSBAR_SS = ""
-
 FG_COLOR = "#F0F0F0"
