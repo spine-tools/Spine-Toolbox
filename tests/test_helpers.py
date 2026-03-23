@@ -382,7 +382,7 @@ class TestFormatLogMessage:
 
     @pytest.mark.parametrize(
         "msg_type,expected_text_color",
-        [("msg", None), ("msg_success", "#0bc20a"), ("msg_error", "#c20a0a"), ("msg_warning", "#c1c20a")],
+        [("msg", None), ("msg_success", "#007a00"), ("msg_error", "#cc0000"), ("msg_warning", "#d4a017")],
     )
     def test_with_black_text(self, msg_type, expected_text_color, parent_widget):
         self._set_text_color(parent_widget, Qt.GlobalColor.black)
@@ -390,7 +390,7 @@ class TestFormatLogMessage:
 
     @pytest.mark.parametrize(
         "msg_type,expected_text_color",
-        [("msg", None), ("msg_success", "#6ef76e"), ("msg_error", "#f76e6e"), ("msg_warning", "#f7f76e")],
+        [("msg", None), ("msg_success", "#00ff00"), ("msg_error", "#ff3333"), ("msg_warning", "#ffcc00")],
     )
     def test_with_white_text(self, msg_type, expected_text_color, parent_widget):
         self._set_text_color(parent_widget, Qt.GlobalColor.white)
