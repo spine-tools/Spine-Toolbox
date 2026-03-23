@@ -429,19 +429,6 @@ class ToolboxUI(QMainWindow):
         elif theme == "light":
             QApplication.setStyle("Fusion")
             QApplication.setPalette(_make_light_palette())
-            QApplication.instance().setStyleSheet(
-                "QCheckBox::indicator, QTreeView::indicator,"
-                "QListView::indicator, QGroupBox::indicator {"
-                "    border: 1px solid #999999;"
-                "    border-radius: 2px;"
-                "    background-color: white;"
-                "}"
-                "QCheckBox::indicator:checked, QTreeView::indicator:checked,"
-                "QListView::indicator:checked, QGroupBox::indicator:checked {"
-                "    background-color: #308cc6;"
-                "    image: url(:/icons/menu_icons/check-white.svg);"
-                "}"
-            )
 
     @staticmethod
     def set_error_mode():

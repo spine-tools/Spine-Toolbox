@@ -15,7 +15,7 @@ import os
 import pathlib
 import shutil
 from PySide6.QtCore import QEvent, QPoint, QSettings, QSize, Qt, QUrl, Slot
-from PySide6.QtGui import QColor, QDesktopServices, QIcon, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
     get_julia_env,
