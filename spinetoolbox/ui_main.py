@@ -132,7 +132,7 @@ def _make_dark_palette():
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
     palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
-    palette.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+    palette.setColor(QPalette.ColorRole.Base, QColor(42, 42, 42))
     palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
     palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
     palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
@@ -154,6 +154,36 @@ def _make_dark_palette():
     palette.setColor(QPalette.ColorRole.Dark, QColor(35, 35, 35))
     palette.setColor(QPalette.ColorRole.Mid, QColor(48, 48, 48))
     palette.setColor(QPalette.ColorRole.Shadow, QColor(20, 20, 20))
+    return palette
+
+
+def _make_light_palette():
+    """Creates a light QPalette suitable for the Fusion style on systems with dark OS theme."""
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor(239, 239, 239))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.Base, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(240, 240, 240))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(255, 255, 220))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(128, 128, 128))
+    palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+    palette.setColor(QPalette.ColorRole.Button, QColor(239, 239, 239))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(48, 140, 198))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Link, QColor(0, 0, 255))
+    palette.setColor(QPalette.ColorRole.LinkVisited, QColor(255, 0, 255))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorRole.Light, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Midlight, QColor(227, 227, 227))
+    palette.setColor(QPalette.ColorRole.Dark, QColor(130, 130, 130))
+    palette.setColor(QPalette.ColorRole.Mid, QColor(160, 160, 160))
+    palette.setColor(QPalette.ColorRole.Shadow, QColor(90, 90, 90))
     return palette
 
 
@@ -396,8 +426,22 @@ class ToolboxUI(QMainWindow):
                 "    titlebar-normal-icon: url(:/icons/menu_icons/float-white.svg);"
                 "}"
             )
-        elif theme == "light" and sys.platform != "darwin":
+        elif theme == "light":
             QApplication.setStyle("Fusion")
+            QApplication.setPalette(_make_light_palette())
+            QApplication.instance().setStyleSheet(
+                "QCheckBox::indicator, QTreeView::indicator,"
+                "QListView::indicator, QGroupBox::indicator {"
+                "    border: 1px solid #999999;"
+                "    border-radius: 2px;"
+                "    background-color: white;"
+                "}"
+                "QCheckBox::indicator:checked, QTreeView::indicator:checked,"
+                "QListView::indicator:checked, QGroupBox::indicator:checked {"
+                "    background-color: #308cc6;"
+                "    image: url(:/icons/menu_icons/check-white.svg);"
+                "}"
+            )
 
     @staticmethod
     def set_error_mode():
