@@ -46,7 +46,9 @@ class CustomQTextBrowser(QTextBrowser):
         self._frame_format.setBorder(1)
         self._selected_frame_format = QTextFrameFormat(self._frame_format)
         palette = self.palette()
-        self._selected_frame_format.setBackground(QBrush(palette.color(QPalette.ColorRole.Highlight).darker()))
+        window_color = palette.color(QPalette.ColorRole.Window)
+        selected_bg_color = window_color.darker(105) if window_color.lightnessF() > 0.5 else window_color.lighter()
+        self._selected_frame_format.setBackground(QBrush(selected_bg_color))
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)
 
