@@ -904,13 +904,18 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
-        self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         if self.ui.radioButton_theme_light.isChecked():
             theme = "light"
         elif self.ui.radioButton_theme_dark.isChecked():
             theme = "dark"
         else:
             theme = "os"
+        old_theme = self._qsettings.value("appSettings/theme", defaultValue="os")
+        if theme != old_theme:
+            # Reset bg color to palette default when theme changes
+            self._qsettings.remove("appSettings/bgColor")
+        else:
+            self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         self._qsettings.setValue("appSettings/theme", theme)
         save_spec = str(self.ui.checkBox_save_spec_before_closing.checkState().value)
         self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)

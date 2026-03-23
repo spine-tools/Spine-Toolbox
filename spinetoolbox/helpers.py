@@ -150,25 +150,17 @@ def format_log_message(msg_type: MessageType, message: str, widget: QWidget, sho
         formatted message
     """
     if msg_type == "msg":
-        color_tag = ""
+        color = None
     else:
-        lightness = widget.palette().color(QPalette.ColorRole.Text).lightnessF()
-        match msg_type:
-            case "msg_success":
-                hue = 0.333
-            case "msg_error":
-                hue = 0.0
-            case "msg_warning":
-                hue = 0.167
-            case _:
-                raise RuntimeError(f"logic error: no such message type {msg_type}")
-        saturation = 0.9
-        if lightness < 0.5:
-            lightness = 0.4
+        is_dark_theme = widget.palette().color(QPalette.ColorRole.Text).lightnessF() > 0.5
+        if is_dark_theme:
+            colors = {"msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "#ffcc00"}
         else:
-            lightness = 0.7
-        color = QColor.fromHslF(hue, saturation, lightness).name()
-        color_tag = f"color:{color};"
+            colors = {"msg_success": "#007a00", "msg_error": "#cc0000", "msg_warning": "#d4a017"}
+        color = colors.get(msg_type)
+        if color is None:
+            raise RuntimeError(f"logic error: no such message type {msg_type}")
+    color_tag = f"color:{color};" if color else ""
     open_tag = f"<span style='{color_tag}white-space:pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
