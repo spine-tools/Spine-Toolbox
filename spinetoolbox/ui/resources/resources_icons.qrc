@@ -96,6 +96,9 @@
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/times.svg</file>
+    <file>menu_icons/times-white.svg</file>
+    <file>menu_icons/float-white.svg</file>
+    <file>menu_icons/check-white.svg</file>
     <file>menu_icons/redo.svg</file>
     <file>menu_icons/undo.svg</file>
     <file>menu_icons/pivot-table.svg</file>

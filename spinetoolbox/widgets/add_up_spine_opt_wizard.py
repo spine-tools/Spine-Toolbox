@@ -13,7 +13,7 @@
 """Classes for custom QDialogs for julia setup."""
 from enum import IntEnum, auto
 import pathlib
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QCursor, QTextCursor
 from PySide6.QtWidgets import (
@@ -31,7 +31,6 @@ from PySide6.QtWidgets import (
     QWizard,
     QWizardPage,
 )
-from typing_extensions import Literal
 from spine_engine.logger_interface import LoggerInterface
 from ..execution_managers import QProcessExecutionManager
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
@@ -65,6 +64,7 @@ class AddUpSpineOptWizard(QWizard):
             julia_project: path to Julia project
         """
         super().__init__(parent)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.process_log: str | None = None
         self.required_action: RequiredActions | None = None
         self.spine_opt_version_before_update: list[int] | None = None

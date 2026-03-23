@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QHeaderView, QMenu, QWidget
 from ...plotting import PlottingError, plot_pivot_table_selection
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
-from ..mvcmodels.colors import PIVOT_TABLE_HEADER_COLOR
+from ..mvcmodels.colors import pivot_table_header_color
 from .tabular_view_header_widget import TabularViewHeaderWidget
 
 
@@ -36,7 +36,7 @@ class PivotTableHeaderView(QHeaderView):
         super().__init__(orientation, parent=pivot_table_view)
         self._area = area
         self.setAcceptDrops(True)
-        self.setStyleSheet(f"QHeaderView::section {{background-color: {PIVOT_TABLE_HEADER_COLOR.name()};}}")
+        self.setStyleSheet(f"QHeaderView::section {{background-color: {pivot_table_header_color().name()};}}")
         self.setSectionsClickable(True)
         self.setVisible(True)
 

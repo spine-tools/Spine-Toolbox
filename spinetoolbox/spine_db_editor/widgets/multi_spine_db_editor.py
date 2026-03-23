@@ -14,10 +14,10 @@
 from contextlib import suppress
 import os
 from PySide6.QtCore import QPoint, Slot
-from PySide6.QtGui import QFont, QIcon
-from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
+from PySide6.QtGui import QFont, QIcon, QPalette
+from PySide6.QtWidgets import QApplication, QMenu, QStatusBar, QToolButton
 from sqlalchemy.engine.url import URL
-from ...config import MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL
+from ...config import ONLINE_DOCUMENTATION_URL
 from ...font import TOOLBOX_FONT
 from ...helpers import CharIconEngine, normcase_database_url_path, open_url
 from ...widgets.multi_tab_window import MultiTabWindow
@@ -40,7 +40,6 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.db_mngr = db_mngr
         self._waiting_box = None
         self.settings_form = SpineDBEditorSettingsWidget(self)
-        self.setStyleSheet(MAINWINDOW_SS)
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStatusBar(_CustomStatusBar(self))
@@ -184,19 +183,22 @@ class _CustomStatusBar(QStatusBar):
         super().__init__(parent)
         self.setContentsMargins(0, 0, 4, 0)
         self._hide_button = QToolButton()
+        palette = QApplication.palette()
+        hover_color = palette.color(QPalette.ColorRole.Midlight).name()
+        pressed_color = palette.color(QPalette.ColorRole.Mid).name()
         self._hide_button.setStyleSheet(
-            """
-            QToolButton {
+            f"""
+            QToolButton {{
                 background-color: transparent;
                 border: 0px;
                 border-radius: 6px;
-            }
-            QToolButton:hover {
-                background-color: #dddddd;
-            }
-            QToolButton:pressed {
-                background-color: #bbbbbb;
-            }
+            }}
+            QToolButton:hover {{
+                background-color: {hover_color};
+            }}
+            QToolButton:pressed {{
+                background-color: {pressed_color};
+            }}
             """
         )
         self._hide_button.setText("\uf00d")

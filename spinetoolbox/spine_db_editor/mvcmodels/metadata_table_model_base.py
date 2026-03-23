@@ -15,7 +15,7 @@ from enum import IntEnum, unique
 from operator import itemgetter
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from spinetoolbox.helpers import rows_to_row_count_tuples
-from .colors import FIXED_FIELD_COLOR
+from .colors import fixed_field_color
 
 
 @unique
@@ -135,7 +135,7 @@ class MetadataTableModelBase(QAbstractTableModel):
             and row < len(self._data)
             and self._row_id(self._data[row]) is not None
         ):
-            return FIXED_FIELD_COLOR
+            return fixed_field_color()
         return None
 
     def _add_data_to_db_mngr(self, name, value, db_map):

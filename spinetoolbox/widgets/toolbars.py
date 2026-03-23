@@ -12,7 +12,7 @@
 
 """Functions to make and handle QToolBars."""
 from PySide6.QtCore import QModelIndex, QPoint, QSize, Qt, Slot
-from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPainterPath
+from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPainterPath, QPalette, QPen
 from PySide6.QtWidgets import QMenu, QToolBar, QToolButton, QWidget
 from ..helpers import CharIconEngine, ColoredIcon, make_icon_toolbar_ss
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
@@ -49,13 +49,14 @@ class _TitleWidget(QWidget):
             x = self.margin
         pos = QPoint(x, self.desired_height - self.margin)
         painter.save()
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setFont(self.font())
         path = QPainterPath()
         path.addText(pos, self.font(), self._title)
-        painter.setPen(Qt.white)
+        pen_color = self.palette().color(QPalette.ColorRole.Mid)
+        painter.setPen(QPen(pen_color, 0.5))
         painter.drawPath(path)
-        painter.setPen(Qt.black)
+        painter.setPen(self.palette().color(QPalette.ColorRole.WindowText))
         painter.drawText(pos, self._title)
         painter.restore()
 
@@ -448,7 +449,19 @@ class ExecuteToolBar(ToolBar):
         super().__init__("Execute", parent)  # Inherits stylesheet from ToolboxUI
 
     def setup(self):
+        self._make_execute_icons_theme_aware()
         self._add_buttons()
+
+    def _make_execute_icons_theme_aware(self):
+        """Replaces static SVG icons on execute actions with theme-aware ColoredIcon versions."""
+        icon_size = self.iconSize()
+        ui = self._toolbox.ui
+        for action, icon_path in (
+            (ui.actionExecute_project, ":/icons/menu_icons/play-circle-solid.svg"),
+            (ui.actionExecute_selection, ":/icons/menu_icons/play-circle-regular.svg"),
+            (ui.actionStop_execution, ":/icons/menu_icons/stop-circle-regular.svg"),
+        ):
+            action.setIcon(ColoredIcon(icon_path, None, icon_size))
 
     def _add_button_from_action(self, action):
         button = NiceButton()
