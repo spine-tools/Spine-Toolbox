@@ -12,7 +12,17 @@
 
 """Class for a custom QTextBrowser for showing the logs and tool output."""
 from PySide6.QtCore import Slot
-from PySide6.QtGui import QAction, QBrush, QColor, QFontDatabase, QPalette, QTextBlockFormat, QTextCursor, QTextFrameFormat
+from PySide6.QtGui import (
+    QAction,
+    QBrush,
+    QColor,
+    QFontDatabase,
+    QPalette,
+    QTextBlockFormat,
+    QTextCursor,
+    QTextFrame,
+    QTextFrameFormat,
+)
 from PySide6.QtWidgets import QMenu, QTextBrowser
 from ..helpers import scrolling_to_bottom
 
@@ -44,18 +54,11 @@ class CustomQTextBrowser(QTextBrowser):
         self._base_frame_format.setLeftMargin(8)
         self._base_frame_format.setPadding(2)
         self._base_frame_format.setBorder(1)
-        palette = self.palette()
-        is_dark = palette.color(QPalette.ColorRole.Text).lightnessF() > 0.5
-        # Normal (unselected) frame: slightly off-white or off-black background
+        self._base_frame_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Dotted)
         self._frame_format = QTextFrameFormat(self._base_frame_format)
-        self._normal_bg = QColor(45, 45, 50) if is_dark else QColor(240, 240, 240)
-        self._frame_format.setBackground(QBrush(self._normal_bg))
-        self._normal_text_color = QColor("white") if is_dark else QColor("black")
-        # Selected frame: dark blue background, always white text
         self._selected_frame_format = QTextFrameFormat(self._base_frame_format)
-        self._selected_bg = palette.color(QPalette.ColorRole.Highlight).darker()
-        self._selected_frame_format.setBackground(QBrush(self._selected_bg))
-        self._selected_text_color = QColor("white")
+        self._selected_frame_format.setBorder(3)
+        self._selected_frame_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Ridge)
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)
 
@@ -126,9 +129,9 @@ class CustomQTextBrowser(QTextBrowser):
             return
         self.select_execution(text)
 
-    def _make_log_entry_title(self, title):
-        color = self._normal_text_color.name()
-        return f"<b><span style='color:{color};'>{title}</span></b>"
+    @staticmethod
+    def _make_log_entry_title(title):
+        return f"<b>{title}</b>"
 
     def make_log_entry_point(self, timestamp):
         """Creates cursors (log entry points) for given items in event log.
@@ -218,7 +221,7 @@ class CustomQTextBrowser(QTextBrowser):
                     frame.setFrameFormat(frame_format)
         self.set_item_log_selected(True)
 
-    def set_item_log_selected(self, selected):
+    def set_item_log_selected(self, selected) -> None:
         active_item = self._toolbox.active_project_item or self._toolbox.active_link_item
         if not active_item:
             return
@@ -231,28 +234,25 @@ class CustomQTextBrowser(QTextBrowser):
             frame = cursor.currentFrame()
             if selected:
                 frame.setFrameFormat(self._selected_frame_format)
-                self._recolor_frame_text(frame, self._selected_text_color, recursive=True)
+                self._recolor_frame_text(frame)
                 for child_frame in frame.childFrames():
                     child_frame.setFrameFormat(self._selected_frame_format)
             else:
                 frame.setFrameFormat(self._frame_format)
-                self._recolor_frame_text(frame, self._normal_text_color, recursive=True)
+                self._recolor_frame_text(frame)
                 for child_frame in frame.childFrames():
                     child_frame.setFrameFormat(self._frame_format)
 
-    def _recolor_frame_text(self, frame, color, recursive=True):
+    def _recolor_frame_text(self, frame: QTextFrame) -> None:
         """Changes the text color of unstyled and title text in a frame.
 
         Leaves explicitly colored message text (success/error/warning) unchanged.
 
         Args:
             frame: the text frame to process
-            color: the new text color
-            recursive: if True, also process child frames
         """
-        if recursive:
-            for child_frame in frame.childFrames():
-                self._recolor_frame_text(child_frame, color, recursive=True)
+        for child_frame in frame.childFrames():
+            self._recolor_frame_text(child_frame)
         cursor = frame.firstCursorPosition()
         end = frame.lastPosition()
         while cursor.position() < end:
@@ -261,7 +261,6 @@ class CustomQTextBrowser(QTextBrowser):
             fmt = cursor.charFormat()
             fg = fmt.foreground()
             if not fg.style() or fg.color().saturationF() < 0.1:
-                fmt.setForeground(color)
                 cursor.setCharFormat(fmt)
             if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
                 break

@@ -24,6 +24,7 @@ import pytest
 from spinetoolbox.helpers import (
     DB_ITEM_SEPARATOR,
     HTMLTagFilter,
+    LogMessageHtmlParser,
     add_keyboard_shortcut_to_tool_tip,
     add_keyboard_shortcuts_to_action_tool_tips,
     copy_files,
@@ -382,7 +383,7 @@ class TestFormatLogMessage:
 
     @pytest.mark.parametrize(
         "msg_type,expected_text_color",
-        [("msg", None), ("msg_success", "#007a00"), ("msg_error", "#cc0000"), ("msg_warning", "#d4a017")],
+        [("msg", None), ("msg_success", "#007a00"), ("msg_error", "#cc0000"), ("msg_warning", "#c38f06")],
     )
     def test_with_black_text(self, msg_type, expected_text_color, parent_widget):
         self._set_text_color(parent_widget, Qt.GlobalColor.black)
@@ -416,6 +417,39 @@ class TestFormatLogMessage:
         expected = f"<span style='{color_tag}white-space:pre-wrap;'> {message}</span>"
         assert without_stamp == expected
         assert TestFormatLogMessage.STAMP_PATTERN.match(stamp) is not None
+
+
+@pytest.mark.parametrize("is_dark", [(True,), (False,)])
+class TestLogMessageHtmlParser:
+    @pytest.fixture
+    def color(self, is_dark):
+        return "#bb99ff" if is_dark else "#7755bb"
+
+    def test_raw_text(self, is_dark):
+        text = "Some text."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        assert parser.drain() == text
+
+    def test_text_with_ignored_tag(self, is_dark):
+        text = "This word is <b>bold</b>."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        assert parser.drain() == text
+
+    def test_text_with_unstyled_a_tag(self, is_dark, color):
+        text = "Link to <a href='http://example.com'>somewhere</a>."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        expected = f"Link to <a style=color:{color} href='http://example.com'>somewhere</a>."
+        assert parser.drain() == expected
+
+    def test_styled_tag_is_replaced_by_color(self, is_dark, color):
+        text = "Link to <a style=color:white href='http://example.com'>somewhere</a>."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        expected = f"Link to <a style=color:{color} href='http://example.com'>somewhere</a>."
+        assert parser.drain() == expected
 
 
 class TestOrderKey:
