@@ -149,10 +149,13 @@ def format_log_message(msg_type: MessageType, message: str, widget: QWidget, sho
     Returns:
         formatted message
     """
+    is_dark_theme = widget.palette().color(QPalette.ColorRole.Text).lightnessF() > 0.5
+    parser = LogMessageHtmlParser(is_dark_theme)
+    parser.feed(message)
+    message = parser.drain()
     if msg_type == "msg":
         color = None
     else:
-        is_dark_theme = widget.palette().color(QPalette.ColorRole.Text).lightnessF() > 0.5
         if is_dark_theme:
             colors = {"msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "#ffcc00"}
         else:
@@ -164,6 +167,44 @@ def format_log_message(msg_type: MessageType, message: str, widget: QWidget, sho
     open_tag = f"<span style='{color_tag}white-space:pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
+
+
+class LogMessageHtmlParser(HTMLParser):
+    """Adds colors to <a> tags in HTML text."""
+
+    def __init__(self, is_dark: bool):
+        super().__init__()
+        self._is_dark = is_dark
+        self._text = ""
+
+    def drain(self) -> str:
+        text = self._text
+        self._text = ""
+        return text
+
+    def handle_data(self, data):
+        self._text += data
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            color = "#bb99ff" if self._is_dark else "#7755bb"
+            self._text += f"<a style=color:{color}"
+            for key, value in attrs:
+                if key == "style":
+                    continue
+                if not self._text.endswith(" "):
+                    self._text += " "
+                self._text += f"{key}='{value}'"
+            self._text += ">"
+        else:
+            self._text += self.get_starttag_text()
+
+    def handle_endtag(self, tag):
+        self._text += f"</{tag}>"
+
+    def handle_startendtag(self, tag, attrs):
+        attributes = " ".join(f"{key}={value}" for key, value in attrs)
+        self._text += f"<{tag} {attributes}/>"
 
 
 def busy_effect(func: Callable) -> Any:

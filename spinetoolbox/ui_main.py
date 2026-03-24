@@ -550,7 +550,7 @@ class ToolboxUI(QMainWindow):
         """Shows a welcome message in the Event log."""
         p = os.path.join(f"{ONLINE_DOCUMENTATION_URL}", "getting_started.html")
         getting_started_anchor = (
-            "<a style='color:#99CCFF;' title='"
+            "<a title='"
             + p
             + f"' href='{ONLINE_DOCUMENTATION_URL}/getting_started.html'>Getting Started</a>"
         )
@@ -1256,8 +1256,8 @@ class ToolboxUI(QMainWindow):
         """
         self.msg_success.emit(
             f"Specification <b>{name}</b> successfully saved as "
-            f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a> "
-            f"<a style='color:white;' href='change_spec_file.{name}'><b>[change]</b></a>"
+            f"<a href='file:///{path}'>{path}</a> "
+            f"<a href='change_spec_file.{name}'><b>[change]</b></a>"
         )
 
     @Slot()
