@@ -156,7 +156,7 @@ def format_log_message(msg_type: MessageType, message: str, widget: QWidget, sho
         if is_dark_theme:
             colors = {"msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "#ffcc00"}
         else:
-            colors = {"msg_success": "#007a00", "msg_error": "#cc0000", "msg_warning": "#d4a017"}
+            colors = {"msg_success": "#007a00", "msg_error": "#cc0000", "msg_warning": "#c38f06"}
         color = colors.get(msg_type)
         if color is None:
             raise RuntimeError(f"logic error: no such message type {msg_type}")

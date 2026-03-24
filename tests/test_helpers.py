@@ -382,7 +382,7 @@ class TestFormatLogMessage:
 
     @pytest.mark.parametrize(
         "msg_type,expected_text_color",
-        [("msg", None), ("msg_success", "#007a00"), ("msg_error", "#cc0000"), ("msg_warning", "#d4a017")],
+        [("msg", None), ("msg_success", "#007a00"), ("msg_error", "#cc0000"), ("msg_warning", "#c38f06")],
     )
     def test_with_black_text(self, msg_type, expected_text_color, parent_widget):
         self._set_text_color(parent_widget, Qt.GlobalColor.black)
