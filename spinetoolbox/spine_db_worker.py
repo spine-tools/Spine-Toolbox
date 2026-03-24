@@ -150,7 +150,8 @@ class SpineDBWorker(QObject):
         if not has_external_commits or fully_fetched:
             something_fetched = self._iterate_mapping(parent)
             if fully_fetched:
-                parent.set_fetched(self._db_map, True)
+                if not something_fetched:
+                    parent.set_fetched(self._db_map, True)
                 return
             if something_fetched:
                 return

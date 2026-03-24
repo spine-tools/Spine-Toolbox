@@ -349,6 +349,57 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             self.assertEqual(self._db_mngr.get_item(self._db_map, "list_value", list_value_id), item)
             fetcher.set_obsolete(True)
 
+    def test_fetch_entities_exceeding_chunk_size(self):
+        """Test that all entities are fetched when their count exceeds chunk_size.
+
+        The bug scenario: when the DB query loads all entities at once (< 1000),
+        the item type is marked as fully_fetched. Then _iterate_mapping adds only
+        chunk_size (1000) items and the parent is prematurely marked as fetched,
+        leaving the remaining entities invisible.
+
+        To reproduce, using a file-based database. It is reopened so the
+        in-memory mapping starts empty and must load from the DB query.
+        """
+        entity_count = 1200
+        self._db_mngr.close_all_sessions()
+        import os
+        import tempfile
+
+        tmp_dir = tempfile.mkdtemp()
+        db_path = os.path.join(tmp_dir, "test.sqlite")
+        db_url = "sqlite:///" + db_path
+
+        from spinedb_api import DatabaseMapping as DM
+
+        db_map = DM(db_url, create=True)
+        import_data(
+            db_map, entity_classes=(("oc",),), entities=[("oc", f"entity_{i:04d}") for i in range(entity_count)]
+        )
+        db_map.commit_session("Add test data")
+        db_map.close()
+
+        self._db_map = self._db_mngr.get_db_map(db_url, self._logger)
+        self._db_mngr.name_registry.register(self._db_map.sa_url, "chunk_test_db")
+        with q_object(QObject()) as parent:
+            fetcher = ExampleItemTypeFetchParent("entity", parent)
+            fetched_entity_names = set()
+            while self._db_mngr.can_fetch_more(self._db_map, fetcher):
+                self._db_mngr.fetch_more(self._db_map, fetcher)
+                qApp.processEvents()  # pylint: disable=undefined-variable
+            for call_args in fetcher.handle_items_added.call_args_list:
+                items_by_db_map = call_args[0][0]
+                for items in items_by_db_map.values():
+                    for item in items:
+                        fetched_entity_names.add(item["name"])
+            expected_names = {f"entity_{i:04d}" for i in range(entity_count)}
+            missing = expected_names - fetched_entity_names
+            self.assertEqual(missing, set(), f"Missing {len(missing)} entities from fetch, e.g.: {sorted(missing)[:5]}")
+            self.assertEqual(len(fetched_entity_names & expected_names), entity_count)
+            fetcher.set_obsolete(True)
+        import shutil
+
+        shutil.rmtree(tmp_dir)
+
 
 if __name__ == "__main__":
     unittest.main()
