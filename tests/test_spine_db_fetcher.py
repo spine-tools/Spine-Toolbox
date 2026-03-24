@@ -396,9 +396,12 @@ class TestSpineDBFetcher(TestCaseWithQApplication):
             self.assertEqual(missing, set(), f"Missing {len(missing)} entities from fetch, e.g.: {sorted(missing)[:5]}")
             self.assertEqual(len(fetched_entity_names & expected_names), entity_count)
             fetcher.set_obsolete(True)
+        self._db_mngr.close_all_sessions()
         import shutil
 
         shutil.rmtree(tmp_dir)
+        # Re-create the in-memory db_map expected by tearDown
+        self._db_map = self._db_mngr.get_db_map("sqlite://", self._logger, create=True)
 
 
 if __name__ == "__main__":
