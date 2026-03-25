@@ -14,7 +14,7 @@ jobs:
     name: Bundle
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.git-ref }}
           fetch-depth: 0
@@ -25,7 +25,7 @@ jobs:
           git describe --tags --exact-match
           Write-Output "is_tag=$(if ($?) { 'true' } else { 'false' })" >> $Env:GITHUB_OUTPUT
       - name: "Set up Python"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -115,7 +115,7 @@ jobs:
             Spine-Toolbox-win-${{ inputs.git-ref }}.zip
       - name: Upload archive
         if: steps.commit.outputs.is_tag == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: "./dist/Spine Toolbox"
