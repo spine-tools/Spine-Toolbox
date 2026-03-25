@@ -15,9 +15,9 @@ This is the PyInstaller spec file for Spine Toolbox.
 We bundle an embeddable Python interpreter with Toolbox
 so all basic functionality should be available without the need to install Python.
 
-Steps to bundle Spine Toolbox:
+Steps to bundle Spine Toolbox on command line:
 
-1. Activate Toolbox Python environment.
+1. Activate your Toolbox Python environment.
 2. Install PyInstaller using Pip.
 3. Download one of the 64-bit *embeddable* Python packages from https://www.python.org/downloads/windows/
 4. Unzip the downloaded package somewhere, e.g. <path-to-embeddable-python>
