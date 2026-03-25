@@ -30,14 +30,14 @@ jobs:
     name: Run unit tests
     runs-on: ${{ inputs.host-os }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         repository: ${{ inputs.repository }}
         fetch-depth: 0
     - name: Version from Git tags
       run: git describe --tags
     - name: Set up Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python-version }}
         cache: pip
