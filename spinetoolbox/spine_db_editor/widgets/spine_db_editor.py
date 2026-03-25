@@ -442,7 +442,7 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Import file",
             self._get_base_dir(),
-            "All files (*);;SQLite files (*.sqlite);;JSON files (*.json);;Excel files (*.xlsx)",
+            "All files (*);;JSON files (*.json);;Excel files (*.xlsx);;SQLite files (*.sqlite)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -623,7 +623,7 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Export file",
             self._get_base_dir(),
-            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+            "JSON file (*.json);; Excel file (*.xlsx);; SQLite (*.sqlite) ",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
