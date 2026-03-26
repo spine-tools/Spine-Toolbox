@@ -221,3 +221,15 @@ class ScenarioModel(TreeModelBase):
                     {db_map: [{"id": item["id"], "alternative_id_list": alternative_id_list}]}
                 )
                 break
+
+    def add_scenario_alternatives(self, scenario_item: ScenarioItem, alternatives: list[str]) -> None:
+        db_map = scenario_item.db_map
+        alternative_ids = db_map.mapped_table("scenario")[scenario_item.id]["alternative_id_list"]
+        available_alternatives = {
+            alternative["name"]: alternative["id"]
+            for alternative in db_map.mapped_table("alternative").values()
+            if alternative.is_valid()
+        }
+        alternative_ids += [available_alternatives[name] for name in alternatives]
+        db_item = {"id": scenario_item.id, "alternative_id_list": alternative_ids}
+        self.db_mngr.set_scenario_alternatives({db_map: [db_item]})

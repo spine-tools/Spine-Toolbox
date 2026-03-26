@@ -13,8 +13,8 @@
 """Classes for custom context menus and pop-up menus."""
 from collections.abc import Callable, Iterator
 from typing import Any, Hashable
-from PySide6.QtCore import QPoint, Signal, Slot
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtCore import QPoint, Qt, Signal, Slot
+from PySide6.QtGui import QAction, QActionGroup, QIcon, QMouseEvent
 from PySide6.QtWidgets import QMenu, QWidget
 from spinedb_api import DatabaseMapping, IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
@@ -288,3 +288,56 @@ class DocksMenu(QMenu):
         self.addAction(self.db_editor.ui.item_metadata_dock_widget.toggleViewAction())
         self.addSeparator()
         self.addAction(self.db_editor.ui.dockWidget_exports.toggleViewAction())
+
+
+class RecursiveChoiceSubMenu(QMenu):
+    choice_made = Signal(list)
+
+    def __init__(self, choices: list[str], parent: QWidget | None):
+        super().__init__(parent)
+        self._choices = choices
+        self._init_populated = True
+        self.aboutToShow.connect(self._populate, Qt.ConnectionType.SingleShotConnection)
+        self._single_choice_action: QAction | None = None
+
+    def rebuild(self, choices: list[str]) -> None:
+        if choices == self._choices:
+            return
+        self._choices = choices
+        self.clear()
+        if not self._init_populated:
+            self.aboutToShow.connect(self._populate, Qt.ConnectionType.SingleShotConnection)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.NoModifier:
+            action = self.actionAt(event.pos())
+            if action is not None and action.menu() is not None:
+                event.accept()
+                self.choice_made.emit([self.title(), action.text()])
+                return
+        super().mouseReleaseEvent(event)
+
+    @Slot()
+    def _populate(self):
+        self._init_populated = False
+        for choice in sorted(self._choices):
+            sub_choices = set(self._choices) - {choice}
+            if sub_choices:
+                submenu = RecursiveChoiceSubMenu(sorted(sub_choices), self)
+                submenu.setTitle(choice)
+                submenu.choice_made.connect(self._add_to_made_choices)
+                submenu.menuAction().toggled.connect(lambda *args: print("it happened"))
+                self.addMenu(submenu)
+            else:
+                action = self.addAction(choice)
+                action.triggered.connect(self._emit_choice_made)
+                self._single_choice_action = action
+
+    @Slot(bool)
+    def _emit_choice_made(self, checked: bool = True) -> None:
+        self.choice_made.emit([self.title(), self._single_choice_action.text()])
+
+    @Slot(list)
+    def _add_to_made_choices(self, choices: list[str]) -> None:
+        choices.insert(0, self.title())
+        self.choice_made.emit(choices)
