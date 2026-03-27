@@ -18,7 +18,7 @@ from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSer
 from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
+class TestTimeSeriesModelVariableResolution(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QObject()
 
@@ -174,7 +174,15 @@ class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False), self._parent
         )
-        self.assertFalse(model.removeRows(0, 1))
+        self.assertFalse(model.removeRows(1, 1))
+
+    def test_empty_row_can_be_included_in_removed_rows(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-05T12:00"], [2.3, 3.2], False, False),
+            self._parent,
+        )
+        self.assertTrue(model.removeRows(1, 2))
+        self.assertEqual(model.value, TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], False, False))
 
     def test_reset_updates_indexes(self):
         model = TimeSeriesModelVariableResolution(

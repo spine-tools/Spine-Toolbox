@@ -16,100 +16,97 @@ import numpy.testing
 from PySide6.QtCore import Qt
 from spinedb_api import TimePattern
 from spinetoolbox.mvcmodels.time_pattern_model import TimePatternModel
-from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimePatternModel(TestCaseWithQApplication):
-    def test_flags(self):
-        model = TimePatternModel(TimePattern(["", ""], [0.0, 0.0]), None)
+class TestTimePatternModel:
+    def test_flags(self, parent_object):
+        model = TimePatternModel(TimePattern(["", ""], [0.0, 0.0]), parent_object)
         for row in range(len(model.value)):
             for column in range(2):
                 model_index = model.index(row, column)
-                self.assertEqual(model.flags(model_index), Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable)
-        model.deleteLater()
+                assert (
+                    model.flags(model_index)
+                    == Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable
+                )
 
-    def test_insert_rows_in_the_beginning(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.insertRows(0, 1))
-        self.assertEqual(len(model.value), 3)
-        self.assertEqual(model.value.indexes, ["", "M7-12", "M1-6"])
+    def test_insert_rows_in_the_beginning(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.insertRows(0, 1)
+        assert len(model.value) == 3
+        assert model.value.indexes == ["", "M7-12", "M1-6"]
         numpy.testing.assert_equal(model.value.values, np.array([0.0, -5.0, 7.0]))
-        model.deleteLater()
 
-    def test_insert_single_row_in_the_middle(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.insertRows(1, 1))
-        self.assertEqual(len(model.value), 3)
-        self.assertEqual(model.value.indexes, ["M7-12", "", "M1-6"])
+    def test_insert_single_row_in_the_middle(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.insertRows(1, 1)
+        assert len(model.value) == 3
+        assert model.value.indexes == ["M7-12", "", "M1-6"]
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 0.0, 7.0]))
-        model.deleteLater()
 
-    def test_insert_multiple_rows_in_the_middle(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.insertRows(1, 3))
-        self.assertEqual(len(model.value), 5)
-        self.assertEqual(model.value.indexes, ["M7-12", "", "", "", "M1-6"])
+    def test_insert_multiple_rows_in_the_middle(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.insertRows(1, 3)
+        assert len(model.value) == 5
+        assert model.value.indexes == ["M7-12", "", "", "", "M1-6"]
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 0.0, 0.0, 0.0, 7.0]))
-        model.deleteLater()
 
-    def test_insert_rows_in_the_end(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.insertRows(2, 1))
-        self.assertEqual(len(model.value), 3)
-        self.assertEqual(model.value.indexes, ["M7-12", "M1-6", ""])
+    def test_insert_rows_in_the_end(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.insertRows(2, 1)
+        assert len(model.value) == 3
+        assert model.value.indexes == ["M7-12", "M1-6", ""]
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 7.0, 0.0]))
-        model.deleteLater()
 
-    def test_remove_rows_from_the_beginning(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.removeRows(0, 1))
-        self.assertEqual(len(model.value), 1)
-        self.assertEqual(model.value.indexes, ["M1-6"])
+    def test_remove_rows_from_the_beginning(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.removeRows(0, 1)
+        assert len(model.value) == 1
+        assert model.value.indexes == ["M1-6"]
         numpy.testing.assert_equal(model.value.values, np.array([7.0]))
-        model.deleteLater()
 
-    def test_remove_rows_from_the_middle(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6", "M4-9"], [-5.0, 3.0, 7.0]), None)
-        self.assertTrue(model.removeRows(1, 1))
-        self.assertEqual(len(model.value), 2)
-        self.assertEqual(model.value.indexes, ["M7-12", "M4-9"])
+    def test_remove_rows_from_the_middle(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6", "M4-9"], [-5.0, 3.0, 7.0]), parent_object)
+        assert model.removeRows(1, 1)
+        assert len(model.value) == 2
+        assert model.value.indexes == ["M7-12", "M4-9"]
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 7.0]))
-        model.deleteLater()
 
-    def test_remove_rows_from_the_end(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.removeRows(1, 1))
-        self.assertEqual(len(model.value), 1)
-        self.assertEqual(model.value.indexes, ["M7-12"])
+    def test_remove_rows_from_the_end(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.removeRows(1, 1)
+        assert len(model.value) == 1
+        assert model.value.indexes == ["M7-12"]
         numpy.testing.assert_equal(model.value.values, [-5.0])
-        model.deleteLater()
 
-    def test_cannot_remove_all_rows(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
-        self.assertTrue(model.removeRows(0, 2))
-        self.assertEqual(len(model.value), 1)
-        self.assertEqual(model.value.indexes, ["M7-12"])
+    def test_cannot_remove_all_rows(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.removeRows(0, 2)
+        assert len(model.value) == 1
+        assert model.value.indexes == ["M7-12"]
         numpy.testing.assert_equal(model.value.values, [-5.0])
-        model.deleteLater()
 
-    def test_removing_last_row_fails(self):
-        model = TimePatternModel(TimePattern(["M7-12"], [-5.0]), None)
-        self.assertFalse(model.removeRows(0, 1))
-        model.deleteLater()
+    def test_empty_row_can_be_included_to_removed_rows(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
+        assert model.removeRows(0, 3)
+        assert len(model.value) == 1
+        assert model.value.indexes == ["M7-12"]
+        numpy.testing.assert_equal(model.value.values, [-5.0])
 
-    def test_setData(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), None)
+    def test_removing_last_row_fails(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12"], [-5.0]), parent_object)
+        assert not model.removeRows(0, 1)
+
+    def test_setData(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6"], [-5.0, 7.0]), parent_object)
         model_index = model.index(1, 1)
         model.setData(model_index, 2.3)
-        self.assertEqual(model.value.indexes, ["M7-12", "M1-6"])
+        assert model.value.indexes == ["M7-12", "M1-6"]
         numpy.testing.assert_equal(model.value.values, [-5.0, 2.3])
-        model.deleteLater()
 
-    def test_batch_set_data(self):
-        model = TimePatternModel(TimePattern(["M7-12", "M1-6", "M4-9"], [-5.0, 3.0, 7.0]), None)
+    def test_batch_set_data(self, parent_object):
+        model = TimePatternModel(TimePattern(["M7-12", "M1-6", "M4-9"], [-5.0, 3.0, 7.0]), parent_object)
         indexes = [model.index(0, 0), model.index(1, 1), model.index(2, 1)]
         values = ["D1-7", 55.5, -55.5]
         model.batch_set_data(indexes, values)
         expected = TimePattern(["D1-7", "M1-6", "M4-9"], [-5.0, 55.5, -55.5])
-        self.assertEqual(model.value, expected)
-        model.deleteLater()
+        assert model.value == expected

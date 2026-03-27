@@ -76,9 +76,10 @@ class TimePatternModel(IndexedValueTableModel):
         """
         if len(self._value) == 1:
             return False
-        if count == len(self._value):
-            count = len(self._value) - 1
-            row = 1
+        if count >= len(self._value):
+            if row == 0:
+                row = 1
+            count = len(self._value) - row
         self.beginRemoveRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
         old_values = self._value.values
