@@ -156,7 +156,7 @@ class AlternativeSelectionForFiltering(QObject):
             db_map = database_index.data(DB_MAP_ROLE)
             alternative_ids = db_map.mapped_table("scenario")[scenario_index.data(ITEM_ID_ROLE)]["alternative_id_list"]
             row = index.row()
-            if row == len(alternative_ids):
+            if row >= len(alternative_ids):
                 continue
             alternative_selection.setdefault(db_map, set()).add(alternative_ids[row])
         if not alternative_selection:

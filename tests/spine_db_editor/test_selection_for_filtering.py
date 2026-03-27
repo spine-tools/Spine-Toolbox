@@ -552,13 +552,46 @@ class TestAlternativeSelectionForFiltering:
             )
             mock_signal.emit.assert_called_once_with({db_map: {base_alternative["id"], other_alternative["id"]}})
 
+    def test_undo_when_empty_alternative_row_in_scenario_tree_is_selected(self, db_editor, logger):
+        # There was a silent Traceback when undoing while the empty scenario alternative row was selected.
+        db_mngr = db_editor.db_mngr
+        db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
+        with db_map:
+            base = db_map.alternative(name="Base")
+            db_map.add_scenario(name="Scenario 1")
+        view = db_editor.ui.scenario_tree_view
+        model = view.model()
+        database_index = model.index(0, 0)
+        assert database_index.data() == "TestAlternativeSelectionForFiltering_db"
+        while model.rowCount(database_index) == 1:
+            model.fetchMore(database_index)
+            QApplication.processEvents()
+        assert model.rowCount(database_index) == 2
+        scenario_index = model.index(0, 0, database_index)
+        assert scenario_index.data() == "Scenario 1"
+        new_alternative_index = model.index(0, 0, scenario_index)
+        assert new_alternative_index.data() == "Type scenario alternative name here..."
+        view.expand(scenario_index)
+        model.setData(new_alternative_index, base["id"])
+        while model.rowCount(scenario_index) == 1:
+            QApplication.processEvents()
+        assert model.rowCount(scenario_index) == 2
+        assert model.index(0, 0, scenario_index).data() == base["name"]
+        new_alternative_index = model.index(1, 0, scenario_index)
+        assert new_alternative_index.data() == "Type scenario alternative name here..."
+        view.selectionModel().setCurrentIndex(new_alternative_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        filter_selection = db_editor._alternative_selection_for_filtering
+        with mock.patch.object(filter_selection, "alternative_selection_changed") as mock_signal:
+            mock_signal.emit = mock.MagicMock()
+            db_mngr.undo_stack[db_map].undo()
+            mock_signal.emit.assert_not_called()
+
 
 class TestScenarioSelectionForFiltering:
     def test_select_scenario(self, db_editor, logger):
         db_mngr = db_editor.db_mngr
         db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
         with db_map:
-            db_map.alternative(name="Base")
             db_map.add_alternative(name="Other", description="Another alternative")
             scenario = db_map.add_scenario(name="Scenario 1")
             db_map.add_scenario_alternative(scenario_name="Scenario 1", alternative_name="Base", rank=0)
