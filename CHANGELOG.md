@@ -7,7 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- Added light and dark themes. Detected from OS settings.
+- Added light and dark themes. Detected from OS settings or set via **File->Settings**.
+- The right-click popup menu of Scenario tree has new convenience methods:
+
+  - The Add alternatives submenu adds new alternatives to the selected scenario.
+  - The Duplicate with alternatives submenu duplicates current scenario
+    adding the selected alternatives to the duplicate.
 
 ### Changed
 

@@ -11,10 +11,9 @@
 ######################################################################################################################
 
 """Classes for custom QTreeViews and QTreeWidgets."""
-from PySide6.QtCore import QEvent, QItemSelection, QModelIndex, QSettings, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, QModelIndex, QSettings, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QIcon, QMouseEvent, Qt
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu, QTreeView, QWidget
-from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import CharIconEngine, busy_effect
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
@@ -23,7 +22,7 @@ from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioDBItem, ScenarioItem
 from .custom_delegates import AddEntityButtonDelegate, AlternativeDelegate, ParameterValueListDelegate, ScenarioDelegate
-from .scenario_generator import ScenarioGenerator
+from .custom_menus import RecursiveChoiceSubMenu
 
 
 class MultitreeSelection:
@@ -522,6 +521,8 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
         self._duplicate_scenario_action: QAction | None = None
         self._delegate = ScenarioDelegate(self)
         self.setItemDelegateForColumn(0, self._delegate)
+        self._add_alternatives_submenu: QMenu | None = None
+        self._duplicate_with_alternatives_submenu: QMenu | None = None
 
     def setModel(self, model):
         if self.model():
@@ -533,6 +534,40 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
         """See base class."""
         super().populate_context_menu(copy_action, paste_action)
         self._duplicate_scenario_action = self._menu.addAction("Duplicate", self._duplicate_scenario)
+        self._menu.aboutToShow.connect(self._add_dynamic_menus)
+
+    @Slot()
+    def _add_dynamic_menus(self) -> None:
+        index = self.currentIndex()
+        item = self.model().item_from_index(index)
+        if item.item_type == "db" or (item.item_type == "scenario" and item.id is None):
+            alternatives = []
+        else:
+            while item.item_type != "scenario":
+                item = item.parent_item
+            alternatives = self._available_alternative_names(item)
+        self._setup_add_alternatives_submenu(alternatives)
+        self._setup_duplicate_with_alternatives_submenu(alternatives)
+
+    def _setup_add_alternatives_submenu(self, alternatives: list[str]) -> None:
+        if self._add_alternatives_submenu is not None:
+            self._add_alternatives_submenu.rebuild(alternatives)
+        else:
+            self._add_alternatives_submenu = RecursiveChoiceSubMenu(alternatives, self._menu)
+            self._add_alternatives_submenu.setTitle("Add alternatives")
+            self._add_alternatives_submenu.choice_made.connect(self._add_alternatives)
+            self._menu.addMenu(self._add_alternatives_submenu)
+        self._add_alternatives_submenu.menuAction().setEnabled(bool(alternatives))
+
+    def _setup_duplicate_with_alternatives_submenu(self, alternatives: list[str]) -> None:
+        if self._duplicate_with_alternatives_submenu is not None:
+            self._duplicate_with_alternatives_submenu.rebuild(alternatives)
+        else:
+            self._duplicate_with_alternatives_submenu = RecursiveChoiceSubMenu(alternatives, self._menu)
+            self._duplicate_with_alternatives_submenu.setTitle("Duplicate with alternatives")
+            self._duplicate_with_alternatives_submenu.choice_made.connect(self._duplicate_with_alternatives)
+            self._menu.addMenu(self._duplicate_with_alternatives_submenu)
+        self._duplicate_with_alternatives_submenu.menuAction().setEnabled(bool(alternatives))
 
     def remove_selected(self):
         """See base class."""
@@ -649,6 +684,35 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
             if not isinstance(item, ScenarioItem) or item.id is None:
                 continue
             model.duplicate_scenario(item)
+
+    @staticmethod
+    def _available_alternative_names(scenario_item: ScenarioItem) -> list[str]:
+        db_mngr = scenario_item.model.db_mngr
+        scenario_alternatives = set(db_mngr.get_scenario_alternative_id_list(scenario_item.db_map, scenario_item.id))
+        all_alternatives = db_mngr.get_items(scenario_item.db_map, "alternative")
+        return [
+            alternative["name"] for alternative in all_alternatives if alternative["id"] not in scenario_alternatives
+        ]
+
+    @Slot(list)
+    def _add_alternatives(self, alternatives: list[str]) -> None:
+        index = self.currentIndex()
+        model = self.model()
+        item = model.item_from_index(index)
+        while item.item_type != "scenario":
+            item = item.parent_item
+        model.add_scenario_alternatives(item, alternatives[1:])
+        self._menu.close()
+
+    @Slot(list)
+    def _duplicate_with_alternatives(self, alternatives: list[str]) -> None:
+        index = self.currentIndex()
+        model = self.model()
+        item = model.item_from_index(index)
+        while item.item_type != "scenario":
+            item = item.parent_item
+        model.duplicate_scenario_with_alternatives(item, alternatives[1:])
+        self._menu.close()
 
 
 class ParameterValueListTreeView(ItemTreeView):

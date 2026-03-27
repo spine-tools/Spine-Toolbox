@@ -244,6 +244,7 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
             return self._db_name_registry.display_name(self.db_map.sa_url)
         if role == DB_MAP_ROLE:
             return self.db_map
+        return None
 
 
 class LeafItem(StandardTreeItem):

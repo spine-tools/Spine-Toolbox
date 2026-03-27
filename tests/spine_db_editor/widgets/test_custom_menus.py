@@ -13,6 +13,7 @@
 """Unit tests for ``custom_menus`` module."""
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QWidget
+import pytest
 from spinetoolbox.database_display_names import NameRegistry
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
@@ -20,7 +21,11 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundEntityModel,
     CompoundParameterDefinitionModel,
 )
-from spinetoolbox.spine_db_editor.widgets.custom_menus import AutoFilterMenu, TabularViewDatabaseNameFilterMenu
+from spinetoolbox.spine_db_editor.widgets.custom_menus import (
+    AutoFilterMenu,
+    RecursiveChoiceSubMenu,
+    TabularViewDatabaseNameFilterMenu,
+)
 from tests.mock_helpers import TestCaseWithQApplication, assert_table_model_data_pytest, fetch_model
 
 
@@ -285,3 +290,86 @@ class TestTabularViewCodenameFilterMenu(TestCaseWithQApplication):
             menu.clear_filter()
             waiter.wait()
             self.assertEqual(waiter.args, ("database", {None, "db map 1", "db map 2"}, False))
+
+
+class TestRecursiveChoiceSubMenu:
+    @pytest.fixture
+    def menu_factory(self, parent_widget):
+        class Factory:
+            def __init__(self, parent):
+                self._parent = parent
+
+            def __call__(self, choices):
+                menu = RecursiveChoiceSubMenu(choices, self._parent)
+                menu.aboutToShow.emit()
+                return menu
+
+        return Factory(parent_widget)
+
+    def test_choices_are_sorted(self, menu_factory):
+        menu = menu_factory(["B", "A"])
+        assert [a.text() for a in menu.actions()] == ["A", "B"]
+
+    def test_choices_are_sorted_when_rebuild(self, menu_factory):
+        menu = menu_factory([])
+        menu.rebuild(["B", "A"])
+        menu.aboutToShow.emit()
+        assert [a.text() for a in menu.actions()] == ["A", "B"]
+
+    def test_rebuilding_with_same_choices(self, menu_factory):
+        choices = ["A", "B"]
+        menu = menu_factory(choices)
+        menu.rebuild(choices)
+        menu.aboutToShow.emit()
+        assert [a.text() for a in menu.actions()] == choices
+
+    def test_rebuilding_right_after_init_does_not_duplicate_items(self, parent_widget):
+        menu = RecursiveChoiceSubMenu([], parent_widget)
+        menu.rebuild(["a", "b"])
+        menu.aboutToShow.emit()
+        assert [a.text() for a in menu.actions()] == ["a", "b"]
+
+    def test_rebuilding_twice_in_row_does_not_duplicate_items(self, parent_widget):
+        menu = RecursiveChoiceSubMenu([], parent_widget)
+        menu.rebuild(["a", "b"])
+        menu.aboutToShow.emit()
+        menu.rebuild([])
+        menu.rebuild(["a", "b"])
+        menu.aboutToShow.emit()
+        assert [a.text() for a in menu.actions()] == ["a", "b"]
+
+    def test_submenus_have_correct_items(self, menu_factory):
+        menu = menu_factory(["a", "b", "c"])
+        expected_contents = {
+            "a": {"b": "c", "c": "b"},
+            "b": {"a": "c", "c": "a"},
+            "c": {"a": "b", "b": "a"},
+        }
+        content_iterators = [iter(expected_contents.items())]
+        action_iterators = [iter(menu.actions())]
+        while content_iterators:
+            try:
+                title, content = next(content_iterators[-1])
+            except StopIteration:
+                content_iterators.pop(-1)
+                action_iterators.pop(-1)
+                continue
+            action = next(action_iterators[-1])
+            assert action.text() == title
+            if isinstance(content, dict):
+                content_iterators.append(iter(content.items()))
+                submenu = action.menu()
+                submenu.aboutToShow.emit()
+                action_iterators.append(iter(submenu.actions()))
+
+    def test_trigger_last_choice(self, menu_factory):
+        menu = menu_factory(["a", "b", "c"])
+        menu.setTitle("<root>")
+        submenu = menu.actions()[0].menu()
+        submenu.aboutToShow.emit()
+        sub_submenu = submenu.actions()[0].menu()
+        sub_submenu.aboutToShow.emit()
+        with signal_waiter(menu.choice_made) as waiter:
+            sub_submenu.actions()[0].trigger()
+            waiter.wait()
+        assert waiter.args == (["<root>", "a", "b", "c"],)

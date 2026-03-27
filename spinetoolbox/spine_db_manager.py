@@ -961,11 +961,11 @@ class SpineDBManager(QObject):
                 for item in db_map.find(list_value_table, parameter_value_list_id=id_)
             ]
 
-    def get_scenario_alternative_id_list(self, db_map: DatabaseMapping, scen_id: TempId) -> list[TempId]:
+    def get_scenario_alternative_id_list(self, db_map: DatabaseMapping, scenario_id: TempId) -> list[TempId]:
         if db_map in self._db_locks:
             with self._db_locks[db_map]:
-                scen = self.get_item(db_map, "scenario", scen_id)
-                return scen["alternative_id_list"] if scen else []
+                scenario = self.get_item(db_map, "scenario", scenario_id)
+                return scenario["alternative_id_list"] if scenario else []
         return []
 
     def import_data(self, db_map_data: dict[DatabaseMapping, dict[str, list[tuple]]], command_text: str) -> None:

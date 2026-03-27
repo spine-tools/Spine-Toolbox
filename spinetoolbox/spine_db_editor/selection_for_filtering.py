@@ -158,7 +158,10 @@ class AlternativeSelectionForFiltering(QObject):
             row = index.row()
             if row >= len(alternative_ids):
                 continue
-            alternative_selection.setdefault(db_map, set()).add(alternative_ids[row])
+            try:
+                alternative_selection.setdefault(db_map, set()).add(alternative_ids[row])
+            except IndexError as e:
+                raise e
         if not alternative_selection:
             alternative_selection = Asterisk
         if alternative_selection != self._current_scenario_alternative_selection:
