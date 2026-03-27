@@ -11,10 +11,9 @@
 ######################################################################################################################
 
 """Unit tests for the ParameterValueEditor widget."""
-import unittest
 import dateutil.parser
 import numpy as np
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from spinedb_api import (
     DateTime,
     Duration,
@@ -25,7 +24,6 @@ from spinedb_api import (
     to_database,
 )
 from spinetoolbox.widgets.parameter_value_editor import ParameterValueEditor
-from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class _MockParentModel(QAbstractTableModel):
@@ -60,49 +58,58 @@ class _MockParentModel(QAbstractTableModel):
         return "index_name"
 
 
-class TestParameterValueEditor(TestCaseWithQApplication):
-    def _check_parent_model_updated_when_closed(self, value):
-        with q_object(QObject()) as parent:
-            model = _MockParentModel(parent)
-            model_index = model.index(1, 1)
-            model.setData(model_index, value)
-            editor = ParameterValueEditor(model_index)
-            # Reset model data to check that the value is written back from the editor
-            model.setData(model_index, None)
-            editor.accept()
-            editor.deleteLater()
-            self.assertEqual(model.data(model_index), to_database(value))
+class TestParameterValueEditor:
+    @staticmethod
+    def _check_parent_model_updated_when_closed(value, parent_widget):
+        model = _MockParentModel(parent_widget)
+        model_index = model.index(1, 1)
+        model.setData(model_index, value)
+        editor = ParameterValueEditor(model_index, parent_widget)
+        # Reset model data to check that the value is written back from the editor
+        model.setData(model_index, None)
+        editor.accept()
+        assert model.data(model_index) == to_database(value)
 
-    def test_editor_sets_plain_value_in_parent_model(self):
-        self._check_parent_model_updated_when_closed(23.0)
+    def test_editor_sets_plain_value_in_parent_model(self, parent_widget):
+        self._check_parent_model_updated_when_closed(23.0, parent_widget)
 
-    def test_editor_sets_datetime_in_parent_model(self):
+    def test_editor_sets_datetime_in_parent_model(self, parent_widget):
         time_stamp = DateTime(dateutil.parser.parse("2019-07-03T12:00"))
-        self._check_parent_model_updated_when_closed(time_stamp)
+        self._check_parent_model_updated_when_closed(time_stamp, parent_widget)
 
-    def test_editor_sets_duration_in_parent_model(self):
+    def test_editor_sets_duration_in_parent_model(self, parent_widget):
         duration = Duration(duration_to_relativedelta("3 months"))
-        self._check_parent_model_updated_when_closed(duration)
+        self._check_parent_model_updated_when_closed(duration, parent_widget)
 
-    def test_editor_sets_time_pattern_in_parent_model(self):
+    def test_editor_sets_time_pattern_in_parent_model(self, parent_widget):
         indexes = ["M1-3", "M4-12"]
         values = np.array([23.0, 5.0])
         pattern = TimePattern(indexes, values)
-        self._check_parent_model_updated_when_closed(pattern)
+        self._check_parent_model_updated_when_closed(pattern, parent_widget)
 
-    def test_editor_sets_fixed_resolution_time_series_in_parent_model(self):
+    def test_editor_sets_fixed_resolution_time_series_in_parent_model(self, parent_widget):
         start = dateutil.parser.parse("2019-07-03T12:22")
         resolution = [duration_to_relativedelta("4 years")]
         values = np.array([23.0, 5.0])
         time_series = TimeSeriesFixedResolution(start, resolution, values, False, True)
-        self._check_parent_model_updated_when_closed(time_series)
+        self._check_parent_model_updated_when_closed(time_series, parent_widget)
 
-    def test_editor_sets_variable_resolution_time_series_in_parent_model(self):
+    def test_editor_sets_variable_resolution_time_series_in_parent_model(self, parent_widget):
         indexes = np.array([np.datetime64("2019-07-03T12:22:00"), np.datetime64("2019-07-03T12:23:00")])
         values = np.array([23.0, 5.0])
         time_series = TimeSeriesVariableResolution(indexes, values, True, False)
-        self._check_parent_model_updated_when_closed(time_series)
+        self._check_parent_model_updated_when_closed(time_series, parent_widget)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_switch_from_variable_time_series_to_fixed(self, parent_widget):
+        model = _MockParentModel(parent_widget)
+        model_index = model.index(1, 1)
+        model.setData(
+            model_index, TimeSeriesVariableResolution(["2026-08-27T13:00"], [2.3], ignore_year=False, repeat=False)
+        )
+        editor = ParameterValueEditor(model_index)
+        editor._ui.parameter_type_selector.setCurrentText("Time series fixed resolution")
+        assert editor._ui.parameter_type_selector.currentText() == "Time series fixed resolution"
+        editor.accept()
+        assert model_index.data() == to_database(
+            TimeSeriesFixedResolution("2026-08-27T13:00", "1h", [2.3], ignore_year=False, repeat=False)
+        )
