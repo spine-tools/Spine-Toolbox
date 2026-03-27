@@ -329,6 +329,15 @@ class TestRecursiveChoiceSubMenu:
         menu.aboutToShow.emit()
         assert [a.text() for a in menu.actions()] == ["a", "b"]
 
+    def test_rebuilding_twice_in_row_does_not_duplicate_items(self, parent_widget):
+        menu = RecursiveChoiceSubMenu([], parent_widget)
+        menu.rebuild(["a", "b"])
+        menu.aboutToShow.emit()
+        menu.rebuild([])
+        menu.rebuild(["a", "b"])
+        menu.aboutToShow.emit()
+        assert [a.text() for a in menu.actions()] == ["a", "b"]
+
     def test_submenus_have_correct_items(self, menu_factory):
         menu = menu_factory(["a", "b", "c"])
         expected_contents = {

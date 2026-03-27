@@ -296,7 +296,7 @@ class RecursiveChoiceSubMenu(QMenu):
     def __init__(self, choices: list[str], parent: QWidget | None):
         super().__init__(parent)
         self._choices = choices
-        self._init_populated = True
+        self._is_populate_connected = True
         self.aboutToShow.connect(self._populate, Qt.ConnectionType.SingleShotConnection)
         self._single_choice_action: QAction | None = None
 
@@ -305,7 +305,8 @@ class RecursiveChoiceSubMenu(QMenu):
             return
         self._choices = choices
         self.clear()
-        if not self._init_populated:
+        if not self._is_populate_connected:
+            self._is_populate_connected = True
             self.aboutToShow.connect(self._populate, Qt.ConnectionType.SingleShotConnection)
 
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
@@ -319,11 +320,11 @@ class RecursiveChoiceSubMenu(QMenu):
 
     @Slot()
     def _populate(self):
-        self._init_populated = False
+        self._is_populate_connected = False
         for choice in sorted(self._choices):
             sub_choices = set(self._choices) - {choice}
             if sub_choices:
-                submenu = RecursiveChoiceSubMenu(sorted(sub_choices), self)
+                submenu = RecursiveChoiceSubMenu(list(sub_choices), self)
                 submenu.setTitle(choice)
                 submenu.choice_made.connect(self._add_to_made_choices)
                 submenu.menuAction().toggled.connect(lambda *args: print("it happened"))

@@ -522,6 +522,7 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
         self._delegate = ScenarioDelegate(self)
         self.setItemDelegateForColumn(0, self._delegate)
         self._add_alternatives_submenu: QMenu | None = None
+        self._duplicate_with_alternatives_submenu: QMenu | None = None
 
     def setModel(self, model):
         if self.model():
@@ -545,6 +546,10 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
             while item.item_type != "scenario":
                 item = item.parent_item
             alternatives = self._available_alternative_names(item)
+        self._setup_add_alternatives_submenu(alternatives)
+        self._setup_duplicate_with_alternatives_submenu(alternatives)
+
+    def _setup_add_alternatives_submenu(self, alternatives: list[str]) -> None:
         if self._add_alternatives_submenu is not None:
             self._add_alternatives_submenu.rebuild(alternatives)
         else:
@@ -553,6 +558,16 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
             self._add_alternatives_submenu.choice_made.connect(self._add_alternatives)
             self._menu.addMenu(self._add_alternatives_submenu)
         self._add_alternatives_submenu.menuAction().setEnabled(bool(alternatives))
+
+    def _setup_duplicate_with_alternatives_submenu(self, alternatives: list[str]) -> None:
+        if self._duplicate_with_alternatives_submenu is not None:
+            self._duplicate_with_alternatives_submenu.rebuild(alternatives)
+        else:
+            self._duplicate_with_alternatives_submenu = RecursiveChoiceSubMenu(alternatives, self._menu)
+            self._duplicate_with_alternatives_submenu.setTitle("Duplicate with alternatives")
+            self._duplicate_with_alternatives_submenu.choice_made.connect(self._duplicate_with_alternatives)
+            self._menu.addMenu(self._duplicate_with_alternatives_submenu)
+        self._duplicate_with_alternatives_submenu.menuAction().setEnabled(bool(alternatives))
 
     def remove_selected(self):
         """See base class."""
@@ -687,6 +702,16 @@ class ScenarioTreeView(MultitreeSelection, ItemTreeView):
         while item.item_type != "scenario":
             item = item.parent_item
         model.add_scenario_alternatives(item, alternatives[1:])
+        self._menu.close()
+
+    @Slot(list)
+    def _duplicate_with_alternatives(self, alternatives: list[str]) -> None:
+        index = self.currentIndex()
+        model = self.model()
+        item = model.item_from_index(index)
+        while item.item_type != "scenario":
+            item = item.parent_item
+        model.duplicate_scenario_with_alternatives(item, alternatives[1:])
         self._menu.close()
 
 

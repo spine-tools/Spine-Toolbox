@@ -285,24 +285,39 @@ From **Scenario Tree**
 To add a new scenario, just select the last item under the appropriate database,
 and enter the name of the scenario.
 
-To add an alternative for a particular scenario, drag the alternative item from **Alternative**
-and drop it under the corresponding scenario.
-The position where you drop it determines the alternative's *rank* within the scenario.
-Alternatives can also be copied from **Alternative**
-and pasted at the appropriate position in **Scenario Tree**.
-
-If it is desirable to base a scenario on an existing one, scenarios can be duplicated
-using the **Duplicate** item in the right-click context menu. It is also possible to
-copy and paste scenarios between databases.
-
-.. note:: Alternatives with higher rank have priority when determining the parameter value for a certain scenario.
-   If the parameter value is specified for two alternatives, and both of them happen to coexist in a same scenario,
-   the value from the alternative with the higher rank takes precedence.
-
-.. note:: As noted in the tooltip, scenario names longer than 20 characters may become shortened in generated files.
+.. note:: As noted in the tooltip of the last item,
+   scenario names longer than 20 characters may become shortened in generated files.
    This can happen for example when exporting the scenarios using the Exporter project item. This can lead to confusion
    later on if the first 20 characters of the scenario names are identical. Therefore it is recommended to have a unique
    identifier for each scenario in the first 20 characters of its name.
+
+To add alternatives for a particular scenario,
+right click the scenario and point the mouse to **Add alternatives**
+which opens a submenu showing available alternatives.
+For example, selecting "Base" from the first submenu, as shown in the image below,
+adds the Base alternative to Baseline:
+
+.. image:: img/add_single_scenario_alternative.png
+    :align: center
+
+Further, selecting "wind" from the second submenu add both Base and wind,
+in that order, to the scenario:
+
+.. image:: img/add_two_scenario_alternatives.png
+    :align: center
+
+Another option to add an alternative is to drag the alternative item from **Alternative**
+and drop it under the corresponding scenario.
+The position where you drop it determines the alternative's *rank* within the scenario.
+Alternatives lower in the list have higher rank.
+Alternatives can also be copied from **Alternative**
+and pasted at the appropriate position in **Scenario Tree**.
+
+.. note:: Alternatives lower in the scenario's alternative list have priority (have higher rank)
+   when determining the parameter value for a certain scenario.
+   If the parameter value is specified for two alternatives,
+   and both of them happen to coexist in a same scenario,
+   the value from the alternative that has higher rank takes precedence.
 
 From **Pivot View**
 ~~~~~~~~~~~~~~~~~~~
@@ -328,6 +343,25 @@ Select appropriate operation from the **Operation** combo box.
 Checking the **Use base alternative** check box will add the selected alternative to
 all generated scenarios as the lowest rank alternative.
 The **Alternative by rank** list allows reordering the ranks of the alternatives.
+
+Duplicating scenarios
+~~~~~~~~~~~~~~~~~~~~~
+
+The **Duplicate** action in the right-click popup menu in **Scenario tree** duplicates the selected scenarios.
+
+The **Duplicate with alternatives** action, on the other hand,
+duplicates the current scenario adding the selected alternatives to the duplicate.
+For example, selecting the "wind" alternative from the first submenu as show in the screenshot below
+creates a new scenario called "Baseline+wind" that has Base and wind alternatives.
+
+.. image:: img/duplicate_scenario_with_single_alternative.png
+    :align: center
+
+Selecting "coal plant" in the next submenu creates a scenario called "Baseline+wind+coal plant"
+with Base, wind and coal plant alternatives:
+
+.. image:: img/duplicate_scenario_with_two_alternatives.png
+    :align: center
 
 .. _parameter_value_list:
 
