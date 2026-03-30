@@ -41,6 +41,9 @@ class ExampleEmptyModel(EmptyModelWithEntityClass):
     _entity_class_column = 0
     _database_column = 3
 
+    def _make_unique_id(self, item: dict) -> tuple:
+        return item["entity_class_name"], item["name"]
+
 
 class TestExampleEmptyModel(TestCaseWithQApplication):
     def setUp(self):
