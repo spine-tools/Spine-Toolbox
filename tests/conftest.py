@@ -126,7 +126,7 @@ def db_map_generator(db_mngr, tmp_path, db_name, logger):
 
 
 @pytest.fixture
-def db_editor(db_mngr, db_map, logger, monkeypatch):
+def db_editor(db_mngr, db_map, monkeypatch):
     with (
         mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
         mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
