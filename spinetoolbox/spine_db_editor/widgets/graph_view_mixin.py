@@ -22,7 +22,7 @@ from PySide6.QtCore import QPoint, Qt, QThreadPool, QTimer, Slot
 from PySide6.QtGui import QPen
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
-from spinedb_api.helpers import Asterisk
+from spinedb_api.helpers import Asterisk, ItemType
 from spinedb_api.parameter_value import IndexedValue, TimeSeries
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DBMapPublicItems
@@ -181,10 +181,11 @@ class GraphViewMixin:
         self.entity_alternative_model.dataChanged.connect(lambda: self._graph_build_timer.start())
 
     @Slot(str, object)
-    def _refresh_icons(self, item_type: str, db_map_data: DBMapPublicItems) -> None:
+    def _refresh_icons(self, item_type: ItemType, db_map_data: DBMapPublicItems) -> None:
         """Runs when entity classes are added or updated in the db. Refreshes icons of entities in graph.
 
         Args:
+            item_type: type of item that would potentially cause icons to refresh
             db_map_data: list of dictionary-items keyed by DatabaseMapping instance.
         """
         if item_type != "entity_class":
@@ -1032,8 +1033,6 @@ class GraphViewMixin:
         super().closeEvent(event)
         if not event.isAccepted():
             return
-        self.db_mngr.items_added.disconnect(self._refresh_icons)
-        self.db_mngr.items_updated.disconnect(self._refresh_icons)
         self.scene.selectionChanged.disconnect(self.ui.graphicsView.handle_scene_selection_changed)
         if self.scene is not None:
             self.scene.deleteLater()
