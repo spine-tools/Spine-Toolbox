@@ -894,9 +894,9 @@ def toolbox_with_settings(settings_dict):
     try:
         yield toolbox
     finally:
+        clean_up_toolbox(toolbox)
         settings.clear()
         settings.deleteLater()
-        clean_up_toolbox(toolbox)
 
 
 class MockQMenu(QMenu):

@@ -17,7 +17,7 @@ from unittest import mock
 from PySide6.QtCore import QSettings
 from spinetoolbox.config import DEFAULT_WORK_DIR
 from spinetoolbox.widgets.settings_widget import SettingsWidget
-from tests.mock_helpers import TestCaseWithQApplication, create_toolboxui, q_object
+from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, create_toolboxui, q_object
 
 
 class TestSettingsWidget(TestCaseWithQApplication):
@@ -27,7 +27,9 @@ class TestSettingsWidget(TestCaseWithQApplication):
         self._toolbox._qsettings = self._settings
 
     def tearDown(self):
+        clean_up_toolbox(self._toolbox)
         self._settings.clear()
+        self._settings.deleteLater()
 
     def test_defaults_for_initially_empty_app_settings(self):
         widget = SettingsWidget(self._toolbox)

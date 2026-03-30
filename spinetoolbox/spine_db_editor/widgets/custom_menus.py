@@ -14,7 +14,7 @@
 from collections.abc import Callable, Iterator
 from typing import Any, Hashable
 from PySide6.QtCore import QPoint, Qt, Signal, Slot
-from PySide6.QtGui import QAction, QActionGroup, QIcon, QMouseEvent
+from PySide6.QtGui import QAction, QIcon, QMouseEvent
 from PySide6.QtWidgets import QMenu, QWidget
 from spinedb_api import DatabaseMapping, IndexedValue
 from spinedb_api.db_mapping_base import PublicItem
@@ -327,7 +327,6 @@ class RecursiveChoiceSubMenu(QMenu):
                 submenu = RecursiveChoiceSubMenu(list(sub_choices), self)
                 submenu.setTitle(choice)
                 submenu.choice_made.connect(self._add_to_made_choices)
-                submenu.menuAction().toggled.connect(lambda *args: print("it happened"))
                 self.addMenu(submenu)
             else:
                 action = self.addAction(choice)

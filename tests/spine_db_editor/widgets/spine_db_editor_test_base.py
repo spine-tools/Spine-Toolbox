@@ -24,12 +24,18 @@ class DBEditorTestBase(TestCaseWithQApplication):
 
     def setUp(self):
         """Makes instances of SpineDBEditor classes."""
+
+        def mock_settings_value(key, defaultValue=None):
+            if key.endswith("layoutAlgoSpreadFactor"):
+                return 100
+            return 0
+
         with (
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
+            mock_settings.value.side_effect = mock_settings_value
             self.db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, create=True)
