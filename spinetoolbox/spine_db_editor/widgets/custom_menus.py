@@ -327,7 +327,6 @@ class RecursiveChoiceSubMenu(QMenu):
                 submenu = RecursiveChoiceSubMenu(list(sub_choices), self)
                 submenu.setTitle(choice)
                 submenu.choice_made.connect(self._add_to_made_choices)
-                submenu.menuAction().toggled.connect(lambda *args: print("it happened"))
                 self.addMenu(submenu)
             else:
                 action = self.addAction(choice)
