@@ -12,14 +12,11 @@
 
 """Classes and functions that can be shared among unit test modules."""
 from contextlib import contextmanager
-import time
 from typing import Any
 import unittest
 from unittest import mock
 from PySide6.QtCore import QAbstractListModel, QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
-from PySide6.QtWidgets import QApplication, QWidget
-from spinetoolbox.helpers import SignalWaiter
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.ui_main import ToolboxUI
 
