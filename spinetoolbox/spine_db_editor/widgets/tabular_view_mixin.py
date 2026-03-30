@@ -15,7 +15,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 from itertools import chain
 from typing import ClassVar, Optional
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
+from PySide6.QtCore import QModelIndex, QObject, Qt, QTimer, Slot
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMessageBox, QWidget
 from spinedb_api import DatabaseMapping
@@ -73,6 +73,7 @@ class TabularViewMixin:
         self.ui.pivot_table.connect_spine_db_editor(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+        self._frozen_selection_current_changed_connection = None
 
     def populate_pivot_action_group(self):
         self.pivot_actions = {
@@ -92,7 +93,9 @@ class TabularViewMixin:
         self.ui.frozen_table.header_dropped.connect(
             lambda dropped, catcher: self.handle_header_dropped(dropped, catcher)
         )
-        self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+        self._frozen_selection_current_changed_connection = (
+            self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+        )
         self.frozen_table_model.rowsInserted.connect(self._check_frozen_value_selected)
         self.frozen_table_model.rowsRemoved.connect(self._check_frozen_value_selected)
         self.frozen_table_model.columnsInserted.connect(self._make_inserted_frozen_headers)
@@ -518,9 +521,13 @@ class TabularViewMixin:
             return
         row = current.row()
         if row == 0:
-            selection_model = self.ui.frozen_table.selectionModel()
-            with disconnect(selection_model.currentChanged, self._change_selected_frozen_row):
+            QObject.disconnect(self._frozen_selection_current_changed_connection)
+            try:
                 self.ui.frozen_table.setCurrentIndex(previous)
+            finally:
+                self._frozen_selection_current_changed_connection = (
+                    self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+                )
             return
         if row == previous.row():
             return
