@@ -45,7 +45,11 @@ def parent_widget(application):
 def app_settings():
     class MockSettings:
         @staticmethod
-        def value(*args, **kwargs):
+        def value(key, defaultValue=None):
+            if key.endswith("layoutAlgoSpreadFactor"):
+                return 100
+            if defaultValue is not None:
+                return defaultValue
             return 0
 
         @staticmethod
