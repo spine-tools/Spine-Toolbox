@@ -363,6 +363,11 @@ The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide6` application, those 
 are not needed and there is a chance of conflicts between the packages.
 
+#### Problems in running the application
+
+Creating arrows may fail on Fedora Linux, as described in #3286.
+A workaround is to install a separate Python and use that to install Spine Toolbox.
+
 ## Recorded Webinars showing the use of Spine Tools
 
 ### Spine Toolbox: Data, workflow and scenario management for modelling
