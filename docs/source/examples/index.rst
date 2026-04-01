@@ -4,8 +4,8 @@
 Examples
 ********
 
-This module contains examples, tutorials and how-tos for Spine Toolbox and Spine Database Editor.
-
+This module currently contains tutorials for Spine Database Editor.
+We are planning to add more tutorials here in the future, so stay tuned.
 
 .. toctree::
    :maxdepth: 1
@@ -13,3 +13,6 @@ This module contains examples, tutorials and how-tos for Spine Toolbox and Spine
 
    first_entity_class_and_entity
    first_parameter
+   first_relationship
+   basic_manage_elements
+   basic_pivot_add_relationships

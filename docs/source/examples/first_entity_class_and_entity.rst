@@ -14,7 +14,7 @@
 First Entity Class And Entity
 *****************************
 
-This basic-level tutorial guides you through creating an entity class and an entity.
+This basic level tutorial guides you through creating an entity class and an entity.
 
 Adding Entity Classes
 =====================
@@ -63,7 +63,7 @@ This operation is called *committing* since Spine data is stored in an SQL datab
 In case of file-backed databases like SQLite, the operation is pretty much like saving changes to a file.
 Press **Ctrl+Enter** or click the |commit| **Commit** button on the toolbar at the top.
 You are asked to provide a commit message before proceeding.
-Write something like::
+Write something like:
 
     Added Fish class and first fish, nemo.
 

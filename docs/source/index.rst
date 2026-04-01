@@ -29,7 +29,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    whats_new
    getting_started
    how_to_run_spineopt
-   examples <examples/index>
+   Examples <examples/index>
    setting_up
    main_window
    project_items

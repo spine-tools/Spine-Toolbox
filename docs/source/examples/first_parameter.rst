@@ -80,3 +80,10 @@ Committing Changes
 ==================
 
 This is a good point to save the changes by committing them.
+
+Next Steps
+==========
+
+The tutorial continues on ref:`First Relationship`
+where we will expand the set of entity classes and entities
+into multiple dimensions. See you there!
