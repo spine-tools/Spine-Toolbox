@@ -30,11 +30,11 @@ such as :literal:`Spine-tutorial.sqlite`.
 It might be a good idea to keep the database around
 as it will be needed in other tutorials.
 
-First, we need some entity classes.
+:emphasis:`First, we need some entity classes.
 Entity classes are structural data that define the types of entities in the database.
-Each type has a distinct set of parameters given by the parameter definitions of the class.
+Each type has a distinct set of parameters given by the parameter definitions of the class.`
 
-Let's add a class to called Fish to the database.
+Let's add an entity class to called Fish to the database.
 Right-click the *root* item on **Entity tree** to open the entity context menu and select **Add entity classes...**
 This opens a dialog with a table.
 The table can be filled with new classes by hand or by copy-pasting data from e.g. spreadsheet program.
@@ -43,17 +43,17 @@ You can also write a description and choose a suitable icon and color for the cl
 The rest of the columns can be left as-is for now.
 The classes defined in the table are added when you press **Ctrl+Enter** or click **Ok**.
 
-Often, you do not need to create classes manually.
+:emphasis:`Often, you do not need to create classes manually.
 Instead, the classes may come from a tool provided by the model you are using.
 For example, the SpineOpt plugin "Load template" populates the database with all classes
-required by SpineOpt.
+required by SpineOpt.`
 
 Adding Entities
 ===============
 
-Entities are instances of the class with individual values for the parameters of the class.
+:emphasis:`Entities are instances of the class with individual values for the parameters of the class.
 With the Fish class in place, we can finally add some fish to our database!
-Which famous fish come to your mind?
+Which famous fish come to your mind?`
 
 Next, we will add Nemo to the database.
 Click the |add_entities| icon next to the Fish class in **Entity tree**
@@ -67,9 +67,10 @@ We have our first entity!
 Committing Changes
 ==================
 
-At this point it is a good idea to save our achievements.
+:emphasis:`At this point it is a good idea to save our achievements.
 This operation is called *committing* since Spine data is stored in an SQL database.
-In case of file-backed databases like SQLite, the operation is pretty much like saving changes to a file.
+In case of file-backed databases like SQLite, the operation is pretty much like saving changes to a file.`
+
 Press **Ctrl+Enter** or click the |commit| **Commit** button on the toolbar at the top.
 You are asked to provide a commit message before proceeding.
 Write something like:

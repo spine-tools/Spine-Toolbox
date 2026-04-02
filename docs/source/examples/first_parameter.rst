@@ -46,12 +46,12 @@ Select Nemo from the **Entity tree**.
 You may need to expand the fish class with the small arrow on the left first.
 This will fill the *class* and *entity byname* columns of the parameter value table with correct values.
 
-What is a *byname*, anyway?
-In case of zero-dimensional entities, like :literal:`Nemo`, it is just the name of the entity.
+:emphasis:`What is a byname, anyway?
+In case of zero-dimensional entities, like Nemo, it is just the name of the entity.
 In other tutorials, we will create multidimensional entities, i.e. relationships.
-In that case, entity byname is a list of the names of the zero-dimensional parts of the relationship.
+In that case, entity byname is a list of the names of the zero-dimensional parts of the relationship.`
 
-Let's get back to parameter values.
+:emphasis:`Let's get back to parameter values.`
 
 Double-click the cell under the *parameter name* column on the empty row in **Parameter value** dock.
 This opens a list of available parameters in the Fish class.
@@ -64,9 +64,9 @@ editing a cell opens a list of available alternatives.
 Currently, the only option is :literal:`Base`
 which readily exists in every freshly created Spine database.
 
-We will discuss alternatives in more depth in other tutorials.
+:emphasis:`We will discuss alternatives in more depth in other tutorials.
 For now, it is enough to say that alternatives allow different values for the same parameter,
-creating a basis for scenarios.
+creating a basis for scenarios.`
 
 Select :literal:`Base` with the arrow keys and move on to the next column using **Tab**.
 

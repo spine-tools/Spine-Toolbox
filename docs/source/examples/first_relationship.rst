@@ -19,11 +19,11 @@ that contains the Fish class and an entity only known as :literal:`Nemo` to huma
 Adding Multidimensional Entity Classes
 ======================================
 
-Multidimensional entity classes are used to connect two or more classes with each other.
+:emphasis:`Multidimensional entity classes are used to connect two or more classes with each other.
 The connections represent relations, links, groupings or similar concepts in the data structure.
 One-dimensional entity classes connecting a single class to nothing are possible, too, but uncommon.
 While the dimensions are usually zero-dimensional classes,
-they can also be other multidimensional classes.
+they can also be other multidimensional classes.`
 
 For the sake of simplicity, we will create a two-dimensional entity class called Bond
 that connects the Fish class back to Fish class.
@@ -57,10 +57,10 @@ However, **Enter** works, or you can click the **OK** button.
 Back in the **Add entity classes** dialog, press **Ctrl+Enter** to add the class, or click **OK**.
 The new class should appear in **Entity tree**.
 
-Why did Bond appear below Fish? How is **Entity tree** sorted?
+:emphasis:`Why did Bond appear below Fish? How is **Entity tree** sorted?
 The answer is that classes are primarily sorted by the number of dimensions
 with zero-dimensional classes at the top.
-Alphabetic sorting is just secondary.
+Alphabetic sorting is just secondary.`
 
 Lastly, the description we added to Bond can be viewed as a tooltip.
 Point your mouse to the Bond item in **Entity tree**.
@@ -80,11 +80,11 @@ This is a convenient way to add multiple entities at the same time.
 Bonding Fish with Add Entities Dialog
 =====================================
 
-There are multiple ways to bond fish, that is, to add new entities to the Bond class.
+:emphasis:`There are multiple ways to bond fish, that is, to add new entities to the Bond class.
 Here we will use the familiar **Add entities** dialog.
 Other tutorials will guide you through the other methods.
 Once you are more experienced with the tools at your disposal,
-you will be able to choose the best suited method for your needs, use case and mojo.
+you will be able to choose the best suited method for your needs, use case and mojo.`
 
 **Right-click** Bond in the tree and select **Add entities...** from the popup menu
 or click the |add_entities| icon next to Bond.
