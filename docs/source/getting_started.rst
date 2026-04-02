@@ -317,4 +317,4 @@ Where to next: If you need help on how to set up and run **SpineOpt.jl** using S
 `Simple system <https://spine-tools.github.io/SpineOpt.jl/latest/tutorial/simple_system/>`_
 tutorial over on **SpineOpt.jl**'s documentation that will help you get started on using SpineOpt in Spine Toolbox.
 
-If you are interested in more tutorials, head on to :ref:`Examples`.
+If you are interested in more tutorials, head on to :ref:`Tutorials and Examples`.

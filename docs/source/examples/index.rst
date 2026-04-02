@@ -1,8 +1,8 @@
-.. _Examples:
+.. _Tutorials and Examples:
 
-********
-Examples
-********
+**********************
+Tutorials and Examples
+**********************
 
 This module currently contains tutorials for Spine Database Editor.
 We are planning to add more tutorials here in the future, so stay tuned.

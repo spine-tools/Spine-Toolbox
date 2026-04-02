@@ -13,7 +13,7 @@ which provides means to define, manage, and execute complex data processing and
 computation workflows, such as energy system models.
 
 If you are new to Spine Toolbox, :ref:`Getting Started` section is a good place to start.
-The :ref:`Examples` section contains further tutorials on different topics.
+The :ref:`Tutorials and Examples` section contains further tutorials on different topics.
 If you want to run `SpineOpt.jl <https://github.com/spine-tools/SpineOpt.jl>`_ using Spine Toolbox,
 :ref:`How to Set up SpineOpt.jl` provides step-by-step instructions on how to get started.
 For information on how to set up Python, Julia, or
@@ -29,7 +29,7 @@ please see the :ref:`Contribution Guide`. The last section contains the complete
    whats_new
    getting_started
    how_to_run_spineopt
-   Examples <examples/index>
+   Tutorials and Examples <examples/index>
    setting_up
    main_window
    project_items

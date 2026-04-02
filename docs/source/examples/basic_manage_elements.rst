@@ -37,15 +37,15 @@ while the right side contains a table of existing entities in the Bond class.
 The dialog works such that it creates all possible combinations of the elements that are selected
 in **Available elements** when the |add_elements| button is clicked.
 
-Let's utilize the machinery to create all possible bonds where :literal:`cheep cheep` is the first element!
-Select :literal:`cheep cheep` from the left column in **Available entities**.
+Let's utilize the machinery to create all possible bonds where :literal:`Cheep-Cheep` is the first element!
+Select :literal:`Cheep-Cheep` from the left column in **Available entities**.
 Next, select the first element name in the second column.
 Then, while holding the **Shift** key, select the last element.
 **Shift** makes the selection extend between the previously selected element (the first one)
 and the element that was selected last.
 Click on |add_elements| to create the new entities in **Existing entities**.
 
-Does a bond between :literal:`cheep cheep` and :literal:`cheep cheep` make sense?
+Does a bond between :literal:`Cheep-Cheep` and :literal:`Cheep-Cheep` make sense?
 Perhaps not, so let's remove that entity.
 Select the row containing the non-sensical entity in **Existing entities** and click |remove_rows|.
 This gets us rid of it.
@@ -60,3 +60,13 @@ press **Ctrl+Enter** or click **OK** to accept the changes.
 If in doubt, cancel by pressing **Esc** or by clicking **Cancel**.
 
 That is it! You are now a certified manager of elements.
+
+Committing Changes
+==================
+
+None of the modifications we did in this tutorial are required by the other tutorials,
+so you might as well close the Database Editor and select **Discard changes and close**
+from the confirmation dialog.
+However, if you want to keep your changes, select **Commit and close** instead.
+In that case, follow :ref:`Committing Changes` on how to write a commit message.
+The editor will close once you accept the **Commit changes** dialog.

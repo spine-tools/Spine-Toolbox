@@ -39,10 +39,16 @@ if you want to spice things up a bit.
 
 To add more fish in the soup,
 select the empty cell at the lower left corner of the pivot table (Fish1 column).
-Type :literal:`otto` and press **Enter**.
+Type :literal:`Otto` and press **Enter**.
 This will add a new entity to the Fish class
-and add all possible Bonds with :literal:`otto` to the pivot table.
-You can now create bonds between :literal:`otto` and other fish.
+and add all possible Bonds with :literal:`Otto` to the pivot table.
+You can now create bonds between :literal:`Otto` and other fish.
 
 Once you are happy with your bonds,
 switch the layout back to the regular view by clicking the |table| **Table** button on the top toolbar.
+
+Committing Changes
+==================
+
+Saving the changes we made in this tutorial is not absolutely necessary,
+but if you want to, follow :ref:`Committing Changes`.

@@ -4,6 +4,9 @@
 .. |commit| image:: ../../../spinetoolbox/ui/resources/menu_icons/check.svg
    :width: 16
    :alt:
+.. |db_editor| image:: ../../../spinetoolbox/ui/resources/database-edit.svg
+   :width: 16
+   :alt:
 .. |new_file| image:: ../../../spinetoolbox/ui/resources/menu_icons/file.svg
    :width: 16
    :alt:
@@ -20,8 +23,12 @@ Adding Entity Classes
 =====================
 
 You need to have an empty Spine database to work through this short tutorial.
-Open Spine Toolbox, select **File -> New DB Editor** to open the Database editor.
+Open Spine Toolbox, select **File ->** |db_editor| **New DB Editor** to open the Database editor.
 Then, click the |new_file| **New** button on the toolbar or select **File->New...** to create a fresh database.
+Choose a folder that is easy remember and give the database a descriptive name,
+such as :literal:`Spine-tutorial.sqlite`.
+It might be a good idea to keep the database around
+as it will be needed in other tutorials.
 
 First, we need some entity classes.
 Entity classes are structural data that define the types of entities in the database.
@@ -52,8 +59,10 @@ Next, we will add Nemo to the database.
 Click the |add_entities| icon next to the Fish class in **Entity tree**
 or right-click Fish and select **Add entities...**.
 An **Add entities** dialog opens that works very similarly to the **Add Entity classes** dialog we used previously.
-Here, write :literal:`nemo` to the *entity name* column and press **Ctrl+Enter** to accept the addition.
+Here, write :literal:`Nemo` to the *entity name* column and press **Ctrl+Enter** to accept the addition.
 We have our first entity!
+
+.. _Committing Changes:
 
 Committing Changes
 ==================
@@ -65,7 +74,7 @@ Press **Ctrl+Enter** or click the |commit| **Commit** button on the toolbar at t
 You are asked to provide a commit message before proceeding.
 Write something like:
 
-    Added Fish class and first fish, nemo.
+    Added Fish class and first fish, Nemo.
 
 and press **Ctrl+Enter** to accept, or click **Commit**.
 This stores pending changes to the database.

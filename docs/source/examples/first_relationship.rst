@@ -14,18 +14,18 @@ First Relationship
 This is a basic level tutorial where we will build multidimensional entities, also known as relationships.
 You are expected to have completed :ref:`First Entity Class And Entity` before starting this tutorial.
 If not already open, launch Spine Database Editor and open the database
-that contains the Fish class and an entity only known as :literal:`nemo` to humankind.
+that contains the Fish class and an entity only known as :literal:`Nemo` to humankind.
 
 Adding Multidimensional Entity Classes
 ======================================
 
 Multidimensional entity classes are used to connect two or more classes with each other.
 The connections represent relations, links, groupings or similar concepts in the data structure.
-One dimensional entity classes connecting a single class to nothing are possible, too, but uncommon.
-While the dimensions are usually zero dimensional classes,
+One-dimensional entity classes connecting a single class to nothing are possible, too, but uncommon.
+While the dimensions are usually zero-dimensional classes,
 they can also be other multidimensional classes.
 
-For the sake of simplicity, we will create a two dimensional entity class called Bond
+For the sake of simplicity, we will create a two-dimensional entity class called Bond
 that connects the Fish class back to Fish class.
 Since we will use Fish as the first dimension,
 **right-click** on Fish in **Entity tree** and select **Add entity classes...** from the popup menu.
@@ -59,7 +59,7 @@ The new class should appear in **Entity tree**.
 
 Why did Bond appear below Fish? How is **Entity tree** sorted?
 The answer is that classes are primarily sorted by the number of dimensions
-with zero dimensional classes at the top.
+with zero-dimensional classes at the top.
 Alphabetic sorting is just secondary.
 
 Lastly, the description we added to Bond can be viewed as a tooltip.
@@ -70,8 +70,10 @@ Adding More Fish
 ================
 
 We need more fish to bond.
-Add the following entities to the Fish class: :literal:`marlin`, :literal:`bruce` and :literal:`cheep cheep`.
-In the **Add entities** dialog you can enter the name of the first Fish to the table,
+Click the |add_entities| icon next to the Fish class in **Entity tree** or
+select **Add entities...** from the **Right-click** popup menu.
+Add the following entities to the Fish class: :literal:`Marlin`, :literal:`Bruce` and :literal:`Cheep-Cheep`.
+You can enter the name of the first Fish to the table,
 then press **Down arrow** to create a new empty row and move down to the new empty cell.
 This is a convenient way to add multiple entities at the same time.
 
@@ -91,20 +93,27 @@ the **Add entities** dialog now has two additional columns, both named *Fish*.
 They represent the two dimensions of the entity class.
 The entities that make up a Bond entity are called *elements*.
 
-Select the cell below the first *Fish* column and start typing :literal:`nemo` into it.
+Select the cell below the first *Fish* column and start typing :literal:`Nemo` into it.
 Notice, that a list of Fish entities appears below, filtered by what you have typed.
-Once only :literal:`nemo` is shown on the list, press **Tab** to accept
+Once only :literal:`Nemo` is shown on the list, press **Tab** to accept
 which also moves the selection to the next *Fish* column.
-Add :literal:`marlin` to that cell either by typing or selecting from the list.
+Add :literal:`Marlin` to that cell either by typing or selecting from the list.
 
 Now that the elements of the first Bond entity are in place,
-the *entity name* column readily contains an automatically generated name, :literal:`nemo__marlin`.
+the *entity name* column readily contains an automatically generated name, :literal:`Nemo__Marlin`.
 We will leave the name as-is.
 It is rather uncommon to rename the multidimensional entities
-as they are usually referenced by their bynames, in this case :literal:`nemo | marlin`.
+as they are usually referenced by their bynames, in this case :literal:`Nemo | Marlin`.
 
-Now add :literal:`nemo | bruce`, :literal:`nemo | cheep cheep` and :literal:`bruce | marlin` entities.
-Try to use both mouse and keyboard (arrow keys, **F2**, **Tab**, **Enter**) to fill in the table!
+Now add :literal:`Nemo | Bruce`, :literal:`Nemo | Cheep-Cheep` and :literal:`Bruce | Marlin` entities.
+Try to use both mouse and keyboard to fill in the table! The following keys are especially useful:
+
+- arrow keys to move around
+- **F2** to start editing a cell
+- **Esc** to cancel editing
+- **Tab** to move to the next cell, also while editing
+- **Enter** to accept an edit
+
 You can even copy some Fish names from this tutorial and paste them on the table.
 
 If you make mistakes, you can remove erroneous rows with the |remove_rows| **Remove selected rows** button,
@@ -120,6 +129,7 @@ Committing Changes
 
 We have added quite a bit of new items to the data.
 Now is as good time as any to commit the changes.
+Check out :ref:`Committing Changes` if you are unsure how to proceed.
 
 Next Steps
 ==========

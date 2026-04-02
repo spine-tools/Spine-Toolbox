@@ -37,17 +37,17 @@ In addition to filling the empty rows by hand, it is possible to copy-paste data
 Adding Parameter Values
 =======================
 
-Above, we defined a :literal:`speed` parameter for Fish, and now we will set it for :literal:`nemo`.
+Above, we defined a :literal:`speed` parameter for Fish, and now we will set it for :literal:`Nemo`.
 Press **Alt+3** to focus on the **Parameter value** dock
 or click the name of its tab.
 The dock should feel familiar.
 Indeed, it works much like the **Parameter definition** dock.
-Select nemo from the **Entity tree**.
+Select Nemo from the **Entity tree**.
 You may need to expand the fish class with the small arrow on the left first.
 This will fill the *class* and *entity byname* columns of the parameter value table with correct values.
 
 What is a *byname*, anyway?
-In case of zero-dimensional entities, like :literal:`nemo`, it is just the name of the entity.
+In case of zero-dimensional entities, like :literal:`Nemo`, it is just the name of the entity.
 In other tutorials, we will create multidimensional entities, i.e. relationships.
 In that case, entity byname is a list of the names of the zero-dimensional parts of the relationship.
 
@@ -70,7 +70,7 @@ creating a basis for scenarios.
 
 Select :literal:`Base` with the arrow keys and move on to the next column using **Tab**.
 
-The last column, *value*, contains the actual speed of :literal:`nemo` (in the :literal:`Base` alternative).
+The last column, *value*, contains the actual speed of :literal:`Nemo` (in the :literal:`Base` alternative).
 Enter **5** and press **Enter** to accept the row.
 A new row containing the added value should now appear on the table above the empty row
 while the empty row gets cleared.
@@ -80,10 +80,11 @@ Committing Changes
 ==================
 
 This is a good point to save the changes by committing them.
+If you are not sure how to do that, visit :ref:`Committing Changes`.
 
 Next Steps
 ==========
 
-The tutorial continues on ref:`First Relationship`
+The tutorial continues on :ref:`First Relationship`
 where we will expand the set of entity classes and entities
 into multiple dimensions. See you there!
