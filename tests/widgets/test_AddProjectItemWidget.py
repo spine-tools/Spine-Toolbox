@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for AddProjectItemWidget."""
+
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock, patch

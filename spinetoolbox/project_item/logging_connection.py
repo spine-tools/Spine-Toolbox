@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains logging connection and jump classes."""
+
 from spine_engine.project_item.connection import ConnectionBase, FilterSettings, Jump, ResourceConvertingConnection
 from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError

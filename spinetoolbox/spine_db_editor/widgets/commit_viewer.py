@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains Database editor's Commit viewer."""
+
 from PySide6.QtCore import QEventLoop, QObject, Qt, QThread, Signal, Slot
 from PySide6.QtWidgets import (
     QGridLayout,

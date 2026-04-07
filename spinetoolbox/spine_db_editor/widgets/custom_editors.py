@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom editors for model/view programming."""
+
 from collections.abc import Iterable
 from contextlib import suppress
 from typing import Optional

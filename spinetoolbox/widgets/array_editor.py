@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains an editor widget for array type parameter values."""
+
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import DateTime, Duration, ParameterValueFormatError

@@ -10,6 +10,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``settings_widget`` module."""
+
 import os
 import pathlib
 from tempfile import TemporaryDirectory

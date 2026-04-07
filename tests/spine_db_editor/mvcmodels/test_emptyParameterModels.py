@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the EmptyParameterModel subclasses."""
+
 from unittest import mock
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QUndoStack

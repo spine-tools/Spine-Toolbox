@@ -10,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """This module contains utilities for pasting data from Excel."""
+
 from xml.etree import ElementTree
 from spinedb_api import DateTime, to_database
 from spinedb_api.parameter_value import join_value_and_type

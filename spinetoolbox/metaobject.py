@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """MetaObject class."""
+
 from PySide6.QtCore import QObject
 from spine_engine.utils.helpers import shorten
 

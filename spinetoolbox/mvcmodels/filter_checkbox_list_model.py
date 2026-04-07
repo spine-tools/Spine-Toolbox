@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides models for FilterWidget et al."""
+
 from collections.abc import Callable, Hashable, Iterable
 import re
 from typing import Any, Generic, TypeVar

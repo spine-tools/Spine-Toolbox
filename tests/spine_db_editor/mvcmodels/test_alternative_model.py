@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for :class:`AlternativeModel`."""
+
 import pickle
 from unittest.mock import MagicMock, patch
 from PySide6.QtWidgets import QApplication

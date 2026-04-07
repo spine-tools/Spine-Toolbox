@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for drawing graphics items on QGraphicsScene."""
+
 import math
 from PySide6.QtCore import QLineF, QPointF, QRectF, Qt
 from PySide6.QtGui import (

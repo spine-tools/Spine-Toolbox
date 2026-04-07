@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helper utilities for Database editor's tests."""
+
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor

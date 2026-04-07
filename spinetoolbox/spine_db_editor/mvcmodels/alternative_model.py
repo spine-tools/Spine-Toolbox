@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains alternative tree model."""
+
 from collections import defaultdict
 import pickle
 from PySide6.QtCore import QByteArray, QMimeData

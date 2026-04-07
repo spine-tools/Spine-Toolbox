@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a widget acting as a console for Julia & Python REPL's."""
+
 import multiprocessing
 import os
 from queue import Empty

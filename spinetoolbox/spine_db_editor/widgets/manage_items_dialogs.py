@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add, edit and remove database items."""
+
 from __future__ import annotations
 from functools import cached_property, reduce
 from typing import TYPE_CHECKING, Any

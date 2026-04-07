@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``toolbar`` module."""
+
 from tempfile import TemporaryDirectory
 from unittest import mock
 from spinetoolbox.spine_db_editor.widgets.toolbar import DBEditorToolBar

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for FilterCheckboxListModel class."""
+
 from PySide6.QtCore import Qt
 import pytest
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the SpineDBEditor class."""
+
 from itertools import chain
 import json
 import os

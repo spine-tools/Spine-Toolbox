@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``open_project_dialog`` module."""
+
 from tempfile import TemporaryDirectory
 from unittest import mock
 from PySide6.QtCore import QPoint

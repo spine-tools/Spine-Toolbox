@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Base classes and helpers for database editor tests."""
+
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database

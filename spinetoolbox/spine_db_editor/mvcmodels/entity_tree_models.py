@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Models to represent entities in a tree."""
+
 from PySide6.QtCore import QObject, QSettings
 from spinedb_api import DatabaseMapping
 from ...spine_db_manager import SpineDBManager

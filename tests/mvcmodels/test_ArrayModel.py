@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ArrayModel class."""
+
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import Array
 from spinetoolbox.mvcmodels.array_model import ArrayModel

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ArrayTableView class."""
+
 import csv
 from io import StringIO
 import locale

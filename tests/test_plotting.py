@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the plotting module."""
+
 from contextlib import contextmanager
 import unittest
 from unittest.mock import patch

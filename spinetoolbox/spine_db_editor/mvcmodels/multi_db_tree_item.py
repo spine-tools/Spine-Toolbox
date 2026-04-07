@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Base classes to represent items from multiple databases in a tree."""
+
 from __future__ import annotations
 from collections.abc import Callable
 from typing import ClassVar

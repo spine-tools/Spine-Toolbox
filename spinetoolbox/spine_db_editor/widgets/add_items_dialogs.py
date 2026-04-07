@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add items to databases."""
+
 from __future__ import annotations
 from itertools import product
 from typing import TYPE_CHECKING

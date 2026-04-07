@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for :class:`SpecificationEditorWindowBase` and its supports."""
+
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, PropertyMock, call, patch
 from PySide6.QtGui import QColor, QUndoStack

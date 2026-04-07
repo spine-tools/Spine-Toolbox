@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ParameterValueEditor widget."""
+
 import dateutil.parser
 import numpy as np
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt

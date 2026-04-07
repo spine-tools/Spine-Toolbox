@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a table model with an empty last row."""
+
 from typing import Optional
 from PySide6.QtCore import QModelIndex, QObject, Qt, Slot
 from .minimal_table_model import MinimalTableModel

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains machinery to deal with item metadata editor."""
+
 from PySide6.QtCore import QModelIndex, Slot
 from PySide6.scripts.metaobjectdump import QOBJECT_DERIVED
 from ..mvcmodels.entity_tree_item import EntityItem

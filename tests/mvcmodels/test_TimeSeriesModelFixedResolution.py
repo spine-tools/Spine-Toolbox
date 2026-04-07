@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the TimeSeriesModelFixedResolution class."""
+
 import dateutil.parser
 from dateutil.relativedelta import relativedelta
 import numpy as np

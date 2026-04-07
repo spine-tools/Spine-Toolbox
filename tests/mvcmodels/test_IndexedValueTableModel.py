@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the IndexedValueTableModel class."""
+
 from PySide6.QtCore import Qt
 from spinetoolbox.mvcmodels.indexed_value_table_model import IndexedValueTableModel
 from tests.mock_helpers import TestCaseWithQApplication

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``project_item_icon`` module."""
+
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QEvent, QPoint, Qt

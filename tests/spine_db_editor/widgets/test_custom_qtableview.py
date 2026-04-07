@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
+
 import csv
 import io
 import itertools

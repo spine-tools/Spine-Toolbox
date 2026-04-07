@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A model for maps, used by the parameter_value editors."""
+
 from copy import deepcopy
 from itertools import takewhile
 from numbers import Number

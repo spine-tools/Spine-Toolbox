@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Functions to make and handle QToolBars."""
+
 from PySide6.QtCore import QModelIndex, QPoint, QSize, Qt, Slot
 from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPainterPath, QPalette, QPen
 from PySide6.QtWidgets import QMenu, QToolBar, QToolButton, QWidget

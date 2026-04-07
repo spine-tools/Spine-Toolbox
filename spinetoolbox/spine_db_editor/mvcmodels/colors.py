@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Color functions for models that read from the active palette at call time."""
+
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication
 

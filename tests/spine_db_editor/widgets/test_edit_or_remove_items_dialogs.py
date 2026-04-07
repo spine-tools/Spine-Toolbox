@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for edit_or_remove_items_dialogs module."""
+
 import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, Qt

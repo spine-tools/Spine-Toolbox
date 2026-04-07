@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helper utilities for unit tests that test Database editor's table and tree views."""
+
 from types import MethodType
 from unittest import mock
 from PySide6.QtCore import QEvent, Qt

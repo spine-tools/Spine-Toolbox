@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+
 import pathlib
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel

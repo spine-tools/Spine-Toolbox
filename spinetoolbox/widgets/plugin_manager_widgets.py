@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains PluginManager dialogs and widgets."""
+
 from PySide6.QtCore import QSize, QSortFilterProxyModel, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLineEdit, QListView, QVBoxLayout

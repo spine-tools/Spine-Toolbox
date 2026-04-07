@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains base class for metadata table models associated functionality."""
+
 from enum import IntEnum, unique
 from operator import itemgetter
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal

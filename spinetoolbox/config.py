@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Application constants and style sheets."""
+
 import os
 from pathlib import Path
 import sys

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Test for `mass_select_items_dialogs` module."""
+
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QDialogButtonBox

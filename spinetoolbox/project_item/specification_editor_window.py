@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains base classes and utilities for specification editor windows."""
+
 from __future__ import annotations
 from collections.abc import Callable
 from enum import IntEnum, unique

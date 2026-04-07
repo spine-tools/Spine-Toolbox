@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``add_items_dialog`` module."""
+
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex
 from PySide6.QtWidgets import QApplication

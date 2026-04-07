@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains unit tests for the ``notification`` module."""
+
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QAbstractAnimation
 from PySide6.QtGui import QUndoCommand, QUndoStack

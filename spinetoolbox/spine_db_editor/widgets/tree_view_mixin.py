@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the TreeViewMixin class."""
+
 from PySide6.QtCore import QEvent, QItemSelection, Qt, Slot
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QTreeView

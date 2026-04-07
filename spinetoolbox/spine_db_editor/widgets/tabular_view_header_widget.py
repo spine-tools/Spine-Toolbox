@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains TabularViewHeaderWidget class."""
+
 from PySide6.QtCore import QMimeData, Qt, Signal
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QToolButton, QWidget

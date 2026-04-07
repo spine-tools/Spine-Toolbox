@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """QUndoCommand subclasses for modifying the project."""
+
 import typing
 from PySide6.QtGui import QUndoCommand
 from spine_engine.project_item.connection import Jump

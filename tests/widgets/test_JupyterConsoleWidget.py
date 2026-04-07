@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the JupyterConsoleWidget."""
+
 import queue
 from threading import Event
 from unittest import mock

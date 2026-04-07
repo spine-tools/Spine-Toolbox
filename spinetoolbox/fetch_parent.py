@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The FetchParent and FlexibleFetchParent classes."""
+
 from __future__ import annotations
 from collections.abc import Callable, Hashable
 from contextlib import suppress

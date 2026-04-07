@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the StackedViewMixin class."""
+
 from itertools import chain
 from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt, Slot
 from PySide6.QtGui import QColor

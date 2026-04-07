@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``execution_managers`` module."""
+
 import sys
 import unittest
 from unittest.mock import MagicMock

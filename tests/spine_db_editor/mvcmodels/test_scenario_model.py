@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``scenario_model`` module."""
+
 import pickle
 from PySide6.QtCore import QByteArray, QMimeData, Qt
 from PySide6.QtWidgets import QApplication

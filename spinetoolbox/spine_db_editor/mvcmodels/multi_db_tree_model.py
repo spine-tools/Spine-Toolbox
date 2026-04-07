@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A base model class to represent items from multiple databases in a tree."""
+
 from PySide6.QtCore import QModelIndex, QObject, Qt
 from spinedb_api import DatabaseMapping
 from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem

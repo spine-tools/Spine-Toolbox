@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the KernelEditor widget."""
+
 from unittest import mock
 from PySide6.QtWidgets import QWizard
 from spinetoolbox.widgets.install_julia_wizard import InstallJuliaWizard

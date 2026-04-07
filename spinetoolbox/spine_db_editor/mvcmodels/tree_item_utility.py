@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A tree model for parameter_value lists."""
+
 from typing import ClassVar
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon

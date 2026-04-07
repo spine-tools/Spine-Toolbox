@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """General helper functions and classes."""
+
 from __future__ import annotations
 import bisect
 from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -351,8 +352,7 @@ def pyside6_version_check() -> bool:
     qt_version_info (tuple) contains each version component separately e.g. (6, 4, 1)
     """
     if not (qt_version_info[0] == 6 and qt_version_info[1] >= 4):
-        print(
-            f"""Sorry for the inconvenience but,
+        print(f"""Sorry for the inconvenience but,
 
             Spine Toolbox does not support PySide6 version {qt_version}.
             At the moment, PySide6 version must be 6.4 or greater.
@@ -362,8 +362,7 @@ def pyside6_version_check() -> bool:
                 pip install -r requirements.txt --upgrade
 
             And start the application again.
-            """
-        )
+            """)
         return False
     return True
 

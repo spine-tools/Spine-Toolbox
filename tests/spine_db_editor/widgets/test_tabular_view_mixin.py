@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``tabular_view_mixin`` module."""
+
 import itertools
 import unittest
 from unittest.mock import patch

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains SpineEngineManagerBase."""
+
 import json
 import queue
 import threading

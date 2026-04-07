@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+
 from unittest.mock import patch
 from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QApplication

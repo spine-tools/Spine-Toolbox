@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Compound models. These models concatenate several 'single' models and one 'empty' model."""
+
 from __future__ import annotations
 import bisect
 from collections.abc import Callable, Iterable, Iterator, Sequence

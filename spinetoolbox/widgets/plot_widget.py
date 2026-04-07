@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A Qt widget showing a toolbar and a matplotlib plotting canvas."""
+
 import csv
 import io
 import itertools

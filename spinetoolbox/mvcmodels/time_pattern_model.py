@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A model for time patterns, used by the parameter_value editors."""
+
 import numpy as np
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QMessageBox

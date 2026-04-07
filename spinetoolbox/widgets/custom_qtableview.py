@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
+
 from contextlib import contextmanager, suppress
 import csv
 import ctypes
