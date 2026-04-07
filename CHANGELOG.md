@@ -3,7 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.7]
 
 ### Added
 
@@ -13,16 +13,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   - The Add alternatives submenu adds new alternatives to the selected scenario.
   - The Duplicate with alternatives submenu duplicates current scenario
     adding the selected alternatives to the duplicate.
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
 
 ## [0.10.6]
 
