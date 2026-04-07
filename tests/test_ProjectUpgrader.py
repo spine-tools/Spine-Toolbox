@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ProjectUpgrader class."""
+
 import json
 import os
 from pathlib import Path

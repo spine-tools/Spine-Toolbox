@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Widget shown to user when a new Project Item is created."""
+
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QStatusBar, QWidget
 from spine_engine.utils.helpers import shorten

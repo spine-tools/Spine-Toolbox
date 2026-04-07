@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the AboutWidget class."""
+
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QWidget

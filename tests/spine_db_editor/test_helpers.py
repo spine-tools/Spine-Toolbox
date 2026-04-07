@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for Database editor's ``helpers`` module."""
+
 import unittest
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR

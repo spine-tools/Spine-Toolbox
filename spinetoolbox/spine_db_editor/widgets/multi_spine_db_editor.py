@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the MultiSpineDBEditor class."""
+
 from contextlib import suppress
 import os
 from PySide6.QtCore import QPoint, Slot
@@ -186,8 +187,7 @@ class _CustomStatusBar(QStatusBar):
         palette = QApplication.palette()
         hover_color = palette.color(QPalette.ColorRole.Midlight).name()
         pressed_color = palette.color(QPalette.ColorRole.Mid).name()
-        self._hide_button.setStyleSheet(
-            f"""
+        self._hide_button.setStyleSheet(f"""
             QToolButton {{
                 background-color: transparent;
                 border: 0px;
@@ -199,8 +199,7 @@ class _CustomStatusBar(QStatusBar):
             QToolButton:pressed {{
                 background-color: {pressed_color};
             }}
-            """
-        )
+            """)
         self._hide_button.setText("\uf00d")
         self._hide_button.setFont(QFont(TOOLBOX_FONT.family))
         self._hide_button.setFixedSize(24, 24)

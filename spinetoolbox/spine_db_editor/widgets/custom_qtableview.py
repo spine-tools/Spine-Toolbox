@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
+
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import replace

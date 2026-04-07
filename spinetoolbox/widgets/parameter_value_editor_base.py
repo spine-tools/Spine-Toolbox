@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A base for editor windows for editing parameter values."""
+
 from enum import Enum, auto, unique
 from numbers import Number
 from PySide6.QtCore import Qt, Slot

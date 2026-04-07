@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Widget for controlling user settings."""
+
 import os
 import pathlib
 import shutil

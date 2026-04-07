@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs for julia setup."""
+
 from enum import IntEnum, auto
 import os
 import sys

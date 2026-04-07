@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the SpineToolboxProject class."""
+
 from contextlib import contextmanager
 from dataclasses import replace
 import json

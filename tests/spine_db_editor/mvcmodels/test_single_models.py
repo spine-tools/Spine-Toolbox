@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``single_models`` module."""
+
 import pytest
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, HAS_METADATA_ROLE
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (

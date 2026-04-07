@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The SpineDBWorker class."""
+
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Asterisk, DatabaseMapping

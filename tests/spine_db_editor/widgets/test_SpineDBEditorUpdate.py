@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for database item update functionality in Database editor."""
+
 from spinedb_api import to_database
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Models to represent items in a tree."""
+
 from __future__ import annotations
 from typing import Optional
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, Qt

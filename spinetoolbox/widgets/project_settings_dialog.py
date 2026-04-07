@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A widget for editing project settings."""
+
 import pathlib
 import shutil
 from typing import Literal

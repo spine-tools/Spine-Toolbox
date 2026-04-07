@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the KernelFetcher class."""
+
 from spinetoolbox.helpers import SignalWaiter
 from spinetoolbox.kernel_fetcher import KernelFetcher
 from tests.mock_helpers import TestCaseWithQApplication

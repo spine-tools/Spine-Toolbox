@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for drawing graphics items on graph view's QGraphicsScene."""
+
 from enum import Enum, auto
 from PySide6.QtCore import QByteArray, QLineF, QObject, QPointF, QRectF, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QBrush, QColor, QGuiApplication, QPainterPath, QPalette, QPen

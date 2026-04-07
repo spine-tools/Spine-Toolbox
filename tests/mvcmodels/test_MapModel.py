@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for MapModel class."""
+
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QColor
 from spinedb_api import Array, DateTime, Duration, Map, ParameterValueFormatError

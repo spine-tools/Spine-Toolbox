@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the MultiTabWindow and TabBarPlus classes."""
+
 from PySide6.QtCore import QEvent, QPoint, Qt, Signal, Slot
 from PySide6.QtGui import QCursor, QGuiApplication, QIcon, QMouseEvent
 from PySide6.QtWidgets import QApplication, QMainWindow, QMenu, QTabBar, QTabWidget, QToolButton, QWidget

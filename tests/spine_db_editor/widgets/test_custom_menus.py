@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``custom_menus`` module."""
+
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest

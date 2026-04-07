@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTreeView`` classes."""
+
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication

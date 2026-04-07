@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains TabularViewMixin class."""
+
 from collections import namedtuple
 from contextlib import contextmanager
 from itertools import chain

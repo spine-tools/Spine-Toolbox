@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QWidgets for Filtering and Zooming."""
+
 from typing import Generic, ParamSpec, TypeVar
 from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains model for the Array editor widget."""
+
 import locale
 from numbers import Number
 from typing import Type

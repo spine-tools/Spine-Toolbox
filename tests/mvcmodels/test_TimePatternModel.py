@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the TimePatternModel class."""
+
 import numpy as np
 import numpy.testing
 from PySide6.QtCore import Qt

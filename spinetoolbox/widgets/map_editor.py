@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor widget for editing a map type parameter values."""
+
 from PySide6.QtCore import QModelIndex, QPoint, Qt, Slot
 from PySide6.QtWidgets import QWidget
 from spinedb_api import Map

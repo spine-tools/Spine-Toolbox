@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom item delegates."""
+
 from numbers import Number
 import re
 from typing import ClassVar

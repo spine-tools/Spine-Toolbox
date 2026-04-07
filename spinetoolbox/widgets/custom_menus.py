@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
+
 from collections.abc import Iterable
 import os
 from typing import Generic, TypeVar

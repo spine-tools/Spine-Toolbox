@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """This module contains functionality to manage database display names."""
+
 from collections.abc import Iterable, Iterator
 import hashlib
 import pathlib

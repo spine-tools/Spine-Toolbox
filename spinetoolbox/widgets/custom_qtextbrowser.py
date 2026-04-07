@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Class for a custom QTextBrowser for showing the logs and tool output."""
+
 from PySide6.QtCore import Slot
 from PySide6.QtGui import (
     QAction,

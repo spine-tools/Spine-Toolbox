@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides pivot table models for the Tabular View."""
+
 from __future__ import annotations
 from collections import defaultdict
 from contextlib import suppress

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Spine Toolbox application main file."""
+
 import sys
 from spinetoolbox.main import main
 

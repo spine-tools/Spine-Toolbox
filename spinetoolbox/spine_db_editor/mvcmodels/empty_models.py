@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Empty models for dialogs as well as parameter definitions and values."""
+
 from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Iterator

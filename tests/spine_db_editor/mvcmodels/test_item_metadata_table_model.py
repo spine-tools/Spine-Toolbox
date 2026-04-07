@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the item metadata table model."""
+
 from PySide6.QtCore import Qt
 import pytest
 from spinedb_api import (

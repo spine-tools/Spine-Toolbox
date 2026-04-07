@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the metadata table model."""
+
 import itertools
 from pathlib import Path
 from unittest import mock

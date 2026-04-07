@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for CopyPasteTableView class."""
+
 import locale
 import unittest
 from unittest import mock

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains scenario tree model."""
+
 import pickle
 from PySide6.QtCore import QByteArray, QMimeData, Qt
 from spinetoolbox.helpers import unique_name

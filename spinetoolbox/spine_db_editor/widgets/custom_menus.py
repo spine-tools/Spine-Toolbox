@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom context menus and pop-up menus."""
+
 from collections.abc import Callable, Iterator
 from typing import Any, Hashable
 from PySide6.QtCore import QPoint, Qt, Signal, Slot

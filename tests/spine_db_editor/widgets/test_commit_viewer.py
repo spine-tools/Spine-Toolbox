@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``commit_viewer`` module."""
+
 from contextlib import contextmanager
 from unittest import mock
 from PySide6.QtCore import Qt

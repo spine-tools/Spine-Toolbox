@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``logging_connection`` module."""
+
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock

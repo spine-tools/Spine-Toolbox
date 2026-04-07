@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QListView."""
+
 from textwrap import fill
 from PySide6.QtCore import QMimeData, Qt, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QCursor, QDrag, QIcon, QIconEngine, QPainter

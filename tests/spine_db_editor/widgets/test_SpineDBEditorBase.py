@@ -11,11 +11,12 @@
 ######################################################################################################################
 
 """Contains unit tests for the SpineDBEditorBase class."""
+
 import unittest
 from unittest import mock
 from sqlalchemy.engine.url import make_url
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditorBase
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 
 
 class TestSpineDBEditorBase(TestCaseWithQApplication):

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Tests for Remote Spine Engine Manager."""
+
 import unittest
 from unittest import mock
 from spine_engine import ItemExecutionFinishState

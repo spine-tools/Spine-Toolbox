@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor widget for editing a time pattern type (relationship) parameter values."""
+
 from PySide6.QtCore import QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import TimePattern

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains base classes for project items and item factories."""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING, Type
 from PySide6.QtCore import QModelIndex

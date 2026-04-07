@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the TimeSeriesModelVariableResolution class."""
+
 import numpy
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import TimeSeriesVariableResolution

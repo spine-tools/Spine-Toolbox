@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor dialog for editing database (relationship) parameter values."""
+
 from PySide6.QtWidgets import QMessageBox
 from spinedb_api import ParameterValueFormatError, to_database
 from spinedb_api.parameter_value import deep_copy_value

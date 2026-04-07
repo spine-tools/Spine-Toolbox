@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ProjectItem base class."""
+
 from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, NonCallableMagicMock
 from spinetoolbox.project_item.project_item import ProjectItem

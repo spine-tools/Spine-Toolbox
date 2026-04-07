@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QGraphicsViews for the Entity graph view."""
+
 from collections import defaultdict
 from collections.abc import Iterable
 from contextlib import contextmanager

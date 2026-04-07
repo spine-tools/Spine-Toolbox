@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A widget and utilities to select database items."""
+
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QWidget
 from spinedb_api.db_mapping import DatabaseMapping

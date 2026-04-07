@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for `pivot_table_models` module."""
+
 import itertools
 from unittest.mock import patch
 from PySide6.QtWidgets import QApplication

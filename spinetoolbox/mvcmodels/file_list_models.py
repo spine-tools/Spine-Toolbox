@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a generic File list model and an Item for that model."""
+
 from collections import namedtuple
 from functools import cache, cached_property
 from itertools import takewhile

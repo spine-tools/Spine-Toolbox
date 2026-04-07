@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains GUIUpdater and SpineEngineWorker classes."""
+
 import copy
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from spine_engine.exception import EngineInitFailed, RemoteEngineInitFailed

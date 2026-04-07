@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """General helper functions and classes for DB editor's models."""
+
 from collections.abc import Sequence
 import csv
 from io import StringIO

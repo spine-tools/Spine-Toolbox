@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Single models for parameter definitions and values (as 'for a single entity')."""
+
 from __future__ import annotations
 from collections.abc import Iterable, Iterator
 import math

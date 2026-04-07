@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A tree model for parameter_value lists."""
+
 from PySide6.QtCore import QModelIndex, Qt
 from .parameter_value_list_item import DBItem
 from .tree_model_base import TreeModelBase

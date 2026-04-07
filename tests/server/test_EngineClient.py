@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains tests for the EngineClient class."""
+
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory

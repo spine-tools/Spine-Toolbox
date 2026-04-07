@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a dialog for generating scenarios from selected alternatives."""
+
 from enum import Enum, auto, unique
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QMessageBox, QWidget

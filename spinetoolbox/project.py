@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Spine Toolbox project class."""
+
 from collections.abc import Callable
 from enum import Enum, auto, unique
 from itertools import chain

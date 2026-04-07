@@ -12,6 +12,7 @@
 
 """Contains functions used in upgrading and converting projects
 and project dicts from earlier versions to the latest version."""
+
 from collections.abc import Callable
 import copy
 from enum import Enum, auto

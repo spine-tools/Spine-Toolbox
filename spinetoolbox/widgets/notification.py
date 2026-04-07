@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a notification widget."""
+
 from PySide6.QtCore import Property, QObject, QPropertyAnimation, Qt, QTimer, Slot
 from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QLayout, QPushButton, QSizePolicy

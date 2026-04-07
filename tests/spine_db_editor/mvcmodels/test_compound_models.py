@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the models in ``compound_models`` module."""
+
 from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for drawing graphics items on QGraphicsScene."""
+
 import functools
 from math import cos, pi, radians, sin
 from PySide6.QtCore import QLineF, QPointF, QRectF, Qt, QVariantAnimation, Slot

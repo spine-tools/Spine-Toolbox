@@ -10,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """Contains utilities for validating parameter types."""
+
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
 import queue

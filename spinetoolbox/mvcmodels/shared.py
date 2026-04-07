@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains stuff that is used by more than one model."""
+
 from PySide6.QtCore import Qt
 
 PARSED_ROLE = Qt.ItemDataRole.UserRole

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains custom QHeaderView for the pivot table."""
+
 from PySide6.QtCore import QPoint, Qt, Signal, Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QHeaderView, QMenu, QWidget

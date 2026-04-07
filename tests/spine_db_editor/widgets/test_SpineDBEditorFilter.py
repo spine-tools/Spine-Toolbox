@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for filtering in Database editor."""
+
 from unittest import mock
 from PySide6.QtCore import QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtGui import QColor, QPen

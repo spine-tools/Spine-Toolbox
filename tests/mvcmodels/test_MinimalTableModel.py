@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the MinimalTableModel class."""
+
 from PySide6.QtCore import Qt
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from tests.mock_helpers import TestCaseWithQApplication

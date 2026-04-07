@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes to represent entities in a tree."""
+
 from typing import TypeAlias
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon

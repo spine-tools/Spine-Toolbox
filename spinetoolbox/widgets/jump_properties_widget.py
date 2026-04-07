@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains jump properties widget's business logic."""
+
 from PySide6.QtCore import QItemSelection, Slot
 from spine_engine.project_item.project_item_resource import LabelArg
 from ..mvcmodels.file_list_models import FileListModel, JumpCommandLineArgsModel

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The SpineDBManager class."""
+
 from collections.abc import Iterable
 from contextlib import suppress
 import json

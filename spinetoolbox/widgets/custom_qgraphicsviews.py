@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QGraphicsViews for the Design and Graph views."""
+
 import math
 from PySide6.QtCore import QRectF, Qt, QTimeLine, QTimer, Slot
 from PySide6.QtGui import QContextMenuEvent, QCursor, QMouseEvent

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor dialog for Array elements."""
+
 from PySide6.QtCore import Qt
 from .datetime_editor import DatetimeEditor
 from .duration_editor import DurationEditor

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides SpineDBIconManager."""
+
 from collections.abc import Iterable
 from PySide6.QtCore import QBuffer, QPointF, QRectF, Qt
 from PySide6.QtGui import QFont, QIcon, QPainter, QTextOption

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the spine_db_manager module."""
+
 import time
 from unittest.mock import MagicMock
 from PySide6.QtCore import QSettings, Qt

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to edit items in databases."""
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 from PySide6.QtCore import Slot

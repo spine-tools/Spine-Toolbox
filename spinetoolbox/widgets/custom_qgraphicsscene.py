@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QGraphicsScene used in the Design View."""
+
 import math
 from PySide6.QtCore import QEvent, QPointF, Qt, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QPalette, QPen
@@ -61,7 +62,11 @@ class DesignGraphicsScene(CustomGraphicsScene):
         settings = toolbox.qsettings()
         self.bg_choice = settings.value("appSettings/bgChoice", defaultValue="solid")
         bg_color = settings.value("appSettings/bgColor", defaultValue="")
-        self.bg_color = QColor(bg_color) if bg_color and QColor(bg_color).isValid() else QApplication.palette().color(QPalette.ColorRole.Base)
+        self.bg_color = (
+            QColor(bg_color)
+            if bg_color and QColor(bg_color).isValid()
+            else QApplication.palette().color(QPalette.ColorRole.Base)
+        )
         self._connection_drawer = ConnectionLinkDrawer(toolbox)
         self._connection_drawer.hide()
         self._jump_drawer = JumpLinkDrawer(toolbox)

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs for julia setup."""
+
 from enum import IntEnum, auto
 import pathlib
 from typing import Literal, TypeAlias
@@ -354,8 +355,7 @@ class TroubleshootProblemsPage(QWizardPage):
         self._button1 = QRadioButton("None of the below")
         self._button2 = QRadioButton("Installing SpineOpt fails with the following message (or similar):")
         msg2 = MonoSpaceFontTextBrowser(self)
-        msg2.append(
-            """
+        msg2.append("""
             \u22ee<br>
             error: GitError(Code:ERROR, Class:SSL, Your Julia is built with a SSL/TLS engine that libgit2 
             doesn't know how to configure to use a file or directory of certificate authority roots, 
@@ -363,33 +363,27 @@ class TroubleshootProblemsPage(QWizardPage):
             system's root certificates are safe to use, you can `export JULIA_SSL_CA_ROOTS_PATH=""` 
             in your environment to use those instead.<br>
             \u22ee
-            """
-        )
+            """)
         self._button3 = QRadioButton("Installing SpineOpt fails with one of the following messages (or similar):")
         msg3a = MonoSpaceFontTextBrowser(self)
         msg3b = MonoSpaceFontTextBrowser(self)
-        msg3a.append(
-            """
+        msg3a.append("""
             \u22ee<br>
             Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
             Resolving package versions...<br>
             ERROR: expected package `UUIDs [cf7118a7]` to be registered<br>
             \u22ee
-            """
-        )
-        msg3b.append(
-            """
+            """)
+        msg3b.append("""
             \u22ee<br>
             Updating git-repo `https://github.com/spine-tools/SpineJuliaRegistry`<br>
             Resolving package versions...<br>
             ERROR: cannot find name corresponding to UUID f269a46b-ccf7-5d73-abea-4c690281aa53 in a registry<br>
             \u22ee
-            """
-        )
+            """)
         self._button4 = QRadioButton("On Windows 7, installing SpineOpt fails with the following message (or similar):")
         msg4 = MonoSpaceFontTextBrowser(self)
-        msg4.append(
-            """
+        msg4.append("""
             \u22ee<br>
             Downloading artifact: OpenBLAS32<br>
             Exception setting "SecurityProtocol": "Cannot convert null to type "System.Net.<br>
@@ -401,8 +395,7 @@ class TroubleshootProblemsPage(QWizardPage):
             + CategoryInfo          : InvalidOperation: (:) [], RuntimeException<br>
             + FullyQualifiedErrorId : PropertyAssignmentException<br>
             \u22ee
-            """
-        )
+            """)
         layout = QVBoxLayout(self)
         layout.addWidget(WrapLabel(msg))
         layout.addStretch()

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``spine_db_fetcher`` module."""
+
 from unittest.mock import MagicMock
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
