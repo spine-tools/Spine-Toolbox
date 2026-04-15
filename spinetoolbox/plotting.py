@@ -116,12 +116,17 @@ compat_types = {
 
 # Regex pattern to indentify numerical sequences encoded as string
 SEQ_PAT = re.compile(r"^([a-zA-Z])([0-9]+)$")
+STR_TYPES = (
+    object,
+    pd.StringDtype(na_value=pd.NA),
+    pd.StringDtype(na_value=np.nan),
+)
 
 
 def parse_time(df: pd.DataFrame) -> pd.DataFrame:
     """Parse 'time' or 'period' columns to integers for plotting."""
     for col, _type in df.dtypes.items():
-        if _type in (object, pd.StringDtype()) and (groups := df[col].str.extract(SEQ_PAT)).notna().all(axis=None):
+        if _type in STR_TYPES and (groups := df[col].str.extract(SEQ_PAT)).notna().all(axis=None):
             df[col] = groups[1].astype(int)
     return df
 
