@@ -15,13 +15,9 @@
 from PySide6.QtCore import Slot
 from PySide6.QtGui import (
     QAction,
-    QBrush,
-    QColor,
     QFontDatabase,
-    QPalette,
     QTextBlockFormat,
     QTextCursor,
-    QTextFrame,
     QTextFrameFormat,
 )
 from PySide6.QtWidgets import QMenu, QTextBrowser
@@ -235,36 +231,12 @@ class CustomQTextBrowser(QTextBrowser):
             frame = cursor.currentFrame()
             if selected:
                 frame.setFrameFormat(self._selected_frame_format)
-                self._recolor_frame_text(frame)
                 for child_frame in frame.childFrames():
                     child_frame.setFrameFormat(self._selected_frame_format)
             else:
                 frame.setFrameFormat(self._frame_format)
-                self._recolor_frame_text(frame)
                 for child_frame in frame.childFrames():
                     child_frame.setFrameFormat(self._frame_format)
-
-    def _recolor_frame_text(self, frame: QTextFrame) -> None:
-        """Changes the text color of unstyled and title text in a frame.
-
-        Leaves explicitly colored message text (success/error/warning) unchanged.
-
-        Args:
-            frame: the text frame to process
-        """
-        for child_frame in frame.childFrames():
-            self._recolor_frame_text(child_frame)
-        cursor = frame.firstCursorPosition()
-        end = frame.lastPosition()
-        while cursor.position() < end:
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
-            fmt = cursor.charFormat()
-            fg = fmt.foreground()
-            if not fg.style() or fg.color().saturationF() < 0.1:
-                cursor.setCharFormat(fmt)
-            if not cursor.movePosition(QTextCursor.MoveOperation.NextBlock):
-                break
 
 
 class MonoSpaceFontTextBrowser(QTextBrowser):

@@ -442,14 +442,14 @@ class TestLogMessageHtmlParser:
         text = "Link to <a href='http://example.com'>somewhere</a>."
         parser = LogMessageHtmlParser(is_dark)
         parser.feed(text)
-        expected = f"Link to <a style=color:{color} href='http://example.com'>somewhere</a>."
+        expected = f"Link to <a style='color:{color};' href='http://example.com'>somewhere</a>."
         assert parser.drain() == expected
 
     def test_styled_tag_is_replaced_by_color(self, is_dark, color):
-        text = "Link to <a style=color:white href='http://example.com'>somewhere</a>."
+        text = "Link to <a style='color:white;' href='http://example.com'>somewhere</a>."
         parser = LogMessageHtmlParser(is_dark)
         parser.feed(text)
-        expected = f"Link to <a style=color:{color} href='http://example.com'>somewhere</a>."
+        expected = f"Link to <a style='color:{color};' href='http://example.com'>somewhere</a>."
         assert parser.drain() == expected
 
 
