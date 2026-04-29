@@ -189,7 +189,7 @@ class LogMessageHtmlParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag == "a":
             color = "#bb99ff" if self._is_dark else "#7755bb"
-            self._text += f"<a style=color:{color}"
+            self._text += f"<a style='color:{color};'"
             for key, value in attrs:
                 if key == "style":
                     continue
