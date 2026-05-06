@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- Install Julia wizard now installs latest Julia instead of Julia 1.11.
+
 ### Deprecated
 
 ### Removed
