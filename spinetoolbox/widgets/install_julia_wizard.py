@@ -197,7 +197,6 @@ class InstallJuliaPage(QWizardProcessPage):
             "-m",
             "jill",
             "install",
-            "1.11",  # as of 17.10.2025, SpineOpt doesn't work with Julia >= 1.12; revise later!
             "--confirm",
             "--install_dir",
             self.field("install_dir"),
