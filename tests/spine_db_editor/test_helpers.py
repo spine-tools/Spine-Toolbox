@@ -98,9 +98,21 @@ class TestStringToParameterValue(unittest.TestCase):
     def test_numeric_values(self):
         with mock.patch("spinetoolbox.spine_db_editor.helpers.locale.atof") as mock_atof:
             mock_atof.side_effect = lambda x: float(x.replace(",", "."))
-            self.assertEqual(string_to_parameter_value("2,3"), 2.3)
-            self.assertEqual(string_to_parameter_value("2.3"), 2.3)
+            with mock.patch("spinetoolbox.helpers.locale.setlocale"):
+                self.assertEqual(string_to_parameter_value("2,3"), 2.3)
+                self.assertEqual(string_to_parameter_value("2.3"), 2.3)
         self.assertEqual(string_to_parameter_value("2.3"), 2.3)
+
+    def test_locale_ambiguous_numeric_strings_stay_strings(self):
+        # ``"1,000"`` could be 1.0 (Finnish locale) or 1000.0 (US locale).
+        # Don't guess — leave it as a string and let the user disambiguate.
+        with mock.patch("spinetoolbox.spine_db_editor.helpers.locale.atof") as mock_atof:
+            mock_atof.side_effect = lambda x: float(x.replace(",", "."))
+            self.assertEqual(string_to_parameter_value("1,000,000"), "1,000,000")
+            self.assertEqual(string_to_parameter_value("1.5,3"), "1.5,3")
+            # ``locale.atof`` should never be reached for locale-ambiguous
+            # input under the gated path.
+            mock_atof.assert_not_called()
 
 
 class TestInputStringToInt(unittest.TestCase):

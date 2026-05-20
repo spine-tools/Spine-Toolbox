@@ -217,6 +217,20 @@ class TestHelpers(TestCaseWithQApplication):
         self.assertEqual(try_number_from_string("23"), 23)
         self.assertEqual(try_number_from_string("2.3"), 2.3)
 
+    def test_try_number_from_string_comma_decimal(self):
+        # Users on locales with ``,`` decimal separator (Finnish, German,
+        # etc.) need ``"1,5"`` to parse as the float 1.5.  Mocked here so
+        # the test doesn't depend on the system locale actually being
+        # configured with a comma-decimal in CI.
+        with patch("spinetoolbox.helpers.locale.atof") as mock_atof:
+            mock_atof.side_effect = lambda x: float(x.replace(",", "."))
+            with patch("spinetoolbox.helpers.locale.setlocale"):
+                self.assertEqual(try_number_from_string("1,5"), 1.5)
+                # Two commas / a period present → locale-ambiguous,
+                # leave as string rather than guessing.
+                self.assertEqual(try_number_from_string("1,000,000"), "1,000,000")
+                self.assertEqual(try_number_from_string("1.0,5"), "1.0,5")
+
     def test_select_julia_executable(self):
         with TemporaryDirectory() as temp_dir:
             executable = Path(temp_dir, "julia.exe")

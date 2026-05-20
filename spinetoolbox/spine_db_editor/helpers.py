@@ -16,7 +16,7 @@ import locale
 from typing import Any, Optional, Union
 from PySide6.QtGui import QColor
 from spinedb_api.helpers import string_to_bool as base_string_to_bool
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, system_lc_numeric
 
 
 def string_to_display_icon(x: str) -> Optional[int]:
@@ -96,10 +96,18 @@ def string_to_parameter_value(str_value: str) -> Any:
     try:
         return float(str_value)
     except ValueError:
-        try:
-            return locale.atof(str_value)
-        except ValueError:
-            pass
+        # ``locale.atof`` was always called here but under the C numeric
+        # locale Toolbox sets at startup; ``,``-decimal input (typed by
+        # users on Finnish/German/etc. locales) silently fell through to
+        # the string branch.  Switch to the user's system locale for the
+        # call and gate on "one ``,``, no ``.``" so ``"1,000"``-style
+        # locale-ambiguous strings stay unparsed.
+        if str_value.count(",") == 1 and "." not in str_value:
+            try:
+                with system_lc_numeric():
+                    return locale.atof(str_value)
+            except (ValueError, locale.Error):
+                pass
     if str_value == TRUE_STRING:
         return True
     if str_value == FALSE_STRING:

@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- Parameter and default-value cells in the DB editor now accept comma-decimal
+  input (e.g. `1,5`) under Finnish/German/etc. locales.  Previously such input
+  fell through both `int()` and `float()` and was silently stored as a string
+  with `default_type='str'`, causing downstream tools (e.g. FlexTool) to read
+  the value as text instead of a number.
+
 ### Security
 
 ## [0.10.8]

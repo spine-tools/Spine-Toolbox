@@ -15,8 +15,9 @@
 from __future__ import annotations
 import bisect
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 import datetime
+import locale
 from enum import Enum, unique
 import functools
 import gc
@@ -834,8 +835,38 @@ def get_open_file_name_in_last_dir(
     return filename, selected_filter
 
 
+@contextmanager
+def system_lc_numeric():
+    """Temporarily switches ``LC_NUMERIC`` to the user's system locale.
+
+    Toolbox runs with ``LC_NUMERIC='C'`` set at startup (see ``ui_main``
+    and ``spine_db_editor/main``) so that ``float()`` and other ``.``-decimal
+    parsers behave consistently regardless of OS locale.  This context
+    manager flips ``LC_NUMERIC`` to the user's system locale for the
+    duration of the ``with`` block — needed for ``locale.atof`` to accept
+    comma-decimal input on Finnish/German/etc. locales — and restores the
+    previous value on exit.
+
+    Duplicated from ``widgets.custom_qtableview.system_lc_numeric``; both
+    sites should converge on this module in a follow-up.
+    """
+    saved = locale.getlocale(locale.LC_NUMERIC)
+    locale.setlocale(locale.LC_NUMERIC, "")
+    try:
+        yield
+    finally:
+        locale.setlocale(locale.LC_NUMERIC, saved)
+
+
 def try_number_from_string(text: str) -> Union[float, int, str]:
     """Tries to convert a string to integer or float.
+
+    Accepts both ``.``-decimal (e.g. ``"1.5"``) and ``,``-decimal
+    (e.g. ``"1,5"``) input.  ``.``-decimals are parsed locale-independently
+    via ``float()``.  ``,``-decimals are parsed via ``locale.atof`` under
+    the user's system locale, gated on "exactly one ``,`` and no ``.``"
+    so locale-ambiguous strings like ``"1,000"`` stay as strings rather
+    than silently parsing to ``1.0`` or ``1000.0`` depending on locale.
 
     Args:
         text: string to convert
@@ -849,6 +880,10 @@ def try_number_from_string(text: str) -> Union[float, int, str]:
         try:
             return float(text)
         except ValueError:
+            if isinstance(text, str) and text.count(",") == 1 and "." not in text:
+                with suppress(ValueError, locale.Error):
+                    with system_lc_numeric():
+                        return locale.atof(text)
             return text
     except TypeError:
         return text
