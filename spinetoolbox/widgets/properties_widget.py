@@ -72,8 +72,7 @@ class PropertiesWidgetBase(QWidget):
             widget
             for transparent in self._transparent_classes
             for widget in self.findChildren(transparent)
-            if not any(isinstance(widget, non_transparent)
-                       for non_transparent in self._non_transparent_classes)
+            if not any(isinstance(widget, non_transparent) for non_transparent in self._non_transparent_classes)
         }
         for widget in widgets:
             if widget not in self._transparent_widgets:
