@@ -31,6 +31,7 @@ class PropertiesWidgetBase(QWidget):
         self._transparent_classes = {QAbstractItemView, QLineEdit}
         self._non_transparent_classes = {QHeaderView}
         self._transparent_widgets = set()
+        self.setup_transparent_widgets()
         if base_color is not None:
             self.set_color_and_icon(base_color)
 
@@ -66,6 +67,20 @@ class PropertiesWidgetBase(QWidget):
             painter.fillRect(obj.rect(), QColor(255, 255, 255, 180))
         return super().eventFilter(obj, ev)
 
+    def setup_transparent_widgets(self):
+        widgets = {
+            widget
+            for transparent in self._transparent_classes
+            for widget in self.findChildren(transparent)
+            if not any(isinstance(widget, non_transparent)
+                       for non_transparent in self._non_transparent_classes)
+        }
+        for widget in widgets:
+            if widget not in self._transparent_widgets:
+                widget.setAttribute(Qt.WA_StyledBackground, False)
+                widget.installEventFilter(self)
+        self._transparent_widgets = widgets
+
     def paintEvent(self, ev):
         """Paints background.
 
@@ -73,28 +88,12 @@ class PropertiesWidgetBase(QWidget):
         and the scrollAreaWidgetContents QWidget are set to transparent in stylesheets.
         """
         settings = self._toolbox.qsettings()
-        if settings.value("appSettings/colorPropertiesWidgets", defaultValue="false") == "false":
+        if settings.value("appSettings/colorPropertiesWidgets", "false") == "false":
             super().paintEvent(ev)
             return
-        new_transparent_widgets = {
-            widget
-            for transparent in self._transparent_classes
-            for widget in self.findChildren(transparent)
-            if not any(isinstance(widget, non_transparent) for non_transparent in self._non_transparent_classes)
-        }
-        new_transparent_widgets -= self._transparent_widgets
-        self._transparent_widgets |= new_transparent_widgets
-        for widget in new_transparent_widgets:
-            widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
-            widget.installEventFilter(self)
-            try:
-                widget.viewport().setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            except AttributeError:
-                pass
-        rect = self.rect()
         painter = QPainter(self)
-        painter.fillRect(rect, self._bg_color)
-        if self._pixmap is not None:
+        painter.fillRect(self.rect(), self._bg_color)
+        if self._pixmap:
             margin = 20
-            offset = QPoint(margin, margin)
-            painter.drawPixmap(QRect(rect.topLeft() + offset, rect.bottomRight() - offset), self._pixmap)
+            target = self.rect().adjusted(margin, margin, -margin, -margin)
+            painter.drawPixmap(target, self._pixmap)
