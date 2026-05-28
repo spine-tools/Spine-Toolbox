@@ -16,3 +16,10 @@ We are planning to add more tutorials here in the future, so stay tuned.
    first_relationship
    basic_manage_elements
    basic_pivot_add_relationships
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Running models on a High-Performance Computing (HPC) system
+
+   hpc_basics
+   gams_on_hpc
