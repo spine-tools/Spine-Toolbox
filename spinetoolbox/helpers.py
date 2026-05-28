@@ -1106,7 +1106,7 @@ def get_path_from_native_open_file_dialog(parent, current_path, title, initial_p
     """
     init_path = initial_path if initial_path is not None else home_dir()
     # pylint: disable= possibly-used-before-assignment
-    hwnd = win32gui.FindWindow(None, parent.windowTitle())
+    hwnd = int(parent.winId())
     pyhandle = pywintypes.HANDLE(hwnd)
     try:
         # NOTE: Paths must use Windows path separators (\) !
