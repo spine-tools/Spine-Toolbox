@@ -31,7 +31,7 @@ Download the project as a ZIP file and unzip it into whatever location you fancy
 Alternatively, you can clone the repository if you have Git installed.
 
 We also need to create a Python environment with Pyomo, the HiGHS solver and :literal:`spinedb_api` installed.
-:literal:`spinedb_api` will be used to read the input data and to write the final results to the output database.
+:literal:`spinedb_api` will be used to read the input data and to write the results to the output database.
 
 Start by opening a command prompt and :command:`cd` to the :literal:`Diet-problem-demo/` directory.
 
@@ -160,7 +160,7 @@ This time around, the SQLite file should be called :file:`Results.sqlite`.
 Let's quickly check :file:`Model.sqlite` we just created.
 Double-click the Model item on Design view to open Spine DB Editor.
 Alternatively, you can select the item and click :guilabel:`Open editor...` on its properties tab.
-We will use DB Editor later to make some changes to the input data and to check the final results.
+We will use DB Editor later to make some changes to the input data and to check the results.
 For now, it is enough to note that the DB Editor window is mostly empty
 as there is no data in the database except for one thing:
 the **Alternative** list on the upper right corner shows one item,
@@ -175,7 +175,7 @@ You can now close the DB Editor.
 Checking Input Data
 ===================
 
-Let's have a look how the input data looks like.
+Let's have a look at what the input data looks like.
 Click the Input data Data Connection to select it and to see its properties.
 
 Data Connection items introduce external data to the workflow
@@ -254,7 +254,7 @@ However, the above introduction should be enough to get through this tutorial.
 Setting Up Import Mappings
 ==========================
 
-Now that we have basic understanding on how Spine data looks like,
+Now that we have basic understanding on what Spine data looks like,
 let's see how to map the tables from :file:`Foods and nutrients.xlsx` into the input database.
 
 Double-click the Import input item to open **Importer specification editor**.
@@ -287,7 +287,7 @@ We will get back to that later.
 The panels where the actual mappings are defined are on the right-hand side.
 The specification currently has a single mapping, called foods, for the Foods table,
 although there could be more depending on how much data the table holds.
-Select foods from tha **Mappings** list
+Select foods from the **Mappings** list
 and click the :guilabel:`Remove` button below the list.
 Then, click :guilabel:`Add` to make a new one.
 The new mapping is called Mapping (1) which is not very descriptive.
@@ -620,7 +620,7 @@ so make sure they are all checked.
 Setting up Model
 ================
 
-Let's have a look on how the model looks like.
+Let's have a look at what the model looks like.
 We must also set the correct Python environment for it.
 For starters, double-click the Solver icon on **Design view** to open **Tool specification editor**.
 The editor has some common elements with the **Importer specification editor**
