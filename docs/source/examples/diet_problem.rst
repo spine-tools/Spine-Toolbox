@@ -83,7 +83,7 @@ while the numbers on the top right corners of the project items
 show the execution order.
 
 The two Data Store items, Model and Results, have a red exclamation mark on their top left corners.
-They is a signs of problems.
+They are signs of problems.
 Hovering the mouse pointer over the exclamation marks shows a tool tip that explains the issue:
 the Data Stores point to non-existent databases.
 We will fix this problem later.
