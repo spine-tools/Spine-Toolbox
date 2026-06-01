@@ -682,7 +682,7 @@ Common problems are the :literal:`.venv` environment
 which may not be set correctly
 or there is some issue with input data such as a typo in the volume max parameter.
 
-The Python Consoles are userful for post-mortem debugging
+The Python Consoles are useful for post-mortem debugging
 as you can use them to interrogate the model.
 For example, type :literal:`instance.c["cheeseburger"]` in any of the consoles
 to see the cost of cheeseburgers the model was using.
