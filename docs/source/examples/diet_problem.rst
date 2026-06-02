@@ -87,6 +87,8 @@ They are signs of problems.
 Hovering the mouse pointer over the exclamation marks shows a tool tip that explains the issue:
 the Data Stores point to non-existent databases.
 We will fix this problem later.
+The Tool item called Solver also has a red exclamation mark.
+It also results from the missing databases and should vanish once we fix the Data Stores.
 
 As you may have gathered already, Spine Toolbox projects are in fact directories,
 not files like in some image manipulation or spreadsheet software.
