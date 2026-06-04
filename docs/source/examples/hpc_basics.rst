@@ -1,29 +1,21 @@
 .. _HPC Basics:
 
-Running an Energy Optimization Model on an HPC Cluster (Pyomo + Slurm)
-======================================================================
+====================================================
+Background on High-Performance Cluster (HPC) Systems
+====================================================
 
-Introduction
-------------
-
-This tutorial explains how to run an energy system optimization model using Pyomo on a High-Performance Computing
-(HPC) cluster managed by Slurm.
-
-It is designed to be general and portable, so it applies to:
+This section describes briefly how common HPC systems work. It is designed to be general and portable,
+so it applies to:
 
 - University HPC clusters
-- Company internal clusters (e.g., VTT Tohtori)
+- Company internal clusters
 - Cloud HPC environments (AWS, Azure)
 
-You will learn the full workflow:
+If you are already familiar with HPC systems, you can jump directly to the next section :ref:`Spine Toolbox on HPC`.
 
-::
-
-   Local machine → Cluster login → Upload files → Submit job → Monitor → Retrieve results
-
-
-Background: How HPC Clusters Work
----------------------------------
+*********************
+How HPC Clusters Work
+*********************
 
 Most HPC systems share the same architecture:
 

@@ -1,31 +1,190 @@
-.. _GAMS on HPC:
+.. _Spine Toolbox on HPC:
 
-
-Running GAMS Workflows on HPC with SLURM
-========================================
+=======================================
+Running Spine Toolbox projects on HPC's
+=======================================
 
 .. contents::
    :depth: 1
    :local:
 
+************
 Introduction
-------------
+************
 
-This tutorial demonstrates how to run workflows involving `GAMS <https://www.gams.com/>`_
-models on a High-Performance Computing (HPC) system using the SLURM scheduler.
-It covers both single-job execution and scalable workflows such as parameter sweeps.
+This tutorial demonstrates how to run Spine Toolbox project involving `GAMS <https://www.gams.com/>`_
+workflows on a High-Performance Computing (HPC) system using the SLURM scheduler.
 
-The guide assumes a Linux-based HPC cluster with a shared filesystem and SLURM installed.
+The guide assumes you have access to a Linux-based HPC cluster with a shared filesystem and SLURM
+installed. You also need a valid GAMS license and basic familiarity with the Linux command line.
 
-Prerequisites
--------------
+You will learn the full workflow:
 
-Before starting, ensure the following:
+::
 
-- Access to an HPC system with SLURM
-- A working installation of GAMS (module or user-installed)
-- A valid GAMS license accessible on compute nodes
-- Basic familiarity with the Linux command line
+   Local machine → Cluster login → Upload files → Submit job → Monitor → Retrieve results
+
+****************************************************
+HPC's with container support (apptainer/singularity)
+****************************************************
+
+The easiest way to run Spine Toolbox projects involving GAMS is to use Apptainer containers. Log in to the Login
+node of your HPC and check if you have apptainer available in your HPC with the following command:
+
+.. code-block:: bash
+
+    apptainer --version
+
+Or singularity (singularity is an old name for the system that is nowadays called apptainer).
+
+.. code-block:: bash
+
+    module avail singularity
+
+If the response is a version number, you are good to continue to the next section. If you
+see an error message or 'module not available', skip the next section and continue from
+(`HPC's without container support`_)
+
+About Apptainer
+---------------
+
+Apptainer is an open source container platform designed to be simple, fast, and secure.
+Many container platforms are available, but Apptainer is designed for ease-of-use on shared
+systems and in high performance computing (HPC) environments. The container is a single file (.sif),
+which you can build yourself from a .def file or you can download a ready-to-go container
+from **<gams.sif>**.
+
+Building the Apptainer Container
+--------------------------------
+
+If you want to build the container yourself, please use Linux or Windows Subsystem for Linux (WSL) on Windows.
+Building Apptainer containers is done using *.def* files. You can `view and copy gams.def on your own system
+here <../_static/gams.def>`_. Install Go and apptainer and build **gams.sif** with the following command:
+
+.. code-block:: bash
+
+   apptainer build --fakeroot gams.sif gams.def
+
+Why --fakeroot? See https://apptainer.org/docs/user/latest/fakeroot.html#fakeroot-feature
+
+When the build process has completed, you can use the `shell` command to spawn a new shell within your
+container and interact with it as though it were a virtual machine.
+
+.. code-block:: bash
+
+    apptainer shell gams.sif
+
+For example, you can check the versions of Python and Gams with `python --version` and `gams ?` respectively
+inside the shell.
+
+Running a Spine Toolbox project on an HPC
+-----------------------------------------
+
+1. Download gams.sif
+2. Upload gams.sif to HPC, e.g. to path /jobs/<usename>/sifs/gams.sif
+3. Upload Spine Toolbox project to HPC, e.g. to path /jobs/<username>/projects/<project_name>
+4. Upload GAMS license to HPC, e.g. to path /jobs/<username>/gamslicense
+5. Upload Slurm script `run_on_hpc.sh` to Spine Toolbox project folder, e.g.
+    to /jobs/<username>/projects/<project_name>
+
+**run_on_hpc.sh**
+
+.. code-block:: bash
+
+    #!/bin/bash
+    #SBATCH --job-name=spinetoolbox_on_hpc
+    #SBATCH --output=out.txt
+    #SBATCH --error=err.txt
+    #SBATCH --time=00:30:00
+    #SBATCH --cpus-per-task=1
+    #SBATCH --mem=4G
+
+    apptainer exec /jobs/ttepsa/sifs/gams.sif spinetoolbox --execute-only $PWD/
+
+
+.. attention::
+
+    Line endings in Slurm scripts such as `run_on_hpc.sh` must be Unix style (LF).
+
+6. Edit the Slurm script by adding the license
+7. Submit job to Slurm Scheduler
+
+.. code-block:: bash
+
+    sbatch run_on_hpc.sh
+
+The response will be something like
+
+```
+Submitted batch job 1303767
+```
+
+where 1303767 is the job id
+
+8. Check status of submitted job
+
+.. code-block:: bash
+
+    squeue -j <job_id>
+
+where *<job_id>* is the id returned by the `sbatch` command.
+To check the status of all of your submitted tasks, run
+
+.. code-block:: bash
+
+    squeue -u $USER
+
+If this command fails, replace $USER with your user name. When a job disappears from the the list returned by
+the `squeue` command, it is finished.
+
+9. Check job output files
+
+Since `out.txt` and `err.txt` were given in the Slurm script as the values for *--output* and *--error*, you
+can find the stdout and stderr of your job in these files. The file `err.txt` is empty if everything is Ok.
+To view the files:
+
+.. code-block:: bash
+
+    cat out.txt
+    cat err.txt
+
+10. Final job status
+
+.. code-block:: bash
+
+    sacct -j <job_id>
+
+where *<job_id>* is the id returned by the `sbatch` command.
+This command returns something like:
+
+    ```
+    JobID           JobName  Partition    Account  AllocCPUS      State ExitCode
+    ------------ ---------- ---------- ---------- ---------- ---------- --------
+    1303767      spinetool+        all     ba6401          1  COMPLETED      0:0
+    1303767.bat+      batch                ba6401          1  COMPLETED      0:0
+    1303767.ext+     extern                ba6401          1  COMPLETED      0:0
+    ```
+
+11. Live monitoring
+
+.. code-block:: bash
+
+    watch -n 2 squeue -u $USER
+
+Again, if $USER is not defined, replace it with your user name. This function tails the job progress and updates
+every two seconds.
+
+12. Checking the results
+
+The result files and output from executing the project will be inside the project item folders just like
+when executing the project in Spine Toolbox locally. One way to view the results, is to download
+the project folder back into your local computer, start Spine Toolbox, and open the project there.
+
+*******************************
+HPC's without container support
+*******************************
+
+If apptainer is not available in your HPC system, there's a little bit more setup involved.
 
 Verify GAMS installation:
 
@@ -34,7 +193,6 @@ Verify GAMS installation:
    gams ?
 
 If GAMS is installed correctly, this command prints version and usage information.
-
 
 Accessing GAMS on HPC
 ---------------------
@@ -230,37 +388,12 @@ Module Not Found
 
 - Contact HPC support if GAMS is not provided
 
+**************************
 Performance Considerations
---------------------------
+**************************
 
 - Use job arrays for parallel workloads
 - Avoid running many serial jobs in one script
 - Request appropriate memory and runtime
 
 Large-scale workflows are typically parallelized across scenarios rather than within a single GAMS run.
-
-
-Advanced Topics
----------------
-
-Containers (Optional)
-+++++++++++++++++++++
-
-If supported, you can use Apptainer/Singularity:
-
-.. code-block:: bash
-
-   apptainer exec gams.sif gams model.gms
-
-This improves reproducibility across systems.
-
-Workflow Automation
-+++++++++++++++++++
-
-You can integrate GAMS into larger workflows using tools such as:
-
-- Snakemake
-- Nextflow
-- Makefiles
-
-These tools help manage dependencies and automate multi-step pipelines.
