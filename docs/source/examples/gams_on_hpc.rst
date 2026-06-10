@@ -106,6 +106,14 @@ Running a Spine Toolbox project on an HPC
 
     Line endings in Slurm scripts such as `run_on_hpc.sh` must be Unix style (LF).
 
+**Key parameters**
+    - ``--job-name``: Job name
+    - ``--time``: Maximum runtime
+    - ``--cpus-per-task``: CPU cores
+    - ``--mem``: Memory
+    - ``--output``: Output file
+    - ``--error``: Error file
+
 6. Edit the Slurm script by adding the license
 7. Submit job to Slurm Scheduler
 
@@ -170,6 +178,12 @@ This command returns something like:
 .. code-block:: bash
 
     watch -n 2 squeue -u $USER
+
+Another option is to use `tail`:
+
+.. code-block:: bash
+
+   tail -f out.txt
 
 Again, if $USER is not defined, replace it with your user name. This function tails the job progress and updates
 every two seconds.
@@ -376,6 +390,43 @@ File Not Found
 .. code-block:: bash
 
    echo $PWD
+
+Job Stuck in Queue
+++++++++++++++++++
+
+- Cluster is full
+- Resource request too large
+
+Memory Errors
++++++++++++++
+
+Increase memory:
+
+.. code-block:: bash
+
+   #SBATCH --mem=16G
+
+
+Solver Not Found
+++++++++++++++++
+
+.. code-block:: bash
+
+   module load gurobi
+
+Check installation:
+
+.. code-block:: bash
+
+   which gurobi_cl
+
+
+Python Module Missing
++++++++++++++++++++++
+
+.. code-block:: bash
+
+   pip install pyomo
 
 Module Not Found
 ++++++++++++++++
