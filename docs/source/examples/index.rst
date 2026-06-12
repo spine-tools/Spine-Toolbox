@@ -4,8 +4,13 @@
 Tutorials and Examples
 **********************
 
-This module currently contains tutorials for Spine Database Editor.
-We are planning to add more tutorials here in the future, so stay tuned.
+This module currently contains tutorials for Spine Toolbox and Spine Database Editor.
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Spine Toolbox Tutorials:
+
+   diet_problem
 
 .. toctree::
    :maxdepth: 1

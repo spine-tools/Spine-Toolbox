@@ -1091,22 +1091,24 @@ def get_current_path(line_edit: QLineEdit) -> str:
     return os.path.abspath(current_path)
 
 
-def get_path_from_native_open_file_dialog(parent, current_path, title, initial_path=None):
+def get_path_from_native_open_file_dialog(
+    parent: QWidget | None, current_path: str, title: str, initial_path: str | None = None
+) -> tuple[str, str, int]:
     """Opens the native open file dialog on Windows.
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog
-        current_path (str): If not None, the open file dialog initial dir is set according to the 'File' keyword.
+        parent: Parent widget for the file dialog
+        current_path: If not None, the open file dialog initial dir is set according to the 'File' keyword.
             If None, initial dir set according to the 'InitialDir' keyword.
-        title (str): Dialog title
-        initial_path (str): Initial dir if something else than home_dir()
+        title: Dialog title
+        initial_path: Initial dir if something else than home_dir()
 
     Returns:
-        tuple: [0] is the selected path, [1] is the calling function, [2] is the error message
+        [0] is the selected path, [1] is user selected filter, [2] user input flags (OFN_")
     """
     init_path = initial_path if initial_path is not None else home_dir()
     # pylint: disable= possibly-used-before-assignment
-    hwnd = win32gui.FindWindow(None, parent.windowTitle())
+    hwnd = int(parent.winId())
     pyhandle = pywintypes.HANDLE(hwnd)
     try:
         # NOTE: Paths must use Windows path separators (\) !
@@ -1125,7 +1127,7 @@ def get_path_from_native_open_file_dialog(parent, current_path, title, initial_p
             Title=title,
         )
     except BaseException:  # GetOpenFileNameW throws pywinerror.error or similar when the user cancels the operation
-        r = [""]
+        r = ("", "", 0)
     return r
 
 
