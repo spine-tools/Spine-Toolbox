@@ -238,6 +238,8 @@ class OpenProjectDialog(QDialog):
         Note: We need to expand and scroll the tree view here after setCurrentIndex
         just in case the directory has been loaded already.
         """
+        if os.path.samefile(self.selection(), QDir.rootPath()):
+            return
         self.ui.comboBox_current_path.setCurrentIndex(-1)
         root_index = self.file_model.index(QDir.rootPath())
         self.collapse_and_expand(root_index)
@@ -245,6 +247,8 @@ class OpenProjectDialog(QDialog):
     @Slot(bool, name="go_home")
     def go_home(self, checked=False):
         """Slot for the 'Home' button. Scrolls the treeview to show and select the user's home directory."""
+        if os.path.samefile(self.selection(), QDir.homePath()):
+            return
         self.ui.comboBox_current_path.setCurrentIndex(-1)
         home_index = self.file_model.index(QDir.homePath())
         self.collapse_and_expand(home_index)
@@ -253,7 +257,7 @@ class OpenProjectDialog(QDialog):
     def go_documents(self, checked=False):
         """Slot for the 'Documents' button. Scrolls the treeview to show and select the user's documents directory."""
         docs = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
-        if not docs:
+        if not docs or os.path.samefile(self.selection(), docs):
             return
         self.ui.comboBox_current_path.setCurrentIndex(-1)
         docs_index = self.file_model.index(docs)
@@ -262,8 +266,8 @@ class OpenProjectDialog(QDialog):
     @Slot(bool, name="go_desktop")
     def go_desktop(self, checked=False):
         """Slot for the 'Desktop' button. Scrolls the treeview to show and select the user's desktop directory."""
-        desktop = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DesktopLocation)  # Return a list
-        if not desktop:
+        desktop = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DesktopLocation)
+        if not desktop or os.path.samefile(self.selection(), desktop):
             return
         self.ui.comboBox_current_path.setCurrentIndex(-1)
         desktop_index = self.file_model.index(desktop)
