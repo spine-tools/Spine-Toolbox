@@ -28,28 +28,33 @@ You will learn the full workflow:
 HPC's with container support (apptainer/singularity)
 ****************************************************
 
-The easiest way to run Spine Toolbox projects involving GAMS is to use Apptainer containers. Log in to the Login
-node of your HPC and check if you have apptainer available in your HPC with the following command:
+The easiest way to run Spine Toolbox projects involving GAMS is to use *apptainer* containers. Log in to the Login
+node of your HPC and check if *apptainer* is available in your HPC with the following command:
 
 .. code-block:: bash
 
     apptainer --version
 
-Or singularity (singularity is an old name for the system that is nowadays called apptainer).
+If this fails, try checking if *apptainer* is available as a module:
 
 .. code-block:: bash
 
-    module avail singularity
+    module avail apptainer
 
-If the response is a version number, you are good to continue to the next section. If you
-see an error message or 'module not available', skip the next section and continue from
-(`HPC's without container support`_)
+If the response is a version number or a list of package names and version numbers, you are good to continue to the
+next section. If you see an error message or something like 'module not available', skip the next section and
+continue from (`HPC's without container support`_).
+
+.. Note::
+
+    If the previous commands failed, you can still try if `singularity` is available with `singularity --version` or
+    `module avail singularity`. Apptainer was previously called singularity.
 
 About Apptainer
 ---------------
 
 Apptainer is an open source container platform designed to be simple, fast, and secure.
-Many container platforms are available, but Apptainer is designed for ease-of-use on shared
+There are other container platforms as well, but Apptainer is designed for ease-of-use on shared
 systems and in high performance computing (HPC) environments. The container is a single file (.sif),
 which you can build yourself from a .def file or you can download a ready-to-go container
 from **<gams.sif>**.
@@ -80,6 +85,14 @@ inside the shell.
 Running a Spine Toolbox project on an HPC
 -----------------------------------------
 
+Prerequisites:
+- Access rights to an HPC
+- Apptainer/Singularity as a system package or as a module
+- License file for Gams
+- Spine Toolbox project with a Gams Tool
+- Container file (downloaded `gams.sif` or another .sif file)
+- PuTTY and WinSCP on Windows (optional but recommended)
+
 1. Download gams.sif
 2. Upload gams.sif to HPC, e.g. to path /jobs/<usename>/sifs/gams.sif
 3. Upload Spine Toolbox project to HPC, e.g. to path /jobs/<username>/projects/<project_name>
@@ -106,6 +119,10 @@ Running a Spine Toolbox project on an HPC
 
     Line endings in Slurm scripts such as `run_on_hpc.sh` must be Unix style (LF).
 
+.. note::
+    If your HPC offers *apptainer* as a module, you must add `module load apptainer` to the Slurm script before the
+    `exec` command.
+
 **Key parameters**
     - ``--job-name``: Job name
     - ``--time``: Maximum runtime
@@ -115,6 +132,9 @@ Running a Spine Toolbox project on an HPC
     - ``--error``: Error file
 
 6. Edit the Slurm script by adding the license
+
+    The example project works fine with the demo license but for real use cases you need a Gams license.
+
 7. Submit job to Slurm Scheduler
 
 .. code-block:: bash
