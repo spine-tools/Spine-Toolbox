@@ -1285,6 +1285,16 @@ class PivotTableView(CopyPasteTableView):
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
             header_table.verticalHeader().setDefaultSectionSize(default_section_size)
 
+    def setHorizontalScrollMode(self, mode):
+        super().setHorizontalScrollMode(mode)
+        for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
+            header_table.setHorizontalScrollMode(mode)
+
+    def setVerticalScrollMode(self, mode):
+        super().setVerticalScrollMode(mode)
+        for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
+            header_table.setVerticalScrollMode(mode)
+
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self._update_header_tables_geometry()
