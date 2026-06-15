@@ -17,7 +17,7 @@ import io
 import itertools
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QAbstractItemView, QApplication, QMessageBox
 import pytest
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
@@ -1187,3 +1187,15 @@ class TestPivotTableView(TestBase):
             [None, None, None, None, None, None, None],
         ]
         assert_table_model_data(pivot_model, expected, self)
+
+    def test_set_scroll_modes(self):
+        view = self._db_editor.ui.pivot_table
+        for scroll_mode in (QAbstractItemView.ScrollMode.ScrollPerItem, QAbstractItemView.ScrollMode.ScrollPerPixel):
+            view.setHorizontalScrollMode(scroll_mode)
+            self.assertEqual(view.horizontalScrollMode(), scroll_mode)
+            for header_table in (view._top_left_header_table, view._top_header_table, view._left_header_table):
+                self.assertEqual(header_table.horizontalScrollMode(), scroll_mode)
+            view.setVerticalScrollMode(scroll_mode)
+            self.assertEqual(view.verticalScrollMode(), scroll_mode)
+            for header_table in (view._top_left_header_table, view._top_header_table, view._left_header_table):
+                self.assertEqual(header_table.verticalScrollMode(), scroll_mode)
