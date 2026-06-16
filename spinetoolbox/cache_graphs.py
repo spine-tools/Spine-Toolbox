@@ -47,8 +47,6 @@ class GraphBase:
 
 
 class SuperclassGraphBase(GraphBase):
-    INVALIDATING_ITEM_TYPES: ClassVar[set[str]] = {"entity_class", "superclass_subclass"}
-
     def is_any_id_reachable(self, db_map: DatabaseMapping, source_id: TempId, target_ids: set[TempId]) -> bool:
         if db_map not in self._graphs:
             self._graphs[db_map] = self._build_graph(db_map)
@@ -67,6 +65,8 @@ class SuperclassGraphBase(GraphBase):
 
 
 class RelationshipClassGraph(SuperclassGraphBase):
+    INVALIDATING_ITEM_TYPES: ClassVar[set[str]] = {"entity_class", "superclass_subclass"}
+
     @staticmethod
     def _build_graph(db_map: DatabaseMapping) -> nx.DiGraph:
         graph = _build_graph(db_map, "entity_class", "dimension_id_list")
@@ -78,6 +78,8 @@ class RelationshipClassGraph(SuperclassGraphBase):
 
 
 class RelationshipGraph(SuperclassGraphBase):
+    INVALIDATING_ITEM_TYPES: ClassVar[set[str]] = {"entity", "entity_class", "superclass_subclass"}
+
     @staticmethod
     def _build_graph(db_map: DatabaseMapping) -> nx.DiGraph:
         return _build_graph(db_map, "entity", "element_id_list")
