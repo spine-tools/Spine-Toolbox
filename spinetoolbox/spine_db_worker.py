@@ -268,10 +268,10 @@ class SpineDBWorker(QObject):
             added, updated, errors = self._db_map.add_update_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        self._db_mngr.update_icons(self._db_map, item_type, added + updated)
-        self._wake_up_parents(item_type, added)
         self._db_mngr.items_added.emit(item_type, {self._db_map: added})
         self._db_mngr.items_updated.emit(item_type, {self._db_map: updated})
+        self._db_mngr.update_icons(self._db_map, item_type, added + updated)
+        self._wake_up_parents(item_type, added)
         return added, updated
 
     @busy_effect
