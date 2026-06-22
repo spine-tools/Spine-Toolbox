@@ -163,11 +163,14 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
 
     #!/bin/bash
     #SBATCH --job-name=spinetoolbox_on_hpc
-    #SBATCH --output=out.txt
-    #SBATCH --error=err.txt
+    #SBATCH --output=%j.out
+    #SBATCH --error=%j.err
     #SBATCH --time=00:30:00
     #SBATCH --cpus-per-task=1
     #SBATCH --mem=4G
+
+    # Make folder for Slurm output logs
+    mkdir -p logs
 
     # Load apptainer. Uncomment if apptainer is available as a module.
     # module load apptainer
@@ -177,6 +180,7 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # ----------------------------
     # User configuration
     # ----------------------------
+    SUBMIT_DIR="$SLURM_SUBMIT_DIR"
     PROJECT_NAME=gams_on_hpc_tutorial
     HOME_BASE="$HOME/spinetoolbox"
 
@@ -200,9 +204,9 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Stage data
     # ----------------------------
     echo "Copying project to scratch..."
-    cp -r $HOME_BASE/$PROJECT_NAME $SCRATCH_BASE/
+    rsync -av "$HOME_BASE/$PROJECT_NAME/" "$SCRATCH_BASE/$PROJECT_NAME/"
     # If license is available, uncomment this
-    # cp $HOME_BASE/licenses/gamslic.txt $SCRATCH_BASE/
+    # rsync -av "$HOME_BASE/licenses/gamslic.txt" "$SCRATCH_BASE/"
 
     cd $SCRATCH_BASE/$PROJECT_NAME
 
@@ -227,6 +231,15 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     echo "Copying results back to home..."
     rsync -avh $SCRATCH_BASE/$PROJECT_NAME/ $HOME_BASE/$PROJECT_NAME/
 
+    # -----------------------------------
+    # Move log files to dedicated folder
+    # -----------------------------------
+    LOG_DIR="$HOME_BASE/$PROJECT_NAME/logs/$SLURM_JOB_ID"
+    mkdir -p "$LOG_DIR"
+    mv "$SUBMIT_DIR/${SLURM_JOB_ID}.out" "$LOG_DIR/out.txt" 2>/dev/null || true
+    mv "$SUBMIT_DIR/${SLURM_JOB_ID}.err" "$LOG_DIR/err.txt" 2>/dev/null || true
+    mv "$HOME_BASE/$PROJECT_NAME/spinetoolbox.log" "$LOG_DIR/spinetoolbox.log"
+
     echo "Done."
 
 .. attention::
@@ -237,6 +250,18 @@ The ``run_on_hpc.sh`` script stages a Spine Toolbox project to a temporary worki
 runs it inside an Apptainer container, and then copies the results back to the original project location. This
 approach ensures efficient use of the HPC filesystem by performing computation on a fast scratch or temporary
 storage area while preserving results in the user’s home directory.
+
+The script uses ``rsync`` for data transfer, which provides a robust and reliable way to copy project files between
+locations while preserving file attributes and ensuring that all files, including hidden ones, are transferred
+correctly.
+
+During execution, all model output is written to the staged project directory in scratch space. After completion,
+the results are synchronized back to the original project directory in the user’s home folder.
+
+For reproducibility and debugging, the script also collects log files from each run. Standard Slurm output and error
+files, as well as the Spine Toolbox execution log, are organized into a dedicated directory
+``logs/<SLURM_JOB_ID>/`` within the project. This ensures that logs from different runs are preserved and can be
+easily traced to a specific job.
 
 The folder structure on your HPC should look like this now:
 
