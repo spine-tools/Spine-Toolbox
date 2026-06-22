@@ -166,7 +166,7 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Load apptainer. Uncomment if apptainer is available as a module.
     # module load apptainer
 
-    set -e  # Exit on error
+    set -euxo pipefail  # Exit on Error
 
     # ----------------------------
     # User configuration
@@ -175,9 +175,9 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     HOME_BASE="$HOME/spinetoolbox"
 
     # Choose ONE of these (uncomment the appropriate line)
-    BASE_TMP="$SCRATCH"   # Recommended if available
-    # BASE_TMP="$WORK"    # Alternative on some systems
-    # BASE_TMP="$TMPDIR"  # Often set automatically by Slurm
+    BASE_TMP="${SCRATCH:-}"   # Recommended if available
+    # BASE_TMP="${WORK:-}"    # Alternative on some systems
+    # BASE_TMP="${TMPDIR:-}"  # Often set automatically by Slurm
 
     # Fallback if chosen variable is empty
     if [ -z "$BASE_TMP" ]; then
@@ -206,14 +206,18 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     echo "Running Spine Toolbox..."
 
     apptainer exec \
-    --bind $SCRATCH_BASE:$SCRATCH_BASE \
-    --bind $HOME_BASE:$HOME_BASE \
-    $HOME_BASE/sifs/hpc_container.sif \
-    spinetoolbox --execute-only $SCRATCH_BASE/$PROJECT_NAME/
+        --bind $SCRATCH_BASE:$SCRATCH_BASE \
+        --bind $HOME_BASE:$HOME_BASE \
+        $HOME_BASE/sifs/hpc_container.sif \
+        spinetoolbox --execute-only $SCRATCH_BASE/$PROJECT_NAME/ \
+        > spinetoolbox.log 2>&1
 
     # ----------------------------
     # Copy results back
     # ----------------------------
+    echo "Listing results directory:"
+    ls -R $SCRATCH_BASE/$PROJECT_NAME
+
     echo "Copying results back to home..."
     rsync -avh $SCRATCH_BASE/$PROJECT_NAME/ $HOME_BASE/$PROJECT_NAME/
 
