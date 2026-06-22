@@ -194,8 +194,9 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Stage data
     # ----------------------------
     echo "Copying project to scratch..."
-    cp -r $HOME_BASE/projects/$PROJECT_NAME $SCRATCH_BASE/
-    cp $HOME_BASE/licenses/gamslic.txt $SCRATCH_BASE/
+    cp -r $HOME_BASE/$PROJECT_NAME $SCRATCH_BASE/
+    # If license is available, uncomment this
+    # cp $HOME_BASE/licenses/gamslic.txt $SCRATCH_BASE/
 
     cd $SCRATCH_BASE/$PROJECT_NAME
 
@@ -213,7 +214,7 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Copy results back
     # ----------------------------
     echo "Copying results back to home..."
-    cp -r $SCRATCH_BASE/$PROJECT_NAME/* $HOME_BASE/projects/$PROJECT_NAME/
+    cp -r $SCRATCH_BASE/$PROJECT_NAME/* $HOME_BASE/$PROJECT_NAME/
 
     echo "Done."
 
