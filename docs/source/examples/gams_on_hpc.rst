@@ -135,6 +135,12 @@ In this section, you need the following:
 - GAMS license file (optional for this tutorial; required for real use cases)
 - Slurm script
 
+.. attention::
+
+    It is recommended to run all **Tool** items in your Spine Toolbox project in *"source directory"* mode.
+    You can verify this by opening the project in Spine Toolbox on your local machine, selecting each Tool,
+    and checking that the **source dir** option is enabled in the Tool properties.
+
 Preparing files on the HPC
 ++++++++++++++++++++++++++
 

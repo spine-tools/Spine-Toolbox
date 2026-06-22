@@ -54,7 +54,7 @@
             "x": -272.9269902744163,
             "y": -285.01231825704724,
             "specification": "gams_model",
-            "execute_in_work": true,
+            "execute_in_work": false,
             "cmd_line_args": [],
             "kill_completed_processes": false,
             "log_process_output": false
