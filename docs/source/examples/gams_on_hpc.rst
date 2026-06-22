@@ -206,15 +206,16 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     echo "Running Spine Toolbox..."
 
     apptainer exec \
-        --bind $SCRATCH_BASE:$SCRATCH_BASE \
-        $HOME_BASE/sifs/hpc_container.sif \
-        spinetoolbox --execute-only $PWD/
+    --bind $SCRATCH_BASE:$SCRATCH_BASE \
+    --bind $HOME_BASE:$HOME_BASE \
+    $HOME_BASE/sifs/hpc_container.sif \
+    spinetoolbox --execute-only $SCRATCH_BASE/$PROJECT_NAME/
 
     # ----------------------------
     # Copy results back
     # ----------------------------
     echo "Copying results back to home..."
-    cp -r $SCRATCH_BASE/$PROJECT_NAME/* $HOME_BASE/$PROJECT_NAME/
+    rsync -avh $SCRATCH_BASE/$PROJECT_NAME/ $HOME_BASE/$PROJECT_NAME/
 
     echo "Done."
 
