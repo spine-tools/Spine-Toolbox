@@ -16,8 +16,8 @@ This tutorial demonstrates how to run Spine Toolbox project involving `GAMS <htt
 workflows on a High-Performance Computing (HPC) system using the Slurm scheduler.
 
 The guide assumes you have access to a Linux-based HPC cluster with a shared filesystem and Slurm
-installed. You also need basic familiarity with the Linux command line and a Gams license. This tutorial
-can be completed with a demo license for Gams, but for real use cases you need a valid Gams license.
+installed. You also need basic familiarity with the Linux command line and a valid Gams license for
+real use cases. However, this tutorial can be completed with a demo license for Gams.
 
 You will learn the full workflow:
 
@@ -56,15 +56,15 @@ Building the container
 ----------------------
 
 Apptainer is an open source container platform designed for ease-of-use on shared systems and in high performance
-computing (HPC) environments. The container is a single file (.sif), which you can be built by using an Apptainer
+computing (HPC) environments. The container is a single file (.sif), which can be built by using an Apptainer
 image definition (.def) file.
 
 Building the container requires using Linux or Windows Subsystem for Linux (WSL) on Windows. The following
-instructions are for WSL (v2+) on Windows with an Ubuntu distro (tested on Ubuntu 24.04). Please make sure you are have
+instructions are for WSL (v2+) on Windows with an Ubuntu distro (tested on Ubuntu 24.04). Please make sure you have
 WSL version 2 or later since version 1 is being phased out as obsolete. If you don't have WSL installed,
 please contact your organizations IT department for help. Building Apptainer containers is done using *.def* files.
-You can `view and copy hpc_container.def on your own system here <../_static/hpc_container.def>`_. Save
-`hpc_container.def` file into a mounted drive (for example, `/mnt/c/users/<username>/hpc/hpc_container.sif`) for easier
+You can `download and save hpc_container.def on your own system here <../_static/hpc_container.def>`_. Save
+`hpc_container.def` file into a mounted drive (for example, `/mnt/c/users/<username>/hpc/hpc_container.def`) for easier
 access. The file installs the following apps into the container:
 
 - Ubuntu 26.04
@@ -82,6 +82,8 @@ To start building the container, open command prompt or powershell on Windows an
 .. code-block:: bash
 
     wsl
+
+Cd to `/mnt/c/users/<username>/hpc/` or where ever you saved the **hpc_container.def** file.
 
 Install `Go`
 
@@ -105,8 +107,7 @@ Ensure `fakeroot` is configured
 
     sudo apt install fakeroot uidmap
 
-Cd to `/mnt/c/users/<username>/hpc/` or where ever you saved the **hpc_container.def** file, and build
-the container by running
+Build the container by running
 
 .. code-block:: bash
 
