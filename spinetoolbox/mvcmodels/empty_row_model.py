@@ -78,6 +78,26 @@ class EmptyRowModel(MinimalTableModel):
         self.set_rows_to_default(first, last)
         self.dataChanged.connect(self._handle_data_changed)
 
+    def _default_row(self) -> list:
+        default_row = []
+        for column in range(self.columnCount()):
+            try:
+                field = self.header[column]
+            except IndexError:
+                default = None
+            else:
+                default = self.default_row.get(field)
+            default_row.append(default)
+        return default_row
+
+    def defaulted_rows(self) -> list[int]:
+        default_row = self._default_row()
+        rows = []
+        for i, row in enumerate(self._main_data):
+            if row == default_row:
+                rows.append(i)
+        return rows
+
     def set_rows_to_default(self, first: int, last: Optional[int] = None) -> None:
         """Sets default data in newly inserted rows."""
         if last is None:
@@ -86,14 +106,7 @@ class EmptyRowModel(MinimalTableModel):
         if first >= self.rowCount() or last < 0:
             return
         column_count = self.columnCount()
-        default_row = []
-        for column in range(column_count):
-            try:
-                field = self.header[column]
-            except IndexError:
-                field = None
-            default = self.default_row.get(field)
-            default_row.append(default)
+        default_row = self._default_row()
         for row in range(first, last + 1):
             self._main_data[row] = default_row.copy()
         top_left = self.index(first, 0)

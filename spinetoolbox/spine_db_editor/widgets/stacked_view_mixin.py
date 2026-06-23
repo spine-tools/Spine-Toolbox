@@ -16,6 +16,7 @@ from itertools import chain
 from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel, QModelIndex, QPersistentModelIndex, Qt, Slot
 from PySide6.QtGui import QColor
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import group_consecutive
 from spinedb_api.temp_id import TempId
 from ...helpers import preferred_row_height
 from ...mvcmodels.shared import ITEM_ROLE
@@ -187,8 +188,10 @@ class StackedViewMixin:
         else:
             db_map = self.db_maps[0]
         database_name = self.db_mngr.name_registry.display_name(db_map.sa_url)
+        rows_to_update = model.defaulted_rows()
         model.set_default_row(database=database_name, **default_data.default_data)
-        model.set_rows_to_default(model.rowCount() - 1)
+        for first, last in group_consecutive(rows_to_update):
+            model.set_rows_to_default(first, last)
         model.db_map = db_map
 
     def clear_all_filters(self):
