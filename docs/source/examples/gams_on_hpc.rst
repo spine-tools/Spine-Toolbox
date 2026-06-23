@@ -164,7 +164,7 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     #!/bin/bash
     #SBATCH --job-name=spinetoolbox_on_hpc
     #SBATCH --output=%j.out
-    #SBATCH --error=%j.err
+    #SBATCH --error=%j.out
     #SBATCH --time=00:30:00
     #SBATCH --cpus-per-task=1
     #SBATCH --mem=4G
@@ -175,7 +175,9 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Load apptainer. Uncomment if apptainer is available as a module.
     # module load apptainer
 
-    set -euxo pipefail  # Exit on Error
+    set -euo pipefail  # Exit on Error
+
+    START=$(date +%s)
 
     # ----------------------------
     # User configuration
@@ -204,7 +206,18 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Stage data
     # ----------------------------
     echo "Copying project to scratch..."
-    rsync -av "$HOME_BASE/$PROJECT_NAME/" "$SCRATCH_BASE/$PROJECT_NAME/"
+
+    rsync -av \
+      --exclude '.git*' \
+      --exclude 'logs' \
+      --exclude '*.out' \
+      --exclude '*.err' \
+      --exclude '.spinetoolbox/items/*/output/*' \
+      "$HOME_BASE/$PROJECT_NAME/" \
+      "$SCRATCH_BASE/$PROJECT_NAME/"
+
+    echo "Copying project finished"
+
     # If license is available, uncomment this
     # rsync -av "$HOME_BASE/licenses/gamslic.txt" "$SCRATCH_BASE/"
 
@@ -222,12 +235,11 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
         spinetoolbox --execute-only $SCRATCH_BASE/$PROJECT_NAME/ \
         > spinetoolbox.log 2>&1
 
+    echo "Spine Toolbox execution finished. See spinetoolbox.log for output"
+
     # ----------------------------
     # Copy results back
     # ----------------------------
-    echo "Listing results directory:"
-    ls -R $SCRATCH_BASE/$PROJECT_NAME
-
     echo "Copying results back to home..."
     rsync -avh $SCRATCH_BASE/$PROJECT_NAME/ $HOME_BASE/$PROJECT_NAME/
 
@@ -237,10 +249,10 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     LOG_DIR="$HOME_BASE/$PROJECT_NAME/logs/$SLURM_JOB_ID"
     mkdir -p "$LOG_DIR"
     mv "$SUBMIT_DIR/${SLURM_JOB_ID}.out" "$LOG_DIR/out.txt" 2>/dev/null || true
-    mv "$SUBMIT_DIR/${SLURM_JOB_ID}.err" "$LOG_DIR/err.txt" 2>/dev/null || true
     mv "$HOME_BASE/$PROJECT_NAME/spinetoolbox.log" "$LOG_DIR/spinetoolbox.log"
 
-    echo "Done."
+    END=$(date +%s)
+    echo "Done. Runtime: $((END - START)) seconds"
 
 .. attention::
 
@@ -258,12 +270,26 @@ correctly.
 During execution, all model output is written to the staged project directory in scratch space. After completion,
 the results are synchronized back to the original project directory in the user’s home folder.
 
-For reproducibility and debugging, the script also collects log files from each run. Standard Slurm output and error
-files, as well as the Spine Toolbox execution log, are organized into a dedicated directory
-``logs/<SLURM_JOB_ID>/`` within the project. This ensures that logs from different runs are preserved and can be
-easily traced to a specific job.
+For reproducibility and debugging, the script collects log files for each run.
 
-The folder structure on your HPC should look like this now:
+- Slurm standard output and error streams are written to a single file:
+  ``out.txt``
+- Spine Toolbox execution output is written to:
+  ``spinetoolbox.log``
+
+After each job finishes, these log files are organized into a dedicated directory:
+
+``logs/<SLURM_JOB_ID>/``
+
+This directory is created inside the project folder and contains the logs associated with that specific job. This
+ensures that logs from different runs are preserved and can be easily traced back to a particular execution.
+
+.. note::
+
+   The ``logs/`` directory is created automatically after you run the Slurm script
+   for the first time. It will not exist beforehand.
+
+The folder structure on your HPC should look like this after a run:
 
 .. code-block:: text
 
@@ -279,14 +305,18 @@ The folder structure on your HPC should look like this now:
         │       │   ├── specifications/
         │       │   │   └── ...
         │       │   └── project.json
+        │       ├── logs/
+        │       │   └── <SLURM_JOB_ID>/
+        │       │       ├── out.txt
+        │       │       └── spinetoolbox.log
         │       ├── run_on_hpc.sh
         │       ├── model.gms
         │       └── ...
         └── licenses/
             └── gamslic.txt
 
-When you want to execute another Spine Toolbox project, copy the project under `/home/spinetoolbox/projects/` and add
-a separate `run_on_hpc.sh` Slurm script for that project.
+When executing another Spine Toolbox project, copy the project under ``/home/spinetoolbox/projects/`` and create a
+separate ``run_on_hpc.sh`` Slurm script for that project.
 
 Editing the Slurm script for your HPC
 +++++++++++++++++++++++++++++++++++++
@@ -370,7 +400,6 @@ project. To view the files:
 .. code-block:: bash
 
     cat out.txt
-    cat err.txt
     cat spinetoolbox.log
 
 Final job status
@@ -402,7 +431,7 @@ Another option is to use `tail`:
 
 .. code-block:: bash
 
-    tail -f <SLURM_JOB_ID>.out <SLURM_JOB_ID>.err
+    tail -f <SLURM_JOB_ID>.out
 
 Replace <SLURM_JOB_ID> with the job id for that run. To tail Spine Toolbox output, you need to find
 the scratch path first with the current <SLURM_JOB_ID>:
