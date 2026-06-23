@@ -16,8 +16,8 @@ This tutorial demonstrates how to run Spine Toolbox project involving `GAMS <htt
 workflows on a High-Performance Computing (HPC) system using the Slurm scheduler.
 
 The guide assumes you have access to a Linux-based HPC cluster with a shared filesystem and Slurm
-installed. You also need basic familiarity with the Linux command line and a valid Gams license for
-real use cases. However, this tutorial can be completed with a demo license for Gams.
+installed. You also need basic familiarity with the Linux command line and a valid GAMS license for
+real use cases. However, this tutorial can be completed with a demo license for GAMS.
 
 You will learn the full workflow:
 
@@ -70,7 +70,7 @@ access. The file installs the following apps into the container:
 - Ubuntu 26.04
 - Python 3.13
 - Spine Toolbox (latest release)
-- Gams 53.5
+- GAMS 53.5
 
 .. note::
 
@@ -122,7 +122,7 @@ to spawn a new shell within your container and interact with it as though it wer
 
     apptainer shell hpc_container.sif
 
-For example, you can check the versions of Python and Gams with `python --version` and `gams ?` respectively
+For example, you can check the versions of Python and GAMS with `python --version` and `gams ?` respectively
 inside the shell. Type `exit` to close the container shell, type `exit` to close wsl and then close the terminal.
 
 Running a Spine Toolbox project on an HPC
@@ -130,7 +130,7 @@ Running a Spine Toolbox project on an HPC
 
 In this section, you need the following:
 
-- Spine Toolbox project with a Gams Tool (test project available in <spinetoolbox>/execution_tests/gams_on_hpc_tutorial)
+- Spine Toolbox project with a GAMS Tool (test project available in <spinetoolbox>/execution_tests/gams_on_hpc_tutorial)
 - Container file (**hpc_container.sif**)
 - GAMS license file (optional for this tutorial; required for real use cases)
 - Slurm script
@@ -292,26 +292,7 @@ Editing the Slurm script for your HPC
 +++++++++++++++++++++++++++++++++++++
 You may need to adjust the Slurm script (``run_on_hpc.sh``) to match your HPC environment:
 
-1. **Apptainer module**
-   Check whether Apptainer is available as a module on your system.
-   If it is, uncomment the following line::
-
-       # module load apptainer
-
-2. **Project name**
-   Update the ``PROJECT_NAME`` variable to match your Spine Toolbox project folder name.
-   For this tutorial, it should be::
-
-       PROJECT_NAME=gams_on_hpc_tutorial
-
-3. **Temporary working directory**
-   Check your HPC documentation for the recommended working or scratch filesystem.
-
-   - If your system uses ``$SCRATCH``, no changes are needed.
-   - Otherwise, update the ``BASE_TMP`` setting by commenting or uncommenting the appropriate line (e.g. ``$WORK`` or ``$TMPDIR``).
-   - If none of these variables are available, you can define your own custom path.
-
-4. **Slurm job parameters**
+1. **Slurm job parameters**
    Adjust the resource requests and output settings as needed:
 
    - ``--job-name``: Job name
@@ -320,6 +301,31 @@ You may need to adjust the Slurm script (``run_on_hpc.sh``) to match your HPC en
    - ``--mem``: Memory allocation
    - ``--output``: Output log file
    - ``--error``: Error log file
+
+2. **Apptainer module**
+   Check whether Apptainer is available as a module on your system.
+   If it is, uncomment the following line::
+
+       # module load apptainer
+
+3. **Project name**
+   Update the ``PROJECT_NAME`` variable to match your Spine Toolbox project folder name.
+   For this tutorial, it should be::
+
+       PROJECT_NAME=gams_on_hpc_tutorial
+
+4. **Temporary working directory**
+   Check your HPC documentation for the recommended working or scratch filesystem.
+
+   - If your system uses ``$SCRATCH``, no changes are needed.
+   - Otherwise, update the ``BASE_TMP`` setting by commenting or uncommenting the appropriate line (e.g. ``$WORK`` or ``$TMPDIR``).
+   - If none of these variables are available, you can define your own custom path.
+
+5. **GAMS License file
+    If you have a GAMS, uncomment the following line::
+
+
+        # rsync -av "$HOME_BASE/licenses/gamslic.txt" "$SCRATCH_BASE/"
 
 Submit job to Slurm Scheduler
 +++++++++++++++++++++++++++++
@@ -336,16 +342,16 @@ The response will be something like
 Submitted batch job 1303767
 ```
 
-where 1303767 is the job id
+where 1303767 is the Slurm job id
 
 Check status of submitted job
 +++++++++++++++++++++++++++++
 
 .. code-block:: bash
 
-    squeue -j <job_id>
+    squeue -j <SLURM_JOB_ID>
 
-where *<job_id>* is the id returned by the `sbatch` command.
+where *<SLURM_JOB_ID>* is the id returned by the `sbatch` command.
 To check the status of all of your submitted tasks, run
 
 .. code-block:: bash
@@ -358,23 +364,23 @@ the `squeue` command, it is finished.
 Check job output files
 ++++++++++++++++++++++
 
-Since `out.txt` and `err.txt` were given in the Slurm script as the values for *--output* and *--error*, you
-can find the stdout and stderr of your job in these files. The file `err.txt` is empty if everything is Ok.
-To view the files:
+After the execution has ended, the job output files will be collected into ``logs/<SLURM_JOB_ID>/`` within the
+project. To view the files:
 
 .. code-block:: bash
 
     cat out.txt
     cat err.txt
+    cat spinetoolbox.log
 
 Final job status
 ++++++++++++++++
 
 .. code-block:: bash
 
-    sacct -j <job_id>
+    sacct -j <SLURM_JOB_ID>
 
-where ``<job_id>`` is the ID returned by the ``sbatch`` command.
+where ``<SLURM_JOB_ID>`` is the ID returned by the ``sbatch`` command.
 This command should return something like:
 
 .. code-block:: text
@@ -396,10 +402,21 @@ Another option is to use `tail`:
 
 .. code-block:: bash
 
-   tail -f out.txt
+    tail -f <SLURM_JOB_ID>.out <SLURM_JOB_ID>.err
 
-Again, if $USER is not defined, replace it with your user name. This function tails the job progress and updates
-every two seconds.
+Replace <SLURM_JOB_ID> with the job id for that run. To tail Spine Toolbox output, you need to find
+the scratch path first with the current <SLURM_JOB_ID>:
+
+.. code-block:: bash
+
+    squeue -j <SLURM_JOB_ID> -o "%Z"
+
+And then do:
+
+.. code-block:: bash
+
+    tail -f /path/to/scratch/spinetoolbox_runs/<SLURM_JOB_ID>/gams_on_hpc_tutorial/spinetoolbox.log
+
 
 Checking the results
 ++++++++++++++++++++
