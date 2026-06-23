@@ -25,31 +25,44 @@ You will learn the full workflow:
 
    Local machine → Cluster login → Upload files → Submit job → Monitor → Retrieve results
 
-****************************************************
-HPC's with container support (apptainer/singularity)
-****************************************************
+********************************************
+Running on HPC using Apptainer (Recommended)
+********************************************
 
-The easiest way to run Spine Toolbox projects involving GAMS is to use *apptainer* containers. Log in to the Login
-node of your HPC and check if *apptainer* is available in your HPC with the following command:
+The recommended approach for running Spine Toolbox projects involving GAMS on HPC systems is to use *Apptainer*
+(formerly *Singularity*). Apptainer is specifically designed for HPC environments and provides a portable and
+reproducible way to execute containerized workflows.
+
+Log in to the login node of your HPC system and check whether *Apptainer* is available:
 
 .. code-block:: bash
 
     apptainer --version
 
-If this fails, try checking if *apptainer* is available as a module:
+If this command is not found, it may still be available as a module:
 
 .. code-block:: bash
 
     module avail apptainer
 
-If the response is a version number or a list of package names and version numbers, you are good to continue to the
-next section. If you see an error message or something like 'module not available', skip the next section and
-continue from (`HPC's without container support`_).
+If you see a version number or a list of available module versions, you can proceed with this (recommended) approach.
 
-.. Note::
+If *Apptainer* is not available on your system, do not worry — an alternative approach without containers is described
+in the next section: (`HPC without container support`_).
 
-    If the previous commands failed, you can still try if `singularity` is available with `singularity --version` or
-    `module avail singularity`. Apptainer was previously called singularity.
+.. note::
+
+    *Apptainer* was previously known as *Singularity*. If the above commands do not work, you can also check:
+
+    .. code-block:: bash
+
+        singularity --version
+
+    or:
+
+    .. code-block:: bash
+
+        module avail singularity
 
 
 Building the container
@@ -323,14 +336,12 @@ Editing the Slurm script for your HPC
 You may need to adjust the Slurm script (``run_on_hpc.sh``) to match your HPC environment:
 
 1. **Slurm job parameters**
-   Adjust the resource requests and output settings as needed:
+   Adjust the resource requests as needed:
 
    - ``--job-name``: Job name
    - ``--time``: Maximum runtime
    - ``--cpus-per-task``: Number of CPU cores
    - ``--mem``: Memory allocation
-   - ``--output``: Output log file
-   - ``--error``: Error log file
 
 2. **Apptainer module**
    Check whether Apptainer is available as a module on your system.
@@ -351,8 +362,8 @@ You may need to adjust the Slurm script (``run_on_hpc.sh``) to match your HPC en
    - Otherwise, update the ``BASE_TMP`` setting by commenting or uncommenting the appropriate line (e.g. ``$WORK`` or ``$TMPDIR``).
    - If none of these variables are available, you can define your own custom path.
 
-5. **GAMS License file
-    If you have a GAMS, uncomment the following line::
+5. **GAMS License file**
+    If you have a GAMS license, uncomment the following line::
 
 
         # rsync -av "$HOME_BASE/licenses/gamslic.txt" "$SCRATCH_BASE/"
@@ -454,56 +465,123 @@ The result files and output from executing the project will be inside the projec
 when executing the project in Spine Toolbox locally. You can check the results on the HPC, or transfer the
 project folder back to your local computer, start Spine Toolbox, and open the project there.
 
-*******************************
-HPC's without container support
-*******************************
+*****************************
+HPC without container support
+*****************************
 
-.. attention::
+If your HPC system does not provide *Apptainer*, the recommended first step is to contact your HPC support or
+administration team and request that *Apptainer* be installed. It is widely supported on HPC systems and is the
+preferred approach for running reproducible containerized workflows.
 
-    This section is a work in progress
+If installing Apptainer is not possible, you can still run Spine Toolbox projects directly on the HPC environment.
+In this case, you must ensure that all required software (e.g., GAMS) is available and correctly configured in your
+environment.
 
-Verify GAMS installation:
+Verifying GAMS installation
+---------------------------
+
+First, check whether GAMS is available:
 
 .. code-block:: bash
 
-   gams ?
+    gams ?
 
-If GAMS is installed correctly, this command prints version and usage information.
+If GAMS is installed correctly, this command prints version and usage
+information.
 
 Accessing GAMS on HPC
 ---------------------
 
-Option 1: Using a Module
+Option 1: Using a module
 ++++++++++++++++++++++++
 
 Many HPC systems provide GAMS via environment modules:
 
 .. code-block:: bash
 
-   module avail gams
-   module load gams
+    module avail gams
+    module load gams
 
-Verify:
+Verify that GAMS is available:
 
 .. code-block:: bash
 
-   which gams
+    which gams
 
-
-Option 2: User Installation
+Option 2: User installation
 +++++++++++++++++++++++++++
 
-If GAMS is not provided:
+If GAMS is not provided by your HPC:
 
 1. Download the Linux version from the GAMS website
-2. Extract it in your home or project directory
-3. Add it to your PATH:
+2. Extract it into your home or project directory
+3. Add it to your ``PATH``:
 
 .. code-block:: bash
 
-   export PATH=$HOME/gams:$PATH
+    export PATH=$HOME/gams:$PATH
 
-Ensure that your license file is accessible (e.g., ``gamslice.txt``).
+Ensure that your license file (e.g., ``gamslice.txt``) is available.
+
+
+Running Spine Toolbox without Apptainer
+---------------------------------------
+
+When running without containers, Spine Toolbox executes directly in the
+HPC environment. This means:
+
+- All required tools (GAMS and any dependencies) must be installed and
+  available in your environment
+- Paths to executables must be correctly configured
+- Environment variables (e.g., ``PATH``) must be set before running jobs
+
+A minimal Slurm workflow follows the same structure as the container-based
+approach, but without the ``apptainer exec`` command.
+
+Example Slurm script
+++++++++++++++++++++
+
+.. code-block:: bash
+
+    #!/bin/bash
+    #SBATCH --job-name=spinetoolbox_no_container
+    #SBATCH --output=logs/%j.log
+    #SBATCH --error=logs/%j.log
+    #SBATCH --time=00:30:00
+    #SBATCH --cpus-per-task=1
+    #SBATCH --mem=4G
+
+    set -euo pipefail
+
+    PROJECT_DIR="$HOME/spinetoolbox/projects/gams_on_hpc_tutorial"
+
+    echo "Running Spine Toolbox without container..."
+
+    # Load modules if needed (example)
+    # module load gams
+    # module load python
+
+    # Ensure required tools are available
+    which gams
+    which spinetoolbox
+
+    # Run Spine Toolbox project
+    spinetoolbox --execute-only "$PROJECT_DIR"
+
+    echo "Run completed successfully."
+
+Ensure that:
+
+- The ``spinetoolbox`` command is available in your environment
+- The GAMS executable is discoverable (i.e., ``which gams`` works)
+- Any required input files and licenses are accessible
+
+.. note::
+
+    Running without containers may lead to differences in behavior across
+    systems due to variations in installed software and libraries. Using
+    Apptainer is strongly recommended whenever possible for reproducibility.
+
 
 Common Issues and Troubleshooting
 ---------------------------------

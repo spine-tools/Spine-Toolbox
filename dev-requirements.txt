@@ -5,6 +5,7 @@ pyperf
 sphinx
 sphinx_rtd_theme
 sphinx-autoapi < 3.4
+sphinx-copybutton
 recommonmark
 pylint
 pytest-cov >= 6
