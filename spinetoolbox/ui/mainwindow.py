@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.11.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -200,6 +200,9 @@ class Ui_MainWindow(object):
         self.actionStart_default_julia_in_basic_console = QAction(MainWindow)
         self.actionStart_default_julia_in_basic_console.setObjectName(u"actionStart_default_julia_in_basic_console")
         self.actionStart_default_julia_in_basic_console.setIcon(icon19)
+        self.open_spinedb_api_reference_action = QAction(MainWindow)
+        self.open_spinedb_api_reference_action.setObjectName(u"open_spinedb_api_reference_action")
+        self.open_spinedb_api_reference_action.setIcon(icon7)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         MainWindow.setCentralWidget(self.centralwidget)
@@ -237,7 +240,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
         self.dockWidget_eventlog.setSizePolicy(sizePolicy)
-        self.dockWidget_eventlog.setMinimumSize(QSize(82, 104))
+        self.dockWidget_eventlog.setMinimumSize(QSize(82, 106))
         self.dockWidget_eventlog.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable|QDockWidget.DockWidgetFeature.DockWidgetFloatable|QDockWidget.DockWidgetFeature.DockWidgetMovable)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
@@ -334,7 +337,7 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget_design_view)
         self.dockWidget_item = QDockWidget(MainWindow)
         self.dockWidget_item.setObjectName(u"dockWidget_item")
-        self.dockWidget_item.setMinimumSize(QSize(127, 101))
+        self.dockWidget_item.setMinimumSize(QSize(139, 101))
         self.dockWidgetContents_3 = QWidget()
         self.dockWidgetContents_3.setObjectName(u"dockWidgetContents_3")
         self.verticalLayout = QVBoxLayout(self.dockWidgetContents_3)
@@ -389,6 +392,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
         self.menuHelp.addAction(self.actionGetting_started)
+        self.menuHelp.addAction(self.open_spinedb_api_reference_action)
         self.menuHelp.addAction(self.actionGitHub)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionAbout_Qt)
@@ -622,6 +626,7 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
         self.actionStart_default_python_in_basic_console.setText(QCoreApplication.translate("MainWindow", u"Start Default Python in Basic Console", None))
         self.actionStart_default_julia_in_basic_console.setText(QCoreApplication.translate("MainWindow", u"Start Default Julia in Basic Console", None))
+        self.open_spinedb_api_reference_action.setText(QCoreApplication.translate("MainWindow", u"Spine DB API reference", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))

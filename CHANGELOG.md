@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Added a link to Spine Database API's documentation to the Help menu.
+
 ### Changed
 
 ### Deprecated
