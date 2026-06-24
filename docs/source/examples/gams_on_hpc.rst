@@ -583,9 +583,9 @@ Ensure that:
     Apptainer is strongly recommended whenever possible for reproducibility.
 
 
-=================================
+*********************************
 Common Issues and Troubleshooting
-=================================
+*********************************
 
 License Errors
 --------------
