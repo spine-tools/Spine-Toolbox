@@ -56,7 +56,7 @@ from spine_engine.project_item.project_item_specification_factory import Project
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_DB_API_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
 from .helpers import (
     ChildCyclingKeyPressFilter,
     ColoredIcon,
@@ -358,6 +358,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionManage_plugins.triggered.connect(self._plugin_manager.show_manage_plugins_dialog)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
+        self.ui.open_spinedb_api_reference_action.triggered.connect(self.show_db_api_reference)
         self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionRetrieve_project.triggered.connect(self.retrieve_project)
@@ -1754,23 +1755,28 @@ class ToolboxUI(QMainWindow):
         self.settings_form.show()
 
     @Slot()
-    def show_about(self):
+    def show_about(self) -> None:
         """Shows the About Spine Toolbox widget."""
         form = AboutWidget(self)
         form.show()
 
     @Slot()
-    def show_user_guide(self):
+    def show_user_guide(self) -> None:
         """Opens Spine Toolbox documentation index page in browser."""
         index_url = f"{ONLINE_DOCUMENTATION_URL}/index.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 
     @Slot()
-    def show_getting_started_guide(self):
+    def show_getting_started_guide(self) -> None:
         """Opens Spine Toolbox Getting Started HTML page in browser."""
         index_url = f"{ONLINE_DOCUMENTATION_URL}/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        open_url(index_url)
+
+    @Slot()
+    def show_db_api_reference(self) -> None:
+        index_url = f"{SPINE_DB_API_DOCUMENTATION_URL}"
         open_url(index_url)
 
     @Slot()

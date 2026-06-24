@@ -13,7 +13,7 @@
 """Unit tests for DB editor's custom ``QTreeView`` classes."""
 
 from unittest import mock
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, Qt
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QApplication
 import pytest
 from spinedb_api import (
@@ -733,6 +733,44 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities:
             data = db_map.query(db_map.entity_sq).all()
             assert len(data) == 4
             assert {i.name for i in data} == {"object_11", "object_12", "object_22", "object_11__object_22"}
+
+    def test_duplicate_element(self, entity_tree_model, db_mngr, db_map, db_editor):
+        o11_id = db_map.entity(entity_class_name="object_class_1", name="object_11")["id"]
+        r1_id = db_map.entity(entity_class_name="relationship_class", entity_byname=("object_11", "object_21"))["id"]
+        assert db_mngr.relationship_graph.is_any_id_reachable(db_map, r1_id, {o11_id})
+        view = db_editor.ui.treeView_entity
+        model = entity_tree_model
+        root_index = model.index(0, 0)
+        model.fetchMore(root_index)
+        while model.rowCount(root_index) != 3:
+            QApplication.processEvents()
+        class_index = model.index(0, 0, root_index)
+        assert class_index.data() == "object_class_1"
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 2:
+            QApplication.processEvents()
+        object_index = model.index(0, 0, class_index)
+        assert object_index.data() == "object_11"
+        view.selectionModel().setCurrentIndex(object_index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        view._context_item = model.item_from_index(object_index)
+        view.duplicate_entity()
+        QApplication.processEvents()
+        root_index = model.index(0, 0)
+        model.fetchMore(root_index)
+        while model.rowCount(root_index) != 3:
+            QApplication.processEvents()
+        class_index = model.index(0, 0, root_index)
+        assert class_index.data() == "object_class_1"
+        model.fetchMore(class_index)
+        while model.rowCount(class_index) != 3:
+            QApplication.processEvents()
+        object_index = model.index(1, 0, class_index)
+        assert object_index.data() == "object_11 (1)"
+        model.fetchMore(object_index)
+        while model.rowCount(object_index) != 2:
+            QApplication.processEvents()
+        assert model.index(0, 0, object_index).data() == "٭ ǀ object_21"
+        assert model.index(1, 0, object_index).data() == "٭ ǀ object_22"
 
     @staticmethod
     def _rename_class(class_name, db_editor):
