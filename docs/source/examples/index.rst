@@ -24,7 +24,7 @@ This module currently contains tutorials for Spine Toolbox and Spine Database Ed
 
 .. toctree::
    :maxdepth: 1
-   :caption: Running models on a High-Performance Computing (HPC) system
+   :caption: Spine Toolbox on a High-Performance Computing (HPC) system
 
    hpc_basics
    gams_on_hpc

@@ -1,8 +1,8 @@
 .. _HPC Basics:
 
-====================================================
-Background on High-Performance Cluster (HPC) Systems
-====================================================
+==================================================
+Basics of High-Performance Computing (HPC) Systems
+==================================================
 
 This section briefly describes how common HPC systems work. The description is intentionally general so it applies to:
 

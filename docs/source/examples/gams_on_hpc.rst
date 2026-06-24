@@ -1,8 +1,8 @@
 .. _Spine Toolbox on HPC:
 
-=======================================
-Running Spine Toolbox projects on HPC's
-=======================================
+=============================================
+Running Spine Toolbox projects on HPC systems
+=============================================
 
 .. contents::
    :depth: 1
@@ -473,7 +473,7 @@ If your HPC system does not provide *Apptainer*, the recommended first step is t
 administration team and request that *Apptainer* be installed. It is widely supported on HPC systems and is the
 preferred approach for running reproducible containerized workflows.
 
-If installing Apptainer is not possible, you can still run Spine Toolbox projects directly on the HPC environment.
+If installing *Apptainer* is not possible, you can still run Spine Toolbox projects directly on the HPC environment.
 In this case, you must ensure that all required software (e.g., GAMS) is available and correctly configured in your
 environment.
 
@@ -583,11 +583,12 @@ Ensure that:
     Apptainer is strongly recommended whenever possible for reproducibility.
 
 
+=================================
 Common Issues and Troubleshooting
----------------------------------
+=================================
 
 License Errors
-++++++++++++++
+--------------
 
 - Ensure license file is accessible on compute nodes
 - Check environment variables if needed:
@@ -597,7 +598,7 @@ License Errors
    export GAMSLICE=/path/to/gamslice.txt
 
 File Not Found
-++++++++++++++
+--------------
 
 - Verify paths are correct relative to the SLURM working directory
 - Use:
@@ -607,13 +608,13 @@ File Not Found
    echo $PWD
 
 Job Stuck in Queue
-++++++++++++++++++
+------------------
 
 - Cluster is full
 - Resource request too large
 
 Memory Errors
-+++++++++++++
+-------------
 
 Increase memory:
 
@@ -623,7 +624,7 @@ Increase memory:
 
 
 Solver Not Found
-++++++++++++++++
+----------------
 
 .. code-block:: bash
 
