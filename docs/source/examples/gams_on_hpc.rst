@@ -226,7 +226,7 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
       --exclude '*.out' \
       --exclude '*.err' \
       --exclude '.spinetoolbox/items/*/output/*' \
-      "$HOME_BASE/$PROJECT_NAME/" \
+      "$HOME_BASE/projects/$PROJECT_NAME/" \
       "$SCRATCH_BASE/$PROJECT_NAME/"
 
     echo "Copying project finished"
@@ -254,22 +254,23 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
     # Copy results back
     # ----------------------------
     echo "Copying results back to home..."
-    rsync -avh $SCRATCH_BASE/$PROJECT_NAME/ $HOME_BASE/$PROJECT_NAME/
+    rsync -avh $SCRATCH_BASE/$PROJECT_NAME/ $HOME_BASE/projects/$PROJECT_NAME/
 
     # -----------------------------------
     # Move log files to dedicated folder
     # -----------------------------------
-    LOG_DIR="$HOME_BASE/$PROJECT_NAME/logs/$SLURM_JOB_ID"
+    LOG_DIR="$HOME_BASE/projects/$PROJECT_NAME/logs/$SLURM_JOB_ID"
     mkdir -p "$LOG_DIR"
     mv "$SUBMIT_DIR/${SLURM_JOB_ID}.out" "$LOG_DIR/out.txt" 2>/dev/null || true
-    mv "$HOME_BASE/$PROJECT_NAME/spinetoolbox.log" "$LOG_DIR/spinetoolbox.log"
+    mv "$HOME_BASE/projects/$PROJECT_NAME/spinetoolbox.log" "$LOG_DIR/spinetoolbox.log"
 
     END=$(date +%s)
     echo "Done. Runtime: $((END - START)) seconds"
 
 .. attention::
 
-    Line endings in Slurm scripts must be Unix style (LF).
+    Line endings in Slurm scripts must be Unix style (LF). You can make sure that the line endings are in the
+    correct style by running `dos2unix run_on_hpc.sh` on your HPC.
 
 The ``run_on_hpc.sh`` script stages a Spine Toolbox project to a temporary working directory on the HPC system,
 runs it inside an Apptainer container, and then copies the results back to the original project location. This
@@ -384,6 +385,29 @@ Submitted batch job 1303767
 ```
 
 where 1303767 is the Slurm job id
+
+Another alternative is to submit the Slurm script and get the completion status immediately when it finishes. This is
+helpful so that you don't have to check the status manually. Copy and paste the following into `submit_job.sh`
+file and run with `bash submit_job.sh`.
+
+.. code-block:: bash
+
+    #!/bin/bash
+    JOBID=$(sbatch run_on_hpc.sh | awk '{print $4}')
+    echo "Submitted job $JOBID"
+    # Wait until job disappears from queue
+    while [ -n "$(squeue -j "$JOBID" -h)" ]; do
+        sleep 2
+    done
+    # Get final job state
+    STATE=$(sacct -j "$JOBID" --format=State --noheader | head -n 1 | awk '{print $1}')
+
+    echo "Final state: $STATE"
+    if [[ "$STATE" == "COMPLETED" ]]; then
+        echo "COMPLETED. Logs available at logs/$JOBID"
+    else
+        echo "FAILED. Check $JOBID.out or logs/$JOBID for info"
+    fi
 
 Check status of submitted job
 +++++++++++++++++++++++++++++
@@ -586,6 +610,20 @@ Ensure that:
 *********************************
 Common Issues and Troubleshooting
 *********************************
+
+Error on sbatch
+---------------
+
+If you see the following error when trying to run `sbatch run_on_hpc.sh`::
+
+    sbatch: error: Batch script contains DOS line breaks (\r\n)
+    sbatch: error: instead of expected UNIX line breaks (\n).
+
+You need to change the line endings into Unix/Linux line breaks. You can do this in your hpc with the command::
+
+    dos2unix run_on_hpc.sh
+
+Then run `sbatch run_on_hpc.sh` again.
 
 License Errors
 --------------

@@ -90,8 +90,8 @@ Once you have the necessary rights, you can make an SSH connection from your ter
 
    ssh username@cluster.address
 
-On Windows, we recommend using PuTTY as an SSH client. You can install it from the Windows
-Store or from the `PuTTY site <https://putty.software/>`_.
+On Windows, you can use Command Prompt, Powershell or a dedicated SSH client such as PuTTY. You can
+install PuTTY from the Windows Store or from the `PuTTY site <https://putty.software/>`_.
 
 File Transfer
 -------------
