@@ -118,7 +118,7 @@ Ensure `fakeroot` is configured
 
 .. code-block:: bash
 
-    sudo apt install fakeroot uidmap
+    sudo apt install -y fakeroot uidmap
 
 Build the container by running
 
@@ -126,7 +126,7 @@ Build the container by running
 
    apptainer build --fakeroot hpc_container.sif hpc_container.def
 
-Why --fakeroot? See https://apptainer.org/docs/user/latest/fakeroot.html#fakeroot-feature
+Why :literal:`--fakeroot`? See https://apptainer.org/docs/user/latest/fakeroot.html#fakeroot-feature
 
 When the build process has completed, if you want to check that everything works, you can use the `shell` command
 to spawn a new shell within your container and interact with it as though it were a virtual machine.
@@ -166,7 +166,7 @@ Upload all required files to your HPC's home directory using SCP, WinSCP or rsyn
 2. Upload project:
     ``$HOME/spinetoolbox/projects/gams_on_hpc_tutorial``
 
-3. Upload GAMS license:
+3. Upload GAMS license (not required for this tutorial):
     ``$HOME/spinetoolbox/licenses/gamslic.txt``
 
 4. Create a Slurm script file:
@@ -378,13 +378,11 @@ When you are ready to execute the project, cd to home/spinetoolbox/projects/gams
 
     sbatch run_on_hpc.sh
 
-The response will be something like
+The response will be something like::
 
-```
-Submitted batch job 1303767
-```
+    Submitted batch job 1303767
 
-where 1303767 is the Slurm job id
+where 1303767 is the Slurm job id.
 
 Another alternative is to submit the Slurm script and get the completion status immediately when it finishes. This is
 helpful so that you don't have to check the status manually. Copy and paste the following into `submit_job.sh`
