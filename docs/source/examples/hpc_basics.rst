@@ -10,7 +10,7 @@ This section briefly describes how common HPC systems work. The description is i
 - Company internal clusters
 - Cloud-based HPC environments (e.g., AWS, Azure)
 
-If you are already familiar with HPC systems, you can jump directly to the next section :ref:`Spine Toolbox on HPC`.
+If you are already familiar with HPC systems, you can jump directly to the next section: :ref:`Spine Toolbox on HPC`.
 
 ************
 Introduction
@@ -96,7 +96,7 @@ install PuTTY from the Windows Store or from the `PuTTY site <https://putty.soft
 File Transfer
 -------------
 
-You can use scp to transfer files between your local system and the login node.
+You can use  :program:`scp` to transfer files between your local system and the login node.
 
 .. code-block:: bash
 
@@ -190,8 +190,9 @@ A typical workflow might look like:
 4. Copy final results back to persistent storage (``$HOME`` or project space)
 5. Clean up temporary data
 
-This approach ensures efficient use of cluster resources while keeping your data safe and organized. Next section
-provides an actual example workflow for executing Spine Toolbox projects in an HPC environment.
+This approach ensures efficient use of cluster resources while keeping your data safe and organized. next section,
+:ref:`Spine Toolbox on HPC` provides an actual example workflow for executing Spine Toolbox projects in an HPC
+environment.
 
 Module System
 -------------
