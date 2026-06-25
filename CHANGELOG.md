@@ -6,8 +6,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 ## [unreleased]
 
 ### Added
-
 - Added a link to Spine Database API's documentation to the Help menu.
+- Tutorial on running Spine Toolbox projects on High-Perfomance Computing (HPC) systems.
 
 ### Changed
 
