@@ -26,7 +26,7 @@ dependencies = [
     "Pygments >=2.8",
     "jill >=0.9.2",
     "pyzmq >=21.0",
-    "spine_items>=0.24.8",
+    "spine_items>=0.24.9",
     "pywin32; os_name == 'nt'",
     "pydantic>=2.12",
 ]

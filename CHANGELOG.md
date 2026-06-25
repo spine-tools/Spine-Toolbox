@@ -3,21 +3,11 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.9]
 
 ### Added
 
-- Added a link to Spine Database API's documentation to the Help menu.
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
+- Added a link to Spine Database API's documentation into the Help menu.
 
 ## [0.10.8]
 
