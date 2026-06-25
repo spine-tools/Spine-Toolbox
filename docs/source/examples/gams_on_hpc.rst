@@ -480,9 +480,7 @@ As an alternative to running ``sbatch run_on_hpc.sh`` directly, you can use a he
 and monitor its progress until completion. This allows you to see the job’s final status as soon as it finishes,
 without needing to check it manually.
 
-To do this, copy the script below into a file named ``submit_job.sh`` and run it with:
-
-``bash submit_job.sh``.
+To do this, copy the script below into a file named ``submit_job.sh``
 
 .. code-block:: bash
 
@@ -502,6 +500,10 @@ To do this, copy the script below into a file named ``submit_job.sh`` and run it
     else
         echo "FAILED. Check $JOBID.out or logs/$JOBID for info"
     fi
+
+and run it with::
+
+    bash submit_job.sh
 
 *****************************
 HPC without container support
@@ -625,7 +627,7 @@ Common Issues and Troubleshooting
 Error on sbatch
 ---------------
 
-If you see the following error when trying to run `sbatch run_on_hpc.sh`::
+If you see the following error when trying to run ``sbatch run_on_hpc.sh``::
 
     sbatch: error: Batch script contains DOS line breaks (\r\n)
     sbatch: error: instead of expected UNIX line breaks (\n).
@@ -633,8 +635,6 @@ If you see the following error when trying to run `sbatch run_on_hpc.sh`::
 You need to change the line endings into Unix/Linux line breaks. You can do this in your hpc with the command::
 
     dos2unix run_on_hpc.sh
-
-Then try running `sbatch run_on_hpc.sh` again.
 
 License Errors
 --------------
@@ -670,16 +670,3 @@ Increase memory:
 .. code-block:: bash
 
    #SBATCH --mem=16G
-
-Solver Not Found
-----------------
-
-.. code-block:: bash
-
-   module load gurobi
-
-Check installation:
-
-.. code-block:: bash
-
-   which gurobi_cl
