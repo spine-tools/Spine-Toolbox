@@ -31,6 +31,7 @@ from ...mvcmodels.shared import (
     ITEM_ID_ROLE,
     ITEM_ROLE,
     PARAMETER_TYPE_VALIDATION_ROLE,
+    PARAMETER_VALUE_ROLE,
     PARSED_ROLE,
 )
 from ...parameter_type_validation import ValidationKey
@@ -354,6 +355,7 @@ class ParameterMixin:
         using the item_type property.
         Paint the object_class icon next to the name.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
+        id_ = self._main_data[index.row()]
         if index.column() == self.VALUE_COLUMN and role in {
             Qt.ItemDataRole.DisplayRole,
             Qt.ItemDataRole.EditRole,
@@ -362,10 +364,12 @@ class ParameterMixin:
             PARSED_ROLE,
             PARAMETER_TYPE_VALIDATION_ROLE,
         }:
-            id_ = self._main_data[index.row()]
             with self.db_mngr.get_lock(self.db_map):
                 item = self._mapped_table[id_]
                 return self.db_mngr.get_value(self.db_map, item, role)
+        elif role == PARAMETER_VALUE_ROLE:
+            mapped_table = self.db_map.mapped_table(self.item_type)
+            return mapped_table[id_].public_item
         return super().data(index, role)
 
     def add_rows(self, ids: list[TempId]) -> None:
