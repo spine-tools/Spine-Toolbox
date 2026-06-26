@@ -3,6 +3,22 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
+## [unreleased]
+
+### Added
+
+- Tutorial on running Spine Toolbox projects on High-Perfomance Computing (HPC) systems.
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
 ## [0.10.9]
 
 ### Added
