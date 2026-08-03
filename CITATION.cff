@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+title: Spine Toolbox
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Juha
+    family-names: Kiviluoma
+  - given-names: Fabiano
+    family-names: Pallonetto
+  - given-names: Manuel
+    family-names: Marin
+  - given-names: Pekka T.
+    family-names: Savolainen
+  - given-names: Antti
+    family-names: Soininen
+  - given-names: Per
+    family-names: Vennström
+  - given-names: Erkka
+    family-names: Rinne
+  - given-names: Jiangyi
+    family-names: Huang
+  - given-names: Iasonas
+    family-names: Kouveliotis-Lysikatos
+  - given-names: Maren
+    family-names: Ihlemann
+  - given-names: Erik
+    family-names: Delarue
+  - given-names: Ciara
+    family-names: O'Dwyer
+  - given-names: Terence
+    family-names: O'Donnell
+  - given-names: Mikael
+    family-names: Amelin
+  - given-names: Lennart
+    family-names: Söder
+  - given-names: Joseph
+    family-names: Dillon
+identifiers:
+  - type: url
+    value: 'https://doi.org/10.1016/j.softx.2021.100967'
+repository-code: 'https://github.com/spine-tools/Spine-Toolbox'
+url: 'https://www.tools-for-energy-system-modelling.org/'
+license: LGPL-3.0
