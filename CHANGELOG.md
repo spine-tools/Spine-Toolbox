@@ -478,9 +478,6 @@ Many parts of the Spine data structure have been redesigned.
   Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
 - "Open kernel spec editor" buttons in Settings->Tools page have been changed "Make Julia kernel" and 
   "Make Python Kernel" buttons
-- 
-
-### Deprecated
 
 ### Removed
 - Python 3.7 support
@@ -501,8 +498,6 @@ Many parts of the Spine data structure have been redesigned.
 - Group Id's for Jupyter Consoles
 - Kill consoles at end of execution for Jupyter Consoles
 - Crash when typing exit, exit(), quit, or quit() into Jupyter Console
-
-### Security
 
 ## [0.6.5] - 2021-09-08
 
