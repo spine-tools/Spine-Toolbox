@@ -7,6 +7,8 @@ on:
     paths:
       - "**.py"
       - ".github/workflows/test_runner.yml"
+      - ".github/workflows/unit_tests.yml"
+      - ".github/workflows/execution_tests.yml"
       - "requirements.txt"
       - "pyproject.toml"
       - "execution_tests/**"
