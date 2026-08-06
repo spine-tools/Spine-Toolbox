@@ -85,7 +85,11 @@ ValidatedValueCache = dict[str, dict[int, dict[int, bool]]]
 def do_create_new_spine_database(url: str) -> None:
     """Creates a new spine database at the given url."""
     try:
-        create_new_spine_database(url)
+        engine = create_new_spine_database(url)
+        try:
+            return None
+        finally:
+            engine.dispose()
     except Exception as e:
         raise e
 
