@@ -309,15 +309,10 @@ class CompoundStackedModel(CompoundTableModel):
             self._column_filters.pop(field, None)
         else:
             self._column_filter_patterns[field] = pattern
-            self._column_filters[field] = self._make_column_matcher(pattern)
+            self._column_filters[field] = make_search_matcher(pattern)
         if not self._column_filter_timer.isActive():
             self._column_filter_timer.start()
         self.column_filter_changed.emit(self)
-
-    @staticmethod
-    def _make_column_matcher(pattern: str) -> Callable[[str], bool]:
-        """Builds a matcher for a search pattern (shared with the tree filters)."""
-        return make_search_matcher(pattern)
 
     def clear_column_filters(self) -> None:
         """Clears all per-column regex search filters and refreshes."""

@@ -21,11 +21,11 @@ from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FetchIndex, FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
-from ...mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from ...mvcmodels.minimal_tree_model import FilterableChildrenMixin, MinimalTreeModel, TreeItem
 from ...mvcmodels.shared import ITEM_ID_ROLE
 
 
-class MultiDBTreeItem(TreeItem):
+class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
     """A tree item that may belong in multiple databases."""
 
     item_type: ClassVar[ItemType] = None
@@ -58,13 +58,6 @@ class MultiDBTreeItem(TreeItem):
             owner=self,
         )
 
-    def _compute_visible_children(self):
-        """Returns the children that pass the active filters. Overridden by filtering subclasses.
-
-        The base item does no filtering, so all children are visible.
-        """
-        return self._children
-
     @property
     def visible_children(self):
         """Returns the memoized filtered child list, building it (and the child map) on first access.
@@ -75,17 +68,6 @@ class MultiDBTreeItem(TreeItem):
         if self._visible_children_cache is None:
             self._rebuild_child_map()
         return self._visible_children_cache
-
-    def row_count(self):
-        """Overriden to use the cached visible children."""
-        return len(self.visible_children)
-
-    def child(self, row):
-        """Overriden to use the cached visible children."""
-        visible = self.visible_children
-        if 0 <= row < len(visible):
-            return visible[row]
-        return None
 
     def child_number(self):
         """Overriden to use find_row which is a dict-lookup rather than a list.index() call."""

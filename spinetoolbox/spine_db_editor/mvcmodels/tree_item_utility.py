@@ -18,11 +18,11 @@ from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon
 from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
 from spinetoolbox.helpers import CharIconEngine, DBMapPublicItems, bisect_chunks, plain_to_tool_tip
-from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel, TreeItem
+from spinetoolbox.mvcmodels.minimal_tree_model import FilterableChildrenMixin, MinimalTreeModel, TreeItem
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 
 
-class StandardTreeItem(TreeItem):
+class StandardTreeItem(FilterableChildrenMixin, TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
     item_type: ClassVar[str] = None
@@ -125,26 +125,23 @@ class StandardTreeItem(TreeItem):
         self._ensure_visible_cache()
         return self._visible_children_cache
 
+    def _compute_visible_children(self):
+        """Overridden to keep only the children that pass the model's active level filters.
+
+        Only ever reached under an active filter (``visible_children`` short-circuits to ``self.children``
+        otherwise), so it always applies the filter.
+        """
+        return [child for child in self.children if self.model.item_is_visible(child)]
+
     def _ensure_visible_cache(self) -> None:
         """Rebuilds the filtered child list and position map if the filter generation has moved."""
         generation = self.model.filter_generation
         if self._visible_cache_generation == generation and self._visible_children_cache is not None:
             return
-        visible = [child for child in self.children if self.model.item_is_visible(child)]
+        visible = self._compute_visible_children()
         self._visible_children_cache = visible
         self._visible_row_map = {child: row for row, child in enumerate(visible)}
         self._visible_cache_generation = generation
-
-    def row_count(self):
-        """Overridden to count only visible children."""
-        return len(self.visible_children)
-
-    def child(self, row):
-        """Overridden to return the visible child at the given row or None if out of bounds."""
-        visible = self.visible_children
-        if 0 <= row < len(visible):
-            return visible[row]
-        return None
 
     def child_number(self):
         """Overridden to return the item's VISIBLE row within its parent, or None if hidden/orphan.
