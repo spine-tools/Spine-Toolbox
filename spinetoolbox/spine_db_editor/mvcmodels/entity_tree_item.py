@@ -54,8 +54,10 @@ class EntityTreeRootItem(MultiDBTreeItem):
             return font
         return super().data(column, role)
 
-    @property
-    def visible_children(self):
+    def _compute_visible_children(self):
+        """See base class. Preserves the hide-empty-classes behaviour even with no level filter active."""
+        if not self.model.has_level_filters():
+            return [x for x in self._children if not x.is_hidden()]
         return [x for x in self._children if not x.is_hidden() and self.model.item_is_visible(x)]
 
     @property
@@ -114,8 +116,10 @@ class EntityClassItem(MultiDBTreeItem):
     def child_item_class(self):
         return EntityItem
 
-    @property
-    def visible_children(self):
+    def _compute_visible_children(self):
+        """See base class. With no level filter active every child is visible (O(1) fast path)."""
+        if not self.model.has_level_filters():
+            return self._children
         return [c for c in self._children if self.model.item_is_visible(c)]
 
     def is_hidden(self):
@@ -215,8 +219,10 @@ class EntityItem(MultiDBTreeItem):
         """Child class is always :class:`EntityItem`."""
         return EntityItem
 
-    @property
-    def visible_children(self):
+    def _compute_visible_children(self):
+        """See base class. With no level filter active every child is visible (O(1) fast path)."""
+        if not self.model.has_level_filters():
+            return self._children
         return [c for c in self._children if self.model.item_is_visible(c)]
 
     @property

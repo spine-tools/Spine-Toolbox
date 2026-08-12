@@ -43,6 +43,9 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map: dict[DatabaseMapping, dict[TempId, int]] = {}
+        # Memoized filtered child list, rebuilt in lockstep with ``_child_map`` so that ``child``/
+        # ``row_count`` (list access) and ``child_number`` (``_child_map`` lookup) always agree.
+        self._visible_children_cache: list | None = None
         self._fetch_index: FetchIndex | None = None
         self._fetch_parent = FlexibleFetchParent(
             self.fetch_item_type,
@@ -55,18 +58,33 @@ class MultiDBTreeItem(TreeItem):
             owner=self,
         )
 
-    @property
-    def visible_children(self):
+    def _compute_visible_children(self):
+        """Returns the children that pass the active filters. Overridden by filtering subclasses.
+
+        The base item does no filtering, so all children are visible.
+        """
         return self._children
 
+    @property
+    def visible_children(self):
+        """Returns the memoized filtered child list, building it (and the child map) on first access.
+
+        The list is cached and rebuilt only by :meth:`_rebuild_child_map`, which every structural change and
+        every filter (re)apply already calls - so paint/scroll queries never recompute the filter.
+        """
+        if self._visible_children_cache is None:
+            self._rebuild_child_map()
+        return self._visible_children_cache
+
     def row_count(self):
-        """Overriden to use visible_children."""
+        """Overriden to use the cached visible children."""
         return len(self.visible_children)
 
     def child(self, row):
-        """Overriden to use visible_children."""
-        if 0 <= row < self.row_count():
-            return self.visible_children[row]
+        """Overriden to use the cached visible children."""
+        visible = self.visible_children
+        if 0 <= row < len(visible):
+            return visible[row]
         return None
 
     def child_number(self):
@@ -87,7 +105,9 @@ class MultiDBTreeItem(TreeItem):
         Kept separate so a model can rebuild many items' maps under a single layout change.
         """
         self._child_map.clear()
-        for row, child in enumerate(self.visible_children):
+        visible = self._compute_visible_children()
+        self._visible_children_cache = visible
+        for row, child in enumerate(visible):
             for db_map in child.db_maps:
                 id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, {})[id_] = row

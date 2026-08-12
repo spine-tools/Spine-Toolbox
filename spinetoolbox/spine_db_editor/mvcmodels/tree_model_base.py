@@ -84,6 +84,7 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
         self._applying_level_filters = True
         try:
             self.layoutAboutToBeChanged.emit()
+            self._bump_filter_generation()
             self.layoutChanged.emit()
         finally:
             self._applying_level_filters = False

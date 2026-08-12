@@ -84,6 +84,7 @@ class TreeSearchFocusMixin:
         self._regex_row_was_last = False
         self._lower_filter_session = False
         self._saved_expansion = None
+        self._suppress_auto_expand = False
         self._auto_expand_timer = QTimer(self)
         self._auto_expand_timer.setSingleShot(True)
         self._auto_expand_timer.setInterval(FORCE_FETCH_DELAY)
@@ -93,7 +94,18 @@ class TreeSearchFocusMixin:
         bar.lower_filter_active_changed.connect(self._on_lower_filter_active_changed)
         model = self.model()
         if model is not None:
-            model.layoutChanged.connect(self._auto_expand_timer.start)
+            model.layoutChanged.connect(self._on_model_layout_changed)
+
+    @Slot()
+    def _on_model_layout_changed(self) -> None:
+        """Restarts the auto-expand debounce, unless the layout change was our own programmatic expand.
+
+        The auto-expander itself expands/collapses the view, which emits ``layoutChanged``; re-arming on
+        that would loop. The ``_suppress_auto_expand`` guard swallows exactly those self-inflicted signals.
+        """
+        if self._suppress_auto_expand:
+            return
+        self._auto_expand_timer.start()
 
     @Slot(bool)
     def _on_lower_filter_active_changed(self, active: bool) -> None:
@@ -122,15 +134,50 @@ class TreeSearchFocusMixin:
             if not self._lower_filter_session:
                 self._saved_expansion = self._capture_expansion()
                 self._lower_filter_session = True
-            if model.has_visible_match():
-                self.expandAll()
-            else:
-                self.collapseAll()
+            # One walk collects the matches; reused both to decide reveal-vs-collapse and to expand only the
+            # branches leading to them - never ``expandAll``, which would materialize the whole tree and,
+            # by fetching more rows, feed another layoutChanged back into this handler.
+            matches = model.collect_visible_matches()
+            self._suppress_auto_expand = True
+            try:
+                if matches:
+                    self._expand_to_items(matches)
+                else:
+                    self.collapseAll()
+            finally:
+                self._suppress_auto_expand = False
             return
         if self._lower_filter_session:
-            self._restore_expansion(self._saved_expansion)
+            self._suppress_auto_expand = True
+            try:
+                self._restore_expansion(self._saved_expansion)
+            finally:
+                self._suppress_auto_expand = False
             self._saved_expansion = None
             self._lower_filter_session = False
+
+    def _expand_to_items(self, items) -> None:
+        """Expands just the ancestor chains that reveal the given items, top-down.
+
+        Args:
+            items: tree items to make visible (their ancestors get expanded)
+        """
+        model = self.model()
+        if model is None:
+            return
+        seen = set()
+        for item in items:
+            chain = []
+            ancestor = item.parent_item
+            while ancestor is not None and ancestor not in seen:
+                index = model.index_from_item(ancestor)
+                if not index.isValid():
+                    break
+                chain.append(index)
+                seen.add(ancestor)
+                ancestor = ancestor.parent_item
+            for index in reversed(chain):
+                self.expand(index)
 
     def _capture_expansion(self) -> set:
         """Returns the set of currently expanded tree items."""

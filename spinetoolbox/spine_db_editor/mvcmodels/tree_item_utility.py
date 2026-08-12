@@ -28,6 +28,14 @@ class StandardTreeItem(TreeItem):
     item_type: ClassVar[str] = None
     icon_code: ClassVar[str] = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Memoized filtered view of the children plus a {child: visible_row} position map, both keyed on the
+        # model's ``filter_generation`` so they are rebuilt lazily only when the filter or the children change.
+        self._visible_children_cache: list | None = None
+        self._visible_row_map: dict = {}
+        self._visible_cache_generation: int = -1
+
     @property
     def db_mngr(self):
         return self.model.db_mngr
@@ -105,14 +113,27 @@ class StandardTreeItem(TreeItem):
         """Returns the children that pass the active level filters, plus the phantom add-row.
 
         When no level filter is active this is ``self.children`` unchanged, so the filtered path adds no
-        overhead to normal operation.
+        overhead to normal operation. Otherwise the filtered list is memoized and only recomputed when the
+        model's :attr:`~.level_filter.LevelFilterMixin.filter_generation` moves, so repeated Qt
+        layout/paint/scroll queries are served from the cache rather than rebuilt every time.
 
         Returns:
             list: the visible children
         """
         if not self.model.has_level_filters():
             return self.children
-        return [child for child in self.children if self.model.item_is_visible(child)]
+        self._ensure_visible_cache()
+        return self._visible_children_cache
+
+    def _ensure_visible_cache(self) -> None:
+        """Rebuilds the filtered child list and position map if the filter generation has moved."""
+        generation = self.model.filter_generation
+        if self._visible_cache_generation == generation and self._visible_children_cache is not None:
+            return
+        visible = [child for child in self.children if self.model.item_is_visible(child)]
+        self._visible_children_cache = visible
+        self._visible_row_map = {child: row for row, child in enumerate(visible)}
+        self._visible_cache_generation = generation
 
     def row_count(self):
         """Overridden to count only visible children."""
@@ -126,22 +147,31 @@ class StandardTreeItem(TreeItem):
         return None
 
     def child_number(self):
-        """Overridden to return the item's VISIBLE row within its parent, or None if hidden/orphan."""
-        if self.parent_item is None:
+        """Overridden to return the item's VISIBLE row within its parent, or None if hidden/orphan.
+
+        With no filter active this is the raw sibling index; under a filter it is an O(1) lookup in the
+        parent's cached ``{child: visible_row}`` map rather than an O(n) scan of the filtered list.
+        """
+        parent = self.parent_item
+        if parent is None:
             return None
-        try:
-            return self.parent_item.visible_children.index(self)
-        except ValueError:
-            return None
+        if not self.model.has_level_filters():
+            try:
+                return parent.children.index(self)
+            except ValueError:
+                return None
+        parent._ensure_visible_cache()
+        return parent._visible_row_map.get(self)
 
     def insert_children(self, position, children):
         """Inserts children and refines the filter once new rows appear under an active filter."""
         if not super().insert_children(position, children):
             return False
         if self.model.has_level_filters():
-            # Newly fetched/inserted children must be filtered; the debounced re-apply also refines any
-            # now-non-empty (or still-empty) parent that a filter should show or hide, and continues any
-            # active force-fetch cascade onto the next level down.
+            # Newly fetched/inserted children must be filtered; invalidate the cached filtered lists so the
+            # new rows are reflected. The debounced re-apply also refines any now-non-empty (or still-empty)
+            # parent that a filter should show or hide, and continues any active force-fetch cascade.
+            self.model._bump_filter_generation()
             self.model._schedule_level_filter_refresh()
         return True
 
@@ -150,6 +180,7 @@ class StandardTreeItem(TreeItem):
         if not super().remove_children(position, count):
             return False
         if self.model.has_level_filters():
+            self.model._bump_filter_generation()
             self.model._schedule_level_filter_refresh()
         return True
 
