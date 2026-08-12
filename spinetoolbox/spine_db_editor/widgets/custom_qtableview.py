@@ -18,7 +18,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QContextMenuEvent, QKeySequence, QUndoStack
-from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QTableView, QWidget
+from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import (
     DB_ITEM_SEPARATOR,
     find_section_in_table_model_header,
@@ -40,6 +40,7 @@ from ...widgets.report_plotting_failure import report_plotting_failure
 from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
     SEARCH_FIELD_ACTIVE_STYLE,
+    SearchFocusMixin,
     SearchLineEdit,
     bool_to_string,
     group_to_string,
@@ -211,13 +212,12 @@ class _ColumnSearchBar(QWidget):
             editor.blockSignals(False)
 
 
-class ColumnSearchRowMixin:
+class ColumnSearchRowMixin(SearchFocusMixin):
     """A mixin that adds a permanent per-column regex search row under the header of a StackedTableView."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._search_bar = _ColumnSearchBar(self)
-        self._regex_row_was_last = False  # Whether a search field was the last focused element here.
         self._last_search_column = 0
         self._search_bar.editor_focused.connect(self._on_search_editor_focused)
         self._search_bar.navigate_to_table.connect(self._on_navigate_to_table)
@@ -304,25 +304,9 @@ class ColumnSearchRowMixin:
         """Clears every search editor without touching the model's filters directly."""
         self._search_bar.clear_all()
 
-    def keyPressEvent(self, event) -> None:
-        """Moves focus up into the search row when leaving the top data row with the Up arrow."""
-        if (
-            event.key() == Qt.Key.Key_Up
-            and event.modifiers() == Qt.KeyboardModifier.NoModifier
-            and self.currentIndex().row() == 0
-        ):
-            self._focus_search_editor(self.currentIndex().column())
-            return
-        super().keyPressEvent(event)
-
-    def focusInEvent(self, event) -> None:
-        """Records that a data cell (not the search row) is now the focused element here."""
-        super().focusInEvent(event)
-        self._regex_row_was_last = False
-
     @Slot(int)
     def _on_search_editor_focused(self, column: int) -> None:
-        self._regex_row_was_last = True
+        self._note_search_row_focused()
         self._last_search_column = column
 
     @Slot(int)
@@ -384,23 +368,21 @@ class ColumnSearchRowMixin:
             editor.setFocus()
             editor.selectAll()
 
-    def activate_search_focus(self) -> None:
-        """Focus behavior for this view's Alt+N shortcut.
+    def _search_row_editor_widgets(self) -> list[SearchLineEdit]:
+        """See base class."""
+        return self._search_bar.editors()
 
-        When focus is elsewhere, restores the last focused element here (a data cell or a search
-        field). When a data cell already has focus, moves to that column's search field. When a
-        search field already has focus, keeps it.
-        """
-        focused = QApplication.focusWidget()
-        if focused in self._search_bar.editors():
-            return
-        if focused is self:
-            self._focus_search_editor(self.currentIndex().column())
-            return
-        if self._regex_row_was_last:
-            self._focus_search_editor(self._last_search_column)
-        else:
-            self.setFocus()
+    def _focus_search_row_from_view(self) -> None:
+        """See base class; focuses the search field of the current column."""
+        self._focus_search_editor(self.currentIndex().column())
+
+    def _restore_search_row_focus(self) -> None:
+        """See base class; focuses the search field of the last used column."""
+        self._focus_search_editor(self._last_search_column)
+
+    def _at_top_for_search_focus(self) -> bool:
+        """See base class; True when the current index is on the top data row."""
+        return self.currentIndex().row() == 0
 
 
 class UsesAutoFilter:

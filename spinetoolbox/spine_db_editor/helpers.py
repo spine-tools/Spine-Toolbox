@@ -16,13 +16,31 @@ import locale
 from typing import Any, Optional, Union
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QApplication, QLineEdit
 from spinedb_api.helpers import string_to_bool as base_string_to_bool
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 
 # A search field that holds a pattern is highlighted so it stands out in both light and dark themes.
 # Explicit colors override the theme deliberately.
 SEARCH_FIELD_ACTIVE_STYLE = "QLineEdit { background: #8b0000; color: white; }"
+
+
+def is_unmapped_alt(event) -> bool:
+    """Tells whether a key event carries an unmapped Alt shortcut that should be swallowed.
+
+    Alt+<key> combinations are reserved for window shortcuts (e.g. Alt+1/3/4/... focus docks).
+    Mapped ones fire as QShortcuts on the main window before a widget's key handler runs; unmapped
+    combos like Alt+2 must be swallowed so their character is not typed into a line edit. AltGr
+    composed input arrives as Ctrl+Alt on X11, so it is let through when Ctrl is also held.
+
+    Args:
+        event: the key press event to inspect
+
+    Returns:
+        True if Alt is set and Ctrl is not, False otherwise
+    """
+    modifiers = event.modifiers()
+    return bool(modifiers & Qt.KeyboardModifier.AltModifier) and not modifiers & Qt.KeyboardModifier.ControlModifier
 
 
 class SearchLineEdit(QLineEdit):
@@ -43,14 +61,10 @@ class SearchLineEdit(QLineEdit):
         self.focused.emit()
 
     def keyPressEvent(self, event) -> None:
-        modifiers = event.modifiers()
-        # Alt+<key> combinations are reserved for window shortcuts (e.g. Alt+1/3/4/... focus docks).
-        # Mapped ones fire as QShortcuts on the main window before this handler runs; unmapped combos
-        # like Alt+2 must be swallowed here so their character is not typed into the search field.
-        # AltGr composed input arrives as Ctrl+Alt on X11, so let it through when Ctrl is also held.
-        if modifiers & Qt.KeyboardModifier.AltModifier and not modifiers & Qt.KeyboardModifier.ControlModifier:
+        if is_unmapped_alt(event):
             event.ignore()
             return
+        modifiers = event.modifiers()
         if modifiers == Qt.KeyboardModifier.NoModifier:
             if event.key() == Qt.Key.Key_Down:
                 self.go_down.emit()
@@ -65,6 +79,91 @@ class SearchLineEdit(QLineEdit):
                     self.go_right.emit()
                     return
         super().keyPressEvent(event)
+
+
+class SearchFocusMixin:
+    """Shared keyboard-focus choreography between a view and its regex search row.
+
+    Both the stacked tables' per-column search row and the trees' per-level filter bar sit directly
+    above their view and behave the same way: the view's Alt+N shortcut toggles focus into the search
+    row, the Up arrow on the view's topmost row/item jumps into the search row, and the mixin tracks
+    whether a search field or the view itself was focused last so the shortcut can restore the right
+    one.
+
+    Subclasses supply the parts that genuinely differ through small hooks:
+    :meth:`_search_row_editor_widgets`, :meth:`_focus_search_row_from_view`,
+    :meth:`_restore_search_row_focus` and :meth:`_at_top_for_search_focus`, plus the optional
+    :meth:`_search_focus_ready` guard for views whose search row may not exist yet.
+    """
+
+    _regex_row_was_last = False  # Whether a search field was the last focused element here.
+
+    def focusInEvent(self, event) -> None:
+        """Records that the view (not a search field) is now the focused element here."""
+        super().focusInEvent(event)
+        self._regex_row_was_last = False
+
+    def keyPressEvent(self, event) -> None:
+        """Jumps into the search row when the Up arrow leaves the view's topmost row/item."""
+        if (
+            event.key() == Qt.Key.Key_Up
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+            and self._at_top_for_search_focus()
+        ):
+            self._focus_search_row_from_view()
+            return
+        super().keyPressEvent(event)
+
+    def activate_search_focus(self) -> None:
+        """Focus behavior for this view's Alt+N shortcut.
+
+        When focus is elsewhere, restores the last focused element here (the view or a search
+        field). When the view already has focus, moves into the search row. When a search field
+        already has focus, keeps it.
+        """
+        if not self._search_focus_ready():
+            self.setFocus()
+            return
+        focused = QApplication.focusWidget()
+        if focused in self._search_row_editor_widgets():
+            return
+        if focused is self:
+            self._focus_search_row_from_view()
+            return
+        if self._regex_row_was_last:
+            self._restore_search_row_focus()
+        else:
+            self.setFocus()
+
+    def _note_search_row_focused(self, *_args) -> None:
+        """Records that a search field is now the last focused element here.
+
+        Accepts and ignores extra arguments so it can be connected directly to focus signals that
+        carry a payload (e.g. the focused column or item type).
+        """
+        self._regex_row_was_last = True
+
+    # Hooks implemented by subclasses.
+
+    def _search_focus_ready(self) -> bool:
+        """Tells whether the search row exists and can take focus."""
+        return True
+
+    def _search_row_editor_widgets(self):
+        """Returns the search-field widgets, used to detect whether one already has focus."""
+        raise NotImplementedError()
+
+    def _focus_search_row_from_view(self) -> None:
+        """Moves focus from the focused view into the search row."""
+        raise NotImplementedError()
+
+    def _restore_search_row_focus(self) -> None:
+        """Focuses the search field that was last used here."""
+        raise NotImplementedError()
+
+    def _at_top_for_search_focus(self) -> bool:
+        """Tells whether the view is positioned so that Up should jump into the search row."""
+        raise NotImplementedError()
 
 
 def string_to_display_icon(x: str) -> Optional[int]:

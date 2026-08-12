@@ -19,6 +19,7 @@ from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import CharIconEngine, busy_effect
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
+from ..helpers import SearchFocusMixin
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.level_filter import FORCE_FETCH_DELAY
@@ -60,7 +61,7 @@ class MultitreeSelection:
         super().mousePressEvent(event)
 
 
-class TreeSearchFocusMixin:
+class TreeSearchFocusMixin(SearchFocusMixin):
     """Adds keyboard navigation and lower-level-filter auto-expand between a tree view and its filter bar.
 
     Mirrors the stacked tables' ``ColumnSearchRowMixin``: the Up arrow on the tree's topmost item
@@ -89,7 +90,7 @@ class TreeSearchFocusMixin:
         self._auto_expand_timer.setSingleShot(True)
         self._auto_expand_timer.setInterval(FORCE_FETCH_DELAY)
         self._auto_expand_timer.timeout.connect(self._apply_auto_expand)
-        bar.editor_focused.connect(self._on_filter_editor_focused)
+        bar.editor_focused.connect(self._note_search_row_focused)
         bar.navigate_to_tree.connect(self._focus_tree_top)
         bar.lower_filter_active_changed.connect(self._on_lower_filter_active_changed)
         model = self.model()
@@ -209,11 +210,6 @@ class TreeSearchFocusMixin:
                 if index.isValid():
                     self.expand(index)
 
-    @Slot(str)
-    def _on_filter_editor_focused(self, _item_type: str) -> None:
-        """Records that a filter field is the last focused element here."""
-        self._regex_row_was_last = True
-
     @Slot()
     def _focus_tree_top(self) -> None:
         """Moves focus from the filter bar down onto the first tree item."""
@@ -226,46 +222,30 @@ class TreeSearchFocusMixin:
         self.setCurrentIndex(index)
         self.setFocus()
 
-    def keyPressEvent(self, event) -> None:
-        """Jumps into the filter bar when the Up arrow leaves the tree's topmost item."""
+    def _search_focus_ready(self) -> bool:
+        """See base class; ready once the filter bar has been connected."""
+        return getattr(self, "_level_filter_bar", None) is not None
+
+    def _search_row_editor_widgets(self) -> list:
+        """See base class."""
         bar = getattr(self, "_level_filter_bar", None)
-        if (
-            bar is not None
-            and event.key() == Qt.Key.Key_Up
-            and event.modifiers() == Qt.KeyboardModifier.NoModifier
-            and self.currentIndex().isValid()
-            and not self.indexAbove(self.currentIndex()).isValid()
-        ):
-            bar.focus_last_used_cell()
-            return
-        super().keyPressEvent(event)
+        return bar.editors() if bar is not None else []
 
-    def focusInEvent(self, event) -> None:
-        """Records that the tree (not a filter field) is the last focused element here."""
-        super().focusInEvent(event)
-        self._regex_row_was_last = False
+    def _focus_search_row_from_view(self) -> None:
+        """See base class; focuses the filter bar's last used cell."""
+        self._level_filter_bar.focus_last_used_cell()
 
-    def activate_search_focus(self) -> None:
-        """Focus behavior for this tree's Alt+N shortcut.
+    def _restore_search_row_focus(self) -> None:
+        """See base class; focuses the filter bar's last used cell."""
+        self._level_filter_bar.focus_last_used_cell()
 
-        When focus is elsewhere, restores the last focused element here (the tree or a filter
-        field). When the tree already has focus, moves to the filter row. When a filter field
-        already has focus, keeps it.
-        """
+    def _at_top_for_search_focus(self) -> bool:
+        """See base class; True when the current item is the tree's topmost row."""
         bar = getattr(self, "_level_filter_bar", None)
         if bar is None:
-            self.setFocus()
-            return
-        focused = QApplication.focusWidget()
-        if focused in bar.editors():
-            return
-        if focused is self:
-            bar.focus_last_used_cell()
-            return
-        if getattr(self, "_regex_row_was_last", False):
-            bar.focus_last_used_cell()
-        else:
-            self.setFocus()
+            return False
+        current = self.currentIndex()
+        return current.isValid() and not self.indexAbove(current).isValid()
 
 
 class EntityTreeView(TreeSearchFocusMixin, MultitreeSelection, CopyPasteTreeView):
