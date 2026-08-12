@@ -18,6 +18,7 @@ from PySide6.QtGui import QFocusEvent, QKeyEvent, QStandardItem, QStandardItemMo
 from PySide6.QtWidgets import QApplication, QStyleOptionViewItem, QWidget
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, make_icon_id
 from spinetoolbox.resources_icons_rc import qInitResources
+from spinetoolbox.spine_db_editor.helpers import SearchLineEdit
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
     CheckListEditor,
@@ -60,6 +61,39 @@ class TestEditors(TestCaseWithQApplication):
                 QEvent.Type.ShortcutOverride, Qt.Key.Key_Backspace, Qt.KeyboardModifier.ControlModifier
             )
             QApplication.sendEvent(editor, so_event)
+
+    def test_search_line_edit_ignores_unmapped_alt_shortcut(self):
+        with q_object(QWidget()) as parent:
+            editor = SearchLineEdit(parent)
+            editor.setFocus()
+            # Alt+2 is an unmapped window shortcut and must not type "2" into the field.
+            alt_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.AltModifier, "2")
+            QApplication.sendEvent(editor, alt_event)
+            self.assertEqual(editor.text(), "")
+            # A plain "2" must still be typed.
+            plain_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.NoModifier, "2")
+            QApplication.sendEvent(editor, plain_event)
+            self.assertEqual(editor.text(), "2")
+            # AltGr composed input arrives as Ctrl+Alt on X11 and must still be typed.
+            altgr_event = QKeyEvent(
+                QEvent.Type.KeyPress,
+                Qt.Key.Key_At,
+                Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.ControlModifier,
+                "@",
+            )
+            QApplication.sendEvent(editor, altgr_event)
+            self.assertEqual(editor.text(), "2@")
+
+    def test_custom_line_editor_ignores_unmapped_alt_shortcut(self):
+        with q_object(QWidget()) as parent:
+            editor = CustomLineEditor(parent)
+            editor.setFocus()
+            alt_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.AltModifier, "2")
+            QApplication.sendEvent(editor, alt_event)
+            self.assertEqual(editor.text(), "")
+            plain_event = QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_2, Qt.KeyboardModifier.NoModifier, "2")
+            QApplication.sendEvent(editor, plain_event)
+            self.assertEqual(editor.text(), "2")
 
     def test_custom_combobox_editor(self):
         with q_object(QWidget()) as parent:

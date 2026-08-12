@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 ### Added
 
 - Tutorial on running Spine Toolbox projects on High-Perfomance Computing (HPC) systems.
+- Added a per-column regex search row to the stacked tables (Parameter value, Parameter definition,
+  Entity, Entity alternative) in the Spine database editor for live, case-insensitive filtering of rows
+  by column (combines with the existing column filters). Arrow keys and the table focus shortcuts reach
+  and move within the search row.
+- Added a per-level regex filter to the Entity, Scenario, Alternative and Parameter value list trees in
+  the Spine database editor: a row of search fields above each tree filters nodes by level, with parents
+  that end up empty hidden (among loaded rows).
 
 ### Changed
 

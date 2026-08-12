@@ -72,6 +72,87 @@ class StandardTreeItem(TreeItem):
             except AttributeError:
                 pass
 
+    def is_empty_row(self):
+        """Returns whether this item is the phantom trailing "add new" row.
+
+        The empty row is the child that :class:`EmptyChildMixin` appends past ``non_empty_children``; a
+        plain parent has no such row. It is detected by identity so it works even for levels (e.g. scenario
+        alternatives) whose real items also carry a ``None`` id.
+
+        Returns:
+            bool: whether this item is its parent's phantom add-row
+        """
+        parent = self.parent_item
+        if parent is None:
+            return False
+        return self not in parent.non_empty_children
+
+    def raw_row(self):
+        """Returns this item's index among its parent's children, ignoring any level filter.
+
+        Use this wherever the row is a domain ordinal (an index into an id list or a DB order); use
+        :meth:`child_number` only for the visible Qt row.
+
+        Returns:
+            Optional[int]: the raw sibling index, or None if this item has no parent
+        """
+        if self.parent_item is None:
+            return None
+        return self.parent_item.children.index(self)
+
+    @property
+    def visible_children(self):
+        """Returns the children that pass the active level filters, plus the phantom add-row.
+
+        When no level filter is active this is ``self.children`` unchanged, so the filtered path adds no
+        overhead to normal operation.
+
+        Returns:
+            list: the visible children
+        """
+        if not self.model.has_level_filters():
+            return self.children
+        return [child for child in self.children if self.model.item_is_visible(child)]
+
+    def row_count(self):
+        """Overridden to count only visible children."""
+        return len(self.visible_children)
+
+    def child(self, row):
+        """Overridden to return the visible child at the given row or None if out of bounds."""
+        visible = self.visible_children
+        if 0 <= row < len(visible):
+            return visible[row]
+        return None
+
+    def child_number(self):
+        """Overridden to return the item's VISIBLE row within its parent, or None if hidden/orphan."""
+        if self.parent_item is None:
+            return None
+        try:
+            return self.parent_item.visible_children.index(self)
+        except ValueError:
+            return None
+
+    def insert_children(self, position, children):
+        """Inserts children and refines the filter once new rows appear under an active filter."""
+        if not super().insert_children(position, children):
+            return False
+        if self.model.has_level_filters():
+            # Newly fetched/inserted children must be filtered; the debounced re-apply also refines any
+            # now-non-empty (or still-empty) parent that a filter should show or hide, and continues any
+            # active force-fetch cascade onto the next level down.
+            self.model._schedule_level_filter_refresh()
+        return True
+
+    def remove_children(self, position, count):
+        """Removes children and refines the filter under an active filter."""
+        if not super().remove_children(position, count):
+            return False
+        if self.model.has_level_filters():
+            self.model._schedule_level_filter_refresh()
+        return True
+
 
 class EditableMixin:
     def flags(self, column):

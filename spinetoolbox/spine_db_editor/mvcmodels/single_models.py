@@ -13,7 +13,7 @@
 """Single models for parameter definitions and values (as 'for a single entity')."""
 
 from __future__ import annotations
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 import math
 from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
@@ -94,6 +94,8 @@ class SingleModelBase(HalfSortedTableModel):
         self._mapped_table = self.db_map.mapped_table(parent.item_type)
         self.entity_class_id = entity_class_id
         self._auto_filter: dict[str, set] = {}
+        self._column_filters: dict[str, Callable[[str], bool]] = {}
+        self._column_filter_columns: dict[str, int] = {}  # field -> logical column, cached lazily
         self.committed = committed
 
     def __lt__(self, other):
@@ -178,12 +180,38 @@ class SingleModelBase(HalfSortedTableModel):
     def set_auto_filter(self, auto_filter: dict[str, set | None]) -> None:
         self._auto_filter = auto_filter
 
+    def set_column_filters(self, column_filters: dict[str, Callable[[str], bool]]) -> None:
+        """Shares the compound model's per-column regex matchers with this single model.
+
+        Args:
+            column_filters: field -> matcher predicate, owned by the compound model
+        """
+        self._column_filters = column_filters
+
+    def _row_accepts_column_filters(self, row: int) -> bool:
+        """Returns whether the row's rendered display strings pass all column filters.
+
+        Args:
+            row: row index
+
+        Returns:
+            True if every active column filter matches its column's display text
+        """
+        for field, matches in self._column_filters.items():
+            column = self._column_filter_columns.get(field)
+            if column is None:
+                column = self._column_filter_columns[field] = field_index(field, self.field_map)
+            display = self.index(row, column).data(Qt.ItemDataRole.DisplayRole)
+            if not matches("" if display is None else str(display)):
+                return False
+        return True
+
     def accepted_rows(self) -> Iterator[int]:
         """Yields accepted rows, for convenience."""
         mapped_table = self._mapped_table
         for row in range(self.rowCount()):
             item = mapped_table[self._main_data[row]]
-            if self.filter_accepts_item(item):
+            if self.filter_accepts_item(item) and (not self._column_filters or self._row_accepts_column_filters(row)):
                 yield row
 
     def _get_ref(self, db_item: PublicItem, field: str) -> PublicItem | None:

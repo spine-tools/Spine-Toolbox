@@ -44,6 +44,7 @@ from .utils import (
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
     field_index,
+    make_search_matcher,
 )
 
 
@@ -72,9 +73,15 @@ class CompoundStackedModel(CompoundTableModel):
         self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
         self._auto_filter: dict[str, set] = {}  # Shared with submodels; always modify, never set.
+        self._column_filters: dict[str, Callable[[str], bool]] = {}  # Shared with submodels; always modify, never set.
+        self._column_filter_patterns: dict[str, str] = {}  # field -> raw pattern text
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.timeout.connect(self.refresh)
+        self._column_filter_timer = QTimer(self)
+        self._column_filter_timer.setSingleShot(True)
+        self._column_filter_timer.setInterval(200)
+        self._column_filter_timer.timeout.connect(self.refresh)
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
             shows_item=self.shows_item,
@@ -196,6 +203,8 @@ class CompoundStackedModel(CompoundTableModel):
         self._inv_row_map.clear()
         self._filter_class_ids = Asterisk
         self._auto_filter.clear()
+        self._column_filters.clear()
+        self._column_filter_patterns.clear()
         self.endResetModel()
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
@@ -284,6 +293,42 @@ class CompoundStackedModel(CompoundTableModel):
             self._filter_timer.start()
         self.column_filter_changed.emit(self)
 
+    @Slot(str, str)
+    def set_column_filter(self, field: str, pattern: str) -> None:
+        """Sets or clears the per-column regex search filter for the given field.
+
+        Args:
+            field: the db field name the column maps to
+            pattern: raw regex/substring pattern; empty string clears the filter
+        """
+        pattern = pattern or ""
+        if self._column_filter_patterns.get(field, "") == pattern:
+            return
+        if pattern == "":
+            self._column_filter_patterns.pop(field, None)
+            self._column_filters.pop(field, None)
+        else:
+            self._column_filter_patterns[field] = pattern
+            self._column_filters[field] = self._make_column_matcher(pattern)
+        if not self._column_filter_timer.isActive():
+            self._column_filter_timer.start()
+        self.column_filter_changed.emit(self)
+
+    @staticmethod
+    def _make_column_matcher(pattern: str) -> Callable[[str], bool]:
+        """Builds a matcher for a search pattern (shared with the tree filters)."""
+        return make_search_matcher(pattern)
+
+    def clear_column_filters(self) -> None:
+        """Clears all per-column regex search filters and refreshes."""
+        if not self._column_filters and not self._column_filter_patterns:
+            return
+        self._column_filters.clear()
+        self._column_filter_patterns.clear()
+        if not self._column_filter_timer.isActive():
+            self._column_filter_timer.start()
+        self.column_filter_changed.emit(self)
+
     def _row_map_iterator_for_model(self, model: SingleModelBase) -> Iterator[tuple[SingleModelBase, int]]:
         """Yields row map for the given model.
         Reimplemented to take filter status into account.
@@ -353,6 +398,7 @@ class CompoundStackedModel(CompoundTableModel):
         model = self._single_model_type(self, db_map, entity_class_id, committed)
         self._connect_single_model(model)
         model.set_auto_filter(self._auto_filter)
+        model.set_column_filters(self._column_filters)
         if not self._filter_timer.isActive():
             self._filter_timer.start()
         return model

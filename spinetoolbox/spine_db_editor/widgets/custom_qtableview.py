@@ -18,7 +18,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QContextMenuEvent, QKeySequence, QUndoStack
-from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
+from PySide6.QtWidgets import QApplication, QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import (
     DB_ITEM_SEPARATOR,
     find_section_in_table_model_header,
@@ -39,6 +39,8 @@ from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
+    SEARCH_FIELD_ACTIVE_STYLE,
+    SearchLineEdit,
     bool_to_string,
     group_to_string,
     input_string_to_int,
@@ -110,6 +112,295 @@ if TYPE_CHECKING:
 def _set_data(index, new_value):
     """Updates model value with newly edited data."""
     index.model().setData(index, new_value)
+
+
+class _ColumnSearchBar(QWidget):
+    """A thin strip of per-column regex search editors placed under a table header."""
+
+    pattern_edited = Signal(int, str)
+    """Emitted as (logical_column, text) whenever a column's editor text changes."""
+    editor_focused = Signal(int)
+    """Emitted with the logical column when one of the search fields gains keyboard focus."""
+    navigate_to_table = Signal(int)
+    """Emitted with the logical column when the user presses Down to leave the search row."""
+    navigate_left = Signal(int)
+    """Emitted with the logical column when the user presses Left on an empty search field."""
+    navigate_right = Signal(int)
+    """Emitted with the logical column when the user presses Right on an empty search field."""
+
+    # A column whose search field holds a pattern is highlighted so it stands out in both light and
+    # dark themes. Explicit colors override the theme deliberately.
+    _ACTIVE_STYLE = SEARCH_FIELD_ACTIVE_STYLE
+
+    def __init__(self, parent: QTableView):
+        """
+        Args:
+            parent: the table view this search bar belongs to
+        """
+        super().__init__(parent)
+        self._editors: dict[int, SearchLineEdit] = {}
+        self.HEIGHT = 0  # Matches a data row; set by the owning view before the bar is laid out.
+
+    def rebuild(self, column_count: int) -> None:
+        """Creates or destroys editors so there is exactly one per logical column.
+
+        Args:
+            column_count: number of logical columns
+        """
+        for column in list(self._editors):
+            if column >= column_count:
+                self._editors.pop(column).deleteLater()
+        for column in range(column_count):
+            if column in self._editors:
+                continue
+            editor = SearchLineEdit(self)
+            editor.setPlaceholderText("regex search…")
+            editor.setClearButtonEnabled(True)
+            editor.textChanged.connect(lambda text, col=column: self._handle_text_changed(col, text))
+            editor.focused.connect(lambda col=column: self.editor_focused.emit(col))
+            editor.go_down.connect(lambda col=column: self.navigate_to_table.emit(col))
+            editor.go_left.connect(lambda col=column: self.navigate_left.emit(col))
+            editor.go_right.connect(lambda col=column: self.navigate_right.emit(col))
+            self._editors[column] = editor
+
+    def editors(self) -> list[SearchLineEdit]:
+        """Returns the search field widgets."""
+        return list(self._editors.values())
+
+    def editor_for_column(self, column: int) -> Optional[SearchLineEdit]:
+        """Returns the visible search field for a column, or None if hidden/absent."""
+        editor = self._editors.get(column)
+        return editor if editor is not None and editor.isVisible() else None
+
+    def first_visible_editor(self) -> Optional[SearchLineEdit]:
+        """Returns the first visible search field, or None if there are none."""
+        for _, editor in sorted(self._editors.items()):
+            if editor.isVisible():
+                return editor
+        return None
+
+    def _handle_text_changed(self, column: int, text: str) -> None:
+        """Highlights an editor that holds a pattern and forwards the change.
+
+        Args:
+            column: logical column index
+            text: current editor text
+        """
+        self._editors[column].setStyleSheet(self._ACTIVE_STYLE if text else "")
+        self.pattern_edited.emit(column, text)
+
+    def reposition(self, header: QHeaderView) -> None:
+        """Moves and resizes each editor to sit under its header section.
+
+        Args:
+            header: the horizontal header of the parent view
+        """
+        for column, editor in self._editors.items():
+            if header.isSectionHidden(column) or header.sectionSize(column) == 0:
+                editor.hide()
+                continue
+            editor.setGeometry(header.sectionViewportPosition(column), 0, header.sectionSize(column), self.HEIGHT)
+            editor.show()
+
+    def clear_all(self) -> None:
+        """Clears the text and highlight of every editor without emitting pattern_edited."""
+        for editor in self._editors.values():
+            editor.blockSignals(True)
+            editor.setText("")
+            editor.setStyleSheet("")
+            editor.blockSignals(False)
+
+
+class ColumnSearchRowMixin:
+    """A mixin that adds a permanent per-column regex search row under the header of a StackedTableView."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._search_bar = _ColumnSearchBar(self)
+        self._regex_row_was_last = False  # Whether a search field was the last focused element here.
+        self._last_search_column = 0
+        self._search_bar.editor_focused.connect(self._on_search_editor_focused)
+        self._search_bar.navigate_to_table.connect(self._on_navigate_to_table)
+        self._search_bar.navigate_left.connect(self._on_navigate_left)
+        self._search_bar.navigate_right.connect(self._on_navigate_right)
+        header = self.horizontalHeader()
+        header.sectionResized.connect(self._reposition_search_bar)
+        header.sectionMoved.connect(self._reposition_search_bar)
+        header.sectionCountChanged.connect(self._on_section_count_changed)
+        self.horizontalScrollBar().valueChanged.connect(self._reposition_search_bar)
+        self.updateGeometries()
+        self._reposition_search_bar()
+
+    def updateGeometries(self) -> None:
+        """Reserves space for the header plus the search row and lays them out.
+
+        Overriding this (rather than resizeEvent) is required because Qt re-runs updateGeometries
+        constantly (section resize, model reset, dataChanged), which would otherwise clobber the margin.
+        Qt glues the horizontal header to the top of the data viewport, so the extra reserved space
+        would appear as an empty strip above the header; we therefore place the header at the very top
+        and the search row directly beneath it, each one data-row tall so the row blends in.
+        """
+        super().updateGeometries()
+        bar = getattr(self, "_search_bar", None)
+        if bar is None:
+            return
+        header = self.horizontalHeader()
+        header_height = header.sizeHint().height()
+        bar.HEIGHT = self.verticalHeader().defaultSectionSize()
+        self.setViewportMargins(0, header_height + bar.HEIGHT, 0, 0)
+        left = self.frameWidth() + (self.verticalHeader().width() if self.verticalHeader().isVisible() else 0)
+        top = self.frameWidth()
+        width = self.viewport().width()
+        header.setGeometry(left, top, width, header_height)
+        bar.setGeometry(left, top + header_height, width, bar.HEIGHT)
+        bar.reposition(header)
+        bar.raise_()
+
+    def _reposition_search_bar(self, *args) -> None:
+        """Re-lays the search bar under the header; used on scroll and section changes."""
+        bar = getattr(self, "_search_bar", None)
+        if bar is None:
+            return
+        header = self.horizontalHeader()
+        geometry = header.geometry()
+        bar.setGeometry(geometry.left(), geometry.bottom() + 1, self.viewport().width(), bar.HEIGHT)
+        bar.reposition(header)
+        bar.raise_()
+
+    def _on_section_count_changed(self, *args) -> None:
+        """Rebuilds the editor set when the number of columns changes."""
+        bar = getattr(self, "_search_bar", None)
+        if bar is None:
+            return
+        bar.rebuild(self.horizontalHeader().count())
+        self._reposition_search_bar()
+
+    def setModel(self, model: CompoundStackedModel) -> None:
+        """Rebuilds editors and wires the search row to the model.
+
+        Args:
+            model: the compound model set on the view
+        """
+        super().setModel(model)
+        self._search_bar.rebuild(model.columnCount())
+        self._search_bar.pattern_edited.connect(self._emit_column_filter)
+        model.modelReset.connect(self.clear_search_row)
+        self._reposition_search_bar()
+
+    @Slot(int, str)
+    def _emit_column_filter(self, column: int, text: str) -> None:
+        """Maps a column to its DB field and updates the model's column filter.
+
+        Args:
+            column: logical column index
+            text: regex pattern text
+        """
+        model = self.model()
+        field = model.field_map[model.header[column]]
+        model.set_column_filter(field, text)
+
+    @Slot()
+    def clear_search_row(self) -> None:
+        """Clears every search editor without touching the model's filters directly."""
+        self._search_bar.clear_all()
+
+    def keyPressEvent(self, event) -> None:
+        """Moves focus up into the search row when leaving the top data row with the Up arrow."""
+        if (
+            event.key() == Qt.Key.Key_Up
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+            and self.currentIndex().row() == 0
+        ):
+            self._focus_search_editor(self.currentIndex().column())
+            return
+        super().keyPressEvent(event)
+
+    def focusInEvent(self, event) -> None:
+        """Records that a data cell (not the search row) is now the focused element here."""
+        super().focusInEvent(event)
+        self._regex_row_was_last = False
+
+    @Slot(int)
+    def _on_search_editor_focused(self, column: int) -> None:
+        self._regex_row_was_last = True
+        self._last_search_column = column
+
+    @Slot(int)
+    def _on_navigate_to_table(self, column: int) -> None:
+        """Moves focus from a search field down to the top data row of the same column."""
+        model = self.model()
+        if model is None or model.rowCount() == 0:
+            return
+        self.setCurrentIndex(model.index(0, column))
+        self.setFocus()
+
+    @Slot(int)
+    def _on_navigate_left(self, column: int) -> None:
+        """Moves focus to the previous visible search field in on-screen order.
+
+        Args:
+            column: logical column of the currently focused search field
+        """
+        self._focus_adjacent_search_editor(column, -1)
+
+    @Slot(int)
+    def _on_navigate_right(self, column: int) -> None:
+        """Moves focus to the next visible search field in on-screen order.
+
+        Args:
+            column: logical column of the currently focused search field
+        """
+        self._focus_adjacent_search_editor(column, 1)
+
+    def _focus_adjacent_search_editor(self, column: int, step: int) -> None:
+        """Focuses the visible search field adjacent to a column in visual order.
+
+        Hidden sections are skipped and there is no wrapping: at the first/last visible column
+        this is a no-op.
+
+        Args:
+            column: logical column of the currently focused search field
+            step: -1 to move to the previous visible field, +1 for the next
+        """
+        header = self.horizontalHeader()
+        visual = header.visualIndex(column)
+        if visual < 0:
+            return
+        visual += step
+        while 0 <= visual < header.count():
+            logical = header.logicalIndex(visual)
+            if not header.isSectionHidden(logical) and header.sectionSize(logical) > 0:
+                editor = self._search_bar.editor_for_column(logical)
+                if editor is not None:
+                    editor.setFocus()
+                    editor.selectAll()
+                    return
+            visual += step
+
+    def _focus_search_editor(self, column: int) -> None:
+        """Gives keyboard focus to the search field of a column (or the first visible one)."""
+        editor = self._search_bar.editor_for_column(max(column, 0)) or self._search_bar.first_visible_editor()
+        if editor is not None:
+            editor.setFocus()
+            editor.selectAll()
+
+    def activate_search_focus(self) -> None:
+        """Focus behavior for this view's Alt+N shortcut.
+
+        When focus is elsewhere, restores the last focused element here (a data cell or a search
+        field). When a data cell already has focus, moves to that column's search field. When a
+        search field already has focus, keeps it.
+        """
+        focused = QApplication.focusWidget()
+        if focused in self._search_bar.editors():
+            return
+        if focused is self:
+            self._focus_search_editor(self.currentIndex().column())
+            return
+        if self._regex_row_was_last:
+            self._focus_search_editor(self._last_search_column)
+        else:
+            self.setFocus()
 
 
 class UsesAutoFilter:
@@ -520,7 +811,7 @@ class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoSta
 
 
 class ParameterDefinitionTableView(
-    AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, ParameterDefinitionTableViewBase
+    AboveSeam, HighlightNonCommittedRows, ColumnSearchRowMixin, UsesAutoFilter, ParameterDefinitionTableViewBase
 ):
 
     def create_delegates(self):
@@ -571,7 +862,9 @@ class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, P
         return
 
 
-class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, ParameterValueTableViewBase):
+class ParameterValueTableView(
+    AboveSeam, HighlightNonCommittedRows, ColumnSearchRowMixin, UsesAutoFilter, ParameterValueTableViewBase
+):
     _private_key_headers: ClassVar[tuple[str, str, str, str]] = (
         field_header("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
         field_header("entity_byname", PARAMETER_VALUE_FIELD_MAP),
@@ -661,11 +954,13 @@ class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack
         return
 
 
-class EntityAlternativeTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilter, EntityAlternativeTableViewBase):
+class EntityAlternativeTableView(
+    AboveSeam, HighlightNonCommittedRows, ColumnSearchRowMixin, UsesAutoFilter, EntityAlternativeTableViewBase
+):
     """Visualize entities and their alternatives."""
 
 
-class EntityTableView(UsesAutoFilter, StackedTableView):
+class EntityTableView(ColumnSearchRowMixin, UsesAutoFilter, StackedTableView):
     _COLUMN_SIZE_HINTS = {
         field_header("entity_class_name", ENTITY_FIELD_MAP): 200,
         field_header("name", ENTITY_FIELD_MAP): 125,

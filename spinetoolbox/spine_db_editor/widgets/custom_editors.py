@@ -101,7 +101,15 @@ class CustomLineEditor(QLineEdit):
         return self.text()
 
     def keyPressEvent(self, event):
-        """Prevents shift key press to clear the contents."""
+        """Prevents shift key press to clear the contents and swallows unmapped Alt shortcuts."""
+        modifiers = event.modifiers()
+        # Alt+<key> combinations are reserved for window shortcuts (e.g. Alt+1/3/4/... focus docks).
+        # Mapped ones fire as QShortcuts on the main window before this handler runs; unmapped combos
+        # like Alt+2 must be swallowed here so their character is not typed into the cell editor.
+        # AltGr composed input arrives as Ctrl+Alt on X11, so let it through when Ctrl is also held.
+        if modifiers & Qt.KeyboardModifier.AltModifier and not modifiers & Qt.KeyboardModifier.ControlModifier:
+            event.ignore()
+            return
         if event.key() != Qt.Key_Shift:
             super().keyPressEvent(event)
 

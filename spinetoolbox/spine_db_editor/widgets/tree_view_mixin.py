@@ -37,6 +37,7 @@ from .edit_or_remove_items_dialogs import (
     SelectSuperclassDialog,
 )
 from .scenario_generator import ScenarioGenerator
+from .tree_filter_bar import TreeLevelFilterBar
 
 
 class TreeViewMixin:
@@ -58,6 +59,37 @@ class TreeViewMixin:
         for view, model in zip(views, models):
             view.setModel(model)
             view.header().setResizeContentsPrecision(self.visible_rows)
+        entity_levels = [("entity_class", "class regex search…"), ("entity", "entity regex search…")]
+        self._entity_tree_filter_bar = TreeLevelFilterBar(entity_levels, self.ui.treeView_entity)
+        self.ui.verticalLayout_4.insertWidget(0, self._entity_tree_filter_bar)
+        self._entity_tree_filter_bar.filter_edited.connect(self.entity_tree_model.set_level_filter)
+        # The entity tree header follows the database column: it is hidden while a single database
+        # leaves just the "name" column visible (see EntityTreeView.set_db_column_visibility).
+        self.ui.treeView_entity.connect_level_filter_bar(self._entity_tree_filter_bar)
+        alternative_levels = [("alternative", "alternative regex search…")]
+        self._alternative_tree_filter_bar = TreeLevelFilterBar(alternative_levels, self.ui.alternative_tree_view)
+        self.ui.verticalLayout_18.insertWidget(0, self._alternative_tree_filter_bar)
+        self._alternative_tree_filter_bar.filter_edited.connect(self.alternative_model.set_level_filter)
+        self.ui.alternative_tree_view.connect_level_filter_bar(self._alternative_tree_filter_bar)
+        scenario_levels = [
+            ("scenario", "scenario regex search…"),
+            ("scenario_alternative", "alternative regex search…"),
+        ]
+        self._scenario_tree_filter_bar = TreeLevelFilterBar(scenario_levels, self.ui.scenario_tree_view)
+        self.ui.verticalLayout_12.insertWidget(0, self._scenario_tree_filter_bar)
+        self._scenario_tree_filter_bar.filter_edited.connect(self.scenario_model.set_level_filter)
+        self.ui.scenario_tree_view.connect_level_filter_bar(self._scenario_tree_filter_bar)
+        value_list_levels = [
+            ("parameter_value_list", "list name regex search…"),
+            ("list_value", "value name regex search…"),
+        ]
+        self._value_list_tree_filter_bar = TreeLevelFilterBar(value_list_levels, self.ui.treeView_parameter_value_list)
+        self.ui.verticalLayout.insertWidget(0, self._value_list_tree_filter_bar)
+        self._value_list_tree_filter_bar.filter_edited.connect(self.parameter_value_list_model.set_level_filter)
+        self.ui.treeView_parameter_value_list.connect_level_filter_bar(self._value_list_tree_filter_bar)
+        # The value list tree shows a single column, so its redundant header is hidden and the regex
+        # filter row sits directly above the tree content.
+        self.ui.treeView_parameter_value_list.setHeaderHidden(True)
         self.ui.treeView_entity.finish_init(self.ui.actionCopy)
         self.ui.treeView_entity.add_entity_classes_dialog_requested.connect(self.show_add_entity_classes_form)
         self.ui.treeView_entity.add_entities_dialog_requested.connect(self.show_add_entities_form)

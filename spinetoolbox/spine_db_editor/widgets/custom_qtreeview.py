@@ -21,6 +21,7 @@ from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
+from ..mvcmodels.level_filter import FORCE_FETCH_DELAY
 from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioDBItem, ScenarioItem
 from .custom_delegates import AddEntityButtonDelegate, AlternativeDelegate, ParameterValueListDelegate, ScenarioDelegate
 from .custom_menus import RecursiveChoiceSubMenu
@@ -59,7 +60,168 @@ class MultitreeSelection:
         super().mousePressEvent(event)
 
 
-class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
+class TreeSearchFocusMixin:
+    """Adds keyboard navigation and lower-level-filter auto-expand between a tree view and its filter bar.
+
+    Mirrors the stacked tables' ``ColumnSearchRowMixin``: the Up arrow on the tree's topmost item
+    jumps into the filter row, Down from a filter field drops back onto the tree, and the view's
+    Alt+N shortcut toggles focus into the filter row.
+
+    On top of navigation it reveals the matches of a *lower-level* regex filter: a QTreeView child only
+    shows when its parent is expanded, so while a lower-level filter is active the tree is auto-expanded onto
+    the matching leaves (or collapsed if nothing matches) once the filter has settled, and the pre-filter
+    expansion is restored when the lower-level filters are cleared. Trees with a single level (the
+    alternative tree) never trigger this, since their model reports no lower-level filter.
+    """
+
+    def connect_level_filter_bar(self, bar) -> None:
+        """Stores the filter bar and wires its focus, navigation and auto-expand signals.
+
+        Args:
+            bar (TreeLevelFilterBar): the per-level filter bar sitting above this tree
+        """
+        self._level_filter_bar = bar
+        self._regex_row_was_last = False
+        self._lower_filter_session = False
+        self._saved_expansion = None
+        self._auto_expand_timer = QTimer(self)
+        self._auto_expand_timer.setSingleShot(True)
+        self._auto_expand_timer.setInterval(FORCE_FETCH_DELAY)
+        self._auto_expand_timer.timeout.connect(self._apply_auto_expand)
+        bar.editor_focused.connect(self._on_filter_editor_focused)
+        bar.navigate_to_tree.connect(self._focus_tree_top)
+        bar.lower_filter_active_changed.connect(self._on_lower_filter_active_changed)
+        model = self.model()
+        if model is not None:
+            model.layoutChanged.connect(self._auto_expand_timer.start)
+
+    @Slot(bool)
+    def _on_lower_filter_active_changed(self, active: bool) -> None:
+        """Captures the pre-filter expansion on the rising edge so it can be restored faithfully later.
+
+        Args:
+            active: whether any cell below the top level now holds text
+        """
+        if active and not self._lower_filter_session:
+            self._saved_expansion = self._capture_expansion()
+            self._lower_filter_session = True
+
+    @Slot()
+    def _apply_auto_expand(self) -> None:
+        """Reveals the matches once the filter has settled, or restores the tree when it is cleared.
+
+        Runs on a debounce restarted by every model ``layoutChanged``, so it only fires once fetching and
+        typing have paused. While a lower-level filter is active the tree is expanded onto the matching
+        leaves, or collapsed when nothing matches; once the lower-level filters clear, the pre-filter
+        expansion is restored.
+        """
+        model = self.model()
+        if model is None or not hasattr(model, "lower_level_filter_active"):
+            return
+        if model.lower_level_filter_active():
+            if not self._lower_filter_session:
+                self._saved_expansion = self._capture_expansion()
+                self._lower_filter_session = True
+            if model.has_visible_match():
+                self.expandAll()
+            else:
+                self.collapseAll()
+            return
+        if self._lower_filter_session:
+            self._restore_expansion(self._saved_expansion)
+            self._saved_expansion = None
+            self._lower_filter_session = False
+
+    def _capture_expansion(self) -> set:
+        """Returns the set of currently expanded tree items."""
+        model = self.model()
+        expanded = set()
+        if model is None:
+            return expanded
+        for item in model.visit_all():
+            index = model.index_from_item(item)
+            if index.isValid() and self.isExpanded(index):
+                expanded.add(item)
+        return expanded
+
+    def _restore_expansion(self, expanded) -> None:
+        """Collapses the tree and re-expands exactly the still-present captured items.
+
+        Args:
+            expanded: the set returned by :meth:`_capture_expansion`, or None
+        """
+        model = self.model()
+        if model is None:
+            return
+        self.collapseAll()
+        if not expanded:
+            return
+        for item in model.visit_all():
+            if item in expanded:
+                index = model.index_from_item(item)
+                if index.isValid():
+                    self.expand(index)
+
+    @Slot(str)
+    def _on_filter_editor_focused(self, _item_type: str) -> None:
+        """Records that a filter field is the last focused element here."""
+        self._regex_row_was_last = True
+
+    @Slot()
+    def _focus_tree_top(self) -> None:
+        """Moves focus from the filter bar down onto the first tree item."""
+        model = self.model()
+        if model is None:
+            return
+        index = model.index(0, 0)
+        if not index.isValid():
+            return
+        self.setCurrentIndex(index)
+        self.setFocus()
+
+    def keyPressEvent(self, event) -> None:
+        """Jumps into the filter bar when the Up arrow leaves the tree's topmost item."""
+        bar = getattr(self, "_level_filter_bar", None)
+        if (
+            bar is not None
+            and event.key() == Qt.Key.Key_Up
+            and event.modifiers() == Qt.KeyboardModifier.NoModifier
+            and self.currentIndex().isValid()
+            and not self.indexAbove(self.currentIndex()).isValid()
+        ):
+            bar.focus_last_used_cell()
+            return
+        super().keyPressEvent(event)
+
+    def focusInEvent(self, event) -> None:
+        """Records that the tree (not a filter field) is the last focused element here."""
+        super().focusInEvent(event)
+        self._regex_row_was_last = False
+
+    def activate_search_focus(self) -> None:
+        """Focus behavior for this tree's Alt+N shortcut.
+
+        When focus is elsewhere, restores the last focused element here (the tree or a filter
+        field). When the tree already has focus, moves to the filter row. When a filter field
+        already has focus, keeps it.
+        """
+        bar = getattr(self, "_level_filter_bar", None)
+        if bar is None:
+            self.setFocus()
+            return
+        focused = QApplication.focusWidget()
+        if focused in bar.editors():
+            return
+        if focused is self:
+            bar.focus_last_used_cell()
+            return
+        if getattr(self, "_regex_row_was_last", False):
+            bar.focus_last_used_cell()
+        else:
+            self.setFocus()
+
+
+class EntityTreeView(TreeSearchFocusMixin, MultitreeSelection, CopyPasteTreeView):
     """Tree view for entity classes and entities."""
 
     selection_export_requested = Signal()
@@ -118,6 +280,9 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
             self._header.showSection(1)
         else:
             self._header.hideSection(1)
+        # The tree header only repeats the "name"/"database" labels; hide it while a single column
+        # is visible so the regex filter row sits directly above the tree content.
+        self.setHeaderHidden(not visible)
 
     def _add_middle_actions(self):
         self._add_entity_classes_action = self._menu.addAction(
@@ -331,7 +496,7 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
         self.select_superclass_dialog_requested.emit(self._context_item)
 
 
-class ItemTreeView(CopyPasteTreeView):
+class ItemTreeView(TreeSearchFocusMixin, CopyPasteTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent: QWidget | None):

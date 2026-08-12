@@ -14,9 +14,57 @@
 
 import locale
 from typing import Any, Optional, Union
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QLineEdit
 from spinedb_api.helpers import string_to_bool as base_string_to_bool
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
+
+# A search field that holds a pattern is highlighted so it stands out in both light and dark themes.
+# Explicit colors override the theme deliberately.
+SEARCH_FIELD_ACTIVE_STYLE = "QLineEdit { background: #8b0000; color: white; }"
+
+
+class SearchLineEdit(QLineEdit):
+    """A search field that reports focus and directional navigation to its owner.
+
+    Shared by the stacked tables' column search row and the trees' per-level filter bar so both
+    provide the same keyboard behavior: while the field is empty the Left/Right arrows navigate
+    between neighboring fields, and Down leaves the search row for the data below.
+    """
+
+    focused = Signal()
+    go_down = Signal()
+    go_left = Signal()
+    go_right = Signal()
+
+    def focusInEvent(self, event) -> None:
+        super().focusInEvent(event)
+        self.focused.emit()
+
+    def keyPressEvent(self, event) -> None:
+        modifiers = event.modifiers()
+        # Alt+<key> combinations are reserved for window shortcuts (e.g. Alt+1/3/4/... focus docks).
+        # Mapped ones fire as QShortcuts on the main window before this handler runs; unmapped combos
+        # like Alt+2 must be swallowed here so their character is not typed into the search field.
+        # AltGr composed input arrives as Ctrl+Alt on X11, so let it through when Ctrl is also held.
+        if modifiers & Qt.KeyboardModifier.AltModifier and not modifiers & Qt.KeyboardModifier.ControlModifier:
+            event.ignore()
+            return
+        if modifiers == Qt.KeyboardModifier.NoModifier:
+            if event.key() == Qt.Key.Key_Down:
+                self.go_down.emit()
+                return
+            # While the editor is empty, arrows navigate between cells like the table's value cells;
+            # once typing has started, they move the text cursor as usual.
+            if not self.text():
+                if event.key() == Qt.Key.Key_Left:
+                    self.go_left.emit()
+                    return
+                if event.key() == Qt.Key.Key_Right:
+                    self.go_right.emit()
+                    return
+        super().keyPressEvent(event)
 
 
 def string_to_display_icon(x: str) -> Optional[int]:

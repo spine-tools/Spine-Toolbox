@@ -81,14 +81,21 @@ class MultiDBTreeItem(TreeItem):
             return self.parent_item.find_row(db_map, id_)
         return 0
 
-    def refresh_child_map(self):
-        """Recomputes the child map."""
-        self.model.layoutAboutToBeChanged.emit()
+    def _rebuild_child_map(self):
+        """Recomputes the child map without emitting any layout-change signal.
+
+        Kept separate so a model can rebuild many items' maps under a single layout change.
+        """
         self._child_map.clear()
         for row, child in enumerate(self.visible_children):
             for db_map in child.db_maps:
                 id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, {})[id_] = row
+
+    def refresh_child_map(self):
+        """Recomputes the child map, emitting a layout-change pair."""
+        self.model.layoutAboutToBeChanged.emit()
+        self._rebuild_child_map()
         self.model.layoutChanged.emit()
 
     def set_data(self, column, value, role):
@@ -447,12 +454,19 @@ class MultiDBTreeItem(TreeItem):
         self.refresh_child_map()
         for child in children:
             child.register_fetch_parent()
+        if self.model.has_level_filters():
+            # Newly fetched children (e.g. from a force-fetch or user expansion) must be filtered; the
+            # debounced re-apply also refines any now-empty parent that a filter should hide, and continues
+            # any active force-fetch cascade onto the next level down.
+            self.model._schedule_level_filter_refresh()
         return True
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position."""
         if super().remove_children(position, count):
             self.refresh_child_map()
+            if self.model.has_level_filters():
+                self.model._schedule_level_filter_refresh()
             return True
         return False
 

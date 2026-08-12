@@ -56,7 +56,7 @@ class EntityTreeRootItem(MultiDBTreeItem):
 
     @property
     def visible_children(self):
-        return [x for x in self._children if not x.is_hidden()]
+        return [x for x in self._children if not x.is_hidden() and self.model.item_is_visible(x)]
 
     @property
     def display_id(self):
@@ -113,6 +113,10 @@ class EntityClassItem(MultiDBTreeItem):
     @property
     def child_item_class(self):
         return EntityItem
+
+    @property
+    def visible_children(self):
+        return [c for c in self._children if self.model.item_is_visible(c)]
 
     def is_hidden(self):
         return self.model.hide_empty_classes and not self.has_children()
@@ -210,6 +214,10 @@ class EntityItem(MultiDBTreeItem):
     def child_item_class(self):
         """Child class is always :class:`EntityItem`."""
         return EntityItem
+
+    @property
+    def visible_children(self):
+        return [c for c in self._children if self.model.item_is_visible(c)]
 
     @property
     def display_icon(self):

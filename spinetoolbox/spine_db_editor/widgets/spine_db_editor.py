@@ -966,12 +966,19 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(QWidget)
     def _focus_widget(self, widget: QWidget) -> None:
-        """Focus a specific widget and make its dock visible if needed."""
+        """Focus a specific widget and make its dock visible if needed.
+
+        Views with a per-column search row handle focus themselves (so a repeated shortcut toggles
+        into the search row and a previously focused search field is restored).
+        """
         for dock in self.findChildren(QDockWidget):
             if widget in dock.findChildren(type(widget).__base__):
                 dock.raise_()
-                dock.setFocus()
-                widget.setFocus()
+                if hasattr(widget, "activate_search_focus"):
+                    widget.activate_search_focus()
+                else:
+                    dock.setFocus()
+                    widget.setFocus()
                 break
 
 
