@@ -1117,6 +1117,32 @@ class TestCompoundParameterValueModel(TestBase):
         assert_table_model_data(model, expected, self)
         model.tear_down()
 
+    def test_column_filter_reflects_value_update(self):
+        # Guards the per-row value display cache used for value-column filtering:
+        # after a value is edited (dataChanged / items_updated), a subsequent
+        # filter must use the new value, not a stale cached render.
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("value", "2.3")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        # Change gadget/number from 2.3 to 5.5; this populates and must invalidate the cache.
+        self.assertTrue(model.batch_set_data([model.index(0, 5)], ["5.5"]))
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.clear_column_filters()
+            waiter.wait()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("value", "5.5")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "5.5", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
     def test_column_filter_ands_with_auto_filter(self):
         model = self._widget_value_model()
         with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
