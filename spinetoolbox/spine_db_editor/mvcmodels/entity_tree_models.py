@@ -33,6 +33,11 @@ class EntityTreeModel(LevelFilterMixin, MultiDBTreeModel):
     def root_item_type(self):
         return EntityTreeRootItem
 
+    def build_tree(self):
+        """Builds tree, dropping any stale level-filter state so a reload starts unfiltered."""
+        self.reset_level_filter_state()
+        super().build_tree()
+
     def filter_text(self, item) -> str:
         """Returns the real, unmangled name of an entity-tree item to match against a level filter.
 

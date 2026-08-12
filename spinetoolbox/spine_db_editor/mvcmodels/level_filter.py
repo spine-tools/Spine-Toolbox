@@ -100,6 +100,25 @@ class LevelFilterMixin:
         self._level_matchers.clear()
         self._reschedule_level_filters()
 
+    def reset_level_filter_state(self) -> None:
+        """Drops all level-filter state without scheduling a refresh.
+
+        Used when the tree is (re)built for a new database set (see ``build_tree``): unlike
+        :meth:`clear_level_filters`, which reschedules a refresh of the *existing* tree, this stops the
+        debounce timers and drops every reference (patterns, matchers, the force-fetch frontier and flags)
+        so a stale filter cannot carry over onto the freshly built tree and no cascade keeps running against
+        now-destroyed items. The filter generation is bumped so any cached filtered child list is discarded.
+        """
+        self._level_filter_timer.stop()
+        self._force_fetch_timer.stop()
+        self._level_patterns.clear()
+        self._level_matchers.clear()
+        self._applying_level_filters = False
+        self._force_fetching = False
+        self._force_fetch_frontier = None
+        self._force_fetch_iterations = 0
+        self._bump_filter_generation()
+
     def _reschedule_level_filters(self) -> None:
         """Restarts both debounces so the latest keystroke wins.
 

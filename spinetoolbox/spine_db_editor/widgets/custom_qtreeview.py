@@ -97,6 +97,24 @@ class TreeSearchFocusMixin(SearchFocusMixin):
         if model is not None:
             model.layoutChanged.connect(self._on_model_layout_changed)
 
+    def reset_level_filter_state(self) -> None:
+        """Clears the filter bar and auto-expand state so a (re)loaded tree starts unfiltered.
+
+        Called when the editor (re)builds its trees for a new database set (see
+        ``TreeViewMixin.init_models``). It empties the filter bar and drops the captured pre-filter
+        expansion and session flags, which otherwise reference the now-destroyed pre-reset items, so a
+        stale filter cannot carry over onto the freshly built tree.
+        """
+        bar = getattr(self, "_level_filter_bar", None)
+        if bar is None:
+            return
+        bar.clear_all()
+        self._regex_row_was_last = False
+        self._lower_filter_session = False
+        self._saved_expansion = None
+        self._suppress_auto_expand = False
+        self._auto_expand_timer.stop()
+
     @Slot()
     def _on_model_layout_changed(self) -> None:
         """Restarts the auto-expand debounce, unless the layout change was our own programmatic expand.

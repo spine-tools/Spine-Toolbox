@@ -136,6 +136,9 @@ class TreeViewMixin:
             self.ui.treeView_parameter_value_list,
         ):
             model = view.model()
+            # Drop any active regex filter (bar text and captured expansion) so a (re)load starts the tree
+            # unfiltered; the model's own filter state is reset inside build_tree.
+            view.reset_level_filter_state()
             model.db_maps = self.db_maps
             model.build_tree()
             for item in model.visit_all():

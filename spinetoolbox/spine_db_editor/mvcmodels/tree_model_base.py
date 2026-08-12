@@ -108,6 +108,7 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
 
     def build_tree(self):
         """Builds tree."""
+        self.reset_level_filter_state()
         self.beginResetModel()
         self._invisible_root_item.tear_down_recursively()
         self._invisible_root_item = StandardTreeItem(self)
