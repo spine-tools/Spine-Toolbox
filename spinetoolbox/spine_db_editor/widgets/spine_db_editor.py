@@ -49,6 +49,7 @@ from ...helpers import (
 from ...spine_db_manager import SpineDBManager
 from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
+from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ..selection_for_filtering import (
@@ -173,7 +174,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(str, str)
     def _load_recent_url(self, url: str, name: str) -> None:
-        self.load_db_urls({url: name})
+        self._open_url(url)
 
     def load_db_urls(self, db_urls, create=False, update_history=True):
         self.ui.actionImport.setEnabled(False)
@@ -257,6 +258,35 @@ class SpineDBEditorBase(QMainWindow):
         if not file_path:
             return
         url = "sqlite:///" + file_path
+        self._open_url(url)
+
+    def _multi_db_editor(self):
+        """Returns the tabbed window hosting this editor as a tab, or None if it is not embedded in one.
+
+        Returns:
+            MultiTabWindow: the parent tabbed window, or None
+        """
+        parent = self.parentWidget()
+        while parent is not None:
+            if isinstance(parent, MultiTabWindow):
+                return parent
+            parent = parent.parentWidget()
+        return None
+
+    def _open_url(self, url):
+        """Opens a database URL, preferring a new tab over replacing the current database.
+
+        When this editor already has a database open and is hosted in a tabbed window, the URL opens in a
+        new tab of that window (raising an existing tab if the same URL is already open). Otherwise (an
+        empty tab, or no hosting window) the URL is loaded into this editor.
+
+        Args:
+            url (str): database URL to open
+        """
+        multi_db_editor = self._multi_db_editor()
+        if self.db_maps and multi_db_editor is not None:
+            multi_db_editor.open_url_in_new_tab(url)
+            return
         self.load_db_urls([url])
 
     @Slot(bool)

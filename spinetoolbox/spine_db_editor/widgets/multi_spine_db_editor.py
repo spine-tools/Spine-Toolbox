@@ -54,6 +54,37 @@ class MultiSpineDBEditor(MultiTabWindow):
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)
 
+    def open_url_in_new_tab(self, url):
+        """Opens a database URL in a new tab, or raises the existing tab if the URL is already open.
+
+        Args:
+            url (str): database URL to open
+        """
+        existing = _get_existing_spine_db_editor([normcase_database_url_path(url)])
+        if existing is None:
+            self.add_new_tab([url])
+            return
+        multi_db_editor, db_editor = existing
+        multi_db_editor.set_current_tab(db_editor)
+        if multi_db_editor.isMinimized():
+            multi_db_editor.showNormal()
+        multi_db_editor.activateWindow()
+
+    @Slot(int)
+    def _close_tab(self, index):
+        """Closes the tab at index, keeping the window open even when the last tab is closed.
+
+        Overrides :meth:`MultiTabWindow._close_tab`, which closes the whole window once no tabs remain, so
+        that closing the last database leaves an empty editor the user can open a new database into (via the
+        "+" button). Closing the window itself (its close button / ``closeEvent``) still closes it as before.
+
+        Args:
+            index (int): tab index
+        """
+        if not self.tab_widget.widget(index).close():
+            return
+        self.tab_widget.removeTab(index)
+
     def _connect_tab_signals(self, tab):
         """Connects Spine Db editor window (tab) signals.
 
