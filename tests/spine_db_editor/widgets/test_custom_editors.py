@@ -18,7 +18,6 @@ from PySide6.QtGui import QFocusEvent, QKeyEvent, QStandardItem, QStandardItemMo
 from PySide6.QtWidgets import QApplication, QStyleOptionViewItem, QWidget
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, make_icon_id
 from spinetoolbox.resources_icons_rc import qInitResources
-from spinetoolbox.spine_db_editor.helpers import SearchLineEdit
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
     CheckListEditor,
@@ -31,6 +30,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditor,
     _CustomLineEditDelegate,
 )
+from spinetoolbox.spine_db_editor.widgets.search_bar_base import SearchLineEdit
 from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
