@@ -205,18 +205,14 @@ class StackedViewMixin:
             tree.selectionModel().clearSelection()
         # Clear the per-level regex filters of every tree and its filter bar.
         model_bar_pairs = (
-            ("entity_tree_model", "_entity_tree_filter_bar"),
-            ("alternative_model", "_alternative_tree_filter_bar"),
-            ("scenario_model", "_scenario_tree_filter_bar"),
-            ("parameter_value_list_model", "_value_list_tree_filter_bar"),
+            (self.entity_tree_model, self.ui.entity_tree_filter_bar),
+            (self.alternative_model, self.ui.alternative_tree_filter_bar),
+            (self.scenario_model, self.ui.scenario_tree_filter_bar),
+            (self.parameter_value_list_model, self.ui.value_list_tree_filter_bar),
         )
-        for model_attr, bar_attr in model_bar_pairs:
-            model = getattr(self, model_attr, None)
-            if model is not None:
-                model.clear_level_filters()
-            filter_bar = getattr(self, bar_attr, None)
-            if filter_bar is not None:
-                filter_bar.clear_all()
+        for model, filter_bar in model_bar_pairs:
+            model.clear_level_filters()
+            filter_bar.clear_all()
 
     @Slot(object)
     def _set_entity_selection_filter_for_stacked_tables(self, entity_selection: EntitySelection) -> None:

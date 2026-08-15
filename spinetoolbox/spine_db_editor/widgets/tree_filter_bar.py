@@ -12,10 +12,9 @@
 
 """A per-level regex filter bar placed above a tree view."""
 
-from typing import Optional
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QHBoxLayout, QWidget
-from ..helpers import SEARCH_FIELD_ACTIVE_STYLE, SearchLineEdit
+from .search_bar_base import SEARCH_FIELD_ACTIVE_STYLE, SearchLineEdit
 
 
 class TreeLevelFilterBar(QWidget):
@@ -34,20 +33,18 @@ class TreeLevelFilterBar(QWidget):
     so it can be restored faithfully once the lower-level filters are cleared again.
     """
 
-    def __init__(self, levels: list[tuple[str, str]], parent=None):
-        """
-        Args:
-            levels: (item_type, placeholder) pairs ordered top to bottom
-            parent: parent widget
-        """
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._editors: dict[str, SearchLineEdit] = {}
         self._order: list[str] = []
-        self._last_used_item_type: Optional[str] = None
+        self._last_used_item_type: str | None = None
         self._lower_active = False
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+
+    def set_levels(self, levels: list[tuple[str, str]]) -> None:
+        """Builds one search field per level from (item_type, placeholder) pairs ordered top to bottom."""
         for item_type, placeholder in levels:
             editor = SearchLineEdit(self)
             editor.setPlaceholderText(placeholder)
@@ -59,7 +56,7 @@ class TreeLevelFilterBar(QWidget):
             editor.go_right.connect(lambda it=item_type: self._navigate(it, 1))
             self._editors[item_type] = editor
             self._order.append(item_type)
-            layout.addWidget(editor)
+            self._layout.addWidget(editor)
         if self._order:
             self._last_used_item_type = self._order[0]
 
@@ -68,12 +65,7 @@ class TreeLevelFilterBar(QWidget):
         return list(self._editors.values())
 
     def _handle_text_changed(self, item_type: str, text: str) -> None:
-        """Highlights an editor that holds a pattern and forwards the change.
-
-        Args:
-            item_type: the level's item type
-            text: current editor text
-        """
+        """Highlights an editor that holds a pattern and forwards the change."""
         self._editors[item_type].setStyleSheet(SEARCH_FIELD_ACTIVE_STYLE if text else "")
         self.filter_edited.emit(item_type, text)
         self._update_lower_active()
@@ -90,31 +82,18 @@ class TreeLevelFilterBar(QWidget):
             self.lower_filter_active_changed.emit(active)
 
     def _on_editor_focused(self, item_type: str) -> None:
-        """Records the last focused field and forwards the focus event.
-
-        Args:
-            item_type: the focused level's item type
-        """
+        """Records the last focused field and forwards the focus event."""
         self._last_used_item_type = item_type
         self.editor_focused.emit(item_type)
 
     def _navigate(self, item_type: str, step: int) -> None:
-        """Moves focus to the neighboring field in layout order without wrapping.
-
-        Args:
-            item_type: the currently focused level's item type
-            step: -1 to move to the previous field, +1 for the next
-        """
+        """Moves focus to the neighboring field in layout order without wrapping."""
         index = self._order.index(item_type) + step
         if 0 <= index < len(self._order):
             self._focus_editor(self._order[index])
 
     def _focus_editor(self, item_type: str) -> None:
-        """Gives keyboard focus to a level's search field and selects its text.
-
-        Args:
-            item_type: the level's item type
-        """
+        """Gives keyboard focus to a level's search field and selects its text."""
         editor = self._editors[item_type]
         editor.setFocus()
         editor.selectAll()

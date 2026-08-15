@@ -68,6 +68,9 @@
       <number>0</number>
      </property>
      <item>
+      <widget class="TreeLevelFilterBar" name="alternative_tree_filter_bar" native="true"/>
+     </item>
+     <item>
       <widget class="AlternativeTreeView" name="alternative_tree_view">
        <property name="accessibleName">
         <string>alternative tree</string>
@@ -116,6 +119,9 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="TreeLevelFilterBar" name="value_list_tree_filter_bar" native="true"/>
+     </item>
      <item>
       <widget class="ParameterValueListTreeView" name="treeView_parameter_value_list">
        <property name="accessibleName">
@@ -337,6 +343,9 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
+     <item>
+      <widget class="TreeLevelFilterBar" name="entity_tree_filter_bar" native="true"/>
+     </item>
      <item>
       <widget class="EntityTreeView" name="treeView_entity">
        <property name="sizePolicy">
@@ -679,6 +688,9 @@
       <number>0</number>
      </property>
      <item>
+      <widget class="TreeLevelFilterBar" name="scenario_tree_filter_bar" native="true"/>
+     </item>
+     <item>
       <widget class="ScenarioTreeView" name="scenario_tree_view">
        <property name="acceptDrops">
         <bool>true</bool>
@@ -843,6 +855,7 @@
     </property>
     <addaction name="actionNew_db_file"/>
     <addaction name="actionOpen_db_file"/>
+    <addaction name="actionOpen_in_new_tab"/>
     <addaction name="actionOpen_recent"/>
     <addaction name="actionAdd_db_file"/>
     <addaction name="separator"/>
@@ -1262,10 +1275,22 @@
      <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
    </property>
    <property name="text">
-    <string>&amp;Open...</string>
+    <string>Open in &amp;current tab...</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open SQLite database file&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open SQLite database file in the current tab&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionOpen_in_new_tab">
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Open in new &amp;tab...</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open SQLite database file in a new tab&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
   <action name="actionAdd_db_file">
@@ -1488,6 +1513,12 @@
    <class>EmptyParameterGroupTableView</class>
    <extends>QTableView</extends>
    <header>spinetoolbox/spine_db_editor/widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>TreeLevelFilterBar</class>
+   <extends>QWidget</extends>
+   <header>spinetoolbox/spine_db_editor/widgets/tree_filter_bar.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>
