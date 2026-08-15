@@ -64,8 +64,38 @@ class TestOpenDBEditor:
             assert editor.tab_widget.count() == 1
             self._close_windows(db_editor_registry)
 
-    def test_open_db_opens_new_tab_when_a_db_is_already_open(self, db_map_generator, db_mngr):
-        """File > Open on a tab that already has a database opens a NEW tab instead of replacing it."""
+    def test_open_db_replaces_db_in_place_when_a_db_is_already_open(self, db_map_generator, db_mngr):
+        """File > Open on a tab that already has a database replaces it in place (no new tab)."""
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
+        with (
+            patch(
+                "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
+                db_editor_registry,
+            ),
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+            patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
+            window = MultiSpineDBEditor(db_mngr, [db_map1.db_url])
+            assert window.tab_widget.count() == 1
+            first_tab = window.tab_widget.widget(0)
+            assert first_tab.db_urls == [normcase_database_url_path(db_map1.db_url)]
+            file_path = db_map2.db_url.replace("sqlite:///", "", 1)
+            with patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir",
+                return_value=(file_path, ""),
+            ):
+                first_tab.open_db_file()
+            QApplication.processEvents()
+            # No new tab; the same tab now holds the second database (replaced in place).
+            assert window.tab_widget.count() == 1
+            assert window.tab_widget.widget(0) is first_tab
+            assert first_tab.db_urls == [normcase_database_url_path(db_map2.db_url)]
+            self._close_windows(db_editor_registry)
+
+    def test_open_in_new_tab_opens_a_second_tab(self, db_map_generator, db_mngr):
+        """File > Open in new tab on a tab that already has a database opens a NEW tab."""
         db_map1 = db_map_generator()
         db_map2 = db_map_generator()
         db_editor_registry = MultiTabWindowRegistry()
@@ -79,21 +109,20 @@ class TestOpenDBEditor:
             window = MultiSpineDBEditor(db_mngr, [db_map1.db_url])
             assert window.tab_widget.count() == 1
             first_tab = window.tab_widget.widget(0)
-            assert first_tab.db_urls == [normcase_database_url_path(db_map1.db_url)]
             file_path = db_map2.db_url.replace("sqlite:///", "", 1)
             with patch(
                 "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir",
                 return_value=(file_path, ""),
             ):
-                first_tab.open_db_file()
-            # A new tab was added; the original tab still holds the first database (not replaced).
+                first_tab.open_db_file_in_new_tab()
+            # A new tab was added; the original tab still holds the first database.
             assert window.tab_widget.count() == 2
             assert window.tab_widget.widget(0).db_urls == [normcase_database_url_path(db_map1.db_url)]
             assert window.tab_widget.widget(1).db_urls == [normcase_database_url_path(db_map2.db_url)]
             self._close_windows(db_editor_registry)
 
-    def test_open_same_db_again_raises_existing_tab_instead_of_adding(self, db_map_generator, db_mngr):
-        """Opening a URL already open in a tab selects that tab rather than adding a duplicate."""
+    def test_open_in_new_tab_same_db_raises_existing_tab_instead_of_adding(self, db_map_generator, db_mngr):
+        """Opening in a new tab a URL already open selects that tab rather than adding a duplicate."""
         db_map1 = db_map_generator()
         db_map2 = db_map_generator()
         db_editor_registry = MultiTabWindowRegistry()
@@ -115,7 +144,7 @@ class TestOpenDBEditor:
                 "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir",
                 return_value=(file_path, ""),
             ):
-                window.tab_widget.widget(1).open_db_file()
+                window.tab_widget.widget(1).open_db_file_in_new_tab()
             # No new tab; the existing db1 tab is selected instead.
             assert window.tab_widget.count() == 2
             assert window.tab_widget.currentWidget() is first_tab

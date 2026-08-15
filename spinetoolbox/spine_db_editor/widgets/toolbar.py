@@ -46,7 +46,9 @@ class DBEditorToolBar(QToolBar):
         self._make_icons_theme_aware()
         self.create_button_for_action(self._db_editor.ui.actionNew_db_file)
         self.create_button_for_action(self._db_editor.ui.actionAdd_db_file)
-        self.create_button_for_action(self._db_editor.ui.actionOpen_db_file)
+        # The menu action reads "Open in new tab..."; the toolbar button shows the shorter "Open".
+        self._db_editor.ui.actionOpen_in_new_tab.setIconText("Open")
+        self.create_button_for_action(self._db_editor.ui.actionOpen_in_new_tab)
         self.addSeparator()
         self.create_button_for_action(self._db_editor.ui.actionUndo)
         self.create_button_for_action(self._db_editor.ui.actionRedo)
@@ -81,6 +83,7 @@ class DBEditorToolBar(QToolBar):
             ui.actionNew_db_file: ":/icons/menu_icons/file.svg",
             ui.actionAdd_db_file: ":/icons/menu_icons/folder-open-solid.svg",
             ui.actionOpen_db_file: ":/icons/menu_icons/folder-open-solid.svg",
+            ui.actionOpen_in_new_tab: ":/icons/menu_icons/folder-open-solid.svg",
             ui.actionUndo: ":/icons/menu_icons/undo.svg",
             ui.actionRedo: ":/icons/menu_icons/redo.svg",
             ui.actionCommit: ":/icons/menu_icons/check.svg",

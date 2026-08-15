@@ -174,7 +174,7 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(str, str)
     def _load_recent_url(self, url: str, name: str) -> None:
-        self._open_url(url)
+        self.load_db_urls({url: name})
 
     def load_db_urls(self, db_urls, create=False, update_history=True):
         self.ui.actionImport.setEnabled(False)
@@ -248,46 +248,42 @@ class SpineDBEditorBase(QMainWindow):
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
-    @Slot(bool)
-    def open_db_file(self, _=False):
+    def _open_sqlite_url(self) -> str | None:
+        """Shows the open-file dialog and returns the chosen SQLite URL, or None if cancelled."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
             self.qsettings, "openSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
         )
         self.qsettings.endGroup()
         if not file_path:
+            return None
+        return "sqlite:///" + file_path
+
+    @Slot(bool)
+    def open_db_file(self, _=False):
+        url = self._open_sqlite_url()
+        if url is not None:
+            self.load_db_urls([url])
+
+    @Slot(bool)
+    def open_db_file_in_new_tab(self, _=False) -> None:
+        url = self._open_sqlite_url()
+        if url is None:
             return
-        url = "sqlite:///" + file_path
-        self._open_url(url)
+        multi_db_editor = self._multi_db_editor()
+        if self.db_maps and multi_db_editor is not None:
+            multi_db_editor.open_url_in_new_tab(url)
+        else:
+            self.load_db_urls([url])
 
-    def _multi_db_editor(self):
-        """Returns the tabbed window hosting this editor as a tab, or None if it is not embedded in one.
-
-        Returns:
-            MultiTabWindow: the parent tabbed window, or None
-        """
+    def _multi_db_editor(self) -> "MultiTabWindow | None":
+        """Returns the tabbed window hosting this editor as a tab, or None if it is not embedded in one."""
         parent = self.parentWidget()
         while parent is not None:
             if isinstance(parent, MultiTabWindow):
                 return parent
             parent = parent.parentWidget()
         return None
-
-    def _open_url(self, url):
-        """Opens a database URL, preferring a new tab over replacing the current database.
-
-        When this editor already has a database open and is hosted in a tabbed window, the URL opens in a
-        new tab of that window (raising an existing tab if the same URL is already open). Otherwise (an
-        empty tab, or no hosting window) the URL is loaded into this editor.
-
-        Args:
-            url (str): database URL to open
-        """
-        multi_db_editor = self._multi_db_editor()
-        if self.db_maps and multi_db_editor is not None:
-            multi_db_editor.open_url_in_new_tab(url)
-            return
-        self.load_db_urls([url])
 
     @Slot(bool)
     def add_db_file(self, _=False):
@@ -353,6 +349,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionView_history.triggered.connect(self._browse_commits)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
+        self.ui.actionOpen_in_new_tab.triggered.connect(self.open_db_file_in_new_tab)
         self.ui.actionAdd_db_file.triggered.connect(self.add_db_file)
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
