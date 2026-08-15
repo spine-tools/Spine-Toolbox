@@ -22,6 +22,7 @@ import pytest
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
+from spinetoolbox.spine_db_editor.empty_table_size_hint_provider import calculate_table_height
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import NO_VALUE
 from tests.mock_helpers import (
     assert_table_model_data,
@@ -866,6 +867,42 @@ def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
+
+
+class TestStackedTableSearchRowHeight:
+    """The per-column search row reserves a data-row's worth of viewport margin under the header.
+
+    ``calculate_table_height`` sizes the stacked (top) table so all of its rows fit and the
+    always-on vertical scroll bar stays disabled; it must therefore include that reserved margin,
+    otherwise the table comes up one row too short and the last row is clipped.
+    """
+
+    def test_search_row_height_is_included_so_all_rows_fit(self, db_editor, db_map):
+        db_map.add_entity_class(name="Object")
+        db_map.add_parameter_definition(entity_class_name="Object", name="X")
+        row_count = 5
+        for n in range(row_count):
+            db_map.add_entity(entity_class_name="Object", name=f"object_{n}")
+            db_map.add_parameter_value(
+                entity_class_name="Object",
+                entity_byname=(f"object_{n}",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+                parsed_value=n,
+            )
+        table_view = db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        while model.rowCount() < row_count:
+            model.fetchMore(QModelIndex())
+            QApplication.processEvents()
+        assert model.rowCount() == row_count
+        # Size the table to the height the stacking machinery allots it, then check every data row
+        # fits in the viewport (a faithful proxy for "vertical scroll bar disabled" that, unlike the
+        # scroll-bar range, is computed reliably for an off-screen widget).
+        table_view.resize(600, calculate_table_height(table_view))
+        table_view.updateGeometries()
+        QApplication.processEvents()
+        assert table_view.viewport().height() >= row_count * table_view.rowHeight(0)
 
 
 class TestPivotTableView(TestBase):

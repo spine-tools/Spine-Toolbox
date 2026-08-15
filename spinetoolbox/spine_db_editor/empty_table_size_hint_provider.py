@@ -70,5 +70,15 @@ def calculate_table_height(table: QTableView) -> int:
     row_height = table.rowHeight(0) if row_count != 0 else 0
     contents_margins = table.contentsMargins()
     return (
-        row_count * row_height + table.horizontalHeader().height() + contents_margins.top() + contents_margins.bottom()
+        row_count * row_height
+        + table.horizontalHeader().height()
+        + _reserved_search_row_height(table)
+        + contents_margins.top()
+        + contents_margins.bottom()
     )
+
+
+def _reserved_search_row_height(table: QTableView) -> int:
+    """Top viewport margin a per-column search row reserves under the header, or 0 if there is none."""
+    search_bar = getattr(table, "search_bar", None)
+    return search_bar.HEIGHT if search_bar is not None else 0
