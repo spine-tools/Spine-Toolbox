@@ -83,19 +83,13 @@ class EntityTreeModel(LevelFilterMixin, MultiDBTreeModel):
         return True
 
     def _apply_level_filters(self) -> None:
-        """Rebuilds all child maps so the current level filters take effect, guarded against re-entrancy.
+        """Rebuilds all child maps so the current level filters take effect.
 
         This is the cheap recompute that only re-filters the already-loaded rows; the force-fetch that
         makes a lower-level filter accurate across collapsed classes runs separately (see
         :meth:`LevelFilterMixin._run_force_fetch`).
         """
-        if self._applying_level_filters or self.root_item is None:
-            return
-        self._applying_level_filters = True
-        try:
-            self._rebuild_all_child_maps()
-        finally:
-            self._applying_level_filters = False
+        self._rebuild_all_child_maps()
 
     def _level_filter_root(self):
         """See base class. The entity tree walks from its visible root item down through the classes."""
@@ -114,7 +108,7 @@ class EntityTreeModel(LevelFilterMixin, MultiDBTreeModel):
         stack = [root]
         while stack:
             item = stack.pop()
-            item._rebuild_child_map()
+            item.rebuild_child_map()
             stack.extend(item.children)
         self.layoutChanged.emit()
 

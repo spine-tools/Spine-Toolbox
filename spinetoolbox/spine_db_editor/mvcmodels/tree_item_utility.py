@@ -80,45 +80,35 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
             except AttributeError:
                 pass
 
-    def is_empty_row(self):
+    def is_empty_row(self) -> bool:
         """Returns whether this item is the phantom trailing "add new" row.
 
         The empty row is the child that :class:`EmptyChildMixin` appends past ``non_empty_children``; a
-        plain parent has no such row. It is detected by identity so it works even for levels (e.g. scenario
+        plain parent has no such row. Detected by identity so it works even for levels (e.g. scenario
         alternatives) whose real items also carry a ``None`` id.
-
-        Returns:
-            bool: whether this item is its parent's phantom add-row
         """
-        parent = self.parent_item
-        if parent is None:
+        if self.parent_item is None:
             return False
-        return self not in parent.non_empty_children
+        return self not in self.parent_item.non_empty_children
 
-    def raw_row(self):
-        """Returns this item's index among its parent's children, ignoring any level filter.
+    def raw_row(self) -> int | None:
+        """Returns this item's index among its parent's children, ignoring any level filter, or None.
 
         Use this wherever the row is a domain ordinal (an index into an id list or a DB order); use
         :meth:`child_number` only for the visible Qt row.
-
-        Returns:
-            Optional[int]: the raw sibling index, or None if this item has no parent
         """
         if self.parent_item is None:
             return None
         return self.parent_item.children.index(self)
 
     @property
-    def visible_children(self):
+    def visible_children(self) -> list:
         """Returns the children that pass the active level filters, plus the phantom add-row.
 
         When no level filter is active this is ``self.children`` unchanged, so the filtered path adds no
         overhead to normal operation. Otherwise the filtered list is memoized and only recomputed when the
         model's :attr:`~.level_filter.LevelFilterMixin.filter_generation` moves, so repeated Qt
         layout/paint/scroll queries are served from the cache rather than rebuilt every time.
-
-        Returns:
-            list: the visible children
         """
         if not self.model.has_level_filters():
             return self.children
@@ -143,7 +133,7 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
         self._visible_row_map = {child: row for row, child in enumerate(visible)}
         self._visible_cache_generation = generation
 
-    def child_number(self):
+    def child_number(self) -> int | None:
         """Overridden to return the item's VISIBLE row within its parent, or None if hidden/orphan.
 
         With no filter active this is the raw sibling index; under a filter it is an O(1) lookup in the
@@ -153,14 +143,11 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
         if parent is None:
             return None
         if not self.model.has_level_filters():
-            try:
-                return parent.children.index(self)
-            except ValueError:
-                return None
+            return parent.children.index(self)
         parent._ensure_visible_cache()
         return parent._visible_row_map.get(self)
 
-    def insert_children(self, position, children):
+    def insert_children(self, position, children) -> bool:
         """Inserts children and refines the filter once new rows appear under an active filter."""
         if not super().insert_children(position, children):
             return False
@@ -172,7 +159,7 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
             self.model._schedule_level_filter_refresh()
         return True
 
-    def remove_children(self, position, count):
+    def remove_children(self, position, count) -> bool:
         """Removes children and refines the filter under an active filter."""
         if not super().remove_children(position, count):
             return False

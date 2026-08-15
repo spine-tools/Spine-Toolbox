@@ -21,12 +21,7 @@ from .tree_item_utility import StandardTreeItem
 
 
 class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
-    """A base model to display items in a tree view.
-
-    Mixes in :class:`LevelFilterMixin` so every subclass gets per-level regex filtering. A subclass only
-    needs to set :attr:`LEVEL_ITEM_TYPES` (the filterable levels, top to bottom); the display name, the
-    visibility predicate and the batched refresh are all provided here.
-    """
+    """A base model to display items in a tree view."""
 
     def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
         super().__init__(parent)
@@ -35,14 +30,7 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
         self.destroyed.connect(lambda _: self._invisible_root_item.tear_down_recursively())
 
     def filter_text(self, item) -> str:
-        """Returns the item's display name to match against its level filter.
-
-        Args:
-            item: a tree item
-
-        Returns:
-            the item's displayed text (for a list value this is the rendered value)
-        """
+        """Returns the item's display name to match against its level filter (rendered value for list values)."""
         return str(item.data(0, Qt.ItemDataRole.DisplayRole))
 
     def item_is_visible(self, item) -> bool:
@@ -52,21 +40,12 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
         lower level has an active filter, a parent is kept only if a LOADED descendant matches, or -
         optimistically - if it can still fetch more (no fetch is forced); it is hidden only once it is fully
         loaded and nothing matches. Items on unfiltered levels (e.g. the db root) always pass.
-
-        Args:
-            item: a tree item
-
-        Returns:
-            whether the item is visible under the current filters
         """
-        item_type = item.item_type
-        if item_type not in self.LEVEL_ITEM_TYPES:
-            return True
-        if item.is_empty_row():
+        if item.item_type not in self.LEVEL_ITEM_TYPES or item.is_empty_row():
             return True
         if not self.item_passes_own_filter(item):
             return False
-        lower_types = self.LEVEL_ITEM_TYPES[self.LEVEL_ITEM_TYPES.index(item_type) + 1 :]
+        lower_types = self.LEVEL_ITEM_TYPES[self.LEVEL_ITEM_TYPES.index(item.item_type) + 1 :]
         if any(self.level_filter_active(lower) for lower in lower_types):
             if any(self.item_is_visible(child) for child in item.non_empty_children):
                 return True
@@ -74,31 +53,21 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
         return True
 
     def _apply_level_filters(self) -> None:
-        """Refreshes the whole tree so the current level filters take effect, guarded against re-entrancy.
+        """Refreshes the whole tree so the current level filters take effect.
 
         These trees keep no child-position map, so a single ``layoutAboutToBeChanged``/``layoutChanged`` pair
         is enough for the view to re-query the visible rows.
         """
-        if self._applying_level_filters:
-            return
-        self._applying_level_filters = True
-        try:
-            self.layoutAboutToBeChanged.emit()
-            self._bump_filter_generation()
-            self.layoutChanged.emit()
-        finally:
-            self._applying_level_filters = False
+        self.layoutAboutToBeChanged.emit()
+        self._bump_filter_generation()
+        self.layoutChanged.emit()
 
     def _level_filter_root(self):
         """See base class. The standard trees walk from the invisible root down through the db items."""
         return self._invisible_root_item
 
-    def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 2.
-
-        Returns:
-            int: column count
-        """
+    def columnCount(self, parent=QModelIndex()) -> int:
+        """Always 2."""
         return 2
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):

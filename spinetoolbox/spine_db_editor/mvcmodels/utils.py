@@ -14,6 +14,7 @@
 
 from collections.abc import Callable, Sequence
 import csv
+from dataclasses import dataclass
 from io import StringIO
 from itertools import takewhile
 import re
@@ -47,6 +48,14 @@ def make_search_matcher(pattern: str) -> Callable[[str], bool]:
         needle = pattern.casefold()
         return lambda text: needle in text.casefold()
     return lambda text: regex.search(text) is not None
+
+
+@dataclass
+class Matcher:
+    """A regex search filter: its raw pattern text and the predicate built from it."""
+
+    pattern: str
+    matcher: Callable[[str], bool]
 
 
 PARAMETER_DEFINITION_FIELD_MAP: dict[str, str] = {

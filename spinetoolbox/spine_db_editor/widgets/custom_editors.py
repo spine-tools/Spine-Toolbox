@@ -52,7 +52,8 @@ from spinetoolbox.helpers import (
     order_key,
     try_number_from_string,
 )
-from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING, is_unmapped_alt, string_to_group
+from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING, string_to_group
+from spinetoolbox.spine_db_editor.widgets.search_bar_base import is_unmapped_alt
 
 
 class EventFilterForCatchingRollbackShortcut(QObject):

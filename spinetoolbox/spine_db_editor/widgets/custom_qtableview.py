@@ -15,7 +15,7 @@
 from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import replace
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QContextMenuEvent, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
@@ -39,9 +39,6 @@ from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
-    SEARCH_FIELD_ACTIVE_STYLE,
-    SearchFocusMixin,
-    SearchLineEdit,
     bool_to_string,
     group_to_string,
     input_string_to_int,
@@ -103,6 +100,7 @@ from .pivot_table_header_view import (
     ScenarioAlternativePivotHeaderView,
 )
 from .scenario_generator import ScenarioGenerator
+from .search_bar_base import SEARCH_FIELD_ACTIVE_STYLE, SearchFocusMixin, SearchLineEdit
 from .tabular_view_header_widget import TabularViewHeaderWidget
 
 if TYPE_CHECKING:
@@ -134,20 +132,12 @@ class _ColumnSearchBar(QWidget):
     _ACTIVE_STYLE = SEARCH_FIELD_ACTIVE_STYLE
 
     def __init__(self, parent: QTableView):
-        """
-        Args:
-            parent: the table view this search bar belongs to
-        """
         super().__init__(parent)
         self._editors: dict[int, SearchLineEdit] = {}
         self.HEIGHT = 0  # Matches a data row; set by the owning view before the bar is laid out.
 
     def rebuild(self, column_count: int) -> None:
-        """Creates or destroys editors so there is exactly one per logical column.
-
-        Args:
-            column_count: number of logical columns
-        """
+        """Creates or destroys editors so there is exactly one per logical column."""
         for column in list(self._editors):
             if column >= column_count:
                 self._editors.pop(column).deleteLater()
@@ -168,12 +158,12 @@ class _ColumnSearchBar(QWidget):
         """Returns the search field widgets."""
         return list(self._editors.values())
 
-    def editor_for_column(self, column: int) -> Optional[SearchLineEdit]:
+    def editor_for_column(self, column: int) -> SearchLineEdit | None:
         """Returns the visible search field for a column, or None if hidden/absent."""
         editor = self._editors.get(column)
         return editor if editor is not None and editor.isVisible() else None
 
-    def first_visible_editor(self) -> Optional[SearchLineEdit]:
+    def first_visible_editor(self) -> SearchLineEdit | None:
         """Returns the first visible search field, or None if there are none."""
         for _, editor in sorted(self._editors.items()):
             if editor.isVisible():
@@ -181,21 +171,12 @@ class _ColumnSearchBar(QWidget):
         return None
 
     def _handle_text_changed(self, column: int, text: str) -> None:
-        """Highlights an editor that holds a pattern and forwards the change.
-
-        Args:
-            column: logical column index
-            text: current editor text
-        """
+        """Highlights an editor that holds a pattern and forwards the change."""
         self._editors[column].setStyleSheet(self._ACTIVE_STYLE if text else "")
         self.pattern_edited.emit(column, text)
 
     def reposition(self, header: QHeaderView) -> None:
-        """Moves and resizes each editor to sit under its header section.
-
-        Args:
-            header: the horizontal header of the parent view
-        """
+        """Moves and resizes each editor to sit under its header section."""
         for column, editor in self._editors.items():
             if header.isSectionHidden(column) or header.sectionSize(column) == 0:
                 editor.hide()
@@ -217,12 +198,12 @@ class ColumnSearchRowMixin(SearchFocusMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._search_bar = _ColumnSearchBar(self)
+        self.search_bar = _ColumnSearchBar(self)
         self._last_search_column = 0
-        self._search_bar.editor_focused.connect(self._on_search_editor_focused)
-        self._search_bar.navigate_to_table.connect(self._on_navigate_to_table)
-        self._search_bar.navigate_left.connect(self._on_navigate_left)
-        self._search_bar.navigate_right.connect(self._on_navigate_right)
+        self.search_bar.editor_focused.connect(self._on_search_editor_focused)
+        self.search_bar.navigate_to_table.connect(self._on_navigate_to_table)
+        self.search_bar.navigate_left.connect(self._on_navigate_left)
+        self.search_bar.navigate_right.connect(self._on_navigate_right)
         header = self.horizontalHeader()
         header.sectionResized.connect(self._reposition_search_bar)
         header.sectionMoved.connect(self._reposition_search_bar)
@@ -241,7 +222,7 @@ class ColumnSearchRowMixin(SearchFocusMixin):
         and the search row directly beneath it, each one data-row tall so the row blends in.
         """
         super().updateGeometries()
-        bar = getattr(self, "_search_bar", None)
+        bar = getattr(self, "search_bar", None)
         if bar is None:
             return
         header = self.horizontalHeader()
@@ -258,7 +239,7 @@ class ColumnSearchRowMixin(SearchFocusMixin):
 
     def _reposition_search_bar(self, *args) -> None:
         """Re-lays the search bar under the header; used on scroll and section changes."""
-        bar = getattr(self, "_search_bar", None)
+        bar = getattr(self, "search_bar", None)
         if bar is None:
             return
         header = self.horizontalHeader()
@@ -269,32 +250,23 @@ class ColumnSearchRowMixin(SearchFocusMixin):
 
     def _on_section_count_changed(self, *args) -> None:
         """Rebuilds the editor set when the number of columns changes."""
-        bar = getattr(self, "_search_bar", None)
+        bar = getattr(self, "search_bar", None)
         if bar is None:
             return
         bar.rebuild(self.horizontalHeader().count())
         self._reposition_search_bar()
 
     def setModel(self, model: CompoundStackedModel) -> None:
-        """Rebuilds editors and wires the search row to the model.
-
-        Args:
-            model: the compound model set on the view
-        """
+        """Rebuilds editors and wires the search row to the model."""
         super().setModel(model)
-        self._search_bar.rebuild(model.columnCount())
-        self._search_bar.pattern_edited.connect(self._emit_column_filter)
+        self.search_bar.rebuild(model.columnCount())
+        self.search_bar.pattern_edited.connect(self._emit_column_filter)
         model.modelReset.connect(self.clear_search_row)
         self._reposition_search_bar()
 
     @Slot(int, str)
     def _emit_column_filter(self, column: int, text: str) -> None:
-        """Maps a column to its DB field and updates the model's column filter.
-
-        Args:
-            column: logical column index
-            text: regex pattern text
-        """
+        """Maps a column to its DB field and updates the model's column filter."""
         model = self.model()
         field = model.field_map[model.header[column]]
         model.set_column_filter(field, text)
@@ -302,7 +274,7 @@ class ColumnSearchRowMixin(SearchFocusMixin):
     @Slot()
     def clear_search_row(self) -> None:
         """Clears every search editor without touching the model's filters directly."""
-        self._search_bar.clear_all()
+        self.search_bar.clear_all()
 
     @Slot(int)
     def _on_search_editor_focused(self, column: int) -> None:
@@ -320,20 +292,12 @@ class ColumnSearchRowMixin(SearchFocusMixin):
 
     @Slot(int)
     def _on_navigate_left(self, column: int) -> None:
-        """Moves focus to the previous visible search field in on-screen order.
-
-        Args:
-            column: logical column of the currently focused search field
-        """
+        """Moves focus to the previous visible search field in on-screen order."""
         self._focus_adjacent_search_editor(column, -1)
 
     @Slot(int)
     def _on_navigate_right(self, column: int) -> None:
-        """Moves focus to the next visible search field in on-screen order.
-
-        Args:
-            column: logical column of the currently focused search field
-        """
+        """Moves focus to the next visible search field in on-screen order."""
         self._focus_adjacent_search_editor(column, 1)
 
     def _focus_adjacent_search_editor(self, column: int, step: int) -> None:
@@ -341,10 +305,6 @@ class ColumnSearchRowMixin(SearchFocusMixin):
 
         Hidden sections are skipped and there is no wrapping: at the first/last visible column
         this is a no-op.
-
-        Args:
-            column: logical column of the currently focused search field
-            step: -1 to move to the previous visible field, +1 for the next
         """
         header = self.horizontalHeader()
         visual = header.visualIndex(column)
@@ -354,7 +314,7 @@ class ColumnSearchRowMixin(SearchFocusMixin):
         while 0 <= visual < header.count():
             logical = header.logicalIndex(visual)
             if not header.isSectionHidden(logical) and header.sectionSize(logical) > 0:
-                editor = self._search_bar.editor_for_column(logical)
+                editor = self.search_bar.editor_for_column(logical)
                 if editor is not None:
                     editor.setFocus()
                     editor.selectAll()
@@ -363,14 +323,14 @@ class ColumnSearchRowMixin(SearchFocusMixin):
 
     def _focus_search_editor(self, column: int) -> None:
         """Gives keyboard focus to the search field of a column (or the first visible one)."""
-        editor = self._search_bar.editor_for_column(max(column, 0)) or self._search_bar.first_visible_editor()
+        editor = self.search_bar.editor_for_column(max(column, 0)) or self.search_bar.first_visible_editor()
         if editor is not None:
             editor.setFocus()
             editor.selectAll()
 
     def _search_row_editor_widgets(self) -> list[SearchLineEdit]:
         """See base class."""
-        return self._search_bar.editors()
+        return self.search_bar.editors()
 
     def _focus_search_row_from_view(self) -> None:
         """See base class; focuses the search field of the current column."""
@@ -502,14 +462,14 @@ class StackedTableView(CopyPasteTableView):
         self.create_delegates()
 
     def _convert_copied(
-        self, row: int, column: int, value: Any, model: Union[CompoundStackedModel, EmptyModelBase]
-    ) -> Optional[str]:
+        self, row: int, column: int, value: Any, model: CompoundStackedModel | EmptyModelBase
+    ) -> str | None:
         if column in model.group_columns:
             return group_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
     def _convert_pasted(
-        self, row: int, column: int, str_value: Optional[str], model: Union[CompoundStackedModel, EmptyModelBase]
+        self, row: int, column: int, str_value: str | None, model: CompoundStackedModel | EmptyModelBase
     ) -> Any:
         if column in model.group_columns:
             return string_to_group(str_value)
@@ -627,13 +587,13 @@ class ParameterTableView(StackedTableView):
         self._plot_separator = None
         self.pinned_values = []
 
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
         if header == self.value_column_header:
             return parameter_value_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header == self.value_column_header:
             return string_to_parameter_value(str_value)
@@ -917,13 +877,13 @@ class EntityAlternativeTableViewBase(StackedTableView):
         self._make_delegate(model.field_to_header("alternative_name"), AlternativeNameDelegate)
         self._make_delegate(model.field_to_header("active"), BooleanValueDelegate)
 
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
         if header == "active":
             return bool_to_string(value) if value is not None else None
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header == "active":
             return string_to_bool(str_value)
@@ -973,13 +933,13 @@ class EntityTableView(ColumnSearchRowMixin, UsesAutoFilter, StackedTableView):
         self._make_delegate(model.field_to_header("shape_name"), PlainTextDelegate)
         self._make_delegate(model.field_to_header("shape_blob"), PlainTextDelegate)
 
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
         if header in self._NUMERICAL_HEADERS:
             return str(value) if value is not None else None
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header in self._NUMERICAL_HEADERS:
             try:
@@ -1076,12 +1036,10 @@ class PivotTableView(CopyPasteTableView):
             """Enables/disables context menu entries before the menu is shown."""
             raise NotImplementedError()
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             return value if value is not None else ""
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             return str_value
 
     class _EntityContextBase(_ContextBase):
@@ -1122,7 +1080,7 @@ class PivotTableView(CopyPasteTableView):
             """See base class."""
             raise NotImplementedError()
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             if value is None:
                 return None
             pivot_model = model.sourceModel()
@@ -1130,9 +1088,7 @@ class PivotTableView(CopyPasteTableView):
                 return bool_to_string(value)
             return super().convert_copied(row, column, value, model)
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 return string_to_bool(str_value)
@@ -1275,15 +1231,13 @@ class PivotTableView(CopyPasteTableView):
             self._remove_entities_action.setEnabled(has_selection)
             self._remove_alternatives_action.setEnabled(has_selection)
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 return parameter_value_to_string(value)
             return super().convert_copied(row, column, value, model)
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 return string_to_parameter_value(str_value)
@@ -1414,7 +1368,7 @@ class PivotTableView(CopyPasteTableView):
             checked = len(selected) * [not all(selected)]
             source_model.batch_set_data(self._selected_scenario_alternative_indexes, checked)
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             if value is None:
                 return None
             pivot_model = model.sourceModel()
@@ -1424,9 +1378,7 @@ class PivotTableView(CopyPasteTableView):
                 return str(value)
             return super().convert_copied(row, column, value, model)
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 try:
@@ -1449,7 +1401,7 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setObjectName("top")
         self._top_left_header_table.setObjectName("top-left")
         self._spine_db_editor = None
-        self._context: Optional[PivotTableView._ContextBase] = None
+        self._context: PivotTableView._ContextBase | None = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
@@ -1640,17 +1592,17 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setGeometry(x, y, total_w, header_h)
         self._top_left_header_table.setGeometry(x, y, header_w, header_h)
 
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         return self._context.convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         return self._context.convert_pasted(row, column, str_value, model)
 
 
 class FrozenTableView(QTableView):
     header_dropped = Signal(QWidget, QWidget)
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Args:
             parent: parent widget
@@ -1677,7 +1629,7 @@ class FrozenTableView(QTableView):
 class MetadataTableViewBase(CopyPasteTableView):
     """Base for metadata and item metadata table views."""
 
-    def __init__(self, parent: Optional[QWidget]):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
             parent: parent widget
@@ -1795,7 +1747,7 @@ class ItemMetadataTableView(MetadataTableViewBase):
 
 
 class ManageEntityClassesTable(CopyPasteTableView):
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
         if header == "display icon":
             return optional_to_string(value)
@@ -1803,7 +1755,7 @@ class ManageEntityClassesTable(CopyPasteTableView):
             return bool_to_string(value) if value is not None else None
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header == "display icon":
             return string_to_display_icon(str_value)

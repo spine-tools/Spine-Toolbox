@@ -13,7 +13,7 @@
 """Single models for parameter definitions and values (as 'for a single entity')."""
 
 from __future__ import annotations
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Iterable, Iterator
 import contextlib
 import math
 from typing import TYPE_CHECKING, ClassVar
@@ -42,6 +42,7 @@ from .utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
+    Matcher,
     field_index,
     make_entity_on_the_fly,
 )
@@ -95,7 +96,7 @@ class SingleModelBase(HalfSortedTableModel):
         self._mapped_table = self.db_map.mapped_table(parent.item_type)
         self.entity_class_id = entity_class_id
         self._auto_filter: dict[str, set] = {}
-        self._column_filters: dict[str, Callable[[str], bool]] = {}
+        self._column_filters: dict[str, Matcher] = {}
         self._column_filter_columns: dict[str, int] = {}  # field -> logical column, cached lazily
         self.committed = committed
 
@@ -181,12 +182,8 @@ class SingleModelBase(HalfSortedTableModel):
     def set_auto_filter(self, auto_filter: dict[str, set | None]) -> None:
         self._auto_filter = auto_filter
 
-    def set_column_filters(self, column_filters: dict[str, Callable[[str], bool]]) -> None:
-        """Shares the compound model's per-column regex matchers with this single model.
-
-        Args:
-            column_filters: field -> matcher predicate, owned by the compound model
-        """
+    def set_column_filters(self, column_filters: dict[str, Matcher]) -> None:
+        """Shares the compound model's per-column matchers with this single model (owned by the compound)."""
         self._column_filters = column_filters
 
     def _value_column_display(self, row: int) -> str | None:
@@ -209,31 +206,24 @@ class SingleModelBase(HalfSortedTableModel):
     def _row_accepts_column_filters(self, row: int) -> bool:
         """Returns whether the row's rendered display strings pass all column filters.
 
-        The value column (if filtered) is evaluated last, so that cheaper string
-        columns get the chance to reject the row before the expensive value cell
-        is rendered.
-
-        Args:
-            row: row index
-
-        Returns:
-            True if every active column filter matches its column's display text
+        The value column (if filtered) is evaluated last, so that cheaper string columns get the chance to
+        reject the row before the expensive value cell is rendered.
         """
         value_field = getattr(self, "value_field", None)
-        value_matches = None
-        for field, matches in self._column_filters.items():
+        value_matcher = None
+        for field, matcher in self._column_filters.items():
             if field == value_field:
-                value_matches = matches
+                value_matcher = matcher
                 continue
             column = self._column_filter_columns.get(field)
             if column is None:
                 column = self._column_filter_columns[field] = field_index(field, self.field_map)
             display = self.index(row, column).data(Qt.ItemDataRole.DisplayRole)
-            if not matches("" if display is None else str(display)):
+            if not matcher.matcher("" if display is None else str(display)):
                 return False
-        if value_matches is not None:
+        if value_matcher is not None:
             display = self._value_column_display(row)
-            if not value_matches("" if display is None else str(display)):
+            if not value_matcher.matcher("" if display is None else str(display)):
                 return False
         return True
 

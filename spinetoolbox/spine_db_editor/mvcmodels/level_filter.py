@@ -12,9 +12,9 @@
 
 """A mixin adding per-level regex filtering to tree models."""
 
-from collections.abc import Callable
+from typing import ClassVar
 from PySide6.QtCore import QTimer, Slot
-from .utils import make_search_matcher
+from .utils import Matcher, make_search_matcher
 
 LEVEL_FILTER_INTERVAL = 200
 """Debounce (ms) of the cheap visibility recompute: filters the already-loaded rows while typing."""
@@ -39,13 +39,12 @@ class LevelFilterMixin:
     parents are filtered accurately without the user having to expand them first.
     """
 
-    LEVEL_ITEM_TYPES: tuple[str, ...] = ()
+    LEVEL_ITEM_TYPES: ClassVar[tuple[str, ...]] = ()
     """Item types that carry a filter cell, ordered top to bottom. Set by the subclass."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._level_patterns: dict[str, str] = {}
-        self._level_matchers: dict[str, Callable[[str], bool]] = {}
+        self._level_filters: dict[str, Matcher] = {}
         self._level_filter_timer = QTimer(self)
         self._level_filter_timer.setSingleShot(True)
         self._level_filter_timer.setInterval(LEVEL_FILTER_INTERVAL)
@@ -53,7 +52,6 @@ class LevelFilterMixin:
         self._force_fetch_timer = QTimer(self)
         self._force_fetch_timer.setSingleShot(True)
         self._force_fetch_timer.timeout.connect(self._run_force_fetch)
-        self._applying_level_filters = False
         self._force_fetching = False
         self._filter_generation = 0
         self._force_fetch_frontier: list | None = None
@@ -75,29 +73,21 @@ class LevelFilterMixin:
 
     @Slot(str, str)
     def set_level_filter(self, item_type: str, pattern: str) -> None:
-        """Sets or clears the regex filter for a tree level and schedules a refresh.
-
-        Args:
-            item_type: the level's item type
-            pattern: raw regex/substring pattern; an empty string clears the level's filter
-        """
-        pattern = pattern or ""
-        if self._level_patterns.get(item_type, "") == pattern:
+        """Sets or clears the regex filter for a tree level and schedules a refresh."""
+        current = self._level_filters.get(item_type)
+        if (current.pattern if current else "") == pattern:
             return
-        if pattern == "":
-            self._level_patterns.pop(item_type, None)
-            self._level_matchers.pop(item_type, None)
+        if not pattern:
+            self._level_filters.pop(item_type, None)
         else:
-            self._level_patterns[item_type] = pattern
-            self._level_matchers[item_type] = make_search_matcher(pattern)
+            self._level_filters[item_type] = Matcher(pattern, make_search_matcher(pattern))
         self._reschedule_level_filters()
 
     def clear_level_filters(self) -> None:
         """Clears all level filters and schedules a refresh."""
-        if not self._level_patterns and not self._level_matchers:
+        if not self._level_filters:
             return
-        self._level_patterns.clear()
-        self._level_matchers.clear()
+        self._level_filters.clear()
         self._reschedule_level_filters()
 
     def reset_level_filter_state(self) -> None:
@@ -105,15 +95,13 @@ class LevelFilterMixin:
 
         Used when the tree is (re)built for a new database set (see ``build_tree``): unlike
         :meth:`clear_level_filters`, which reschedules a refresh of the *existing* tree, this stops the
-        debounce timers and drops every reference (patterns, matchers, the force-fetch frontier and flags)
-        so a stale filter cannot carry over onto the freshly built tree and no cascade keeps running against
-        now-destroyed items. The filter generation is bumped so any cached filtered child list is discarded.
+        debounce timers and drops every reference so a stale filter cannot carry over onto the freshly built
+        tree and no cascade keeps running against now-destroyed items. The filter generation is bumped so any
+        cached filtered child list is discarded.
         """
         self._level_filter_timer.stop()
         self._force_fetch_timer.stop()
-        self._level_patterns.clear()
-        self._level_matchers.clear()
-        self._applying_level_filters = False
+        self._level_filters.clear()
         self._force_fetching = False
         self._force_fetch_frontier = None
         self._force_fetch_iterations = 0
@@ -145,15 +133,11 @@ class LevelFilterMixin:
 
     def has_level_filters(self) -> bool:
         """Returns whether any level filter is active."""
-        return bool(self._level_matchers)
+        return bool(self._level_filters)
 
     def level_filter_active(self, item_type: str) -> bool:
-        """Returns whether the given level has an active filter.
-
-        Args:
-            item_type: the level's item type
-        """
-        return item_type in self._level_matchers
+        """Returns whether the given level has an active filter."""
+        return item_type in self._level_filters
 
     def lower_level_filter_active(self) -> bool:
         """Returns whether any filter below the top level is active.
@@ -211,11 +195,7 @@ class LevelFilterMixin:
         return bool(self.collect_visible_matches())
 
     def _level_index(self, item) -> int:
-        """Returns the item's index within ``LEVEL_ITEM_TYPES``, or -1 for items above the top level.
-
-        Args:
-            item: a tree item
-        """
+        """Returns the item's index within ``LEVEL_ITEM_TYPES``, or -1 for items above the top level."""
         try:
             return self.LEVEL_ITEM_TYPES.index(item.item_type)
         except ValueError:
@@ -230,9 +210,6 @@ class LevelFilterMixin:
         deepest filtered level. Fetching is async and batched, so as children land the insert hook continues
         the cascade (see :meth:`_schedule_level_filter_refresh`) until nothing is left to fetch.
         """
-        if self._applying_level_filters:
-            self._force_fetch_timer.start(FORCE_FETCH_CONTINUE_INTERVAL)
-            return
         if not self.lower_level_filter_active():
             self._force_fetching = False
             return
@@ -298,30 +275,16 @@ class LevelFilterMixin:
         raise NotImplementedError()
 
     def item_passes_own_filter(self, item) -> bool:
-        """Returns whether an item matches the filter of its own level.
-
-        Items on a level with no active filter always pass.
-
-        Args:
-            item: a tree item
-        """
-        matcher = self._level_matchers.get(item.item_type)
+        """Returns whether an item matches the filter of its own level. Items on an unfiltered level pass."""
+        matcher = self._level_filters.get(item.item_type)
         if matcher is None:
             return True
-        return matcher(self.filter_text(item))
+        return matcher.matcher(self.filter_text(item))
 
     def filter_text(self, item) -> str:
-        """Returns the real text of a tree item to match its level filter against.
-
-        Args:
-            item: a tree item
-        """
+        """Returns the real text of a tree item to match its level filter against."""
         raise NotImplementedError()
 
     def _apply_level_filters(self) -> None:
-        """Refreshes the model so the current level filters take effect.
-
-        Implemented by the subclass. It should be guarded with ``self._applying_level_filters`` to
-        prevent re-entrancy and emit a single layout change around the refresh.
-        """
+        """Refreshes the model so the current level filters take effect. Implemented by the subclass."""
         raise NotImplementedError()

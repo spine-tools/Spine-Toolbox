@@ -59,17 +59,17 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
         )
 
     @property
-    def visible_children(self):
+    def visible_children(self) -> list:
         """Returns the memoized filtered child list, building it (and the child map) on first access.
 
-        The list is cached and rebuilt only by :meth:`_rebuild_child_map`, which every structural change and
+        The list is cached and rebuilt only by :meth:`rebuild_child_map`, which every structural change and
         every filter (re)apply already calls - so paint/scroll queries never recompute the filter.
         """
         if self._visible_children_cache is None:
-            self._rebuild_child_map()
+            self.rebuild_child_map()
         return self._visible_children_cache
 
-    def child_number(self):
+    def child_number(self) -> int | None:
         """Overriden to use find_row which is a dict-lookup rather than a list.index() call."""
         if not self.parent_item:
             return None
@@ -81,7 +81,7 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
             return self.parent_item.find_row(db_map, id_)
         return 0
 
-    def _rebuild_child_map(self):
+    def rebuild_child_map(self) -> None:
         """Recomputes the child map without emitting any layout-change signal.
 
         Kept separate so a model can rebuild many items' maps under a single layout change.
@@ -94,10 +94,10 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
                 id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, {})[id_] = row
 
-    def refresh_child_map(self):
+    def refresh_child_map(self) -> None:
         """Recomputes the child map, emitting a layout-change pair."""
         self.model.layoutAboutToBeChanged.emit()
-        self._rebuild_child_map()
+        self.rebuild_child_map()
         self.model.layoutChanged.emit()
 
     def set_data(self, column, value, role):
@@ -441,16 +441,8 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
         bottom_right = self.model.index(self.row_count() - 1, 0, self.index())
         self.model.dataChanged.emit(top_left, bottom_right)
 
-    def insert_children(self, position, children):
-        """Inserts new children at given position.
-
-        Args:
-            position (int): insert new items here
-            children (Iterable of MultiDBTreeItem): insert items from this iterable
-
-        Returns:
-            bool: True if children were inserted successfully, False otherwise
-        """
+    def insert_children(self, position, children) -> bool:
+        """Inserts new children at given position."""
         if not super().insert_children(position, children):
             return False
         self.refresh_child_map()
@@ -463,7 +455,7 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
             self.model._schedule_level_filter_refresh()
         return True
 
-    def remove_children(self, position, count):
+    def remove_children(self, position, count) -> bool:
         """Removes count children starting from the given position."""
         if super().remove_children(position, count):
             self.refresh_child_map()

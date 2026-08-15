@@ -43,6 +43,7 @@ from .utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
+    Matcher,
     field_index,
     make_search_matcher,
 )
@@ -73,8 +74,7 @@ class CompoundStackedModel(CompoundTableModel):
         self._db_maps: list[DatabaseMapping] = list(db_maps)
         self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
         self._auto_filter: dict[str, set] = {}  # Shared with submodels; always modify, never set.
-        self._column_filters: dict[str, Callable[[str], bool]] = {}  # Shared with submodels; always modify, never set.
-        self._column_filter_patterns: dict[str, str] = {}  # field -> raw pattern text
+        self._column_filters: dict[str, Matcher] = {}  # Shared with submodels; always modify, never set.
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
         self._filter_timer.timeout.connect(self.refresh)
@@ -204,7 +204,6 @@ class CompoundStackedModel(CompoundTableModel):
         self._filter_class_ids = Asterisk
         self._auto_filter.clear()
         self._column_filters.clear()
-        self._column_filter_patterns.clear()
         self.endResetModel()
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
@@ -295,31 +294,23 @@ class CompoundStackedModel(CompoundTableModel):
 
     @Slot(str, str)
     def set_column_filter(self, field: str, pattern: str) -> None:
-        """Sets or clears the per-column regex search filter for the given field.
-
-        Args:
-            field: the db field name the column maps to
-            pattern: raw regex/substring pattern; empty string clears the filter
-        """
-        pattern = pattern or ""
-        if self._column_filter_patterns.get(field, "") == pattern:
+        """Sets or clears the per-column regex search filter for the given field."""
+        current = self._column_filters.get(field)
+        if (current.pattern if current else "") == pattern:
             return
-        if pattern == "":
-            self._column_filter_patterns.pop(field, None)
+        if not pattern:
             self._column_filters.pop(field, None)
         else:
-            self._column_filter_patterns[field] = pattern
-            self._column_filters[field] = make_search_matcher(pattern)
+            self._column_filters[field] = Matcher(pattern, make_search_matcher(pattern))
         if not self._column_filter_timer.isActive():
             self._column_filter_timer.start()
         self.column_filter_changed.emit(self)
 
     def clear_column_filters(self) -> None:
         """Clears all per-column regex search filters and refreshes."""
-        if not self._column_filters and not self._column_filter_patterns:
+        if not self._column_filters:
             return
         self._column_filters.clear()
-        self._column_filter_patterns.clear()
         if not self._column_filter_timer.isActive():
             self._column_filter_timer.start()
         self.column_filter_changed.emit(self)

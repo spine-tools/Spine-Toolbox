@@ -12,6 +12,8 @@
 
 """Classes for custom QTreeViews and QTreeWidgets."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from PySide6.QtCore import QEvent, QModelIndex, QSettings, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QIcon, QMouseEvent, Qt
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu, QTreeView, QWidget
@@ -19,13 +21,16 @@ from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import CharIconEngine, busy_effect
 from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
-from ..helpers import SearchFocusMixin
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
 from ..mvcmodels.level_filter import FORCE_FETCH_DELAY
 from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioDBItem, ScenarioItem
 from .custom_delegates import AddEntityButtonDelegate, AlternativeDelegate, ParameterValueListDelegate, ScenarioDelegate
 from .custom_menus import RecursiveChoiceSubMenu
+from .search_bar_base import SearchFocusMixin
+
+if TYPE_CHECKING:
+    from .tree_filter_bar import TreeLevelFilterBar
 
 
 class MultitreeSelection:
@@ -75,12 +80,8 @@ class TreeSearchFocusMixin(SearchFocusMixin):
     alternative tree) never trigger this, since their model reports no lower-level filter.
     """
 
-    def connect_level_filter_bar(self, bar) -> None:
-        """Stores the filter bar and wires its focus, navigation and auto-expand signals.
-
-        Args:
-            bar (TreeLevelFilterBar): the per-level filter bar sitting above this tree
-        """
+    def connect_level_filter_bar(self, bar: TreeLevelFilterBar) -> None:
+        """Stores the filter bar and wires its focus, navigation and auto-expand signals."""
         self._level_filter_bar = bar
         self._regex_row_was_last = False
         self._lower_filter_session = False
@@ -147,7 +148,7 @@ class TreeSearchFocusMixin(SearchFocusMixin):
         expansion is restored.
         """
         model = self.model()
-        if model is None or not hasattr(model, "lower_level_filter_active"):
+        if not hasattr(model, "lower_level_filter_active"):
             return
         if model.lower_level_filter_active():
             if not self._lower_filter_session:
@@ -182,8 +183,6 @@ class TreeSearchFocusMixin(SearchFocusMixin):
             items: tree items to make visible (their ancestors get expanded)
         """
         model = self.model()
-        if model is None:
-            return
         seen = set()
         for item in items:
             chain = []
@@ -202,8 +201,6 @@ class TreeSearchFocusMixin(SearchFocusMixin):
         """Returns the set of currently expanded tree items."""
         model = self.model()
         expanded = set()
-        if model is None:
-            return expanded
         for item in model.visit_all():
             index = model.index_from_item(item)
             if index.isValid() and self.isExpanded(index):
@@ -217,8 +214,6 @@ class TreeSearchFocusMixin(SearchFocusMixin):
             expanded: the set returned by :meth:`_capture_expansion`, or None
         """
         model = self.model()
-        if model is None:
-            return
         self.collapseAll()
         if not expanded:
             return
@@ -232,8 +227,6 @@ class TreeSearchFocusMixin(SearchFocusMixin):
     def _focus_tree_top(self) -> None:
         """Moves focus from the filter bar down onto the first tree item."""
         model = self.model()
-        if model is None:
-            return
         index = model.index(0, 0)
         if not index.isValid():
             return
@@ -246,8 +239,7 @@ class TreeSearchFocusMixin(SearchFocusMixin):
 
     def _search_row_editor_widgets(self) -> list:
         """See base class."""
-        bar = getattr(self, "_level_filter_bar", None)
-        return bar.editors() if bar is not None else []
+        return self._level_filter_bar.editors()
 
     def _focus_search_row_from_view(self) -> None:
         """See base class; focuses the filter bar's last used cell."""

@@ -237,14 +237,9 @@ class FilterableChildrenMixin:
     read the (subclass-cached) ``visible_children`` list, and :meth:`_compute_visible_children` is the
     extension point that produces the filtered list (the base passes every child through).
 
-    Deliberately left to the concrete item classes, because their post-optimization strategies differ and
-    that differentiation is correctness-critical:
-
-    - ``visible_children`` and its caching/invalidation (one memoizes on a ``filter_generation`` counter,
-      the other rebuilds alongside its child map), and
-    - ``child_number`` (an O(1) lookup keyed differently in each class).
-
-    This mixin does NOT try to unify those.
+    ``visible_children`` and its caching/invalidation are deliberately left to the concrete item classes,
+    because their strategies differ (one memoizes on a ``filter_generation`` counter, the other rebuilds
+    alongside its child map). This mixin does NOT try to unify those.
     """
 
     def _compute_visible_children(self):
