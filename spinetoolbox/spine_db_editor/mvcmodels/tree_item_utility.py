@@ -115,7 +115,7 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
         self._ensure_visible_cache()
         return self._visible_children_cache
 
-    def _compute_visible_children(self):
+    def _compute_visible_children(self) -> list:
         """Overridden to keep only the children that pass the model's active level filters.
 
         Only ever reached under an active filter (``visible_children`` short-circuits to ``self.children``

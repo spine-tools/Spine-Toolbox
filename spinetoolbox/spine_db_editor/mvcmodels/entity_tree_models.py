@@ -44,16 +44,13 @@ class EntityTreeModel(LevelFilterMixin, MultiDBTreeModel):
         For classes this is ``EntityClassItem.name``: the plain class name, without the "(superclass)"
         suffix that ``display_data`` appends. For entities it is the entity byname joined with the DB item
         separator; ``display_data`` mangles a repeated parent element into a placeholder glyph, so it is
-        unsuitable for matching. Falls back to the entity's ``name`` when there is no byname.
+        unsuitable for matching.
 
         Args:
             item: an entity-tree item
         """
         if item.item_type == "entity":
-            byname = item.byname
-            if byname:
-                return DB_ITEM_SEPARATOR.join(byname)
-            return item.name
+            return DB_ITEM_SEPARATOR.join(item.byname)
         return item.name
 
     def item_is_visible(self, item) -> bool:
