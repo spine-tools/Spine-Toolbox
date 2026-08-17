@@ -94,9 +94,7 @@ class TreeSearchFocusMixin(SearchFocusMixin):
         bar.editor_focused.connect(self._note_search_row_focused)
         bar.navigate_to_tree.connect(self._focus_tree_top)
         bar.lower_filter_active_changed.connect(self._on_lower_filter_active_changed)
-        model = self.model()
-        if model is not None:
-            model.layoutChanged.connect(self._on_model_layout_changed)
+        self.model().layoutChanged.connect(self._on_model_layout_changed)
 
     def reset_level_filter_state(self) -> None:
         """Clears the filter bar and auto-expand state so a (re)loaded tree starts unfiltered.
