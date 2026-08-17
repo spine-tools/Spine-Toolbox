@@ -53,6 +53,7 @@ from spinetoolbox.helpers import (
     try_number_from_string,
 )
 from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING, string_to_group
+from spinetoolbox.spine_db_editor.widgets.search_bar_base import is_unmapped_alt
 
 
 class EventFilterForCatchingRollbackShortcut(QObject):
@@ -101,7 +102,10 @@ class CustomLineEditor(QLineEdit):
         return self.text()
 
     def keyPressEvent(self, event):
-        """Prevents shift key press to clear the contents."""
+        """Prevents shift key press to clear the contents and swallows unmapped Alt shortcuts."""
+        if is_unmapped_alt(event):
+            event.ignore()
+            return
         if event.key() != Qt.Key_Shift:
             super().keyPressEvent(event)
 

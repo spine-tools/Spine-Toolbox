@@ -54,6 +54,29 @@ class MultiSpineDBEditor(MultiTabWindow):
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)
 
+    def open_url_in_new_tab(self, url: str) -> None:
+        """Opens a database URL in a new tab, or raises the existing tab if the URL is already open."""
+        existing = _get_existing_spine_db_editor([normcase_database_url_path(url)])
+        if existing is None:
+            self.add_new_tab([url])
+            return
+        multi_db_editor, db_editor = existing
+        multi_db_editor.set_current_tab(db_editor)
+        if multi_db_editor.isMinimized():
+            multi_db_editor.showNormal()
+        multi_db_editor.activateWindow()
+
+    @Slot(int)
+    def _close_tab(self, index: int) -> None:
+        """Closes the tab at index, keeping the window open even when the last tab is closed.
+
+        Unlike the base class, closing the last database leaves an empty editor the user can open a new
+        database into. Closing the window itself still closes it as before.
+        """
+        if not self.tab_widget.widget(index).close():
+            return
+        self.tab_widget.removeTab(index)
+
     def _connect_tab_signals(self, tab):
         """Connects Spine Db editor window (tab) signals.
 
@@ -89,8 +112,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
         return True
 
-    def _make_new_tab(self, db_urls=None):  # pylint: disable=arguments-differ
-        """Makes a new tab, if successful return the tab, returns None otherwise"""
+    def _make_new_tab(
+        self, db_urls: list[str] | None = None
+    ) -> "SpineDBEditor | None":  # pylint: disable=arguments-differ
+        """Makes a new tab, returning it on success or None otherwise."""
         tab = SpineDBEditor(self.db_mngr)
         if not tab.load_db_urls(db_urls if db_urls is not None else [], create=True):
             return

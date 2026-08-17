@@ -12,6 +12,8 @@
 
 """Classes for custom QTreeViews and QTreeWidgets."""
 
+from __future__ import annotations
+from typing import TYPE_CHECKING
 from PySide6.QtCore import QEvent, QModelIndex, QSettings, QTimer, Signal, Slot
 from PySide6.QtGui import QAction, QIcon, QMouseEvent, Qt
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QHeaderView, QMenu, QTreeView, QWidget
@@ -21,9 +23,14 @@ from spinetoolbox.widgets.custom_qtreeview import CopyPasteTreeView
 from ...mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 from ..mvcmodels import mime_types
 from ..mvcmodels.alternative_item import AlternativeItem
+from ..mvcmodels.level_filter import FORCE_FETCH_DELAY
 from ..mvcmodels.scenario_item import ScenarioAlternativeItem, ScenarioDBItem, ScenarioItem
 from .custom_delegates import AddEntityButtonDelegate, AlternativeDelegate, ParameterValueListDelegate, ScenarioDelegate
 from .custom_menus import RecursiveChoiceSubMenu
+from .search_bar_base import SearchFocusMixin
+
+if TYPE_CHECKING:
+    from .tree_filter_bar import TreeLevelFilterBar
 
 
 class MultitreeSelection:
@@ -59,7 +66,197 @@ class MultitreeSelection:
         super().mousePressEvent(event)
 
 
-class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
+class TreeSearchFocusMixin(SearchFocusMixin):
+    """Adds keyboard navigation and lower-level-filter auto-expand between a tree view and its filter bar.
+
+    Mirrors the stacked tables' ``ColumnSearchRowMixin``: the Up arrow on the tree's topmost item
+    jumps into the filter row, Down from a filter field drops back onto the tree, and the view's
+    Alt+N shortcut toggles focus into the filter row.
+
+    On top of navigation it reveals the matches of a *lower-level* regex filter: a QTreeView child only
+    shows when its parent is expanded, so while a lower-level filter is active the tree is auto-expanded onto
+    the matching leaves (or collapsed if nothing matches) once the filter has settled, and the pre-filter
+    expansion is restored when the lower-level filters are cleared. Trees with a single level (the
+    alternative tree) never trigger this, since their model reports no lower-level filter.
+    """
+
+    def connect_level_filter_bar(self, bar: TreeLevelFilterBar) -> None:
+        """Stores the filter bar and wires its focus, navigation and auto-expand signals."""
+        self._level_filter_bar = bar
+        self._regex_row_was_last = False
+        self._lower_filter_session = False
+        self._saved_expansion = None
+        self._suppress_auto_expand = False
+        self._auto_expand_timer = QTimer(self)
+        self._auto_expand_timer.setSingleShot(True)
+        self._auto_expand_timer.setInterval(FORCE_FETCH_DELAY)
+        self._auto_expand_timer.timeout.connect(self._apply_auto_expand)
+        bar.editor_focused.connect(self._note_search_row_focused)
+        bar.navigate_to_tree.connect(self._focus_tree_top)
+        bar.lower_filter_active_changed.connect(self._on_lower_filter_active_changed)
+        self.model().layoutChanged.connect(self._on_model_layout_changed)
+
+    def reset_level_filter_state(self) -> None:
+        """Clears the filter bar and auto-expand state so a (re)loaded tree starts unfiltered.
+
+        Called when the editor (re)builds its trees for a new database set (see
+        ``TreeViewMixin.init_models``). It empties the filter bar and drops the captured pre-filter
+        expansion and session flags, which otherwise reference the now-destroyed pre-reset items, so a
+        stale filter cannot carry over onto the freshly built tree.
+        """
+        bar = getattr(self, "_level_filter_bar", None)
+        if bar is None:
+            return
+        bar.clear_all()
+        self._regex_row_was_last = False
+        self._lower_filter_session = False
+        self._saved_expansion = None
+        self._suppress_auto_expand = False
+        self._auto_expand_timer.stop()
+
+    @Slot()
+    def _on_model_layout_changed(self) -> None:
+        """Restarts the auto-expand debounce, unless the layout change was our own programmatic expand.
+
+        The auto-expander itself expands/collapses the view, which emits ``layoutChanged``; re-arming on
+        that would loop. The ``_suppress_auto_expand`` guard swallows exactly those self-inflicted signals.
+        """
+        if self._suppress_auto_expand:
+            return
+        self._auto_expand_timer.start()
+
+    @Slot(bool)
+    def _on_lower_filter_active_changed(self, active: bool) -> None:
+        """Captures the pre-filter expansion on the rising edge so it can be restored faithfully later.
+
+        Args:
+            active: whether any cell below the top level now holds text
+        """
+        if active and not self._lower_filter_session:
+            self._saved_expansion = self._capture_expansion()
+            self._lower_filter_session = True
+
+    @Slot()
+    def _apply_auto_expand(self) -> None:
+        """Reveals the matches once the filter has settled, or restores the tree when it is cleared.
+
+        Runs on a debounce restarted by every model ``layoutChanged``, so it only fires once fetching and
+        typing have paused. While a lower-level filter is active the tree is expanded onto the matching
+        leaves, or collapsed when nothing matches; once the lower-level filters clear, the pre-filter
+        expansion is restored.
+        """
+        model = self.model()
+        if not hasattr(model, "lower_level_filter_active"):
+            return
+        if model.lower_level_filter_active():
+            if not self._lower_filter_session:
+                self._saved_expansion = self._capture_expansion()
+                self._lower_filter_session = True
+            # One walk collects the matches; reused both to decide reveal-vs-collapse and to expand only the
+            # branches leading to them - never ``expandAll``, which would materialize the whole tree and,
+            # by fetching more rows, feed another layoutChanged back into this handler.
+            matches = model.collect_visible_matches()
+            self._suppress_auto_expand = True
+            try:
+                if matches:
+                    self._expand_to_items(matches)
+                else:
+                    self.collapseAll()
+            finally:
+                self._suppress_auto_expand = False
+            return
+        if self._lower_filter_session:
+            self._suppress_auto_expand = True
+            try:
+                self._restore_expansion(self._saved_expansion)
+            finally:
+                self._suppress_auto_expand = False
+            self._saved_expansion = None
+            self._lower_filter_session = False
+
+    def _expand_to_items(self, items) -> None:
+        """Expands just the ancestor chains that reveal the given items, top-down.
+
+        Args:
+            items: tree items to make visible (their ancestors get expanded)
+        """
+        model = self.model()
+        seen = set()
+        for item in items:
+            chain = []
+            ancestor = item.parent_item
+            while ancestor is not None and ancestor not in seen:
+                index = model.index_from_item(ancestor)
+                if not index.isValid():
+                    break
+                chain.append(index)
+                seen.add(ancestor)
+                ancestor = ancestor.parent_item
+            for index in reversed(chain):
+                self.expand(index)
+
+    def _capture_expansion(self) -> set:
+        """Returns the set of currently expanded tree items."""
+        model = self.model()
+        expanded = set()
+        for item in model.visit_all():
+            index = model.index_from_item(item)
+            if index.isValid() and self.isExpanded(index):
+                expanded.add(item)
+        return expanded
+
+    def _restore_expansion(self, expanded) -> None:
+        """Collapses the tree and re-expands exactly the still-present captured items.
+
+        Args:
+            expanded: the set returned by :meth:`_capture_expansion`, or None
+        """
+        model = self.model()
+        self.collapseAll()
+        if not expanded:
+            return
+        for item in model.visit_all():
+            if item in expanded:
+                index = model.index_from_item(item)
+                if index.isValid():
+                    self.expand(index)
+
+    @Slot()
+    def _focus_tree_top(self) -> None:
+        """Moves focus from the filter bar down onto the first tree item."""
+        model = self.model()
+        index = model.index(0, 0)
+        if not index.isValid():
+            return
+        self.setCurrentIndex(index)
+        self.setFocus()
+
+    def _search_focus_ready(self) -> bool:
+        """See base class; ready once the filter bar has been connected."""
+        return getattr(self, "_level_filter_bar", None) is not None
+
+    def _search_row_editor_widgets(self) -> list:
+        """See base class."""
+        return self._level_filter_bar.editors()
+
+    def _focus_search_row_from_view(self) -> None:
+        """See base class; focuses the filter bar's last used cell."""
+        self._level_filter_bar.focus_last_used_cell()
+
+    def _restore_search_row_focus(self) -> None:
+        """See base class; focuses the filter bar's last used cell."""
+        self._level_filter_bar.focus_last_used_cell()
+
+    def _at_top_for_search_focus(self) -> bool:
+        """See base class; True when the current item is the tree's topmost row."""
+        bar = getattr(self, "_level_filter_bar", None)
+        if bar is None:
+            return False
+        current = self.currentIndex()
+        return current.isValid() and not self.indexAbove(current).isValid()
+
+
+class EntityTreeView(TreeSearchFocusMixin, MultitreeSelection, CopyPasteTreeView):
     """Tree view for entity classes and entities."""
 
     selection_export_requested = Signal()
@@ -118,6 +315,9 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
             self._header.showSection(1)
         else:
             self._header.hideSection(1)
+        # The tree header only repeats the "name"/"database" labels; hide it while a single column
+        # is visible so the regex filter row sits directly above the tree content.
+        self.setHeaderHidden(not visible)
 
     def _add_middle_actions(self):
         self._add_entity_classes_action = self._menu.addAction(
@@ -331,7 +531,7 @@ class EntityTreeView(MultitreeSelection, CopyPasteTreeView):
         self.select_superclass_dialog_requested.emit(self._context_item)
 
 
-class ItemTreeView(CopyPasteTreeView):
+class ItemTreeView(TreeSearchFocusMixin, CopyPasteTreeView):
     """Base class for all non-entity tree views."""
 
     def __init__(self, parent: QWidget | None):

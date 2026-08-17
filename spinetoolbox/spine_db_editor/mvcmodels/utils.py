@@ -12,10 +12,12 @@
 
 """General helper functions and classes for DB editor's models."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import csv
+from dataclasses import dataclass
 from io import StringIO
 from itertools import takewhile
+import re
 from typing import TYPE_CHECKING, Optional, TypeAlias
 from PySide6.QtCore import QModelIndex
 from spinedb_api import DatabaseMapping, SpineDBAPIError
@@ -26,6 +28,35 @@ if TYPE_CHECKING:
     from spinetoolbox.spine_db_editor.mvcmodels.compound_models import CompoundStackedModel
 
 FilterIds: TypeAlias = dict[tuple[DatabaseMapping, TempId], set[TempId]]
+
+
+def make_search_matcher(pattern: str) -> Callable[[str], bool]:
+    """Builds a predicate for a regex search pattern shared by the stacked and tree filters.
+
+    Uses a case-insensitive regex; on an invalid pattern falls back to a case-insensitive substring
+    match so rows/nodes do not vanish erratically while a pattern is being typed.
+
+    Args:
+        pattern: raw pattern text
+
+    Returns:
+        a predicate that returns whether a string matches the pattern
+    """
+    try:
+        regex = re.compile(pattern, re.IGNORECASE)
+    except re.error:
+        needle = pattern.casefold()
+        return lambda text: needle in text.casefold()
+    return lambda text: regex.search(text) is not None
+
+
+@dataclass
+class Matcher:
+    """A regex search filter: its raw pattern text and the predicate built from it."""
+
+    pattern: str
+    matcher: Callable[[str], bool]
+
 
 PARAMETER_DEFINITION_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",

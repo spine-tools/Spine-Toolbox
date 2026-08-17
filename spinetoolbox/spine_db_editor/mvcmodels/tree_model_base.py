@@ -16,10 +16,11 @@ from PySide6.QtCore import QModelIndex, QObject, Qt
 from spinedb_api import DatabaseMapping
 from spinetoolbox.mvcmodels.minimal_tree_model import MinimalTreeModel
 from ...spine_db_manager import SpineDBManager
+from .level_filter import LevelFilterMixin
 from .tree_item_utility import StandardTreeItem
 
 
-class TreeModelBase(MinimalTreeModel):
+class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
     """A base model to display items in a tree view."""
 
     def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
@@ -28,12 +29,45 @@ class TreeModelBase(MinimalTreeModel):
         self.db_maps = db_maps
         self.destroyed.connect(lambda _: self._invisible_root_item.tear_down_recursively())
 
-    def columnCount(self, parent=QModelIndex()):
-        """Returns the number of columns under the given parent. Always 2.
+    def filter_text(self, item) -> str:
+        """Returns the item's display name to match against its level filter (rendered value for list values)."""
+        return str(item.data(0, Qt.ItemDataRole.DisplayRole))
 
-        Returns:
-            int: column count
+    def item_is_visible(self, item) -> bool:
+        """Returns whether a tree item passes the active level filters.
+
+        The phantom add-row is always visible. An item on a filtered level must match its own regex. When a
+        lower level has an active filter, a parent is kept only if a LOADED descendant matches, or -
+        optimistically - if it can still fetch more (no fetch is forced); it is hidden only once it is fully
+        loaded and nothing matches. Items on unfiltered levels (e.g. the db root) always pass.
         """
+        if item.item_type not in self.LEVEL_ITEM_TYPES or item.is_empty_row():
+            return True
+        if not self.item_passes_own_filter(item):
+            return False
+        lower_types = self.LEVEL_ITEM_TYPES[self.LEVEL_ITEM_TYPES.index(item.item_type) + 1 :]
+        if any(self.level_filter_active(lower) for lower in lower_types):
+            if any(self.item_is_visible(child) for child in item.non_empty_children):
+                return True
+            return item.can_fetch_more()
+        return True
+
+    def _apply_level_filters(self) -> None:
+        """Refreshes the whole tree so the current level filters take effect.
+
+        These trees keep no child-position map, so a single ``layoutAboutToBeChanged``/``layoutChanged`` pair
+        is enough for the view to re-query the visible rows.
+        """
+        self.layoutAboutToBeChanged.emit()
+        self._bump_filter_generation()
+        self.layoutChanged.emit()
+
+    def _level_filter_root(self):
+        """See base class. The standard trees walk from the invisible root down through the db items."""
+        return self._invisible_root_item
+
+    def columnCount(self, parent=QModelIndex()) -> int:
+        """Always 2."""
         return 2
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
@@ -43,6 +77,7 @@ class TreeModelBase(MinimalTreeModel):
 
     def build_tree(self):
         """Builds tree."""
+        self.reset_level_filter_state()
         self.beginResetModel()
         self._invisible_root_item.tear_down_recursively()
         self._invisible_root_item = StandardTreeItem(self)

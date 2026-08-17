@@ -1011,6 +1011,195 @@ class TestCompoundParameterValueModel(TestBase):
         assert_table_model_data(model, expected, self, Qt.ItemDataRole.BackgroundRole)
         model.tear_down()
 
+    def _widget_value_model(self):
+        """Builds a compound value model with a standard Widget dataset and returns it fetched."""
+        with self._db_map:
+            self._db_map.add_entity_class(name="Widget")
+            self._db_map.add_entity(entity_class_name="Widget", name="gadget")
+            self._db_map.add_entity(entity_class_name="Widget", name="object")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="number")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="renumber")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="string")
+            for byname, parameter_name, value in (
+                (("gadget",), "number", 2.3),
+                (("gadget",), "renumber", 7.7),
+                (("gadget",), "string", "hello"),
+                (("object",), "number", 4.4),
+                (("object",), "string", "world"),
+            ):
+                self._db_map.add_parameter_value(
+                    entity_class_name="Widget",
+                    entity_byname=byname,
+                    parameter_definition_name=parameter_name,
+                    alternative_name="Base",
+                    parsed_value=value,
+                )
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        fetch_model(model)
+        return model
+
+    def test_column_filter_basic(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("parameter_definition_name", "num")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+            [None, "Widget", "gadget", "renumber", "Base", "7.7", self.db_codename],
+            [None, "Widget", "object", "number", "Base", "4.4", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_regex_anchored(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("parameter_definition_name", "^num")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+            [None, "Widget", "object", "number", "Base", "4.4", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_case_insensitive(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("parameter_definition_name", "STRING")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "string", "Base", "hello", self.db_codename],
+            [None, "Widget", "object", "string", "Base", "world", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_invalid_regex_fallback(self):
+        with self._db_map:
+            self._db_map.add_entity_class(name="Widget")
+            self._db_map.add_entity(entity_class_name="Widget", name="gadget")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="f(x)")
+            self._db_map.add_parameter_definition(entity_class_name="Widget", name="plain")
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="f(x)",
+                alternative_name="Base",
+                parsed_value=1.0,
+            )
+            self._db_map.add_parameter_value(
+                entity_class_name="Widget",
+                entity_byname=("gadget",),
+                parameter_definition_name="plain",
+                alternative_name="Base",
+                parsed_value=2.0,
+            )
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        fetch_model(model)
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("parameter_definition_name", "(")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "f(x)", "Base", "1.0", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_matches_rendered_value(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("value", "2.3")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_reflects_value_update(self):
+        # Guards the per-row value display cache used for value-column filtering:
+        # after a value is edited (dataChanged / items_updated), a subsequent
+        # filter must use the new value, not a stale cached render.
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("value", "2.3")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        # Change gadget/number from 2.3 to 5.5; this populates and must invalidate the cache.
+        self.assertTrue(model.batch_set_data([model.index(0, 5)], ["5.5"]))
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.clear_column_filters()
+            waiter.wait()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("value", "5.5")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "5.5", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_ands_with_auto_filter(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_auto_filter("parameter_definition_name", {"number"})
+            model.set_column_filter("entity_byname", "gad")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_column_filter_multiple_columns_and(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("entity_byname", "gad")
+            model.set_column_filter("parameter_definition_name", "str")
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "string", "Base", "hello", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        model.tear_down()
+
+    def test_clear_column_filters(self):
+        model = self._widget_value_model()
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.set_column_filter("entity_byname", "gad")
+            model.set_column_filter("parameter_definition_name", "str")
+            waiter.wait()
+        assert_table_model_data(
+            model,
+            [[None, "Widget", "gadget", "string", "Base", "hello", self.db_codename]],
+            self,
+        )
+        with signal_waiter(model.layoutChanged, timeout=3.0) as waiter:
+            model.clear_column_filters()
+            waiter.wait()
+        expected = [
+            [None, "Widget", "gadget", "number", "Base", "2.3", self.db_codename],
+            [None, "Widget", "gadget", "renumber", "Base", "7.7", self.db_codename],
+            [None, "Widget", "gadget", "string", "Base", "hello", self.db_codename],
+            [None, "Widget", "object", "number", "Base", "4.4", self.db_codename],
+            [None, "Widget", "object", "string", "Base", "world", self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
+        self.assertEqual(model.filtered_columns, [])
+        model.tear_down()
+
+    def test_set_column_filter_noop_suppressed(self):
+        model = self._widget_value_model()
+        with mock.patch.object(model, "column_filter_changed") as mock_signal:
+            model.set_column_filter("parameter_definition_name", "num")
+            model.set_column_filter("parameter_definition_name", "num")
+            mock_signal.emit.assert_called_once_with(model)
+        model.tear_down()
+
 
 class TestCompoundEntityAlternativeModel:
     def test_horizontal_header(self, db_mngr, db_map, parent_object):

@@ -17,6 +17,13 @@ The **Entity tree** presents the structure of entity classes and entities in all
 .. image:: img/entity_tree.png
    :align: center
 
+Above the **Entity tree** there is a row of regular-expression search fields, one per level
+(**class** and **entity**). Type a pattern to show only the entity classes, or entities, whose name
+matches. A pattern in the **entity** field also reveals matching entities across *all* classes without
+expanding them first, and hides classes that contain no match; clearing the field restores the tree.
+This search row is a reusable component and appears above **Alternative**, **Scenario tree** and
+**Parameter value list** as well.
+
 - To view all entities of a class, expand the corresponding entity class item.
 - To view all multidimensional entities where a specific entity is an member, expand that entity.
 
@@ -271,6 +278,21 @@ To filter a **Table view** according to a selection of items in the table itself
 to show the context menu, and then select **Filter by** or **Filter excluding**. To remove these filters, select
 **Remove filters** from the header menus of the filtered columns.
 
+Searching Table Views with Regular Expressions
+**********************************************
+
+Each **Table view** table has a search row directly below the header, with one field per column.
+Type a `regular expression <https://docs.python.org/3/library/re.html>`_ into a column's field to show
+only the rows whose value in that column matches. Matching is case-insensitive and updates as you type;
+an incomplete or invalid pattern falls back to a plain substring match. The search fields combine with
+each other and with the column filters described above, so the table can be narrowed from several columns
+at once.
+
+.. tip:: A search field with a pattern in it is highlighted. Use the **Up** and **Down** arrow keys to move
+   between the search row and the table rows, and **Left**/**Right** to move between the search fields (once
+   you start typing, **Left**/**Right** move within the text instead). Pressing a table's focus shortcut
+   again (for example **Alt+3** for *Parameter value*) jumps into its search row.
+
 .. tip:: You can rearrange columns in *Table Views* by dragging the headers with your mouse.
    The ordering will be remembered the next time you open Spine DB editor.
 
@@ -351,6 +373,8 @@ You can find alternatives from all databases under **Alternative**:
 .. image:: img/alternative_tree.png
    :align: center
 
+A regular-expression search field above **Alternative** filters the list to alternatives whose name matches.
+
 To view the alternatives from each database,
 expand the root item for that database.
 
@@ -361,6 +385,9 @@ You can find scenarios from all databases under **Scenario tree**:
 
 .. image:: img/scenario_tree.png
    :align: center
+
+Two regular-expression search fields above **Scenario tree** (**scenario** and **alternative**) filter the
+scenarios and, within a scenario, its alternatives by name.
 
 To view the scenarios from each database,
 expand the root item for that database.
@@ -375,7 +402,10 @@ You can find parameter value lists from all databases under **Parameter value li
 .. image:: img/parameter_value_list.png
    :align: center
 
-To view the parameter value lists from each database, 
+Two regular-expression search fields above **Parameter value list** (**list name** and **value name**)
+filter the value lists and their values by name.
+
+To view the parameter value lists from each database,
 expand the root item for that database.
 To view the values for each list, expand the corresponding list item.
 

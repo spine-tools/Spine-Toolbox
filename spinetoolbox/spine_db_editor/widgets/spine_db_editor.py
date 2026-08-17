@@ -49,6 +49,7 @@ from ...helpers import (
 from ...spine_db_manager import SpineDBManager
 from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
+from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
 from ..selection_for_filtering import (
@@ -247,17 +248,42 @@ class SpineDBEditorBase(QMainWindow):
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
-    @Slot(bool)
-    def open_db_file(self, _=False):
+    def _open_sqlite_url(self) -> str | None:
+        """Shows the open-file dialog and returns the chosen SQLite URL, or None if cancelled."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
             self.qsettings, "openSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
         )
         self.qsettings.endGroup()
         if not file_path:
+            return None
+        return "sqlite:///" + file_path
+
+    @Slot(bool)
+    def open_db_file(self, _=False):
+        url = self._open_sqlite_url()
+        if url is not None:
+            self.load_db_urls([url])
+
+    @Slot(bool)
+    def open_db_file_in_new_tab(self, _=False) -> None:
+        url = self._open_sqlite_url()
+        if url is None:
             return
-        url = "sqlite:///" + file_path
-        self.load_db_urls([url])
+        multi_db_editor = self._multi_db_editor()
+        if self.db_maps and multi_db_editor is not None:
+            multi_db_editor.open_url_in_new_tab(url)
+        else:
+            self.load_db_urls([url])
+
+    def _multi_db_editor(self) -> "MultiTabWindow | None":
+        """Returns the tabbed window hosting this editor as a tab, or None if it is not embedded in one."""
+        parent = self.parentWidget()
+        while parent is not None:
+            if isinstance(parent, MultiTabWindow):
+                return parent
+            parent = parent.parentWidget()
+        return None
 
     @Slot(bool)
     def add_db_file(self, _=False):
@@ -323,6 +349,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionView_history.triggered.connect(self._browse_commits)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
+        self.ui.actionOpen_in_new_tab.triggered.connect(self.open_db_file_in_new_tab)
         self.ui.actionAdd_db_file.triggered.connect(self.add_db_file)
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
@@ -966,12 +993,19 @@ class SpineDBEditorBase(QMainWindow):
 
     @Slot(QWidget)
     def _focus_widget(self, widget: QWidget) -> None:
-        """Focus a specific widget and make its dock visible if needed."""
+        """Focus a specific widget and make its dock visible if needed.
+
+        Views with a per-column search row handle focus themselves (so a repeated shortcut toggles
+        into the search row and a previously focused search field is restored).
+        """
         for dock in self.findChildren(QDockWidget):
             if widget in dock.findChildren(type(widget).__base__):
                 dock.raise_()
-                dock.setFocus()
-                widget.setFocus()
+                if hasattr(widget, "activate_search_focus"):
+                    widget.activate_search_focus()
+                else:
+                    dock.setFocus()
+                    widget.setFocus()
                 break
 
 

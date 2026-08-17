@@ -24,6 +24,8 @@ from .utils import two_column_as_csv
 class AlternativeModel(TreeModelBase):
     """A model to display alternatives in a tree view."""
 
+    LEVEL_ITEM_TYPES = ("alternative",)
+
     def _make_db_item(self, db_map):
         return DBItem(self, db_map, self.db_mngr.name_registry)
 

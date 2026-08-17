@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.0
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -39,6 +39,7 @@ from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityA
     PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
 from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, ResizeSignallingWidget, TimeLineWidget)
+from spinetoolbox.spine_db_editor.widgets.tree_filter_bar import TreeLevelFilterBar
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -150,6 +151,9 @@ class Ui_MainWindow(object):
         icon16 = QIcon()
         icon16.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionOpen_db_file.setIcon(icon16)
+        self.actionOpen_in_new_tab = QAction(MainWindow)
+        self.actionOpen_in_new_tab.setObjectName(u"actionOpen_in_new_tab")
+        self.actionOpen_in_new_tab.setIcon(icon16)
         self.actionAdd_db_file = QAction(MainWindow)
         self.actionAdd_db_file.setObjectName(u"actionAdd_db_file")
         self.actionAdd_db_file.setIcon(icon16)
@@ -207,6 +211,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_18.setSpacing(0)
         self.verticalLayout_18.setObjectName(u"verticalLayout_18")
         self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
+        self.alternative_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents_15)
+        self.alternative_tree_filter_bar.setObjectName(u"alternative_tree_filter_bar")
+
+        self.verticalLayout_18.addWidget(self.alternative_tree_filter_bar)
+
         self.alternative_tree_view = AlternativeTreeView(self.dockWidgetContents_15)
         self.alternative_tree_view.setObjectName(u"alternative_tree_view")
         self.alternative_tree_view.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
@@ -227,6 +236,11 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.value_list_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents)
+        self.value_list_tree_filter_bar.setObjectName(u"value_list_tree_filter_bar")
+
+        self.verticalLayout.addWidget(self.value_list_tree_filter_bar)
+
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
         self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
@@ -322,6 +336,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.entity_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents_6)
+        self.entity_tree_filter_bar.setObjectName(u"entity_tree_filter_bar")
+
+        self.verticalLayout_4.addWidget(self.entity_tree_filter_bar)
+
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
         sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -483,6 +502,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_12.setSpacing(0)
         self.verticalLayout_12.setObjectName(u"verticalLayout_12")
         self.verticalLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.scenario_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents_9)
+        self.scenario_tree_filter_bar.setObjectName(u"scenario_tree_filter_bar")
+
+        self.verticalLayout_12.addWidget(self.scenario_tree_filter_bar)
+
         self.scenario_tree_view = ScenarioTreeView(self.dockWidgetContents_9)
         self.scenario_tree_view.setObjectName(u"scenario_tree_view")
         self.scenario_tree_view.setAcceptDrops(True)
@@ -625,6 +649,7 @@ class Ui_MainWindow(object):
         self.menuSession.addAction(self.actionClose)
         self.menuFile_2.addAction(self.actionNew_db_file)
         self.menuFile_2.addAction(self.actionOpen_db_file)
+        self.menuFile_2.addAction(self.actionOpen_in_new_tab)
         self.menuFile_2.addAction(self.actionOpen_recent)
         self.menuFile_2.addAction(self.actionAdd_db_file)
         self.menuFile_2.addSeparator()
@@ -727,9 +752,13 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionNew_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Create new SQLite database file</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.actionOpen_db_file.setText(QCoreApplication.translate("MainWindow", u"&Open...", None))
+        self.actionOpen_db_file.setText(QCoreApplication.translate("MainWindow", u"Open in &current tab...", None))
 #if QT_CONFIG(tooltip)
-        self.actionOpen_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open SQLite database file</p></body></html>", None))
+        self.actionOpen_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open SQLite database file in the current tab</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionOpen_in_new_tab.setText(QCoreApplication.translate("MainWindow", u"Open in new &tab...", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_in_new_tab.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open SQLite database file in a new tab</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.actionAdd_db_file.setText(QCoreApplication.translate("MainWindow", u"&Add...", None))
 #if QT_CONFIG(tooltip)

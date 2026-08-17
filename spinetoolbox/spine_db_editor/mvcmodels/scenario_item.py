@@ -129,8 +129,10 @@ class ScenarioAlternativeItem(GrayIfLastMixin, EditableMixin, LeafItem):
 
     @property
     def alternative_id(self):
+        # raw_row() (not child_number()) because alternative_id_list is the unfiltered domain order; a
+        # scenario_alternative filter that hides siblings must not shift this lookup.
         try:
-            return self.parent_item.alternative_id_list[self.child_number()]
+            return self.parent_item.alternative_id_list[self.raw_row()]
         except IndexError:
             return None
 

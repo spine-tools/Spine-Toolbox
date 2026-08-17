@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 from collections.abc import Iterable, Iterator
+import contextlib
 import math
 from typing import TYPE_CHECKING, ClassVar
 from PySide6.QtCore import QModelIndex, Qt, Slot
@@ -41,6 +42,7 @@ from .utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
+    Matcher,
     field_index,
     make_entity_on_the_fly,
 )
@@ -94,6 +96,8 @@ class SingleModelBase(HalfSortedTableModel):
         self._mapped_table = self.db_map.mapped_table(parent.item_type)
         self.entity_class_id = entity_class_id
         self._auto_filter: dict[str, set] = {}
+        self._column_filters: dict[str, Matcher] = {}
+        self._column_filter_columns: dict[str, int] = {}  # field -> logical column, cached lazily
         self.committed = committed
 
     def __lt__(self, other):
@@ -178,13 +182,71 @@ class SingleModelBase(HalfSortedTableModel):
     def set_auto_filter(self, auto_filter: dict[str, set | None]) -> None:
         self._auto_filter = auto_filter
 
+    def set_column_filters(self, column_filters: dict[str, Matcher]) -> None:
+        """Shares the compound model's per-column matchers with this single model (owned by the compound)."""
+        self._column_filters = column_filters
+
+    def _value_column_display(self, row: int) -> str | None:
+        """Returns the value column's DisplayRole string for the given row.
+
+        Only meaningful for models that have a value column (see ParameterMixin);
+        the base implementation is never reached because such models have no
+        ``value_field``.
+        """
+        raise NotImplementedError()
+
+    def _column_filter_scan_context(self):
+        """Context manager wrapping a full column-filter scan.
+
+        No lock is needed for the base model; ParameterMixin overrides this to
+        hold ``db_mngr.get_lock`` once for the whole scan (see accepted_rows).
+        """
+        return contextlib.nullcontext()
+
+    def _row_accepts_column_filters(self, row: int) -> bool:
+        """Returns whether the row's rendered display strings pass all column filters.
+
+        The value column (if filtered) is evaluated last, so that cheaper string columns get the chance to
+        reject the row before the expensive value cell is rendered.
+        """
+        value_field = getattr(self, "value_field", None)
+        value_matcher = None
+        for field, matcher in self._column_filters.items():
+            if field == value_field:
+                value_matcher = matcher
+                continue
+            column = self._column_filter_columns.get(field)
+            if column is None:
+                column = self._column_filter_columns[field] = field_index(field, self.field_map)
+            display = self.index(row, column).data(Qt.ItemDataRole.DisplayRole)
+            if not matcher.matcher("" if display is None else str(display)):
+                return False
+        if value_matcher is not None:
+            display = self._value_column_display(row)
+            if not value_matcher.matcher("" if display is None else str(display)):
+                return False
+        return True
+
     def accepted_rows(self) -> Iterator[int]:
         """Yields accepted rows, for convenience."""
         mapped_table = self._mapped_table
-        for row in range(self.rowCount()):
-            item = mapped_table[self._main_data[row]]
-            if self.filter_accepts_item(item):
-                yield row
+        if not self._column_filters:
+            for row in range(self.rowCount()):
+                item = mapped_table[self._main_data[row]]
+                if self.filter_accepts_item(item):
+                    yield row
+            return
+        # Acquire the db manager's lock once for the whole scan (instead of once
+        # per value cell), collect the accepted rows, then release before yielding
+        # so the lock is never held across the caller's per-row processing.
+        with self._column_filter_scan_context():
+            accepted = [
+                row
+                for row in range(self.rowCount())
+                if self.filter_accepts_item(mapped_table[self._main_data[row]])
+                and self._row_accepts_column_filters(row)
+            ]
+        yield from accepted
 
     def _get_ref(self, db_item: PublicItem, field: str) -> PublicItem | None:
         """Returns the item referred by the given field."""
@@ -323,6 +385,11 @@ class ParameterMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._ids_pending_type_validation = set()
+        # Cache of rendered value-column DisplayRole strings, keyed by the stable
+        # item id, used only for per-column value filtering. Keying by id (not row)
+        # keeps it valid across row reordering.
+        self._value_display_cache: dict[TempId, str | None] = {}
+        self.db_mngr.items_updated.connect(self._invalidate_value_display_cache)
         self.destroyed.connect(self._stop_waiting_validation)
 
     @property
@@ -340,8 +407,47 @@ class ParameterMixin:
             "parameter_group": ("parameter_group_id", "parameter_group"),
         }
 
+    @Slot(str, object)
+    def _invalidate_value_display_cache(self, item_type: str, db_map_data: dict) -> None:
+        """Drops cached value display strings when db items change.
+
+        Clears the whole cache for the affected db_map on any update. Value
+        display can depend not only on the value item itself but also on
+        referenced list values / value list names, so clearing wholesale on any
+        change guarantees a changed value is never served stale. During filter
+        typing no db updates occur, so the cache still spares the repeated
+        re-rendering across keystrokes.
+        """
+        if self.db_map in db_map_data:
+            self._value_display_cache.clear()
+
+    def _column_filter_scan_context(self):
+        """Holds the db manager's lock once for a whole column-filter scan.
+
+        The value column renders through ``db_mngr.get_value`` which expects the
+        lock to be held; acquiring it once per scan avoids re-acquiring the
+        (reentrant) RLock for every row.
+        """
+        return self.db_mngr.get_lock(self.db_map)
+
+    def _value_column_display(self, row: int) -> str | None:
+        """Returns the value column's DisplayRole string, cached per item id.
+
+        Must be called with ``db_mngr.get_lock`` held (see accepted_rows). This
+        yields the same string as ``index(row, VALUE_COLUMN).data(DisplayRole)``.
+        """
+        id_ = self._main_data[row]
+        try:
+            return self._value_display_cache[id_]
+        except KeyError:
+            item = self._mapped_table[id_]
+            display = self.db_mngr.get_value(self.db_map, item, Qt.ItemDataRole.DisplayRole)
+            self._value_display_cache[id_] = display
+            return display
+
     def reset_model(self, main_data: list[TempId] | None = None) -> None:
         """Resets the model."""
+        self._value_display_cache.clear()
         super().reset_model(main_data)
         if self._ids_pending_type_validation:
             self.db_mngr.parameter_type_validator.validated.disconnect(self._parameter_type_validated)

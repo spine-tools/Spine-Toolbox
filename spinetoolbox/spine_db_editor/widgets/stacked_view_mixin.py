@@ -195,11 +195,24 @@ class StackedViewMixin:
         model.db_map = db_map
 
     def clear_all_filters(self):
-        for model in self._all_stacked_models:
+        for model, view in self._all_stacked_models.items():
             model.clear_auto_filter()
+            model.clear_column_filters()
+            if hasattr(view, "clear_search_row"):
+                view.clear_search_row()
         trees = [self.ui.treeView_entity, self.ui.scenario_tree_view, self.ui.alternative_tree_view]
         for tree in trees:
             tree.selectionModel().clearSelection()
+        # Clear the per-level regex filters of every tree and its filter bar.
+        model_bar_pairs = (
+            (self.entity_tree_model, self.ui.entity_tree_filter_bar),
+            (self.alternative_model, self.ui.alternative_tree_filter_bar),
+            (self.scenario_model, self.ui.scenario_tree_filter_bar),
+            (self.parameter_value_list_model, self.ui.value_list_tree_filter_bar),
+        )
+        for model, filter_bar in model_bar_pairs:
+            model.clear_level_filters()
+            filter_bar.clear_all()
 
     @Slot(object)
     def _set_entity_selection_filter_for_stacked_tables(self, entity_selection: EntitySelection) -> None:
