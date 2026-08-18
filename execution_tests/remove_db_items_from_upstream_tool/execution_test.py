@@ -25,6 +25,7 @@ class TestRemovingDBItemsFromUpstreamTool:
                 parsed_value=23.0,
             )
             db_map.commit_session("Add test data.")
+        db_map.close()
 
     def test_no_orphan_records_are_left_in_the_database(self):
         self._set_up()

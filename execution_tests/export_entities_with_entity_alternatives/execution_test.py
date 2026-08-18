@@ -99,6 +99,7 @@ class ExportEntitiesWithEntityAlternatives(unittest.TestCase):
                 )
             )
             db_map.commit_session("Add test data.")
+        db_map.close()
 
     def _assert_item_added(self, result):
         self.assertIsNone(result[1])

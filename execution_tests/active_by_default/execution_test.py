@@ -30,6 +30,7 @@ class ActiveByDefault(unittest.TestCase):
             self._check_addition(db_map.add_scenario_item(name="base_scenario"))
             self._check_addition(db_map.add_scenario_alternative_item(scenario_name="base_scenario", alternative_name="Base", rank=0))
             db_map.commit_session("Add test data.")
+        db_map.close()
 
     def test_execution(self):
         this_file = Path(__file__)
