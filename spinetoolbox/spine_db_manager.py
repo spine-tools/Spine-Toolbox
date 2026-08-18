@@ -81,13 +81,6 @@ from .widgets.options_dialog import OptionsDialog
 ValidatedValueCache = dict[str, dict[int, dict[int, bool]]]
 
 
-@busy_effect
-def do_create_new_spine_database(url: str) -> None:
-    """Creates a new spine database at the given url."""
-    engine = create_new_spine_database(url)
-    engine.dispose()
-
-
 class SpineDBManager(QObject):
     """Class to manage DBs within a project."""
 
@@ -341,7 +334,8 @@ class SpineDBManager(QObject):
             if clicked_button is not overwrite_button:
                 return
         try:
-            do_create_new_spine_database(url)
+            engine = create_new_spine_database(url)
+            engine.dispose()
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
             db_map = self.db_map(url)
             self.refresh_session(db_map)
