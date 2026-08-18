@@ -19,6 +19,7 @@ from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
 import functools
+import gc
 import glob
 from html.parser import HTMLParser
 import itertools
@@ -259,6 +260,7 @@ def rename_dir(old_dir: str, new_dir: str, toolbox: ToolboxUI, box_title: str) -
     Returns:
         True if operation was successful, False otherwise
     """
+    gc.collect()
     if os.path.exists(new_dir):
         msg = f"Directory <b>{new_dir}</b> already exists.<br/><br/>Would you like to overwrite its contents?"
         box = QMessageBox(
