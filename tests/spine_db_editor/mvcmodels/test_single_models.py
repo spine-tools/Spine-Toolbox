@@ -12,6 +12,7 @@
 
 """Unit tests for the ``single_models`` module."""
 
+from PySide6.QtCore import Qt
 import pytest
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, HAS_METADATA_ROLE
 from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
@@ -28,6 +29,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.utils import (
     ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
     PARAMETER_VALUE_FIELD_MAP,
+    field_index,
 )
 
 ENTITY_PARAMETER_VALUE_HEADER = [
@@ -125,6 +127,45 @@ class TestSingleParameterValueModel:
         for column in range(model.columnCount()):
             assert model.index(0, column).data(HAS_METADATA_ROLE)
             assert not model.index(1, column).data(HAS_METADATA_ROLE)
+
+    def test_parameter_name_column_tooltip_shows_definition_description(
+        self, single_parameter_value_model, db_map, gadget
+    ):
+        with db_map:
+            my_parameter = db_map.add_parameter_definition(
+                entity_class_id=gadget["id"], name="my_parameter", description="The description of my parameter."
+            )
+            my_object = db_map.add_entity(class_id=gadget["id"], name="my_object")
+            parameter_value = db_map.add_parameter_value(
+                entity_class_id=gadget["id"],
+                entity_id=my_object["id"],
+                parameter_definition_id=my_parameter["id"],
+                alternative_name="Base",
+                parsed_value=2.3,
+            )
+        model = single_parameter_value_model
+        model.add_rows([parameter_value["id"]])
+        column = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
+        tooltip = model.index(0, column).data(Qt.ItemDataRole.ToolTipRole)
+        assert tooltip == "<qt>The description of my parameter.</qt>"
+
+    def test_parameter_name_column_tooltip_falls_back_to_name_without_description(
+        self, single_parameter_value_model, db_map, gadget
+    ):
+        with db_map:
+            my_parameter = db_map.add_parameter_definition(entity_class_id=gadget["id"], name="my_parameter")
+            my_object = db_map.add_entity(class_id=gadget["id"], name="my_object")
+            parameter_value = db_map.add_parameter_value(
+                entity_class_id=gadget["id"],
+                entity_id=my_object["id"],
+                parameter_definition_id=my_parameter["id"],
+                alternative_name="Base",
+                parsed_value=2.3,
+            )
+        model = single_parameter_value_model
+        model.add_rows([parameter_value["id"]])
+        column = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
+        assert model.index(0, column).data(Qt.ItemDataRole.ToolTipRole) == "my_parameter"
 
 
 @pytest.fixture
