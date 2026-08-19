@@ -397,7 +397,7 @@ class ParameterMixin:
         return {
             "entity_class_name": ("entity_class_id", "entity_class"),
             "entity_byname": ("entity_id", "entity"),
-            "parameter_name": (self.parameter_definition_id_key, "parameter_definition"),
+            "parameter_definition_name": (self.parameter_definition_id_key, "parameter_definition"),
             "value_list_name": ("value_list_id", "parameter_value_list"),
             "description": ("id", "parameter_definition"),
             "value": ("id", "parameter_value"),

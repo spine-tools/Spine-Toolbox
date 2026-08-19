@@ -20,6 +20,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- The parameter name column in parameter value tables now shows the parameter definition's
+  description as a tooltip on hover.
+
 ### Security
 
 ## [0.10.9]
