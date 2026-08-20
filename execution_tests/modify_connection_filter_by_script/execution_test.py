@@ -46,6 +46,7 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
             import_scenarios(db_map, (("scenario", True),))
             import_scenario_alternatives(db_map, (("scenario", "alternative"),))
             db_map.commit_session("Add test data.")
+        db_map.close()
 
     def test_execution(self):
         completed = subprocess.run(

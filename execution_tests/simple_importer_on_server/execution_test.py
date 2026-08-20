@@ -43,13 +43,15 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         if self._db_path.exists():
             self._db_path.unlink()
         self._db_url = "sqlite:///" + str(self._db_path)
-        create_new_spine_database(self._db_url)
+        engine = create_new_spine_database(self._db_url)
+        engine.dispose()
 
     def test_execution(self):
         # Check that DS1.sqlite is empty
         with DatabaseMapping(self._db_url) as db_map:
             entities = db_map.get_items("entity")
             self.assertEqual(0, len(entities))
+        db_map.close()
         completed = subprocess.run(
             (
                 sys.executable,
@@ -75,6 +77,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
                     self.assertEqual("Factory3", entity["name"])
                 else:
                     self.fail()
+        db_map.close()
 
 
 if __name__ == '__main__':
