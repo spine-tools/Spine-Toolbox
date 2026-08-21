@@ -55,7 +55,7 @@ Unavailable options are still visible but they are greyed out:
 - **Remove...** removes the selection.
 - **Duplicate entity** duplicates the whole entity.
 
-- **Export** creates a new Spine Database in an `.sqlite` file with all of the relevant data to the selection.
+- **Export** creates a new Spine Database in an ``.sqlite`` file with all of the relevant data to the selection.
 
 - **Fully expand** expands the selection and all its children.
 - **Fully collapse** collapses the selection and all its children.
@@ -204,7 +204,7 @@ The context menu has the following options:
   vertices when drawing the graph.
 
 - **Select graph parameters** is where different aspects of the graph can be mapped to for example parameter values.
-- **Select background image** can be used to set any `.svg` image as the background for the graph.
+- **Select background image** can be used to set any ``.svg`` image as the background for the graph.
 
 - **Save positions** Saves the positions of the selected items into the database. To clear the saved position select
   **Clear saved positions**.
@@ -212,7 +212,8 @@ The context menu has the following options:
 - **Save state...** saves the drawn graph. Selecting a specific state from **Load state...** will load that state
   into the **Graph view**. Saved states can be deleted from **Remove state**.
 
-- **Export as image...** can be used to export the image of the graph in either `.svg` or `.pdf` formats
+- **Export as image...** can be used to export the image of the graph in either ``.svg`` or ``.pdf`` formats.
+  Note, that for viewing the exported ``.svg``, you need to have `Font Awesome <https://fontawesome.com/>`_ fonts installed.
 - **Export as video...** can be used to export the video of the graph.
 
 - **Rebuild** to rebuild the whole graph.
