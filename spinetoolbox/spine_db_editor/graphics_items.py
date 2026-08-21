@@ -12,8 +12,9 @@
 
 """Classes for drawing graphics items on graph view's QGraphicsScene."""
 
+from collections.abc import Iterable
 from enum import Enum, auto
-from PySide6.QtCore import QByteArray, QLineF, QObject, QPointF, QRectF, Qt, Signal, Slot
+from PySide6.QtCore import QByteArray, QLineF, QObject, QPointF, QRect, QRectF, QSizeF, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QBrush, QColor, QGuiApplication, QPainterPath, QPalette, QPen
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtSvgWidgets import QGraphicsSvgItem
@@ -1069,12 +1070,12 @@ class BgItem(QGraphicsRectItem):
         self.update()
         self._place_resizers()
 
-    def fit_rect(self, rect):
+    def fit_rect(self, rect: QRectF | QRect | Iterable[QPointF | QSizeF] | Iterable[float]) -> None:
         if not isinstance(rect, QRectF):
             rect = QRectF(*rect)
         self._do_resize(rect, True)
 
-    def scene_rect(self):
+    def scene_rect(self) -> QRectF:
         return self.mapToScene(self.rect()).boundingRect()
 
 

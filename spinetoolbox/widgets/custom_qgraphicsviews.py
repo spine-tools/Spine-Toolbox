@@ -310,12 +310,8 @@ class CustomQGraphicsView(QGraphicsView):
     def _zoom(self, factor):
         self.scale(factor, factor)
 
-    def _get_viewport_scene_rect(self):
-        """Returns the viewport rect mapped to the scene.
-
-        Returns:
-            QRectF
-        """
+    def _get_viewport_scene_rect(self) -> QRectF:
+        """Returns the viewport rect mapped to the scene."""
         rect = self.viewport().rect()
         top_left = self.mapToScene(rect.topLeft())
         bottom_right = self.mapToScene(rect.bottomRight())
