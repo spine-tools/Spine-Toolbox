@@ -16,7 +16,9 @@ import os
 from PySide6.QtCore import QDir, QModelIndex, QStandardPaths, Qt, Slot, QPoint, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QValidator
 from PySide6.QtWidgets import QAbstractItemView, QComboBox, QDialog, QFileSystemModel, QApplication
-from spinetoolbox.helpers import ProjectDirectoryIconProvider
+from spinetoolbox.helpers import ProjectDirectoryIconProvider, is_spine_toolbox_project_dir
+from spinetoolbox.config import LATEST_PROJECT_VERSION
+from spinetoolbox.load_project import load_project_dict
 from spinetoolbox.widgets.custom_menus import OpenProjectDialogComboBoxContextMenu
 from spinetoolbox.widgets.notification import Notification
 
@@ -322,6 +324,17 @@ class OpenProjectDialog(QDialog):
                 notification = Notification(self, "Not a valid Spine Toolbox project")
                 notification.show()
                 return
+            # Prevent opening incompatible projects version > LATEST_PROJECT_VERSION
+            project_dict = load_project_dict(self.selection())
+            version = project_dict.get("project", {}).get("version")
+            if version is not None and version > LATEST_PROJECT_VERSION:
+                notification = Notification(
+                    self,
+                    f"Cannot open project. Version {version} requires a newer Spine Toolbox "
+                    f"(supports up to version {LATEST_PROJECT_VERSION}).",
+                )
+                notification.show()
+                return
             # self.selection() now contains a valid Spine Toolbox project directory.
             # Add the parent directory of selected directory to qsettings
             self.update_recents(os.path.abspath(os.path.join(self.selection(), os.path.pardir)), self._qsettings)
@@ -418,6 +431,24 @@ class CustomQFileSystemModel(QFileSystemModel):
     def columnCount(self, parent=QModelIndex()):
         """Returns one."""
         return 1
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if role == Qt.ItemDataRole.ToolTipRole:
+            p = self.filePath(index)
+            if is_spine_toolbox_project_dir(p):
+                project_dict = load_project_dict(p)
+                version = project_dict.get("project", {}).get("version")
+                if version:
+                    if version == LATEST_PROJECT_VERSION:
+                        return f"Version {version} (current)"
+                    elif version < LATEST_PROJECT_VERSION:
+                        return f"Version {version} (upgrades to {LATEST_PROJECT_VERSION} when opened)"
+                    else:
+                        return (
+                            f"Version {version} (requires newer Spine "
+                            f"Toolbox, current support: {LATEST_PROJECT_VERSION})"
+                        )
+        return super().data(index, role)
 
 
 class DirValidator(QValidator):

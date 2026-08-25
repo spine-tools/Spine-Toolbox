@@ -17,8 +17,10 @@ import os
 from typing import Generic, TypeVar
 from PySide6.QtCore import QPersistentModelIndex, Slot
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QMenu, QWidget, QWidgetAction
+from PySide6.QtWidgets import QMenu, QWidget, QWidgetAction, QMessageBox
 from spinetoolbox.helpers import CustomPopupMenu
+from spinetoolbox.load_project import load_project_dict
+from spinetoolbox.config import LATEST_PROJECT_VERSION
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
@@ -124,10 +126,33 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             recents_list = recents.split("\n")
             for entry in recents_list:
                 name, filepath = entry.split("<>")
+                version = None
+                if os.path.isdir(filepath):
+                    project_dict = load_project_dict(filepath)
+                    version = project_dict.get("project", {}).get("version")
+                if version is None:
+                    tt = filepath
+                else:
+                    version = int(version)
+                    if version == LATEST_PROJECT_VERSION:
+                        tt = f"{filepath}\nProject version: {version} (current)"
+                    elif version < LATEST_PROJECT_VERSION:
+                        tt = (
+                            f"{filepath}\nProject version: {version} (upgrades "
+                            f"to {LATEST_PROJECT_VERSION} when opened)"
+                        )
+                    else:
+                        name = f"[Incompatible] " + name
+                        tt = (
+                            f"{filepath}\nProject version: {version} "
+                            f"(requires newer Spine Toolbox, current support: {LATEST_PROJECT_VERSION})"
+                        )
                 self.add_action(
                     name,
-                    lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath),
-                    tooltip=filepath,
+                    lambda checked=False, filepath=filepath, version=version: self.call_open_project(
+                        checked, filepath, version
+                    ),
+                    tooltip=tt,
                 )
 
     @Slot(bool)
@@ -140,14 +165,23 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
 
         self._parent.clear_recent_projects()
 
-    @Slot(bool, str)
-    def call_open_project(self, checked, p):
+    @Slot(bool, str, object)
+    def call_open_project(self, checked, p, version):
         """Slot for catching the user selected action from the recent projects menu.
 
         Args:
             checked (bool): Argument sent by triggered signal
             p (str): Full path to a project file
+            version (int | None): Project version
         """
+        if version > LATEST_PROJECT_VERSION:
+            QMessageBox.warning(
+                self,
+                "Incompatible project",
+                f"Project '{p}' is version {version} and requires a newer Spine Toolbox.\n"
+                f"This version of Spine Toolbox supports projects up to version {LATEST_PROJECT_VERSION}.",
+            )
+            return
         if not os.path.exists(p):
             # Project has been removed, remove it from recent projects list
             self._parent.remove_path_from_recent_projects(p)

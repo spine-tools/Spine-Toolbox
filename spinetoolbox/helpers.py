@@ -753,11 +753,14 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         if not info.isDir():
             return super().icon(info)
         p = info.filePath()
-        # logging.debug("In dir:{0}".format(p))
-        if os.path.exists(os.path.join(p, ".spinetoolbox")):
-            # logging.debug("found project dir:{0}".format(p))
+        if is_spine_toolbox_project_dir(p):
             return self.spine_icon
         return super().icon(info)
+
+
+def is_spine_toolbox_project_dir(p):
+    """Returns True when given path looks like it contains a valid Spine Toolbox project."""
+    return os.path.isfile(os.path.join(p, ".spinetoolbox", "project.json"))
 
 
 def basic_console_icon(language: str) -> QIcon:

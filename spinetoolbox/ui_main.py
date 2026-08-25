@@ -56,7 +56,13 @@ from spine_engine.project_item.project_item_specification_factory import Project
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_DB_API_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import (
+    DEFAULT_WORK_DIR,
+    ONLINE_DOCUMENTATION_URL,
+    SPINE_DB_API_DOCUMENTATION_URL,
+    SPINE_TOOLBOX_REPO_URL,
+    LATEST_PROJECT_VERSION
+)
 from .helpers import (
     ChildCyclingKeyPressFilter,
     ColoredIcon,
@@ -79,7 +85,7 @@ from .helpers import (
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
-from .load_project import ProjectLoadingFailed
+from .load_project import ProjectLoadingFailed, load_project_dict
 from .load_project_items import load_project_items
 from .load_specification import (
     SpecificationLoadingFailed,
@@ -590,8 +596,26 @@ class ToolboxUI(QMainWindow):
             # Now we just give up.
             return
         if not os.path.isdir(project_dir):
-            self.msg_error.emit(f"Cannot open previous project. Directory <b>{project_dir}</b> may have been moved.")
+            self.msg_error.emit(
+                f"Cannot open previously opened project. "
+                f"Directory <b>{project_dir}</b> may have been moved or deleted."
+            )
             self.remove_path_from_recent_projects(project_dir)
+            return
+        project_dict = load_project_dict(project_dir)
+        version = project_dict.get("project", {}).get("version")
+        if not version:
+            self.msg_error.emit(
+                f"Cannot open previously opened project <b>'{project_dir}'</b>. "
+                f"Project version information is missing."
+            )
+            return
+        if version > LATEST_PROJECT_VERSION:
+            self.msg_warning.emit(
+                f"Cannot open previously opened project <b>'{project_dir}'</b>. "
+                f"Project version {version} requires a newer Spine Toolbox "
+                f"(current support: {LATEST_PROJECT_VERSION})."
+            )
             return
         self.open_project(project_dir, clear_event_log=False)
 
@@ -753,7 +777,6 @@ class ToolboxUI(QMainWindow):
         if button == QMessageBox.StandardButton.Yes:
             return True
         return False
-
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
@@ -2084,7 +2107,8 @@ class ToolboxUI(QMainWindow):
         self._qsettings.sync()
 
     def update_recent_projects(self):
-        """Adds a new entry to QSettings variable that remembers twenty most recent project paths."""
+        """Adds a recent project entry to a QSettings variable if not already present.
+        The max amount of recent projects is 20."""
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
         entry = self.project().name + "<>" + self.project().project_dir
         if not recents:
