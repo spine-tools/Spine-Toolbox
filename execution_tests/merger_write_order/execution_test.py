@@ -46,5 +46,5 @@ class MergerWriteOrder(unittest.TestCase):
         db_map.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

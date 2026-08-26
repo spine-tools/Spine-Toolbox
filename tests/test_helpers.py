@@ -64,7 +64,7 @@ from spinetoolbox.helpers import (
     unique_name,
     update_recent_projects,
     remove_path_from_recent_projects,
-    clear_recent_projects
+    clear_recent_projects,
 )
 from tests.mock_helpers import TestCaseWithQApplication, q_object
 
@@ -720,12 +720,16 @@ class TestRecentProjects:
         update_recent_projects(qsettings_file, "ProjectA", "C:/Projects/A")
         recents = qsettings_file.value("appSettings/recentProjects")
         assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
-        with mock.patch("spinetoolbox.helpers.QMessageBox.exec", return_value=QMessageBox.StandardButton.No) as mock_exec1:
+        with mock.patch(
+            "spinetoolbox.helpers.QMessageBox.exec", return_value=QMessageBox.StandardButton.No
+        ) as mock_exec1:
             clear_recent_projects(parent_widget, qsettings_file)
             mock_exec1.assert_called()
             recents = qsettings_file.value("appSettings/recentProjects")
             assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
-        with mock.patch("spinetoolbox.helpers.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes) as mock_exec2:
+        with mock.patch(
+            "spinetoolbox.helpers.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes
+        ) as mock_exec2:
             clear_recent_projects(parent_widget, qsettings_file)
             mock_exec2.assert_called()
             assert qsettings_file.value("appSettings/recentProjects") is None
