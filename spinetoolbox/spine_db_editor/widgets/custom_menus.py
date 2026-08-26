@@ -23,10 +23,10 @@ from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from ...database_display_names import NameRegistry
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import CustomPopupMenu, DBMapPublicItems
+from ...helpers import DBMapPublicItems
 from ...mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from ...spine_db_manager import SpineDBManager
-from ...widgets.custom_menus import FilterMenuBase
+from ...widgets.custom_menus import FilterMenuBase, CustomPopupMenu
 from ..mvcmodels.compound_models import CompoundStackedModel
 from ..mvcmodels.lazy_filter_checkbox_list_model import LazyFilterCheckboxListModel
 from ..mvcmodels.utils import field_index

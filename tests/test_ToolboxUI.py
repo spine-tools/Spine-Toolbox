@@ -97,9 +97,10 @@ class TestToolboxUI(TestCaseWithQApplication):
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
             mock.patch("spinetoolbox.project.create_dir"),
             mock.patch("spinetoolbox.project_item.project_item.create_dir"),
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
+            mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp,
         ):
             self.toolbox.open_project(project_dir)
+            mock_urp.assert_called()
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
         self.assertEqual(self.toolbox.project().n_items, 4)
@@ -156,9 +157,10 @@ class TestToolboxUI(TestCaseWithQApplication):
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
             mock.patch("spinetoolbox.project.create_dir"),
             mock.patch("spinetoolbox.project_item.project_item.create_dir"),
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
+            mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp,
         ):
             self.toolbox.init_project(project_dir)
+            mock_urp.assert_called()
         self.assertIsNotNone(self.toolbox.project())
         self.assertEqual(self.toolbox.project().name, "Project Directory")
 
@@ -184,9 +186,10 @@ class TestToolboxUI(TestCaseWithQApplication):
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
             mock.patch("spinetoolbox.project.create_dir"),
             mock.patch("spinetoolbox.project_item.project_item.create_dir"),
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
+            mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp,
         ):
             self.toolbox.open_project(self._temp_dir.name)
+            mock_urp.assert_called()
         self.assertIsNotNone(self.toolbox.project())
         self.assertEqual(self.toolbox.project().get_item("DC").name, "DC")
 
@@ -208,7 +211,7 @@ class TestToolboxUI(TestCaseWithQApplication):
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
             mock.patch("spinetoolbox.project.create_dir"),
             mock.patch("spinetoolbox.project_item.project_item.create_dir"),
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
+            mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp,
             mock.patch.object(QMessageBox, "exec", return_value=QMessageBox.StandardButton.Cancel),
         ):
             # Selecting cancel on the project close confirmation
@@ -218,6 +221,7 @@ class TestToolboxUI(TestCaseWithQApplication):
                 warning_msg.assert_called_with(
                     f"Cancelled opening project {self._temp_dir.name}. Current project has unsaved changes."
                 )
+            mock_urp.assert_not_called()
         self.assertIsNotNone(self.toolbox.project())
         self.assertEqual(self.toolbox.project().get_item("DC1").name, "DC1")
         self.assertEqual(self.toolbox.project().get_item("DC2").name, "DC2")
@@ -533,9 +537,10 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertIsNone(self.toolbox.project())
         with (
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
-            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),
+            mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp,
         ):
             self.toolbox.open_project(project_dir)
+            mock_urp.assert_called()
         # Tool spec model must be empty at this point
         self.assertEqual(0, self.toolbox.specification_model.rowCount())
         tool_spec_path = os.path.abspath(
@@ -760,10 +765,11 @@ class TestToolboxUI(TestCaseWithQApplication):
         self.assertIn("appSettings/toolbarIconOrdering", saved_dict)
 
     def test_enable_execute_all_project_setting_is_respected(self):
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"), TemporaryDirectory() as temp_dir:
+        with mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp, TemporaryDirectory() as temp_dir:
             with mock.patch.object(self.toolbox, "_qsettings"):
                 self.toolbox.create_project(temp_dir)
             self.toolbox.close_project(ask_confirmation=False)
+            mock_urp.assert_called()
             project_json = pathlib.Path(temp_dir) / ".spinetoolbox" / "project.json"
             self.assertTrue(project_json.is_file())
             with open(project_json) as project_file:

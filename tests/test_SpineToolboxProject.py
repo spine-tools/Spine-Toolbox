@@ -410,8 +410,7 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
     def test_rename_project(self):
         new_name = "New Project Name"
         new_short_name = "new_project_name"
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"):
-            self.toolbox.project().set_name(new_name)
+        self.toolbox.project().set_name(new_name)
         self.assertEqual(self.toolbox.project().name, new_name)
         self.assertEqual(self.toolbox.project().short_name, new_short_name)
 
@@ -610,11 +609,12 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         project.save()
         self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
         with (
-            mock.patch.object(self.toolbox, "update_recent_projects"),
             mock.patch.object(self.toolbox, "project_item_properties_ui"),
             mock.patch.object(self.toolbox, "project_item_icon"),
         ):
-            self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+            with mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp:
+                self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+                mock_urp.assert_called()
         self.assertEqual(self.toolbox.project().settings.mode, "consumer")
 
     def test_load_when_storing_item_local_data(self):
@@ -629,11 +629,12 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
         self.assertTrue(self.toolbox.close_project(ask_confirmation=False))
         self.toolbox.item_factories = {"Tester": _MockItemFactoryForLocalDataTests()}
         with (
-            mock.patch.object(self.toolbox, "update_recent_projects"),
             mock.patch.object(self.toolbox, "project_item_properties_ui"),
             mock.patch.object(self.toolbox, "project_item_icon"),
         ):
-            self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+            with mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp:
+                self.assertTrue(self.toolbox.restore_project(self._temp_dir.name, ask_confirmation=False))
+                mock_urp.assert_called()
         item = self.toolbox.project().get_item("test item")
         self.assertEqual(item.kwargs, {"type": "Tester", "a": {"b": 1, "c": 2, "d": 3}})
 

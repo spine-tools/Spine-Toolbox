@@ -327,6 +327,10 @@ class OpenProjectDialog(QDialog):
             # Prevent opening incompatible projects version > LATEST_PROJECT_VERSION
             project_dict = load_project_dict(self.selection())
             version = project_dict.get("project", {}).get("version")
+            if not version:
+                notification = Notification(self, f"Project corrupted. Version info missing from project.json.")
+                notification.show()
+                return
             if version is not None and version > LATEST_PROJECT_VERSION:
                 notification = Notification(
                     self,
@@ -438,16 +442,17 @@ class CustomQFileSystemModel(QFileSystemModel):
             if is_spine_toolbox_project_dir(p):
                 project_dict = load_project_dict(p)
                 version = project_dict.get("project", {}).get("version")
-                if version:
-                    if version == LATEST_PROJECT_VERSION:
-                        return f"Version {version} (current)"
-                    elif version < LATEST_PROJECT_VERSION:
-                        return f"Version {version} (upgrades to {LATEST_PROJECT_VERSION} when opened)"
-                    else:
-                        return (
-                            f"Version {version} (requires newer Spine "
-                            f"Toolbox, current support: {LATEST_PROJECT_VERSION})"
-                        )
+                if not version:
+                    return f"Corrupted project. No version information found."
+                if version == LATEST_PROJECT_VERSION:
+                    return f"Version {version} (current)"
+                elif version < LATEST_PROJECT_VERSION:
+                    return f"Version {version} (upgrades to {LATEST_PROJECT_VERSION} when opened)"
+                else:
+                    return (
+                        f"Version {version} (requires newer Spine "
+                        f"Toolbox, current support: {LATEST_PROJECT_VERSION})"
+                    )
         return super().data(index, role)
 
 

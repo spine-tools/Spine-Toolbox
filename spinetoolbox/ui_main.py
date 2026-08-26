@@ -82,6 +82,8 @@ from .helpers import (
     solve_connection_file,
     supported_img_formats,
     unique_name,
+    update_recent_projects,
+    remove_path_from_recent_projects,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
@@ -600,7 +602,7 @@ class ToolboxUI(QMainWindow):
                 f"Cannot open previously opened project. "
                 f"Directory <b>{project_dir}</b> may have been moved or deleted."
             )
-            self.remove_path_from_recent_projects(project_dir)
+            remove_path_from_recent_projects(self._qsettings, project_dir)
             return
         project_dict = load_project_dict(project_dir)
         version = project_dict.get("project", {}).get("version")
@@ -675,7 +677,7 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.graphicsView.reset_zoom()
         # Update recentProjects
-        self.update_recent_projects()
+        update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(proj_dir, os.path.pardir)), self.qsettings())
         self.save_project()
@@ -755,14 +757,14 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit(str(error))
             success = False
         if not success:
-            self.remove_path_from_recent_projects(self._project.project_dir)
+            remove_path_from_recent_projects(self._qsettings, self._project.project_dir)
             return False
         self._enable_project_actions()
         self._plugin_manager.reload_plugins_with_local_data()
         self._project.settings_updated.connect(self._handle_project_settings_update)
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
-        self.update_recent_projects()
+        update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
 
@@ -2067,71 +2069,6 @@ class ToolboxUI(QMainWindow):
             self.save_project()
         return True
 
-    def remove_path_from_recent_projects(self, p):
-        """Removes entry that contains given path from the recent project files list in QSettings.
-
-        Args:
-            p (str): Full path to a project directory
-        """
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        if not recents:
-            return
-        recents = str(recents)
-        recents_list = recents.split("\n")
-        for entry in recents_list:
-            _, path = entry.split("<>")
-            if same_path(path, p):
-                recents_list.pop(recents_list.index(entry))
-                break
-        updated_recents = "\n".join(recents_list)
-        # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
-    def clear_recent_projects(self):
-        """Clears recent projects list in File->Open recent menu."""
-        msg = "Are you sure?"
-        title = "Clear recent projects?"
-        message_box = QMessageBox(
-            QMessageBox.Icon.Question,
-            title,
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            parent=self,
-        )
-        answer = message_box.exec()
-        if answer == QMessageBox.StandardButton.No:
-            return
-        self._qsettings.remove("appSettings/recentProjects")
-        self._qsettings.remove("appSettings/recentProjectStorages")
-        self._qsettings.sync()
-
-    def update_recent_projects(self):
-        """Adds a recent project entry to a QSettings variable if not already present.
-        The max amount of recent projects is 20."""
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + "<>" + self.project().project_dir
-        if not recents:
-            updated_recents = entry
-        else:
-            recents = str(recents)
-            recents_list = recents.split("\n")
-            normalized_recents = list(map(os.path.normcase, recents_list))
-            try:
-                index = normalized_recents.index(os.path.normcase(entry))
-            except ValueError:
-                # Add path only if it's not in the list already
-                recents_list.insert(0, entry)
-                if len(recents_list) > 20:
-                    recents_list.pop()
-            else:
-                # If entry was on the list, move it as the first item
-                recents_list.insert(0, recents_list.pop(index))
-            updated_recents = "\n".join(recents_list)
-        # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
     def closeEvent(self, event):
         """Method for handling application exit.
 
@@ -2150,7 +2087,7 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
-            self.update_recent_projects()
+            update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())

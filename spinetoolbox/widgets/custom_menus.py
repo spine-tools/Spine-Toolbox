@@ -12,17 +12,58 @@
 
 """Classes for custom context menus and pop-up menus."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Callable
 import os
 from typing import Generic, TypeVar
 from PySide6.QtCore import QPersistentModelIndex, Slot
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import QMenu, QWidget, QWidgetAction, QMessageBox
-from spinetoolbox.helpers import CustomPopupMenu
+from spinetoolbox.helpers import clear_recent_projects, remove_path_from_recent_projects
 from spinetoolbox.load_project import load_project_dict
 from spinetoolbox.config import LATEST_PROJECT_VERSION
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
+
+
+class CustomPopupMenu(QMenu):
+    """Popup menu master class for several popup menus."""
+
+    def __init__(self, parent: QWidget):
+        """
+        Args:
+            parent: Parent widget of this pop-up menu
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+
+    def add_action(
+        self,
+        text: str,
+        slot: Callable[[], None],
+        enabled: bool = True,
+        tooltip: str | None = None,
+        icon: QIcon | None = None,
+    ) -> QAction:
+        """Adds an action to the popup menu.
+
+        Args:
+            text: Text description of the action
+            slot: Method to connect to action's triggered signal
+            enabled: Is action enabled?
+            tooltip: Tool tip for the action
+            icon: Action icon
+
+        Returns:
+            The added action.
+        """
+        if icon is not None:
+            action = self.addAction(icon, text, slot)
+        else:
+            action = self.addAction(text, slot)
+        action.setEnabled(enabled)
+        if tooltip is not None:
+            action.setToolTip(tooltip)
+        return action
 
 
 class CustomContextMenu(QMenu):
@@ -156,37 +197,41 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                 )
 
     @Slot(bool)
-    def call_clear_recents(self, checked):
+    def call_clear_recents(self, _=True):
         """Slot for Clear recents menu item.
 
         Args:
-            checked (bool): Argument sent by triggered signal
+            _ (bool): Argument sent by triggered signal
         """
-
-        self._parent.clear_recent_projects()
+        clear_recent_projects(self._parent, self._parent.qsettings())
 
     @Slot(bool, str, object)
-    def call_open_project(self, checked, p, version):
+    def call_open_project(self, _, p, version):
         """Slot for catching the user selected action from the recent projects menu.
 
         Args:
-            checked (bool): Argument sent by triggered signal
-            p (str): Full path to a project file
+            _ (bool): Argument sent by triggered signal
+            p (str): Full path to a project directory
             version (int | None): Project version
         """
+        if not os.path.exists(p):
+            # Project has been removed, remove it from recent projects list
+            remove_path_from_recent_projects(self._parent.qsettings(), p)
+            self._parent.msg_error.emit(f"Opening selected project failed. Project <b>{p}</b> may have been removed.")
+            return
+        if not version:
+            QMessageBox.warning(
+                self,
+                "Project corrupted",
+                f"Project '{p}' may be corrupted because 'version' key is missing from the project.json file.\n",
+            )
+            return
         if version > LATEST_PROJECT_VERSION:
             QMessageBox.warning(
                 self,
                 "Incompatible project",
                 f"Project '{p}' is version {version} and requires a newer Spine Toolbox.\n"
                 f"This version of Spine Toolbox supports projects up to version {LATEST_PROJECT_VERSION}.",
-            )
-            return
-        if not os.path.exists(p):
-            # Project has been removed, remove it from recent projects list
-            self._parent.remove_path_from_recent_projects(p)
-            self._parent.msg_error.emit(
-                f"Opening selected project failed. Project file <b>{p}</b> may have been removed."
             )
             return
         # Check if the same project is already open
