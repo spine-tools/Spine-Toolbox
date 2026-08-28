@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for the custom_menus module."""
+"""Unit tests for the ``custom_menus`` module."""
 from unittest import mock
 from PySide6.QtWidgets import QMessageBox
 from spinetoolbox.widgets.custom_menus import RecentProjectsPopupMenu
