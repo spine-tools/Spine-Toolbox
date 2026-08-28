@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``custom_menus`` module."""
+
 from unittest import mock
 from PySide6.QtWidgets import QMessageBox
 from spinetoolbox.widgets.custom_menus import RecentProjectsPopupMenu
@@ -57,7 +58,7 @@ class TestRecentProjectsPopUpMenu:
         parent_widget_with_settings.open_project = mock.Mock()
         with (
             mock.patch("spinetoolbox.widgets.custom_menus.os.path.exists", return_value=True),
-            mock.patch("spinetoolbox.widgets.custom_menus.QMessageBox.warning") as mock_warning
+            mock.patch("spinetoolbox.widgets.custom_menus.QMessageBox.warning") as mock_warning,
         ):
             menu.actions()[0].trigger()  # Trigger unknown project
             assert mock_warning.call_count == 1

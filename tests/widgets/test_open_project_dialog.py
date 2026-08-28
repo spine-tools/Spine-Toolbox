@@ -15,9 +15,10 @@
 import os
 import json
 from unittest import mock
-from PySide6.QtCore import QPoint, QDir, QModelIndex
+from PySide6.QtCore import QPoint, QDir, QModelIndex, Qt
 from PySide6.QtWidgets import QDialog
-from spinetoolbox.widgets.open_project_dialog import OpenProjectDialog
+from PySide6.QtGui import QValidator
+from spinetoolbox.widgets.open_project_dialog import OpenProjectDialog, CustomQFileSystemModel, DirValidator
 from spinetoolbox.config import LATEST_PROJECT_VERSION
 
 
@@ -137,7 +138,9 @@ class TestOpenProjectDialog:
 
     @mock.patch("spinetoolbox.widgets.open_project_dialog.Notification")
     @mock.patch("spinetoolbox.widgets.open_project_dialog.load_project_dict")
-    def test_done_incompatible_version(self, mock_load_project_dict, mock_notification, parent_widget_with_settings, tmp_path):
+    def test_done_incompatible_version(
+        self, mock_load_project_dict, mock_notification, parent_widget_with_settings, tmp_path
+    ):
         project_dir = tmp_path / "project"
         (project_dir / ".spinetoolbox").mkdir(parents=True)
         (project_dir / ".spinetoolbox" / "project.json").write_text("{}")
@@ -149,16 +152,121 @@ class TestOpenProjectDialog:
         assert "Cannot open project" in mock_notification.call_args[0][1]
 
     @mock.patch("spinetoolbox.widgets.open_project_dialog.load_project_dict")
-    def test_done_valid_project(self, mock_load_project_dict, parent_widget_with_settings,tmp_path):
+    def test_done_valid_project(self, mock_load_project_dict, parent_widget_with_settings, tmp_path):
         project_dir = tmp_path / "project"
         (project_dir / ".spinetoolbox").mkdir(parents=True)
-        project_json = (project_dir / ".spinetoolbox" / "project.json")
+        project_json = project_dir / ".spinetoolbox" / "project.json"
         project_json.write_text(json.dumps({"project": {"version": LATEST_PROJECT_VERSION}}))
         mock_load_project_dict.return_value = {"project": {"version": LATEST_PROJECT_VERSION}}
         opw = OpenProjectDialog(parent_widget_with_settings)
         with (
             mock.patch.object(opw, "selection", return_value=str(project_dir)),
-            mock.patch.object(opw, "update_recents") as mock_update_recents
+            mock.patch.object(opw, "update_recents") as mock_update_recents,
         ):
             opw.done(QDialog.DialogCode.Accepted)
         mock_update_recents.assert_called_once()
+
+
+class TestCustomQFileSystemModel:
+    def test_data_tooltip_role(self):
+        model = CustomQFileSystemModel()
+        assert model.columnCount() == 1
+        index = QModelIndex()
+        with mock.patch.object(model, "filePath", return_value="/some/project"):
+            # Not a Spine Toolbox project
+            with mock.patch(
+                "spinetoolbox.widgets.open_project_dialog.is_spine_toolbox_project_dir",
+                return_value=False,
+            ):
+                result = model.data(index, Qt.ItemDataRole.ToolTipRole)
+                assert result is None
+            # Missing version info
+            with (
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.is_spine_toolbox_project_dir",
+                    return_value=True,
+                ),
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.load_project_dict",
+                    return_value={"project": {}},
+                ),
+            ):
+                result = model.data(index, Qt.ItemDataRole.ToolTipRole)
+                assert result == "Corrupted project. No version information found."
+            # Current version
+            with (
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.is_spine_toolbox_project_dir",
+                    return_value=True,
+                ),
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.load_project_dict",
+                    return_value={"project": {"version": LATEST_PROJECT_VERSION}},
+                ),
+            ):
+                result = model.data(index, Qt.ItemDataRole.ToolTipRole)
+                assert result == f"Version {LATEST_PROJECT_VERSION} (current)"
+            # Older version
+            old_version = LATEST_PROJECT_VERSION - 1
+            with (
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.is_spine_toolbox_project_dir",
+                    return_value=True,
+                ),
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.load_project_dict",
+                    return_value={"project": {"version": old_version}},
+                ),
+            ):
+                result = model.data(index, Qt.ItemDataRole.ToolTipRole)
+                assert result == f"Version {old_version} " f"(upgrades to {LATEST_PROJECT_VERSION} when opened)"
+            # Newer version
+            new_version = LATEST_PROJECT_VERSION + 1
+            with (
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.is_spine_toolbox_project_dir",
+                    return_value=True,
+                ),
+                mock.patch(
+                    "spinetoolbox.widgets.open_project_dialog.load_project_dict",
+                    return_value={"project": {"version": new_version}},
+                ),
+            ):
+                result = model.data(index, Qt.ItemDataRole.ToolTipRole)
+                assert result == (
+                    f"Version {new_version} "
+                    f"(requires newer Spine Toolbox, "
+                    f"current support: {LATEST_PROJECT_VERSION})"
+                )
+
+
+class TestDirValidator:
+    def test_validate(self, tmp_path):
+        validator = DirValidator()
+        changed = mock.Mock()
+        validator.changed.connect(changed)
+        # Empty text -> Intermediate
+        state = validator.validate("", 0)
+        assert state == QValidator.State.Intermediate
+        assert validator.state == QValidator.State.Intermediate
+        assert changed.call_count == 1
+        # Same state again -> no signal
+        state = validator.validate("does_not_exist", 0)
+        assert state == QValidator.State.Intermediate
+        assert validator.state == QValidator.State.Intermediate
+        assert changed.call_count == 1
+        # Existing directory -> Acceptable
+        state = validator.validate(str(tmp_path), 0)
+        assert state == QValidator.State.Acceptable
+        assert validator.state == QValidator.State.Acceptable
+        assert changed.call_count == 2
+        # Same state again -> no signal
+        state = validator.validate(str(tmp_path), 0)
+        assert state == QValidator.State.Acceptable
+        assert validator.state == QValidator.State.Acceptable
+        assert changed.call_count == 2
+        # Back to invalid -> state changes, signal emitted
+        state = validator.validate("does_not_exist", 0)
+        assert state == QValidator.State.Intermediate
+        assert validator.state == QValidator.State.Intermediate
+        assert changed.call_count == 3
