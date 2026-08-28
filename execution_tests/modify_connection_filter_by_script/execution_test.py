@@ -85,5 +85,5 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
             return filter_id_file.readline().strip()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -753,11 +753,14 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         if not info.isDir():
             return super().icon(info)
         p = info.filePath()
-        # logging.debug("In dir:{0}".format(p))
-        if os.path.exists(os.path.join(p, ".spinetoolbox")):
-            # logging.debug("found project dir:{0}".format(p))
+        if is_spine_toolbox_project_dir(p):
             return self.spine_icon
         return super().icon(info)
+
+
+def is_spine_toolbox_project_dir(p):
+    """Returns True when given path looks like it contains a valid Spine Toolbox project."""
+    return os.path.isfile(os.path.join(p, ".spinetoolbox", "project.json"))
 
 
 def basic_console_icon(language: str) -> QIcon:
@@ -1728,47 +1731,6 @@ def plain_to_tool_tip(text: str | None) -> str | None:
     return plain_to_rich(text) if text else None
 
 
-class CustomPopupMenu(QMenu):
-    """Popup menu master class for several popup menus."""
-
-    def __init__(self, parent: QWidget):
-        """
-        Args:
-            parent: Parent widget of this pop-up menu
-        """
-        super().__init__(parent=parent)
-        self._parent = parent
-
-    def add_action(
-        self,
-        text: str,
-        slot: Callable[[], None],
-        enabled: bool = True,
-        tooltip: str | None = None,
-        icon: QIcon | None = None,
-    ) -> QAction:
-        """Adds an action to the popup menu.
-
-        Args:
-            text: Text description of the action
-            slot: Method to connect to action's triggered signal
-            enabled: Is action enabled?
-            tooltip: Tool tip for the action
-            icon: Action icon
-
-        Returns:
-            The added action.
-        """
-        if icon is not None:
-            action = self.addAction(icon, text, slot)
-        else:
-            action = self.addAction(text, slot)
-        action.setEnabled(enabled)
-        if tooltip is not None:
-            action.setToolTip(tooltip)
-        return action
-
-
 _SPLIT_PATTERN = re.compile(r"(\d+)")
 
 
@@ -1868,3 +1830,71 @@ def find_section_in_table_model_header(
         if model.headerData(section, orientation) == data:
             return section
     raise ValueError(f"{data} not found in header")
+
+
+def remove_path_from_recent_projects(settings: QSettings, p: str) -> None:
+    """Removes entry that contains given path from the recent project files list in QSettings.
+
+    Args:
+        settings (QSettings): Application settings object
+        p (str): Full path to a project directory
+    """
+    recents = settings.value("appSettings/recentProjects", defaultValue=None)
+    if not recents:
+        return
+    recents = str(recents)
+    recents_list = recents.split("\n")
+    for entry in recents_list:
+        _, path = entry.split("<>")
+        if same_path(path, p):
+            recents_list.pop(recents_list.index(entry))
+            break
+    updated_recents = "\n".join(recents_list)
+    # Save updated recent paths
+    settings.setValue("appSettings/recentProjects", updated_recents)
+    settings.sync()  # Commit change immediately
+
+
+def clear_recent_projects(parent: QWidget, settings: QSettings) -> None:
+    """Clears recent projects list in File->Open recent menu."""
+    msg = "Are you sure?"
+    title = "Clear recent projects?"
+    message_box = QMessageBox(
+        QMessageBox.Icon.Question,
+        title,
+        msg,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        parent=parent,
+    )
+    answer = message_box.exec()
+    if answer == QMessageBox.StandardButton.No:
+        return
+    settings.remove("appSettings/recentProjects")
+    settings.remove("appSettings/recentProjectStorages")
+    settings.sync()
+
+
+def update_recent_projects(settings: QSettings, project_name: str, project_dir: str) -> None:
+    """Adds a recent project entry to QSettings if not already present. Max amount of recent projects is 20."""
+    recents = settings.value("appSettings/recentProjects", defaultValue=None)
+    entry = project_name + "<>" + project_dir
+    if not recents:
+        updated_recents = entry
+    else:
+        recents = str(recents)
+        recents_list = recents.split("\n")
+        normalized_recents = list(map(os.path.normcase, recents_list))
+        try:
+            index = normalized_recents.index(os.path.normcase(entry))
+        except ValueError:
+            # Add path only if it's not in the list already
+            recents_list.insert(0, entry)
+            if len(recents_list) > 20:
+                recents_list.pop()
+        else:
+            # If entry was on the list, move it as the first item
+            recents_list.insert(0, recents_list.pop(index))
+        updated_recents = "\n".join(recents_list)
+    # Save updated recent paths
+    settings.setValue("appSettings/recentProjects", updated_recents)
+    settings.sync()  # Commit change immediately

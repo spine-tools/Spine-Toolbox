@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from unittest import mock
-from PySide6.QtCore import QObject, QTimer
+from PySide6.QtCore import QObject, QTimer, QSettings
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
@@ -147,3 +147,15 @@ def db_editor(db_mngr, db_map, monkeypatch):
         commit_at_exit_setting.return_value = "0"  # Discard changes and close.
         db_editor.close()
     db_editor.deleteLater()
+
+
+@pytest.fixture
+def qsettings_file(tmp_path):
+    settings_file = tmp_path / "settings.ini"
+    return QSettings(str(settings_file), QSettings.Format.IniFormat)
+
+
+@pytest.fixture
+def parent_widget_with_settings(parent_widget, qsettings_file):
+    parent_widget.qsettings = lambda: qsettings_file
+    return parent_widget

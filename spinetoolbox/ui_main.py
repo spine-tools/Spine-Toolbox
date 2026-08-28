@@ -56,7 +56,13 @@ from spine_engine.project_item.project_item_specification_factory import Project
 from spine_engine.spine_engine import _set_resource_limits
 from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_project, resolve_python_interpreter
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, ONLINE_DOCUMENTATION_URL, SPINE_DB_API_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import (
+    DEFAULT_WORK_DIR,
+    ONLINE_DOCUMENTATION_URL,
+    SPINE_DB_API_DOCUMENTATION_URL,
+    SPINE_TOOLBOX_REPO_URL,
+    LATEST_PROJECT_VERSION
+)
 from .helpers import (
     ChildCyclingKeyPressFilter,
     ColoredIcon,
@@ -76,10 +82,12 @@ from .helpers import (
     solve_connection_file,
     supported_img_formats,
     unique_name,
+    update_recent_projects,
+    remove_path_from_recent_projects,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
-from .load_project import ProjectLoadingFailed
+from .load_project import ProjectLoadingFailed, load_project_dict
 from .load_project_items import load_project_items
 from .load_specification import (
     SpecificationLoadingFailed,
@@ -590,8 +598,26 @@ class ToolboxUI(QMainWindow):
             # Now we just give up.
             return
         if not os.path.isdir(project_dir):
-            self.msg_error.emit(f"Cannot open previous project. Directory <b>{project_dir}</b> may have been moved.")
-            self.remove_path_from_recent_projects(project_dir)
+            self.msg_error.emit(
+                f"Cannot open previously opened project. "
+                f"Directory <b>{project_dir}</b> may have been moved or deleted."
+            )
+            remove_path_from_recent_projects(self._qsettings, project_dir)
+            return
+        project_dict = load_project_dict(project_dir)
+        version = project_dict.get("project", {}).get("version")
+        if not version:
+            self.msg_error.emit(
+                f"Cannot open previously opened project <b>'{project_dir}'</b>. "
+                f"Project version information is missing."
+            )
+            return
+        if version > LATEST_PROJECT_VERSION:
+            self.msg_warning.emit(
+                f"Cannot open previously opened project <b>'{project_dir}'</b>. "
+                f"Project version {version} requires a newer Spine Toolbox "
+                f"(current support: {LATEST_PROJECT_VERSION})."
+            )
             return
         self.open_project(project_dir, clear_event_log=False)
 
@@ -651,7 +677,7 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.graphicsView.reset_zoom()
         # Update recentProjects
-        self.update_recent_projects()
+        update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(proj_dir, os.path.pardir)), self.qsettings())
         self.save_project()
@@ -731,14 +757,14 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit(str(error))
             success = False
         if not success:
-            self.remove_path_from_recent_projects(self._project.project_dir)
+            remove_path_from_recent_projects(self._qsettings, self._project.project_dir)
             return False
         self._enable_project_actions()
         self._plugin_manager.reload_plugins_with_local_data()
         self._project.settings_updated.connect(self._handle_project_settings_update)
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
-        self.update_recent_projects()
+        update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
 
@@ -753,7 +779,6 @@ class ToolboxUI(QMainWindow):
         if button == QMessageBox.StandardButton.Yes:
             return True
         return False
-
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
@@ -2044,70 +2069,6 @@ class ToolboxUI(QMainWindow):
             self.save_project()
         return True
 
-    def remove_path_from_recent_projects(self, p):
-        """Removes entry that contains given path from the recent project files list in QSettings.
-
-        Args:
-            p (str): Full path to a project directory
-        """
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        if not recents:
-            return
-        recents = str(recents)
-        recents_list = recents.split("\n")
-        for entry in recents_list:
-            _, path = entry.split("<>")
-            if same_path(path, p):
-                recents_list.pop(recents_list.index(entry))
-                break
-        updated_recents = "\n".join(recents_list)
-        # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
-    def clear_recent_projects(self):
-        """Clears recent projects list in File->Open recent menu."""
-        msg = "Are you sure?"
-        title = "Clear recent projects?"
-        message_box = QMessageBox(
-            QMessageBox.Icon.Question,
-            title,
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            parent=self,
-        )
-        answer = message_box.exec()
-        if answer == QMessageBox.StandardButton.No:
-            return
-        self._qsettings.remove("appSettings/recentProjects")
-        self._qsettings.remove("appSettings/recentProjectStorages")
-        self._qsettings.sync()
-
-    def update_recent_projects(self):
-        """Adds a new entry to QSettings variable that remembers twenty most recent project paths."""
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + "<>" + self.project().project_dir
-        if not recents:
-            updated_recents = entry
-        else:
-            recents = str(recents)
-            recents_list = recents.split("\n")
-            normalized_recents = list(map(os.path.normcase, recents_list))
-            try:
-                index = normalized_recents.index(os.path.normcase(entry))
-            except ValueError:
-                # Add path only if it's not in the list already
-                recents_list.insert(0, entry)
-                if len(recents_list) > 20:
-                    recents_list.pop()
-            else:
-                # If entry was on the list, move it as the first item
-                recents_list.insert(0, recents_list.pop(index))
-            updated_recents = "\n".join(recents_list)
-        # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
     def closeEvent(self, event):
         """Method for handling application exit.
 
@@ -2126,7 +2087,7 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
-            self.update_recent_projects()
+            update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())

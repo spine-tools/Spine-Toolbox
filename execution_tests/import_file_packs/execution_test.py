@@ -48,5 +48,5 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         self.assertEqual(values["e"], -50.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
