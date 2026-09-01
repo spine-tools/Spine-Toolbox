@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence, QPalette, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QLineEdit, QWidget, QMessageBox
+from PySide6.QtWidgets import QLineEdit, QMessageBox, QWidget
 import pytest
 from spinetoolbox.helpers import (
     DB_ITEM_SEPARATOR,
@@ -28,6 +28,7 @@ from spinetoolbox.helpers import (
     LogMessageHtmlParser,
     add_keyboard_shortcut_to_tool_tip,
     add_keyboard_shortcuts_to_action_tool_tips,
+    clear_recent_projects,
     copy_files,
     create_dir,
     dir_is_valid,
@@ -43,6 +44,7 @@ from spinetoolbox.helpers import (
     home_dir,
     interpret_icon_id,
     list_to_rich_text,
+    macos_tooltip_style_sheet,
     make_icon_id,
     merge_dicts,
     normcase_database_url_path,
@@ -52,6 +54,7 @@ from spinetoolbox.helpers import (
     plain_to_rich,
     plain_to_tool_tip,
     recursive_overwrite,
+    remove_path_from_recent_projects,
     rename_dir,
     rows_to_row_count_tuples,
     select_directory_with_dialog,
@@ -63,8 +66,6 @@ from spinetoolbox.helpers import (
     tuple_itemgetter,
     unique_name,
     update_recent_projects,
-    remove_path_from_recent_projects,
-    clear_recent_projects,
 )
 from tests.mock_helpers import TestCaseWithQApplication, q_object
 
@@ -749,3 +750,10 @@ class TestRecentProjects:
         remove_path_from_recent_projects(qsettings_file, "C:/Projects/DoesNotExist")
         recents = qsettings_file.value("appSettings/recentProjects")
         assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
+
+
+class TestMacosTooltipStyleSheet(TestCaseWithQApplication):
+    def test_forces_a_square_frame(self):
+        style_sheet = macos_tooltip_style_sheet()
+        self.assertTrue(style_sheet.startswith("QToolTip {"))
+        self.assertIn("border-radius: 0px;", style_sheet)
