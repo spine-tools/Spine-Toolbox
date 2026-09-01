@@ -58,10 +58,10 @@ from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_p
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import (
     DEFAULT_WORK_DIR,
+    LATEST_PROJECT_VERSION,
     ONLINE_DOCUMENTATION_URL,
     SPINE_DB_API_DOCUMENTATION_URL,
     SPINE_TOOLBOX_REPO_URL,
-    LATEST_PROJECT_VERSION
 )
 from .helpers import (
     ChildCyclingKeyPressFilter,
@@ -77,13 +77,13 @@ from .helpers import (
     make_icons_theme_aware,
     open_url,
     recursive_overwrite,
+    remove_path_from_recent_projects,
     same_path,
     set_taskbar_icon,
     solve_connection_file,
     supported_img_formats,
     unique_name,
     update_recent_projects,
-    remove_path_from_recent_projects,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
