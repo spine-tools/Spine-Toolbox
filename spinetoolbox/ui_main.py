@@ -74,6 +74,7 @@ from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
+    macos_tooltip_style_sheet,
     make_icons_theme_aware,
     open_url,
     recursive_overwrite,
@@ -410,7 +411,7 @@ class ToolboxUI(QMainWindow):
         )
 
     @staticmethod
-    def set_app_style():
+    def set_app_style() -> None:
         """Sets application style appropriate for each platform.
 
         The user can override the theme via appSettings/theme ("os", "light", or "dark").
@@ -426,10 +427,11 @@ class ToolboxUI(QMainWindow):
         use_dark = theme == "dark" or (
             theme == "os" and QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark
         )
+        style_sheet_parts = []
         if use_dark:
             QApplication.setStyle("Fusion")
             QApplication.setPalette(_make_dark_palette())
-            QApplication.instance().setStyleSheet(
+            style_sheet_parts.append(
                 "QDockWidget {"
                 "    titlebar-close-icon: url(:/icons/menu_icons/times-white.svg);"
                 "    titlebar-normal-icon: url(:/icons/menu_icons/float-white.svg);"
@@ -438,6 +440,10 @@ class ToolboxUI(QMainWindow):
         elif theme == "light":
             QApplication.setStyle("Fusion")
             QApplication.setPalette(_make_light_palette())
+        if sys.platform == "darwin":
+            style_sheet_parts.append(macos_tooltip_style_sheet())
+        if style_sheet_parts:
+            QApplication.instance().setStyleSheet("\n".join(style_sheet_parts))
 
     @staticmethod
     def set_error_mode():
