@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - The parameter name column in parameter value tables now shows the parameter definition's
   description as a tooltip on hover.
+- Active regex search fields in the Spine database editor no longer show white text on a white
+  background on macOS; the intended dark-red highlight is now drawn.
 
 ### Security
 
