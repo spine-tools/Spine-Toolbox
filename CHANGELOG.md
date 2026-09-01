@@ -22,6 +22,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 - The parameter name column in parameter value tables now shows the parameter definition's
   description as a tooltip on hover.
+- Tooltips in the Spine database editor no longer render as rounded pills with a large shadow on
+  macOS; they now use the same square frame as on the other platforms.
 
 ### Security
 
