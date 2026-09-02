@@ -31,3 +31,19 @@ def test_execution_permits_selects_matching_tool():
     permits = UserModeService._execution_permits(items, "SpineOpt")
 
     assert permits == {"Input": False, "SpineOpt": True, "Exporter": False}
+
+
+def test_import_excel_request_passes_workbook_to_service(monkeypatch):
+    service = UserModeService()
+    expected = {"filename": "input.xlsx", "imported": 2, "errors": []}
+    monkeypatch.setattr(service, "import_excel", lambda *args: expected)
+
+    result = handle_request(
+        service,
+        {
+            "method": "import_excel",
+            "params": {"path": "project", "filename": "input.xlsx", "content": "encoded"},
+        },
+    )
+
+    assert result == expected
