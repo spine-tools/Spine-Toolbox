@@ -32,6 +32,7 @@ button { border: 0; cursor: pointer; }
 
 .workflow-canvas { height: 620px; }
 .content-grid { display: block; }
+.selection-box { position: absolute; z-index: 3; border: 1px solid #5f9fca; background: #8fc8ee33; pointer-events: none; }
 .canvas-links path { pointer-events: stroke; }.canvas-links path.selected { stroke: #df704c; stroke-width: 3; }
 .canvas-node { width: 132px; height: 108px; min-height: 0; padding: 9px; border-radius: 8px; }.canvas-node.selected { box-shadow: 0 0 0 3px #d3e7a8, 0 5px 13px #26382c18; }
 .canvas-node-head { gap: 5px; margin-bottom: 7px; font-size: 10px; }.canvas-node-icon { width: 22px; height: 22px; border-radius: 5px; }.canvas-node-icon svg { width: 14px; }.canvas-node strong { margin-bottom: 7px; font-size: 12px; }.canvas-select { padding: 5px 6px; }.canvas-select select { font-size: 9px; }.canvas-node > small { margin-top: 6px; font-size: 8px; }.node-open { right: 8px; bottom: 7px; padding: 4px 8px; font-size: 9px; }.excel-upload { margin-top: 6px; padding: 5px 6px; font-size: 8px; }

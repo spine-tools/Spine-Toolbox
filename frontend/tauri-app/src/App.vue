@@ -48,12 +48,15 @@ const workflowNodes = ref([
   { id: "excel-results", label: "Excel results", detail: "Output file", icon: Table2, className: "canvas-excel", x: 400, y: 265 },
   { id: "plot", label: "Plot results", detail: "Visualization", icon: LineChart, className: "canvas-plot", x: 400, y: 430 },
 ]);
-const draggingNode = ref(null);
-const dragOffset = ref({ x: 0, y: 0 });
+const draggingNodes = ref([]);
+const dragOrigins = ref({});
 const dragStart = ref({ x: 0, y: 0 });
 const selectedNode = ref(null);
+const selectedNodeIds = ref([]);
 const selectedConnection = ref("");
 const canvas = ref(null);
+const selectionBox = ref(null);
+const selectionStart = ref({ x: 0, y: 0 });
 const recentRuns = ref([
   { name: "Baseline 2030", status: "Ready", time: "Today, 10:42" },
   { name: "High demand", status: "Ready", time: "Yesterday, 16:08" },
@@ -134,25 +137,62 @@ async function importExcel(event) {
 }
 
 function startDrag(event, node) {
-  const canvasBounds = canvas.value.getBoundingClientRect();
-  draggingNode.value = node;
+  draggingNodes.value = selectedNodeIds.value.includes(node.id)
+    ? workflowNodes.value.filter((candidate) => selectedNodeIds.value.includes(candidate.id))
+    : [node];
+  dragOrigins.value = Object.fromEntries(draggingNodes.value.map((candidate) => [candidate.id, { x: candidate.x, y: candidate.y }]));
   dragStart.value = { x: event.clientX, y: event.clientY };
-  dragOffset.value = { x: event.clientX - canvasBounds.left - node.x, y: event.clientY - canvasBounds.top - node.y };
   window.addEventListener("pointermove", moveNode);
   window.addEventListener("pointerup", stopDrag, { once: true });
 }
 
 function moveNode(event) {
-  if (!draggingNode.value) return;
+  if (!draggingNodes.value.length) return;
   const canvasBounds = canvas.value.getBoundingClientRect();
-  draggingNode.value.x = Math.max(8, Math.min(canvasBounds.width - 140, event.clientX - canvasBounds.left - dragOffset.value.x));
-  draggingNode.value.y = Math.max(42, Math.min(canvasBounds.height - 118, event.clientY - canvasBounds.top - dragOffset.value.y));
+  const deltaX = event.clientX - dragStart.value.x;
+  const deltaY = event.clientY - dragStart.value.y;
+  for (const node of draggingNodes.value) {
+    const origin = dragOrigins.value[node.id];
+    node.x = Math.max(8, Math.min(canvasBounds.width - 140, origin.x + deltaX));
+    node.y = Math.max(42, Math.min(canvasBounds.height - 118, origin.y + deltaY));
+  }
 }
 
 function stopDrag(event) {
-  if (Math.hypot(event.clientX - dragStart.value.x, event.clientY - dragStart.value.y) < 5) selectNode(draggingNode.value);
-  draggingNode.value = null;
+  if (Math.hypot(event.clientX - dragStart.value.x, event.clientY - dragStart.value.y) < 5) selectNode(draggingNodes.value[0]);
+  draggingNodes.value = [];
   window.removeEventListener("pointermove", moveNode);
+}
+
+function startSelection(event) {
+  const canvasBounds = canvas.value.getBoundingClientRect();
+  selectionStart.value = { x: event.clientX - canvasBounds.left, y: event.clientY - canvasBounds.top };
+  selectionBox.value = { ...selectionStart.value, width: 0, height: 0 };
+  selectedNode.value = null;
+  selectedConnection.value = "";
+  window.addEventListener("pointermove", updateSelection);
+  window.addEventListener("pointerup", stopSelection, { once: true });
+}
+
+function updateSelection(event) {
+  const canvasBounds = canvas.value.getBoundingClientRect();
+  const endX = event.clientX - canvasBounds.left;
+  const endY = event.clientY - canvasBounds.top;
+  selectionBox.value = {
+    x: Math.min(selectionStart.value.x, endX),
+    y: Math.min(selectionStart.value.y, endY),
+    width: Math.abs(endX - selectionStart.value.x),
+    height: Math.abs(endY - selectionStart.value.y),
+  };
+}
+
+function stopSelection() {
+  const box = selectionBox.value;
+  selectedNodeIds.value = workflowNodes.value
+    .filter((node) => node.x >= box.x && node.y >= box.y && node.x + 132 <= box.x + box.width && node.y + 108 <= box.y + box.height)
+    .map((node) => node.id);
+  selectionBox.value = null;
+  window.removeEventListener("pointermove", updateSelection);
 }
 
 function selectNode(node) {
@@ -166,6 +206,7 @@ function selectNode(node) {
   }
   selectedConnection.value = "";
   selectedNode.value = node;
+  selectedNodeIds.value = [node.id];
 }
 
 function nodePorts(node) {
@@ -193,6 +234,7 @@ function connectionPath(connection) {
 
 function selectConnection(connection) {
   selectedNode.value = null;
+  selectedNodeIds.value = [];
   selectedConnection.value = connection.join("-");
 }
 
@@ -280,13 +322,14 @@ onBeforeUnmount(() => window.removeEventListener("keydown", deleteSelectedConnec
             <button class="text-button"><Plus :size="16" /> New workflow</button>
           </div>
 
-          <section ref="canvas" class="workflow-canvas" aria-label="Draggable workflow design view">
+          <section ref="canvas" class="workflow-canvas" aria-label="Draggable workflow design view" @pointerdown.self="startSelection">
             <div class="canvas-toolbar"><span><span class="canvas-live-dot"></span> Design View</span><small>Drag boxes to arrange your workflow</small></div>
             <svg class="canvas-links" aria-hidden="true">
               <defs><marker id="connection-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" /></marker></defs>
               <path v-for="connection in workflowConnections" :key="connection.join('-')" :class="{ selected: selectedConnection === connection.join('-') }" :d="connectionPath(connection)" marker-end="url(#connection-arrow)" @pointerdown.stop @click.stop="selectConnection(connection)" />
             </svg>
-            <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNode?.id === node.id }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
+            <div v-if="selectionBox" class="selection-box" :style="{ left: `${selectionBox.x}px`, top: `${selectionBox.y}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }"></div>
+            <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
               <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="18" /></span><span>{{ node.detail }}</span><button class="node-menu" title="Node options">...</button></div>
               <strong>{{ node.id === "tool" ? selectedTool : node.label }}</strong>
               <template v-if="node.id === 'input'">
