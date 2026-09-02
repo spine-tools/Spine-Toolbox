@@ -42,9 +42,9 @@ const projectLoadError = ref("");
 const plotReady = ref(false);
 const isRunning = ref(false);
 const workflowNodes = ref([
-  { id: "input", label: "Input data", detail: "Database", icon: Database, className: "canvas-input", x: 20, y: 52 },
+  { id: "input", label: "Input data", detail: "", icon: Database, className: "canvas-input", x: 20, y: 52 },
   { id: "tool", label: "SpineOpt", detail: "Tool", icon: Wrench, className: "canvas-tool", x: 210, y: 52 },
-  { id: "results", label: "Results", detail: "Database", icon: Table2, className: "canvas-results", x: 400, y: 52 },
+  { id: "results", label: "Results", detail: "", icon: Table2, className: "canvas-results", x: 400, y: 52 },
   { id: "excel-results", label: "Excel results", detail: "", icon: Table2, className: "canvas-excel", x: 400, y: 265 },
   { id: "plot", label: "Plot results", detail: "", icon: LineChart, className: "canvas-plot", x: 400, y: 430 },
 ]);
@@ -346,7 +346,7 @@ onBeforeUnmount(() => {
             </svg>
             <div v-if="selectionBox" class="selection-box" :style="{ left: `${selectionBox.x}px`, top: `${selectionBox.y}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }"></div>
             <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
-              <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="18" /></span><span v-if="node.detail">{{ node.detail }}</span><button class="node-menu" title="Node options">...</button></div>
+              <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="24" /></span><span v-if="node.detail">{{ node.detail }}</span></div>
               <strong>{{ node.id === "tool" ? selectedTool : node.label }}</strong>
               <template v-if="node.id === 'input'">
                 <div v-if="inputSourceMenuOpen" class="input-source-menu" @pointerdown.stop>
