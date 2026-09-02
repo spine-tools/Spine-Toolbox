@@ -349,18 +349,11 @@ onBeforeUnmount(() => {
               <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="18" /></span><span v-if="node.detail">{{ node.detail }}</span><button class="node-menu" title="Node options">...</button></div>
               <strong>{{ node.id === "tool" ? selectedTool : node.label }}</strong>
               <template v-if="node.id === 'input'">
-                <label class="canvas-select"><select v-model="inputFile"><option>energy_model.sqlite</option><option>north_sea_data.sqlite</option><option>demo_data.sqlite</option></select></label>
                 <div v-if="inputSourceMenuOpen" class="input-source-menu" @pointerdown.stop>
                   <button type="button" @click="chooseInputSource('database')"><Database :size="13" /> Use database</button>
                   <button type="button" @click="chooseInputSource('excel')"><Upload :size="13" /> Choose Excel file</button>
                 </div>
                 <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
-              </template>
-              <template v-else-if="node.id === 'tool'">
-                <label class="canvas-select"><select v-model="selectedTool"><option>SpineOpt</option><option>Spine Engine</option><option>Data Connection</option><option>Python script</option></select></label>
-              </template>
-              <template v-else-if="node.id === 'results'">
-                <label class="canvas-select"><select v-model="resultFile"><option>results.sqlite</option><option>spineopt_results.sqlite</option><option>export_results.xlsx</option></select></label>
               </template>
               <button v-if="node.id === 'plot'" class="node-open" @pointerdown.stop @click="previewPlot">Open</button>
             </article>
