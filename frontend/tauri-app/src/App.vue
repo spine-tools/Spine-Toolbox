@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowRight,
@@ -42,20 +42,31 @@ const plotReady = ref(false);
 const isRunning = ref(false);
 const workflowNodes = ref([
   { id: "input", label: "Input data", detail: "Database", icon: Database, className: "canvas-input", x: 20, y: 52 },
-  { id: "tool", label: "SpineOpt", detail: "Tool", icon: Wrench, className: "canvas-tool", x: 275, y: 52 },
-  { id: "results", label: "Results", detail: "Database", icon: Table2, className: "canvas-results", x: 530, y: 52 },
-  { id: "excel-input", label: "Excel input", detail: "Input file", icon: Upload, className: "canvas-excel", x: 20, y: 235 },
-  { id: "excel-results", label: "Excel results", detail: "Output file", icon: Table2, className: "canvas-excel", x: 530, y: 235 },
-  { id: "plot", label: "Plot results", detail: "Visualization", icon: LineChart, className: "canvas-plot", x: 530, y: 360 },
+  { id: "tool", label: "SpineOpt", detail: "Tool", icon: Wrench, className: "canvas-tool", x: 210, y: 52 },
+  { id: "results", label: "Results", detail: "Database", icon: Table2, className: "canvas-results", x: 400, y: 52 },
+  { id: "excel-input", label: "Excel input", detail: "Input file", icon: Upload, className: "canvas-excel", x: 20, y: 265 },
+  { id: "excel-results", label: "Excel results", detail: "Output file", icon: Table2, className: "canvas-excel", x: 400, y: 265 },
+  { id: "plot", label: "Plot results", detail: "Visualization", icon: LineChart, className: "canvas-plot", x: 400, y: 430 },
 ]);
 const draggingNode = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
+const dragStart = ref({ x: 0, y: 0 });
+const selectedNode = ref(null);
+const selectedConnection = ref("");
+const canvas = ref(null);
 const recentRuns = ref([
   { name: "Baseline 2030", status: "Ready", time: "Today, 10:42" },
   { name: "High demand", status: "Ready", time: "Yesterday, 16:08" },
 ]);
 
 const activeMode = computed(() => modes.find((mode) => mode.id === selectedMode.value));
+const workflowConnections = ref([
+  ["excel-input", "input"],
+  ["input", "tool"],
+  ["tool", "results"],
+  ["results", "excel-results"],
+  ["results", "plot"],
+]);
 
 async function callBackend(method, params = {}) {
   const request = JSON.stringify({ method, params });
@@ -123,21 +134,73 @@ async function importExcel(event) {
 }
 
 function startDrag(event, node) {
+  const canvasBounds = canvas.value.getBoundingClientRect();
   draggingNode.value = node;
-  dragOffset.value = { x: event.clientX - node.x, y: event.clientY - node.y };
+  dragStart.value = { x: event.clientX, y: event.clientY };
+  dragOffset.value = { x: event.clientX - canvasBounds.left - node.x, y: event.clientY - canvasBounds.top - node.y };
   window.addEventListener("pointermove", moveNode);
   window.addEventListener("pointerup", stopDrag, { once: true });
 }
 
 function moveNode(event) {
   if (!draggingNode.value) return;
-  draggingNode.value.x = Math.max(8, event.clientX - dragOffset.value.x);
-  draggingNode.value.y = Math.max(8, event.clientY - dragOffset.value.y);
+  const canvasBounds = canvas.value.getBoundingClientRect();
+  draggingNode.value.x = Math.max(8, Math.min(canvasBounds.width - 140, event.clientX - canvasBounds.left - dragOffset.value.x));
+  draggingNode.value.y = Math.max(42, Math.min(canvasBounds.height - 118, event.clientY - canvasBounds.top - dragOffset.value.y));
 }
 
-function stopDrag() {
+function stopDrag(event) {
+  if (Math.hypot(event.clientX - dragStart.value.x, event.clientY - dragStart.value.y) < 5) selectNode(draggingNode.value);
   draggingNode.value = null;
   window.removeEventListener("pointermove", moveNode);
+}
+
+function selectNode(node) {
+  if (selectedNode.value && selectedNode.value.id !== node.id) {
+    const connection = [selectedNode.value.id, node.id];
+    if (!workflowConnections.value.some(([source, target]) => source === connection[0] && target === connection[1])) {
+      workflowConnections.value.push(connection);
+    }
+    selectedNode.value = null;
+    return;
+  }
+  selectedConnection.value = "";
+  selectedNode.value = node;
+}
+
+function nodePorts(node) {
+  return [
+    { x: node.x + 66, y: node.y, dx: 0, dy: -1 },
+    { x: node.x + 132, y: node.y + 54, dx: 1, dy: 0 },
+    { x: node.x + 66, y: node.y + 108, dx: 0, dy: 1 },
+    { x: node.x, y: node.y + 54, dx: -1, dy: 0 },
+  ];
+}
+
+function connectionPorts([sourceId, targetId]) {
+  const source = workflowNodes.value.find((node) => node.id === sourceId);
+  const target = workflowNodes.value.find((node) => node.id === targetId);
+  return nodePorts(source).flatMap((sourcePort) => nodePorts(target).map((targetPort) => ({ sourcePort, targetPort }))).reduce(
+    (nearest, pair) => (Math.hypot(pair.targetPort.x - pair.sourcePort.x, pair.targetPort.y - pair.sourcePort.y) < Math.hypot(nearest.targetPort.x - nearest.sourcePort.x, nearest.targetPort.y - nearest.sourcePort.y) ? pair : nearest)
+  );
+}
+
+function connectionPath(connection) {
+  const { sourcePort, targetPort } = connectionPorts(connection);
+  const distance = Math.max(35, Math.hypot(targetPort.x - sourcePort.x, targetPort.y - sourcePort.y) / 3);
+  return `M ${sourcePort.x} ${sourcePort.y} C ${sourcePort.x + sourcePort.dx * distance} ${sourcePort.y + sourcePort.dy * distance}, ${targetPort.x + targetPort.dx * distance} ${targetPort.y + targetPort.dy * distance}, ${targetPort.x} ${targetPort.y}`;
+}
+
+function selectConnection(connection) {
+  selectedNode.value = null;
+  selectedConnection.value = connection.join("-");
+}
+
+function deleteSelectedConnection(event) {
+  if ((event.key === "Delete" || event.key === "Backspace") && selectedConnection.value) {
+    workflowConnections.value = workflowConnections.value.filter((connection) => connection.join("-") !== selectedConnection.value);
+    selectedConnection.value = "";
+  }
 }
 
 async function loadProject() {
@@ -159,7 +222,12 @@ async function loadProject() {
   }
 }
 
-onMounted(loadProject);
+onMounted(() => {
+  loadProject();
+  window.addEventListener("keydown", deleteSelectedConnection);
+});
+
+onBeforeUnmount(() => window.removeEventListener("keydown", deleteSelectedConnection));
 </script>
 
 <template>
@@ -212,10 +280,13 @@ onMounted(loadProject);
             <button class="text-button"><Plus :size="16" /> New workflow</button>
           </div>
 
-          <section class="workflow-canvas" aria-label="Draggable workflow design view">
+          <section ref="canvas" class="workflow-canvas" aria-label="Draggable workflow design view">
             <div class="canvas-toolbar"><span><span class="canvas-live-dot"></span> Design View</span><small>Drag boxes to arrange your workflow</small></div>
-            <div class="canvas-links"><span class="link-one"></span><span class="link-two"></span><span class="link-three"></span><span class="link-four"></span></div>
-            <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="node.className" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
+            <svg class="canvas-links" aria-hidden="true">
+              <defs><marker id="connection-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" /></marker></defs>
+              <path v-for="connection in workflowConnections" :key="connection.join('-')" :class="{ selected: selectedConnection === connection.join('-') }" :d="connectionPath(connection)" marker-end="url(#connection-arrow)" @pointerdown.stop @click.stop="selectConnection(connection)" />
+            </svg>
+            <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNode?.id === node.id }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
               <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="18" /></span><span>{{ node.detail }}</span><button class="node-menu" title="Node options">...</button></div>
               <strong>{{ node.id === "tool" ? selectedTool : node.label }}</strong>
               <template v-if="node.id === 'input'">
@@ -242,14 +313,6 @@ onMounted(loadProject);
             <div class="action-buttons"><button class="plot-button" :class="{ ready: plotReady }" @click="previewPlot"><LineChart :size="16" /> {{ plotReady ? "Plot ready" : "Plot results" }}</button><button class="run-button" :disabled="isRunning" @click="runWorkflow"><Play :size="17" fill="currentColor" /> {{ isRunning ? "Preparing run..." : "Run workflow" }} <ArrowRight :size="17" /></button></div>
           </section>
         </section>
-
-        <aside class="recent-panel">
-          <div class="section-heading compact"><div><p class="eyebrow">Workspace</p><h2>Recent runs</h2></div><button class="icon-button" title="Add run"><Plus :size="18" /></button></div>
-          <div class="run-list">
-            <article v-for="run in recentRuns.slice(0, 4)" :key="run.time + run.name" class="run-item"><span class="run-indicator"><Check :size="14" /></span><div><strong>{{ run.name }}</strong><small>{{ run.time }}</small></div><span class="run-status">{{ run.status }}</span></article>
-          </div>
-          <div class="tip-box"><Sparkles :size="18" /><div><strong>Keep it simple</strong><p>Choose a mode, select a scenario, and let Toolbox handle the rest.</p></div></div>
-        </aside>
       </div>
     </section>
   </main>
