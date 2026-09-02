@@ -10,196 +10,178 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""A Qt widget showing a toolbar and a matplotlib plotting canvas."""
+"""A Qt widget showing a toolbar and a plotting canvas."""
+import json
+from pathlib import Path
+import tempfile
+import pandas as pd
+from PySide6.QtCore import QMetaObject, QObject, QSize, QStandardPaths, Qt, QUrl, Slot
+from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineScript
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QLabel, QVBoxLayout, QWidget
 
-import csv
-import io
-import itertools
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
-import numpy
-from PySide6.QtCore import QMetaObject, Qt
-from PySide6.QtWidgets import QApplication, QMenu, QVBoxLayout, QWidget
-from ..helpers import busy_effect
-from ..mvcmodels.minimal_table_model import MinimalTableModel
-from .custom_qtableview import CopyPasteTableView
-from .plot_canvas import LegendPosition, PlotCanvas
+
+class WarnUser(QDialog):
+    def __init__(self, msg: str, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("Warning!")
+        self.buttonbox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+        self.buttonbox.accepted.connect(self.accept)
+
+        layout = QVBoxLayout()
+        self.message = QLabel(msg)
+        layout.addWidget(self.message)
+        layout.addWidget(self.buttonbox)
+        self.setLayout(layout)
 
 
 class PlotWidget(QWidget):
-    """
-    A widget that contains a toolbar and a plotting canvas.
+    """Plotting widget, w/ a webview canvas, and a webchannel.
 
     Attributes:
-        canvas (PlotCanvas): the plotting canvas
-        original_xy_data (list of XYData): unmodified data on which the plots are based
+        canvas (QWebEngineView): webview plotting canvas
+
+        html_path (NamedTemporaryFile): managed temporary HTML file rendered by the canvas.
+
+        channel (WebChannel): webchannel for communication from javascript
+
     """
 
-    plot_windows = {}
-    """A global list of plot windows."""
-
-    def __init__(self, parent=None, legend_axes_position=LegendPosition.BOTTOM):
+    def __init__(self, parent=None):
         """
         Args:
             parent (QWidget, optional): parent widget
-            legend_axes_position (LegendPosition): legend axes position relative to plot axes
         """
         super().__init__(parent)
+
         self._layout = QVBoxLayout(self)
-        self.canvas = PlotCanvas(self, legend_axes_position)
-        self._toolbar = NavigationToolBar(self.canvas, self)
-        self._layout.addWidget(self._toolbar)
+        self.canvas = QWebEngineView()
+        self.html_path = tempfile.NamedTemporaryFile(suffix=".html")
+        self.canvas.setUrl(QUrl.fromLocalFile(self.html_path.name))
         self._layout.addWidget(self.canvas)
-        self.original_xy_data = []
+        self.resize(QSize(900, 600))
+
+        # save plot as image
+        self.canvas.page().profile().downloadRequested.connect(self.save_as_prompt)
+
+        # Set up QWebChannel so JavaScript can call back into Python
+        self._bridge = PlotActions(self)
+        # NOTE: the proxy is made available as "window.bridge" in JS
+        self._channel = WebChannel(self.canvas, "bridge", self._bridge)
+
         QMetaObject.connectSlotsByName(self)
 
-    def closeEvent(self, event):
-        """Removes the window from plot_windows and closes."""
-        closed = set(name for name, widget in PlotWidget.plot_windows.items() if widget is self)
-        for name in closed:
-            del PlotWidget.plot_windows[name]
-        super().closeEvent(event)
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        """Underlying dataframe for the plot, only used for export."""
+        if self._df is None:
+            raise RuntimeError("underlying dataframe not set, cannot export data")
+        return self._df
 
-    def contextMenuEvent(self, event):
-        """Shows plot context menu."""
-        menu = QMenu(self)
-        menu.addAction("Show plot data...", self.show_plot_data)
-        menu.addAction("Copy plot data", self.copy_plot_data)
-        menu.exec(event.globalPos())
+    @dataframe.setter
+    def dataframe(self, df: pd.DataFrame):
+        self._df = df
 
-    def _get_plot_data(self):
-        """Gathers plot data into a table.
+    def write(self, html_content: str):
+        Path(self.html_path.name).write_bytes(bytes(html_content, "utf8"))
+        self.canvas.reload()
 
-        Returns:
-            list of list: data as table
-        """
-        header = ["indexes"]
-        indexes = []
-        data_dicts = []
-        for xy_data in self.original_xy_data:
-            label = " | ".join(["None" if name is None else str(name) for name in xy_data.data_index])
-            header.append(label)
-            indexes.append(xy_data.x)
-            data_dict = dict(zip(xy_data.x, xy_data.y))
-            data_dicts.append(data_dict)
-        all_indexes = numpy.unique(numpy.concatenate(indexes))
-        rows = [header]
-        for index in all_indexes:
-            row = [str(index)] + [str(data_dict.get(index, "")) for data_dict in data_dicts]
-            rows.append(row)
-        return rows
-
-    @busy_effect
-    def copy_plot_data(self):
-        """Copies plot data to clipboard."""
-        rows = self._get_plot_data()
-        with io.StringIO() as output:
-            writer = csv.writer(output, delimiter="\t", quotechar="'")
-            for row in rows:
-                writer.writerow(row)
-            QApplication.clipboard().setText(output.getvalue())
-
-    @busy_effect
-    def show_plot_data(self):
-        """Opens a separate window that shows the plot data."""
-        rows = self._get_plot_data()
-        widget = _PlotDataWidget(rows, self)
-        widget.setWindowFlag(Qt.WindowType.Window, True)
-        title = "Plot data"
-        widget.setWindowTitle(title)
-        widget.set_size_according_to_parent()
-        widget.show()
-
-    def add_legend(self, handles):
-        """Adds a legend to the plot's legend axes.
-
-        Args:
-            handles (list): legend handles
-        """
-        self.canvas.legend_axes.legend(handles=handles, loc="upper center")
-
-    def use_as_window(self, parent_window, document_name):
-        """
-        Prepares the widget to be used as a window and adds it to plot_windows list.
-
-        Args:
-            parent_window (QWidget): a parent window
-            document_name (str): a string to add to the window title
-        """
-        self.setParent(parent_window)
-        self.setWindowFlag(Qt.WindowType.Window, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
-        title = "Plot"
-        if document_name:
-            title += f"    -- {document_name} --"
-        self.setWindowTitle(title)
-        PlotWidget.plot_windows[self._unique_window_name(document_name)] = self
-
-    @staticmethod
-    def _unique_window_name(document_name):
-        """Returns an unique identifier for a new plot window."""
-        if document_name not in PlotWidget.plot_windows:
-            return document_name
-        for i in itertools.count(0):
-            proposition = f"{document_name} ({i + 1})"
-            if proposition not in PlotWidget.plot_windows:
-                return proposition
-
-
-class _PlotDataView(CopyPasteTableView):
-    def contextMenuEvent(self, event):
-        menu = QMenu(self)
-        menu.addAction("Select all", self.selectAll)
-        menu.addAction("Copy", self.copy).setEnabled(self.can_copy())
-        menu.exec(event.globalPos())
-
-
-class _PlotDataWidget(QWidget):
-    def __init__(self, rows, parent=None):
-        super().__init__(parent=parent)
-        self._parent = parent
-        self._rows = rows
-        self.setWindowTitle("Plot data")
-        layout = QVBoxLayout(self)
-        self._view = _PlotDataView(self)
-        self._model = MinimalTableModel(self)
-        self._view.setModel(self._model)
-        self._model.reset_model(rows)
-        self._view.setHorizontalScrollMode(_PlotDataView.ScrollMode.ScrollPerPixel)
-        self._view.setVerticalScrollMode(_PlotDataView.ScrollMode.ScrollPerPixel)
-        self._view.resizeColumnsToContents()
-        self._view.horizontalHeader().hide()
-        self._view.verticalHeader().hide()
-        layout.addWidget(self._view)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.table_view_width = (
-            self._view.frameWidth() + self._view.verticalHeader().width() + self._view.horizontalHeader().length()
+    @Slot(QWebEngineDownloadRequest)
+    def save_as_prompt(self, download: QWebEngineDownloadRequest):
+        download_dir: Path = Path(download.downloadDirectory())
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            caption="Save File",
+            dir=str(download_dir / download.suggestedFileName()),
+            filter="Images (*.svg *.png *.jpg)",
         )
+        if path:
+            download.setDownloadFileName(path)
+            download.accept()
 
-    def set_size_according_to_parent(self):
-        """Sets the size of the widget according to the parent widget's dimensions and the data in the table"""
-        self.setMinimumWidth(274)
-        self.setMinimumHeight(210)
-        margins = self.layout().contentsMargins()
-        width = min(self.table_view_width + margins.left(), self._parent.size().width() * 0.8)
-        height = min(
-            self._view.verticalHeader().defaultSectionSize() * (len(self._rows) + 1) + margins.top(),
-            self._parent.size().height() * 0.8,
+
+class PlotActions(QObject):
+    """QWebChannel bridge exposed via JavaScript for CSV download."""
+
+    def __init__(self, plot_widget):
+        super().__init__()
+        self._plot = plot_widget
+
+    @Slot(str)
+    def downloadFilteredCsv(self, visible_keys_json: str):
+        """Called from JavaScript with the list of currently visible legend labels.
+
+        Filters the stored DataFrame to include only the data series that are
+        visible in the plot (i.e. not toggled off via the legend), then prompts
+        the user to save as CSV.
+        """
+        match json.loads(visible_keys_json):
+            case ([] | ["ALL"]) as visible_keys:
+                # - all legend items are hidden, export all w/ warning (FIXME)
+                # - first value is "ALL" when no legend is present, e.g. bar charts
+                filtered = self._plot.dataframe
+                if len(visible_keys) == 0:
+                    warn_user = WarnUser(
+                        "All legend items are hidden, ignoring selection and exporting all data.", self._plot
+                    )
+                    warn_user.exec()
+            case [str(), *_] as visible_keys:
+                filtered = self._plot.dataframe.query("|".join(visible_keys))
+                if filtered.empty:
+                    # FIXME: warn user
+                    filtered = self._plot.dataframe
+                    warn_user = WarnUser("Empty selection, ignoring and exporting all data.", self._plot)
+                    warn_user.exec()
+            case keys:
+                raise RuntimeError(f"webchannel returned {keys}, something went terribly wrong!")
+
+        download_dir = Path(QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation))
+        path, _ = QFileDialog.getSaveFileName(
+            self._plot, caption="Save Data as CSV", dir=str(download_dir / "plot_data.csv"), filter="CSV Files (*.csv)"
         )
-        self.resize(width, height)
+        if path:
+            filtered.to_csv(path, index=False, sep=",", header=True)
 
 
-def prepare_plot_in_window_menu(menu):
-    """Fills a given menu with available plot window names.
+class WebChannel(QWebChannel):
+    def __init__(self, webview: QWebEngineView, name: str, obj: QObject, parent: QObject | None = None):
+        super().__init__(parent)
+        self._bridge_name = name
+        self.setup_js_api(webview)
+        self.register_and_init(webview, name, obj)
 
-    Args:
-        menu (QMenu): menu to modify
-    """
-    menu.clear()
-    plot_windows = PlotWidget.plot_windows
-    if not plot_windows:
-        menu.setEnabled(False)
-        return
-    menu.setEnabled(True)
-    window_names = list(plot_windows.keys())
-    for name in sorted(window_names):
-        menu.addAction(name)
+    def setup_js_api(self, webview: QWebEngineView):
+        # inject qwebchannel.js (shipped with Qt) so the page can use QWebChannel
+        qwebchannel_script = QWebEngineScript()
+        qwebchannel_script.setName("qwebchannel")
+        qwebchannel_script.setSourceUrl(QUrl("qrc:///qtwebchannel/qwebchannel.js"))
+        qwebchannel_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+        qwebchannel_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+        webview.page().scripts().insert(qwebchannel_script)
+        webview.page().setWebChannel(self)
+
+    def register_and_init(self, webview: QWebEngineView, name: str, obj: QObject):
+        """Register and initialise a bridge.
+
+        NOTE: that this only registers a single `QObject` as the
+        bridge.  If you want to register multiple objects, this method
+        has to be updated to use QWebChannel.registerObjects(objects:
+        dict[str, QObject]), and update the script accordingly.
+
+        """
+        self.registerObject(name, obj)
+
+        # inject a small init script that establishes the bridge on window.bridge
+        init_script = QWebEngineScript()
+        init_script.setName("bridge_init")
+        init_script.setSourceCode(
+            "new QWebChannel(qt.webChannelTransport, function(channel) {"
+            f"    window.{name} = channel.objects.{name};"
+            "});"
+        )
+        init_script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentReady)
+        init_script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
+
+        webview.page().scripts().insert(init_script)

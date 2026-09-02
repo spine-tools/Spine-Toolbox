@@ -19,7 +19,6 @@ from matplotlib.gridspec import GridSpec
 from PySide6.QtWidgets import QWidget
 from spinedb_api.parameter_value import TimeSeriesFixedResolution
 from spinetoolbox.plotting import TreeNode, convert_indexed_value_to_tree, plot_data, turn_node_to_xy_data
-from spinetoolbox.widgets.plot_canvas import LegendPosition
 from spinetoolbox.widgets.plot_widget import PlotWidget, _PlotDataWidget
 from tests.mock_helpers import TestCaseWithQApplication, q_object
 
@@ -50,20 +49,6 @@ class TestPlotWidget(TestCaseWithQApplication):
             expected = [["indexes", "first"], ["2022-11-08T16:00:00", "1.1"], ["2022-11-08T19:00:00", "2.2"]]
             for row, column in product(range(model.rowCount()), range(model.columnCount())):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
-
-    def test_legend_axes_placement_bottom(self):
-        with q_object(QWidget()) as parent:
-            plot_widget = PlotWidget(parent, legend_axes_position=LegendPosition.BOTTOM)
-            self.assertEqual(
-                repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(2, 1, height_ratios=[1, 0]))
-            )
-
-    def test_legend_axes_placement_right(self):
-        with q_object(QWidget()) as parent:
-            plot_widget = PlotWidget(parent, legend_axes_position=LegendPosition.RIGHT)
-            self.assertEqual(
-                repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(1, 2, width_ratios=[1, 0]))
-            )
 
 
 if __name__ == "__main__":
