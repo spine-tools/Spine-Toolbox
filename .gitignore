@@ -17,7 +17,30 @@ projects/
 work/
 .coverage
 htmlcov/
+
+# Node.js / Vue / Vite
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn-cache/
+.vite/
+*.tsbuildinfo
+
+# Rust / Tauri
+target/
+frontend/tauri-app/src-tauri/gen/
+
+# Python tooling
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 src/
+!frontend/tauri-app/src/
+!frontend/tauri-app/src-tauri/src/
 spinetoolbox/_version.py
 release.toml
 pkgtags.json

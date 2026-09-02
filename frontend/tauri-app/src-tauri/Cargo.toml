@@ -1,0 +1,18 @@
+[package]
+name = "spine-toolbox-user-mode"
+version = "0.1.0"
+description = "Parallel user-mode interface for Spine Toolbox"
+authors = ["Spine Toolbox contributors"]
+edition = "2021"
+
+[lib]
+name = "spine_toolbox_user_mode_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.2", features = [] }
+
+[dependencies]
+tauri = { version = "2.2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
