@@ -1,5 +1,7 @@
 """Backend application service for the parallel User Mode frontend."""
 import threading
+import base64
+import tempfile
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -58,6 +60,40 @@ class UserModeService:
     def job(self, job_id: str) -> Job | None:
         with self._jobs_lock:
             return self._jobs.get(job_id)
+
+    def import_excel(self, project_path: str, filename: str, content: str, data_store: str | None = None) -> dict[str, Any]:
+        """Import an Excel workbook into a project's Data Store."""
+        from sqlalchemy.engine.url import URL
+        from spinedb_api import DatabaseMapping, import_data
+        from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
+
+        project_dir = self._project_dir(project_path)
+        project = load_project_dict(project_dir)
+        stores = {
+            name: item for name, item in project.get("items", {}).items() if item.get("type") == "Data Store"
+        }
+        if not stores:
+            raise ValueError("The project has no Data Store to import into")
+        store_name = data_store or next(iter(stores))
+        if store_name not in stores:
+            raise ValueError(f"Unknown Data Store: {store_name}")
+        database = stores[store_name].get("url", {}).get("database", {})
+        database_path = Path(database.get("path", f"{store_name}.sqlite"))
+        if database.get("relative", True):
+            database_path = project_dir / database_path
+        workbook = base64.b64decode(content)
+        with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix or ".xlsx", delete=False) as temporary_file:
+            temporary_file.write(workbook)
+            temporary_path = temporary_file.name
+        try:
+            mapped_data, errors = get_mapped_data_from_xlsx(temporary_path)
+            url = URL.create("sqlite", database=str(database_path))
+            with DatabaseMapping(url) as db_map:
+                imported, import_errors = import_data(db_map, **mapped_data)
+                db_map.commit_session(f"Import data from Excel: {filename}")
+            return {"filename": filename, "data_store": store_name, "imported": imported, "errors": errors + import_errors}
+        finally:
+            Path(temporary_path).unlink(missing_ok=True)
 
     @staticmethod
     def _project_dir(project_path: str) -> Path:

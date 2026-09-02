@@ -34,6 +34,7 @@ const projectMenuOpen = ref(false);
 const scenario = ref("Baseline 2030");
 const selectedTool = ref("SpineOpt");
 const inputFile = ref("energy_model.sqlite");
+const excelInputFile = ref("");
 const resultFile = ref("results.sqlite");
 const projectPath = ref("execution_tests/active_by_default");
 const projectLoadError = ref("");
@@ -89,8 +90,36 @@ async function runWorkflow() {
   }
 }
 
+function openExcelPicker() {
+  document.querySelector("#excel-input-picker").click();
+}
+
 function previewPlot() {
   plotReady.value = true;
+}
+
+async function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  projectLoadError.value = "";
+  excelInputFile.value = file.name;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    const result = await callBackend("import_excel", {
+      path: projectPath.value,
+      filename: file.name,
+      content: btoa(binary),
+      data_store: workflowNodes.value.find((node) => node.id === "input").label,
+    });
+    recentRuns.value.unshift({ name: `Imported ${result.filename}`, status: `${result.imported} items`, time: "Just now" });
+    if (result.errors.length) projectLoadError.value = result.errors.join(" ");
+  } catch (error) {
+    projectLoadError.value = `Excel import failed: ${error.message}`;
+  } finally {
+    event.target.value = "";
+  }
 }
 
 function startDrag(event, node) {
@@ -197,6 +226,10 @@ onMounted(loadProject);
               </template>
               <template v-else-if="node.id === 'results'">
                 <label class="canvas-select"><select v-model="resultFile"><option>results.sqlite</option><option>spineopt_results.sqlite</option><option>export_results.xlsx</option></select></label>
+              </template>
+              <template v-else-if="node.id === 'excel-input'">
+                <button class="excel-upload" type="button" @pointerdown.stop @dblclick.stop="openExcelPicker"><Upload :size="13" /> {{ excelInputFile || "Double-click to choose Excel" }}</button>
+                <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
               </template>
               <small v-else>{{ node.label === "Plot results" && plotReady ? "Plot preview ready" : node.label === "Plot results" ? "Open after a run" : node.detail }}</small>
               <button v-if="node.id === 'plot'" class="node-open" @pointerdown.stop @click="previewPlot">Open</button>

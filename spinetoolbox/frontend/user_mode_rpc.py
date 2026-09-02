@@ -21,6 +21,8 @@ def handle_request(service: UserModeService, request: dict) -> dict:
         if job is None:
             raise ValueError("Unknown job")
         return {"status": job.status, "events": job.events, "error": job.error}
+    if method == "import_excel":
+        return service.import_excel(params["path"], params["filename"], params["content"], params.get("data_store"))
     raise ValueError(f"Unknown method: {method}")
 
 
