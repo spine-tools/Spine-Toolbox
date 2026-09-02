@@ -35,6 +35,7 @@ const scenario = ref("Baseline 2030");
 const selectedTool = ref("SpineOpt");
 const inputFile = ref("energy_model.sqlite");
 const excelInputFile = ref("");
+const inputSourceMenuOpen = ref(false);
 const resultFile = ref("results.sqlite");
 const projectPath = ref("execution_tests/active_by_default");
 const projectLoadError = ref("");
@@ -44,9 +45,8 @@ const workflowNodes = ref([
   { id: "input", label: "Input data", detail: "Database", icon: Database, className: "canvas-input", x: 20, y: 52 },
   { id: "tool", label: "SpineOpt", detail: "Tool", icon: Wrench, className: "canvas-tool", x: 210, y: 52 },
   { id: "results", label: "Results", detail: "Database", icon: Table2, className: "canvas-results", x: 400, y: 52 },
-  { id: "excel-input", label: "Excel input", detail: "Input file", icon: Upload, className: "canvas-excel", x: 20, y: 265 },
-  { id: "excel-results", label: "Excel results", detail: "Output file", icon: Table2, className: "canvas-excel", x: 400, y: 265 },
-  { id: "plot", label: "Plot results", detail: "Visualization", icon: LineChart, className: "canvas-plot", x: 400, y: 430 },
+  { id: "excel-results", label: "Excel results", detail: "", icon: Table2, className: "canvas-excel", x: 400, y: 265 },
+  { id: "plot", label: "Plot results", detail: "", icon: LineChart, className: "canvas-plot", x: 400, y: 430 },
 ]);
 const draggingNodes = ref([]);
 const dragOrigins = ref({});
@@ -64,7 +64,6 @@ const recentRuns = ref([
 
 const activeMode = computed(() => modes.find((mode) => mode.id === selectedMode.value));
 const workflowConnections = ref([
-  ["excel-input", "input"],
   ["input", "tool"],
   ["tool", "results"],
   ["results", "excel-results"],
@@ -106,6 +105,15 @@ async function runWorkflow() {
 
 function openExcelPicker() {
   document.querySelector("#excel-input-picker").click();
+}
+
+function chooseInputSource(source) {
+  inputSourceMenuOpen.value = false;
+  if (source === "excel") openExcelPicker();
+}
+
+function closeInputSourceMenu(event) {
+  if (!event.target.closest(".canvas-input")) inputSourceMenuOpen.value = false;
 }
 
 function previewPlot() {
@@ -166,6 +174,7 @@ function stopDrag(event) {
 
 function startSelection(event) {
   const canvasBounds = canvas.value.getBoundingClientRect();
+  inputSourceMenuOpen.value = false;
   selectionStart.value = { x: event.clientX - canvasBounds.left, y: event.clientY - canvasBounds.top };
   selectionBox.value = { ...selectionStart.value, width: 0, height: 0 };
   selectedNode.value = null;
@@ -202,11 +211,13 @@ function selectNode(node) {
       workflowConnections.value.push(connection);
     }
     selectedNode.value = null;
+    inputSourceMenuOpen.value = false;
     return;
   }
   selectedConnection.value = "";
   selectedNode.value = node;
   selectedNodeIds.value = [node.id];
+  inputSourceMenuOpen.value = node.id === "input" ? !inputSourceMenuOpen.value : false;
 }
 
 function nodePorts(node) {
@@ -235,6 +246,7 @@ function connectionPath(connection) {
 function selectConnection(connection) {
   selectedNode.value = null;
   selectedNodeIds.value = [];
+  inputSourceMenuOpen.value = false;
   selectedConnection.value = connection.join("-");
 }
 
@@ -267,9 +279,13 @@ async function loadProject() {
 onMounted(() => {
   loadProject();
   window.addEventListener("keydown", deleteSelectedConnection);
+  window.addEventListener("pointerdown", closeInputSourceMenu);
 });
 
-onBeforeUnmount(() => window.removeEventListener("keydown", deleteSelectedConnection));
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", deleteSelectedConnection);
+  window.removeEventListener("pointerdown", closeInputSourceMenu);
+});
 </script>
 
 <template>
@@ -330,10 +346,15 @@ onBeforeUnmount(() => window.removeEventListener("keydown", deleteSelectedConnec
             </svg>
             <div v-if="selectionBox" class="selection-box" :style="{ left: `${selectionBox.x}px`, top: `${selectionBox.y}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }"></div>
             <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
-              <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="18" /></span><span>{{ node.detail }}</span><button class="node-menu" title="Node options">...</button></div>
+              <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="18" /></span><span v-if="node.detail">{{ node.detail }}</span><button class="node-menu" title="Node options">...</button></div>
               <strong>{{ node.id === "tool" ? selectedTool : node.label }}</strong>
               <template v-if="node.id === 'input'">
                 <label class="canvas-select"><select v-model="inputFile"><option>energy_model.sqlite</option><option>north_sea_data.sqlite</option><option>demo_data.sqlite</option></select></label>
+                <div v-if="inputSourceMenuOpen" class="input-source-menu" @pointerdown.stop>
+                  <button type="button" @click="chooseInputSource('database')"><Database :size="13" /> Use database</button>
+                  <button type="button" @click="chooseInputSource('excel')"><Upload :size="13" /> Choose Excel file</button>
+                </div>
+                <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
               </template>
               <template v-else-if="node.id === 'tool'">
                 <label class="canvas-select"><select v-model="selectedTool"><option>SpineOpt</option><option>Spine Engine</option><option>Data Connection</option><option>Python script</option></select></label>
@@ -341,11 +362,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", deleteSelectedConnec
               <template v-else-if="node.id === 'results'">
                 <label class="canvas-select"><select v-model="resultFile"><option>results.sqlite</option><option>spineopt_results.sqlite</option><option>export_results.xlsx</option></select></label>
               </template>
-              <template v-else-if="node.id === 'excel-input'">
-                <button class="excel-upload" type="button" @pointerdown.stop @dblclick.stop="openExcelPicker"><Upload :size="13" /> {{ excelInputFile || "Double-click to choose Excel" }}</button>
-                <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
-              </template>
-              <small v-else>{{ node.label === "Plot results" && plotReady ? "Plot preview ready" : node.label === "Plot results" ? "Open after a run" : node.detail }}</small>
               <button v-if="node.id === 'plot'" class="node-open" @pointerdown.stop @click="previewPlot">Open</button>
             </article>
           </section>
