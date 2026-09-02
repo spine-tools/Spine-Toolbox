@@ -355,7 +355,6 @@ onBeforeUnmount(() => {
                 </div>
                 <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
               </template>
-              <button v-if="node.id === 'plot'" class="node-open" @pointerdown.stop @click="previewPlot">Open</button>
             </article>
           </section>
 
