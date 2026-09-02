@@ -12,15 +12,15 @@
 
 """Classes for custom context menus and pop-up menus."""
 
-from collections.abc import Iterable, Callable
+from collections.abc import Callable, Iterable
 import os
 from typing import Generic, TypeVar
 from PySide6.QtCore import QPersistentModelIndex, Slot
 from PySide6.QtGui import QAction, QIcon
-from PySide6.QtWidgets import QMenu, QWidget, QWidgetAction, QMessageBox
-from spinetoolbox.helpers import clear_recent_projects, remove_path_from_recent_projects
-from spinetoolbox.load_project import load_project_dict
+from PySide6.QtWidgets import QMenu, QMessageBox, QWidget, QWidgetAction
 from spinetoolbox.config import LATEST_PROJECT_VERSION
+from spinetoolbox.helpers import clear_recent_projects, remove_path_from_recent_projects
+from spinetoolbox.load_project import ProjectLoadingFailed, load_project_dict
 from spinetoolbox.mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from spinetoolbox.widgets.custom_qwidgets import FilterWidget
 
@@ -169,7 +169,10 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
                 name, filepath = entry.split("<>")
                 version = None
                 if os.path.isdir(filepath):
-                    project_dict = load_project_dict(filepath)
+                    try:
+                        project_dict = load_project_dict(filepath)
+                    except ProjectLoadingFailed:
+                        continue
                     version = project_dict.get("project", {}).get("version")
                 if version is None:
                     tt = filepath
