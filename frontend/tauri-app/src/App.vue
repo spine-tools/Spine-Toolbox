@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   ArrowRight,
   BarChart3,
@@ -34,6 +34,8 @@ const scenario = ref("Baseline 2030");
 const selectedTool = ref("SpineOpt");
 const inputFile = ref("energy_model.sqlite");
 const resultFile = ref("results.sqlite");
+const projectPath = ref("execution_tests/active_by_default");
+const projectLoadError = ref("");
 const plotReady = ref(false);
 const isRunning = ref(false);
 const workflowNodes = ref([
@@ -87,6 +89,29 @@ function stopDrag() {
   draggingNode.value = null;
   window.removeEventListener("pointermove", moveNode);
 }
+
+async function loadProject() {
+  projectLoadError.value = "";
+  try {
+    const response = await fetch(`http://127.0.0.1:8765/api/project?path=${encodeURIComponent(projectPath.value)}`);
+    const project = await response.json();
+    if (!response.ok) throw new Error(project.error);
+    selectedProject.value = project.path;
+    const dataStores = project.items.filter((item) => item.type === "Data Store");
+    if (dataStores.length) {
+      inputFile.value = dataStores[0].database;
+      workflowNodes.value.find((node) => node.id === "input").label = dataStores[0].name;
+    }
+    recentRuns.value = project.items
+      .filter((item) => item.type !== "Data Store")
+      .slice(0, 4)
+      .map((item) => ({ name: item.name, status: item.type, time: "Project item" }));
+  } catch (error) {
+    projectLoadError.value = `Could not load project: ${error.message}`;
+  }
+}
+
+onMounted(loadProject);
 </script>
 
 <template>
@@ -130,8 +155,9 @@ function stopDrag() {
                 <button v-for="project in projects" :key="project" @click="selectedProject = project; projectMenuOpen = false">{{ project }}</button>
               </div>
             </div>
-            <button class="secondary-button" @click="openProject"><FolderOpen :size="16" /> Open project</button>
+            <div class="project-open-controls"><input v-model="projectPath" class="project-path" aria-label="Project directory" /><button class="secondary-button" @click="loadProject"><FolderOpen :size="16" /> Load project</button></div>
           </div>
+          <p v-if="projectLoadError" class="project-error">{{ projectLoadError }}</p>
 
           <div class="section-heading">
             <div><p class="eyebrow">Workflow</p><h2>Build your run</h2></div>
