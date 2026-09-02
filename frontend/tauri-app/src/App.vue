@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowRight,
   BarChart3,
@@ -55,17 +56,37 @@ const recentRuns = ref([
 
 const activeMode = computed(() => modes.find((mode) => mode.id === selectedMode.value));
 
+async function callBackend(method, params = {}) {
+  const request = JSON.stringify({ method, params });
+  const response = await invoke("python_bridge_request", { request });
+  const message = JSON.parse(response);
+  if (!message.ok) throw new Error(message.error);
+  return message.result;
+}
+
 function openProject() {
   selectedProject.value = projects[(projects.indexOf(selectedProject.value) + 1) % projects.length];
   projectMenuOpen.value = false;
 }
 
-function runWorkflow() {
+async function runWorkflow() {
   isRunning.value = true;
-  window.setTimeout(() => {
+  projectLoadError.value = "";
+  try {
+    const job = await callBackend("start_run", { path: projectPath.value, tool: selectedTool.value, scenario: scenario.value });
+    let status = job.status;
+    while (status === "starting" || status === "running") {
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+      const currentJob = await callBackend("job", { job_id: job.job_id });
+      status = currentJob.status;
+      if (status === "failed") throw new Error(currentJob.error || "Spine Engine failed");
+    }
+    recentRuns.value.unshift({ name: `${selectedTool.value} / ${scenario.value}`, status: status === "completed" ? "Ready" : status, time: "Just now" });
+  } catch (error) {
+    projectLoadError.value = `Run failed: ${error.message}`;
+  } finally {
     isRunning.value = false;
-    recentRuns.value.unshift({ name: scenario.value, status: "Ready", time: "Just now" });
-  }, 900);
+  }
 }
 
 function previewPlot() {
@@ -93,9 +114,7 @@ function stopDrag() {
 async function loadProject() {
   projectLoadError.value = "";
   try {
-    const response = await fetch(`http://127.0.0.1:8765/api/project?path=${encodeURIComponent(projectPath.value)}`);
-    const project = await response.json();
-    if (!response.ok) throw new Error(project.error);
+    const project = await callBackend("project", { path: projectPath.value });
     selectedProject.value = project.path;
     const dataStores = project.items.filter((item) => item.type === "Data Store");
     if (dataStores.length) {
