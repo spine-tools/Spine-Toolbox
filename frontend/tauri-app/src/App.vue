@@ -116,6 +116,16 @@ function closeInputSourceMenu(event) {
   if (!event.target.closest(".canvas-input")) inputSourceMenuOpen.value = false;
 }
 
+function resetCanvasSelection() {
+  selectedNode.value = null;
+  selectedNodeIds.value = [];
+  selectedConnection.value = "";
+}
+
+function clearCanvasSelection(event) {
+  if (!event.target.closest(".workflow-canvas")) resetCanvasSelection();
+}
+
 function previewPlot() {
   plotReady.value = true;
 }
@@ -175,6 +185,7 @@ function stopDrag(event) {
 function startSelection(event) {
   const canvasBounds = canvas.value.getBoundingClientRect();
   inputSourceMenuOpen.value = false;
+  resetCanvasSelection();
   selectionStart.value = { x: event.clientX - canvasBounds.left, y: event.clientY - canvasBounds.top };
   selectionBox.value = { ...selectionStart.value, width: 0, height: 0 };
   selectedNode.value = null;
@@ -280,11 +291,13 @@ onMounted(() => {
   loadProject();
   window.addEventListener("keydown", deleteSelectedConnection);
   window.addEventListener("pointerdown", closeInputSourceMenu);
+  window.addEventListener("pointerdown", clearCanvasSelection);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", deleteSelectedConnection);
   window.removeEventListener("pointerdown", closeInputSourceMenu);
+  window.removeEventListener("pointerdown", clearCanvasSelection);
 });
 </script>
 
@@ -340,9 +353,12 @@ onBeforeUnmount(() => {
 
           <section ref="canvas" class="workflow-canvas" aria-label="Draggable workflow design view" @pointerdown.self="startSelection">
             <div class="canvas-toolbar"><span><span class="canvas-live-dot"></span> Design View</span><small>Drag boxes to arrange your workflow</small></div>
-            <svg class="canvas-links" aria-hidden="true">
+            <svg class="canvas-links" aria-hidden="true" @pointerdown.self="resetCanvasSelection">
               <defs><marker id="connection-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" /></marker></defs>
-              <path v-for="connection in workflowConnections" :key="connection.join('-')" :class="{ selected: selectedConnection === connection.join('-') }" :d="connectionPath(connection)" marker-end="url(#connection-arrow)" @pointerdown.stop @click.stop="selectConnection(connection)" />
+              <g v-for="connection in workflowConnections" :key="connection.join('-')">
+                <path class="connection-hit" :d="connectionPath(connection)" @pointerdown.stop @click.stop="selectConnection(connection)" />
+                <path :class="{ selected: selectedConnection === connection.join('-') }" :d="connectionPath(connection)" marker-end="url(#connection-arrow)" />
+              </g>
             </svg>
             <div v-if="selectionBox" class="selection-box" :style="{ left: `${selectionBox.x}px`, top: `${selectionBox.y}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }"></div>
             <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
