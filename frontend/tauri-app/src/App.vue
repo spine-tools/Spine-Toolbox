@@ -9,14 +9,20 @@ import {
   CircleHelp,
   Database,
   FolderOpen,
+  GitBranch,
+  History,
   LineChart,
   LayoutDashboard,
+  Redo2,
   Play,
   Plus,
+  Search,
+  Save,
   Settings2,
   SlidersHorizontal,
   Sparkles,
   Table2,
+  Undo2,
   Upload,
   Wrench,
 } from "lucide-vue-next";
@@ -29,6 +35,7 @@ const modes = [
 
 const projects = ["No project loaded", "Demo energy system", "North Sea study"];
 const selectedMode = ref("input");
+const currentView = ref("workflow");
 const selectedProject = ref(projects[0]);
 const projectMenuOpen = ref(false);
 const scenario = ref("Baseline 2030");
@@ -109,6 +116,7 @@ function openExcelPicker() {
 
 function chooseInputSource(source) {
   inputSourceMenuOpen.value = false;
+  if (source === "database") currentView.value = "database";
   if (source === "excel") openExcelPicker();
 }
 
@@ -310,8 +318,8 @@ onBeforeUnmount(() => {
         <span>Toolbox</span>
       </div>
       <nav class="nav-list" aria-label="Main navigation">
-        <button class="nav-item active"><LayoutDashboard :size="18" /> Overview</button>
-        <button class="nav-item"><SlidersHorizontal :size="18" /> Workflows</button>
+        <button class="nav-item" :class="{ active: currentView === 'workflow' }" @click="currentView = 'workflow'"><LayoutDashboard :size="18" /> Design view</button>
+        <button class="nav-item" :class="{ active: currentView === 'database' }" @click="currentView = 'database'"><Database :size="18" /> Database editor</button>
         <button class="nav-item"><BarChart3 :size="18" /> Results</button>
       </nav>
       <div class="sidebar-bottom">
@@ -329,7 +337,7 @@ onBeforeUnmount(() => {
         <button class="icon-button" title="Help"><CircleHelp :size="19" /></button>
       </header>
 
-      <div class="content-grid">
+      <div v-if="currentView === 'workflow'" class="content-grid">
         <section class="primary-column">
           <div class="project-banner">
             <div class="project-icon"><FolderOpen :size="22" /></div>
@@ -381,6 +389,20 @@ onBeforeUnmount(() => {
           </section>
         </section>
       </div>
+
+      <section v-else class="database-editor" aria-label="Database editor">
+        <nav class="db-menu-bar"><button>File</button><button>Edit</button><button>Session</button><button>View</button><button>Help</button></nav>
+        <header class="db-toolbar">
+          <button title="Open database"><FolderOpen :size="17" /></button><button title="Save session"><Save :size="17" /></button><span></span><button title="Undo"><Undo2 :size="17" /></button><button title="Redo"><Redo2 :size="17" /></button><span></span><button title="Commit"><Check :size="17" /></button><button title="History"><History :size="17" /></button><span></span><button title="Graph view"><GitBranch :size="17" /></button><label class="db-search"><Search :size="15" /><input placeholder="Search" /></label>
+        </header>
+        <div class="db-tabs"><button class="active"><Database :size="14" /> {{ inputFile }} <b>×</b></button><button title="Open database"><Plus :size="15" /></button></div>
+        <div class="db-dock-grid">
+          <section class="db-dock entity-tree-dock"><header>Entity tree <span>×</span></header><div class="tree-filter"><Search :size="13" /><input placeholder="Filter" /></div><div class="db-tree"><p><ChevronDown :size="13" /> commodity</p><p class="tree-child">electricity</p><p class="tree-child">gas</p><p><ChevronDown :size="13" /> node</p><p class="tree-child selected-row">North</p><p class="tree-child">South</p><p><ChevronDown :size="13" /> unit</p></div></section>
+          <section class="db-dock parameter-values-dock"><header>Parameter value <span>×</span></header><table class="db-table"><thead><tr><th>Entity class</th><th>Entity</th><th>Parameter</th><th>Alternative</th><th>Value</th></tr></thead><tbody><tr class="selected-row"><td>node</td><td>North</td><td>demand</td><td>Base</td><td>120</td></tr><tr><td>node</td><td>South</td><td>demand</td><td>Base</td><td>94</td></tr><tr><td>unit</td><td>Gas plant</td><td>capacity</td><td>Base</td><td>300</td></tr><tr><td>unit</td><td>Wind</td><td>capacity</td><td>Base</td><td>150</td></tr></tbody></table></section>
+          <section class="db-dock entity-dock"><header>Entity <span>×</span></header><table class="db-table"><thead><tr><th>Entity class</th><th>Name</th><th>Description</th></tr></thead><tbody><tr class="selected-row"><td>node</td><td>North</td><td>Northern system node</td></tr><tr><td>node</td><td>South</td><td>Southern system node</td></tr><tr><td>unit</td><td>Gas plant</td><td>Combined cycle gas</td></tr></tbody></table></section>
+          <section class="db-dock scenario-dock"><header>Scenario <span>×</span></header><div class="tree-filter"><Search :size="13" /><input placeholder="Filter" /></div><div class="db-tree"><p class="selected-row"><ChevronDown :size="13" /> Base</p><p class="tree-child">Base</p><p><ChevronDown :size="13" /> High demand</p><p class="tree-child">Base</p><p class="tree-child">High demand</p></div></section>
+        </div>
+      </section>
     </section>
   </main>
 </template>
