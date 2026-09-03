@@ -11,13 +11,14 @@
 ######################################################################################################################
 
 """Contains TabularViewMixin class."""
+
 from collections import namedtuple
 from contextlib import contextmanager
 from itertools import chain
 from typing import ClassVar, Optional
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
+from PySide6.QtCore import QModelIndex, QObject, Qt, QTimer, Slot
 from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 from spinedb_api import DatabaseMapping
 from spinedb_api.helpers import fix_name_ambiguity
 from spinedb_api.temp_id import TempId
@@ -59,7 +60,7 @@ class TabularViewMixin:
         self.current_class_id: dict[DatabaseMapping, TempId] = {}  # Mapping from db_map to class_id
         self.current_class_name: Optional[str] = None
         self.current_input_type = self._PARAMETER_VALUE
-        self.filter_menus = {}
+        self.filter_menus: dict[str, TabularViewDBItemFilterMenu] = {}
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
         self.pivot_action_group = QActionGroup(self)
@@ -73,6 +74,7 @@ class TabularViewMixin:
         self.ui.pivot_table.connect_spine_db_editor(self)
         self.ui.frozen_table.setModel(self.frozen_table_model)
         self.ui.frozen_table.verticalHeader().setDefaultSectionSize(preferred_row_height(self))
+        self._frozen_selection_current_changed_connection = None
 
     def populate_pivot_action_group(self):
         self.pivot_actions = {
@@ -85,12 +87,16 @@ class TabularViewMixin:
     def connect_signals(self):
         """Connects signals to slots."""
         super().connect_signals()
-        self.ui.treeView_entity.tree_selection_changed.connect(
+        self.ui.treeView_entity.selectionModel().currentChanged.connect(
             self._handle_entity_tree_selection_changed_in_pivot_table
         )
         self.ui.pivot_table.header_changed.connect(self._connect_pivot_table_header_signals)
-        self.ui.frozen_table.header_dropped.connect(self.handle_header_dropped)
-        self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+        self.ui.frozen_table.header_dropped.connect(
+            lambda dropped, catcher: self.handle_header_dropped(dropped, catcher)
+        )
+        self._frozen_selection_current_changed_connection = (
+            self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+        )
         self.frozen_table_model.rowsInserted.connect(self._check_frozen_value_selected)
         self.frozen_table_model.rowsRemoved.connect(self._check_frozen_value_selected)
         self.frozen_table_model.columnsInserted.connect(self._make_inserted_frozen_headers)
@@ -114,15 +120,15 @@ class TabularViewMixin:
 
     # FIXME: MM - this should be called after modifications
     @Slot(str)
-    def update_filter_menus(self, action):
+    def update_filter_menus(self, action: str) -> None:
         for identifier, menu in self.filter_menus.items():
             index_values = dict.fromkeys(self.pivot_table_model.model.index_values.get(identifier, []))
             index_values.pop(None, None)
             if action == "add":
-                menu.add_items_to_filter_list(list(index_values.keys()))
+                menu.add_items_to_filter_list(index_values.keys())
             elif action == "remove":
-                previous = menu._filter._filter_model._data_set
-                menu.remove_items_from_filter_list(list(previous - index_values.keys()))
+                previous = menu.filter.model().data_set
+                menu.remove_items_from_filter_list(previous - index_values.keys())
         self.reload_frozen_table()
 
     def _needs_to_update_headers(self, item_type, db_map_data):
@@ -140,7 +146,7 @@ class TabularViewMixin:
                         return True
         return False
 
-    @Slot(str, dict)
+    @Slot(str, object)
     def _reload_pivot_table_if_needed(self, item_type, db_map_data):
         if not self.pivot_table_model:
             return
@@ -156,7 +162,8 @@ class TabularViewMixin:
     def init_models(self):
         """Initializes models."""
         with disconnect(
-            self.ui.treeView_entity.tree_selection_changed, self._handle_entity_tree_selection_changed_in_pivot_table
+            self.ui.treeView_entity.selectionModel().currentChanged,
+            self._handle_entity_tree_selection_changed_in_pivot_table,
         ):
             super().init_models()
         self.current_class_id = {}
@@ -228,25 +235,25 @@ class TabularViewMixin:
         if self._pending_reload:
             self.do_reload_pivot_table()
 
-    @Slot(dict)
-    def _handle_entity_tree_selection_changed_in_pivot_table(self, selected_indexes):
-        current_index = self.ui.treeView_entity.currentIndex()
-        self._update_class_attributes(current_index)
-        if self.current_input_type != self._SCENARIO_ALTERNATIVE:
+    @Slot(QModelIndex, QModelIndex)
+    def _handle_entity_tree_selection_changed_in_pivot_table(self, current: QModelIndex, previous: QModelIndex) -> None:
+        reload_required = self._update_class_attributes(current)
+        if self.current_input_type != self._SCENARIO_ALTERNATIVE and reload_required:
             self.do_reload_pivot_table()
 
-    def _update_class_attributes(self, current_index):
+    def _update_class_attributes(self, current_index: QModelIndex) -> bool:
         """Updates current class id and name."""
         current_class_item = self._get_current_class_item(current_index)
         if current_class_item is None:
             self.current_class_id = {}
             self.current_class_name = None
-            return
+            return True
         class_id = current_class_item.db_map_ids
         if self.current_class_id == class_id:
-            return
+            return False
         self.current_class_id = class_id
         self.current_class_name = current_class_item.name
+        return True
 
     @staticmethod
     def _get_current_class_item(current_index):
@@ -291,12 +298,14 @@ class TabularViewMixin:
                 self.pivot_table_model.modelReset.disconnect(self.reload_frozen_table)
                 self.pivot_table_model.frozen_values_added.disconnect(self._add_values_to_frozen_table)
                 self.pivot_table_model.frozen_values_removed.disconnect(self._remove_values_from_frozen_table)
+                self.pivot_table_model.big_data_refused.disconnect(self._warn_big_data_refused)
             self.pivot_table_model = pivot_table_model
             self.pivot_table_proxy.setSourceModel(self.pivot_table_model)
             self.pivot_table_model.modelReset.connect(self.make_pivot_headers)
             self.pivot_table_model.modelReset.connect(self.reload_frozen_table)
             self.pivot_table_model.frozen_values_added.connect(self._add_values_to_frozen_table)
             self.pivot_table_model.frozen_values_removed.connect(self._remove_values_from_frozen_table)
+            self.pivot_table_model.big_data_refused.connect(self._warn_big_data_refused)
             delegate = self.pivot_table_model.make_delegate(self)
             self.ui.pivot_table.setItemDelegate(delegate)
         pivot = self.get_pivot_preferences()
@@ -427,7 +436,7 @@ class TabularViewMixin:
                     self, self.db_mngr, self.db_maps, item_type, accepts_item, identifier, show_empty=False
                 )
             self.filter_menus[identifier] = menu
-            menu.filterChanged.connect(self.change_filter)
+            menu.filter_changed.connect(self.change_filter)
         return self.filter_menus[identifier]
 
     def create_header_widget(self, identifier, area, with_menu=True):
@@ -506,15 +515,20 @@ class TabularViewMixin:
         )
         self.make_pivot_headers()
 
-    def _change_selected_frozen_row(self, current, previous):
+    @Slot(QModelIndex, QModelIndex)
+    def _change_selected_frozen_row(self, current: QModelIndex, previous: QModelIndex) -> None:
         """Sets the frozen value from selection in frozen table."""
         if not current.isValid():
             return
         row = current.row()
         if row == 0:
-            selection_model = self.ui.frozen_table.selectionModel()
-            with disconnect(selection_model.currentChanged, self._change_selected_frozen_row):
+            QObject.disconnect(self._frozen_selection_current_changed_connection)
+            try:
                 self.ui.frozen_table.setCurrentIndex(previous)
+            finally:
+                self._frozen_selection_current_changed_connection = (
+                    self.ui.frozen_table.selectionModel().currentChanged.connect(self._change_selected_frozen_row)
+                )
             return
         if row == previous.row():
             return
@@ -635,9 +649,16 @@ class TabularViewMixin:
         finally:
             self._disable_frozen_table_reload = False
 
+    @Slot()
+    def _warn_big_data_refused(self):
+        QMessageBox.warning(
+            self, "Too much data to show", "The data contains too many elements to show. Some data was dropped."
+        )
+
     def closeEvent(self, event):
         super().closeEvent(event)
         if not event.isAccepted():
             return
         if self.pivot_table_model is not None:
             self.pivot_table_model.tear_down()
+            self.pivot_table_model = None

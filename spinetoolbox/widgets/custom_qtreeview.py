@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QTreeView."""
+
 import os
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QApplication, QTreeView

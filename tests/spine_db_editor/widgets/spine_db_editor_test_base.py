@@ -11,11 +11,13 @@
 ######################################################################################################################
 
 """Base classes and helpers for database editor tests."""
+
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
+from tests.spine_db_editor.helpers import fetch_entity_tree_model
 
 
 class DBEditorTestBase(TestCaseWithQApplication):
@@ -23,12 +25,18 @@ class DBEditorTestBase(TestCaseWithQApplication):
 
     def setUp(self):
         """Makes instances of SpineDBEditor classes."""
+
+        def mock_settings_value(key, defaultValue=None):
+            if key.endswith("layoutAlgoSpreadFactor"):
+                return 100
+            return 0
+
         with (
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
         ):
             mock_settings = mock.Mock()
-            mock_settings.value.side_effect = lambda *args, **kwargs: 0
+            mock_settings.value.side_effect = mock_settings_value
             self.db_mngr = MockSpineDBManager(mock_settings, None)
             logger = mock.MagicMock()
             self.mock_db_map = self.db_mngr.get_db_map("sqlite://", logger, create=True)
@@ -215,7 +223,4 @@ class DBEditorTestBase(TestCaseWithQApplication):
         self.put_mock_relationship_parameter_values_in_db_mngr()
 
     def fetch_entity_tree_model(self):
-        for item in self.spine_db_editor.entity_tree_model.visit_all():
-            while item.can_fetch_more():
-                item.fetch_more()
-                qApp.processEvents()  # pylint: disable=undefined-variable
+        fetch_entity_tree_model(self.spine_db_editor)

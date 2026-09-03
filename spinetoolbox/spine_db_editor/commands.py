@@ -10,6 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 """DB Editor specific QUndoCommand subclasses."""
+
 from __future__ import annotations
 from collections.abc import Iterable
 import pickle

@@ -11,18 +11,25 @@
 ######################################################################################################################
 
 """Unit tests for DB editor's custom ``QTableView`` classes."""
+
 import csv
 import io
 import itertools
-import os
-from tempfile import TemporaryDirectory
-import unittest
 from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QAbstractItemView, QApplication, QMessageBox
+import pytest
 from spinedb_api import Array, DatabaseMapping, import_functions
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
-from tests.mock_helpers import assert_table_model_data, fetch_model, mock_clipboard_patch
+from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
+from spinetoolbox.spine_db_editor.empty_table_size_hint_provider import calculate_table_height
+from spinetoolbox.spine_db_editor.mvcmodels.empty_models import NO_VALUE
+from tests.mock_helpers import (
+    assert_table_model_data,
+    assert_table_model_data_pytest,
+    fetch_model,
+    mock_clipboard_patch,
+)
 from tests.spine_db_editor.helpers import TestBase
 from tests.spine_db_editor.widgets.helpers import EditorDelegateMocking, add_entity, add_zero_dimension_entity_class
 
@@ -34,6 +41,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         index = model.index(0, 4)
         plot_widget = table_view._plot_selection([index])
         try:
@@ -61,6 +71,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         valid_types_column = model.header.index("valid types")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -79,6 +92,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         valid_types_column = model.header.index("valid types")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -97,6 +113,9 @@ class TestParameterDefinitionTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_definition
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        self.assertEqual(model.rowCount(), 1)
         valid_types_column = model.header.index("valid types")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, valid_types_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
@@ -110,12 +129,13 @@ class TestParameterDefinitionTableView(TestBase):
         ):
             self.assertTrue(table_view.paste())
         expected = [
-            ["Object", "X", "bool" + DB_ITEM_SEPARATOR + "str", None, "None", None, self.db_codename],
+            ["Object", "X", "bool" + DB_ITEM_SEPARATOR + "str", None, "None", None, None, self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
 
 class TestParameterValueTableView(TestBase):
+
     def test_paste_empty_string_to_entity_byname_column(self):
         self._db_map.add_entity_class(name="Object")
         self._db_map.add_entity(entity_class_name="Object", name="my_object")
@@ -130,7 +150,9 @@ class TestParameterValueTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         fetch_model(model)
-        byname_column = model.header.index("entity_byname")
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        byname_column = model.header.index("entity byname")
         table_view.selectionModel().setCurrentIndex(
             model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
@@ -139,13 +161,13 @@ class TestParameterValueTableView(TestBase):
             self.assertTrue(table_view.paste())
         expected = {
             Qt.ItemDataRole.DisplayRole: [
-                ["Object", "my_object", "X", "Base", "2.3", self.db_codename],
+                [None, "Object", "my_object", "X", "Base", "2.3", self.db_codename],
             ],
             Qt.ItemDataRole.ToolTipRole: [
-                ["Object", "my_object", "X", "<qt>Base alternative</qt>", None, self.db_codename],
+                [None, "Object", "my_object", "X", "<qt>Base alternative</qt>", None, self.db_codename],
             ],
             Qt.ItemDataRole.EditRole: [
-                ["Object", ("my_object",), "X", "Base", "2.3", self.db_codename],
+                [None, "Object", ("my_object",), "X", "Base", "2.3", self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
@@ -168,11 +190,11 @@ class TestParameterValueTableView(TestBase):
         while model.rowCount() != 1:
             QApplication.processEvents()
         expected = [
-            ["Object", "pencil", "y", "Base", "2.3", self.db_codename],
+            [None, "Object", "pencil", "y", "Base", "2.3", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
         while model.rowCount() != 0:
             QApplication.processEvents()
@@ -193,28 +215,40 @@ class TestParameterValueTableView(TestBase):
         empty_model = empty_table_view.model()
         self.assertEqual(empty_model.rowCount(), 1)
         _set_row_data(
-            empty_table_view, empty_model, 0, ["an_object_class", ("object_1",), "a_parameter", "Base"], delegate_mock
+            empty_table_view,
+            empty_model,
+            0,
+            [None, "an_object_class", ("object_1",), "a_parameter", "Base"],
+            delegate_mock,
         )
         delegate_mock.reset()
-        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
+        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 5), "value_1")
         _set_row_data(
-            empty_table_view, empty_model, 1, ["an_object_class", ("object_2",), "a_parameter", "Base"], delegate_mock
+            empty_table_view,
+            empty_model,
+            1,
+            [None, "an_object_class", ("object_2",), "a_parameter", "Base"],
+            delegate_mock,
         )
         delegate_mock.reset()
-        delegate_mock.write_to_index(empty_table_view, empty_model.index(1, 4), "value_2")
+        delegate_mock.write_to_index(empty_table_view, empty_model.index(1, 5), "value_2")
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         expected = [
-            ["an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
-            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
+            [None, "an_object_class", "object_1", "a_parameter", "Base", "value_1", self.db_codename],
+            [None, "an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
-        selection_model.select(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        selection_model.select(model.index(0, 1), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
+        while model.rowCount() == 2:
+            QApplication.processEvents()
         self.assertFalse(model.canFetchMore(QModelIndex()))
         expected = [
-            ["an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
+            [None, "an_object_class", "object_2", "a_parameter", "Base", "value_2", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
@@ -232,14 +266,20 @@ class TestParameterValueTableView(TestBase):
         empty_model = empty_table_view.model()
         self.assertEqual(empty_model.rowCount(), 1)
         _set_row_data(
-            empty_table_view, empty_model, 0, ["an_object_class", ("an_object",), "a_parameter", "Base"], delegate_mock
+            empty_table_view,
+            empty_model,
+            0,
+            [None, "an_object_class", ("an_object",), "a_parameter", "Base"],
+            delegate_mock,
         )
         delegate_mock.reset()
-        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 4), "value_1")
+        delegate_mock.write_to_index(empty_table_view, empty_model.index(0, 5), "value_1")
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         expected = [
-            ["an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
+            [None, "an_object_class", "an_object", "a_parameter", "Base", "value_1", self.db_codename],
         ]
         assert_table_model_data(model, expected, self)
 
@@ -263,47 +303,33 @@ class TestParameterValueTableView(TestBase):
             empty_table_view,
             empty_model,
             0,
-            ["object_1_class", ("an_object_1",), "parameter_1", "Base", "a_value"],
+            [None, "object_1_class", ("an_object_1",), "parameter_1", "Base", "a_value"],
             delegate_mock,
         )
         _set_row_data(
             empty_table_view,
             empty_model,
             1,
-            ["object_2_class", ("an_object_2",), "parameter_2", "Base", "b_value"],
+            [None, "object_2_class", ("an_object_2",), "parameter_2", "Base", "b_value"],
             delegate_mock,
         )
         _set_row_data(
             empty_table_view,
             empty_model,
             2,
-            ["object_1_class", ("another_object_1",), "parameter_1", "Base", "c_value"],
+            [None, "object_1_class", ("another_object_1",), "parameter_1", "Base", "c_value"],
             delegate_mock,
         )
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
-        expected = [
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
-        ]
-        self.assertEqual(model.rowCount(), len(expected))
-        self.assertEqual(model.columnCount(), 6)
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
-        self._commit_changes_to_database("Add test data.")
-        self._db_editor.refresh_session()
-        while model.rowCount() != 3:
-            model.fetchMore(QModelIndex())
+        while model.rowCount() == 0:
             QApplication.processEvents()
         expected = [
-            ["object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
-            ["object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
-            ["object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
+            [None, "object_1_class", "an_object_1", "parameter_1", "Base", "a_value", self.db_codename],
+            [None, "object_1_class", "another_object_1", "parameter_1", "Base", "c_value", self.db_codename],
+            [None, "object_2_class", "an_object_2", "parameter_2", "Base", "b_value", self.db_codename],
         ]
-        self.assertEqual(model.rowCount(), len(expected))
-        for row, column in itertools.product(range(model.rowCount()), range(model.columnCount())):
-            self.assertEqual(model.index(row, column).data(), expected[row][column])
+        assert_table_model_data(model, expected, self)
 
     def test_plotting(self):
         self._db_map.add_entity_class(name="Object")
@@ -319,7 +345,9 @@ class TestParameterValueTableView(TestBase):
         table_view = self._db_editor.ui.tableView_parameter_value
         model = table_view.model()
         fetch_model(model)
-        index = model.index(0, 4)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        index = model.index(0, 5)
         plot_widget = table_view._plot_selection([index])
         try:
             self.assertEqual(
@@ -344,31 +372,40 @@ class TestParameterValueTableView(TestBase):
         self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
 
 
-class TestParameterValueTableWithExistingData(TestBase):
+class TestParameterValueTableWithExistingData:
     _CHUNK_SIZE = 100  # This has to be large enough, so the chunk won't 'fit' into the table view.
 
-    @mock.patch("spinetoolbox.spine_db_worker._CHUNK_SIZE", new=_CHUNK_SIZE)
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
+    @pytest.fixture()
+    def limited_chunk_size(self, monkeypatch):
+        monkeypatch.setattr(
+            "spinetoolbox.spine_db_worker._CHUNK_SIZE", TestParameterValueTableWithExistingData._CHUNK_SIZE
+        )
+
+    @pytest.fixture()
+    def db_map(self, db_name, db_mngr, logger, tmp_path, limited_chunk_size):
+        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             # 1-D entity class
             self._n_entities = 12
             self._n_parameters = 12
-            import_functions.import_entity_classes(db_map, (("object_class",),))
+            _, errors = import_functions.import_entity_classes(db_map, (("object_class",),))
+            assert errors == []
             object_data = [("object_class", f"object_{n}") for n in range(self._n_entities)]
-            import_functions.import_entities(db_map, object_data)
+            _, errors = import_functions.import_entities(db_map, object_data)
+            assert errors == []
             parameter_definition_data = (("object_class", f"parameter_{n}") for n in range(self._n_parameters))
-            import_functions.import_object_parameters(db_map, parameter_definition_data)
+            _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
+            assert errors == []
             parameter_value_data = (
                 ("object_class", f"object_{object_n}", f"parameter_{parameter_n}", "a_value")
                 for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
             )
-            import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            _, errors = import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            assert errors == []
             # 2-D entity class
             self._n_ND_entities = 2
             self._n_ND_parameters = 2
-            import_functions.import_entity_classes(
+            _, errors = import_functions.import_entity_classes(
                 db_map,
                 (
                     (
@@ -380,13 +417,16 @@ class TestParameterValueTableWithExistingData(TestBase):
                     ),
                 ),
             )
+            assert errors == []
             nd_entity_names = [
                 (f"object_{i}", f"object_{j}") for i, j in itertools.permutations(range(self._n_ND_entities), 2)
             ]
             object_data = [("multi_d_class", byname) for byname in nd_entity_names]
-            import_functions.import_entities(db_map, object_data)
+            _, errors = import_functions.import_entities(db_map, object_data)
+            assert errors == []
             parameter_definition_data = (("multi_d_class", f"parameter_{n}") for n in range(self._n_ND_parameters))
-            import_functions.import_object_parameters(db_map, parameter_definition_data)
+            _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
+            assert errors == []
             parameter_value_data = [
                 (
                     "multi_d_class",
@@ -396,120 +436,143 @@ class TestParameterValueTableWithExistingData(TestBase):
                 )
                 for byname, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
-            import_functions.import_parameter_values(db_map, parameter_value_data)
+            _, errors = import_functions.import_parameter_values(db_map, parameter_value_data)
+            assert errors == []
             db_map.commit_session("Add test data.")
-        self._common_setup(url, create=False)
-        model = self._db_editor.ui.tableView_parameter_value.model()
-        while model.rowCount() != self._CHUNK_SIZE:
-            # Wait for fetching to finish.
-            QApplication.processEvents()
+        unfetched_db_map = db_mngr.get_db_map(url, logger)
+        db_mngr.name_registry.register(unfetched_db_map.sa_url, db_name)
+        return unfetched_db_map
 
-    def tearDown(self):
-        self._common_tear_down()
-        self._temp_dir.cleanup()
+    @pytest.fixture()
+    def model(self, db_editor):
+        table_view = db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        return model
 
     def _whole_model_rowcount(self):
         return self._n_entities * self._n_parameters + self._n_ND_entities * self._n_ND_parameters
 
-    def test_purging_value_data_removes_all_rows(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-        self.assertEqual(model.rowCount(), 0)
+    def test_purging_value_data_removes_all_rows(self, model, db_map, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
+        assert model.rowCount() == 0
 
-    def test_purging_value_data_clears_table(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-        self.assertEqual(model.rowCount(), 0)
+    def test_purging_value_data_clears_table(self, model, db_map, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
+        assert model.rowCount() == 0
 
-    def test_remove_fetched_rows(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        ids = [model.item_at_row(row) for row in range(0, model.rowCount() - 1, 2)]
-        self._db_mngr.remove_items({self._db_map: {"parameter_value": set(ids)}})
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE // 2)
+    def test_remove_fetched_rows(self, model, db_map, db_name, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        ids = [model.index(row, 0).data(ITEM_ID_ROLE) for row in range(0, model.rowCount() - 1, 2)]
+        db_mngr.remove_items({db_map: {"parameter_value": set(ids)}})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
+        assert model.rowCount() == self._whole_model_rowcount() - self._CHUNK_SIZE // 2
 
-    def test_undoing_purge(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-        self.assertEqual(model.rowCount(), 0)
-        self._db_mngr.undo_stack[self._db_map].undo()
+    def test_undoing_purge(self, model, db_map, db_name, db_mngr):
+        assert model.rowCount() == self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
+        assert model.rowCount() == 0
+        db_mngr.undo_stack[db_map].undo()
         while model.rowCount() != self._whole_model_rowcount():
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = [
-            ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+            [
+                None,
+                "object_class",
+                f"object_{object_n}",
+                f"parameter_{parameter_n}",
+                "Base",
+                "a_value",
+                db_name,
+            ]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", db_name]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount())
-        assert_table_model_data(model, expected, self)
+        assert model.rowCount() == self._whole_model_rowcount()
+        assert_table_model_data_pytest(model, expected)
 
-    def test_rolling_back_purge(self):
-        table_view = self._db_editor.ui.tableView_parameter_value
-        model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
-        self.assertEqual(model.rowCount(), 0)
+    def test_rolling_back_purge(self, model, db_map, db_name, db_mngr, db_editor):
+        assert model.rowCount(), self._CHUNK_SIZE
+        db_mngr.purge_items({db_map: ["parameter_value"]})
+        while model.rowCount() == self._CHUNK_SIZE:
+            QApplication.processEvents()
+        assert model.rowCount() == 0
         with mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.QMessageBox") as roll_back_dialog:
             roll_back_dialog.StandardButton.Ok = QMessageBox.StandardButton.Ok
             instance = roll_back_dialog.return_value
             instance.exec.return_value = QMessageBox.StandardButton.Ok
-            self._db_editor.ui.actionRollback.trigger()
-            self._db_editor.rollback_session()
+            db_editor.ui.actionRollback.trigger()
+            db_editor.rollback_session()
         while model.rowCount() != self._whole_model_rowcount():
             # Fetch the entire model, because we want to validate all the data.
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = [
-            ["object_class", f"object_{object_n}", f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+            [
+                None,
+                "object_class",
+                f"object_{object_n}",
+                f"parameter_{parameter_n}",
+                "Base",
+                "a_value",
+                db_name,
+            ]
             for object_n, parameter_n in itertools.product(range(self._n_entities), range(self._n_parameters))
         ]
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", db_name]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
         QApplication.processEvents()
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount())
-        assert_table_model_data(model, expected, self)
+        assert model.rowCount() == self._whole_model_rowcount()
+        assert_table_model_data_pytest(model, expected)
 
-    def test_sorting(self):
+    def test_sorting(self, db_map, db_name, db_mngr, db_editor, tmp_path):
         """Test that the parameter value table sorts in an expected order."""
-        url = "sqlite:///" + os.path.join(self._temp_dir.name, "test_database.sqlite")
-        with DatabaseMapping(url) as db_map:
+        with db_map:
             parameter_definition_data = (
                 ("object_class", "0parameter_"),
                 ("object_class", "1parameter_"),
             )
-            import_functions.import_object_parameters(db_map, parameter_definition_data)
+            _, errors = import_functions.import_object_parameters(db_map, parameter_definition_data)
+            assert errors == []
             parameter_value_data = (
                 ("object_class", "object_0", "0parameter_", "a_value"),
                 ("object_class", "object_0", "1parameter_", "a_value"),
                 ("object_class", "object_1", "0parameter_", "a_value"),
                 ("object_class", "object_1", "1parameter_", "a_value"),
             )
-            import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            _, errors = import_functions.import_object_parameter_values(db_map, parameter_value_data)
+            assert errors == []
             db_map.commit_session("Add test data.")
-        table_view = self._db_editor.ui.tableView_parameter_value
+        table_view = db_editor.ui.tableView_parameter_value
         model = table_view.model()
-        self.assertEqual(model.rowCount(), self._CHUNK_SIZE)
-        while model.rowCount() != self._whole_model_rowcount() + 4:
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        assert model.rowCount() == self._whole_model_rowcount() + len(parameter_value_data)
+        db_mngr.refresh_session(db_map)
+        while model.rowCount() == 0:
             model.fetchMore(QModelIndex())
             QApplication.processEvents()
         expected = []
@@ -517,30 +580,46 @@ class TestParameterValueTableWithExistingData(TestBase):
             for parameter_n in range(self._n_parameters):
                 expected.append(
                     [
+                        None,
                         "object_class",
                         f"object_{object_n}",
                         f"parameter_{parameter_n}",
                         "Base",
                         "a_value",
-                        self.db_codename,
+                        db_name,
                     ]
                 )
             if object_n < 2:
                 expected.extend(
                     [
-                        ["object_class", f"object_{object_n}", "0parameter_", "Base", "a_value", self.db_codename],
-                        ["object_class", f"object_{object_n}", "1parameter_", "Base", "a_value", self.db_codename],
+                        [
+                            None,
+                            "object_class",
+                            f"object_{object_n}",
+                            "0parameter_",
+                            "Base",
+                            "a_value",
+                            db_name,
+                        ],
+                        [
+                            None,
+                            "object_class",
+                            f"object_{object_n}",
+                            "1parameter_",
+                            "Base",
+                            "a_value",
+                            db_name,
+                        ],
                     ]
                 )
         nd_entity_names = [f"object_{i} ǀ object_{j}" for i, j in itertools.permutations(range(self._n_ND_entities), 2)]
         expected.extend(
             [
-                ["multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", self.db_codename]
+                [None, "multi_d_class", entity_name, f"parameter_{parameter_n}", "Base", "a_value", db_name]
                 for entity_name, parameter_n in itertools.product(nd_entity_names, range(self._n_ND_parameters))
             ]
         )
-        self.assertEqual(model.rowCount(), self._whole_model_rowcount() + 4)
-        assert_table_model_data(model, expected, self)
+        assert_table_model_data_pytest(model, expected)
 
 
 class TestEntityAlternativeTableView(TestBase):
@@ -553,6 +632,8 @@ class TestEntityAlternativeTableView(TestBase):
         table_view = self._db_editor.ui.tableView_entity_alternative
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with mock_clipboard_patch(
             "Object\tspoon\tBase\tGIBBERISH", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
@@ -572,6 +653,8 @@ class TestEntityAlternativeTableView(TestBase):
         table_view = self._db_editor.ui.tableView_entity_alternative
         model = table_view.model()
         fetch_model(model)
+        while model.rowCount() == 0:
+            QApplication.processEvents()
         table_view.selectionModel().setCurrentIndex(model.index(0, 0), QItemSelectionModel.SelectionFlag.ClearAndSelect)
         with mock_clipboard_patch(
             "Object\tspoon\tBase\tyes", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"
@@ -587,6 +670,22 @@ class TestEntityAlternativeTableView(TestBase):
         self.assertTrue(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
         self._db_editor.ui.tableView_parameter_definition.set_db_column_visibility(True)
         self.assertFalse(table_view.isColumnHidden(table_view._EXPECTED_COLUMN_COUNT - 1))
+
+
+class TestEmptyParameterDefinitionTableView:
+    def test_paste_parameter_types(self, db_editor):
+        table_view = db_editor.ui.empty_parameter_definition_table_view
+        model = table_view.model()
+        type_column = model.header.index("valid types")
+        index = model.index(0, type_column)
+        table_view.setCurrentIndex(index)
+        with mock_clipboard_patch("bool", "spinetoolbox.widgets.custom_qtableview.QApplication.clipboard"):
+            assert table_view.paste()
+        expected = [
+            [None, None, "bool", None, None, None, None, "TestEmptyParameterDefinitionTableView_db"],
+            [None, None, None, None, None, None, None, "TestEmptyParameterDefinitionTableView_db"],
+        ]
+        assert_table_model_data_pytest(model, expected)
 
 
 class TestEmptyParameterValueTableView(TestBase):
@@ -607,38 +706,25 @@ class TestEmptyParameterValueTableView(TestBase):
         table_view = self._db_editor.ui.empty_parameter_value_table_view
         model = table_view.model()
         self.assertEqual(model.rowCount(), 1)
-        index = model.index(0, 0)
+        index = model.index(0, 1)
         delegate_mock = EditorDelegateMocking()
         delegate_mock.write_to_index(table_view, index, "an_object_class")
-        self.assertEqual(model.rowCount(), 2)
-        self.assertEqual(model.columnCount(), 6)
-        self.assertEqual(model.index(0, 0).data(), "an_object_class")
-        self.assertEqual(model.index(0, 1).data(), None)
-        self.assertEqual(model.index(0, 2).data(), None)
-        self.assertEqual(model.index(0, 3).data(), None)
-        self.assertEqual(model.index(0, 4).data(), None)
-        self.assertEqual(model.index(0, 5).data(), self.db_codename)
-        self.assertEqual(model.index(1, 0).data(), None)
-        self.assertEqual(model.index(1, 1).data(), None)
-        self.assertEqual(model.index(1, 2).data(), None)
-        self.assertEqual(model.index(1, 3).data(), None)
-        self.assertEqual(model.index(1, 4).data(), None)
-        self.assertEqual(model.index(1, 5).data(), self.db_codename)
+        expected = [
+            [None, "an_object_class", None, None, None, None, self.db_codename],
+            [None, None, None, None, None, None, self.db_codename],
+        ]
+        assert_table_model_data(model, expected, self)
         selection_model = table_view.selectionModel()
         selection_model.select(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         table_view.remove_selected()
-        self.assertEqual(model.rowCount(), 1)
-        self.assertEqual(model.index(0, 0).data(), None)
-        self.assertEqual(model.index(0, 1).data(), None)
-        self.assertEqual(model.index(0, 2).data(), None)
-        self.assertEqual(model.index(0, 3).data(), None)
-        self.assertEqual(model.index(0, 4).data(), None)
+        expected = [[None, None, None, None, None, None, self.db_codename]]
+        assert_table_model_data(model, expected, self)
         self.assertFalse(selection_model.hasSelection())
 
     def test_paste_empty_string_to_entity_byname_column(self):
         table_view = self._db_editor.ui.empty_parameter_value_table_view
         model = table_view.model()
-        byname_column = model.header.index("entity_byname")
+        byname_column = model.header.index(model.field_to_header("entity_byname"))
         table_view.selectionModel().setCurrentIndex(
             model.index(0, byname_column), QItemSelectionModel.SelectionFlag.ClearAndSelect
         )
@@ -646,13 +732,13 @@ class TestEmptyParameterValueTableView(TestBase):
             self.assertTrue(table_view.paste())
         expected = {
             Qt.ItemDataRole.DisplayRole: [
-                [None, None, None, None, None, self.db_codename],
+                [None, None, None, None, None, None, self.db_codename],
             ],
             Qt.ItemDataRole.ToolTipRole: [
-                [None, None, None, None, None, None],
+                [None, None, None, None, None, None, None],
             ],
             Qt.ItemDataRole.EditRole: [
-                [None, (), None, None, None, self.db_codename],
+                [None, None, (), None, None, NO_VALUE, self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
@@ -670,22 +756,22 @@ class TestEmptyParameterValueTableView(TestBase):
             table_view,
             model,
             model.rowCount() - 1,
-            ["object_class", ("object_1",), "parameter_1", "Base"],
+            [None, "object_class", ("object_1",), "parameter_1", "Base"],
             delegate_mock,
         )
         self._db_mngr.purge_items({self._db_map: ["parameter_value"]})
         expected = {
             Qt.ItemDataRole.DisplayRole: [
-                ["object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
-                [None, None, None, None, None, self.db_codename],
+                [None, "object_class", "object_1", "parameter_1", "Base", None, self.db_codename],
+                [None, None, None, None, None, None, self.db_codename],
             ],
             Qt.ItemDataRole.ToolTipRole: [
-                [None, None, None, None, None, None],
-                [None, None, None, None, None, None],
+                [None, None, None, None, None, None, None],
+                [None, None, None, None, None, None, None],
             ],
             Qt.ItemDataRole.EditRole: [
-                ["object_class", ("object_1",), "parameter_1", "Base", None, self.db_codename],
-                [None, None, None, None, None, self.db_codename],
+                [None, "object_class", ("object_1",), "parameter_1", "Base", NO_VALUE, self.db_codename],
+                [None, None, None, None, None, NO_VALUE, self.db_codename],
             ],
         }
         for role, expected_for_role in expected.items():
@@ -781,6 +867,42 @@ def _set_row_data(view, model, row, data, delegate_mock):
     for column, cell_data in enumerate(data):
         delegate_mock.reset()
         delegate_mock.write_to_index(view, model.index(row, column), cell_data)
+
+
+class TestStackedTableSearchRowHeight:
+    """The per-column search row reserves a data-row's worth of viewport margin under the header.
+
+    ``calculate_table_height`` sizes the stacked (top) table so all of its rows fit and the
+    always-on vertical scroll bar stays disabled; it must therefore include that reserved margin,
+    otherwise the table comes up one row too short and the last row is clipped.
+    """
+
+    def test_search_row_height_is_included_so_all_rows_fit(self, db_editor, db_map):
+        db_map.add_entity_class(name="Object")
+        db_map.add_parameter_definition(entity_class_name="Object", name="X")
+        row_count = 5
+        for n in range(row_count):
+            db_map.add_entity(entity_class_name="Object", name=f"object_{n}")
+            db_map.add_parameter_value(
+                entity_class_name="Object",
+                entity_byname=(f"object_{n}",),
+                parameter_definition_name="X",
+                alternative_name="Base",
+                parsed_value=n,
+            )
+        table_view = db_editor.ui.tableView_parameter_value
+        model = table_view.model()
+        while model.rowCount() < row_count:
+            model.fetchMore(QModelIndex())
+            QApplication.processEvents()
+        assert model.rowCount() == row_count
+        # Size the table to the height the stacking machinery allots it, then check every data row
+        # fits in the viewport (a faithful proxy for "vertical scroll bar disabled" that, unlike the
+        # scroll-bar range, is computed reliably for an off-screen widget).
+        table_view.resize(600, calculate_table_height(table_view))
+        table_view.updateGeometries()
+        QApplication.processEvents()
+        assert table_view.viewport().height() >= row_count * table_view.rowHeight(0)
 
 
 class TestPivotTableView(TestBase):
@@ -1103,6 +1225,14 @@ class TestPivotTableView(TestBase):
         ]
         assert_table_model_data(pivot_model, expected, self)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_set_scroll_modes(self):
+        view = self._db_editor.ui.pivot_table
+        for scroll_mode in (QAbstractItemView.ScrollMode.ScrollPerItem, QAbstractItemView.ScrollMode.ScrollPerPixel):
+            view.setHorizontalScrollMode(scroll_mode)
+            self.assertEqual(view.horizontalScrollMode(), scroll_mode)
+            for header_table in (view._top_left_header_table, view._top_header_table, view._left_header_table):
+                self.assertEqual(header_table.horizontalScrollMode(), scroll_mode)
+            view.setVerticalScrollMode(scroll_mode)
+            self.assertEqual(view.verticalScrollMode(), scroll_mode)
+            for header_table in (view._top_left_header_table, view._top_header_table, view._left_header_table):
+                self.assertEqual(header_table.verticalScrollMode(), scroll_mode)

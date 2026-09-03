@@ -11,13 +11,13 @@
 ######################################################################################################################
 
 """Classes and functions that can be shared among unit test modules."""
+
 from contextlib import contextmanager
 from typing import Any
 import unittest
 from unittest import mock
-from PySide6.QtCore import QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
+from PySide6.QtCore import QAbstractListModel, QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
 from PySide6.QtWidgets import QApplication
-import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.ui_main import ToolboxUI
 
@@ -54,8 +54,9 @@ def create_toolboxui():
 
 def create_project(toolbox, project_dir):
     """Creates a project for the given ToolboxUI."""
-    with (mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects"),):
+    with (mock.patch("spinetoolbox.ui_main.update_recent_projects") as mock_urp,):
         toolbox.create_project(project_dir)
+        mock_urp.assert_called()
 
 
 def create_toolboxui_with_project(project_dir):
@@ -378,10 +379,34 @@ def assert_table_model_data(
                 test_case.assertEqual(model.index(row, column).data(role), expected[row][column])
 
 
+def assert_table_model_data_pytest(
+    model: QAbstractTableModel,
+    expected: list[list[Any]],
+    role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
+) -> None:
+    assert model.rowCount() == len(expected), f"{model.rowCount()} != {len(expected)}"
+    for row in range(model.rowCount()):
+        assert model.columnCount() == len(expected[row]), f"{model.columnCount()} != {len(expected[row])}"
+        for column in range(model.columnCount()):
+            data = model.index(row, column).data(role)
+            expected_data = expected[row][column]
+            assert data == expected_data, f"{data} != {expected_data} on row {row} column {column}"
+
+
+def assert_list_model_data_pytest(
+    model: QAbstractListModel, expected: list, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
+) -> None:
+    assert model.rowCount() == len(expected), f"{model.rowCount()} != {len(expected)}"
+    for row in range(model.rowCount()):
+        data = model.index(row).data(role)
+        expected_data = expected[row]
+        assert data == expected_data, f"{data} != {expected_data} on row {row}"
+
+
 def fetch_model(model):
     while model.canFetchMore(QModelIndex()):
         model.fetchMore(QModelIndex())
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        QApplication.processEvents()
 
 
 class FakeDataStore:

@@ -11,6 +11,8 @@
 ######################################################################################################################
 
 """Custom editors for model/view programming."""
+
+from collections.abc import Iterable
 from contextlib import suppress
 from typing import Optional
 from PySide6.QtCore import (
@@ -51,6 +53,7 @@ from spinetoolbox.helpers import (
     try_number_from_string,
 )
 from spinetoolbox.spine_db_editor.helpers import FALSE_STRING, TRUE_STRING, string_to_group
+from spinetoolbox.spine_db_editor.widgets.search_bar_base import is_unmapped_alt
 
 
 class EventFilterForCatchingRollbackShortcut(QObject):
@@ -99,7 +102,10 @@ class CustomLineEditor(QLineEdit):
         return self.text()
 
     def keyPressEvent(self, event):
-        """Prevents shift key press to clear the contents."""
+        """Prevents shift key press to clear the contents and swallows unmapped Alt shortcuts."""
+        if is_unmapped_alt(event):
+            event.ignore()
+            return
         if event.key() != Qt.Key_Shift:
             super().keyPressEvent(event)
 
@@ -202,12 +208,12 @@ class SearchBarEditor(QTableView):
         hover_color = self.palette().color(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight).lighter(220)
         self.setStyleSheet(f"QTableView::item:hover {{background: {hover_color.name()};}}")
 
-    def set_data(self, current, items):
+    def set_data(self, current: str, items: Iterable[str]):
         """Populates model.
 
         Args:
-            current (str): item that is currently selected from given items
-            items (Sequence of str): items to show in the list
+            current: item that is currently selected from given items
+            items: items to show in the list
         """
         item_list = [QStandardItem(current)]
         for item in sorted(items, key=lambda x: order_key(x.casefold())):
@@ -557,7 +563,7 @@ class IconColorEditor(QDialog):
 
     def connect_signals(self):
         """Connects signals to slots."""
-        self.line_edit.textEdited.connect(self.proxy_model.invalidateFilter)
+        self.line_edit.textEdited.connect(self.proxy_model.invalidate)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         self.button_box_reset.clicked.connect(lambda: self.reset_pressed.emit(self))

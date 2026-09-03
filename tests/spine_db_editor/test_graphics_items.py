@@ -11,13 +11,14 @@
 ######################################################################################################################
 
 """Unit tests for Database editor's ``graphics_items`` module."""
+
 from unittest import mock
 from PySide6.QtCore import QPointF
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.graphics_items import EntityItem
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 
 
 class TestEntityItem(TestCaseWithQApplication):

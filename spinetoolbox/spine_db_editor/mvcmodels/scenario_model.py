@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains scenario tree model."""
+
 import pickle
 from PySide6.QtCore import QByteArray, QMimeData, Qt
 from spinetoolbox.helpers import unique_name
@@ -22,6 +23,8 @@ from .utils import two_column_as_csv
 
 class ScenarioModel(TreeModelBase):
     """A model to display scenarios in a tree view."""
+
+    LEVEL_ITEM_TYPES = ("scenario", "scenario_alternative")
 
     def _make_db_item(self, db_map):
         return ScenarioDBItem(self, db_map, self.db_mngr.name_registry)
@@ -221,3 +224,31 @@ class ScenarioModel(TreeModelBase):
                     {db_map: [{"id": item["id"], "alternative_id_list": alternative_id_list}]}
                 )
                 break
+
+    def duplicate_scenario_with_alternatives(self, scenario_item: ScenarioItem, alternatives: list[str]) -> None:
+        db_map = scenario_item.db_map
+        scenario = db_map.scenario(id=scenario_item.id)
+        scenario_name = scenario["name"] + "+" + "+".join(alternatives)
+        existing_names = {i["name"] for i in db_map.find_scenarios()}
+        if scenario_name in existing_names:
+            scenario_name = unique_name(scenario_name, existing_names)
+        self.db_mngr.add_items("scenario", {db_map: [{"name": scenario_name}]})
+        alternative_id_list = scenario["alternative_id_list"]
+        all_alternatives = {alternative["name"]: alternative["id"] for alternative in db_map.find_alternatives()}
+        alternative_id_list += [all_alternatives[alternative] for alternative in alternatives]
+        duplicate = db_map.scenario(name=scenario_name)
+        self.db_mngr.set_scenario_alternatives(
+            {db_map: [{"id": duplicate["id"], "alternative_id_list": alternative_id_list}]}
+        )
+
+    def add_scenario_alternatives(self, scenario_item: ScenarioItem, alternatives: list[str]) -> None:
+        db_map = scenario_item.db_map
+        alternative_ids = db_map.mapped_table("scenario")[scenario_item.id]["alternative_id_list"]
+        available_alternatives = {
+            alternative["name"]: alternative["id"]
+            for alternative in db_map.mapped_table("alternative").values()
+            if alternative.is_valid()
+        }
+        alternative_ids += [available_alternatives[name] for name in alternatives]
+        db_item = {"id": scenario_item.id, "alternative_id_list": alternative_ids}
+        self.db_mngr.set_scenario_alternatives({db_map: [db_item]})

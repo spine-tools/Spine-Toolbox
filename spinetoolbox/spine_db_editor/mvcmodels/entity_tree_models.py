@@ -11,20 +11,103 @@
 ######################################################################################################################
 
 """Models to represent entities in a tree."""
+
+from PySide6.QtCore import QObject, QSettings
+from spinedb_api import DatabaseMapping
+from ...helpers import DB_ITEM_SEPARATOR
+from ...spine_db_manager import SpineDBManager
 from .entity_tree_item import EntityTreeRootItem
+from .level_filter import LevelFilterMixin
 from .multi_db_tree_model import MultiDBTreeModel
 
 
-class EntityTreeModel(MultiDBTreeModel):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._hide_empty_classes = (
-            self.db_editor.qsettings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
-        )
+class EntityTreeModel(LevelFilterMixin, MultiDBTreeModel):
+    LEVEL_ITEM_TYPES = ("entity_class", "entity")
+
+    def __init__(self, parent: QObject, app_settings: QSettings, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
+        super().__init__(parent, db_mngr, *db_maps)
+        self._app_settings = app_settings
+        self._hide_empty_classes = app_settings.value("appSettings/hideEmptyClasses", defaultValue="false") == "true"
 
     @property
     def root_item_type(self):
         return EntityTreeRootItem
+
+    def build_tree(self):
+        """Builds tree, dropping any stale level-filter state so a reload starts unfiltered."""
+        self.reset_level_filter_state()
+        super().build_tree()
+
+    def filter_text(self, item) -> str:
+        """Returns the real, unmangled name of an entity-tree item to match against a level filter.
+
+        For classes this is ``EntityClassItem.name``: the plain class name, without the "(superclass)"
+        suffix that ``display_data`` appends. For entities it is the entity byname joined with the DB item
+        separator; ``display_data`` mangles a repeated parent element into a placeholder glyph, so it is
+        unsuitable for matching.
+
+        Args:
+            item: an entity-tree item
+        """
+        if item.item_type == "entity":
+            return DB_ITEM_SEPARATOR.join(item.byname)
+        return item.name
+
+    def item_is_visible(self, item) -> bool:
+        """Returns whether a tree item passes the active level filters.
+
+        Only classes get the hide-empty-parent behaviour, and only over LOADED rows: when the entity filter
+        is active a class is visible if any already-fetched entity matches, or - optimistically - if it still
+        has unfetched entities (``can_fetch_more``, no fetch is forced); it is hidden only when it is fully
+        loaded and nothing matches. So a collapsed/unfetched class stays visible until expanded, then refines
+        (the insert/remove hooks restart the debounced re-apply once its children are fetched). Entities are
+        filtered purely by their own level's regex. Because the entity regex applies at every entity depth
+        top-down, a deep element only shows when it and all of its ancestor entities match (caveat N1).
+
+        Args:
+            item: an entity-tree item
+        """
+        if item.item_type == "entity_class":
+            if not self.item_passes_own_filter(item):
+                return False
+            if self.level_filter_active("entity"):
+                if any(self.item_passes_own_filter(c) for c in item.children if c.item_type == "entity"):
+                    return True
+                return item.can_fetch_more()
+            return True
+        if item.item_type == "entity":
+            return self.item_passes_own_filter(item)
+        return True
+
+    def _apply_level_filters(self) -> None:
+        """Rebuilds all child maps so the current level filters take effect.
+
+        This is the cheap recompute that only re-filters the already-loaded rows; the force-fetch that
+        makes a lower-level filter accurate across collapsed classes runs separately (see
+        :meth:`LevelFilterMixin._run_force_fetch`).
+        """
+        self._rebuild_all_child_maps()
+
+    def _level_filter_root(self):
+        """See base class. The entity tree walks from its visible root item down through the classes."""
+        return self.root_item
+
+    def _rebuild_all_child_maps(self) -> None:
+        """Recursively rebuilds every item's child map, emitting a single layout change for the whole tree.
+
+        Unlike calling ``refresh_child_map`` per node (which emits a layout-change pair each time), this emits
+        exactly one ``layoutAboutToBeChanged``/``layoutChanged`` around a non-emitting rebuild of each item.
+        """
+        root = self.root_item
+        if root is None:
+            return
+        self.layoutAboutToBeChanged.emit()
+        stack = [root]
+        while stack:
+            item = stack.pop()
+            item.rebuild_child_map()
+            stack.extend(item.children)
+        self.layoutChanged.emit()
 
     def find_next_entity_index(self, index):
         """Find and return next occurrence of relationship item."""
@@ -58,7 +141,7 @@ class EntityTreeModel(MultiDBTreeModel):
 
     def save_hide_empty_classes(self):
         hide_empty_classes = "true" if self.hide_empty_classes else "false"
-        self.db_editor.qsettings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
+        self._app_settings.setValue("appSettings/hideEmptyClasses", hide_empty_classes)
 
     @property
     def hide_empty_classes(self):

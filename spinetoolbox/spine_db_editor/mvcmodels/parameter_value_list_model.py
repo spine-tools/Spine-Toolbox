@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A tree model for parameter_value lists."""
+
 from PySide6.QtCore import QModelIndex, Qt
 from .parameter_value_list_item import DBItem
 from .tree_model_base import TreeModelBase
@@ -18,6 +19,8 @@ from .tree_model_base import TreeModelBase
 
 class ParameterValueListModel(TreeModelBase):
     """A model to display parameter_value_list data in a tree view."""
+
+    LEVEL_ITEM_TYPES = ("parameter_value_list", "list_value")
 
     def _make_db_item(self, db_map):
         return DBItem(self, db_map, self.db_mngr.name_registry)

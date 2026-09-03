@@ -26,8 +26,10 @@ class MergerWriteOrder(unittest.TestCase):
                 import_functions.import_parameter_definitions(db_map, (("Widget", "volume"),))
                 import_functions.import_parameter_values(db_map, (("Widget", "spoon", "volume", spoon_volume, "Base"),))
                 db_map.commit_session("Add test data.")
+            db_map.close()
         self._sink_url = "sqlite:///" + str(self._sink_database_path)
-        create_new_spine_database(self._sink_url)
+        engine = create_new_spine_database(self._sink_url)
+        engine.dispose()
 
     def test_execution(self):
         this_file = Path(__file__)
@@ -41,7 +43,8 @@ class MergerWriteOrder(unittest.TestCase):
             self.assertEqual(value_rows[0].parameter_name, "volume")
             self.assertEqual(value_rows[0].alternative_name, "Base")
             self.assertEqual(from_database(value_rows[0].value, value_rows[0].type), 99.0)
+        db_map.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

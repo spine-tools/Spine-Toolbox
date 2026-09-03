@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The SpineDBManager class."""
+
 from collections.abc import Iterable
 from contextlib import suppress
 import json
@@ -22,8 +23,9 @@ import numpy.typing as nptyping
 from PySide6.QtCore import QObject, QSettings, Qt, Signal, Slot
 from PySide6.QtGui import QAction, QColor, QIcon
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QApplication, QMessageBox
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 from sqlalchemy.engine.url import URL
+from spine_engine.logger_interface import LoggerInterface
 from spinedb_api import (
     Array,
     Asterisk,
@@ -47,7 +49,7 @@ from spinedb_api import (
 )
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.exception import NothingToCommit
-from spinedb_api.helpers import remove_credentials_from_url
+from spinedb_api.helpers import ItemType, remove_credentials_from_url
 from spinedb_api.parameter_value import (
     MapIndex,
     Value,
@@ -59,10 +61,10 @@ from spinedb_api.parameter_value import (
 )
 from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
-from spinetoolbox.database_display_names import NameRegistry
+from .cache_graphs import EntityScenarioActivityGraph, RelationshipClassGraph, RelationshipGraph
+from .database_display_names import NameRegistry
 from .fetch_parent import FetchParent
-from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, plain_to_tool_tip
-from .logger_interface import LoggerInterface
+from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, normcase_database_url_path, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
 from .parameter_type_validation import ParameterTypeValidator
 from .spine_db_commands import (
@@ -79,37 +81,31 @@ from .widgets.options_dialog import OptionsDialog
 ValidatedValueCache = dict[str, dict[int, dict[int, bool]]]
 
 
-@busy_effect
-def do_create_new_spine_database(url: str) -> None:
-    """Creates a new spine database at the given url."""
-    create_new_spine_database(url)
-
-
 class SpineDBManager(QObject):
     """Class to manage DBs within a project."""
 
     error_msg = Signal(object)
     # Data changed signals
-    items_added = Signal(str, dict)
+    items_added = Signal(str, object)
     """Emitted whenever items are added to a DB.
 
     Args:
-        str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of added dict-items.
+        str: item type, such as "entity_class"
+        object: a dictionary mapping DatabaseMapping to list of added dict-items.
     """
-    items_updated = Signal(str, dict)
+    items_updated = Signal(str, object)
     """Emitted whenever items are updated in a DB.
 
     Args:
-        str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of updated dict-items.
+        str: item type, such as "entity_class"
+        object: a dictionary mapping DatabaseMapping to list of updated dict-items.
     """
-    items_removed = Signal(str, dict)
+    items_removed = Signal(str, object)
     """Emitted whenever items are removed from a DB.
 
     Args:
-        str: item type, such as "object_class"
-        dict: mapping DatabaseMapping to list of updated dict-items.
+        str: item type, such as "entity_class"
+        object: a dictionary mapping DatabaseMapping to list of updated dict-items.
     """
     database_clean_changed = Signal(object, bool)
     """Emitted whenever database becomes clean or dirty.
@@ -117,6 +113,19 @@ class SpineDBManager(QObject):
     Args:
         object: database mapping
         bool: True if database has become clean, False if it became dirty
+    """
+    more_data_fetched = Signal(object, str)
+    """Emitted whenever data is fetched from a database.
+
+    Args:
+        object: database mapping
+        str: item type, such as "entity_class"
+    """
+    database_refreshed = Signal(object)
+    """Emitted whenever database is refreshed.
+
+    Args:
+        object: database mapping
     """
     database_reset = Signal(object)
     """Emitted whenever database is reset.
@@ -134,12 +143,21 @@ class SpineDBManager(QObject):
         """
         super().__init__(parent)
         self.qsettings = settings
-        self._db_maps = {}
+        self._db_maps: dict[str, DatabaseMapping] = {}
         self.name_registry = NameRegistry(self)
         self._workers: dict[DatabaseMapping, SpineDBWorker] = {}
         self._lock_lock = RLock()
         self._db_locks: dict[DatabaseMapping, RLock] = {}
         self.listeners: dict[DatabaseMapping, set[object]] = {}
+        self.relationship_class_graph = RelationshipClassGraph()
+        self.relationship_graph = RelationshipGraph()
+        self.entity_scenario_activity_graph = EntityScenarioActivityGraph()
+        for graph in (self.relationship_class_graph, self.relationship_graph, self.entity_scenario_activity_graph):
+            for signal in (self.items_updated, self.items_removed):
+                signal.connect(graph.maybe_invalidate_caches_after_data_changed)
+            for signal in (self.database_refreshed, self.database_reset):
+                signal.connect(graph.invalidate_caches)
+            self.more_data_fetched.connect(graph.maybe_invalidate_caches_after_fetch)
         self.undo_stack: dict[DatabaseMapping, AgedUndoStack] = {}
         self.undo_action: dict[DatabaseMapping, QAction] = {}
         self.redo_action: dict[DatabaseMapping, QAction] = {}
@@ -211,6 +229,15 @@ class SpineDBManager(QObject):
             return
         worker.register_fetch_parent(parent)
 
+    def unregister_fetch_parent(self, db_map: DatabaseMapping, parent: FetchParent) -> None:
+        if db_map.closed:
+            return
+        try:
+            worker = self._workers[db_map]
+        except KeyError:
+            return
+        worker.unregister_fetch_parent(parent)
+
     def can_fetch_more(self, db_map: DatabaseMapping, parent: FetchParent) -> bool:
         """Whether we can fetch more items of given type from given db."""
         if db_map.closed:
@@ -237,7 +264,7 @@ class SpineDBManager(QObject):
             self._icon_mngr[db_map] = SpineDBIconManager()
         return self._icon_mngr[db_map]
 
-    def update_icons(self, db_map: DatabaseMapping, item_type: str, items: Iterable[PublicItem]) -> None:
+    def update_icons(self, db_map: DatabaseMapping, item_type: ItemType, items: Iterable[PublicItem]) -> None:
         """Runs when items are added or updated. Setups icons."""
         if item_type == "entity_class":
             self.get_icon_mngr(db_map).update_icon_caches(items)
@@ -286,7 +313,9 @@ class SpineDBManager(QObject):
         Returns:
             a database map or None if not found
         """
-        url = str(url)
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
+        url = normcase_database_url_path(url)
         return self._db_maps.get(url)
 
     def create_new_spine_database(self, url: str, logger: LoggerInterface, overwrite: bool = False):
@@ -305,7 +334,8 @@ class SpineDBManager(QObject):
             if clicked_button is not overwrite_button:
                 return
         try:
-            do_create_new_spine_database(url)
+            engine = create_new_spine_database(url)
+            engine.dispose()
             logger.msg_success.emit(f"New Spine db successfully created at '{url}'.")
             db_map = self.db_map(url)
             self.refresh_session(db_map)
@@ -314,6 +344,7 @@ class SpineDBManager(QObject):
 
     def close_session(self, url: str) -> None:
         """Pops any db map on the given url and closes its connection."""
+        url = normcase_database_url_path(url)
         self._no_prompt_urls.discard(url)
         try:
             db_map = self._db_maps.pop(url)
@@ -331,6 +362,8 @@ class SpineDBManager(QObject):
                 del self._db_locks[db_map]
         del self._validated_values["parameter_definition"][id(db_map)]
         del self._validated_values["parameter_value"][id(db_map)]
+        for graph in (self.relationship_class_graph, self.relationship_graph, self.entity_scenario_activity_graph):
+            graph.invalidate_caches(db_map)
         self.undo_stack[db_map].cleanChanged.disconnect()
         del self.undo_stack[db_map]
         del self.undo_action[db_map]
@@ -342,12 +375,19 @@ class SpineDBManager(QObject):
             self.close_session(url)
 
     def get_db_map(
-        self, url: str, logger: LoggerInterface, create: bool = False, force_upgrade_prompt: bool = False
+        self,
+        url: str | URL,
+        logger: LoggerInterface,
+        create: bool = False,
+        force_upgrade_prompt: bool = False,
+        upgrade_prompt_parent: QWidget = None,
     ) -> Optional[DatabaseMapping]:
         """Returns a DatabaseMapping instance from url if possible, None otherwise.
         If needed, asks the user to upgrade to the latest db version.
         """
-        url = str(url)
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
+        url = normcase_database_url_path(url)
         db_map = self._db_maps.get(url)
         if db_map is not None:
             return db_map
@@ -361,8 +401,9 @@ class SpineDBManager(QObject):
                 return None
             self._no_prompt_urls.add(url)
             title, text, option_to_kwargs, notes, preferred = prompt_data
+            prompt_parent = upgrade_prompt_parent if upgrade_prompt_parent is not None else self.parent()
             kwargs = OptionsDialog.get_answer(
-                self.parent(), title, text, option_to_kwargs, notes=notes, preferred=preferred
+                prompt_parent, title, text, option_to_kwargs, notes=notes, preferred=preferred
             )
             if kwargs is None:
                 return None
@@ -672,7 +713,7 @@ class SpineDBManager(QObject):
         return SpineDBIconManager.icon_from_renderer(renderer) if renderer is not None else None
 
     @staticmethod
-    def get_item(db_map: DatabaseMapping, item_type: str, id_: TempId) -> Optional[PublicItem]:
+    def get_item(db_map: DatabaseMapping, item_type: ItemType, id_: TempId) -> Optional[PublicItem]:
         """Returns the item of the given type in the given db map that has the given id,
         or an empty dict if not found.
         """
@@ -682,13 +723,15 @@ class SpineDBManager(QObject):
         except KeyError:
             return None
 
-    def get_items(self, db_map: DatabaseMapping, item_type: str, **search_criteria) -> list[PublicItem]:
+    def get_items(self, db_map: DatabaseMapping, item_type: ItemType, **search_criteria) -> list[PublicItem]:
         """Returns a list of the items of the given type in the given db map."""
         with self.get_lock(db_map):
             table = db_map.mapped_table(item_type)
             return db_map.find(table, **search_criteria)
 
-    def get_items_by_field(self, db_map: DatabaseMapping, item_type: str, field: str, value: Any) -> list[PublicItem]:
+    def get_items_by_field(
+        self, db_map: DatabaseMapping, item_type: ItemType, field: str, value: Any
+    ) -> list[PublicItem]:
         """Returns a list of items of the given type in the given db map that have the given value
         for the given field.
         """
@@ -697,7 +740,7 @@ class SpineDBManager(QObject):
             return [x for x in db_map.find(mapped_table) if x.get(field) == value]
 
     def get_item_by_field(
-        self, db_map: DatabaseMapping, item_type: str, field: str, value: Any
+        self, db_map: DatabaseMapping, item_type: ItemType, field: str, value: Any
     ) -> Union[PublicItem, dict]:
         """Returns the first item of the given type in the given db map
         that has the given value for the given field
@@ -748,7 +791,9 @@ class SpineDBManager(QObject):
             return plain_to_tool_tip(f"Expected value's type to be <b>{type_list[0]}</b>.")
         return plain_to_tool_tip(f"Expected value's type to be one of <b>{', '.join(type_list)}</b>.")
 
-    def _format_list_value(self, db_map: DatabaseMapping, item_type: str, value: Value, list_value_id: TempId) -> str:
+    def _format_list_value(
+        self, db_map: DatabaseMapping, item_type: ItemType, value: Value, list_value_id: TempId
+    ) -> str:
         list_value = self.get_item(db_map, "list_value", list_value_id)
         if not list_value:
             return value
@@ -774,8 +819,6 @@ class SpineDBManager(QObject):
         Returns:
             value corresponding to role
         """
-        if not item:
-            return None
         if role == PARAMETER_TYPE_VALIDATION_ROLE:
             try:
                 is_valid = self._validated_values[item.item_type][id(db_map)][item["id"].private_id]
@@ -801,16 +844,14 @@ class SpineDBManager(QObject):
             return self._format_list_value(db_map, item.item_type, complex_types[item[type_field]], list_value_id)
         if role == Qt.ItemDataRole.EditRole:
             return join_value_and_type(item[value_field], item[type_field])
-        return self._format_value(item["parsed_value"], role=role)
+        return self.format_value(item["parsed_value"], role=role)
 
     def get_value_from_data(
         self, data: Optional[str], role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
     ) -> Optional[Union[str, int]]:
         """Returns the value or default value of a parameter directly from data."""
-        if data is None:
-            return None
         parsed_value = self._parse_value(*split_value_and_type(data))
-        return self._format_value(parsed_value, role=role)
+        return self.format_value(parsed_value, role=role)
 
     @staticmethod
     def _parse_value(db_value: bytes, type_: Optional[str] = None) -> Value:
@@ -819,7 +860,7 @@ class SpineDBManager(QObject):
         except ParameterValueFormatError as error:
             return str(error)
 
-    def _format_value(
+    def format_value(
         self, parsed_value: Value, role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole
     ) -> Optional[Union[str, int]]:
         """Formats the given value for the given role."""
@@ -835,7 +876,7 @@ class SpineDBManager(QObject):
             return parsed_value
         return None
 
-    def get_value_indexes(self, db_map: DatabaseMapping, item_type: str, id_: TempId) -> nptyping.NDArray:
+    def get_value_indexes(self, db_map: DatabaseMapping, item_type: ItemType, id_: TempId) -> nptyping.NDArray:
         """Returns the value or default value indexes of a parameter.
 
         Args:
@@ -852,7 +893,7 @@ class SpineDBManager(QObject):
     def get_value_index(
         self,
         db_map: DatabaseMapping,
-        item_type: str,
+        item_type: ItemType,
         id_: TempId,
         index: MapIndex,
         role: Qt.ItemDataRole = Qt.ItemDataRole.DisplayRole,
@@ -913,11 +954,11 @@ class SpineDBManager(QObject):
                 for item in db_map.find(list_value_table, parameter_value_list_id=id_)
             ]
 
-    def get_scenario_alternative_id_list(self, db_map: DatabaseMapping, scen_id: TempId) -> list[TempId]:
+    def get_scenario_alternative_id_list(self, db_map: DatabaseMapping, scenario_id: TempId) -> list[TempId]:
         if db_map in self._db_locks:
             with self._db_locks[db_map]:
-                scen = self.get_item(db_map, "scenario", scen_id)
-                return scen["alternative_id_list"] if scen else []
+                scenario = self.get_item(db_map, "scenario", scenario_id)
+                return scenario["alternative_id_list"] if scenario else []
         return []
 
     def import_data(self, db_map_data: dict[DatabaseMapping, dict[str, list[tuple]]], command_text: str) -> None:
@@ -949,7 +990,7 @@ class SpineDBManager(QObject):
         if any(db_map_error_log.values()):
             self.error_msg.emit(db_map_error_log)
 
-    def add_ext_item_metadata(self, item_type: str, db_map_data: DBMapDictItems) -> None:
+    def add_ext_item_metadata(self, item_type: ItemType, db_map_data: DBMapDictItems) -> None:
         for db_map, items in db_map_data.items():
             identifier = self.get_command_identifier()
             metadata_items = db_map.get_metadata_to_add_with_item_metadata_items(*items)
@@ -984,7 +1025,7 @@ class SpineDBManager(QObject):
                 items.append(item)
             self.undo_stack[db_map].push(UpdateItemsCommand(self, db_map, "parameter_value", items))
 
-    def update_ext_item_metadata(self, item_type: str, db_map_data: DBMapDictItems) -> None:
+    def update_ext_item_metadata(self, item_type: ItemType, db_map_data: DBMapDictItems) -> None:
         for db_map, items in db_map_data.items():
             identifier = self.get_command_identifier()
             metadata_items = db_map.get_metadata_to_add_with_item_metadata_items(*items)
@@ -1084,9 +1125,19 @@ class SpineDBManager(QObject):
         self.remove_items(db_map_typed_data, **kwargs)
 
     def add_items(
-        self, item_type: str, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
+        self, item_type: ItemType, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
     ) -> None:
         """Pushes commands to add items to undo stack."""
+        if item_type == "entity_class" or item_type == "superclass_subclass":
+            for db_map in db_map_data:
+                self.relationship_class_graph.invalidate_caches(db_map)
+                self.relationship_graph.invalidate_caches(db_map)
+        elif item_type == "entity":
+            for db_map in db_map_data:
+                self.relationship_graph.invalidate_caches(db_map)
+        elif item_type in {"scenario_alternative", "entity_alternative"}:
+            for db_map in db_map_data:
+                self.entity_scenario_activity_graph.invalidate_caches(db_map)
         if identifier is None:
             identifier = self.get_command_identifier()
         for db_map, data in db_map_data.items():
@@ -1095,7 +1146,7 @@ class SpineDBManager(QObject):
             )
 
     def update_items(
-        self, item_type: str, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
+        self, item_type: ItemType, db_map_data: DBMapDictItems, identifier: Optional[int] = None, **kwargs
     ) -> None:
         """Pushes commands to update items to undo stack."""
         if identifier is None:
@@ -1108,7 +1159,7 @@ class SpineDBManager(QObject):
             )
 
     def add_update_items(
-        self, item_type: str, db_map_data: DBMapDictItems, command_text: str, identifier=None, **kwargs
+        self, item_type: ItemType, db_map_data: DBMapDictItems, command_text: str, identifier=None, **kwargs
     ) -> None:
         """Pushes commands to add_update items to undo stack."""
         if identifier is None:
@@ -1122,7 +1173,7 @@ class SpineDBManager(QObject):
 
     def remove_items(
         self,
-        db_map_typed_ids: dict[DatabaseMapping, dict[str, set[TempId]]],
+        db_map_typed_ids: dict[DatabaseMapping, dict[ItemType, set[TempId]]],
         identifier: Optional[int] = None,
         **kwargs,
     ) -> None:
@@ -1150,7 +1201,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_add_items(
-        self, db_map: DatabaseMapping, item_type: str, data: list[dict], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, data: list[dict], check: bool = True
     ) -> list[PublicItem]:
         try:
             worker = self._workers[db_map]
@@ -1161,7 +1212,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_update_items(
-        self, db_map: DatabaseMapping, item_type: str, data: list[dict], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, data: list[dict], check: bool = True
     ) -> list[PublicItem]:
         try:
             worker = self._workers[db_map]
@@ -1172,7 +1223,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_add_update_items(
-        self, db_map: DatabaseMapping, item_type: str, data: list[dict], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, data: list[dict], check: bool = True
     ) -> tuple[list[PublicItem], list[PublicItem]]:
         try:
             worker = self._workers[db_map]
@@ -1183,7 +1234,7 @@ class SpineDBManager(QObject):
 
     @busy_effect
     def do_remove_items(
-        self, db_map: DatabaseMapping, item_type: str, ids: set[TempId], check: bool = True
+        self, db_map: DatabaseMapping, item_type: ItemType, ids: set[TempId], check: bool = True
     ) -> list[PublicItem]:
         """Removes items from database.
 
@@ -1200,7 +1251,7 @@ class SpineDBManager(QObject):
         return worker.remove_items(item_type, ids, check)
 
     @busy_effect
-    def do_restore_items(self, db_map: DatabaseMapping, item_type: str, ids: set[TempId]) -> list[PublicItem]:
+    def do_restore_items(self, db_map: DatabaseMapping, item_type: ItemType, ids: set[TempId]) -> list[PublicItem]:
         """Restores items in database.
 
         Args:
@@ -1220,7 +1271,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def db_map_class_ids(
-        db_map_data: Union[DBMapDictItems, DBMapPublicItems]
+        db_map_data: Union[DBMapDictItems, DBMapPublicItems],
     ) -> dict[tuple[DatabaseMapping, TempId], set[TempId]]:
         d = {}
         for db_map, items in db_map_data.items():
@@ -1385,7 +1436,7 @@ class SpineDBManager(QObject):
 
     @staticmethod
     def _get_data_for_export(
-        db_map_item_ids: dict[DatabaseMapping, dict[str, Iterable[TempId]]]
+        db_map_item_ids: dict[DatabaseMapping, dict[str, Iterable[TempId]]],
     ) -> dict[str, list[tuple]]:
         data = {}
         for db_map, item_ids in db_map_item_ids.items():
@@ -1412,7 +1463,10 @@ class SpineDBManager(QObject):
             raise ValueError()
 
     def _is_url_available(self, url: Union[URL, str], logger: LoggerInterface) -> bool:
-        if str(url) in self.db_urls:
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
+        url = normcase_database_url_path(url)
+        if url in self.db_urls:
             message = f"The URL <b>{url}</b> is in use. Please close all applications using it and try again."
             logger.msg_error.emit(message)
             return False
@@ -1484,7 +1538,7 @@ class SpineDBManager(QObject):
             with suppress(KeyError):
                 self._validated_values[key.item_type][key.db_map_id][key.item_private_id] = is_valid
 
-    def _clear_validated_value_ids(self, item_type: str, db_map_data: DBMapPublicItems) -> None:
+    def _clear_validated_value_ids(self, item_type: ItemType, db_map_data: DBMapPublicItems) -> None:
         db_map_validated_values = self._validated_values[item_type]
         for db_map, data in db_map_data.items():
             validated_values = db_map_validated_values[id(db_map)]

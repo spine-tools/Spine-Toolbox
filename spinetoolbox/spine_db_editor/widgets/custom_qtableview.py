@@ -11,13 +11,20 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
-from collections.abc import Iterable
+
+from __future__ import annotations
+from collections.abc import Callable, Iterable
 from dataclasses import replace
-from typing import Any, ClassVar, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QKeySequence, QUndoStack
+from PySide6.QtGui import QAction, QContextMenuEvent, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
-from ...helpers import DB_ITEM_SEPARATOR, preferred_row_height, rows_to_row_count_tuples
+from ...helpers import (
+    DB_ITEM_SEPARATOR,
+    find_section_in_table_model_header,
+    preferred_row_height,
+    rows_to_row_count_tuples,
+)
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...plotting import (
     ParameterTableHeaderSection,
@@ -25,10 +32,12 @@ from ...plotting import (
     plot_parameter_table_selection,
     plot_pivot_table_selection,
 )
-from ...widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPasteTableView
+from ...spine_db_manager import SpineDBManager
+from ...widgets.custom_qtableview import CopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
 from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
+from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
     bool_to_string,
     group_to_string,
@@ -40,6 +49,8 @@ from ..helpers import (
     string_to_group,
     string_to_parameter_value,
 )
+from ..mvcmodels.compound_models import CompoundStackedModel
+from ..mvcmodels.compound_table_model import CompoundTableModel
 from ..mvcmodels.empty_models import EmptyModelBase
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
 from ..mvcmodels.pivot_table_models import (
@@ -49,30 +60,51 @@ from ..mvcmodels.pivot_table_models import (
     PivotTableSortFilterProxy,
     ScenarioAlternativePivotTableModel,
 )
-from ..mvcmodels.single_models import SingleModelBase
-from ..mvcmodels.utils import height_limited_size_hint
+from ..mvcmodels.utils import (
+    ENTITY_ALTERNATIVE_FIELD_MAP,
+    ENTITY_FIELD_MAP,
+    PARAMETER_DEFINITION_FIELD_MAP,
+    PARAMETER_GROUP_FIELD_MAP,
+    PARAMETER_VALUE_FIELD_MAP,
+    field_header,
+    field_index,
+)
+from ..stacked_table_seam import AboveSeam, BelowSeam
 from .custom_delegates import (
     AlternativeNameDelegate,
     BooleanValueDelegate,
+    ColorPickerDelegate,
     DatabaseNameDelegate,
     EntityBynameDelegate,
     EntityClassNameDelegate,
     ItemMetadataDelegate,
     MetadataDelegate,
     ParameterDefaultValueDelegate,
-    ParameterDefinitionNameAndDescriptionDelegate,
+    ParameterGroupDelegate,
     ParameterNameDelegate,
+    ParameterNameDelegateWithIndicator,
     ParameterTypeListDelegate,
     ParameterValueDelegate,
+    PlainIntegerDelegate,
+    PlainNumberDelegate,
+    PlainTextDelegate,
+    PlainTextDelegateWithMetadataIndicator,
+    TableDelegate,
+    ValueDelegateWithIndicator,
     ValueListDelegate,
 )
+from .custom_menus import AutoFilterMenu
 from .pivot_table_header_view import (
     ParameterValuePivotHeaderView,
     PivotTableHeaderView,
     ScenarioAlternativePivotHeaderView,
 )
 from .scenario_generator import ScenarioGenerator
+from .search_bar_base import SEARCH_FIELD_ACTIVE_STYLE, SearchFocusMixin, SearchLineEdit
 from .tabular_view_header_widget import TabularViewHeaderWidget
+
+if TYPE_CHECKING:
+    from .spine_db_editor import SpineDBEditor
 
 
 @Slot(QModelIndex, object)
@@ -81,13 +113,337 @@ def _set_data(index, new_value):
     index.model().setData(index, new_value)
 
 
-class StackedTableView(AutoFilterCopyPasteTableView):
+class _ColumnSearchBar(QWidget):
+    """A thin strip of per-column regex search editors placed under a table header."""
+
+    pattern_edited = Signal(int, str)
+    """Emitted as (logical_column, text) whenever a column's editor text changes."""
+    editor_focused = Signal(int)
+    """Emitted with the logical column when one of the search fields gains keyboard focus."""
+    navigate_to_table = Signal(int)
+    """Emitted with the logical column when the user presses Down to leave the search row."""
+    navigate_left = Signal(int)
+    """Emitted with the logical column when the user presses Left on an empty search field."""
+    navigate_right = Signal(int)
+    """Emitted with the logical column when the user presses Right on an empty search field."""
+
+    # A column whose search field holds a pattern is highlighted so it stands out in both light and
+    # dark themes. Explicit colors override the theme deliberately.
+    _ACTIVE_STYLE = SEARCH_FIELD_ACTIVE_STYLE
+
+    def __init__(self, parent: QTableView):
+        super().__init__(parent)
+        self._editors: dict[int, SearchLineEdit] = {}
+        self.HEIGHT = 0  # Matches a data row; set by the owning view before the bar is laid out.
+
+    def rebuild(self, column_count: int) -> None:
+        """Creates or destroys editors so there is exactly one per logical column."""
+        for column in list(self._editors):
+            if column >= column_count:
+                self._editors.pop(column).deleteLater()
+        for column in range(column_count):
+            if column in self._editors:
+                continue
+            editor = SearchLineEdit(self)
+            editor.setPlaceholderText("regex search…")
+            editor.setClearButtonEnabled(True)
+            editor.textChanged.connect(lambda text, col=column: self._handle_text_changed(col, text))
+            editor.focused.connect(lambda col=column: self.editor_focused.emit(col))
+            editor.go_down.connect(lambda col=column: self.navigate_to_table.emit(col))
+            editor.go_left.connect(lambda col=column: self.navigate_left.emit(col))
+            editor.go_right.connect(lambda col=column: self.navigate_right.emit(col))
+            self._editors[column] = editor
+
+    def editors(self) -> list[SearchLineEdit]:
+        """Returns the search field widgets."""
+        return list(self._editors.values())
+
+    def editor_for_column(self, column: int) -> SearchLineEdit | None:
+        """Returns the visible search field for a column, or None if hidden/absent."""
+        editor = self._editors.get(column)
+        return editor if editor is not None and editor.isVisible() else None
+
+    def first_visible_editor(self) -> SearchLineEdit | None:
+        """Returns the first visible search field, or None if there are none."""
+        for _, editor in sorted(self._editors.items()):
+            if editor.isVisible():
+                return editor
+        return None
+
+    def _handle_text_changed(self, column: int, text: str) -> None:
+        """Highlights an editor that holds a pattern and forwards the change."""
+        self._editors[column].setStyleSheet(self._ACTIVE_STYLE if text else "")
+        self.pattern_edited.emit(column, text)
+
+    def reposition(self, header: QHeaderView) -> None:
+        """Moves and resizes each editor to sit under its header section."""
+        for column, editor in self._editors.items():
+            if header.isSectionHidden(column) or header.sectionSize(column) == 0:
+                editor.hide()
+                continue
+            editor.setGeometry(header.sectionViewportPosition(column), 0, header.sectionSize(column), self.HEIGHT)
+            editor.show()
+
+    def clear_all(self) -> None:
+        """Clears the text and highlight of every editor without emitting pattern_edited."""
+        for editor in self._editors.values():
+            editor.blockSignals(True)
+            editor.setText("")
+            editor.setStyleSheet("")
+            editor.blockSignals(False)
+
+
+class ColumnSearchRowMixin(SearchFocusMixin):
+    """A mixin that adds a permanent per-column regex search row under the header of a StackedTableView."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.search_bar = _ColumnSearchBar(self)
+        self._last_search_column = 0
+        self.search_bar.editor_focused.connect(self._on_search_editor_focused)
+        self.search_bar.navigate_to_table.connect(self._on_navigate_to_table)
+        self.search_bar.navigate_left.connect(self._on_navigate_left)
+        self.search_bar.navigate_right.connect(self._on_navigate_right)
+        header = self.horizontalHeader()
+        header.sectionResized.connect(self._reposition_search_bar)
+        header.sectionMoved.connect(self._reposition_search_bar)
+        header.sectionCountChanged.connect(self._on_section_count_changed)
+        self.horizontalScrollBar().valueChanged.connect(self._reposition_search_bar)
+        self.updateGeometries()
+        self._reposition_search_bar()
+
+    def updateGeometries(self) -> None:
+        """Reserves space for the header plus the search row and lays them out.
+
+        Overriding this (rather than resizeEvent) is required because Qt re-runs updateGeometries
+        constantly (section resize, model reset, dataChanged), which would otherwise clobber the margin.
+        Qt glues the horizontal header to the top of the data viewport, so the extra reserved space
+        would appear as an empty strip above the header; we therefore place the header at the very top
+        and the search row directly beneath it, each one data-row tall so the row blends in.
+        """
+        super().updateGeometries()
+        bar = getattr(self, "search_bar", None)
+        if bar is None:
+            return
+        header = self.horizontalHeader()
+        header_height = header.sizeHint().height()
+        bar.HEIGHT = self.verticalHeader().defaultSectionSize()
+        self.setViewportMargins(0, header_height + bar.HEIGHT, 0, 0)
+        left = self.frameWidth() + (self.verticalHeader().width() if self.verticalHeader().isVisible() else 0)
+        top = self.frameWidth()
+        width = self.viewport().width()
+        header.setGeometry(left, top, width, header_height)
+        bar.setGeometry(left, top + header_height, width, bar.HEIGHT)
+        bar.reposition(header)
+        bar.raise_()
+
+    def _reposition_search_bar(self, *args) -> None:
+        """Re-lays the search bar under the header; used on scroll and section changes."""
+        bar = getattr(self, "search_bar", None)
+        if bar is None:
+            return
+        header = self.horizontalHeader()
+        geometry = header.geometry()
+        bar.setGeometry(geometry.left(), geometry.bottom() + 1, self.viewport().width(), bar.HEIGHT)
+        bar.reposition(header)
+        bar.raise_()
+
+    def _on_section_count_changed(self, *args) -> None:
+        """Rebuilds the editor set when the number of columns changes."""
+        bar = getattr(self, "search_bar", None)
+        if bar is None:
+            return
+        bar.rebuild(self.horizontalHeader().count())
+        self._reposition_search_bar()
+
+    def setModel(self, model: CompoundStackedModel) -> None:
+        """Rebuilds editors and wires the search row to the model."""
+        super().setModel(model)
+        self.search_bar.rebuild(model.columnCount())
+        self.search_bar.pattern_edited.connect(self._emit_column_filter)
+        model.modelReset.connect(self.clear_search_row)
+        self._reposition_search_bar()
+
+    @Slot(int, str)
+    def _emit_column_filter(self, column: int, text: str) -> None:
+        """Maps a column to its DB field and updates the model's column filter."""
+        model = self.model()
+        field = model.field_map[model.header[column]]
+        model.set_column_filter(field, text)
+
+    @Slot()
+    def clear_search_row(self) -> None:
+        """Clears every search editor without touching the model's filters directly."""
+        self.search_bar.clear_all()
+
+    @Slot(int)
+    def _on_search_editor_focused(self, column: int) -> None:
+        self._note_search_row_focused()
+        self._last_search_column = column
+
+    @Slot(int)
+    def _on_navigate_to_table(self, column: int) -> None:
+        """Moves focus from a search field down to the top data row of the same column."""
+        model = self.model()
+        if model is None or model.rowCount() == 0:
+            return
+        self.setCurrentIndex(model.index(0, column))
+        self.setFocus()
+
+    @Slot(int)
+    def _on_navigate_left(self, column: int) -> None:
+        """Moves focus to the previous visible search field in on-screen order."""
+        self._focus_adjacent_search_editor(column, -1)
+
+    @Slot(int)
+    def _on_navigate_right(self, column: int) -> None:
+        """Moves focus to the next visible search field in on-screen order."""
+        self._focus_adjacent_search_editor(column, 1)
+
+    def _focus_adjacent_search_editor(self, column: int, step: int) -> None:
+        """Focuses the visible search field adjacent to a column in visual order.
+
+        Hidden sections are skipped and there is no wrapping: at the first/last visible column
+        this is a no-op.
+        """
+        header = self.horizontalHeader()
+        visual = header.visualIndex(column)
+        if visual < 0:
+            return
+        visual += step
+        while 0 <= visual < header.count():
+            logical = header.logicalIndex(visual)
+            if not header.isSectionHidden(logical) and header.sectionSize(logical) > 0:
+                editor = self.search_bar.editor_for_column(logical)
+                if editor is not None:
+                    editor.setFocus()
+                    editor.selectAll()
+                    return
+            visual += step
+
+    def _focus_search_editor(self, column: int) -> None:
+        """Gives keyboard focus to the search field of a column (or the first visible one)."""
+        editor = self.search_bar.editor_for_column(max(column, 0)) or self.search_bar.first_visible_editor()
+        if editor is not None:
+            editor.setFocus()
+            editor.selectAll()
+
+    def _search_row_editor_widgets(self) -> list[SearchLineEdit]:
+        """See base class."""
+        return self.search_bar.editors()
+
+    def _focus_search_row_from_view(self) -> None:
+        """See base class; focuses the search field of the current column."""
+        self._focus_search_editor(self.currentIndex().column())
+
+    def _restore_search_row_focus(self) -> None:
+        """See base class; focuses the search field of the last used column."""
+        self._focus_search_editor(self._last_search_column)
+
+    def _at_top_for_search_focus(self) -> bool:
+        """See base class; True when the current index is on the top data row."""
+        return self.currentIndex().row() == 0
+
+
+class UsesAutoFilter:
+    """A mixin that adds autofilter functionality to a StackedTableView."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._auto_filter_menus: dict[str, AutoFilterMenu] = {}
+        self._show_filter_menu_action = QAction(self)
+        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
+        self._show_filter_menu_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+        self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
+        self.addAction(self._show_filter_menu_action)
+        self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
+
+    def setModel(self, model: CompoundStackedModel) -> None:
+        """Disconnects the sectionPressed signal which seems to be connected by the super method.
+        Otherwise pressing the header just selects the column.
+        """
+        super().setModel(model)
+        self.horizontalHeader().sectionPressed.disconnect()
+        model.modelReset.connect(self._clear_auto_filter_menus)
+
+    def get_auto_filter_menu(self, logical_index: int) -> AutoFilterMenu:
+        """Returns auto filter menu for given logical index from header view."""
+        return self._make_auto_filter_menu(self.model().header[logical_index])
+
+    def _make_auto_filter_menu(self, header: str) -> AutoFilterMenu:
+        model: CompoundStackedModel = self.model()
+        field = model.field_map[header]
+        if field not in self._auto_filter_menus:
+            self._auto_filter_menus[field] = menu = AutoFilterMenu(self, model, field)
+            menu.filter_changed.connect(model.set_auto_filter)
+        return self._auto_filter_menus[field]
+
+    @Slot()
+    def _clear_auto_filter_menus(self) -> None:
+        while self._auto_filter_menus:
+            _, menu = self._auto_filter_menus.popitem()
+            menu.deleteLater()
+
+    @Slot(bool)
+    def _trigger_filter_menu(self, _: bool) -> None:
+        """Shows current column's auto filter menu."""
+        self.show_auto_filter_menu(self.currentIndex().column())
+
+    @Slot(int)
+    def show_auto_filter_menu(self, logical_index: int) -> None:
+        """Called when user clicks on a horizontal section header.
+        Shows/hides the auto filter widget.
+
+        Args:
+            logical_index: header section index
+        """
+        menu = self.get_auto_filter_menu(logical_index)
+        if menu is None:
+            return
+        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
+        pos_y = header_pos.y() + self.horizontalHeader().height()
+        menu.popup(QPoint(pos_x, pos_y))
+
+    def _add_filter_actions_to_context_menu(self) -> None:
+        self._menu.addSeparator()
+        self._menu.addAction("Filter by", self.filter_by_selection)
+        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+
+    @Slot(bool)
+    def filter_by_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        model: CompoundTableModel = self.model()
+        for column, rows in rows_per_column.items():
+            field = model.header[column]
+            menu = self._make_auto_filter_menu(field)
+            accepted_values = {model.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
+            menu.set_filter_accepted_values(accepted_values)
+
+    @Slot(bool)
+    def filter_excluding_selection(self, checked=False):
+        rows_per_column = self._selected_rows_per_column()
+        model: CompoundTableModel = self.model()
+        for column, rows in rows_per_column.items():
+            field = model.header[column]
+            menu = self._make_auto_filter_menu(field)
+            rejected_values = {model.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
+            menu.set_filter_rejected_values(rejected_values)
+
+    def _clear_filters(self):
+        """Clear all filters"""
+        super()._clear_filters()
+        for i in range(self._EXPECTED_COLUMN_COUNT):
+            self.get_auto_filter_menu(i).clear_filter()
+
+
+class StackedTableView(CopyPasteTableView):
     """Base stacked view."""
 
     _COLUMN_SIZE_HINTS: ClassVar[dict[str, int]] = {}
     _EXPECTED_COLUMN_COUNT: ClassVar[int] = NotImplemented
 
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent=parent)
         self._menu = QMenu(self)
         self._spine_db_editor = None
@@ -104,35 +460,36 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self.populate_context_menu()
         self.create_delegates()
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def _convert_copied(
-        self, row: int, column: int, value: Any, model: Union[SingleModelBase, EmptyModelBase]
-    ) -> Optional[str]:
-        if model.header[column] in model.group_fields:
+        self, row: int, column: int, value: Any, model: CompoundStackedModel | EmptyModelBase
+    ) -> str | None:
+        if column in model.group_columns:
             return group_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
-    def _make_delegate(self, column_name, delegate_class):
-        """Creates a delegate for the given column and returns it.
+    def _convert_pasted(
+        self, row: int, column: int, str_value: str | None, model: CompoundStackedModel | EmptyModelBase
+    ) -> Any:
+        if column in model.group_columns:
+            return string_to_group(str_value)
+        return super()._convert_pasted(row, column, str_value, model)
 
-        Args:
-            column_name (str)
-            delegate_class (TableDelegate)
-
-        Returns:
-            TableDelegate
-        """
-        column = self.model().header.index(column_name)
+    def _make_delegate(
+        self, column_name: str, delegate_class: Callable[[SpineDBEditor, SpineDBManager], TableDelegate]
+    ) -> TableDelegate:
+        """Creates a delegate for the given column and returns it."""
+        column = find_section_in_table_model_header(column_name, self.model())
         delegate = delegate_class(self._spine_db_editor, self._spine_db_editor.db_mngr)
         self.setItemDelegateForColumn(column, delegate)
         delegate.data_committed.connect(_set_data)
         return delegate
 
-    def create_delegates(self):
+    def create_delegates(self) -> None:
         """Creates delegates for this view"""
-        self._make_delegate("database", DatabaseNameDelegate)
-        self._make_delegate("entity_class_name", EntityClassNameDelegate)
+        model = self.model()
+        self._make_delegate(model.field_to_header("database"), DatabaseNameDelegate)
+        self._make_delegate(model.field_to_header("entity_class_name"), EntityClassNameDelegate)
 
     def populate_context_menu(self):
         """Creates a context menu for this view."""
@@ -140,39 +497,34 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self._menu.addAction(self._spine_db_editor.ui.actionPaste)
         self._menu.addSeparator()
         remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
-        self._menu.addSeparator()
-        self._menu.addAction("Filter by", self.filter_by_selection)
-        self._menu.addAction("Filter excluding", self.filter_excluding_selection)
+        self._add_filter_actions_to_context_menu()
         self._menu.addSeparator()
         self._menu.addAction("Clear all filters", self._clear_filters)
         self._menu.addSeparator()
         # Shortcuts
         remove_rows_action.setShortcut(QKeySequence(Qt.Modifier.CTRL.value | Qt.Key.Key_Delete.value))
-        remove_rows_action.setShortcutContext(Qt.WidgetShortcut)
+        remove_rows_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
         self.addAction(remove_rows_action)
+
+    def _add_filter_actions_to_context_menu(self) -> None:
+        return
 
     def _clear_filters(self):
         """Clear all filters"""
         self._spine_db_editor.clear_all_filters()
-        for i in range(self._EXPECTED_COLUMN_COUNT):
-            self.model().get_auto_filter_menu(i)._clear_filter()
 
     def contextMenuEvent(self, event):
-        """Shows context menu.
-
-        Args:
-            event (QContextMenuEvent)
-        """
+        """Shows context menu."""
         index = self.indexAt(event.pos())
         if not index.isValid():
             return
         self._menu.exec(event.globalPos())
 
-    def _selected_rows_per_column(self):
+    def _selected_rows_per_column(self) -> dict[int, set[int]]:
         """Computes selected rows per column.
 
         Returns:
-            dict: Mapping columns to selected rows in that column.
+            Mapping columns to selected rows in that column.
         """
         selection = self.selectionModel().selection()
         if not selection:
@@ -191,17 +543,7 @@ class StackedTableView(AutoFilterCopyPasteTableView):
                     rows.add(i)
         return rows_per_column
 
-    @Slot(bool)
-    def filter_by_selection(self, checked=False):
-        rows_per_column = self._selected_rows_per_column()
-        self.model().filter_by(rows_per_column)
-
-    @Slot(bool)
-    def filter_excluding_selection(self, checked=False):
-        rows_per_column = self._selected_rows_per_column()
-        self.model().filter_excluding(rows_per_column)
-
-    def remove_selected(self):
+    def remove_selected(self) -> None:
         """Removes selected indexes."""
         selection = self.selectionModel().selection()
         rows = []
@@ -214,11 +556,6 @@ class StackedTableView(AutoFilterCopyPasteTableView):
         self.selectionModel().clearSelection()
         model = self.model()
         model.remove_rows(rows)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        """Enables or disables copy and paste actions."""
-        self._spine_db_editor.refresh_copy_paste_actions()
 
     def _initial_column_size(self, column):
         label = (
@@ -243,27 +580,23 @@ class ParameterTableView(StackedTableView):
     value_column_header: ClassVar[str] = NotImplemented
     """Either "default_value" or "value". Used to identify the value column for advanced editing and plotting."""
 
-    def __init__(self, parent: QWidget):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent=parent)
         self._open_in_editor_action = None
         self._plot_action = None
         self._plot_separator = None
         self.pinned_values = []
 
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
         if header == self.value_column_header:
             return parameter_value_to_string(value)
-        if header == "entity_byname":
-            return group_to_string(value)
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header == self.value_column_header:
             return string_to_parameter_value(str_value)
-        if header == "entity_byname":
-            return string_to_group(str_value)
         return super()._convert_pasted(row, column, str_value, model)
 
     def populate_context_menu(self):
@@ -339,18 +672,47 @@ class ParameterTableView(StackedTableView):
 
 
 class ParameterDefinitionTableViewBase(ParameterTableView):
-    value_column_header = "default_value"
-    _EXPECTED_COLUMN_COUNT = 7
-    _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "parameter_name": 125, "list_value_name": 125, "description": 250}
+    value_column_header = field_header("default_value", PARAMETER_DEFINITION_FIELD_MAP)
+    _EXPECTED_COLUMN_COUNT = len(PARAMETER_DEFINITION_FIELD_MAP)
+    _COLUMN_SIZE_HINTS = {
+        field_header("entity_class_name", PARAMETER_DEFINITION_FIELD_MAP): 200,
+        field_header("name", PARAMETER_DEFINITION_FIELD_MAP): 125,
+        field_header("parameter_value_list_name", PARAMETER_DEFINITION_FIELD_MAP): 125,
+        field_header("description", PARAMETER_DEFINITION_FIELD_MAP): 250,
+    }
 
     def create_delegates(self):
         super().create_delegates()
-        self._make_delegate("valid types", ParameterTypeListDelegate)
-        self._make_delegate("value_list_name", ValueListDelegate)
-        self._make_delegate("parameter_name", ParameterDefinitionNameAndDescriptionDelegate)
-        self._make_delegate("description", ParameterDefinitionNameAndDescriptionDelegate)
-        delegate = self._make_delegate("default_value", ParameterDefaultValueDelegate)
+        model = self.model()
+        self._make_delegate(model.field_to_header("parameter_type_list"), ParameterTypeListDelegate)
+        self._make_delegate(model.field_to_header("parameter_value_list_name"), ValueListDelegate)
+        self._make_delegate(model.field_to_header("name"), PlainTextDelegate)
+        self._make_delegate(model.field_to_header("description"), PlainTextDelegate)
+        delegate = self._make_delegate(model.field_to_header("default_value"), ParameterDefaultValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+
+
+class HighlightNonCommittedRows:
+    def setModel(self, model: CompoundStackedModel) -> None:
+        super().setModel(model)
+        model.non_committed_items_about_to_be_added.connect(self._begin_following_added_rows)
+        model.non_committed_items_added.connect(self._end_following_added_rows)
+
+    @Slot()
+    def _begin_following_added_rows(self) -> None:
+        self.model().rowsInserted.connect(self._highlight_inserted_rows)
+        self.selectionModel().clearSelection()
+
+    @Slot()
+    def _end_following_added_rows(self) -> None:
+        self.model().rowsInserted.disconnect(self._highlight_inserted_rows)
+
+    @Slot(QModelIndex, int, int)
+    def _highlight_inserted_rows(self, parent: QModelIndex, first: int, last: int) -> None:
+        model = self.model()
+        self.scrollTo(model.index(last, 0, parent))
+        selection = QItemSelection(model.index(first, 0, parent), model.index(last, model.columnCount() - 1, parent))
+        self.selectionModel().select(selection, QItemSelectionModel.SelectionFlag.Select)
 
 
 class WithUndoStack:
@@ -376,61 +738,89 @@ class WithUndoStack:
         self.request_reset_undo_redo_actions.emit()
 
 
-class EmptyParameterDefinitionTableView(WithUndoStack, ParameterDefinitionTableViewBase):
-    def sizeHint(self, /):
-        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+class EmptyParameterDefinitionTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterDefinitionTableViewBase):
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self._make_delegate(
+            field_header("parameter_group_name", PARAMETER_DEFINITION_FIELD_MAP), ParameterGroupDelegate
+        )
 
     def _plot_selection(self, selection, plot_widget=None):
         return
 
 
-class ParameterDefinitionTableView(ParameterDefinitionTableViewBase):
+class ParameterDefinitionTableView(
+    AboveSeam, HighlightNonCommittedRows, ColumnSearchRowMixin, UsesAutoFilter, ParameterDefinitionTableViewBase
+):
+
+    def create_delegates(self):
+        super().create_delegates()
+        delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
+        self._make_delegate(
+            field_header("parameter_group_name", PARAMETER_DEFINITION_FIELD_MAP), ParameterGroupDelegate
+        )
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
-        header_sections = [
-            ParameterTableHeaderSection(label) for label in ("database", "entity_class_name", "parameter_name")
-        ]
+        header_sections = [ParameterTableHeaderSection(label) for label in ("database", "class", "parameter name")]
         return plot_parameter_table_selection(
             self.model(), selection, header_sections, self.value_column_header, plot_widget
         )
 
 
 class ParameterValueTableViewBase(ParameterTableView):
-    value_column_header = "value"
+    value_column_header = field_header("value", PARAMETER_VALUE_FIELD_MAP)
     _COLUMN_SIZE_HINTS = {
-        "entity_class_name": 200,
-        "entity_byname": 200,
-        "parameter_name": 125,
-        "alternative_name": 125,
+        field_header("entity_class_name", PARAMETER_VALUE_FIELD_MAP): 200,
+        field_header("entity_byname", PARAMETER_VALUE_FIELD_MAP): 200,
+        field_header("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP): 125,
+        field_header("alternative_name", PARAMETER_VALUE_FIELD_MAP): 125,
     }
-    _EXPECTED_COLUMN_COUNT = 6
+    _EXPECTED_COLUMN_COUNT = len(PARAMETER_VALUE_FIELD_MAP)
 
     def create_delegates(self):
         super().create_delegates()
-        self._make_delegate("parameter_name", ParameterNameDelegate)
-        self._make_delegate("alternative_name", AlternativeNameDelegate)
-        delegate = self._make_delegate("value", ParameterValueDelegate)
+        model = self.model()
+        self._make_delegate(model.field_to_header("alternative_name"), AlternativeNameDelegate)
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
         delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
-        delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
+        delegate = self._make_delegate(model.field_to_header("entity_byname"), EntityBynameDelegate)
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
 
 
-class EmptyParameterValueTableView(WithUndoStack, ParameterValueTableViewBase):
-    def sizeHint(self, /):
-        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+class EmptyParameterValueTableView(BelowSeam, SizeHintProvided, WithUndoStack, ParameterValueTableViewBase):
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate(self.model().field_to_header("parameter_definition_name"), ParameterNameDelegate)
+        delegate = self._make_delegate(self.value_column_header, ParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def _plot_selection(self, selection, plot_widget=None):
         return
 
 
-class ParameterValueTableView(ParameterValueTableViewBase):
-    _private_key_fields: ClassVar[tuple[str, str, str, str]] = (
-        "entity_class_name",
-        "entity_byname",
-        "parameter_name",
-        "alternative_name",
+class ParameterValueTableView(
+    AboveSeam, HighlightNonCommittedRows, ColumnSearchRowMixin, UsesAutoFilter, ParameterValueTableViewBase
+):
+    _private_key_headers: ClassVar[tuple[str, str, str, str]] = (
+        field_header("entity_class_name", PARAMETER_VALUE_FIELD_MAP),
+        field_header("entity_byname", PARAMETER_VALUE_FIELD_MAP),
+        field_header("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP),
+        field_header("alternative_name", PARAMETER_VALUE_FIELD_MAP),
     )
+
+    def create_delegates(self):
+        super().create_delegates()
+        self._make_delegate(
+            self.model().field_to_header("parameter_definition_name"), ParameterNameDelegateWithIndicator
+        )
+        delegate = self._make_delegate(self.value_column_header, ValueDelegateWithIndicator)
+        delegate.parameter_value_editor_requested.connect(self._spine_db_editor.show_parameter_value_editor)
 
     def connect_spine_db_editor(self, spine_db_editor):
         super().connect_spine_db_editor(spine_db_editor)
@@ -450,13 +840,20 @@ class ParameterValueTableView(ParameterValueTableViewBase):
         db_item = self.model().db_item(index)
         if db_item is None:
             return None
-        return (db_map.db_url, {f: db_item[f] for f in self._private_key_fields})
+        model = self.model()
+        private_key_fields = [model.field_map[header] for header in self._private_key_headers]
+        return (db_map.db_url, {f: db_item[f] for f in private_key_fields})
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class."""
-        header_sections = [ParameterTableHeaderSection(label) for label in ("database",) + self._private_key_fields]
+        model = self.model()
+        header_sections = [
+            ParameterTableHeaderSection(label)
+            for label in (model.field_to_header("database"),) + self._private_key_headers
+        ]
+        byname_header = model.field_to_header("entity_byname")
         for i, section in enumerate(header_sections):
-            if section.label == "entity_byname":
+            if section.label == byname_header:
                 header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
                 break
         return plot_parameter_table_selection(
@@ -465,43 +862,91 @@ class ParameterValueTableView(ParameterValueTableViewBase):
 
 
 class EntityAlternativeTableViewBase(StackedTableView):
-    _EXPECTED_COLUMN_COUNT = 5
-    _COLUMN_SIZE_HINTS = {"entity_class_name": 200, "entity_byname": 200, "alternative_name": 125}
+    _EXPECTED_COLUMN_COUNT = len(ENTITY_ALTERNATIVE_FIELD_MAP)
+    _COLUMN_SIZE_HINTS = {
+        field_header("entity_class_name", ENTITY_ALTERNATIVE_FIELD_MAP): 200,
+        field_header("entity_byname", ENTITY_ALTERNATIVE_FIELD_MAP): 200,
+        field_header("alternative_name", ENTITY_ALTERNATIVE_FIELD_MAP): 125,
+    }
 
     def create_delegates(self):
         super().create_delegates()
-        delegate = self._make_delegate("entity_byname", EntityBynameDelegate)
+        model = self.model()
+        delegate = self._make_delegate(model.field_to_header("entity_byname"), EntityBynameDelegate)
         delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
-        self._make_delegate("alternative_name", AlternativeNameDelegate)
-        self._make_delegate("active", BooleanValueDelegate)
+        self._make_delegate(model.field_to_header("alternative_name"), AlternativeNameDelegate)
+        self._make_delegate(model.field_to_header("active"), BooleanValueDelegate)
 
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
-        if header == "entity_byname":
-            return group_to_string(value)
         if header == "active":
             return bool_to_string(value) if value is not None else None
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
-        if header == "entity_byname":
-            return string_to_group(str_value)
         if header == "active":
             return string_to_bool(str_value)
         return super()._convert_pasted(row, column, str_value, model)
 
 
-class EmptyEntityAlternativeTableView(WithUndoStack, EntityAlternativeTableViewBase):
-    def sizeHint(self, /):
-        return height_limited_size_hint(super().sizeHint(), self.parent().size())
+class EmptyEntityAlternativeTableView(BelowSeam, SizeHintProvided, WithUndoStack, EntityAlternativeTableViewBase):
 
     def _plot_selection(self, selection, plot_widget=None):
         return
 
 
-class EntityAlternativeTableView(EntityAlternativeTableViewBase):
+class EntityAlternativeTableView(
+    AboveSeam, HighlightNonCommittedRows, ColumnSearchRowMixin, UsesAutoFilter, EntityAlternativeTableViewBase
+):
     """Visualize entities and their alternatives."""
+
+
+class EntityTableView(ColumnSearchRowMixin, UsesAutoFilter, StackedTableView):
+    _COLUMN_SIZE_HINTS = {
+        field_header("entity_class_name", ENTITY_FIELD_MAP): 200,
+        field_header("name", ENTITY_FIELD_MAP): 125,
+        field_header("entity_byname", ENTITY_FIELD_MAP): 200,
+        field_header("description", ENTITY_FIELD_MAP): 70,
+        field_header("lat", ENTITY_FIELD_MAP): 70,
+        field_header("lon", ENTITY_FIELD_MAP): 70,
+        field_header("alt", ENTITY_FIELD_MAP): 70,
+        field_header("shape_name", ENTITY_FIELD_MAP): 70,
+        field_header("shape_blob", ENTITY_FIELD_MAP): 70,
+    }
+    _EXPECTED_COLUMN_COUNT = len(ENTITY_FIELD_MAP)
+    _NUMERICAL_HEADERS = {
+        field_header("lat", ENTITY_FIELD_MAP),
+        field_header("lon", ENTITY_FIELD_MAP),
+        field_header("alt", ENTITY_FIELD_MAP),
+    }
+
+    def create_delegates(self):
+        super().create_delegates()
+        model = self.model()
+        self._make_delegate(model.field_to_header("name"), PlainTextDelegateWithMetadataIndicator)
+        delegate = self._make_delegate(model.field_to_header("entity_byname"), EntityBynameDelegate)
+        delegate.element_name_list_editor_requested.connect(self._spine_db_editor.show_element_name_list_editor)
+        self._make_delegate(model.field_to_header("description"), PlainTextDelegate)
+        for header in self._NUMERICAL_HEADERS:
+            self._make_delegate(header, PlainNumberDelegate)
+        self._make_delegate(model.field_to_header("shape_name"), PlainTextDelegate)
+        self._make_delegate(model.field_to_header("shape_blob"), PlainTextDelegate)
+
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
+        header = model.header[column]
+        if header in self._NUMERICAL_HEADERS:
+            return str(value) if value is not None else None
+        return super()._convert_copied(row, column, value, model)
+
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
+        header = model.header[column]
+        if header in self._NUMERICAL_HEADERS:
+            try:
+                return float(str_value)
+            except (ValueError, TypeError):
+                return None
+        return super()._convert_pasted(row, column, str_value, model)
 
 
 class PivotTableView(CopyPasteTableView):
@@ -591,12 +1036,10 @@ class PivotTableView(CopyPasteTableView):
             """Enables/disables context menu entries before the menu is shown."""
             raise NotImplementedError()
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             return value if value is not None else ""
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             return str_value
 
     class _EntityContextBase(_ContextBase):
@@ -637,7 +1080,7 @@ class PivotTableView(CopyPasteTableView):
             """See base class."""
             raise NotImplementedError()
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             if value is None:
                 return None
             pivot_model = model.sourceModel()
@@ -645,9 +1088,7 @@ class PivotTableView(CopyPasteTableView):
                 return bool_to_string(value)
             return super().convert_copied(row, column, value, model)
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 return string_to_bool(str_value)
@@ -790,15 +1231,13 @@ class PivotTableView(CopyPasteTableView):
             self._remove_entities_action.setEnabled(has_selection)
             self._remove_alternatives_action.setEnabled(has_selection)
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 return parameter_value_to_string(value)
             return super().convert_copied(row, column, value, model)
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 return string_to_parameter_value(str_value)
@@ -929,7 +1368,7 @@ class PivotTableView(CopyPasteTableView):
             checked = len(selected) * [not all(selected)]
             source_model.batch_set_data(self._selected_scenario_alternative_indexes, checked)
 
-        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> Optional[str]:
+        def convert_copied(self, row: int, column: int, value: Any, model: PivotTableSortFilterProxy) -> str | None:
             if value is None:
                 return None
             pivot_model = model.sourceModel()
@@ -939,9 +1378,7 @@ class PivotTableView(CopyPasteTableView):
                 return str(value)
             return super().convert_copied(row, column, value, model)
 
-        def convert_pasted(
-            self, row: int, column: int, str_value: Optional[str], model: PivotTableSortFilterProxy
-        ) -> Any:
+        def convert_pasted(self, row: int, column: int, str_value: str | None, model: PivotTableSortFilterProxy) -> Any:
             pivot_model = model.sourceModel()
             if pivot_model.index_in_data_or_empty_data(pivot_model.index(row, column)):
                 try:
@@ -964,10 +1401,9 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setObjectName("top")
         self._top_left_header_table.setObjectName("top-left")
         self._spine_db_editor = None
-        self._context: Optional[PivotTableView._ContextBase] = None
+        self._context: PivotTableView._ContextBase | None = None
         self._fetch_more_timer = QTimer(self)
         self._fetch_more_timer.setSingleShot(True)
-        self._fetch_more_timer.setInterval(100)
         self._fetch_more_timer.timeout.connect(self._fetch_more_visible)
         self._left_header_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
         self.verticalScrollBar().valueChanged.connect(self._left_header_table.verticalScrollBar().setValue)
@@ -982,8 +1418,8 @@ class PivotTableView(CopyPasteTableView):
             header_table.show()
             header_table.verticalHeader().hide()
             header_table.horizontalHeader().hide()
-            header_table.setHorizontalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
-            header_table.setVerticalScrollMode(QTableView.ScrollMode.ScrollPerPixel)
+            header_table.setHorizontalScrollMode(self.horizontalScrollMode())
+            header_table.setVerticalScrollMode(self.verticalScrollMode())
             header_table.setStyleSheet("QTableView { border: none;}")
             self.viewport().stackUnder(header_table)
         for header_table in (self._top_header_table, self._left_header_table):
@@ -1003,7 +1439,6 @@ class PivotTableView(CopyPasteTableView):
         self._spine_db_editor = spine_db_editor
         self.set_external_copy_and_paste_actions(spine_db_editor.ui.actionCopy, spine_db_editor.ui.actionPaste)
         self._spine_db_editor.pivot_table_proxy.sourceModelChanged.connect(self._change_context)
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     @Slot()
     def _change_context(self):
@@ -1079,6 +1514,16 @@ class PivotTableView(CopyPasteTableView):
         for header_table in (self._left_header_table, self._top_header_table, self._top_left_header_table):
             header_table.verticalHeader().setDefaultSectionSize(default_section_size)
 
+    def setHorizontalScrollMode(self, mode):
+        super().setHorizontalScrollMode(mode)
+        for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
+            header_table.setHorizontalScrollMode(mode)
+
+    def setVerticalScrollMode(self, mode):
+        super().setVerticalScrollMode(mode)
+        for header_table in (self._top_left_header_table, self._top_header_table, self._left_header_table):
+            header_table.setVerticalScrollMode(mode)
+
     def resizeEvent(self, ev):
         super().resizeEvent(ev)
         self._update_header_tables_geometry()
@@ -1147,21 +1592,17 @@ class PivotTableView(CopyPasteTableView):
         self._top_header_table.setGeometry(x, y, total_w, header_h)
         self._top_left_header_table.setGeometry(x, y, header_w, header_h)
 
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self, _, __):
-        self._spine_db_editor.refresh_copy_paste_actions()
-
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         return self._context.convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         return self._context.convert_pasted(row, column, str_value, model)
 
 
 class FrozenTableView(QTableView):
     header_dropped = Signal(QWidget, QWidget)
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Args:
             parent: parent widget
@@ -1188,7 +1629,7 @@ class FrozenTableView(QTableView):
 class MetadataTableViewBase(CopyPasteTableView):
     """Base for metadata and item metadata table views."""
 
-    def __init__(self, parent: Optional[QWidget]):
+    def __init__(self, parent: QWidget | None):
         """
         Args:
             parent: parent widget
@@ -1198,7 +1639,6 @@ class MetadataTableViewBase(CopyPasteTableView):
         horizontal_header.sectionCountChanged.connect(self._set_horizontal_header_resize_modes)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self._menu = QMenu(self)
-        self._db_editor = None
 
     def connect_spine_db_editor(self, db_editor):
         """Finishes view's initialization.
@@ -1206,11 +1646,9 @@ class MetadataTableViewBase(CopyPasteTableView):
         Args:
              db_editor (SpineDBEditor): database editor instance
         """
-        self._db_editor = db_editor
         self.set_external_copy_and_paste_actions(db_editor.ui.actionCopy, db_editor.ui.actionPaste)
         self._populate_context_menu()
         self._enable_delegates(db_editor)
-        self.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def contextMenuEvent(self, event):
         menu_position = event.globalPos()
@@ -1249,10 +1687,6 @@ class MetadataTableViewBase(CopyPasteTableView):
             value (str): value
         """
         self.model().setData(index, value)
-
-    @Slot(QModelIndex, QModelIndex)
-    def _refresh_copy_paste_actions(self):
-        self._db_editor.refresh_copy_paste_actions()
 
     @Slot(int, int)
     def _set_horizontal_header_resize_modes(self, old_column_count, new_column_count):
@@ -1313,7 +1747,7 @@ class ItemMetadataTableView(MetadataTableViewBase):
 
 
 class ManageEntityClassesTable(CopyPasteTableView):
-    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> Optional[str]:
+    def _convert_copied(self, row: int, column: int, value: Any, model: MinimalTableModel) -> str | None:
         header = model.header[column]
         if header == "display icon":
             return optional_to_string(value)
@@ -1321,10 +1755,49 @@ class ManageEntityClassesTable(CopyPasteTableView):
             return bool_to_string(value) if value is not None else None
         return super()._convert_copied(row, column, value, model)
 
-    def _convert_pasted(self, row: int, column: int, str_value: Optional[str], model: MinimalTableModel) -> Any:
+    def _convert_pasted(self, row: int, column: int, str_value: str | None, model: MinimalTableModel) -> Any:
         header = model.header[column]
         if header == "display icon":
             return string_to_display_icon(str_value)
         if header == "active by default":
             return string_to_bool(str_value)
         return super()._convert_pasted(row, column, str_value, model)
+
+
+class ParameterGroupTableView(AboveSeam, CopyPasteTableView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setItemDelegateForColumn(field_index("color", PARAMETER_GROUP_FIELD_MAP), ColorPickerDelegate(self))
+        self.setItemDelegateForColumn(field_index("priority", PARAMETER_GROUP_FIELD_MAP), PlainIntegerDelegate(self))
+        self._menu: QMenu | None = None
+
+    def remove_selected(self) -> None:
+        """Removes selected indexes."""
+        selection = self.selectionModel().selection()
+        model = self.model()
+        for selection_range in selection:
+            top = selection_range.top()
+            bottom = selection_range.bottom()
+            model.removeRows(top, bottom - top + 1)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        event.accept()
+        if self._menu is None:
+            self._menu = QMenu(self)
+            self._menu.addAction(self._copy_action)
+            self._menu.addAction(self._paste_action)
+            self._menu.addSeparator()
+            remove_rows_action = self._menu.addAction("Remove row(s)", self.remove_selected)
+            remove_rows_action.setShortcut(QKeySequence(Qt.Modifier.CTRL | Qt.Key.Key_Delete))
+            remove_rows_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+            self.addAction(remove_rows_action)
+        self._menu.exec(event.globalPos())
+
+
+class EmptyParameterGroupTableView(BelowSeam, SizeHintProvided, WithUndoStack, CopyPasteTableView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        color_column = field_index("color", PARAMETER_GROUP_FIELD_MAP)
+        self.setItemDelegateForColumn(color_column, ColorPickerDelegate(self))
+        priority_column = field_index("priority", PARAMETER_GROUP_FIELD_MAP)
+        self.setItemDelegateForColumn(priority_column, PlainIntegerDelegate(self))

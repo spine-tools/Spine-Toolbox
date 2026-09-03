@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``custom_qgraphicsviews`` module."""
+
 import math
 import unittest
 from unittest import mock

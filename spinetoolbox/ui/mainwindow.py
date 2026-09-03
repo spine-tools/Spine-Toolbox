@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -158,11 +158,11 @@ class Ui_MainWindow(object):
         icon12 = QIcon()
         icon12.addFile(u":/icons/menu_icons/door-closed.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionClose.setIcon(icon12)
-        self.actionSet_description = QAction(MainWindow)
-        self.actionSet_description.setObjectName(u"actionSet_description")
+        self.open_project_settings_action = QAction(MainWindow)
+        self.open_project_settings_action.setObjectName(u"open_project_settings_action")
         icon13 = QIcon()
         icon13.addFile(u":/icons/menu_icons/exchange-alt.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.actionSet_description.setIcon(icon13)
+        self.open_project_settings_action.setIcon(icon13)
         self.actionExecute_project = QAction(MainWindow)
         self.actionExecute_project.setObjectName(u"actionExecute_project")
         icon14 = QIcon()
@@ -200,6 +200,9 @@ class Ui_MainWindow(object):
         self.actionStart_julia = QAction(MainWindow)
         self.actionStart_julia.setObjectName(u"actionStart_julia")
         self.actionStart_julia.setIcon(icon19)
+        self.open_spinedb_api_reference_action = QAction(MainWindow)
+        self.open_spinedb_api_reference_action.setObjectName(u"open_spinedb_api_reference_action")
+        self.open_spinedb_api_reference_action.setIcon(icon7)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         MainWindow.setCentralWidget(self.centralwidget)
@@ -237,7 +240,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dockWidget_eventlog.sizePolicy().hasHeightForWidth())
         self.dockWidget_eventlog.setSizePolicy(sizePolicy)
-        self.dockWidget_eventlog.setMinimumSize(QSize(82, 104))
+        self.dockWidget_eventlog.setMinimumSize(QSize(82, 106))
         self.dockWidget_eventlog.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable|QDockWidget.DockWidgetFeature.DockWidgetFloatable|QDockWidget.DockWidgetFeature.DockWidgetMovable)
         self.dockWidgetContents = QWidget()
         self.dockWidgetContents.setObjectName(u"dockWidgetContents")
@@ -334,7 +337,7 @@ class Ui_MainWindow(object):
         MainWindow.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget_design_view)
         self.dockWidget_item = QDockWidget(MainWindow)
         self.dockWidget_item.setObjectName(u"dockWidget_item")
-        self.dockWidget_item.setMinimumSize(QSize(127, 101))
+        self.dockWidget_item.setMinimumSize(QSize(139, 101))
         self.dockWidgetContents_3 = QWidget()
         self.dockWidgetContents_3.setObjectName(u"dockWidgetContents_3")
         self.verticalLayout = QVBoxLayout(self.dockWidgetContents_3)
@@ -380,7 +383,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addAction(self.actionClose)
-        self.menuFile.addAction(self.actionSet_description)
+        self.menuFile.addAction(self.open_project_settings_action)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionNew_DB_editor)
         self.menuFile.addSeparator()
@@ -389,6 +392,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
         self.menuHelp.addAction(self.actionGetting_started)
+        self.menuHelp.addAction(self.open_spinedb_api_reference_action)
         self.menuHelp.addAction(self.actionGitHub)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionAbout_Qt)
@@ -585,9 +589,9 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionClose.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Close current project</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.actionSet_description.setText(QCoreApplication.translate("MainWindow", u"Set project description...", None))
+        self.open_project_settings_action.setText(QCoreApplication.translate("MainWindow", u"Project settings...", None))
 #if QT_CONFIG(tooltip)
-        self.actionSet_description.setToolTip(QCoreApplication.translate("MainWindow", u"Modify or set project description", None))
+        self.open_project_settings_action.setToolTip(QCoreApplication.translate("MainWindow", u"Open project settings dialog.", None))
 #endif // QT_CONFIG(tooltip)
         self.actionExecute_project.setText(QCoreApplication.translate("MainWindow", u"Project", None))
 #if QT_CONFIG(tooltip)
@@ -625,6 +629,7 @@ class Ui_MainWindow(object):
         self.actionStart_python.setToolTip(QCoreApplication.translate("MainWindow", u"Start Python", None))
 #endif // QT_CONFIG(tooltip)
         self.actionStart_julia.setText(QCoreApplication.translate("MainWindow", u"Start Julia", None))
+        self.open_spinedb_api_reference_action.setText(QCoreApplication.translate("MainWindow", u"Spine DB API reference", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))

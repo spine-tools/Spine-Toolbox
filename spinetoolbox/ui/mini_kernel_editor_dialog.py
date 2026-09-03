@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mini_kernel_editor_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -95,28 +95,28 @@ class Ui_Dialog(object):
         self.label_3 = QLabel(self.stackedWidgetPage1)
         self.label_3.setObjectName(u"label_3")
 
-        self.formLayout_3.setWidget(2, QFormLayout.LabelRole, self.label_3)
+        self.formLayout_3.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_3)
 
         self.comboBox_python_interpreter = QComboBox(self.stackedWidgetPage1)
         self.comboBox_python_interpreter.setObjectName(u"comboBox_python_interpreter")
 
-        self.formLayout_3.setWidget(2, QFormLayout.FieldRole, self.comboBox_python_interpreter)
+        self.formLayout_3.setWidget(2, QFormLayout.ItemRole.FieldRole, self.comboBox_python_interpreter)
 
         self.label = QLabel(self.stackedWidgetPage1)
         self.label.setObjectName(u"label")
 
-        self.formLayout_3.setWidget(5, QFormLayout.LabelRole, self.label)
+        self.formLayout_3.setWidget(5, QFormLayout.ItemRole.LabelRole, self.label)
 
         self.lineEdit_python_kernel_name_prefix = QLineEdit(self.stackedWidgetPage1)
         self.lineEdit_python_kernel_name_prefix.setObjectName(u"lineEdit_python_kernel_name_prefix")
         self.lineEdit_python_kernel_name_prefix.setEnabled(True)
 
-        self.formLayout_3.setWidget(5, QFormLayout.FieldRole, self.lineEdit_python_kernel_name_prefix)
+        self.formLayout_3.setWidget(5, QFormLayout.ItemRole.FieldRole, self.lineEdit_python_kernel_name_prefix)
 
         self.label_python_kernel_name = QLabel(self.stackedWidgetPage1)
         self.label_python_kernel_name.setObjectName(u"label_python_kernel_name")
 
-        self.formLayout_3.setWidget(6, QFormLayout.FieldRole, self.label_python_kernel_name)
+        self.formLayout_3.setWidget(6, QFormLayout.ItemRole.FieldRole, self.label_python_kernel_name)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage1)
         self.stackedWidgetPage2 = QWidget()
@@ -131,38 +131,38 @@ class Ui_Dialog(object):
         self.label_6 = QLabel(self.stackedWidgetPage2)
         self.label_6.setObjectName(u"label_6")
 
-        self.formLayout_4.setWidget(0, QFormLayout.LabelRole, self.label_6)
+        self.formLayout_4.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_6)
 
         self.comboBox_julia_executable = QComboBox(self.stackedWidgetPage2)
         self.comboBox_julia_executable.setObjectName(u"comboBox_julia_executable")
 
-        self.formLayout_4.setWidget(0, QFormLayout.FieldRole, self.comboBox_julia_executable)
+        self.formLayout_4.setWidget(0, QFormLayout.ItemRole.FieldRole, self.comboBox_julia_executable)
 
         self.label_9 = QLabel(self.stackedWidgetPage2)
         self.label_9.setObjectName(u"label_9")
 
-        self.formLayout_4.setWidget(1, QFormLayout.LabelRole, self.label_9)
+        self.formLayout_4.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_9)
 
         self.comboBox_julia_project = QComboBox(self.stackedWidgetPage2)
         self.comboBox_julia_project.setObjectName(u"comboBox_julia_project")
 
-        self.formLayout_4.setWidget(1, QFormLayout.FieldRole, self.comboBox_julia_project)
+        self.formLayout_4.setWidget(1, QFormLayout.ItemRole.FieldRole, self.comboBox_julia_project)
 
         self.label_2 = QLabel(self.stackedWidgetPage2)
         self.label_2.setObjectName(u"label_2")
 
-        self.formLayout_4.setWidget(2, QFormLayout.LabelRole, self.label_2)
+        self.formLayout_4.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_2)
 
         self.lineEdit_julia_kernel_name_prefix = QLineEdit(self.stackedWidgetPage2)
         self.lineEdit_julia_kernel_name_prefix.setObjectName(u"lineEdit_julia_kernel_name_prefix")
         self.lineEdit_julia_kernel_name_prefix.setEnabled(True)
 
-        self.formLayout_4.setWidget(2, QFormLayout.FieldRole, self.lineEdit_julia_kernel_name_prefix)
+        self.formLayout_4.setWidget(2, QFormLayout.ItemRole.FieldRole, self.lineEdit_julia_kernel_name_prefix)
 
         self.label_julia_kernel_name = QLabel(self.stackedWidgetPage2)
         self.label_julia_kernel_name.setObjectName(u"label_julia_kernel_name")
 
-        self.formLayout_4.setWidget(3, QFormLayout.FieldRole, self.label_julia_kernel_name)
+        self.formLayout_4.setWidget(3, QFormLayout.ItemRole.FieldRole, self.label_julia_kernel_name)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage2)
         self.splitter.addWidget(self.stackedWidget)

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for TimeSeriesFixedResolutionTableView class."""
+
 import locale
 import unittest
 from unittest import mock

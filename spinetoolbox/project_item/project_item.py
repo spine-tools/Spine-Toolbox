@@ -11,24 +11,25 @@
 ######################################################################################################################
 
 """Contains base classes for project items and item factories."""
+
 from __future__ import annotations
 from collections.abc import Callable
 import logging
 import os
+import pathlib
 from typing import TYPE_CHECKING, Optional
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QWidget
+from spine_engine.logger_interface import LoggerInterface
 from spine_engine.project_item.project_item_resource import ProjectItemResource
 from spine_engine.project_item.project_item_specification import ProjectItemSpecification
 from spine_engine.utils.helpers import ExecutionDirection, shorten
 from ..helpers import create_dir, open_url, rename_dir
 from ..log_mixin import LogMixin
-from ..logger_interface import LoggerInterface
 from ..metaobject import MetaObject
 from ..project_commands import SetItemSpecificationCommand
 from ..project_item_icon import ProjectItemIcon
-from ..project_upgrader import ProjectUpgrader
 
 if TYPE_CHECKING:
     from ..project import SpineToolboxProject
@@ -323,7 +324,7 @@ class ProjectItem(LogMixin, MetaObject):
         """Returns entries or 'paths' in item dict that should be stored in project's local data directory.
 
         Returns:
-            list of tuple of str: local data item dict entries
+            local data item dict entries
         """
         return []
 
@@ -335,7 +336,7 @@ class ProjectItem(LogMixin, MetaObject):
         Args:
             item_dict: an item dict
         Returns:
-            tuple: item's name, description as well as x and y coordinates
+            item's name, description as well as x and y coordinates
         """
         description = item_dict["description"]
         x = item_dict["x"]
@@ -449,6 +450,15 @@ class ProjectItem(LogMixin, MetaObject):
             "implemented yet."
         )
 
+    def temporary_paths_in_item_directory(self) -> list[pathlib.Path]:
+        temp_paths = []
+        for path in pathlib.Path(self.data_dir).iterdir():
+            if path.name == "logs":
+                temp_paths += list(path.iterdir())
+            else:
+                temp_paths.append(path)
+        return temp_paths
+
     @staticmethod
     def upgrade_v1_to_v2(item_name: str, item_dict: dict) -> dict:
         """
@@ -466,7 +476,7 @@ class ProjectItem(LogMixin, MetaObject):
         return item_dict
 
     @staticmethod
-    def upgrade_v2_to_v3(item_name: str, item_dict: dict, project_upgrader: ProjectUpgrader) -> dict:
+    def upgrade_v2_to_v3(item_name: str, item_dict: dict) -> dict:
         """
         Upgrades item's dictionary from v2 to v3.
 
@@ -475,7 +485,6 @@ class ProjectItem(LogMixin, MetaObject):
         Args:
             item_name: item's name
             item_dict: Version 2 item dictionary
-            project_upgrader: Project upgrader class instance
 
         Returns:
             Version 3 item dictionary

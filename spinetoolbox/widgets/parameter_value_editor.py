@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor dialog for editing database (relationship) parameter values."""
+
 from PySide6.QtWidgets import QMessageBox
 from spinedb_api import ParameterValueFormatError, to_database
 from spinedb_api.parameter_value import deep_copy_value
@@ -51,7 +52,6 @@ class ParameterValueEditor(ParameterValueEditorBase):
             )
         super().__init__(index, editors, parent)
         model = index.model()
-        self._index = index
         self.set_data_delayed = model.get_set_data_delayed(index)
         self.setWindowTitle(f"Edit value    -- {model.index_name(index)} --")
         value = deep_copy_value(index.data(PARSED_ROLE))

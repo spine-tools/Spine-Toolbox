@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QTableView classes that support copy-paste and the like."""
+
 from contextlib import contextmanager, suppress
 import csv
 import ctypes
@@ -21,7 +22,7 @@ from numbers import Number
 from operator import methodcaller
 import re
 from typing import Any, Optional
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, Slot
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt, Slot
 from PySide6.QtGui import QAction, QIcon, QKeySequence
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QTableView, QWidget
 from spinedb_api import (
@@ -206,10 +207,14 @@ class CopyPasteTableView(QTableView):
                     index = model_index(row, column)
                     if index.flags() & Qt.ItemFlag.ItemIsEditable:
                         i = (row - rows[0]) % len(data)
-                        j = (column - columns[0]) % len(data[i])
-                        value = data[i][j]
-                        indexes.append(index)
-                        values.append(self._convert_pasted(row, column, value, model))
+                        data_row = data[i]
+                        if data_row:
+                            j = (column - columns[0]) % len(data_row)
+                            value = data[i][j]
+                            indexes.append(index)
+                            values.append(self._convert_pasted(row, column, value, model))
+        if not indexes:
+            return False
         model.batch_set_data(indexes, values)
         return True
 
@@ -241,11 +246,16 @@ class CopyPasteTableView(QTableView):
         columns = []
         columns_append = columns.append
         h = self.horizontalHeader()
-        for _ in range(len(data[0])):
-            while is_visual_column_hidden(visual_column):
+        for data_row in data:
+            for _ in range(len(data_row)):
+                while is_visual_column_hidden(visual_column):
+                    visual_column += 1
+                columns_append(h.logicalIndex(visual_column))
                 visual_column += 1
-            columns_append(h.logicalIndex(visual_column))
-            visual_column += 1
+            if data_row:
+                break
+        else:
+            return False
         # Insert extra rows if needed:
         last_row = rows[-1]
         model = self.model()
@@ -292,50 +302,6 @@ class CopyPasteTableView(QTableView):
             culled_rows.append(row)
             culled_data.append(data[i])
         return culled_rows, culled_data
-
-
-class AutoFilterCopyPasteTableView(CopyPasteTableView):
-    """Custom QTableView class with autofilter functionality."""
-
-    def __init__(self, parent: Optional[QWidget]):
-        super().__init__(parent=parent)
-        self._show_filter_menu_action = QAction(self)
-        self._show_filter_menu_action.setShortcut(QKeySequence(Qt.Modifier.ALT.value | Qt.Key.Key_Down.value))
-        self._show_filter_menu_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
-        self._show_filter_menu_action.triggered.connect(self._trigger_filter_menu)
-        self.addAction(self._show_filter_menu_action)
-        self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
-
-    def setModel(self, model):
-        """Disconnects the sectionPressed signal which seems to be connected by the super method.
-        Otherwise pressing the header just selects the column.
-
-        Args:
-            model (QAbstractItemModel)
-        """
-        super().setModel(model)
-        self.horizontalHeader().sectionPressed.disconnect()
-
-    @Slot(bool)
-    def _trigger_filter_menu(self, _):
-        """Shows current column's auto filter menu."""
-        self.show_auto_filter_menu(self.currentIndex().column())
-
-    @Slot(int)
-    def show_auto_filter_menu(self, logical_index):
-        """Called when user clicks on a horizontal section header.
-        Shows/hides the auto filter widget.
-
-        Args:
-            logical_index (int): header section index
-        """
-        menu = self.model().get_auto_filter_menu(logical_index)
-        if menu is None:
-            return
-        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(logical_index)
-        pos_y = header_pos.y() + self.horizontalHeader().height()
-        menu.popup(QPoint(pos_x, pos_y))
 
 
 class IndexedParameterValueTableViewBase(CopyPasteTableView):
@@ -488,17 +454,33 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
             value_column = []
             for row in data:
                 index_column.append(row[0])
-                value_column.append(row[1])
+                try:
+                    value_column.append(row[1])
+                except IndexError:
+                    value_column.append(None)
             pasted_table = [index_column, value_column]
+            paste_length = len(index_column)
+        else:
+            paste_length = len(pasted_table)
         first_row, last_row, first_column, _ = _range(selection_model.selection())
         selection_length = last_row - first_row + 1
         model = self.model()
-        model_row_count = model.rowCount() - 1
+        if selection_length == 1 or model.is_expanse_row(last_row):
+            # If a single row or the expanse row is selected, we paste everything.
+            model_last_row = model.rowCount() - 1
+            if model_last_row <= first_row + paste_length:
+                model.insertRows(model_last_row, paste_length - (model_last_row - first_row))
+        elif paste_length > selection_length:
+            # If multiple row are selected, we paste what fits the selection.
+            paste_length = selection_length
+            if paste_single_column:
+                pasted_table = pasted_table[0:selection_length]
+            else:
+                pasted_table = pasted_table[0][0:selection_length], pasted_table[1][0:selection_length]
         if paste_single_column:
             indexes_to_set, values_to_set = self._paste_single_column(
                 pasted_table, first_row, first_column, selection_length if selection_length > 1 else len(pasted_table)
             )
-            paste_length = len(indexes_to_set)
             paste_selection = QItemSelection(
                 model.index(first_row, first_column), model.index(first_row + paste_length - 1, first_column)
             )
@@ -507,22 +489,9 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
                 pasted_table[0],
                 pasted_table[1],
                 first_row,
-                selection_length if selection_length > 1 else len(pasted_table),
+                selection_length if selection_length > 1 else len(pasted_table[0]),
             )
-            paste_length = len(indexes_to_set) // 2
             paste_selection = QItemSelection(model.index(first_row, 0), model.index(first_row + paste_length - 1, 1))
-        paste_length = len(pasted_table) if paste_single_column else len(pasted_table[0])
-        if selection_length == 1 or model.is_expanse_row(last_row):
-            # If a single row or the expanse row is selected, we paste everything.
-            if model_row_count <= first_row + paste_length:
-                model.insertRows(model_row_count, paste_length - (model_row_count - first_row))
-        elif paste_length > selection_length:
-            # If multiple row are selected, we paste what fits the selection.
-            paste_length = selection_length
-            if paste_single_column:
-                pasted_table = pasted_table[0:selection_length]
-            else:
-                pasted_table = pasted_table[0][0:selection_length], pasted_table[1][0:selection_length]
         model.batch_set_data(indexes_to_set, values_to_set)
         self.selectionModel().select(paste_selection, QItemSelectionModel.ClearAndSelect)
         return True

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a class for the main window of Spine Toolbox."""
+from collections.abc import Callable
 import json
 import locale
 import logging
@@ -21,7 +22,7 @@ import threading
 from typing import Optional
 from zipfile import ZipFile
 import numpy as np
-from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, QSize, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -30,6 +31,7 @@ from PySide6.QtGui import (
     QGuiApplication,
     QIcon,
     QKeySequence,
+    QPalette,
     QUndoStack,
     QWindow,
 )
@@ -50,21 +52,28 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from spine_engine.load_project_items import load_item_specification_factories
+from spine_engine.project_item.project_item_specification_factory import ProjectItemSpecificationFactory
 from spine_engine.spine_engine import _set_resource_limits
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
-from .config import DEFAULT_WORK_DIR, MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL, SPINE_TOOLBOX_REPO_URL
+from .config import (
+    DEFAULT_WORK_DIR,
+    ONLINE_DOCUMENTATION_URL,
+    SPINE_DB_API_DOCUMENTATION_URL,
+    SPINE_TOOLBOX_REPO_URL,
+    LATEST_PROJECT_VERSION
+)
 from .helpers import (
     ChildCyclingKeyPressFilter,
+    ColoredIcon,
+    MessageType,
     add_keyboard_shortcuts_to_action_tool_tips,
     basic_console_icon,
     busy_effect,
     clear_qsettings,
-    color_from_index,
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
-    load_specification_from_file,
-    load_specification_local_data,
+    make_icons_theme_aware,
     open_url,
     recursive_overwrite,
     same_path,
@@ -72,10 +81,21 @@ from .helpers import (
     solve_connection_file,
     supported_img_formats,
     unique_name,
+    update_recent_projects,
+    remove_path_from_recent_projects,
 )
 from .kernel_models import ExecutableCompoundModels
-from .link import JUMP_COLOR, LINK_COLOR, JumpLink, Link
+from .kernel_fetcher import KernelFetcher
+from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
+from .load_project import ProjectLoadingFailed, load_project_dict
 from .load_project_items import load_project_items
+from .load_specification import (
+    SpecificationLoadingFailed,
+    load_specification_dict,
+    load_specification_local_data,
+    merge_local_dict_to_specification_dict,
+    specification_from_dict,
+)
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .mvcmodels.project_item_specification_models import FilteredSpecificationModel, ProjectItemSpecificationModel
 from .plugin_manager import PluginManager
@@ -92,8 +112,11 @@ from .project_commands import (
     SpineToolboxCommand,
 )
 from .project_item.logging_connection import LoggingConnection, LoggingJump
+from .project_item.project_item import ProjectItem
+from .project_item.project_item_factory import ProjectItemFactory
 from .project_item_icon import ProjectItemIcon
 from .project_settings import ProjectSettings
+from .project_upgrader import InvalidProjectDict, ProjectUpgradeFailed
 from .spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from .spine_db_manager import SpineDBManager
 from .spine_engine_manager import make_engine_manager
@@ -107,8 +130,69 @@ from .widgets.link_properties_widget import LinkPropertiesWidget
 from .widgets.multi_tab_spec_editor import MultiTabSpecEditor
 from .widgets.open_project_dialog import OpenProjectDialog
 from .widgets.persistent_console_widget import ConsoleWindow, PersistentConsoleWidget
-from .widgets.set_description_dialog import SetDescriptionDialog
+from .widgets.project_settings_dialog import ProjectSettingsDialog
+from .widgets.properties_widget import PropertiesWidgetBase
 from .widgets.settings_widget import SettingsWidget
+
+
+def _make_dark_palette():
+    """Creates a dark QPalette suitable for the Fusion style."""
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Base, QColor(42, 42, 42))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(25, 25, 25))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+    palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.ColorRole.LinkVisited, QColor(150, 100, 200))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(127, 127, 127))
+    palette.setColor(QPalette.ColorRole.Light, QColor(80, 80, 80))
+    palette.setColor(QPalette.ColorRole.Midlight, QColor(65, 65, 65))
+    palette.setColor(QPalette.ColorRole.Dark, QColor(35, 35, 35))
+    palette.setColor(QPalette.ColorRole.Mid, QColor(48, 48, 48))
+    palette.setColor(QPalette.ColorRole.Shadow, QColor(20, 20, 20))
+    return palette
+
+
+def _make_light_palette():
+    """Creates a light QPalette suitable for the Fusion style on systems with dark OS theme."""
+    palette = QPalette()
+    palette.setColor(QPalette.ColorRole.Window, QColor(239, 239, 239))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.Base, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(240, 240, 240))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(255, 255, 220))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(128, 128, 128))
+    palette.setColor(QPalette.ColorRole.Text, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+    palette.setColor(QPalette.ColorRole.Button, QColor(239, 239, 239))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(0, 0, 0))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(48, 140, 198))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Link, QColor(0, 0, 255))
+    palette.setColor(QPalette.ColorRole.LinkVisited, QColor(255, 0, 255))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, QColor(190, 190, 190))
+    palette.setColor(QPalette.ColorRole.Light, QColor(255, 255, 255))
+    palette.setColor(QPalette.ColorRole.Midlight, QColor(227, 227, 227))
+    palette.setColor(QPalette.ColorRole.Dark, QColor(130, 130, 130))
+    palette.setColor(QPalette.ColorRole.Mid, QColor(160, 160, 160))
+    palette.setColor(QPalette.ColorRole.Shadow, QColor(90, 90, 90))
+    return palette
 
 
 class ToolboxUI(QMainWindow):
@@ -152,22 +236,20 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.installEventFilter(self.key_press_filter)
         self._add_item_edit_actions()
         self.ui.listView_console_executions.setModel(FilterExecutionModel(self))
-        # Set style sheets
-        self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self.undo_stack = QUndoStack(self)
-        self._item_properties_uis = {}
-        self.item_factories = {}  # maps item types to `ProjectItemFactory` objects
-        self._item_specification_factories = {}  # maps item types to `ProjectItemSpecificationFactory` objects
-        self._project = None
-        self.specification_model = None
-        self.filtered_spec_factory_models = {}
+        self._item_properties_uis: dict[str, PropertiesWidgetBase] = {}
+        self.item_factories: dict[str, ProjectItemFactory] = {}
+        self._item_specification_factories: dict[str, ProjectItemSpecificationFactory] = {}
+        self._project: SpineToolboxProject | None = None
+        self.specification_model: ProjectItemSpecificationModel | None = None
+        self.filtered_spec_factory_models: dict[str, FilteredSpecificationModel] = {}
         self.show_datetime = self.update_datetime()
-        self.active_project_item = None
-        self.active_link_item = None
-        self._selected_item_names = set()
+        self.active_project_item: ProjectItem | None = None
+        self.active_link_item: JumpOrLink | None = None
+        self._selected_item_names: set[str] = set()
         self.execution_in_progress = False
-        self._anchor_callbacks = {}
+        self._anchor_callbacks: dict[str, Callable[[], None]] = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
         self.exec_compound_models = ExecutableCompoundModels(self._qsettings)
@@ -175,8 +257,8 @@ class ToolboxUI(QMainWindow):
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references
-        self.settings_form = None
-        self.add_project_item_form = None
+        self.settings_form: SettingsWidget | None = None
+        self.add_project_item_form: PropertiesWidgetBase | None = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         self.kernels_menu = KernelsPopupMenu(self)
         self.start_python_menu = PythonPopupMenu(self)
@@ -188,11 +270,11 @@ class ToolboxUI(QMainWindow):
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
-        self._item_consoles = {}  # Mapping of ProjectItem to console
-        self._filter_item_consoles = {}  # (ProjectItem, {f_id_0: console_0, f_id_1:console_1, ... , f_id_n:console_n})
-        self._persistent_consoles = {}  # Mapping of key to PersistentConsoleWidget
-        self._jupyter_consoles = {}  # Mapping of connection file to JupyterConsoleWidget
-        self._current_execution_keys = {}
+        self._item_consoles: dict[ProjectItem, PersistentConsoleWidget] = {}
+        self._filter_item_consoles: dict[ProjectItem, dict[str, JupyterConsoleWidget]] = {}
+        self._persistent_consoles: dict[str, PersistentConsoleWidget] = {}
+        self._jupyter_consoles: dict[str, JupyterConsoleWidget] = {}
+        self._current_execution_keys: dict[ProjectItem, str] = {}
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -200,6 +282,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.setToolTipsVisible(True)
         self.ui.menuConsoles.setToolTipsVisible(True)
         self._add_execute_actions()
+        self.kernel_fetcher: KernelFetcher | None = None
         # Hidden QActions for debugging or testing
         self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
@@ -218,6 +301,8 @@ class ToolboxUI(QMainWindow):
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
         }
+        for widget in self.link_properties_widgets.values():
+            make_icons_theme_aware(widget)
         self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingConnection], "Link properties")
         self.ui.tabWidget_item_properties.addTab(self.link_properties_widgets[LoggingJump], "Loop properties")
         self._plugin_manager = PluginManager(self)
@@ -265,7 +350,7 @@ class ToolboxUI(QMainWindow):
         self.error_box.connect(self._show_error_box)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
-        self.ui.actionOpen.triggered.connect(self.open_project)
+        self.ui.actionOpen.triggered.connect(lambda _: self.open_project())
         self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
         self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
@@ -277,8 +362,8 @@ class ToolboxUI(QMainWindow):
         self.start_julia_menu.aboutToShow.connect(self.start_julia_menu.populate_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
-        self.ui.actionClose.triggered.connect(lambda _checked=False: self.close_project())
-        self.ui.actionSet_description.triggered.connect(self.set_project_description)
+        self.ui.actionClose.triggered.connect(lambda _checked: self.close_project())
+        self.ui.open_project_settings_action.triggered.connect(self.open_project_settings)
         self.ui.actionNew_DB_editor.triggered.connect(self.new_db_editor)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -287,6 +372,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionManage_plugins.triggered.connect(self._plugin_manager.show_manage_plugins_dialog)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
+        self.ui.open_spinedb_api_reference_action.triggered.connect(self.show_db_api_reference)
         self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionRetrieve_project.triggered.connect(self.retrieve_project)
@@ -331,11 +417,33 @@ class ToolboxUI(QMainWindow):
 
     @staticmethod
     def set_app_style():
-        """Sets app style on Windows to 'windowsvista' or to a default if not available."""
+        """Sets application style appropriate for each platform.
+
+        The user can override the theme via appSettings/theme ("os", "light", or "dark").
+        Fusion style is used on all platforms for dark mode since native styles
+        (windowsvista, macOS) do not support programmatic dark palettes.
+        """
+        theme = QSettings("SpineProject", "Spine Toolbox").value("appSettings/theme", defaultValue="os")
         if sys.platform == "win32":
-            if "windowsvista" not in QStyleFactory.keys():
-                return
-            QApplication.setStyle("windowsvista")
+            if "windowsvista" in QStyleFactory.keys():
+                QApplication.setStyle("windowsvista")
+        elif sys.platform != "darwin":
+            QApplication.setStyle("Fusion")
+        use_dark = theme == "dark" or (
+            theme == "os" and QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark
+        )
+        if use_dark:
+            QApplication.setStyle("Fusion")
+            QApplication.setPalette(_make_dark_palette())
+            QApplication.instance().setStyleSheet(
+                "QDockWidget {"
+                "    titlebar-close-icon: url(:/icons/menu_icons/times-white.svg);"
+                "    titlebar-normal-icon: url(:/icons/menu_icons/float-white.svg);"
+                "}"
+            )
+        elif theme == "light":
+            QApplication.setStyle("Fusion")
+            QApplication.setPalette(_make_light_palette())
 
     @staticmethod
     def set_error_mode():
@@ -457,7 +565,7 @@ class ToolboxUI(QMainWindow):
         """Shows a welcome message in the Event log."""
         p = os.path.join(f"{ONLINE_DOCUMENTATION_URL}", "getting_started.html")
         getting_started_anchor = (
-            "<a style='color:#99CCFF;' title='"
+            "<a title='"
             + p
             + f"' href='{ONLINE_DOCUMENTATION_URL}/getting_started.html'>Getting Started</a>"
         )
@@ -496,13 +604,31 @@ class ToolboxUI(QMainWindow):
             # Now we just give up.
             return
         if not os.path.isdir(project_dir):
-            self.msg_error.emit(f"Cannot open previous project. Directory <b>{project_dir}</b> may have been moved.")
-            self.remove_path_from_recent_projects(project_dir)
+            self.msg_error.emit(
+                f"Cannot open previously opened project. "
+                f"Directory <b>{project_dir}</b> may have been moved or deleted."
+            )
+            remove_path_from_recent_projects(self._qsettings, project_dir)
+            return
+        project_dict = load_project_dict(project_dir)
+        version = project_dict.get("project", {}).get("version")
+        if not version:
+            self.msg_error.emit(
+                f"Cannot open previously opened project <b>'{project_dir}'</b>. "
+                f"Project version information is missing."
+            )
+            return
+        if version > LATEST_PROJECT_VERSION:
+            self.msg_warning.emit(
+                f"Cannot open previously opened project <b>'{project_dir}'</b>. "
+                f"Project version {version} requires a newer Spine Toolbox "
+                f"(current support: {LATEST_PROJECT_VERSION})."
+            )
             return
         self.open_project(project_dir, clear_event_log=False)
 
     @Slot()
-    def new_project(self):
+    def new_project(self) -> None:
         """Opens a file dialog where user can select a directory where a project is created.
         Pops up a question box if selected directory is not empty or if it already contains
         a Spine Toolbox project. Initial project name is the directory name.
@@ -557,25 +683,24 @@ class ToolboxUI(QMainWindow):
         self.update_window_title()
         self.ui.graphicsView.reset_zoom()
         # Update recentProjects
-        self.update_recent_projects()
+        update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         # Update recentProjectStorages
         OpenProjectDialog.update_recents(os.path.abspath(os.path.join(proj_dir, os.path.pardir)), self.qsettings())
         self.save_project()
         self._plugin_manager.reload_plugins_with_local_data()
         self.msg.emit(f"New project <b>{self._project.name}</b> is now open")
 
-    @Slot()
-    def open_project(self, load_dir=None, clear_event_log=True):
+    def open_project(self, load_dir: str | None=None, clear_event_log: bool=True) -> bool:
         """Opens project from a selected or given directory.
 
         Args:
-            load_dir (str, optional): Path to project base directory. If default value is used,
+            load_dir: Path to project base directory. If default value is used,
                 a file explorer dialog is opened where the user can select the
                 project to open.
-            clear_event_log (bool): True clears the Event log before opening the project
+            clear_event_log: True clears the Event log before opening the project
 
         Returns:
-            bool: True when opening the project succeeded, False otherwise
+            True when opening the project succeeded, False otherwise
         """
         if not load_dir:
             custom_open_dialog = self.qsettings().value("appSettings/customOpenProjectDialog", defaultValue="true")
@@ -632,17 +757,34 @@ class ToolboxUI(QMainWindow):
         # Populate project model with project items
         if clear_event_log:
             self.ui.textBrowser_eventlog.clear()
-        success = self._project.load(self._item_specification_factories, self.item_factories)
+        try:
+            success = self._project.load(self._item_specification_factories, self.item_factories, self._confirm_project_upgrade)
+        except (ProjectLoadingFailed, ProjectUpgradeFailed, InvalidProjectDict) as error:
+            self.msg_error.emit(str(error))
+            success = False
         if not success:
-            self.remove_path_from_recent_projects(self._project.project_dir)
+            remove_path_from_recent_projects(self._qsettings, self._project.project_dir)
             return False
         self._enable_project_actions()
         self._plugin_manager.reload_plugins_with_local_data()
+        self._project.settings_updated.connect(self._handle_project_settings_update)
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
-        self.update_recent_projects()
+        update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         return True
+
+    def _confirm_project_upgrade(self, project_dir: pathlib.Path | str) -> bool:
+        """Asks user whether to upgrade the project to a new version."""
+        button = QMessageBox.question(
+            self,
+            "Upgrade project?",
+            f"Project <b>{project_dir}</b> needs an upgrade to work "
+            f"with this version of Spine Toolbox. <br><br>Upgrade project?",
+        )
+        if button == QMessageBox.StandardButton.Yes:
+            return True
+        return False
 
     def _toolbars(self):
         """Yields all toolbars in the window."""
@@ -664,7 +806,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setDisabled(True)
         self.ui.actionSave_As.setDisabled(True)
         self.ui.actionClose.setDisabled(True)
-        self.ui.actionSet_description.setDisabled(True)
+        self.ui.open_project_settings_action.setDisabled(True)
         self.ui.actionExecute_project.setDisabled(True)
         self.ui.actionExecute_selection.setDisabled(True)
         self.ui.actionStop_execution.setDisabled(True)
@@ -678,18 +820,20 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.setEnabled(True)
         self.ui.actionSave_As.setEnabled(True)
         self.ui.actionClose.setEnabled(True)
-        self.ui.actionSet_description.setEnabled(True)
+        self.ui.open_project_settings_action.setEnabled(True)
         self._unset_execution_in_progress()
 
     def refresh_toolbars(self):
-        """Set toolbars' color using the highest possible contrast."""
+        """Set toolbars' color using subtle palette-derived shades."""
+        base = QApplication.palette().color(QPalette.ColorRole.Button)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
-            color = color_from_index(k, len(all_toolbars), base_hue=217.0, saturation=0.6)
+            factor = 100 + (k - len(all_toolbars) // 2) * 5
+            color = base.lighter(factor) if factor >= 100 else base.darker(200 - factor)
             toolbar.set_color(color)
             if self.toolBarArea(toolbar) == Qt.ToolBarArea.NoToolBarArea:
                 self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
-        self.execute_toolbar.set_color(QColor("silver"))
+        self.execute_toolbar.set_color(QApplication.palette().color(QPalette.ColorRole.Button))
         if self.toolBarArea(self.execute_toolbar) == Qt.ToolBarArea.NoToolBarArea:
             self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.execute_toolbar)
 
@@ -701,7 +845,36 @@ class ToolboxUI(QMainWindow):
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
 
     @Slot()
-    def save_project(self):
+    def _handle_project_settings_update(self) -> None:
+        self._update_execute_enabled()
+
+    @Slot()
+    def fetch_kernels(self):
+        """Starts a thread for fetching local kernels."""
+        if self.kernel_fetcher is not None and self.kernel_fetcher.isRunning():
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
+        self.kernels_menu.clear()
+        conda_path = self.qsettings().value("appSettings/condaPath", defaultValue="")
+        self.kernel_fetcher = KernelFetcher(conda_path)
+        self.kernel_fetcher.kernel_found.connect(self.kernels_menu.add_kernel)
+        self.kernel_fetcher.finished.connect(self.restore_override_cursor)
+        self.ui.actionStart_jupyter_console.setMenu(self.kernels_menu)
+        self.kernel_fetcher.start()
+
+    @Slot()
+    def stop_fetching_kernels(self):
+        """Terminates kernel fetcher thread."""
+        if self.kernel_fetcher is not None:
+            self.kernel_fetcher.stop_fetcher.emit()
+
+    @Slot()
+    def restore_override_cursor(self):
+        """Restores default mouse cursor."""
+        QApplication.restoreOverrideCursor()
+
+    @Slot()
+    def save_project(self) -> None:
         """Saves project."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
@@ -711,7 +884,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.setClean()
 
     @Slot()
-    def save_project_as(self):
+    def save_project_as(self) -> None:
         """Asks user for a new project directory and duplicates the current project there.
         The name of the duplicated project will be the new directory name. The duplicated
         project is activated."""
@@ -774,17 +947,20 @@ class ToolboxUI(QMainWindow):
             self.ui.textBrowser_eventlog.clear()
         return True
 
-    @Slot(bool)
-    def set_project_description(self, _=False):
-        """Opens a dialog where the user can enter a new description for the project."""
+    @Slot()
+    def open_project_settings(self) -> None:
+        """Opens a dialog where the user can manage current project's settings."""
         if not self._project:
             return
-        dialog = SetDescriptionDialog(self, self._project)
+        dialog = ProjectSettingsDialog(self, self._project)
         dialog.show()
 
     def init_specification_model(self):
         """Initializes specification model."""
-        factory_icons = {item_type: QIcon(factory.icon()) for item_type, factory in self.item_factories.items()}
+        factory_icons = {
+            item_type: ColoredIcon(factory.icon(), None, QSize(16, 16))
+            for item_type, factory in self.item_factories.items()
+        }
         self.specification_model = ProjectItemSpecificationModel(factory_icons)
         for item_type in self.item_factories:
             model = self.filtered_spec_factory_models[item_type] = FilteredSpecificationModel(item_type)
@@ -794,6 +970,7 @@ class ToolboxUI(QMainWindow):
         for item_type, factory in self.item_factories.items():
             properties_ui = self._item_properties_uis[item_type] = factory.make_properties_widget(self)
             properties_ui.set_color_and_icon(factory.icon_color(), factory.icon())
+            make_icons_theme_aware(properties_ui)
             self.ui.tabWidget_item_properties.addTab(properties_ui, item_type)
 
     def add_project_items(self, items_dict):
@@ -999,7 +1176,7 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(self.active_project_item.item_type() + " Properties")
         color = self._item_properties_uis[self.active_project_item.item_type()].fg_color
-        ss = f"QWidget{{background: {color.name()};}}"
+        ss = f"QWidget{{background: {color.name()}; color: black;}}"
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.show()
         self._button_item_dir.setToolTip(f"<html>Open <b>{self.active_project_item.name}</b> directory.</html>")
@@ -1014,7 +1191,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.currentWidget().layout().insertWidget(0, self._properties_title)
         self.ui.dockWidget_item.setWindowTitle(tab_text)
         color = self.link_properties_widgets[type(self.active_link_item)].fg_color
-        ss = f"QWidget{{background: {color.name()};}}"
+        ss = f"QWidget{{background: {color.name()}; color: black;}}"
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.hide()
 
@@ -1036,7 +1213,7 @@ class ToolboxUI(QMainWindow):
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=True))
 
     @Slot()
-    def import_specification(self):
+    def import_specification(self) -> None:
         """Opens a file dialog where the user can select an existing specification
         definition file (.json). If file is valid, pushes AddSpecificationCommand to undo stack.
         """
@@ -1051,12 +1228,15 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load specification
-        local_data = load_specification_local_data(self._project.config_dir)
-        specification = load_specification_from_file(
-            def_file, local_data, self._item_specification_factories, self._qsettings, self
-        )
-        if not specification:
-            self.msg_error.emit("Failed to load specification.")
+        local_data = load_specification_local_data(self._project.project_dir)
+        try:
+            specification_dict = load_specification_dict(def_file)
+            merge_local_dict_to_specification_dict(
+                local_data, specification_dict
+            )
+            specification = specification_from_dict(specification_dict, self._item_specification_factories, self._qsettings, self)
+        except SpecificationLoadingFailed as error:
+            self.msg_error.emit(str(error))
             return
         self.undo_stack.push(AddSpecificationCommand(self._project, specification, save_to_disk=False))
 
@@ -1108,8 +1288,8 @@ class ToolboxUI(QMainWindow):
         """
         self.msg_success.emit(
             f"Specification <b>{name}</b> successfully saved as "
-            f"<a style='color:#99CCFF;' href='file:///{path}'>{path}</a> "
-            f"<a style='color:white;' href='change_spec_file.{name}'><b>[change]</b></a>"
+            f"<a href='file:///{path}'>{path}</a> "
+            f"<a href='change_spec_file.{name}'><b>[change]</b></a>"
         )
 
     @Slot()
@@ -1297,8 +1477,8 @@ class ToolboxUI(QMainWindow):
                 f"10, go to Control Panel -> Default Programs to do this."
             )
 
-    @Slot(bool)
-    def new_db_editor(self):
+    @Slot()
+    def new_db_editor(self) -> None:
         editor = MultiSpineDBEditor(self.db_mngr, [])
         editor.show()
 
@@ -1380,6 +1560,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.insertAction(before, redo_action)
         self.ui.menuEdit.insertSeparator(before)
 
+    @Slot()
     def toggle_properties_tabbar_visibility(self):
         """Shows or hides the tab bar in properties dock widget. For debugging purposes."""
         if self.ui.tabWidget_item_properties.tabBar().isVisible():
@@ -1387,7 +1568,7 @@ class ToolboxUI(QMainWindow):
         else:
             self.ui.tabWidget_item_properties.tabBar().show()
 
-    def update_datetime(self):
+    def update_datetime(self) -> bool:
         """Returns a boolean, which determines whether
         date and time is prepended to every Event Log message."""
         d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
@@ -1400,7 +1581,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg, self.show_datetime)
+        message = format_log_message("msg", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1410,7 +1591,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_success", msg, self.show_datetime)
+        message = format_log_message("msg_success", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1420,7 +1601,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg, self.show_datetime)
+        message = format_log_message("msg_error", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1430,7 +1611,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_warning", msg, self.show_datetime)
+        message = format_log_message("msg_warning", msg, self.ui.textBrowser_eventlog, self.show_datetime)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1440,7 +1621,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg", msg)
+        message = format_log_message("msg", msg, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.append(message)
 
     @Slot(str)
@@ -1450,7 +1631,7 @@ class ToolboxUI(QMainWindow):
         Args:
             msg (str): String written to QTextBrowser
         """
-        message = format_log_message("msg_error", msg)
+        message = format_log_message("msg_error", msg, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.append(message)
 
     def override_console_and_execution_list(self):
@@ -1599,7 +1780,7 @@ class ToolboxUI(QMainWindow):
         return None
 
     @Slot()
-    def show_settings(self):
+    def show_settings(self) -> None:
         """Shows the Settings widget."""
         self.settings_form = SettingsWidget(self)
         self.settings_form.closing.connect(self.when_settings_widget_closes)
@@ -1615,24 +1796,28 @@ class ToolboxUI(QMainWindow):
         # TODO: Check if Python interpreter, Julia Executable, or Julia Project defaults changed and update Tools
         # TODO: That use defaults.
 
-    @Slot()
-    def show_about(self):
+    def show_about(self) -> None:
         """Shows the About Spine Toolbox widget."""
         form = AboutWidget(self)
         form.show()
 
     @Slot()
-    def show_user_guide(self):
+    def show_user_guide(self) -> None:
         """Opens Spine Toolbox documentation index page in browser."""
         index_url = f"{ONLINE_DOCUMENTATION_URL}/index.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         open_url(index_url)
 
     @Slot()
-    def show_getting_started_guide(self):
+    def show_getting_started_guide(self) -> None:
         """Opens Spine Toolbox Getting Started HTML page in browser."""
         index_url = f"{ONLINE_DOCUMENTATION_URL}/getting_started.html"
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        open_url(index_url)
+
+    @Slot()
+    def show_db_api_reference(self) -> None:
+        index_url = f"{SPINE_DB_API_DOCUMENTATION_URL}"
         open_url(index_url)
 
     @Slot()
@@ -1900,70 +2085,6 @@ class ToolboxUI(QMainWindow):
             self.save_project()
         return True
 
-    def remove_path_from_recent_projects(self, p):
-        """Removes entry that contains given path from the recent project files list in QSettings.
-
-        Args:
-            p (str): Full path to a project directory
-        """
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        if not recents:
-            return
-        recents = str(recents)
-        recents_list = recents.split("\n")
-        for entry in recents_list:
-            _, path = entry.split("<>")
-            if same_path(path, p):
-                recents_list.pop(recents_list.index(entry))
-                break
-        updated_recents = "\n".join(recents_list)
-        # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
-    def clear_recent_projects(self):
-        """Clears recent projects list in File->Open recent menu."""
-        msg = "Are you sure?"
-        title = "Clear recent projects?"
-        message_box = QMessageBox(
-            QMessageBox.Icon.Question,
-            title,
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            parent=self,
-        )
-        answer = message_box.exec()
-        if answer == QMessageBox.StandardButton.No:
-            return
-        self._qsettings.remove("appSettings/recentProjects")
-        self._qsettings.remove("appSettings/recentProjectStorages")
-        self._qsettings.sync()
-
-    def update_recent_projects(self):
-        """Adds a new entry to QSettings variable that remembers twenty most recent project paths."""
-        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + "<>" + self.project().project_dir
-        if not recents:
-            updated_recents = entry
-        else:
-            recents = str(recents)
-            recents_list = recents.split("\n")
-            normalized_recents = list(map(os.path.normcase, recents_list))
-            try:
-                index = normalized_recents.index(os.path.normcase(entry))
-            except ValueError:
-                # Add path only if it's not in the list already
-                recents_list.insert(0, entry)
-                if len(recents_list) > 20:
-                    recents_list.pop()
-            else:
-                # If entry was on the list, move it as the first item
-                recents_list.insert(0, recents_list.pop(index))
-            updated_recents = "\n".join(recents_list)
-        # Save updated recent paths
-        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
-        self._qsettings.sync()  # Commit change immediately
-
     def closeEvent(self, event):
         """Method for handling application exit.
 
@@ -1982,7 +2103,7 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.project_dir)
-            self.update_recent_projects()
+            update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
@@ -2328,13 +2449,13 @@ class ToolboxUI(QMainWindow):
         return menu
 
     @Slot()
-    def start_detached_python_basic_console(self, path):
+    def start_detached_python_basic_console(self, path) -> None:
         """Starts basic console with the default Python interpreter."""
         _set_resource_limits(self.qsettings(), threading.Lock())
         self.start_detached_basic_console("python", path)
 
     @Slot()
-    def start_detached_julia_basic_console(self, julia_exe, julia_project):
+    def start_detached_julia_basic_console(self, julia_exe, julia_project) -> None:
         """Starts basic console with the default Julia executable."""
         if not julia_exe:
             self.msg_warning.emit("No Julia installation found. Add path to a Julia executable in Spine "
@@ -2571,12 +2692,14 @@ class ToolboxUI(QMainWindow):
         """
         self.ui.textBrowser_eventlog.make_log_entry_point(timestamp)
 
-    def add_log_message(self, item_name, filter_id, message):
+    def add_log_message(self, item_name: str, filter_id: str, msg_type: MessageType, message: str) -> None:
         """Adds a message to an item's execution log.
 
         Args:
-            item_name (str): item name
-            filter_id (str): filter identifier
-            message (str): formatted message
+            item_name: item name
+            filter_id: filter identifier
+            msg_type: Type of the message.
+            message: Message to log.
         """
+        message = format_log_message(msg_type, message, self.ui.textBrowser_eventlog)
         self.ui.textBrowser_eventlog.add_log_message(item_name, filter_id, message)

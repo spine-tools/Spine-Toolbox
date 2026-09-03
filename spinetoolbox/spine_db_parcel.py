@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """SpineDBParcel class."""
+
 from spinedb_api import Asterisk
 
 
@@ -24,8 +25,7 @@ class SpineDBParcel:
     """
 
     def __init__(self, db_mngr):
-        """Initializes the parcel object.
-
+        """
         Args:
             db_mngr (SpineDBManager)
         """

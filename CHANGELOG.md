@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Tutorial on running Spine Toolbox projects on High-Perfomance Computing (HPC) systems.
+- Added a per-column regex search row to the stacked tables (Parameter value, Parameter definition,
+  Entity, Entity alternative) in the Spine database editor for live, case-insensitive filtering.
+- Added a per-level regex filter to the Entity, Scenario, Alternative and Parameter value list trees.
+
 ### Changed
 
 ### Deprecated
@@ -15,7 +20,167 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- The parameter name column in parameter value tables now shows the parameter definition's
+  description as a tooltip on hover.
+
 ### Security
+
+## [0.10.9]
+
+### Added
+
+- Added a link to Spine Database API's documentation into the Help menu.
+
+## [0.10.8]
+
+### Changed
+
+- Install Julia wizard now installs latest Julia instead of Julia 1.11.
+  The version was restricted because previously SpineOpt did not support Julia 1.12
+
+## [0.10.7]
+
+### Added
+
+- Added light and dark themes. Detected from OS settings or set via **File->Settings**.
+- The right-click popup menu of Scenario tree has new convenience methods:
+
+  - The Add alternatives submenu adds new alternatives to the selected scenario.
+  - The Duplicate with alternatives submenu duplicates current scenario
+    adding the selected alternatives to the duplicate.
+
+## [0.10.6]
+
+### Added
+
+- Added Parameter group dock to Database editor.
+  You can add, edit and remove parameter groups from the dock.
+- Added *group* column to Parameter definition table in Database editor.
+  You can select parameter's group from the column.
+- Added *group* column to Parameter value table in Database editor.
+  The read-only column shows the group of the value.
+- Database editor now shows a little metadata tag next to entity or parameter name
+  if there is metadata available for the item.
+  The tag is shown in Entity and Parameter value tables.
+- Importer: added new mapping types for metadata:
+
+    - The Metadata type imports basic metadata name-value pairs.
+    - The Entity metadata type imports metadata for entities.
+    - The Parameter value metadata type imports metadata for parameter values.
+
+- Importer: added support for importing descriptions.
+  It is now possible to import entity class, entity and parameter definition descriptions
+  as well as scenario and alternative descriptions.
+  Note that the feature is not available for existing mappings.
+  You need to create new mappings to import descriptions.
+- Exporter: added new mapping types for metadata. The types are the same as listed for Importer above,
+  except for exporting.
+- Exporter: support for exporting descriptions have been extended.
+  It is now possible to export entity class, entity and parameter descriptions
+  in addition to scenario and alternative descriptions.
+  Note, that the feature is not available for existing mappings.
+  You need to create new *Entity class* or type mappings with *Parameter type* set to None or Default value.
+
+### Removed
+
+- Importer: Entity and Parameter value metadata entries in Entity class type import mappings are gone.
+  Use the new Metadata, Entity metadata or Parameter value metadata mapping types instead.
+
+## [0.10.5]
+
+### Added
+
+- Python 3.14 is now supported.
+- Projects now have two modes: **Author** and **Consumer**.
+  The mode can be changed from **File -> Project settings...**.
+  In the Author mode (the default), everything works as before.
+  The Consumer mode, on the other hand, can be used when working with a shared project (a Git repository)
+  where you do not want to make any changes to `<project dir>/.spinetoolbox/project.json`.
+
+  - Currently, only project items' *x* and *y* coordinates are tracked in Consumer mode.
+  - Modifications to properties that get stored in `<project dir>/.spinetoolbox/local/` directory
+    still get saved.
+  - Modifications to specifications still modify the specification files.
+  - **Any other changes to the project that would go to `<project dir>/.spinetoolbox/project.json`
+    will be lost when the project is closed.**
+  - Headless mode does not support changes that have been made in the Consumer mode.
+    Currently, this is not an issue as item coordinates are not used during execution.
+
+### Changed
+
+- The Entity table in Spine Database editor can now be properly filtered by selecting scenarios
+  from the Scenario tree.
+  When doing so, the table will show the entities that are visible in the selected scenario.
+- The column filters in the tables of Stacked view in Spine Database editor now contain only
+  visible items instead of all possible choices.
+- Selected scenarios/alternatives in Link properties are now stored in the local settings file in `.spinetoolbox/local/`.
+  This should make sharing projects more convenient.
+
+## [0.10.4]
+
+### Added
+
+- Spine Database editor has now a new Entity table which shows all entity information
+  including location data that has not been accessible in the editor before.
+  Existing entities can be updated using the table. 
+  However, new entities cannot currently be added from the table.
+- Importer Specification editor has a new button **Remove unavailable tables** that removes source tables
+  which are not found in the input source.
+- Source tables can now be removed with the **Delete** action found in the right-click context menu.
+  The action removes all selected items except the ones that are found in the source.
+  As always, tables that cannot be deleted can be unchecked to exclude them.
+
+
+## [0.10.3]
+
+### Added
+
+- There is now a new checkbox in Project Settings, **Store all paths as relative to project dir**
+  (accessible from **File -> Project settings...**),
+  that turns all file paths into relative paths in `project.json`.
+  This may be useful for projects that are shared among multiple users.
+- Data Connection: it is now possible to add references to directories to Data Connection items.
+  They may be useful as command line arguments to Tools.
+- Data Connection: it is now possible to add file patterns, i.e. references to contents of given directory
+  using wildcards. They can be used, among other things, as Optional input files for Tools.
+- Data Connection: references can now be modified by right-clicking them and selecting **Select another...**
+  from the popup menu.
+
+## [0.10.2]
+
+### Added
+
+- Added a button that deletes all files and directories in work directory to Settings window.
+- Added a button that opens the work directory in system's file browser to Settings window.
+- Added a work directory size calculator to Settings window.
+
+### Changed
+
+- **File->Set project description...** has been replaced by **File->Project settings...** which
+  opens a new Project Settings dialog that can be used to modify the currently open project.
+  Things that can be done using the dialog:
+
+  - Modify project description.
+  - Enable/disable the **Execute all** button.
+  - Delete temporary files from the items folder.
+
+## [0.10.1]
+
+### Changed
+
+- Exporter now uses a cache while reading the database which speeds up the process considerably
+  in certain cases.
+
+### Fixed
+
+- Fixed performance regression in Spine Database Editor.
+- Fixed a bug in Importer where columns of floats were sometimes misinterpreted as integers when reading a datapackage.
+
+## [0.10.0]
+
+### Removed
+
+- Removed support for Python 3.9.
 
 ## [0.9.7]
 
@@ -319,9 +484,6 @@ Many parts of the Spine data structure have been redesigned.
   Duplicating a previously duplicated item now has the number `xx` incremented instead of having a new number appended.
 - "Open kernel spec editor" buttons in Settings->Tools page have been changed "Make Julia kernel" and 
   "Make Python Kernel" buttons
-- 
-
-### Deprecated
 
 ### Removed
 - Python 3.7 support
@@ -342,8 +504,6 @@ Many parts of the Spine data structure have been redesigned.
 - Group Id's for Jupyter Consoles
 - Kill consoles at end of execution for Jupyter Consoles
 - Crash when typing exit, exit(), quit, or quit() into Jupyter Console
-
-### Security
 
 ## [0.6.5] - 2021-09-08
 

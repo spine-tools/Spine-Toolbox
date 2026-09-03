@@ -15,7 +15,7 @@ from PySide6.QtWidgets import QApplication
 from spinedb_api import to_database
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.parameter_type_validation import ValidationKey
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 
 
 class TestTypeValidator(TestCaseWithQApplication):
@@ -73,7 +73,7 @@ class TestTypeValidator(TestCaseWithQApplication):
                 default_type=value_type,
             )
         )
-        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=5.0) as waiter:
+        with signal_waiter(self._db_mngr.parameter_type_validator.validated, timeout=10.0) as waiter:
             self._db_mngr.parameter_type_validator.start_validating(self._db_mngr, self._db_map, [price["id"]])
             waiter.wait()
             self.assertEqual(

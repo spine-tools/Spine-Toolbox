@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QListView."""
+
 from textwrap import fill
 from PySide6.QtCore import QMimeData, Qt, Signal, Slot
 from PySide6.QtGui import QBrush, QColor, QCursor, QDrag, QIcon, QIconEngine, QPainter
@@ -223,3 +224,6 @@ class _ChoppedIconEngine(QIconEngine):
 
     def pixmap(self, size, mode, state):
         return self._pixmap
+
+    def paint(self, painter, rect, mode=None, state=None):
+        pass

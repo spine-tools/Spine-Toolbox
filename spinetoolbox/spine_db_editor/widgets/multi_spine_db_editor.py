@@ -11,13 +11,16 @@
 ######################################################################################################################
 
 """Contains the MultiSpineDBEditor class."""
+
+from contextlib import suppress
 import os
 from PySide6.QtCore import QPoint, Slot
-from PySide6.QtGui import QFont, QIcon
-from PySide6.QtWidgets import QMenu, QStatusBar, QToolButton
-from ...config import MAINWINDOW_SS, ONLINE_DOCUMENTATION_URL
+from PySide6.QtGui import QFont, QIcon, QPalette
+from PySide6.QtWidgets import QApplication, QMenu, QStatusBar, QToolButton
+from sqlalchemy.engine.url import URL
+from ...config import ONLINE_DOCUMENTATION_URL
 from ...font import TOOLBOX_FONT
-from ...helpers import CharIconEngine, open_url
+from ...helpers import CharIconEngine, normcase_database_url_path, open_url
 from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.settings_widget import SpineDBEditorSettingsWidget
 from ..editors import db_editor_registry
@@ -38,7 +41,6 @@ class MultiSpineDBEditor(MultiTabWindow):
         self.db_mngr = db_mngr
         self._waiting_box = None
         self.settings_form = SpineDBEditorSettingsWidget(self)
-        self.setStyleSheet(MAINWINDOW_SS)
         self.setWindowTitle("Spine DB Editor")
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStatusBar(_CustomStatusBar(self))
@@ -51,6 +53,29 @@ class MultiSpineDBEditor(MultiTabWindow):
 
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)
+
+    def open_url_in_new_tab(self, url: str) -> None:
+        """Opens a database URL in a new tab, or raises the existing tab if the URL is already open."""
+        existing = _get_existing_spine_db_editor([normcase_database_url_path(url)])
+        if existing is None:
+            self.add_new_tab([url])
+            return
+        multi_db_editor, db_editor = existing
+        multi_db_editor.set_current_tab(db_editor)
+        if multi_db_editor.isMinimized():
+            multi_db_editor.showNormal()
+        multi_db_editor.activateWindow()
+
+    @Slot(int)
+    def _close_tab(self, index: int) -> None:
+        """Closes the tab at index, keeping the window open even when the last tab is closed.
+
+        Unlike the base class, closing the last database leaves an empty editor the user can open a new
+        database into. Closing the window itself still closes it as before.
+        """
+        if not self.tab_widget.widget(index).close():
+            return
+        self.tab_widget.removeTab(index)
 
     def _connect_tab_signals(self, tab):
         """Connects Spine Db editor window (tab) signals.
@@ -87,8 +112,10 @@ class MultiSpineDBEditor(MultiTabWindow):
         tab.ui.actionClose.triggered.disconnect(self.handle_close_request_from_tab)
         return True
 
-    def _make_new_tab(self, db_urls=None):  # pylint: disable=arguments-differ
-        """Makes a new tab, if successful return the tab, returns None otherwise"""
+    def _make_new_tab(
+        self, db_urls: list[str] | None = None
+    ) -> "SpineDBEditor | None":  # pylint: disable=arguments-differ
+        """Makes a new tab, returning it on success or None otherwise."""
         tab = SpineDBEditor(self.db_mngr)
         if not tab.load_db_urls(db_urls if db_urls is not None else [], create=True):
             return
@@ -171,7 +198,10 @@ class MultiSpineDBEditor(MultiTabWindow):
     def closeEvent(self, event):
         super().closeEvent(event)
         if event.isAccepted():
-            db_editor_registry.unregister_window(self)
+            with suppress(ValueError):
+                # If the window is closed quickly after opening while fetching a huge database,
+                # we may end up here before the window has been registered leading to a ValueError.
+                db_editor_registry.unregister_window(self)
 
 
 class _CustomStatusBar(QStatusBar):
@@ -179,21 +209,22 @@ class _CustomStatusBar(QStatusBar):
         super().__init__(parent)
         self.setContentsMargins(0, 0, 4, 0)
         self._hide_button = QToolButton()
-        self._hide_button.setStyleSheet(
-            """
-            QToolButton {
+        palette = QApplication.palette()
+        hover_color = palette.color(QPalette.ColorRole.Midlight).name()
+        pressed_color = palette.color(QPalette.ColorRole.Mid).name()
+        self._hide_button.setStyleSheet(f"""
+            QToolButton {{
                 background-color: transparent;
                 border: 0px;
                 border-radius: 6px;
-            }
-            QToolButton:hover {
-                background-color: #dddddd;
-            }
-            QToolButton:pressed {
-                background-color: #bbbbbb;
-            }
-            """
-        )
+            }}
+            QToolButton:hover {{
+                background-color: {hover_color};
+            }}
+            QToolButton:pressed {{
+                background-color: {pressed_color};
+            }}
+            """)
         self._hide_button.setText("\uf00d")
         self._hide_button.setFont(QFont(TOOLBOX_FONT.family))
         self._hide_button.setFixedSize(24, 24)
@@ -237,7 +268,12 @@ def open_db_editor(db_urls, db_mngr, reuse_existing_editor):
         if multi_db_editor.tab_load_success:
             multi_db_editor.show()
         return
-    existing = _get_existing_spine_db_editor(list(map(str, db_urls)))
+    normcased_urls = []
+    for url in db_urls:
+        if isinstance(url, URL):
+            url = url.render_as_string(hide_password=False)
+        normcased_urls.append(normcase_database_url_path(url))
+    existing = _get_existing_spine_db_editor(normcased_urls)
     if existing is None:
         multi_db_editor.add_new_tab(db_urls)
     else:

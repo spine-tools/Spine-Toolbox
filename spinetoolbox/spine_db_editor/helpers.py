@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helpers and utilities for Spine Database editor."""
+
 import locale
 from typing import Any, Optional, Union
 from PySide6.QtGui import QColor
@@ -62,22 +63,24 @@ def optional_to_string(x: Optional[Any]) -> Optional[str]:
     return str(x) if x is not None else None
 
 
-def group_to_string(types: Union[str, tuple[str, ...]]) -> Optional[str]:
-    if not types:
+def group_to_string(group: Union[str, tuple[str, ...]]) -> Optional[str]:
+    if not group:
         return None
-    if isinstance(types, str):
-        return types
-    return DB_ITEM_SEPARATOR.join(types)
+    if isinstance(group, str):
+        return group
+    return DB_ITEM_SEPARATOR.join(group)
 
 
-def string_to_group(types: Optional[str]) -> Union[str, tuple[str, ...]]:
-    if not types:
+def string_to_group(string: Optional[str]) -> Union[str, tuple[str, ...]]:
+    if not string:
         return ()
-    separator = DB_ITEM_SEPARATOR if DB_ITEM_SEPARATOR in types else ","
-    return tuple(stripped for t in types.split(separator) if (stripped := t.strip()))
+    separator = DB_ITEM_SEPARATOR if DB_ITEM_SEPARATOR in string else ","
+    return tuple(stripped for t in string.split(separator) if (stripped := t.strip()))
 
 
 def parameter_value_to_string(value: Any) -> str:
+    if value is None:
+        return ""
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
@@ -110,15 +113,6 @@ def input_string_to_int(str_value: str) -> int:
     except ValueError:
         x = locale.atof(str_value)
     return int(round(x))
-
-
-def table_name_from_item_type(item_type: str) -> str:
-    """Returns the dock widgets headers text for the given item type"""
-    return {
-        "parameter_value": "Parameter value",
-        "parameter_definition": "Parameter definition",
-        "entity_alternative": "Entity alternative",
-    }.get(item_type)
 
 
 GRAPH_OVERLAY_COLOR = QColor(210, 210, 210, 211)

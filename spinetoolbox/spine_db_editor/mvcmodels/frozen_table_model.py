@@ -11,10 +11,11 @@
 ######################################################################################################################
 
 """Contains FrozenTableModel class."""
+
 from itertools import product
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 from ...helpers import plain_to_tool_tip, rows_to_row_count_tuples
-from .colors import SELECTED_COLOR
+from .colors import selected_color
 
 
 class FrozenTableModel(QAbstractTableModel):
@@ -311,7 +312,7 @@ class FrozenTableModel(QAbstractTableModel):
             return self._tooltip_from_data(row, index.column())
         if role == Qt.ItemDataRole.BackgroundRole:
             if index.row() == self._selected_row:
-                return SELECTED_COLOR
+                return selected_color()
             return None
         return None
 
@@ -370,7 +371,12 @@ class FrozenTableModel(QAbstractTableModel):
             table_name = "alternative"
         else:
             table_name = "entity"
-        with self.db_mngr.get_lock(db_map):
+        try:
+            db_lock = self.db_mngr.get_lock(db_map)
+        except KeyError:
+            # Happens when closing the DB editor after the frozen table dock has been shown, then hidden.
+            return ""
+        with db_lock:
             return db_map.mapped_table(table_name)[id_]["name"]
 
     @property

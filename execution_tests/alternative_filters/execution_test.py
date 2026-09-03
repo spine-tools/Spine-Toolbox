@@ -62,6 +62,7 @@ class AlternativeFilters(unittest.TestCase):
                 )
             )
             db_map.commit_session("Add test data.")
+        db_map.close()
 
     def test_execution(self):
         this_file = Path(__file__)
@@ -73,5 +74,5 @@ class AlternativeFilters(unittest.TestCase):
         self.assertCountEqual(entities, expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

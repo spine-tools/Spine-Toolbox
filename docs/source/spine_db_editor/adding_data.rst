@@ -4,7 +4,7 @@
    :width: 16
 
 
-Adding data
+Adding Data
 -----------
 
 This section describes the available tools to add new data. Note that after adding
@@ -15,7 +15,7 @@ information about this in the chapter :ref:`committing_and_history`.
 .. contents::
    :local:
 
-Adding entity classes
+Adding Entity Classes
 =====================
 
 From **Entity Tree**
@@ -64,7 +64,7 @@ with **Remove selected rows**. When you're ready, press **Ok** to make the addit
    If needed, the table will grow to accommodate the exceeding data.
    To paste data on multiple cells, select all the cells you want to paste on and press **Ctrl+V**.
 
-Adding entities
+Adding Entities
 ===============
 
 From **Entity Tree** or **Graph View**
@@ -86,7 +86,7 @@ in the **Entity Tree**. This way the class will be preselected from the list and
 other classes that are relevant to the selected class.
 
 Enter the names of the entities under **entity name**. The column **alternative** is optional. It defaults to the
-first alternative in the **Alternative** -dock widget (normally *Base* will automatically set the entity active in the
+first alternative in the **Alternative** dock widget (normally *Base* will automatically set the entity active in the
 selected alternative. The cell under **entity group** is also optional. By filling it, the entity will be automatically
 added to the group that is specified in the cell. If the entity group doesn't exist, it will also be created. Finally,
 select the databases where you want to add the entities under **databases**. When you're ready, press **Ok**. Rows can
@@ -134,7 +134,7 @@ will be shown that contains all the newly added entities. The popup can be quick
 **Esc** or just by clicking **OK**. The automatic adding of entities works with entities of any dimension, but all of
 the elements of the new entity must already be present in the database.
 
-Duplicating entities
+Duplicating Entities
 ~~~~~~~~~~~~~~~~~~~~
 
 To duplicate an existing entity with all its parameter values and other associated data, right-click over the
@@ -143,7 +143,7 @@ new entity will have the same name with an added (1) to indicate that it is a co
 can be renamed to be something else afterwards.
 
 
-Adding entity groups
+Adding Entity Groups
 ====================
 
 Right-click on an entity class item in **Entity Tree**,
@@ -160,15 +160,15 @@ Multiple selection is supported with **Ctrl** and **Shift**. Finally press **OK*
 
 When you're happy with your selections, press **OK** to add the group to the database.
 
-Adding parameter definitions
+Adding Parameter Definitions
 ============================
 
 From **Table View**
 ~~~~~~~~~~~~~~~~~~~~
 
 To add new parameter definitions for an entity class, just fill the empty row of *Parameter definition*.
-Only two of the fields are required when creating a new parameter definition: *entity_class_name* and
-*parameter_name*. Enter the name of the class under *entity_class_name*. To display a list of available
+Only two of the fields are required when creating a new parameter definition: *class* and
+*parameter name*. Enter the name of the class under *class*. To display a list of available
 entity classes, start typing in the empty cell or double click it. For the name of the parameter choose
 something that isn't already defined for the specified entity class. Optionally, you can also
 specify valid value types, a parameter value list, a default value and a description.
@@ -176,23 +176,26 @@ specify valid value types, a parameter value list, a default value and a descrip
 The *valid types* column defines value types that are valid for the parameter.
 An empty field means that all types are valid.
 All values are validated against this column and non-valid types are marked invalid
-in the *default_value* and *value* (in Parameter value table) columns.
+in the *default value* and *value* (in Parameter value table) columns.
 Valid types are not enforced, however, so it is still possible to commit values of invalid type to the database.
 
-In the column *value_list_name* a name for a parameter value list can be selected. Leaving this field empty
+In the column *value list* a name for a parameter value list can be selected. Leaving this field empty
 means that later on when creating parameter values with this definition, the values are arbitrary. Meaning that
 the value could for example be a string or an integer. When the parameter value list is defined in the parameter
 definition, only the values in the list will be allowed to be chosen. For the creation of parameter value lists,
 see :ref:`parameter_value_list`.
 
-In the *default_value* field, the default value can be set. The default value can be used in cases where the value
-is not specified. The usage of *default_value* is really tool dependent, meaning that the Spine Database Editor
+In the *default value* field, the default value can be set. The default value can be used in cases where the value
+is not specified. The usage of *default value* is really tool dependent, meaning that the Spine Database Editor
 doesn't use the information of the default value anywhere, but it is instead left to the tool creators on how to
 utilize the default value.
 
 A short description for the parameter can be written in the *description* column.
 
-The parameter is added when the background of the cells under *entity_class_name* and *database* become gray.
+A parameter can be a member of parameter group which can be selected in the *group* column.
+
+The parameter is added when the row "jumps" to the existing parameter table above
+and the background of the cells under *class* and *database* become gray.
 
 
 From **Pivot View**
@@ -206,25 +209,26 @@ with existing parameter definitions for the class.
 Enter a name for the new parameter in the last cell of that header.
 
 
-Adding parameter values
+Adding Parameter Values
 =======================
 
 From **Table View**
 ~~~~~~~~~~~~~~~~~~~
 
 To add new parameter values for an entity, just fill the empty row of the *Parameter value* table.
-Enter the name of the class under *entity_class_name*, the name of the entity under *entity_byname*,
-the name of the parameter under *parameter_name*, and the name of the alternative under *alternative_name*.
+Enter the name of the class under *class*, the name of the entity under *entity byname*,
+the name of the parameter under *parameter name*, and the name of the alternative under *alternative*.
 Optionally, you can also specify the parameter value right away under the *value* column. The database where
 the value will be added to is displayed in the last column of the table (if multiple databases open at once).
 To display a list of available entity classes, entities, parameters, or alternatives, just start typing or
-double click under the appropriate column. The parameter value is added when the background of the cells under
-*entity_class_name* and *database* become gray.
+double click under the appropriate column.
+The parameter value is added when the row "jumps" to the existing values table above and the background of the cells under
+*class* and *database* become gray.
 
 .. note:: To add parameter values for an entity, the entity doesn't have to exist beforehand.
-   If the entity in question is one dimensional, you can just type in a new name into the cell under *entity_byname*.
+   If the entity in question is one dimensional, you can just type in a new name into the cell under *entity byname*.
    If the entity in question has more dimensions, you can specify any valid combination of elements by double
-   clicking the cell, which opens up the *Select elements* -dialog. In both cases, the specified entity will be
+   clicking the cell, which opens up the *Select elements* dialog. In both cases, the specified entity will be
    created if it doesn't yet exist.
 
 From **Pivot View**
@@ -241,19 +245,20 @@ Then, enter the parameter value in the corresponding cell in the table body.
    To paste data on multiple cells, select all the cells you want to paste on and press **Ctrl+V**.
 
 
-Adding entity alternatives
+Adding Entity Alternatives
 ==========================
 
-To add an entity alternative, open the **Entity Alternative** **Table View**. There under *entity_class_name* select
-the class. Under *entity_byname* select the specific entity from that class and from *alternative_name* select the
-alternative. Then set the value of the *active* -column to either true or false by double clicking it. The background
-of the cells under *entity_class_name* and *database* should become gray, indicating that the entity alternative has
+To add an entity alternative, open the **Entity Alternative** **Table View**. There under *class* select
+the class. Under *entity byname* select the specific entity from that class and from *alternative* select the
+alternative. Then set the value of the *active* column to either true or false by double clicking it.
+The row "jumps" to the table for existing entity alternatives above
+and the background of the cells under *class* and *database* become gray, indicating that the entity alternative has
 been added.
 
 .. tip:: Like with the parameter values, new entities can be created on the fly by filling out the cell below
-         *entity_byname* with either text or a valid combination of elements.
+         *entity byname* with either text or a valid combination of elements.
 
-Adding alternatives
+Adding Alternatives
 ===================
 
 From **Alternative**
@@ -271,7 +276,7 @@ Select the **Scenario** input type (see :ref:`using_pivot_table_and_frozen_table
 To add a new alternative, enter a name in the last cell of the **alternative** header.
 
 
-Adding scenarios
+Adding Scenarios
 ================
 
 From **Scenario Tree**
@@ -280,24 +285,39 @@ From **Scenario Tree**
 To add a new scenario, just select the last item under the appropriate database,
 and enter the name of the scenario.
 
-To add an alternative for a particular scenario, drag the alternative item from **Alternative**
+.. note:: As noted in the tooltip of the last item,
+   scenario names longer than 20 characters may become shortened in generated files.
+   This can happen for example when exporting the scenarios using the Exporter project item. This can lead to confusion
+   later on if the first 20 characters of the scenario names are identical. Therefore it is recommended to have a unique
+   identifier for each scenario in the first 20 characters of its name.
+
+To add alternatives for a particular scenario,
+right click the scenario and point the mouse to **Add alternatives**
+which opens a submenu showing available alternatives.
+For example, selecting "Base" from the first submenu, as shown in the image below,
+adds the Base alternative to Baseline:
+
+.. image:: img/add_single_scenario_alternative.png
+    :align: center
+
+Further, selecting "wind" from the second submenu add both Base and wind,
+in that order, to the scenario:
+
+.. image:: img/add_two_scenario_alternatives.png
+    :align: center
+
+Another option to add an alternative is to drag the alternative item from **Alternative**
 and drop it under the corresponding scenario.
 The position where you drop it determines the alternative's *rank* within the scenario.
+Alternatives lower in the list have higher rank.
 Alternatives can also be copied from **Alternative**
 and pasted at the appropriate position in **Scenario Tree**.
 
-If it is desirable to base a scenario on an existing one, scenarios can be duplicated
-using the **Duplicate** item in the right-click context menu. It is also possible to
-copy and paste scenarios between databases.
-
-.. note:: Alternatives with higher rank have priority when determining the parameter value for a certain scenario.
-   If the parameter value is specified for two alternatives, and both of them happen to coexist in a same scenario,
-   the value from the alternative with the higher rank takes precedence.
-
-.. note:: As noted in the tooltip, scenario names longer than 20 characters may become shortened in generated files.
-   This can happen for example when exporting the scenarios using the Exporter -project item. This can lead to confusion
-   later on if the first 20 characters of the scenario names are identical. Therefore it is recommended to have a unique
-   identifier for each scenario in the first 20 characters of its name.
+.. note:: Alternatives lower in the scenario's alternative list have priority (have higher rank)
+   when determining the parameter value for a certain scenario.
+   If the parameter value is specified for two alternatives,
+   and both of them happen to coexist in a same scenario,
+   the value from the alternative that has higher rank takes precedence.
 
 From **Pivot View**
 ~~~~~~~~~~~~~~~~~~~
@@ -324,9 +344,28 @@ Checking the **Use base alternative** check box will add the selected alternativ
 all generated scenarios as the lowest rank alternative.
 The **Alternative by rank** list allows reordering the ranks of the alternatives.
 
+Duplicating scenarios
+~~~~~~~~~~~~~~~~~~~~~
+
+The **Duplicate** action in the right-click popup menu in **Scenario tree** duplicates the selected scenarios.
+
+The **Duplicate with alternatives** action, on the other hand,
+duplicates the current scenario adding the selected alternatives to the duplicate.
+For example, selecting the "wind" alternative from the first submenu as show in the screenshot below
+creates a new scenario called "Baseline+wind" that has Base and wind alternatives.
+
+.. image:: img/duplicate_scenario_with_single_alternative.png
+    :align: center
+
+Selecting "coal plant" in the next submenu creates a scenario called "Baseline+wind+coal plant"
+with Base, wind and coal plant alternatives:
+
+.. image:: img/duplicate_scenario_with_two_alternatives.png
+    :align: center
+
 .. _parameter_value_list:
 
-Adding parameter value lists
+Adding Parameter Value Lists
 ============================
 
 To add a new parameter value list, go to **Parameter Value List** and select the last item under the appropriate
@@ -339,7 +378,7 @@ corresponding list item, and enter the value. To enter a complex value, right-cl
 .. note:: To be actually added to the database, a parameter value list must have at least one value.
 
 
-Adding metadata and item metadata
+Adding Metadata and Item Metadata
 =================================
 
 To add new metadata go to **Metadata** and add a new name and value to the last row.
@@ -348,3 +387,9 @@ To add a new link metadata for an item,
 select an entity from one of the entity trees
 or a parameter value from one of the parameter value tables.
 Then go to **Item metadata** and select the appropriate metadata name and value on the last row.
+
+
+Adding Parameter Groups
+=======================
+
+To add a new parameter group go to **Parameter group** and fill in the empty rows.

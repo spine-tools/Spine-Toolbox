@@ -7,9 +7,13 @@ on:
     paths:
       - "**.py"
       - ".github/workflows/test_runner.yml"
+      - ".github/workflows/unit_tests.yml"
+      - ".github/workflows/execution_tests.yml"
       - "requirements.txt"
       - "pyproject.toml"
       - "execution_tests/**"
+    branches-ignore:
+      - "release"
 
 jobs:
   call-unit-tests:
@@ -17,11 +21,11 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, ubuntu-latest]
         include:
           - os: macos-latest
-            python-version: "3.13"
+            python-version: "3.14"
     uses: ./.github/workflows/unit_tests.yml
     with:
       host-os: ${{ matrix.os }}
@@ -32,11 +36,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         os: [windows-latest, ubuntu-latest]
         include:
           - os: macos-latest
             python-version: "3.13"
+        exclude:
+          - os: ubuntu-latest
+            python-version: "3.14"
     uses: ./.github/workflows/execution_tests.yml
     with:
       host-os: ${{ matrix.os }}

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A widget for presenting basic information about the application."""
+
 import os
 import platform
 import sys

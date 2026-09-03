@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the :module:`spinetoolbox.load_project_items` module."""
+
 import unittest
 from spinetoolbox.load_project_items import load_project_items
 from spinetoolbox.project_item.project_item_factory import ProjectItemFactory

@@ -11,104 +11,212 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QPoint, QSettings
+
+from unittest.mock import patch
+from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QApplication
+from spinetoolbox.helpers import normcase_database_url_path
 from spinetoolbox.multi_tab_windows import MultiTabWindowRegistry
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor, open_db_editor
-from spinetoolbox.spine_db_manager import SpineDBManager
-from tests.mock_helpers import FakeDataStore, TestCaseWithQApplication, clean_up_toolbox, create_toolboxui_with_project
-from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
+from tests.mock_helpers import FakeDataStore
 
 
-class TestMultiSpineDBEditor(DBEditorTestBase):
-    def setUp(self):
-        super().setUp()
-        self._temp_dir = TemporaryDirectory()
-        self._toolbox = create_toolboxui_with_project(self._temp_dir.name)
-
-    def tearDown(self):
-        super().tearDown()
-        clean_up_toolbox(self._toolbox)
-        self._temp_dir.cleanup()
-
-    def test_multi_spine_db_editor(self):
-        self.db_mngr.setParent(self._toolbox)
-        multieditor = MultiSpineDBEditor(self.db_mngr)
+class TestMultiSpineDBEditor:
+    def test_multi_spine_db_editor(self, db_mngr, spine_toolbox_with_project):
+        toolbox = spine_toolbox_with_project
+        db_mngr.setParent(toolbox)
+        multieditor = MultiSpineDBEditor(db_mngr)
         multieditor.add_new_tab([])
-        self.assertEqual(1, multieditor.tab_widget.count())
+        assert multieditor.tab_widget.count() == 1
         multieditor.make_context_menu(0)
         multieditor.show_plus_button_context_menu(QPoint(0, 0))
         # Add fake data stores to project
-        self._toolbox.project()._project_items = {"a": FakeDataStore("a")}
+        toolbox.project()._project_items = {"a": FakeDataStore("a")}
         multieditor.show_plus_button_context_menu(QPoint(0, 0))
         multieditor._take_tab(0)
 
 
-class TestOpenDBEditor(TestCaseWithQApplication):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        db_path = Path(self._temp_dir.name, "db.sqlite")
-        self._db_url = "sqlite:///" + str(db_path)
-        self._db_mngr = SpineDBManager(QSettings(), None)
-        self._logger = MagicMock()
-        self._db_editor_registry = MultiTabWindowRegistry()
-
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
-        # Database connection may still be open. Retry cleanup until it succeeds.
-        running = True
-        while running:
-            QApplication.processEvents()
-            try:
-                self._temp_dir.cleanup()
-            except NotADirectoryError:
-                pass
-            else:
-                running = False
-
-    def _close_windows(self):
-        for editor in self._db_editor_registry.windows():
+class TestOpenDBEditor:
+    @staticmethod
+    def _close_windows(db_editor_registry):
+        for editor in db_editor_registry.windows():
             QApplication.processEvents()
             editor.close()
-        self.assertFalse(self._db_editor_registry.has_windows())
+        assert not db_editor_registry.has_windows()
 
-    def test_open_db_editor(self):
+    def test_open_db_editor(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
         with (
             patch(
                 "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
-                self._db_editor_registry,
+                db_editor_registry,
             ),
             patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show") as mock_show,
         ):
-            self.assertFalse(self._db_editor_registry.has_windows())
-            open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
+            assert not db_editor_registry.has_windows()
+            open_db_editor([db_map.db_url], db_mngr, reuse_existing_editor=True)
             mock_show.assert_called_once()
-            self.assertEqual(len(self._db_editor_registry.windows()), 1)
-            open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
-            self.assertEqual(len(self._db_editor_registry.windows()), 1)
-            editor = self._db_editor_registry.windows()[0]
-            self.assertEqual(editor.tab_widget.count(), 1)
-            self._close_windows()
+            assert len(db_editor_registry.windows()) == 1
+            open_db_editor([db_map.db_url], db_mngr, reuse_existing_editor=True)
+            assert len(db_editor_registry.windows()) == 1
+            editor = db_editor_registry.windows()[0]
+            assert editor.tab_widget.count() == 1
+            self._close_windows(db_editor_registry)
 
-    def test_open_db_in_tab_when_editor_has_an_empty_tab(self):
+    def test_open_db_replaces_db_in_place_when_a_db_is_already_open(self, db_map_generator, db_mngr):
+        """File > Open on a tab that already has a database replaces it in place (no new tab)."""
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
         with (
             patch(
                 "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
-                self._db_editor_registry,
+                db_editor_registry,
             ),
-            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show") as mock_show,
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+            patch("spinetoolbox.spine_db_manager.QMessageBox"),
         ):
-            self.assertFalse(self._db_editor_registry.has_windows())
-            window = MultiSpineDBEditor(self._db_mngr, [])
-            self.assertEqual(window.tab_widget.count(), 1)
+            window = MultiSpineDBEditor(db_mngr, [db_map1.db_url])
+            assert window.tab_widget.count() == 1
+            first_tab = window.tab_widget.widget(0)
+            assert first_tab.db_urls == [normcase_database_url_path(db_map1.db_url)]
+            file_path = db_map2.db_url.replace("sqlite:///", "", 1)
+            with patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir",
+                return_value=(file_path, ""),
+            ):
+                first_tab.open_db_file()
+            QApplication.processEvents()
+            # No new tab; the same tab now holds the second database (replaced in place).
+            assert window.tab_widget.count() == 1
+            assert window.tab_widget.widget(0) is first_tab
+            assert first_tab.db_urls == [normcase_database_url_path(db_map2.db_url)]
+            self._close_windows(db_editor_registry)
+
+    def test_open_in_new_tab_opens_a_second_tab(self, db_map_generator, db_mngr):
+        """File > Open in new tab on a tab that already has a database opens a NEW tab."""
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
+        with (
+            patch(
+                "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
+                db_editor_registry,
+            ),
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+        ):
+            window = MultiSpineDBEditor(db_mngr, [db_map1.db_url])
+            assert window.tab_widget.count() == 1
+            first_tab = window.tab_widget.widget(0)
+            file_path = db_map2.db_url.replace("sqlite:///", "", 1)
+            with patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir",
+                return_value=(file_path, ""),
+            ):
+                first_tab.open_db_file_in_new_tab()
+            # A new tab was added; the original tab still holds the first database.
+            assert window.tab_widget.count() == 2
+            assert window.tab_widget.widget(0).db_urls == [normcase_database_url_path(db_map1.db_url)]
+            assert window.tab_widget.widget(1).db_urls == [normcase_database_url_path(db_map2.db_url)]
+            self._close_windows(db_editor_registry)
+
+    def test_open_in_new_tab_same_db_raises_existing_tab_instead_of_adding(self, db_map_generator, db_mngr):
+        """Opening in a new tab a URL already open selects that tab rather than adding a duplicate."""
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
+        with (
+            patch(
+                "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
+                db_editor_registry,
+            ),
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+        ):
+            window = MultiSpineDBEditor(db_mngr, [db_map1.db_url])
+            window.add_new_tab([db_map2.db_url])
+            assert window.tab_widget.count() == 2
+            window.tab_widget.setCurrentIndex(1)
+            # Re-open db1, which is already open in the first tab.
+            first_tab = window.tab_widget.widget(0)
+            file_path = db_map1.db_url.replace("sqlite:///", "", 1)
+            with patch(
+                "spinetoolbox.spine_db_editor.widgets.spine_db_editor.get_open_file_name_in_last_dir",
+                return_value=(file_path, ""),
+            ):
+                window.tab_widget.widget(1).open_db_file_in_new_tab()
+            # No new tab; the existing db1 tab is selected instead.
+            assert window.tab_widget.count() == 2
+            assert window.tab_widget.currentWidget() is first_tab
+            self._close_windows(db_editor_registry)
+
+    def test_closing_last_tab_keeps_window_open_with_no_tabs(self, db_map_generator, db_mngr):
+        """Closing the last tab leaves the MultiSpineDBEditor open (empty), instead of closing the window."""
+        db_map = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
+        with (
+            patch(
+                "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
+                db_editor_registry,
+            ),
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+            patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
+            window = MultiSpineDBEditor(db_mngr, [db_map.db_url])
+            assert window.tab_widget.count() == 1
+            window._close_tab(0)
+            # The window is still open (registered) with no tabs, ready to open a new db via "+".
+            assert window.tab_widget.count() == 0
+            assert window in db_editor_registry.windows()
+            # The "+" button still works on the empty window.
+            window.add_new_tab([db_map.db_url])
+            assert window.tab_widget.count() == 1
+            self._close_windows(db_editor_registry)
+
+    def test_replace_path_still_replaces_db_in_place(self, db_map_generator, db_mngr):
+        """Regression guard for deliverable 1: load_db_urls([url]) still replaces the db in place.
+
+        The reload/refresh flows and the "add a db" action rely on load_db_urls tearing down the old db
+        maps and loading the given ones into the same editor. This asserts that path is not a no-op.
+        """
+        db_map1 = db_map_generator()
+        db_map2 = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
+        with (
+            patch(
+                "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
+                db_editor_registry,
+            ),
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+            patch("spinetoolbox.spine_db_manager.QMessageBox"),
+        ):
+            window = MultiSpineDBEditor(db_mngr, [db_map1.db_url])
             tab = window.tab_widget.widget(0)
-            self.assertEqual(tab.db_urls, [])
-            open_db_editor([self._db_url], self._db_mngr, reuse_existing_editor=True)
-            self.assertEqual(window.tab_widget.count(), 2)
+            assert tab.db_urls == [normcase_database_url_path(db_map1.db_url)]
+            assert tab.load_db_urls([db_map2.db_url]) is True
+            QApplication.processEvents()
+            # Same tab, but now holding the second database (replaced, not a no-op, no extra tab).
+            assert window.tab_widget.count() == 1
+            assert tab.db_urls == [normcase_database_url_path(db_map2.db_url)]
+            self._close_windows(db_editor_registry)
+
+    def test_open_db_in_tab_when_editor_has_an_empty_tab(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
+        db_editor_registry = MultiTabWindowRegistry()
+        with (
+            patch(
+                "spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.db_editor_registry",
+                db_editor_registry,
+            ),
+            patch("spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor.MultiSpineDBEditor.show"),
+        ):
+            assert not db_editor_registry.has_windows()
+            window = MultiSpineDBEditor(db_mngr, [])
+            assert window.tab_widget.count() == 1
+            tab = window.tab_widget.widget(0)
+            assert tab.db_urls == []
+            open_db_editor([db_map.db_url], db_mngr, reuse_existing_editor=True)
+            assert window.tab_widget.count() == 2
             tab = window.tab_widget.widget(1)
-            self.assertEqual(tab.db_urls, [self._db_url])
-            self._close_windows()
+            assert tab.db_urls == [normcase_database_url_path(db_map.db_url)]
+            self._close_windows(db_editor_registry)

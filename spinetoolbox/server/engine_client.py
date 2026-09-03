@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Client for exchanging messages between the toolbox and the Spine Engine Server."""
+
 from enum import Enum
 import json
 import os
@@ -236,7 +237,7 @@ class EngineClient:
                 f.write(file_data)
         except Exception as e:
             return "fail", f"Saving the received file to '{dst_fpath}' failed. [{type(e).__name__}: {e}"
-        return "neutral", f"<b>{fname}</b> saved to  <b>&#x227A;project_dir&#x227B;/{rel_path_wo_fname}</b>"
+        return "neutral", f"<b>{fname}</b> saved to  <b>[project_dir]/{rel_path_wo_fname}</b>"
 
     def retrieve_project(self, job_id):
         """Retrieves a zipped project file from server.

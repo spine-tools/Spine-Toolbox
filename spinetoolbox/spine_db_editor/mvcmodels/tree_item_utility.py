@@ -11,19 +11,30 @@
 ######################################################################################################################
 
 """A tree model for parameter_value lists."""
+
 from typing import ClassVar
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QGuiApplication, QIcon
+from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from spinetoolbox.helpers import CharIconEngine, bisect_chunks, plain_to_tool_tip
-from spinetoolbox.mvcmodels.minimal_tree_model import TreeItem
+from spinetoolbox.helpers import CharIconEngine, DBMapPublicItems, bisect_chunks, plain_to_tool_tip
+from spinetoolbox.mvcmodels.minimal_tree_model import FilterableChildrenMixin, MinimalTreeModel, TreeItem
+from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 
 
-class StandardTreeItem(TreeItem):
+class StandardTreeItem(FilterableChildrenMixin, TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
     item_type: ClassVar[str] = None
     icon_code: ClassVar[str] = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Memoized filtered view of the children plus a {child: visible_row} position map, both keyed on the
+        # model's ``filter_generation`` so they are rebuilt lazily only when the filter or the children change.
+        self._visible_children_cache: list | None = None
+        self._visible_row_map: dict = {}
+        self._visible_cache_generation: int = -1
 
     @property
     def db_mngr(self):
@@ -68,6 +79,94 @@ class StandardTreeItem(TreeItem):
                 yield child.id
             except AttributeError:
                 pass
+
+    def is_empty_row(self) -> bool:
+        """Returns whether this item is the phantom trailing "add new" row.
+
+        The empty row is the child that :class:`EmptyChildMixin` appends past ``non_empty_children``; a
+        plain parent has no such row. Detected by identity so it works even for levels (e.g. scenario
+        alternatives) whose real items also carry a ``None`` id.
+        """
+        if self.parent_item is None:
+            return False
+        return self not in self.parent_item.non_empty_children
+
+    def raw_row(self) -> int | None:
+        """Returns this item's index among its parent's children, ignoring any level filter, or None.
+
+        Use this wherever the row is a domain ordinal (an index into an id list or a DB order); use
+        :meth:`child_number` only for the visible Qt row.
+        """
+        if self.parent_item is None:
+            return None
+        return self.parent_item.children.index(self)
+
+    @property
+    def visible_children(self) -> list:
+        """Returns the children that pass the active level filters, plus the phantom add-row.
+
+        When no level filter is active this is ``self.children`` unchanged, so the filtered path adds no
+        overhead to normal operation. Otherwise the filtered list is memoized and only recomputed when the
+        model's :attr:`~.level_filter.LevelFilterMixin.filter_generation` moves, so repeated Qt
+        layout/paint/scroll queries are served from the cache rather than rebuilt every time.
+        """
+        if not self.model.has_level_filters():
+            return self.children
+        self._ensure_visible_cache()
+        return self._visible_children_cache
+
+    def _compute_visible_children(self) -> list:
+        """Overridden to keep only the children that pass the model's active level filters.
+
+        Only ever reached under an active filter (``visible_children`` short-circuits to ``self.children``
+        otherwise), so it always applies the filter.
+        """
+        return [child for child in self.children if self.model.item_is_visible(child)]
+
+    def _ensure_visible_cache(self) -> None:
+        """Rebuilds the filtered child list and position map if the filter generation has moved."""
+        generation = self.model.filter_generation
+        if self._visible_cache_generation == generation and self._visible_children_cache is not None:
+            return
+        visible = self._compute_visible_children()
+        self._visible_children_cache = visible
+        self._visible_row_map = {child: row for row, child in enumerate(visible)}
+        self._visible_cache_generation = generation
+
+    def child_number(self) -> int | None:
+        """Overridden to return the item's VISIBLE row within its parent, or None if hidden/orphan.
+
+        With no filter active this is the raw sibling index; under a filter it is an O(1) lookup in the
+        parent's cached ``{child: visible_row}`` map rather than an O(n) scan of the filtered list.
+        """
+        parent = self.parent_item
+        if parent is None:
+            return None
+        if not self.model.has_level_filters():
+            return parent.children.index(self)
+        parent._ensure_visible_cache()
+        return parent._visible_row_map.get(self)
+
+    def insert_children(self, position, children) -> bool:
+        """Inserts children and refines the filter once new rows appear under an active filter."""
+        if not super().insert_children(position, children):
+            return False
+        if self.model.has_level_filters():
+            # Newly fetched/inserted children must be filtered; invalidate the cached filtered lists so the
+            # new rows are reflected. The debounced re-apply also refines any now-non-empty (or still-empty)
+            # parent that a filter should show or hide, and continues any active force-fetch cascade.
+            self.model._bump_filter_generation()
+            self.model._schedule_level_filter_refresh()
+        return True
+
+    def remove_children(self, position, count) -> bool:
+        """Removes children and refines the filter under an active filter."""
+        if not super().remove_children(position, count):
+            return False
+        if self.model.has_level_filters():
+            self.model._bump_filter_generation()
+            self.model._schedule_level_filter_refresh()
+        return True
 
 
 class EditableMixin:
@@ -173,23 +272,23 @@ class FetchMoreMixin:
     def accepts_item(self, item, db_map):
         return True
 
-    def handle_items_added(self, db_map_data):
-        """Inserts items at right positions. Items with commit_id are kept sorted.
-        Items without a commit_id are put at the end.
+    def handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
+        """Inserts items at right positions. Items that have been committed are kept sorted.
+        Uncommitted items are put at the end.
 
         Args:
-            db_map_data (dict): mapping db_map to list of dict corresponding to db items
+            db_map_data: mapping db_map to list of dict corresponding to db items
         """
         db_items = db_map_data.get(self.db_map, [])
-        ids_committed = []
-        ids_uncommitted = []
+        children_committed = []
+        children_uncommitted = []
+        existing_ids = set(self.children_ids)
         for item in db_items:
-            if item["id"] in self.children_ids:
+            item_id = item["id"]
+            if item_id in existing_ids:
                 continue
-            ids = ids_committed if item.get("commit_id") is not None else ids_uncommitted
-            ids.append(item["id"])
-        children_committed = [self._do_make_child(id_) for id_ in ids_committed]
-        children_uncommitted = [self._do_make_child(id_) for id_ in ids_uncommitted]
+            child = self._do_make_child(item_id)
+            (children_committed if item.is_committed() else children_uncommitted).append(child)
         self.insert_children_sorted(children_committed)
         self.insert_children(len(self.non_empty_children), children_uncommitted)
 
@@ -240,14 +339,17 @@ class StandardDBItem(SortChildrenMixin, StandardTreeItem):
             return QIcon(":/symbols/Spine_symbol.png")
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole):
             return self._db_name_registry.display_name(self.db_map.sa_url)
+        if role == DB_MAP_ROLE:
+            return self.db_map
+        return None
 
 
 class LeafItem(StandardTreeItem):
-    def __init__(self, model, identifier=None):
+    def __init__(self, model: MinimalTreeModel, identifier: TempId | None = None):
         """
         Args:
-            model (MinimalTreeModel)
-            identifier (int, optional): item's database id
+            model: The model the item belongs to.
+            identifier: Item's id.
         """
         super().__init__(model)
         self._id = identifier
@@ -287,6 +389,8 @@ class LeafItem(StandardTreeItem):
             if data is None:
                 data = ""
             return data
+        if role == ITEM_ID_ROLE:
+            return self._id
         return super().data(column, role)
 
     def set_data(self, column, value, role=Qt.ItemDataRole.EditRole):

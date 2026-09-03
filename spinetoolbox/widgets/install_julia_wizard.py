@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs for julia setup."""
+
 from enum import IntEnum, auto
 import os
 import sys
@@ -22,6 +23,7 @@ except ModuleNotFoundError:
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QFileDialog,
     QHBoxLayout,
@@ -32,7 +34,6 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
-    QApplication,
 )
 from spine_engine.utils.helpers import resolve_current_python_interpreter
 from ..config import APPLICATION_PATH
@@ -53,17 +54,17 @@ class InstallJuliaWizard(QWizard):
 
     julia_exe_selected = Signal(str)
 
-    def __init__(self, parent):
-        """Initialize class.
-
+    def __init__(self, parent: QWidget | None):
+        """
         Args:
-            parent (QWidget): the parent widget (SettingsWidget)
+            parent: the parent widget (SettingsWidget)
         """
         super().__init__(parent)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         if jill_install is None:
             self.addPage(JillNotFoundPage(self))
             return
-        self.julia_exe = None
+        self.julia_exe: str | None = None
         self.setWindowTitle("Julia Installer")
         self.setPage(_PageId.INTRO, IntroPage(self))
         self.setPage(_PageId.SELECT_DIRS, SelectDirsPage(self))
@@ -72,7 +73,7 @@ class InstallJuliaWizard(QWizard):
         self.setPage(_PageId.FAILURE, FailurePage(self))
         self.setStartId(_PageId.INTRO)
 
-    def set_julia_exe(self):
+    def set_julia_exe(self) -> None:
         """Returns the path to the jill julia launcher, which always launches the latest Julia release."""
         if not sys.platform == "win32":
             julia_launcher_path = os.path.join(self.field("symlink_dir"), "julia")
@@ -90,7 +91,7 @@ class InstallJuliaWizard(QWizard):
 
 
 class JillNotFoundPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Unable to find jill")
         conda_env = os.environ.get("CONDA_DEFAULT_ENV", "base")
@@ -120,7 +121,7 @@ class JillNotFoundPage(QWizardPage):
 
 
 class IntroPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Welcome")
         label = HyperTextLabel(
@@ -135,7 +136,7 @@ class IntroPage(QWizardPage):
 
 
 class SelectDirsPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Select directories")
         self._install_dir_line_edit = QLineEdit()
@@ -166,7 +167,7 @@ class SelectDirsPage(QWizardPage):
         self._install_dir_line_edit.setText(jill_install.default_install_dir())
         self._symlink_dir_line_edit.setText(jill_install.default_symlink_dir())
 
-    def _select_install_dir(self):
+    def _select_install_dir(self) -> None:
         install_dir = QFileDialog.getExistingDirectory(
             self, "Select directory for Julia packages", self.field("install_dir")
         )
@@ -174,7 +175,7 @@ class SelectDirsPage(QWizardPage):
             return
         self.setField("install_dir", install_dir)
 
-    def _select_symlink_dir(self):
+    def _select_symlink_dir(self) -> None:
         symlink_dir = QFileDialog.getExistingDirectory(
             self, "Select directory for Julia executable", self.field("symlink_dir")
         )
@@ -190,12 +191,6 @@ class InstallJuliaPage(QWizardProcessPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.setTitle("Installing Julia")
-
-    def cleanupPage(self):
-        super().cleanupPage()
-        if self._exec_mngr is not None:
-            self._exec_mngr.stop_execution()
-        self.msg_error.emit("Aborted by the user")
 
     def initializePage(self):
         args = [
@@ -223,7 +218,7 @@ class InstallJuliaPage(QWizardProcessPage):
         self._exec_mngr.start_execution()
 
     @Slot(int)
-    def _handle_julia_install_finished(self, ret):
+    def _handle_julia_install_finished(self, ret: int) -> None:
         QApplication.restoreOverrideCursor()  # pylint: disable=undefined-variable
         self._exec_mngr.execution_finished.disconnect(self._handle_julia_install_finished)
         if self.wizard().currentPage() != self:
@@ -244,7 +239,7 @@ class InstallJuliaPage(QWizardProcessPage):
 
 
 class SuccessPage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Installation successful")
         self._label = HyperTextLabel()
@@ -266,7 +261,7 @@ class SuccessPage(QWizardPage):
 
 
 class FailurePage(QWizardPage):
-    def __init__(self, parent):
+    def __init__(self, parent: QWidget | None):
         super().__init__(parent)
         self.setTitle("Installation failed")
         self._label = HyperTextLabel()

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the KernelEditor widget."""
+
 from unittest import mock
 from PySide6.QtWidgets import QWizard
 from spinetoolbox.widgets.install_julia_wizard import InstallJuliaWizard
@@ -36,6 +37,7 @@ class TestInstallJuliaWizard(TestCaseWithQApplication):
 
     def tearDown(self):
         """Clean up."""
+        self._settings_widget.close()
         clean_up_toolbox(self.toolbox)
 
     def test_julia_installation_succeeds(self):

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for adding database items in Database editor."""
+
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleParameterDefinitionModel
@@ -115,9 +116,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
         self.assertIn(("fish", "water"), parameters)
         self.assertIn(("dog", "breed"), parameters)
 
@@ -135,9 +134,7 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
         self.assertIn(("fish__dog", "relative_speed"), parameters)
         self.assertIn(("dog__fish", "combined_mojo"), parameters)
 
@@ -158,8 +155,8 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("entity_byname")).data(),
-                    model.index(row, h("parameter_name")).data(),
+                    model.index(row, h("entity byname")).data(),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
@@ -187,8 +184,8 @@ class TestSpineDBEditorAdd(DBEditorTestBase):
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    tuple((model.index(row, h("entity_byname")).data() or "").split(DB_ITEM_SEPARATOR)),
-                    model.index(row, h("parameter_name")).data(),
+                    tuple((model.index(row, h("entity byname")).data() or "").split(DB_ITEM_SEPARATOR)),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )

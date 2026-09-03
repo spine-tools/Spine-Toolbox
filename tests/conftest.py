@@ -10,10 +10,11 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from unittest import mock
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QObject, QTimer, QSettings
+from PySide6.QtWidgets import QApplication, QWidget
 import pytest
-from tests.mock_helpers import MockSpineDBManager
+from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
+from tests.mock_helpers import MockSpineDBManager, clean_up_toolbox, create_toolboxui, create_toolboxui_with_project
 
 
 @pytest.fixture(scope="module")
@@ -27,13 +28,62 @@ def application():
 
 
 @pytest.fixture
+def parent_object(application):
+    parent = QObject()
+    yield parent
+    parent.deleteLater()
+
+
+@pytest.fixture
+def parent_widget(application):
+    parent = QWidget()
+    yield parent
+    parent.deleteLater()
+
+
+@pytest.fixture
 def app_settings():
-    return mock.MagicMock()
+    class MockSettings:
+        @staticmethod
+        def value(key, defaultValue=None):
+            if key.endswith("layoutAlgoSpreadFactor"):
+                return 100
+            if defaultValue is not None:
+                return defaultValue
+            return 0
+
+        @staticmethod
+        def setValue(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def beginGroup(*args, **kwargs):
+            pass
+
+        @staticmethod
+        def endGroup(*args, **kwargs):
+            pass
+
+    return MockSettings()
 
 
 @pytest.fixture
 def logger():
     return mock.MagicMock()
+
+
+@pytest.fixture
+def spine_toolbox(application):
+    toolbox = create_toolboxui()
+    yield toolbox
+    clean_up_toolbox(toolbox)
+
+
+@pytest.fixture
+def spine_toolbox_with_project(application, tmp_path):
+    toolbox = create_toolboxui_with_project(str(tmp_path))
+    yield toolbox
+    clean_up_toolbox(toolbox)
 
 
 @pytest.fixture
@@ -46,7 +96,66 @@ def db_mngr(application, app_settings, logger):
 
 
 @pytest.fixture
-def db_map(db_mngr, logger):
+def db_name(request):
+    return "mock_db" if request.cls is None else request.cls.__name__ + "_db"
+
+
+@pytest.fixture
+def db_map(db_mngr, db_name, logger, request):
     db_map = db_mngr.get_db_map("sqlite://", logger, create=True)
-    db_mngr.name_registry.register(db_map.sa_url, "mock_db")
+    db_mngr.name_registry.register(db_map.sa_url, db_name)
     return db_map
+
+
+class DBMapGenerator:
+    def __init__(self, db_mngr, tmp_path, name_prefix, logger):
+        self._db_mngr = db_mngr
+        self._tmp_path = tmp_path
+        self._name_prefix = name_prefix
+        self._logger = logger
+        self._next_id = 1
+
+    def __call__(self):
+        name = f"{self._name_prefix}_{self._next_id}"
+        self._next_id += 1
+        url = "sqlite:///" + str(self._tmp_path / f"{name}.sqlite")
+        db_map = self._db_mngr.get_db_map(url, self._logger, create=True)
+        self._db_mngr.name_registry.register(db_map.sa_url, name)
+        return db_map
+
+
+@pytest.fixture()
+def db_map_generator(db_mngr, tmp_path, db_name, logger):
+    return DBMapGenerator(db_mngr, tmp_path, db_name, logger)
+
+
+@pytest.fixture
+def db_editor(db_mngr, db_map, monkeypatch):
+    with (
+        mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
+        mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),
+    ):
+        monkeypatch.setattr(SpineDBEditor, "restoreState", lambda *args, **kwargs: None)
+        db_editor = SpineDBEditor(db_mngr, [db_map.db_url])
+    QApplication.processEvents()
+    yield db_editor
+    with (
+        mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.save_window_state"),
+        mock.patch.object(db_editor.qsettings, "value") as commit_at_exit_setting,
+        mock.patch("spinetoolbox.spine_db_manager.QMessageBox"),
+    ):
+        commit_at_exit_setting.return_value = "0"  # Discard changes and close.
+        db_editor.close()
+    db_editor.deleteLater()
+
+
+@pytest.fixture
+def qsettings_file(tmp_path):
+    settings_file = tmp_path / "settings.ini"
+    return QSettings(str(settings_file), QSettings.Format.IniFormat)
+
+
+@pytest.fixture
+def parent_widget_with_settings(parent_widget, qsettings_file):
+    parent_widget.qsettings = lambda: qsettings_file
+    return parent_widget

@@ -11,28 +11,41 @@
 ######################################################################################################################
 
 """Compound models. These models concatenate several 'single' models and one 'empty' model."""
+
+from __future__ import annotations
 import bisect
-from collections.abc import Iterable
-from typing import ClassVar, Type
-from PySide6.QtCore import QModelIndex, Qt, QTimer, Slot
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from functools import cache
+from typing import Any, ClassVar, Type
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
+from spinedb_api import Asterisk, DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
+from spinedb_api.helpers import AsteriskType, ItemType
 from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.temp_id import TempId
 from ...fetch_parent import FlexibleFetchParent
-from ...helpers import parameter_identifier, rows_to_row_count_tuples
-from ..widgets.custom_menus import AutoFilterMenu
+from ...helpers import DBMapPublicItems, parameter_identifier, rows_to_row_count_tuples
+from ...mvcmodels.shared import ITEM_ID_ROLE
+from ...spine_db_manager import SpineDBManager
+from ..helpers import FALSE_STRING, TRUE_STRING
+from ..selection_for_filtering import AlternativeSelection, EntitySelection, ScenarioSelection
 from .compound_table_model import CompoundTableModel
 from .single_models import (
     SingleEntityAlternativeModel,
+    SingleEntityModel,
     SingleModelBase,
     SingleParameterDefinitionModel,
     SingleParameterValueModel,
 )
 from .utils import (
-    ENTITY_ALTERNATIVE_MODEL_HEADER,
+    ENTITY_ALTERNATIVE_FIELD_MAP,
+    ENTITY_FIELD_MAP,
     PARAMETER_DEFINITION_FIELD_MAP,
-    PARAMETER_DEFINITION_MODEL_HEADER,
     PARAMETER_VALUE_FIELD_MAP,
-    PARAMETER_VALUE_MODEL_HEADER,
+    Matcher,
+    field_index,
+    make_search_matcher,
 )
 
 
@@ -41,25 +54,34 @@ class CompoundStackedModel(CompoundTableModel):
 
     item_type: ClassVar[str] = NotImplemented
     field_map: ClassVar[dict[str, str]] = {}
+    _single_model_type: Type[SingleModelBase] = NotImplemented
+    non_committed_items_about_to_be_added = Signal()
+    non_committed_items_added = Signal()
+    column_filter_changed = Signal(QAbstractTableModel)
 
-    def __init__(self, parent, db_mngr, *db_maps):
+    _ENTITY_CLASS_ID_FIELD: ClassVar[str] = "entity_class_id"
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION: ClassVar[set[str]] = set()
+
+    def __init__(self, parent: QObject, db_mngr: SpineDBManager, *db_maps: DatabaseMapping):
         """
         Args:
-            parent (SpineDBEditor): the parent object
-            db_mngr (SpineDBManager): the database manager
-            *db_maps (DatabaseMapping): the database maps included in the model
+            parent: the parent object
+            db_mngr: the database manager
+            *db_maps: the database maps included in the model
         """
         super().__init__(parent=parent, header=self._make_header())
-        self._parent = parent
         self.db_mngr = db_mngr
-        self.db_maps = db_maps
-        self._filter_class_ids = {}
-        self._auto_filter_menus = {}
-        self._auto_filter = {}
+        self._db_maps: list[DatabaseMapping] = list(db_maps)
+        self._filter_class_ids: dict[DatabaseMapping, set[TempId]] | AsteriskType = Asterisk
+        self._auto_filter: dict[str, set] = {}  # Shared with submodels; always modify, never set.
+        self._column_filters: dict[str, Matcher] = {}  # Shared with submodels; always modify, never set.
         self._filter_timer = QTimer(self)
         self._filter_timer.setSingleShot(True)
-        self._filter_timer.setInterval(100)
         self._filter_timer.timeout.connect(self.refresh)
+        self._column_filter_timer = QTimer(self)
+        self._column_filter_timer.setSingleShot(True)
+        self._column_filter_timer.setInterval(200)
+        self._column_filter_timer.timeout.connect(self.refresh)
         self._fetch_parent = FlexibleFetchParent(
             self.item_type,
             shows_item=self.shows_item,
@@ -68,69 +90,85 @@ class CompoundStackedModel(CompoundTableModel):
             handle_items_updated=self.handle_items_updated,
             owner=self,
         )
-        self.dock = None
-        self._column_filters = {self.header[column]: False for column in range(self.columnCount())}
+        for db_map in self._db_maps:
+            self.db_mngr.register_fetch_parent(db_map, self._fetch_parent)
 
-    @staticmethod
-    def _make_header() -> list[str]:
-        raise NotImplementedError()
+    @classmethod
+    @cache
+    def field_to_header(cls, field: str) -> str:
+        return dict(zip(cls.field_map.values(), cls.field_map.keys()))[field]
 
-    @property
-    def column_filters(self):
-        return self._column_filters
-
-    @property
-    def group_fields(self) -> Iterable[str]:
-        return self._single_model_type.group_fields
+    @classmethod
+    def _make_header(cls) -> list[str]:
+        return list(cls.field_map)
 
     @property
-    def _single_model_type(self) -> Type[SingleModelBase]:
-        """Returns a constructor for the single models."""
-        raise NotImplementedError()
+    def filtered_columns(self) -> list[str]:
+        return list(self._auto_filter)
+
+    @property
+    def group_columns(self) -> set[int]:
+        return self._single_model_type.group_columns
 
     def canFetchMore(self, _parent):
-        result = False
-        for db_map in self.db_maps:
-            result |= self.db_mngr.can_fetch_more(db_map, self._fetch_parent)
-        return result
+        return bool(self._db_maps) and any(not self._fetch_parent.is_fetched(db_map) for db_map in self._db_maps)
 
     def fetchMore(self, _parent):
-        for db_map in self.db_maps:
+        for db_map in self._db_maps:
             self.db_mngr.fetch_more(db_map, self._fetch_parent)
 
-    def shows_item(self, item, db_map):
-        return any(m.db_map == db_map and m.filter_accepts_item(item) for m in self.accepted_single_models())
+    def shows_item(self, item: PublicItem, db_map: DatabaseMapping) -> bool:
+        return any(
+            m.db_map == db_map and m.filter_accepts_item(item) for m in self.sub_models if self.filter_accepts_model(m)
+        )
 
-    def reset_db_maps(self, db_maps):
-        if set(db_maps) == set(self.db_maps):
+    def reset_db_maps(self, db_maps: Sequence[DatabaseMapping]) -> None:
+        if set(db_maps) == set(self._db_maps):
             return
-        self.db_maps = db_maps
         self._fetch_parent.set_obsolete(False)
         self._fetch_parent.reset()
+        for old_db_map in self._db_maps:
+            if old_db_map not in db_maps:
+                self.db_mngr.unregister_fetch_parent(old_db_map, self._fetch_parent)
+        for new_db_map in db_maps:
+            if new_db_map not in self._db_maps:
+                self.db_mngr.register_fetch_parent(new_db_map, self._fetch_parent)
+        self._db_maps = db_maps
 
     def _connect_single_model(self, model: SingleModelBase) -> None:
         """Connects signals so changes in the submodels are acknowledged by the compound."""
         model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
         model.modelAboutToBeReset.connect(lambda model=model: self._handle_single_model_about_to_be_reset(model))
         model.dataChanged.connect(
-            lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
-                self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
+            lambda top_left, bottom_right, roles, model=model: self._handle_single_model_data_changed(
+                top_left, bottom_right, roles, model
             )
         )
+
+    def _handle_single_model_data_changed(
+        self,
+        top_left: QModelIndex,
+        bottom_right: QModelIndex,
+        roles: list[Qt.ItemDataRole] | None,
+        model: SingleModelBase,
+    ) -> None:
+        top_left = self.map_from_sub(model, top_left)
+        bottom_right = self.map_from_sub(model, bottom_right)
+        if top_left.isValid() and bottom_right.isValid():
+            self.dataChanged.emit(top_left, bottom_right, roles)
 
     def _handle_single_model_about_to_be_reset(self, model: SingleModelBase) -> None:
         """Runs when given model is about to reset."""
         if model not in self.sub_models:
             return
-        row_map = self._row_map_for_model(model)
-        if not row_map:
-            return
         removed_rows = []
-        for mapped_row in row_map:
+        for mapped_row in self._row_map_iterator_for_model(model):
             try:
                 removed_rows.append(self._inv_row_map[mapped_row])
             except KeyError:
                 pass
+        if not removed_rows:
+            return
         for first, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
             last = first + count - 1
             tail_row_map = self._row_map[last + 1 :]
@@ -155,213 +193,163 @@ class CompoundStackedModel(CompoundTableModel):
 
     def init_model(self) -> None:
         """Initializes the model."""
+        self.beginResetModel()
+        self.reset_db_maps([])
         if self._row_map:
-            self.beginResetModel()
             self._row_map.clear()
-            self.endResetModel()
         for m in self.sub_models:
             m.deleteLater()
         self.sub_models.clear()
         self._inv_row_map.clear()
-        self._filter_class_ids = {}
-        self._auto_filter = {}
-        while self._auto_filter_menus:
-            _, menu = self._auto_filter_menus.popitem()
-            menu.deleteLater()
-
-    def get_auto_filter_menu(self, logical_index):
-        """Returns auto filter menu for given logical index from header view.
-
-        Args:
-            logical_index (int)
-
-        Returns:
-            AutoFilterMenu
-        """
-        return self._make_auto_filter_menu(self.header[logical_index])
-
-    def _make_auto_filter_menu(self, field):
-        field = self.field_map.get(field, field)
-        if field not in self._auto_filter_menus:
-            self._auto_filter_menus[field] = menu = AutoFilterMenu(
-                self._parent, self.db_mngr, self.db_maps, self.item_type, field, show_empty=False
-            )
-            menu.filterChanged.connect(self.set_auto_filter)
-        return self._auto_filter_menus[field]
+        self._filter_class_ids = Asterisk
+        self._auto_filter.clear()
+        self._column_filters.clear()
+        self.endResetModel()
 
     def headerData(self, section, orientation=Qt.Orientation.Horizontal, role=Qt.ItemDataRole.DisplayRole):
         """Returns an italic font in case the given column has an autofilter installed."""
         field = self.header[section]
-        real_field = self.field_map.get(field, field)
-        italic_font = QFont()
-        italic_font.setItalic(True)
+        real_field = self.field_map[field]
         if (
             role == Qt.ItemDataRole.FontRole
             and orientation == Qt.Orientation.Horizontal
-            and self._auto_filter.get(real_field, {}) != {}
+            and real_field in self._auto_filter
         ):
+            italic_font = QFont()
+            italic_font.setItalic(True)
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def filter_accepts_model(self, model):
-        """Returns a boolean indicating whether the given model passes the filter for compound model.
-
-        Args:
-            model (SingleModelBase or EmptyModelBase)
-
-        Returns:
-            bool
-        """
-        if not model.can_be_filtered:
+    def filter_accepts_model(self, model: SingleModelBase) -> bool:
+        """Returns a boolean indicating whether the given model passes the filter for compound model."""
+        if self._filter_class_ids is Asterisk or not self._filter_class_ids:
             return True
-        if not self._auto_filter_accepts_model(model):
+        if model.db_map not in self._filter_class_ids:
             return False
-        if not self._class_filter_accepts_model(model):
-            return False
-        return True
-
-    def _class_filter_accepts_model(self, model):
-        if not self._filter_class_ids:
+        class_ids = self._filter_class_ids[model.db_map]
+        if model.entity_class_id in class_ids:
             return True
-        class_ids = self._filter_class_ids.get(model.db_map, set())
-        return model.entity_class_id in class_ids or bool(set(model.dimension_id_list) & class_ids)
+        return self.db_mngr.relationship_class_graph.is_any_id_reachable(model.db_map, model.entity_class_id, class_ids)
 
-    def _auto_filter_accepts_model(self, model):
-        if None in self._auto_filter.values():
-            return False
-        for values in self._auto_filter.values():
-            if not values:
-                continue
-            for db_map, entity_class_id in values:
-                if model.db_map == db_map and (entity_class_id is None or model.entity_class_id == entity_class_id):
-                    break
-            else:
-                return False
-        return True
-
-    def accepted_single_models(self):
-        """Returns a list of accepted single models by calling filter_accepts_model
-        on each of them, just for convenience.
-
-        Returns:
-            list
-        """
-        return [m for m in self.sub_models if self.filter_accepts_model(m)]
-
-    def _invalidate_filter(self):
-        """Sets the filter invalid."""
-        self._filter_timer.start()
-
-    def stop_invalidating_filter(self):
+    def stop_invalidating_filter(self) -> None:
         """Stops invalidating the filter."""
         self._filter_timer.stop()
 
-    def set_filter_class_ids(self, class_ids):
-        if class_ids != self._filter_class_ids:
-            self._filter_class_ids = class_ids
-            self._invalidate_filter()
+    def set_entity_selection_for_filtering(self, entity_selection: EntitySelection) -> None:
+        if entity_selection is Asterisk:
+            filter_class_ids = Asterisk
+        else:
+            filter_class_ids = {
+                db_map: set(entities_by_class) for db_map, entities_by_class in entity_selection.items()
+            }
+        if filter_class_ids == self._filter_class_ids:
+            return
+        self._filter_class_ids = filter_class_ids
+        self._filter_timer.start()
 
-    def clear_auto_filter(self):
-        self._auto_filter = {}
-        self._invalidate_filter()
+    def has_auto_filter_empty_selected(self, field: str) -> bool:
+        if field not in self._auto_filter:
+            return True
+        auto_filter = self._auto_filter[field]
+        return "" in auto_filter or None in auto_filter
 
-    @Slot(str, object)
-    def set_auto_filter(self, field, values):
+    def clear_auto_filter(self) -> None:
+        self._auto_filter.clear()
+        if not self._filter_timer.isActive():
+            self._filter_timer.start()
+
+    def auto_filter_data_map(self, column_i: int) -> dict[str, Any]:
+        data = {}
+        for sub_model, sub_row in self._row_map:
+            index = sub_model.index(sub_row, column_i)
+            data[index.data()] = index.data(Qt.ItemDataRole.EditRole)
+        return data
+
+    def auto_filter_data_list(self, column_i: int) -> list[str]:
+        data = set()
+        for sub_model, sub_row in self._row_map:
+            if x := sub_model.index(sub_row, column_i).data():
+                data.add(x)
+        return sorted(data)
+
+    @Slot(int, object)
+    def set_auto_filter(self, field: str, values: set | None) -> None:
         """Updates and applies the auto filter.
 
         Args:
-            field (str): the field name
-            values (dict): mapping (db_map, entity_class_id) to set of valid values
+            field : Field name.
+            values: Values that should pass the filter; None means all pass.
         """
-        self._set_compound_auto_filter(field, values)
-        for model in self.accepted_single_models():
-            self._set_single_auto_filter(model, field)
-        if values is None or any(bool(i) for i in values.values()):
-            self._column_filters[field] = True
-        else:
-            self._column_filters[field] = False
-        self._parent.handle_column_filters(self)
-
-    def _set_compound_auto_filter(self, field, values):
-        """Sets the auto filter for given column in the compound model.
-
-        Args:
-            field (str): the field name
-            values (set): set of valid (db_map, item_type, id) tuples
-        """
-        if self._auto_filter.setdefault(field, {}) == values:
+        if (field in self._auto_filter and self._auto_filter[field] == values) or (
+            values is None and field not in self._auto_filter
+        ):
             return
-        self._auto_filter[field] = values
-        self._invalidate_filter()
+        if values is None:
+            del self._auto_filter[field]
+        else:
+            self._auto_filter[field] = values
+        if not self._filter_timer.isActive():
+            self._filter_timer.start()
+        self.column_filter_changed.emit(self)
 
-    def _set_single_auto_filter(self, model, field):
-        """Sets the auto filter for given column in the given single model.
+    @Slot(str, str)
+    def set_column_filter(self, field: str, pattern: str) -> None:
+        """Sets or clears the per-column regex search filter for the given field."""
+        current = self._column_filters.get(field)
+        if (current.pattern if current else "") == pattern:
+            return
+        if not pattern:
+            self._column_filters.pop(field, None)
+        else:
+            self._column_filters[field] = Matcher(pattern, make_search_matcher(pattern))
+        if not self._column_filter_timer.isActive():
+            self._column_filter_timer.start()
+        self.column_filter_changed.emit(self)
 
-        Args:
-            model (SingleParameterModel): the model
-            field (str): the field name
+    def clear_column_filters(self) -> None:
+        """Clears all per-column regex search filters and refreshes."""
+        if not self._column_filters:
+            return
+        self._column_filters.clear()
+        if not self._column_filter_timer.isActive():
+            self._column_filter_timer.start()
+        self.column_filter_changed.emit(self)
 
-        Returns:
-            bool: True if the auto-filtered values were updated, None otherwise
-        """
-        values = self._auto_filter[field].get((model.db_map, model.entity_class_id), set())
-        if model.set_auto_filter(field, values):
-            self._invalidate_filter()
-
-    def _row_map_iterator_for_model(self, model):
+    def _row_map_iterator_for_model(self, model: SingleModelBase) -> Iterator[tuple[SingleModelBase, int]]:
         """Yields row map for the given model.
         Reimplemented to take filter status into account.
 
         Args:
-            model (SingleParameterModel, EmptyParameterModel)
+            model: single model
 
         Yields:
-            tuple: (model, row number) for each accepted row
+            (model, row number) for each accepted row
         """
         if not self.filter_accepts_model(model):
-            return ()
+            return
         for i in model.accepted_rows():
             yield (model, i)
 
-    def _models_with_db_map(self, db_map):
-        """Returns a collection of single models with given db_map.
-
-        Args:
-            db_map (DatabaseMapping)
-
-        Returns:
-            list
-        """
-        return [m for m in self.sub_models if m.db_map == db_map]
-
-    @staticmethod
-    def _items_per_class(items):
-        """Returns a dict mapping entity_class ids to a set of items.
-
-        Args:
-            items (list)
-
-        Returns:
-            dict
-        """
+    @classmethod
+    def _items_per_class(cls, items: Iterable[PublicItem]) -> dict[TempId, list[PublicItem]]:
+        """Returns a dict mapping entity_class ids to a set of items."""
         d = {}
+        class_id_field = cls._ENTITY_CLASS_ID_FIELD
         for item in items:
-            entity_class_id = item.get("entity_class_id")
-            if not entity_class_id:
-                continue
+            entity_class_id = item[class_id_field]
             d.setdefault(entity_class_id, []).append(item)
         return d
 
-    def handle_items_added(self, db_map_data):
+    def handle_items_added(self, db_map_data: DBMapPublicItems) -> None:
         """Runs when either parameter definitions or values are added to the dbs.
         Adds necessary sub-models and initializes them with data.
         Also notifies the empty model, so it can remove rows that are already in.
 
         Args:
-            db_map_data (dict): list of added dict-items keyed by DatabaseMapping
+            db_map_data: list of added items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             db_map_single_models = [m for m in self.sub_models if m.db_map is db_map]
             existing_ids = set().union(*(m.item_ids() for m in db_map_single_models))
@@ -372,24 +360,33 @@ class CompoundStackedModel(CompoundTableModel):
                 for item in class_items:
                     item_id = item["id"]
                     if item_id in existing_ids:
+                        existing_ids.remove(item_id)
                         continue
                     if item.is_committed():
                         ids_committed.append(item_id)
                     else:
                         ids_uncommitted.append(item_id)
-                self._add_items(db_map, entity_class_id, ids_committed, committed=True)
-                self._add_items(db_map, entity_class_id, ids_uncommitted, committed=False)
+                if ids_committed:
+                    self._add_items(db_map, entity_class_id, ids_committed, committed=True)
+                if ids_uncommitted:
+                    self.non_committed_items_about_to_be_added.emit()
+                    self._add_items(db_map, entity_class_id, ids_uncommitted, committed=False)
+                    self.non_committed_items_added.emit()
 
-    def _get_insert_position(self, model):
+    def _get_insert_position(self, model: SingleModelBase) -> int:
         if model.committed:
             return bisect.bisect_left(self.sub_models, model)
         return len(self.sub_models)
 
-    def _create_single_model(self, db_map, entity_class_id, committed):
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
         model = self._single_model_type(self, db_map, entity_class_id, committed)
         self._connect_single_model(model)
-        for field in self._auto_filter:
-            self._set_single_auto_filter(model, field)
+        model.set_auto_filter(self._auto_filter)
+        model.set_column_filters(self._column_filters)
+        if not self._filter_timer.isActive():
+            self._filter_timer.start()
         return model
 
     def _insert_single_model(self, model: SingleModelBase) -> None:
@@ -413,10 +410,7 @@ class CompoundStackedModel(CompoundTableModel):
     def _insert_row_map(self, pos: int, single_row_map: list[tuple[SingleModelBase, int]]) -> None:
         if not single_row_map:
             # Emit layoutChanged to trigger fetching.
-            # The QTimer is to avoid funny situations where the user enters new data via the empty row model,
-            # and those rows need to be removed at the same time as we fetch the added data.
-            # Doing it in the same loop cycle was causing bugs.
-            QTimer.singleShot(0, self.layoutChanged.emit)
+            self.layoutChanged.emit()
             return
         row = self._get_row_for_insertion(pos)
         last = row + len(single_row_map) - 1
@@ -430,23 +424,21 @@ class CompoundStackedModel(CompoundTableModel):
         """Removes given rows by removing the corresponding items from the db map."""
         db_map_typed_data = {}
         for row in sorted(rows, reverse=True):
-            sub_model = self.sub_model_at_row(row)
+            sub_model, sub_row = self._row_map[row]
             db_map = sub_model.db_map
-            id_ = self.item_at_row(row)
+            id_ = sub_model.item_id(sub_row)
             db_map_typed_data.setdefault(db_map, {}).setdefault(self.item_type, []).append(id_)
         self.db_mngr.remove_items(db_map_typed_data)
 
-    def _add_items(self, db_map, entity_class_id, ids, committed):
+    def _add_items(self, db_map: DatabaseMapping, entity_class_id: TempId, ids: list[TempId], committed: bool) -> None:
         """Creates new single model and resets it with the given parameter ids.
 
         Args:
-            db_map (DatabaseMapping): database map
-            entity_class_id (int): parameter's entity class id
-            ids (list of int): parameter ids
-            committed (bool): True if the ids have been committed, False otherwise
+            db_map: database map
+            entity_class_id: parameter's entity class id
+            ids: parameter ids
+            committed: True if the ids have been committed, False otherwise
         """
-        if not ids:
-            return
         if committed:
             existing = next(
                 (m for m in self.sub_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
@@ -457,28 +449,28 @@ class CompoundStackedModel(CompoundTableModel):
         model = self._create_single_model(db_map, entity_class_id, committed)
         model.reset_model(ids)
 
-    def handle_items_updated(self, db_map_data):
+    def handle_items_updated(self, db_map_data: DBMapPublicItems) -> None:
         """Runs when either parameter definitions or values are updated in the dbs.
         Emits dataChanged so the parameter_name column is refreshed.
 
         Args:
-            db_map_data (dict): list of updated dict-items keyed by DatabaseMapping
+            db_map_data: list of updated dict-items keyed by DatabaseMapping
         """
-        if all(db_map not in self.db_maps for db_map in db_map_data):
+        if all(db_map not in self._db_maps for db_map in db_map_data):
             return
         self.dataChanged.emit(
             self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1), [Qt.ItemDataRole.DisplayRole]
         )
 
-    def handle_items_removed(self, db_map_data):
+    def handle_items_removed(self, db_map_data: DBMapPublicItems) -> None:
         """Runs when either parameter definitions or values are removed from the dbs.
         Removes the affected rows from the corresponding single models.
 
         Args:
-            db_map_data (dict): list of removed dict-items keyed by DatabaseMapping
+            db_map_data: list of removed dict-items keyed by DatabaseMapping
         """
         for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             items_per_class = self._items_per_class(items)
             emptied_single_model_indexes = []
@@ -521,12 +513,12 @@ class CompoundStackedModel(CompoundTableModel):
                 model = self.sub_models.pop(model_index)
                 model.deleteLater()
 
-    def _delete_rows_from_single_model(self, model, rows_to_remove):
+    def _delete_rows_from_single_model(self, model: SingleModelBase, rows_to_remove: Iterable[int]) -> dict[int, int]:
         """Removes rows from given single model and computes a map from original rows to retained rows.
 
         Args:
-            model (SingleModelBase): single model to delete data from
-            rows_to_remove (set of int): row index that should be removed
+            model: single model to delete data from
+            rows_to_remove: row index that should be removed
 
         Returns:
             dict: mapping from original row index to post-removal row index
@@ -542,12 +534,12 @@ class CompoundStackedModel(CompoundTableModel):
             del model._main_data[row]
         return new_kept_rows
 
-    def _update_single_model_rows_in_row_map(self, model, new_rows):
+    def _update_single_model_rows_in_row_map(self, model: SingleModelBase, new_rows: dict[int, int]) -> None:
         """Rewrites single model rows in row map.
 
         Args:
-            model (SingleModelBase): single model whose rows to update
-            new_rows (dict): mapping from old row index to updated index
+            model: single model whose rows to update
+            new_rows: mapping from old row index to updated index
         """
         new_inv_row_map = {}
         for row, new_row in new_rows.items():
@@ -560,61 +552,73 @@ class CompoundStackedModel(CompoundTableModel):
         for mapped_row, compound_row in new_inv_row_map.items():
             self._inv_row_map[mapped_row] = compound_row
 
-    def db_item(self, index):
+    def db_item(self, index: QModelIndex) -> PublicItem:
         sub_index = self.map_to_sub(index)
         return sub_index.model().db_item(sub_index)
 
-    def db_map_id(self, index):
+    def db_map_id(self, index: QModelIndex) -> tuple[DatabaseMapping, TempId] | tuple[None, None]:
         sub_index = self.map_to_sub(index)
         sub_model = sub_index.model()
         if sub_model is None:
             return None, None
         return sub_model.db_map, sub_model.item_id(sub_index.row())
 
-    def filter_by(self, rows_per_column):
-        for column, rows in rows_per_column.items():
-            field = self.headerData(column)
-            menu = self._make_auto_filter_menu(field)
-            accepted_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
-            menu.set_filter_accepted_values(accepted_values)
-
-    def filter_excluding(self, rows_per_column):
-        for column, rows in rows_per_column.items():
-            field = self.headerData(column)
-            menu = self._make_auto_filter_menu(field)
-            rejected_values = {self.index(row, column).data(Qt.ItemDataRole.DisplayRole) for row in rows}
-            menu.set_filter_rejected_values(rejected_values)
+    def tear_down(self) -> None:
+        return
 
 
-class FilterEntityAlternativeMixin:
-    """Provides the interface to filter by entity and alternative."""
+class FilterEntityMixin:
+    """Provides the interface to filter by entity."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._filter_entity_ids = {}
-        self._filter_alternative_ids = {}
+        self._entity_selection: EntitySelection = Asterisk
 
-    def init_model(self):
+    def init_model(self) -> None:
         super().init_model()
-        self._filter_entity_ids = {}
-        self._filter_alternative_ids = {}
+        self._entity_selection = Asterisk
 
-    def set_filter_entity_ids(self, entity_ids):
-        self._filter_entity_ids = entity_ids
+    def set_entity_selection_for_filtering(self, entity_selection: EntitySelection) -> None:
+        self._entity_selection = entity_selection
+        should_invalidate_filter = False
         for model in self.sub_models:
-            if model.set_filter_entity_ids(entity_ids):
-                self._invalidate_filter()
+            should_invalidate_filter |= model.set_filter_entity_ids(entity_selection)
+        if should_invalidate_filter and not self._filter_timer.isActive():
+            self._filter_timer.start()
+        super().set_entity_selection_for_filtering(entity_selection)
 
-    def set_filter_alternative_ids(self, alternative_ids):
-        self._filter_alternative_ids = alternative_ids
-        for model in self.sub_models:
-            if model.set_filter_alternative_ids(alternative_ids):
-                self._invalidate_filter()
-
-    def _create_single_model(self, db_map, entity_class_id, committed):
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
         model = super()._create_single_model(db_map, entity_class_id, committed)
-        model.set_filter_entity_ids(self._filter_entity_ids)
-        model.set_filter_alternative_ids(self._filter_alternative_ids)
+        model.set_filter_entity_ids(self._entity_selection)
+        return model
+
+
+class FilterAlternativeMixin:
+    """Provides the interface to filter by alternative."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._alternative_selection: AlternativeSelection = Asterisk
+
+    def init_model(self) -> None:
+        super().init_model()
+        self._alternative_selection = Asterisk
+
+    def set_alternative_selection_for_filtering(self, alternative_ids: dict[DatabaseMapping, set[TempId]]) -> None:
+        self._alternative_selection = alternative_ids
+        should_invalidate_filter = False
+        for model in self.sub_models:
+            should_invalidate_filter |= model.set_filter_alternative_ids(alternative_ids)
+        if should_invalidate_filter and not self._filter_timer.isActive():
+            self._filter_timer.start()
+
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
+        model = super()._create_single_model(db_map, entity_class_id, committed)
+        model.set_filter_alternative_ids(self._alternative_selection)
         return model
 
 
@@ -624,7 +628,7 @@ class EditParameterValueMixin:
     def handle_items_updated(self, db_map_data):
         changed_rows = []
         for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+            if db_map not in self._db_maps:
                 continue
             items_by_class = self._items_per_class(items)
             for entity_class_id, class_items in items_by_class.items():
@@ -633,9 +637,16 @@ class EditParameterValueMixin:
                 )
                 if single_model is not None:
                     single_model.revalidate_item_types(class_items)
-                    changed_rows = [
-                        self._inv_row_map[(single_model, single_row)] for single_row in range(single_model.rowCount())
-                    ]
+                    ids = {item["id"] for item in class_items}
+                    changed_rows = []
+                    for single_row in range(single_model.rowCount()):
+                        key = (single_model, single_row)
+                        if (
+                            key in self._inv_row_map
+                            and (item_id := single_model.index(single_row, 0).data(ITEM_ID_ROLE)) in ids
+                        ):
+                            changed_rows.append(self._inv_row_map[key])
+                            ids.remove(item_id)
         if changed_rows:
             column_count = self.columnCount()
             for first_row, count in rows_to_row_count_tuples(changed_rows):
@@ -653,38 +664,79 @@ class EditParameterValueMixin:
             label identifying the data
         """
         item = self.db_item(index)
-        if item is None:
-            return ""
         database = self.index(index.row(), self.columnCount() - 1).data()
+        entity_class_name = item["entity_class_name"]
         if self.item_type == "parameter_definition":
             parameter_name = item["name"]
-            names = [item["entity_class_name"]]
+            entity_byame = None
             alternative_name = None
         elif self.item_type == "parameter_value":
             parameter_name = item["parameter_name"]
-            names = list(item["entity_byname"])
+            entity_byame = list(item["entity_byname"])
             alternative_name = item["alternative_name"]
         else:
             raise ValueError(
                 f"invalid item_type: expected parameter_definition or parameter_value, got {self.item_type}"
             )
-        return parameter_identifier(database, parameter_name, names, alternative_name)
+        return parameter_identifier(database, entity_class_name, entity_byame, parameter_name, alternative_name)
 
-    def get_set_data_delayed(self, index):
+    def get_set_data_delayed(self, index: QModelIndex) -> Callable[tuple[bytes, str], None]:
         """Returns a function that ParameterValueEditor can call to set data for the given index at any later time,
         even if the model changes.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            function
         """
-        sub_model = self.sub_model_at_row(index.row())
-        id_ = self.item_at_row(index.row())
+        sub_model, sub_row = self._row_map[index.row()]
+        id_ = sub_model.item_id(sub_row)
         return lambda value_and_type, sub_model=sub_model, id_=id_: sub_model.update_items_in_db(
             [{"id": id_, sub_model.value_field: join_value_and_type(*value_and_type)}]
         )
+
+
+class MetadataIndicatorMixin:
+    METADATA_ITEM_TYPE: ClassVar[str] = NotImplemented
+    METADATA_INDICATOR_COLUMN: ClassVar[int] = NotImplemented
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.db_mngr.items_added.connect(self._handle_metadata_added_or_removed)
+        self.db_mngr.items_removed.connect(self._handle_metadata_added_or_removed)
+
+    @Slot(str, object)
+    def _handle_metadata_added_or_removed(
+        self, item_type: ItemType, db_map_data: dict[DatabaseMapping, list[PublicItem]]
+    ) -> None:
+        if item_type != self.METADATA_ITEM_TYPE:
+            return
+        top_row = None
+        bottom_row = None
+        for db_map, items in db_map_data.items():
+            for metadata in items:
+                for sub_model in self.sub_models:
+                    if sub_model.db_map is not db_map or not self.filter_accepts_model(sub_model):
+                        continue
+                    sub_row = sub_model.row_for_associated_metadata_item(metadata)
+                    if sub_row is None:
+                        continue
+                    try:
+                        row = self._inv_row_map[(sub_model, sub_row)]
+                    except KeyError:
+                        continue
+                    if top_row is None:
+                        top_row = row
+                        bottom_row = row
+                    elif row < top_row:
+                        top_row = row
+                    elif row > bottom_row:
+                        bottom_row = row
+        if top_row is None:
+            return
+        top_left = self.index(top_row, self.METADATA_INDICATOR_COLUMN)
+        bottom_right = self.index(bottom_row, self.METADATA_INDICATOR_COLUMN)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
+
+    def tear_down(self) -> None:
+        super().tear_down()
+        self.db_mngr.items_added.disconnect(self._handle_metadata_added_or_removed)
+        self.db_mngr.items_removed.disconnect(self._handle_metadata_added_or_removed)
 
 
 class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedModel):
@@ -692,65 +744,109 @@ class CompoundParameterDefinitionModel(EditParameterValueMixin, CompoundStackedM
 
     item_type = "parameter_definition"
     field_map = PARAMETER_DEFINITION_FIELD_MAP
-
-    @staticmethod
-    def _make_header():
-        return PARAMETER_DEFINITION_MODEL_HEADER
-
-    @property
-    def _single_model_type(self):
-        return SingleParameterDefinitionModel
+    _single_model_type = SingleParameterDefinitionModel
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {
+        "parameter_type_list",
+    }
 
 
-class CompoundParameterValueModel(FilterEntityAlternativeMixin, EditParameterValueMixin, CompoundStackedModel):
+class CompoundParameterValueModel(
+    MetadataIndicatorMixin, FilterAlternativeMixin, FilterEntityMixin, EditParameterValueMixin, CompoundStackedModel
+):
     """A model that concatenates several single parameter_value models and one empty parameter_value model."""
 
     item_type = "parameter_value"
     field_map = PARAMETER_VALUE_FIELD_MAP
+    _single_model_type = SingleParameterValueModel
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {
+        "entity_byname",
+    }
+    METADATA_ITEM_TYPE = "parameter_value_metadata"
+    METADATA_INDICATOR_COLUMN = field_index("parameter_definition_name", PARAMETER_VALUE_FIELD_MAP)
+    _PARAMETER_GROUP_COLUMN = field_index("parameter_group_name", PARAMETER_VALUE_FIELD_MAP)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._definition_fetch_parent = FlexibleFetchParent(
-            "parameter_definition",
-            shows_item=lambda item, db_map: True,
-            handle_items_updated=self._handle_parameter_definitions_updated,
-            owner=self,
-        )
+        self.db_mngr.items_updated.connect(self._handle_parameter_definitions_updated)
 
-    @staticmethod
-    def _make_header():
-        return PARAMETER_VALUE_MODEL_HEADER
+    def flags(self, index):
+        if index.column() == self._PARAMETER_GROUP_COLUMN:
+            return Qt.ItemFlag.ItemIsEnabled
+        return super().flags(index)
 
-    @property
-    def _single_model_type(self):
-        return SingleParameterValueModel
-
-    def reset_db_map(self, db_maps):
-        super().reset_db_maps(db_maps)
-        self._definition_fetch_parent.set_obsolete(False)
-        self._definition_fetch_parent.reset()
-
-    def _handle_parameter_definitions_updated(self, db_map_data):
-        for db_map, items in db_map_data.items():
-            if db_map not in self.db_maps:
+    @Slot(str, object)
+    def _handle_parameter_definitions_updated(
+        self, item_type: ItemType, db_map_data: dict[DatabaseMapping, list[PublicItem]]
+    ) -> None:
+        if item_type != "parameter_definition":
+            return
+        for db_map, definition_items in db_map_data.items():
+            if db_map not in self._db_maps:
                 continue
-            items_by_class = self._items_per_class(items)
-            for entity_class_id, class_items in items_by_class.items():
-                single_model = next(
-                    (m for m in self.sub_models if (m.db_map, m.entity_class_id) == (db_map, entity_class_id)), None
-                )
-                if single_model is not None:
-                    single_model.revalidate_item_typs(class_items)
+            value_table = db_map.mapped_table("parameter_value")
+            for sub_model in self.sub_models:
+                if sub_model.db_map is not db_map:
+                    continue
+                value_items = {}
+                validatable_value_items = []
+                for sub_row in sub_model.accepted_rows():
+                    value_item = value_table[sub_model.item_id(sub_row)]
+                    value_items[(value_item["entity_class_id"], value_item["parameter_definition_id"])] = value_item
+                leftover_definition_items = []
+                for definition_item in definition_items:
+                    key = (definition_item["entity_class_id"], definition_item["id"])
+                    if key not in value_items:
+                        leftover_definition_items.append(definition_item)
+                        continue
+                    validatable_value_items.append(value_items[key])
+                sub_model.revalidate_item_types(validatable_value_items)
+                if not leftover_definition_items:
+                    break
+                definition_items = leftover_definition_items
+
+    def tear_down(self) -> None:
+        super().tear_down()
+        self.db_mngr.items_updated.disconnect(self._handle_parameter_definitions_updated)
 
 
-class CompoundEntityAlternativeModel(FilterEntityAlternativeMixin, CompoundStackedModel):
+class CompoundEntityAlternativeModel(FilterAlternativeMixin, FilterEntityMixin, CompoundStackedModel):
 
     item_type = "entity_alternative"
+    field_map = ENTITY_ALTERNATIVE_FIELD_MAP
+    _single_model_type = SingleEntityAlternativeModel
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {"entity_byname", "active"}
+    _ACTIVE_COLUMN = field_index("active", ENTITY_ALTERNATIVE_FIELD_MAP)
 
-    @staticmethod
-    def _make_header():
-        return ENTITY_ALTERNATIVE_MODEL_HEADER
+    def auto_filter_data_map(self, column_i: int) -> dict[str, Any]:
+        if column_i == self._ACTIVE_COLUMN:
+            return {TRUE_STRING: True, FALSE_STRING: False}
+        return super().auto_filter_data_map(column_i)
 
-    @property
-    def _single_model_type(self):
-        return SingleEntityAlternativeModel
+
+class CompoundEntityModel(MetadataIndicatorMixin, FilterEntityMixin, CompoundStackedModel):
+    item_type = "entity"
+    field_map = ENTITY_FIELD_MAP
+    _single_model_type = SingleEntityModel
+    _ENTITY_CLASS_ID_FIELD = "class_id"
+    FIELDS_REQUIRING_FILTER_DATA_CONVERSION = {"entity_byname", "lat", "lon", "alt"}
+    METADATA_ITEM_TYPE = "entity_metadata"
+    METADATA_INDICATOR_COLUMN = field_index("name", ENTITY_FIELD_MAP)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._scenario_selection: ScenarioSelection = Asterisk
+
+    def set_scenario_selection_for_filtering(self, scenario_selection: ScenarioSelection) -> None:
+        self._scenario_selection = scenario_selection
+        should_invalidate_filter = False
+        for model in self.sub_models:
+            should_invalidate_filter |= model.set_filter_scenario_ids(scenario_selection)
+        if should_invalidate_filter and not self._filter_timer.isActive():
+            self._filter_timer.start()
+
+    def _create_single_model(
+        self, db_map: DatabaseMapping, entity_class_id: TempId, committed: bool
+    ) -> SingleModelBase:
+        model = super()._create_single_model(db_map, entity_class_id, committed)
+        model.set_filter_scenario_ids(self._scenario_selection)
+        return model

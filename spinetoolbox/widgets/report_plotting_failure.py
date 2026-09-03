@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Functions to report failures in plotting to the user."""
+
 from PySide6.QtWidgets import QMessageBox
 
 

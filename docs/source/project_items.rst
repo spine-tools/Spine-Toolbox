@@ -66,9 +66,9 @@ The following items are currently available:
 Data Connection |data_connection|
 =================================
 
-A Data connection item provides access to data files.
-The item has two categories of files: **references** connect to
-files anywhere on the file system or on remote (non-Spine) databases while
+A Data connection item provides access to data.
+The item has two categories of data: **references** connect to
+files or directories anywhere on the file system and to remote (non-Spine) databases while
 **data** files reside in the item's own data directory.
 
 Data Store |data_store|

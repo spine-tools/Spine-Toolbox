@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for database item update functionality in Database editor."""
+
 from spinedb_api import to_database
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
@@ -60,7 +61,6 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_object_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.parameter_definition_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -71,15 +71,12 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
         self.assertTrue(("fish", "fire") in parameters)
 
     def test_update_relationship_parameter_definitions_in_model(self):
         """Test that object parameter definitions are updated in the model."""
         model = self.spine_db_editor.parameter_definition_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -92,15 +89,12 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         h = model.header.index
         parameters = []
         for row in range(model.rowCount()):
-            parameters.append(
-                (model.index(row, h("entity_class_name")).data(), model.index(row, h("parameter_name")).data())
-            )
+            parameters.append((model.index(row, h("class")).data(), model.index(row, h("parameter name")).data()))
         self.assertTrue(("fish__dog", "each_others_opinion") in parameters)
 
     def test_update_object_parameter_values_in_model(self):
         """Test that object parameter values are updated in the model."""
         model = self.spine_db_editor.parameter_value_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -116,8 +110,8 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    model.index(row, h("entity_byname")).data(),
-                    model.index(row, h("parameter_name")).data(),
+                    model.index(row, h("entity byname")).data(),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )
@@ -126,7 +120,6 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
     def test_update_relationship_parameter_values_in_model(self):
         """Test that relationship parameter values are updated in the model."""
         model = self.spine_db_editor.parameter_value_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
@@ -143,8 +136,8 @@ class TestSpineDBEditorUpdate(DBEditorTestBase):
         for row in range(model.rowCount()):
             parameters.append(
                 (
-                    tuple((model.index(row, h("entity_byname")).data() or "").split(DB_ITEM_SEPARATOR)),
-                    model.index(row, h("parameter_name")).data(),
+                    tuple((model.index(row, h("entity byname")).data() or "").split(DB_ITEM_SEPARATOR)),
+                    model.index(row, h("parameter name")).data(),
                     model.index(row, h("value")).data(),
                 )
             )

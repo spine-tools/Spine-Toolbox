@@ -11,7 +11,10 @@
 ######################################################################################################################
 
 """Contains project-specific settings."""
+
+from __future__ import annotations
 import dataclasses
+from typing import Literal
 
 
 @dataclasses.dataclass
@@ -19,23 +22,29 @@ class ProjectSettings:
     """Spine Toolbox project settings."""
 
     enable_execute_all: bool = True
+    store_external_paths_as_relative: bool = False
+    mode: Literal["author", "consumer"] = "author"
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """Serializes the settings into a dictionary.
 
         Returns:
-            dict: serialized settings
+            serialized settings
         """
         return dataclasses.asdict(self)
 
     @staticmethod
-    def from_dict(settings_dict):
+    def from_dict(settings_dict: dict) -> ProjectSettings:
         """Deserializes settings from dictionary.
 
         Args:
-            settings_dict (dict): serialized settings
+            settings_dict: serialized settings
 
         Returns:
-            ProjectSettings: deserialized settings
+            deserialized settings
         """
         return ProjectSettings(**settings_dict)
+
+    @staticmethod
+    def dict_local_entries() -> list[tuple[str, ...]]:
+        return [("mode",)]

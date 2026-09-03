@@ -11,13 +11,16 @@
 ######################################################################################################################
 
 """Contains the SpineDBEditor class."""
+
+from itertools import chain
 import json
 import os
-from typing import Optional
-from PySide6.QtCore import QCoreApplication, QModelIndex, Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QAction, QColor, QGuiApplication, QKeySequence, QPalette, QShortcut
+from typing import Literal, Optional, TypeAlias
+from PySide6.QtCore import QCoreApplication, QItemSelection, QModelIndex, Qt, QTimer, Signal, Slot
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence, QPalette, QShortcut
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
+    QApplication,
     QCheckBox,
     QDialog,
     QDockWidget,
@@ -25,15 +28,16 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QTabBar,
+    QWidget,
 )
 from sqlalchemy.engine.url import URL
+from spine_engine.utils.helpers import urls_equal
 from spinedb_api import Asterisk, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, export_data
 from spinedb_api.helpers import vacuum
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 from ...helpers import (
     add_keyboard_shortcuts_to_action_tool_tips,
-    busy_effect,
     call_on_focused_widget,
     format_string_list,
     get_open_file_name_in_last_dir,
@@ -45,19 +49,27 @@ from ...helpers import (
 from ...spine_db_manager import SpineDBManager
 from ...spine_db_parcel import SpineDBParcel
 from ...widgets.commit_dialog import CommitDialog
+from ...widgets.multi_tab_window import MultiTabWindow
 from ...widgets.notification import ChangeNotifier, Notification
 from ...widgets.parameter_value_editor import ParameterValueEditor
-from ..helpers import table_name_from_item_type
+from ..selection_for_filtering import (
+    AlternativeSelectionForFiltering,
+    EntitySelectionForFiltering,
+    ScenarioSelectionForFiltering,
+)
 from .commit_viewer import CommitViewer
 from .custom_menus import DocksMenu, RecentDatabasesPopupMenu
 from .graph_view_mixin import GraphViewMixin
 from .item_metadata_editor import ItemMetadataEditor
 from .mass_select_items_dialogs import MassExportItemsDialog, MassRemoveItemsDialog
 from .metadata_editor import MetadataEditor
+from .parameter_group_editor import ParameterGroupEditor
 from .stacked_view_mixin import StackedViewMixin
 from .tabular_view_mixin import TabularViewMixin
 from .toolbar import DBEditorToolBar
 from .tree_view_mixin import TreeViewMixin
+
+ViewType: TypeAlias = Literal["graph", "stacked", "&Value", "&Index", "E&lement", "&Scenario"]
 
 
 class SpineDBEditorBase(QMainWindow):
@@ -75,8 +87,10 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr = db_mngr
         self.db_maps: list[DatabaseMapping] = []
         self.db_urls: list[str] = []
-        self._history = []
+        self._history: list[tuple[str, str]] = []
         self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
+        self.recent_dbs_menu.load_url_requested.connect(self._load_recent_url)
+        self.recent_dbs_menu.clear_url_history_requested.connect(self._clear_url_history)
         self._change_notifiers = []
         self._changelog = []
         # Setup UI from Qt Designer file
@@ -85,7 +99,7 @@ class SpineDBEditorBase(QMainWindow):
         add_keyboard_shortcuts_to_action_tool_tips(self.ui)
         self.takeCentralWidget().deleteLater()
         self.toolbar = DBEditorToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         toolbox = self.db_mngr.parent()
         if toolbox is not None:
             self.toolbar.show_toolbox_action.triggered.connect(toolbox.restore_and_activate)
@@ -105,15 +119,21 @@ class SpineDBEditorBase(QMainWindow):
         self.redo_action: Optional[QAction] = None
         self.ui.actionUndo.setShortcuts(QKeySequence.StandardKey.Undo)
         self.ui.actionRedo.setShortcuts(QKeySequence.StandardKey.Redo)
-        self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self._torn_down = False
         self._purge_items_dialog = None
         self._purge_items_dialog_state = None
         self._export_items_dialog = None
         self._export_items_dialog_state = None
         self.update_commit_enabled()
-        self.last_view = None
-        self.setup_focus_shortcuts()
+        self.last_view: ViewType | None = None
+        self._setup_focus_shortcuts()
+        self.table_name_from_item_type = {
+            "parameter_value": self.ui.dockWidget_parameter_value.windowTitle(),
+            "parameter_definition": self.ui.dockWidget_parameter_definition.windowTitle(),
+            "entity_alternative": self.ui.dockWidget_entity_alternative.windowTitle(),
+            "entity": self.ui.entity_dock_widget.windowTitle(),
+        }
 
     @property
     def toolbox(self):
@@ -140,13 +160,21 @@ class SpineDBEditorBase(QMainWindow):
             url (str): database url
             name (str): database display name
         """
-        if not any(str(db_map.sa_url) == url for db_map in self.db_maps):
+        if not any(urls_equal(str(db_map.sa_url), url) for db_map in self.db_maps):
             return
         self._reset_window_title()
 
     def _reset_window_title(self):
         """Sets new window title according to open databases."""
         self.setWindowTitle(", ".join(self.db_mngr.name_registry.display_name_iter(self.db_maps)))
+
+    @Slot()
+    def _clear_url_history(self) -> None:
+        self._history.clear()
+
+    @Slot(str, str)
+    def _load_recent_url(self, url: str, name: str) -> None:
+        self.load_db_urls({url: name})
 
     def load_db_urls(self, db_urls, create=False, update_history=True):
         self.ui.actionImport.setEnabled(False)
@@ -156,15 +184,18 @@ class SpineDBEditorBase(QMainWindow):
         self.toolbar.reload_action.setEnabled(False)
         if not db_urls:
             return True
-        if not self.tear_down():
-            return False
+        if self.db_maps:
+            if not self.tear_down():
+                return False
+            self.db_maps.clear()
         if self.db_maps:
             self.save_window_state()
-        self.db_maps = []
         self._changelog.clear()
         self._purge_change_notifiers()
         for url in db_urls:
-            db_map = self.db_mngr.get_db_map(url, self, create=create, force_upgrade_prompt=True)
+            db_map = self.db_mngr.get_db_map(
+                url, self, create=create, force_upgrade_prompt=True, upgrade_prompt_parent=self
+            )
             if db_map is not None:
                 self.db_maps.append(db_map)
         if not self.db_maps:
@@ -193,39 +224,66 @@ class SpineDBEditorBase(QMainWindow):
         self.set_db_column_visibility(db_column_visible)
         return True
 
-    def show_recent_db(self):
+    @Slot()
+    def show_recent_db(self) -> None:
         """Updates and sets up the recent projects menu to File-Open recent menu item."""
         if not self.recent_dbs_menu.isVisible():
-            self.recent_dbs_menu = RecentDatabasesPopupMenu(self)
+            self.recent_dbs_menu.update_history(self._history)
             self.ui.actionOpen_recent.setMenu(self.recent_dbs_menu)
 
     def add_urls_to_history(self):
         """Adds current urls to history."""
-        opened_names = set()
-        for row in self._history:
-            for name in row:
-                opened_names.add(name)
-        for url in self.db_urls:
+        new = []
+        for url in reversed(self.db_urls):
             name = self.db_mngr.name_registry.display_name(url)
-            if name not in opened_names:
-                self._history.insert(0, {name: url})
+            new.append((url, name))
+        old = []
+        for row in self._history:
+            if row not in new:
+                old.append(row)
+        self._history = new + old
 
     def init_add_undo_redo_actions(self):
         new_undo_action = self.db_mngr.undo_action[self.first_db_map]
         new_redo_action = self.db_mngr.redo_action[self.first_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
-    @Slot(bool)
-    def open_db_file(self, _=False):
+    def _open_sqlite_url(self) -> str | None:
+        """Shows the open-file dialog and returns the chosen SQLite URL, or None if cancelled."""
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_open_file_name_in_last_dir(
             self.qsettings, "openSQLiteUrl", self, "Open SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
         )
         self.qsettings.endGroup()
         if not file_path:
+            return None
+        return "sqlite:///" + file_path
+
+    @Slot(bool)
+    def open_db_file(self, _=False):
+        url = self._open_sqlite_url()
+        if url is not None:
+            self.load_db_urls([url])
+
+    @Slot(bool)
+    def open_db_file_in_new_tab(self, _=False) -> None:
+        url = self._open_sqlite_url()
+        if url is None:
             return
-        url = "sqlite:///" + os.path.normcase(file_path)
-        self.load_db_urls([url])
+        multi_db_editor = self._multi_db_editor()
+        if self.db_maps and multi_db_editor is not None:
+            multi_db_editor.open_url_in_new_tab(url)
+        else:
+            self.load_db_urls([url])
+
+    def _multi_db_editor(self) -> "MultiTabWindow | None":
+        """Returns the tabbed window hosting this editor as a tab, or None if it is not embedded in one."""
+        parent = self.parentWidget()
+        while parent is not None:
+            if isinstance(parent, MultiTabWindow):
+                return parent
+            parent = parent.parentWidget()
+        return None
 
     @Slot(bool)
     def add_db_file(self, _=False):
@@ -236,11 +294,11 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
-        url = "sqlite:///" + os.path.normcase(file_path)
+        url = "sqlite:///" + file_path
         self.load_db_urls(self.db_urls + [url])
 
-    @Slot(bool)
-    def create_db_file(self, _=False):
+    @Slot()
+    def create_db_file(self) -> None:
         self.qsettings.beginGroup(self.settings_group)
         file_path, _ = get_save_file_name_in_last_dir(
             self.qsettings, "createSQLiteUrl", self, "Create SQLite file", self._get_base_dir(), "SQLite (*.sqlite)"
@@ -252,10 +310,11 @@ class SpineDBEditorBase(QMainWindow):
             os.remove(file_path)
         except OSError:
             pass
-        url = "sqlite:///" + os.path.normcase(file_path)
+        url = "sqlite:///" + file_path
         self.load_db_urls([url], create=True)
 
-    def reset_docks(self):
+    @Slot()
+    def reset_docks(self) -> None:
         """Resets the layout of the dock widgets for this URL"""
         self.qsettings.beginGroup(self.settings_group)
         self.qsettings.beginGroup(self.settings_subgroup)
@@ -272,6 +331,7 @@ class SpineDBEditorBase(QMainWindow):
         menu.setTitle(QCoreApplication.translate("MainWindow", "&View", None))
         self.ui.menuBar.insertMenu(self.ui.menuBar.actions()[2], menu)
 
+    @Slot()
     def _browse_commits(self):
         browser = CommitViewer(self.qsettings, self.db_mngr, *self.db_maps, parent=self)
         browser.show()
@@ -289,6 +349,7 @@ class SpineDBEditorBase(QMainWindow):
         self.ui.actionView_history.triggered.connect(self._browse_commits)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
         self.ui.actionOpen_db_file.triggered.connect(self.open_db_file)
+        self.ui.actionOpen_in_new_tab.triggered.connect(self.open_db_file_in_new_tab)
         self.ui.actionAdd_db_file.triggered.connect(self.add_db_file)
         self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionExport.triggered.connect(self.show_mass_export_items_dialog)
@@ -319,14 +380,17 @@ class SpineDBEditorBase(QMainWindow):
             undo_stack.indexChanged.disconnect(self.update_undo_redo_actions)
             undo_stack.cleanChanged.disconnect(self.update_commit_enabled)
 
-    @Slot(int)
-    def update_undo_redo_actions(self, _=0):
+    @Slot()
+    def update_undo_redo_actions(self) -> None:
+        if not self.db_maps:
+            return
         undo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].undo_age)
         redo_db_map = max(self.db_maps, key=lambda db_map: self.db_mngr.undo_stack[db_map].redo_age)
         new_undo_action = self.db_mngr.undo_action[undo_db_map]
         new_redo_action = self.db_mngr.redo_action[redo_db_map]
         self._replace_undo_redo_actions(new_undo_action, new_redo_action)
 
+    @Slot(QAction, QAction)
     def _replace_undo_redo_actions(self, new_undo_action: QAction, new_redo_action: QAction) -> None:
         if new_undo_action is not self.undo_action:
             if self.undo_action:
@@ -366,10 +430,10 @@ class SpineDBEditorBase(QMainWindow):
         """
         if self.silenced:
             return
-        Notification(self, msg, corner=Qt.BottomRightCorner).show()
+        Notification(self, msg, corner=Qt.Corner.BottomRightCorner).show()
 
-    @Slot()
-    def refresh_copy_paste_actions(self):
+    @Slot(QItemSelection, QItemSelection)
+    def _refresh_copy_paste_actions(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         """Runs when menus are about to show.
         Enables or disables actions according to selection status."""
         self.ui.actionCopy.setEnabled(bool(call_on_focused_widget(self, "can_copy")))
@@ -406,7 +470,7 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Import file",
             self._get_base_dir(),
-            "All files (*);;SQLite files (*.sqlite);;JSON files (*.json);;Excel files (*.xlsx)",
+            "All files (*);;JSON files (*.json);;Excel files (*.xlsx);;SQLite files (*.sqlite)",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -541,6 +605,7 @@ class SpineDBEditorBase(QMainWindow):
         parcel.push_scenario_alternative_ids(db_map_scen_alt_ids)
         self.export_data(parcel.data)
 
+    @Slot(object)
     def duplicate_entity(self, entity_item):
         """
         Duplicates an entity.
@@ -586,7 +651,7 @@ class SpineDBEditorBase(QMainWindow):
             self,
             "Export file",
             self._get_base_dir(),
-            "SQLite (*.sqlite);; JSON file (*.json);; Excel file (*.xlsx)",
+            "JSON file (*.json);; Excel file (*.xlsx);; SQLite (*.sqlite) ",
         )
         self.qsettings.endGroup()
         if not file_path:  # File selection cancelled
@@ -675,11 +740,15 @@ class SpineDBEditorBase(QMainWindow):
         """Removes references to purge items dialog."""
         self._purge_items_dialog = None
 
-    @busy_effect
     @Slot(QModelIndex)
-    def show_parameter_value_editor(self, index, plain=False):
+    def show_parameter_value_editor(self, index: QModelIndex) -> None:
         """Shows the parameter_value editor for the given index of given table view."""
-        editor = ParameterValueEditor(index, parent=self, plain=plain)
+        editor = ParameterValueEditor(index, parent=self)
+        editor.show()
+
+    @Slot(QModelIndex)
+    def show_plain_parameter_value_editor(self, index: QModelIndex) -> None:
+        editor = ParameterValueEditor(index, parent=self, plain=True)
         editor.show()
 
     def receive_error_msg(self, db_map_error_log):
@@ -702,38 +771,41 @@ class SpineDBEditorBase(QMainWindow):
         self._changelog.append(msg)
         self._update_export_enabled()
 
+    @Slot(str, object)
     def _handle_items_added(self, item_type, db_map_data):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully added {count} {item_type} item(s)"
         self._log_items_change(msg)
 
+    @Slot(str, object)
     def _handle_items_updated(self, item_type, db_map_data):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully updated {count} {item_type} item(s)"
         self._log_items_change(msg)
 
+    @Slot(str, object)
     def _handle_items_removed(self, item_type, db_map_data):
         count = sum(len(data) for data in db_map_data.values())
         msg = f"Successfully removed {count} {item_type} item(s)"
         self._log_items_change(msg)
 
-    def restore_ui(self, view_type, fresh=False):
+    def restore_ui(self, view_type: ViewType, fresh: bool = False) -> None:
         """Restores UI state from previous session.
 
         Args:
-            view_type (str): What the selected view type is.
-            fresh (bool): If true, the view specified with subgroup will be applied,
+            view_type: What the selected view type is.
+            fresh: If true, the view specified with subgroup will be applied,
                 instead of loading the previous window state of the said view.
         """
         if fresh and view_type:
             # Apply the view instead of loading the window state
             self.last_view = None
-            options = {
-                "stacked": self.apply_stacked_style,
-                "graph": self.apply_graph_style,
-            }
-            func = options[view_type] if view_type in options else self.apply_pivot_style
-            func(view_type)
+            if view_type == "stacked":
+                self.apply_stacked_style()
+            elif view_type == "graph":
+                self.apply_graph_style()
+            else:
+                self.apply_pivot_style(view_type)
             return
         window_state = None
         if view_type:
@@ -752,7 +824,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def save_window_state(self):
         """Saves window state parameters (size, position, state) via QSettings."""
-        if not self.db_maps or len(self.db_urls) != 1:
+        if not self.db_maps or len(self.db_urls) != 1 or self.last_view is None:
             # Only save window sates of single db tabs
             return
         self.qsettings.beginGroup(self.settings_group)
@@ -764,11 +836,11 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         self.qsettings.endGroup()
 
-    def tear_down(self):
+    def tear_down(self) -> bool:
         """Performs clean up duties.
 
         Returns:
-            bool: True if editor is ready to close, False otherwise
+            True if editor is ready to close, False otherwise
         """
         dirty_db_maps = self.db_mngr.dirty_and_without_editors(self, *self.db_maps)
         commit_dirty = False
@@ -895,54 +967,46 @@ class SpineDBEditorBase(QMainWindow):
         """Colors the header of a dock widget"""
         palette = QPalette()
         if color:
-            palette.setColor(QPalette.Window, color)
+            palette.setColor(QPalette.ColorRole.Window, color)
         dock.setPalette(palette)
 
-    def handle_column_filters(self, model):
-        if not model.dock:
-            return
-        if not any(model.column_filters.values()):
-            # Back to defaults
-            model.dock.setWindowTitle(table_name_from_item_type(model.item_type))
-            self.set_dock_tab_color(model.dock, None)
-            return
-        self.set_dock_tab_color(model.dock, QColor("paleturquoise"))
-        table_name = table_name_from_item_type(model.item_type)
-        table_name += (
-            f" [COLUMN FILTERS: {', '.join([name for name, active in model.column_filters.items() if active])}]"
-        )
-        model.dock.setWindowTitle(table_name)
-
-    def setup_focus_shortcuts(self):
+    def _setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor
-        QShortcut(QKeySequence("Alt+1"), self).activated.connect(lambda: self.focus_widget(self.ui.treeView_entity))
+        QShortcut(QKeySequence("Alt+1"), self).activated.connect(lambda: self._focus_widget(self.ui.treeView_entity))
         QShortcut(QKeySequence("Alt+3"), self).activated.connect(
-            lambda: self.focus_widget(self.ui.tableView_parameter_value)
+            lambda: self._focus_widget(self.ui.tableView_parameter_value)
         )
         QShortcut(QKeySequence("Alt+Shift+3"), self).activated.connect(
-            lambda: self.focus_widget(self.ui.tableView_parameter_definition)
+            lambda: self._focus_widget(self.ui.tableView_parameter_definition)
         )
         QShortcut(QKeySequence("Alt+4"), self).activated.connect(
-            lambda: self.focus_widget(self.ui.tableView_entity_alternative)
+            lambda: self._focus_widget(self.ui.tableView_entity_alternative)
         )
-        QShortcut(QKeySequence("Alt+5"), self).activated.connect(
-            lambda: self.focus_widget(self.ui.alternative_tree_view)
+        QShortcut(QKeySequence("Alt+5"), self).activated.connect(lambda: self._focus_widget(self.ui.entity_table_view))
+        QShortcut(QKeySequence("Alt+6"), self).activated.connect(
+            lambda: self._focus_widget(self.ui.alternative_tree_view)
         )
-        QShortcut(QKeySequence("Alt+6"), self).activated.connect(lambda: self.focus_widget(self.ui.scenario_tree_view))
+        QShortcut(QKeySequence("Alt+7"), self).activated.connect(lambda: self._focus_widget(self.ui.scenario_tree_view))
         QShortcut(QKeySequence("Alt+9"), self).activated.connect(
-            lambda: self.focus_widget(self.ui.treeView_parameter_value_list)
+            lambda: self._focus_widget(self.ui.treeView_parameter_value_list)
         )
 
-    @Slot()
-    def focus_widget(self, widget):
-        """Focus a specific widget and make its dock visible if needed."""
+    @Slot(QWidget)
+    def _focus_widget(self, widget: QWidget) -> None:
+        """Focus a specific widget and make its dock visible if needed.
+
+        Views with a per-column search row handle focus themselves (so a repeated shortcut toggles
+        into the search row and a previously focused search field is restored).
+        """
         for dock in self.findChildren(QDockWidget):
             if widget in dock.findChildren(type(widget).__base__):
                 dock.raise_()
-                dock.setFocus()
-                widget.setFocus()
-                return True
-        return False
+                if hasattr(widget, "activate_search_focus"):
+                    widget.activate_search_focus()
+                else:
+                    dock.setFocus()
+                    widget.setFocus()
+                break
 
 
 class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeViewMixin, SpineDBEditorBase):
@@ -950,17 +1014,36 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
 
     pinned_values_updated = Signal(list)
 
-    def __init__(self, db_mngr, db_urls=None):
+    def __init__(self, db_mngr: SpineDBManager, db_urls: list[str] | None = None):
         """
         Args:
-            db_mngr (SpineDBManager): The manager to use
-            db_urls (Iterable of str, optional): URLs of databases to load
+            db_mngr: The manager to use
+            db_urls: URLs of databases to load
         """
         super().__init__(db_mngr)
         self._original_size = None
         self._metadata_editor = MetadataEditor(self.ui.metadata_table_view, self, db_mngr)
         self._item_metadata_editor = ItemMetadataEditor(
             self.ui.item_metadata_table_view, self, self._metadata_editor, db_mngr
+        )
+        self._parameter_group_editor = ParameterGroupEditor(
+            self.ui.parameter_group_table_view,
+            self.ui.empty_parameter_group_table_view,
+            self.ui.parameter_group_contents_widget,
+            self.ui.actionCopy,
+            self.ui.actionPaste,
+            db_mngr,
+            preferred_row_height(self),
+            self,
+        )
+        self._alternative_selection_for_filtering = AlternativeSelectionForFiltering(
+            self.ui.alternative_tree_view.selectionModel(), self.ui.scenario_tree_view.selectionModel(), self
+        )
+        self._entity_selection_for_filtering = EntitySelectionForFiltering(
+            self.ui.treeView_entity.selectionModel(), self
+        )
+        self._scenario_selection_for_filtering = ScenarioSelectionForFiltering(
+            self.ui.scenario_tree_view.selectionModel(), self
         )
         self._dock_views = {d: d.findChild(QAbstractScrollArea) for d in self.findChildren(QDockWidget)}
         self._timer_refresh_tab_order = QTimer(self)  # Used to limit refresh
@@ -981,6 +1064,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
             self.ui.empty_parameter_value_table_view,
             self.ui.tableView_parameter_definition,
             self.ui.empty_parameter_definition_table_view,
+            self.ui.entity_table_view,
             self.ui.treeView_entity,
         ):
             view.set_db_column_visibility(visible)
@@ -992,6 +1076,33 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         super().connect_signals()
         self._metadata_editor.connect_signals(self.ui)
         self._item_metadata_editor.connect_signals(self.ui)
+        self.ui.graphicsView.graph_selection_changed.connect(
+            self._entity_selection_for_filtering.update_secondary_entity_selection
+        )
+        self.ui.graphicsView.graph_selection_changed.connect(
+            self._default_row_generator.update_defaults_from_secondary_entity_selection
+        )
+        self._entity_selection_for_filtering.entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_stacked_tables
+        )
+        self._entity_selection_for_filtering.entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_graph
+        )
+        self._entity_selection_for_filtering.secondary_entity_selection_changed.connect(
+            self._set_entity_selection_filter_for_stacked_tables
+        )
+        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
+            self._set_alternative_selection_filter_for_stacked_tables
+        )
+        self._alternative_selection_for_filtering.alternative_selection_changed.connect(
+            self._set_alternative_selection_filter_for_graph
+        )
+        self._scenario_selection_for_filtering.scenario_selection_changed.connect(
+            self._set_scenario_selection_filter_for_stacekd_tables
+        )
+        self._scenario_selection_for_filtering.scenario_selection_changed.connect(
+            self._set_scenario_selection_filter_for_graph
+        )
         self.ui.actionStacked_style.triggered.connect(self.apply_stacked_style)
         self.ui.actionGraph_style.triggered.connect(self.apply_graph_style)
         self.ui.actionValue.triggered.connect(lambda: self._handle_pivot_action_triggered(self.ui.actionValue))
@@ -1004,20 +1115,38 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         for dock in self._dock_views:
             dock.visibilityChanged.connect(self._restart_timer_refresh_tab_order)
         self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
+        for copy_paste_view in chain(
+            (
+                self.ui.treeView_entity,
+                self.ui.alternative_tree_view,
+                self.ui.scenario_tree_view,
+                self.ui.treeView_parameter_value_list,
+                self.ui.pivot_table,
+                self.ui.metadata_table_view,
+                self.ui.item_metadata_table_view,
+                self.ui.parameter_group_table_view,
+                self.ui.empty_parameter_group_table_view,
+            ),
+            self._all_stacked_models.values(),
+            self._all_empty_models.values(),
+        ):
+            copy_paste_view.selectionModel().selectionChanged.connect(self._refresh_copy_paste_actions)
 
     def init_models(self):
         super().init_models()
         self._metadata_editor.init_models(self.db_maps)
         self._item_metadata_editor.init_models(self.db_maps)
+        self._parameter_group_editor.init_models(self.db_maps)
 
     @Slot(bool)
-    def _restart_timer_refresh_tab_order(self, _visible=False):
+    def _restart_timer_refresh_tab_order(self, _visible: bool = False) -> None:
         if self._torn_down:
             return
-        self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.UniqueConnection)
+        self._timer_refresh_tab_order.timeout.connect(self._refresh_tab_order, Qt.ConnectionType.UniqueConnection)
         self._timer_refresh_tab_order.start(100)
 
-    def _refresh_tab_order(self):
+    @Slot()
+    def _refresh_tab_order(self) -> None:
         if self._torn_down:
             return
         self._timer_refresh_tab_order.timeout.disconnect(self._refresh_tab_order)
@@ -1027,9 +1156,9 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 continue
             if dock.pos().x() >= 0 and not dock.isFloating():
                 visible_docks.append(dock)
-                view.setFocusPolicy(Qt.StrongFocus)
+                view.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             else:
-                view.setFocusPolicy(Qt.ClickFocus)
+                view.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         if not visible_docks:
             return
         sorted_docks = sorted(visible_docks, key=lambda d: (d.pos().x(), d.pos().y()))
@@ -1063,7 +1192,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         for dock in self._dock_views:
             dock.setFloating(False)
             dock.setVisible(True)
-            self.addDockWidget(Qt.RightDockWidgetArea, dock)
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
     def update_last_view(self):
         self.qsettings.beginGroup(self.settings_group)
@@ -1090,12 +1219,12 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 continue
             if tab_bar.count() == 0 and tab_bar.isVisible():
                 tab_bar.hide()
-        qApp.processEvents()  # pylint: disable=undefined-variable
+        QApplication.processEvents()
         self.ui.dockWidget_exports.hide()
         self.resize(self._original_size)
 
-    @Slot(object)
-    def apply_stacked_style(self, _checked=None):
+    @Slot()
+    def apply_stacked_style(self) -> None:
         """Applies the stacked style, inspired in the former tree view."""
         if self.last_view:
             self.save_window_state()
@@ -1120,6 +1249,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         )
         self.tabify_and_raise([self.ui.dockWidget_parameter_value_list, self.ui.metadata_dock_widget])
         self.tabify_and_raise([self.ui.metadata_dock_widget, self.ui.item_metadata_dock_widget])
+        self.tabify_and_raise([self.ui.item_metadata_dock_widget, self.ui.parameter_group_dock_widget])
         self.ui.dockWidget_parameter_value_list.raise_()
         # center
         self.tabify_and_raise(
@@ -1127,6 +1257,7 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
                 self.ui.dockWidget_parameter_value,
                 self.ui.dockWidget_parameter_definition,
                 self.ui.dockWidget_entity_alternative,
+                self.ui.entity_dock_widget,
             ]
         )
         self.ui.dockWidget_pivot_table.hide()
@@ -1135,12 +1266,16 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.3 * width, 0.5 * width, 0.2 * width], Qt.Orientation.Horizontal)
 
-    @Slot(object)
-    def apply_pivot_style(self, _checked=None):
+    @Slot(QAction)
+    def apply_pivot_style(self, triggering_action_or_last_view: QAction | ViewType) -> None:
         """Applies the pivot style, inspired in the former tabular view."""
         if self.last_view:
             self.save_window_state()
-        self.last_view = _checked if isinstance(_checked, str) else _checked.text()
+        self.last_view = (
+            triggering_action_or_last_view
+            if isinstance(triggering_action_or_last_view, str)
+            else triggering_action_or_last_view.text()
+        )
         self.current_input_type = self.last_view
         self.begin_style_change()
         self.splitDockWidget(self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, Qt.Orientation.Horizontal)
@@ -1154,16 +1289,18 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.ui.dockWidget_parameter_value.hide()
         self.ui.dockWidget_parameter_definition.hide()
         self.ui.dockWidget_entity_alternative.hide()
+        self.ui.entity_dock_widget.hide()
         self.ui.metadata_dock_widget.hide()
         self.ui.item_metadata_dock_widget.hide()
+        self.ui.parameter_group_dock_widget.hide()
         docks = [self.ui.dockWidget_entity_tree, self.ui.dockWidget_pivot_table, self.ui.dockWidget_frozen_table]
         width = sum(d.size().width() for d in docks)
         self.resizeDocks(docks, [0.2 * width, 0.65 * width, 0.15 * width], Qt.Orientation.Horizontal)
         self.end_style_change()
         self.restore_ui(self.last_view)
 
-    @Slot(object)
-    def apply_graph_style(self, _checked=None):
+    @Slot()
+    def apply_graph_style(self) -> None:
         """Applies the graph style, inspired in the former graph view."""
         if self.last_view:
             self.save_window_state()
@@ -1185,6 +1322,8 @@ class SpineDBEditor(TabularViewMixin, GraphViewMixin, StackedViewMixin, TreeView
         self.restore_ui(self.last_view)
         self.ui.graphicsView.reset_zoom()
 
-    @staticmethod
-    def _get_base_dir():
-        return APPLICATION_PATH
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        if not event.isAccepted():
+            return
+        self._parameter_group_editor.tear_down()

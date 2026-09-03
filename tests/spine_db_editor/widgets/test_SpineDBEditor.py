@@ -11,16 +11,17 @@
 ######################################################################################################################
 
 """Unit tests for SpineDBEditor classes."""
+
 import pathlib
-import unittest
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, QModelIndex
+from PySide6.QtCore import QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QApplication, QMessageBox
 from spinedb_api import Duration
 from spinedb_api.helpers import name_from_elements
 from spinetoolbox.helpers import signal_waiter
+from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
 
@@ -35,13 +36,15 @@ class TestSpineDBEditor(DBEditorTestBase):
         fish_item = root_item.child(1)
         fish_index = self.spine_db_editor.entity_tree_model.index_from_item(fish_item)
         self.spine_db_editor.ui.treeView_entity.setCurrentIndex(fish_index)
-        self.spine_db_editor.ui.treeView_entity.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        self.spine_db_editor.ui.treeView_entity.selectionModel().select(
+            fish_index, QItemSelectionModel.SelectionFlag.Select
+        )
         # Check default in object parameter_definition
         model = self.spine_db_editor.empty_parameter_definition_model
         h = model.header.index
         row_data = []
         for row in range(model.rowCount()):
-            row_data.append(tuple(model.index(row, h(field)).data() for field in ("entity_class_name", "database")))
+            row_data.append(tuple(model.index(row, h(field)).data() for field in ("class", "database")))
         self.assertIn(("fish", self.db_codename), row_data)
 
     def test_save_window_state(self):
@@ -68,9 +71,9 @@ class TestSpineDBEditor(DBEditorTestBase):
         while self.spine_db_editor.parameter_value_model.rowCount() != 2:
             QApplication.processEvents()
         model = self.spine_db_editor.parameter_value_model
-        index = model.index(0, 1)
+        index = model.index(0, 2)
         self.assertEqual(index.data(), "nemo ǀ pluto")
-        self.assertEqual(model.index(1, 1).data(), "nemo ǀ scooby")
+        self.assertEqual(model.index(1, 2).data(), "nemo ǀ scooby")
         with mock.patch(
             "spinetoolbox.spine_db_editor.widgets.stacked_view_mixin.ElementNameListEditor"
         ) as editor_constructor:
@@ -140,8 +143,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["dog", None, None, None, None, None, self.db_codename],
-            ["dog", None, None, None, None, self.db_codename],
+            ["dog", None, None, None, None, None, None, self.db_codename],
+            [None, "dog", None, None, None, None, self.db_codename],
             ["dog", None, None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -170,8 +173,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["wolf", None, None, None, None, None, self.db_codename],
-            ["wolf", None, None, None, None, self.db_codename],
+            ["wolf", None, None, None, None, None, None, self.db_codename],
+            [None, "wolf", None, None, None, None, self.db_codename],
             ["wolf", None, None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -203,8 +206,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["fish", None, None, None, None, None, self.db_codename],
-            ["fish", "nemo", None, None, None, self.db_codename],
+            ["fish", None, None, None, None, None, None, self.db_codename],
+            [None, "fish", "nemo", None, None, None, self.db_codename],
             ["fish", "nemo", None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -239,8 +242,8 @@ class TestSpineDBEditor(DBEditorTestBase):
         ]
         expected_row_counts = [1, 1, 1]
         expected_empty_rows = [
-            ["fish", None, None, None, None, None, self.db_codename],
-            ["fish", "emon", None, None, None, self.db_codename],
+            ["fish", None, None, None, None, None, None, self.db_codename],
+            [None, "fish", "emon", None, None, None, self.db_codename],
             ["fish", "emon", None, None, self.db_codename],
         ]
         for model, expected_row_count, expected_empty_row in zip(models, expected_row_counts, expected_empty_rows):
@@ -249,6 +252,85 @@ class TestSpineDBEditor(DBEditorTestBase):
                 self.assertEqual(row_count, expected_row_count)
                 empty_row = [model.index(row_count - 1, col).data() for col in range(model.columnCount())]
                 self.assertEqual(empty_row, expected_empty_row)
+
+    def test_export_selected_entity_tree_items(self):
+        gadget_index, widget_index, check_box_index = self._prepare_selection_including_descriptions()
+        with mock.patch.object(self.spine_db_editor, "export_data") as mock_export_data:
+            self.spine_db_editor.ui.treeView_entity.selection_export_requested.emit()
+            mock_export_data.assert_called_once_with(
+                {
+                    self.mock_db_map: {
+                        "entity_class_ids": {
+                            gadget_index.data(ITEM_ID_ROLE)[self.mock_db_map],
+                            widget_index.data(ITEM_ID_ROLE)[self.mock_db_map],
+                        },
+                        "entity_ids": {check_box_index.data(ITEM_ID_ROLE)[self.mock_db_map]},
+                        "entity_group_ids": set(),
+                        "parameter_definition_ids": set(),
+                        "parameter_value_ids": set(),
+                        "parameter_value_list_ids": set(),
+                        "alternative_ids": set(),
+                        "scenario_ids": set(),
+                        "scenario_alternative_ids": set(),
+                    }
+                }
+            )
+
+    def test_open_dialog_to_remove_selected_entity_tree_items(self):
+        gadget_index, widget_index, check_box_index = self._prepare_selection_including_descriptions()
+        model = self.spine_db_editor.entity_tree_model
+        with mock.patch.object(self.spine_db_editor, "show_remove_entity_tree_items_form") as mock_show_dialog:
+            self.spine_db_editor.ui.treeView_entity.selection_removal_requested.emit()
+            mock_show_dialog.assert_called_once_with(
+                {
+                    "entity_class": [model.item_from_index(gadget_index), model.item_from_index(widget_index)],
+                    "entity": [model.item_from_index(check_box_index)],
+                }
+            )
+
+    def test_open_dialog_to_edit_selected_entity_tree_items(self):
+        gadget_index, widget_index, check_box_index = self._prepare_selection_including_descriptions()
+        model = self.spine_db_editor.entity_tree_model
+        with (
+            mock.patch.object(self.spine_db_editor, "show_edit_entity_classes_form") as mock_show_edit_classes_dialog,
+            mock.patch.object(self.spine_db_editor, "show_edit_entities_form") as mock_show_edit_entities_dialog,
+        ):
+            self.spine_db_editor.ui.treeView_entity.selection_edit_requested.emit()
+            mock_show_edit_classes_dialog.assert_called_once_with(
+                {model.item_from_index(gadget_index), model.item_from_index(widget_index)}
+            )
+            mock_show_edit_entities_dialog.assert_called_once_with({model.item_from_index(check_box_index)})
+
+    def _prepare_selection_including_descriptions(self):
+        with self.mock_db_map:
+            self.mock_db_map.add_entity_class(name="Widget")
+            self.mock_db_map.add_entity(name="button", entity_class_name="Widget")
+            self.mock_db_map.add_entity(name="check_box", entity_class_name="Widget")
+            self.mock_db_map.add_entity_class(name="Gadget")
+            self.mock_db_map.add_entity(name="wall_clock", entity_class_name="Gadget")
+        self.fetch_entity_tree_model()
+        model = self.spine_db_editor.entity_tree_model
+        root_index = model.index(0, 0)
+        gadget_index = model.index(0, 0, root_index)
+        gadget_description_index = model.index(0, 1, root_index)
+        self.assertEqual(gadget_index.data(), "Gadget")
+        widget_index = model.index(1, 0, root_index)
+        widget_description_index = model.index(1, 1, root_index)
+        self.assertEqual(widget_index.data(), "Widget")
+        check_box_index = model.index(1, 0, widget_index)
+        check_box_description_index = model.index(1, 1, widget_index)
+        self.assertEqual(check_box_index.data(), "check_box")
+        selection_model = self.spine_db_editor.ui.treeView_entity.selectionModel()
+        selection_model.select(
+            QItemSelection(gadget_index, gadget_description_index), QItemSelectionModel.SelectionFlag.ClearAndSelect
+        )
+        selection_model.select(
+            QItemSelection(widget_index, widget_description_index), QItemSelectionModel.SelectionFlag.Select
+        )
+        selection_model.select(
+            QItemSelection(check_box_index, check_box_description_index), QItemSelectionModel.SelectionFlag.Select
+        )
+        return gadget_index, widget_index, check_box_index
 
 
 class TestClosingDBEditors(TestCaseWithQApplication):
@@ -311,7 +393,3 @@ class TestClosingDBEditors(TestCaseWithQApplication):
             commit_changes.return_value = QMessageBox.StandardButton.Discard
             editor.close()
             commit_changes.assert_called_once()
-
-
-if __name__ == "__main__":
-    unittest.main()

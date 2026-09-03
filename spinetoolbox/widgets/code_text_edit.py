@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides simple text editor for programming purposes."""
+
 from pygments.lexers import get_lexer_by_name
 from pygments.styles import get_style_by_name
 from pygments.token import Token

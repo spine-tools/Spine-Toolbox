@@ -11,10 +11,12 @@
 ######################################################################################################################
 
 """Classes to represent entities in a tree."""
+
+from typing import TypeAlias
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QFont, QIcon
 from spinetoolbox.fetch_parent import FetchIndex, FlexibleFetchParent
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, plain_to_tool_tip
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_tool_tip
 from .multi_db_tree_item import MultiDBTreeItem
 
 
@@ -45,16 +47,18 @@ class EntityTreeRootItem(MultiDBTreeItem):
         self._has_children_initially = True
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.FontRole and column == 0:
+        if role == Qt.ItemDataRole.FontRole and column == 0:
             font = QFont()
             font.setBold(True)
             font.setUnderline(True)
             return font
         return super().data(column, role)
 
-    @property
-    def visible_children(self):
-        return [x for x in self._children if not x.is_hidden()]
+    def _compute_visible_children(self):
+        """See base class. Preserves the hide-empty-classes behaviour even with no level filter active."""
+        if not self.model.has_level_filters():
+            return [x for x in self._children if not x.is_hidden()]
+        return [x for x in self._children if not x.is_hidden() and self.model.item_is_visible(x)]
 
     @property
     def display_id(self):
@@ -90,12 +94,18 @@ class EntityTreeRootItem(MultiDBTreeItem):
             )
 
 
+EntityClassVisualKey: TypeAlias = tuple[str, tuple[str, ...], str | None]
+
+
 class EntityClassItem(MultiDBTreeItem):
     """An entity_class item."""
 
     visual_key = ["name", "dimension_name_list", "superclass_name"]
     item_type = "entity_class"
-    _fetch_index = EntityClassIndex()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._fetch_index = EntityClassIndex()
 
     @property
     def display_icon(self):
@@ -106,13 +116,19 @@ class EntityClassItem(MultiDBTreeItem):
     def child_item_class(self):
         return EntityItem
 
+    def _compute_visible_children(self):
+        """See base class. With no level filter active every child is visible (O(1) fast path)."""
+        if not self.model.has_level_filters():
+            return self._children
+        return [c for c in self._children if self.model.item_is_visible(c)]
+
     def is_hidden(self):
         return self.model.hide_empty_classes and not self.has_children()
 
     @property
     def _children_sort_key(self):
         """Reimplemented so groups are above non-groups."""
-        return lambda item: (not item.is_group, order_key("__".join(item.display_id[1]).casefold()))
+        return lambda item: (not item.is_group, order_key_from_names(i.casefold() for i in item.display_id[1]))
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -127,7 +143,7 @@ class EntityClassItem(MultiDBTreeItem):
         name = self.name
         superclass_name = self.db_map_data_field(self.first_db_map, "superclass_name")
         if superclass_name:
-            name += f"({superclass_name})"
+            name += f" ({superclass_name})"
         return name
 
     @property
@@ -145,7 +161,7 @@ class EntityClassItem(MultiDBTreeItem):
                 return bold_font
             if role == Qt.ItemDataRole.ForegroundRole:
                 if not self.has_children():
-                    return QBrush(Qt.gray)
+                    return QBrush(Qt.GlobalColor.gray)
         return super().data(column, role)
 
     def _key_for_index(self, db_map):
@@ -175,13 +191,13 @@ class EntityItem(MultiDBTreeItem):
 
     visual_key = ["entity_class_name", "entity_byname"]
     item_type = "entity"
-    _fetch_index = EntityIndex()
-    _entity_group_index = EntityGroupIndex()
 
     def __init__(self, *args, is_member=False, **kwargs):
         super().__init__(*args, **kwargs)
         self._is_group = False
         self._is_member = is_member
+        self._fetch_index = EntityIndex()
+        self._entity_group_index = EntityGroupIndex()
         self._entity_group_fetch_parent = FlexibleFetchParent(
             "entity_group",
             accepts_item=self._accepts_entity_group_item,
@@ -202,6 +218,12 @@ class EntityItem(MultiDBTreeItem):
     def child_item_class(self):
         """Child class is always :class:`EntityItem`."""
         return EntityItem
+
+    def _compute_visible_children(self):
+        """See base class. With no level filter active every child is visible (O(1) fast path)."""
+        if not self.model.has_level_filters():
+            return self._children
+        return [c for c in self._children if self.model.item_is_visible(c)]
 
     @property
     def display_icon(self):
@@ -286,7 +308,11 @@ class EntityItem(MultiDBTreeItem):
         return self.parent_item.name in self.element_name_list
 
     def _can_fetch_more_entity_groups(self):
-        return any(self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent) for db_map in self.db_maps)
+        result = False
+        for db_map in self.db_maps:
+            # Must loop over all fetch parents so they get registered.
+            result |= self.db_mngr.can_fetch_more(db_map, self._entity_group_fetch_parent)
+        return result
 
     def can_fetch_more(self):
         return self._can_fetch_more_entity_groups() or super().can_fetch_more()
@@ -333,6 +359,17 @@ class EntityItem(MultiDBTreeItem):
                 return
             self._is_group = False
             self.parent_item.reposition_child(self.child_number())
+
+    def _polish_children(self, children):
+        """See base class."""
+        db_map_entity_element_ids = {
+            db_map: {el_id for ent in self.db_mngr.get_items(db_map, "entity") for el_id in ent["element_id_list"]}
+            for db_map in self.db_maps
+        }
+        for child in children:
+            child.set_has_children_initially(
+                any(child.db_map_id(db_map) in db_map_entity_element_ids.get(db_map, ()) for db_map in child.db_maps)
+            )
 
     def tear_down(self):
         super().tear_down()

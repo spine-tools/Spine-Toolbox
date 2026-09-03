@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Tree items for parameter_value lists."""
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from spinetoolbox.mvcmodels.shared import PARSED_ROLE
@@ -90,6 +91,8 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
             return "Enter new list value here..."
         if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.EditRole, Qt.ItemDataRole.ToolTipRole, PARSED_ROLE):
             item = self.db_mngr.get_item(self.db_map, self.item_type, self.id)
+            if item is None:
+                return None
             return self.db_mngr.get_value(self.db_map, item, role=role)
         return super().data(column, role)
 
@@ -98,7 +101,10 @@ class ValueItem(GrayIfLastMixin, EditableMixin, LeafItem):
 
     def _make_item_to_add(self, value):
         db_value, db_type = value
-        index = 0 if self.child_number() == 0 else self.parent_item.child(self.child_number() - 1).list_index() + 1
+        # raw_row() and raw siblings (not child_number()/child()) because the DB index follows the
+        # unfiltered order; a list_value filter that hides siblings must not corrupt the computed index.
+        raw_row = self.raw_row()
+        index = 0 if raw_row == 0 else self.parent_item.children[raw_row - 1].list_index() + 1
         return {"value": db_value, "type": db_type, "parameter_value_list_id": self.parent_item.id, "index": index}
 
     def _make_item_to_update(self, _column, value):

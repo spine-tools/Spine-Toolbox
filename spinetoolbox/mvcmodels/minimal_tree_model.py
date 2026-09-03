@@ -11,9 +11,10 @@
 ######################################################################################################################
 
 """Models to represent items in a tree."""
+
 from __future__ import annotations
 from typing import Optional
-from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, Qt
 
 
 class TreeItem:
@@ -140,9 +141,6 @@ class TreeItem:
         Returns:
             bool: True if the children were inserted successfully, False otherwise
         """
-        bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
-        if bad_types:
-            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self).__name__}")
         if position < 0 or position > self.child_count():
             return False
         self._polish_children(children)
@@ -231,16 +229,43 @@ class TreeItem:
         raise NotImplementedError()
 
 
+class FilterableChildrenMixin:
+    """Routes Qt row access through a filtered ``visible_children`` view instead of raw ``children``.
+
+    Mixed into tree items that may hide some children behind a level/search filter. It captures only the
+    parts that are identical no matter *how* the visible list is cached: :meth:`row_count`/:meth:`child`
+    read the (subclass-cached) ``visible_children`` list, and :meth:`_compute_visible_children` is the
+    extension point that produces the filtered list (the base passes every child through).
+
+    ``visible_children`` and its caching/invalidation are deliberately left to the concrete item classes,
+    because their strategies differ (one memoizes on a ``filter_generation`` counter, the other rebuilds
+    alongside its child map). This mixin does NOT try to unify those.
+    """
+
+    def _compute_visible_children(self):
+        """Returns the children that pass the active filters. Overridden by filtering subclasses/items.
+
+        The base does no filtering, so all children are visible.
+        """
+        return self._children
+
+    def row_count(self):
+        """Overridden to count only visible children."""
+        return len(self.visible_children)
+
+    def child(self, row):
+        """Overridden to return the visible child at the given row or None if out of bounds."""
+        visible = self.visible_children
+        if 0 <= row < len(visible):
+            return visible[row]
+        return None
+
+
 class MinimalTreeModel(QAbstractItemModel):
     """Base class for all tree models."""
 
-    def __init__(self, parent):
-        """
-        Args:
-            parent (SpineDBEditor)
-        """
+    def __init__(self, parent: QObject):
         super().__init__(parent)
-        self._parent = parent
         self._invisible_root_item = TreeItem(self)
 
     def visit_all(self, index=QModelIndex(), view=None):
@@ -285,14 +310,14 @@ class MinimalTreeModel(QAbstractItemModel):
             visit_children = False  # To make sure we don't visit children again
             current = parent_item
 
-    def item_from_index(self, index):
+    def item_from_index(self, index: QModelIndex) -> TreeItem:
         """Return the item corresponding to the given index.
 
         Args:
-            index (QModelIndex): model index
+            index: model index
 
         Returns:
-            TreeItem: item at index
+            item at index
         """
         if index.isValid():
             return index.internalPointer()

@@ -55,7 +55,7 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="actionClose"/>
-    <addaction name="actionSet_description"/>
+    <addaction name="open_project_settings_action"/>
     <addaction name="separator"/>
     <addaction name="actionNew_DB_editor"/>
     <addaction name="separator"/>
@@ -69,6 +69,7 @@
     </property>
     <addaction name="actionUser_Guide"/>
     <addaction name="actionGetting_started"/>
+    <addaction name="open_spinedb_api_reference_action"/>
     <addaction name="actionGitHub"/>
     <addaction name="separator"/>
     <addaction name="actionAbout_Qt"/>
@@ -148,7 +149,7 @@
    <property name="minimumSize">
     <size>
      <width>82</width>
-     <height>104</height>
+     <height>106</height>
     </size>
    </property>
    <property name="features">
@@ -351,7 +352,7 @@
   <widget class="QDockWidget" name="dockWidget_item">
    <property name="minimumSize">
     <size>
-     <width>127</width>
+     <width>139</width>
      <height>101</height>
     </size>
    </property>
@@ -796,16 +797,16 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Close current project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
-  <action name="actionSet_description">
+  <action name="open_project_settings_action">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/menu_icons/exchange-alt.svg</normaloff>:/icons/menu_icons/exchange-alt.svg</iconset>
    </property>
    <property name="text">
-    <string>Set project description...</string>
+    <string>Project settings...</string>
    </property>
    <property name="toolTip">
-    <string>Modify or set project description</string>
+    <string>Open project settings dialog.</string>
    </property>
   </action>
   <action name="actionExecute_project">
@@ -906,6 +907,15 @@
    </property>
    <property name="text">
     <string>Start Julia</string>
+   </property>
+  </action>
+  <action name="open_spinedb_api_reference_action">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/question-circle.svg</normaloff>:/icons/menu_icons/question-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Spine DB API reference</string>
    </property>
   </action>
  </widget>

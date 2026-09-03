@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helper utilities for unit tests that test Database editor's table and tree views."""
+
 from types import MethodType
 from unittest import mock
 from PySide6.QtCore import QEvent, Qt
@@ -141,7 +142,7 @@ def select_item_with_index(view, index, extend=False):
     pos = rect.center()
     QTest.mouseClick(
         view.viewport(),
-        Qt.LeftButton,
+        Qt.MouseButton.LeftButton,
         modifier,
         pos,
     )

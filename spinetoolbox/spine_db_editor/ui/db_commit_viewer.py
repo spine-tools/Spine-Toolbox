@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'db_commit_viewer.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -40,19 +40,18 @@ class Ui_DBCommitViewer(object):
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.splitter = QSplitter(DBCommitViewer)
         self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
         self.commit_list = QTreeWidget(self.splitter)
         __qtreewidgetitem = QTreeWidgetItem()
-        __qtreewidgetitem.setText(0, u"1");
+        __qtreewidgetitem.setText(0, u"1")
         self.commit_list.setHeaderItem(__qtreewidgetitem)
         self.commit_list.setObjectName(u"commit_list")
         self.splitter.addWidget(self.commit_list)
         self.verticalFrame = QFrame(self.splitter)
         self.verticalFrame.setObjectName(u"verticalFrame")
-        self.verticalFrame.setStyleSheet(u"QFrame {\n"
-"  background-color: white;\n"
-"}")
-        self.verticalFrame.setFrameShape(QFrame.Box)
+        self.verticalFrame.setStyleSheet(u"")
+        self.verticalFrame.setFrameShape(QFrame.Shape.Box)
         self.verticalLayout = QVBoxLayout(self.verticalFrame)
         self.verticalLayout.setSpacing(3)
         self.verticalLayout.setObjectName(u"verticalLayout")
@@ -85,9 +84,9 @@ class Ui_DBCommitViewer(object):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.no_affected_items_notice = QTextBrowser(self.no_items_page)
         self.no_affected_items_notice.setObjectName(u"no_affected_items_notice")
-        self.no_affected_items_notice.setFocusPolicy(Qt.NoFocus)
-        self.no_affected_items_notice.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.no_affected_items_notice.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.no_affected_items_notice.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.no_affected_items_notice.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.no_affected_items_notice.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.no_affected_items_notice.setOpenLinks(False)
 
         self.horizontalLayout.addWidget(self.no_affected_items_notice)
@@ -101,7 +100,7 @@ class Ui_DBCommitViewer(object):
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.loading_label = QLabel(self.loading_page)
         self.loading_label.setObjectName(u"loading_label")
-        self.loading_label.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
+        self.loading_label.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
         self.horizontalLayout_4.addWidget(self.loading_label)
 
@@ -114,7 +113,7 @@ class Ui_DBCommitViewer(object):
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.label_2 = QLabel(self.no_commit_selected_page)
         self.label_2.setObjectName(u"label_2")
-        self.label_2.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
+        self.label_2.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignTop)
 
         self.verticalLayout_2.addWidget(self.label_2)
 

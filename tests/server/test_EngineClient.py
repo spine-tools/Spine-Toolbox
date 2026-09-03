@@ -11,12 +11,13 @@
 ######################################################################################################################
 
 """Contains tests for the EngineClient class."""
+
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import time
 import unittest
 from unittest import mock
-import time
 import zmq
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.execution_managers.persistent_execution_manager import PythonPersistentExecutionManager
@@ -180,7 +181,3 @@ class TestEngineClient(TestCaseWithQApplication):
             elapsed_t3 = client.get_elapsed_time()
             mock_t.assert_called()
             self.assertEqual("16 min 40.0 s", elapsed_t3)
-
-
-if __name__ == "__main__":
-    unittest.main()

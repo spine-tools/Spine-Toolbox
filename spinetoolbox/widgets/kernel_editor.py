@@ -11,8 +11,9 @@
 ######################################################################################################################
 
 """Widget for showing the progress of making a Julia or Python kernel."""
+
 import subprocess
-from PySide6.QtCore import Qt, Slot
+from PySide6.QtCore import Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QWidget, QPushButton
 from spine_engine.utils.helpers import (
@@ -35,6 +36,12 @@ from spinetoolbox.logger_interface import LoggerInterface
 
 class KernelEditorBase(QDialog):
     """Base class for kernel editors."""
+    msg = Signal(str)
+    msg_success = Signal(str)
+    msg_warning = Signal(str)
+    msg_proc = Signal(str)
+    msg_proc_error = Signal(str)
+    msg_error = Signal(str)
 
     def __init__(self, parent, models):
         """
@@ -60,7 +67,6 @@ class KernelEditorBase(QDialog):
         self._julia_project = ""
         self._julia_kernel_name_prefix = None  # This is a prefix, IJulia decides the final kernel name
         self._app_settings = self._parent.qsettings
-        self._logger = LoggerInterface(self)
         self._install_kernel_process = None
         self._install_package_process = None
         self._ipykernel_install_failed = False
@@ -72,6 +78,8 @@ class KernelEditorBase(QDialog):
         self._new_kernel_name = ""
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
+        for widget in self._cursors:
+            widget.setCursor(Qt.CursorShape.BusyCursor)
         self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
 
     def connect_signals(self):
@@ -212,10 +220,10 @@ class KernelEditorBase(QDialog):
         self._install_package_process = None
         if retval != 0:
             self._ipykernel_install_failed = True
-            self._logger.msg_error.emit("Failed")
+            self.add_process_error_message("Failed")
         else:
             self._ipykernel_install_failed = False
-            self._logger.msg_success.emit("Package installation succeeded.")
+            self.add_success_message("Package installation succeeded.")
         self.make_python_kernel()  # Try installing kernel specs now
 
     @busy_effect
@@ -341,16 +349,16 @@ class KernelEditorBase(QDialog):
         exec_mngr = QProcessExecutionManager(self._logger, self._julia_exe, args, silent=True)
         exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=8000):
-            self._logger.msg_error.emit(
+            self.add_process_error_message(
                 f"Couldn't start Julia to check IJulia status. "
                 f"Please make sure that Julia {self._julia_exe} is correctly installed and try again."
             )
-            self._logger.msg_error.emit("Failed")
+            self.add_process_error_message("Failed")
             return 0
         if exec_mngr.process_output == "True":
-            self._logger.msg.emit("IJulia is installed")
+            self.add_message("IJulia is installed")
             return 1
-        self._logger.msg_warning.emit("IJulia is not installed")
+        self.add_warning_message("IJulia is not installed")
         return 2
 
     @busy_effect
@@ -375,10 +383,10 @@ class KernelEditorBase(QDialog):
         self._install_ijulia_process.deleteLater()
         self._install_ijulia_process = None
         if ret != 0:
-            self._logger.msg_error.emit("Installing IJulia failed. Please try again later.")
+            self.add_process_error_message("Installing IJulia failed. Please try again later.")
             self._ready_to_install_kernel = False
             return
-        self._logger.msg_success.emit("IJulia installed")
+        self.add_success_message("IJulia installed")
         self._ready_to_install_kernel = True
         self.make_julia_kernel()
 
@@ -404,10 +412,10 @@ class KernelEditorBase(QDialog):
         self._rebuild_ijulia_process.deleteLater()
         self._rebuild_ijulia_process = None
         if ret != 0:
-            self._logger.msg_error.emit("Rebuilding IJulia failed. Please try again later.")
+            self.add_process_error_message("Rebuilding IJulia failed. Please try again later.")
             self._ready_to_install_kernel = False
             return
-        self._logger.msg_success.emit("IJulia rebuilt")
+        self.add_success_message("IJulia rebuilt")
         self._ready_to_install_kernel = True
         self.make_julia_kernel()
 
@@ -418,7 +426,7 @@ class KernelEditorBase(QDialog):
         uncapitalizes this to make the kernel name automatically. Julia version is
         concatenated to both kernel and display names automatically (This cannot be changed).
         """
-        self._logger.msg.emit("Installing Julia kernel")
+        self.add_message("Installing Julia kernel")
         args = [
             f"--project={self._julia_project}",
             "-e",

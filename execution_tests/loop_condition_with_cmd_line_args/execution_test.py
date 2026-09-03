@@ -24,7 +24,8 @@ class LoopConditionWithCmdLineArgs(unittest.TestCase):
             database_path.parent.mkdir(parents=True, exist_ok=True)
             if database_path.exists():
                 database_path.unlink()
-            create_new_spine_database(url)
+            engine = create_new_spine_database(url)
+            engine.dispose()
 
     def test_execution(self):
         completed = subprocess.run((sys.executable, "-m", "spinetoolbox", "--execute-only", str(self._root_path)))
@@ -33,15 +34,17 @@ class LoopConditionWithCmdLineArgs(unittest.TestCase):
             value_rows = db_map.query(db_map.parameter_value_sq).all()
             self.assertEqual(len(value_rows), 1)
             loop_counter = from_database(value_rows[0].value, value_rows[0].type)
+        db_map.close()
         self.assertEqual(loop_counter, 20.0)
         with DatabaseMapping(self._output_database_url) as db_map:
             value_rows = db_map.query(db_map.parameter_value_sq).all()
             self.assertEqual(len(value_rows), 1)
             output_value = from_database(value_rows[0].value, value_rows[0].type)
+        db_map.close()
         expected_x = [f"T{i:03}" for i in range(31)]
         expected_y = [float(i) for i in range(31)]
         self.assertEqual(output_value, Map(expected_x, expected_y))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

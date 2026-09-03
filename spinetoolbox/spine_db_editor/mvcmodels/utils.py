@@ -11,56 +11,110 @@
 ######################################################################################################################
 
 """General helper functions and classes for DB editor's models."""
+
+from collections.abc import Callable, Sequence
 import csv
+from dataclasses import dataclass
 from io import StringIO
-from typing import Optional
-from PySide6.QtCore import QModelIndex, QSize
+from itertools import takewhile
+import re
+from typing import TYPE_CHECKING, Optional, TypeAlias
+from PySide6.QtCore import QModelIndex
 from spinedb_api import DatabaseMapping, SpineDBAPIError
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.temp_id import TempId
-from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 
-PARAMETER_DEFINITION_MODEL_HEADER = [
-    "entity_class_name",
-    "parameter_name",
-    "valid types",
-    "value_list_name",
-    "default_value",
-    "description",
-    "database",
-]
-PARAMETER_DEFINITION_FIELD_MAP = {
-    "parameter_name": "name",
+if TYPE_CHECKING:
+    from spinetoolbox.spine_db_editor.mvcmodels.compound_models import CompoundStackedModel
+
+FilterIds: TypeAlias = dict[tuple[DatabaseMapping, TempId], set[TempId]]
+
+
+def make_search_matcher(pattern: str) -> Callable[[str], bool]:
+    """Builds a predicate for a regex search pattern shared by the stacked and tree filters.
+
+    Uses a case-insensitive regex; on an invalid pattern falls back to a case-insensitive substring
+    match so rows/nodes do not vanish erratically while a pattern is being typed.
+
+    Args:
+        pattern: raw pattern text
+
+    Returns:
+        a predicate that returns whether a string matches the pattern
+    """
+    try:
+        regex = re.compile(pattern, re.IGNORECASE)
+    except re.error:
+        needle = pattern.casefold()
+        return lambda text: needle in text.casefold()
+    return lambda text: regex.search(text) is not None
+
+
+@dataclass
+class Matcher:
+    """A regex search filter: its raw pattern text and the predicate built from it."""
+
+    pattern: str
+    matcher: Callable[[str], bool]
+
+
+PARAMETER_DEFINITION_FIELD_MAP: dict[str, str] = {
+    "class": "entity_class_name",
+    "parameter name": "name",
     "valid types": "parameter_type_list",
-    "value_list_name": "parameter_value_list_name",
+    "value list": "parameter_value_list_name",
+    "default value": "default_value",
+    "description": "description",
+    "group": "parameter_group_name",
+    "database": "database",
 }
-PARAMETER_VALUE_MODEL_HEADER = [
-    "entity_class_name",
-    "entity_byname",
-    "parameter_name",
-    "alternative_name",
-    "value",
-    "database",
-]
-PARAMETER_VALUE_FIELD_MAP = {"parameter_name": "parameter_definition_name"}
-ENTITY_ALTERNATIVE_MODEL_HEADER = [
-    "entity_class_name",
-    "entity_byname",
-    "alternative_name",
-    "active",
-    "database",
-]
+PARAMETER_VALUE_FIELD_MAP: dict[str, str] = {
+    "group": "parameter_group_name",
+    "class": "entity_class_name",
+    "entity byname": "entity_byname",
+    "parameter name": "parameter_definition_name",
+    "alternative": "alternative_name",
+    "value": "value",
+    "database": "database",
+}
+ENTITY_ALTERNATIVE_FIELD_MAP: dict[str, str] = {
+    "class": "entity_class_name",
+    "entity byname": "entity_byname",
+    "alternative": "alternative_name",
+    "active": "active",
+    "database": "database",
+}
+ENTITY_FIELD_MAP: dict[str, str] = {
+    "class": "entity_class_name",
+    "name": "name",
+    "byname": "entity_byname",
+    "description": "description",
+    "latitude": "lat",
+    "longitude": "lon",
+    "altitude": "alt",
+    "shape name": "shape_name",
+    "shape blob": "shape_blob",
+    "database": "database",
+}
+
+PARAMETER_GROUP_FIELD_MAP: dict[str, str] = {
+    "name": "name",
+    "color": "color",
+    "priority": "priority",
+    "database": "database",
+}
 
 
-def two_column_as_csv(indexes):
+def two_column_as_csv(indexes: Sequence[QModelIndex]) -> str:
     """Writes data in given indexes into a CSV table.
 
     Expects the source table to have two columns.
 
     Args:
-        indexes (Sequence of QModelIndex): model indexes
+        indexes: model indexes
 
     Returns:
-        str: data as CSV table
+        data as CSV table
     """
     first_column = indexes[0].column()
     single_column = all(i.column() == first_column for i in indexes[1:])
@@ -79,8 +133,10 @@ def two_column_as_csv(indexes):
 
 
 def entity_class_id_for_row(index: QModelIndex, db_map: DatabaseMapping) -> Optional[TempId]:
-    model: MinimalTableModel = index.model()
-    entity_class_name = index.sibling(index.row(), model.header.index("entity_class_name")).data()
+    model: CompoundStackedModel = index.model()
+    entity_class_name = index.sibling(
+        index.row(), model.header.index(model.field_to_header("entity_class_name"))
+    ).data()
     try:
         entity_class = db_map.entity_class(name=entity_class_name)
     except SpineDBAPIError:
@@ -88,14 +144,7 @@ def entity_class_id_for_row(index: QModelIndex, db_map: DatabaseMapping) -> Opti
     return entity_class["id"]
 
 
-def height_limited_size_hint(size_hint: QSize, parent_size: QSize) -> QSize:
-    max_height = parent_size.height() // 2
-    if size_hint.height() > max_height:
-        size_hint.setHeight(max_height)
-    return size_hint
-
-
-def make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optional[dict], list[str]]:
+def make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optional[PublicItem], list[str]]:
     """Returns a database entity item (id-based) from the given model parameter_value item (name-based).
 
     Args:
@@ -114,3 +163,14 @@ def make_entity_on_the_fly(item: dict, db_map: DatabaseMapping) -> tuple[Optiona
         return None, []
     item = {"entity_class_name": entity_class_name, "entity_byname": entity_byname}
     return None if db_map.get_item("entity", **item) else item, []
+
+
+def field_index(field: str, field_map: dict[str, str]) -> int:
+    index = len(list(takewhile(lambda x: x != field, field_map.values())))
+    if index == len(field_map):
+        raise RuntimeError(f"field {field} not found")
+    return index
+
+
+def field_header(field: str, field_map: dict[str, str]) -> str:
+    return next(header for header, mapped_field in field_map.items() if mapped_field == field)

@@ -11,9 +11,12 @@
 ######################################################################################################################
 
 """Widget for controlling user settings."""
+
 import os
-from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Signal, Slot
-from PySide6.QtGui import QIcon, QPixmap
+import pathlib
+import shutil
+from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Signal, Slot, QUrl
+from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
     get_julia_env,
@@ -22,9 +25,11 @@ from spine_engine.utils.helpers import (
     resolve_default_julia_executable,
     resolve_gams_executable,
 )
-from ..config import DEFAULT_WORK_DIR, SETTINGS_SS
+from ..config import DEFAULT_WORK_DIR
+from ..file_size_aggregator import AggregatorProcess
 from ..helpers import (
     dir_is_valid,
+    display_byte_size,
     file_is_valid,
     get_current_item,
     get_current_item_data,
@@ -64,12 +69,13 @@ class SettingsWidgetBase(QWidget):
         from ..ui.settings import Ui_SettingsForm  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
-        # Set up the ui from Qt Designer files
         self._qsettings = qsettings
         self.ui = Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.CustomizeWindowHint)
-        self.setStyleSheet(SETTINGS_SS)
+        self.setStyleSheet(
+            "QGroupBox { margin-top: 0.5em; }" "QGroupBox::title { top: -8px; left: 10px; padding: 0 3px; }"
+        )
         self._mouse_press_pos = None
         self._mouse_release_pos = None
         self._mouse_move_pos = None
@@ -331,9 +337,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
+        #
+        self.ui.lineEdit_work_dir.textChanged.connect(self._handle_work_directory_changed)
         self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
         self._update_julia_widgets_enabled(self.ui.radioButton_use_julia_jupyter_console.isChecked())
         self._update_remote_execution_page_widget_status(self.ui.checkBox_enable_remote_exec.isChecked())
+        self._work_directory_size_aggregator = AggregatorProcess(self)
+        self._work_directory_size_aggregator.aggregated.connect(self.set_work_directory_size)
+        work_directory = self.ui.lineEdit_work_dir.text()
+        self._handle_work_directory_changed(work_directory)
 
     def connect_signals(self):
         """Connect signals."""
@@ -380,6 +392,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.user_defined_persistent_process_limit_radio_button.toggled.connect(
             self.ui.persistent_process_limit_spin_box.setEnabled
         )
+        self.ui.open_work_dir_button.clicked.connect(self._open_work_directory)
+        self.ui.work_dir_cleanup_button.clicked.connect(self._clean_work_directory)
 
     @Slot(bool)
     def _update_python_widgets_enabled(self, state):
@@ -579,27 +593,55 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         global_pos = self.ui.comboBox_python_kernels.mapToGlobal(pos)
         self._show_python_context_menu(self.ui.comboBox_python_kernels, global_pos, data)
 
+    @Slot()
+    def _open_python_kernel_resource_dir(self) -> None:
+        """Opens Python kernels resource dir."""
+        try:
+            index = self.ui.comboBox_python_kernel.view().selectedIndexes()[0]
+            item = self._python_kernel_model.item(index.row())
+        except IndexError:
+            row = self.ui.comboBox_python_kernel.currentIndex()
+            item = self._python_kernel_model.item(row)
+        self.open_rsc_dir(item)
+
+    @Slot()
+    def _open_julia_kernel_resource_dir(self) -> None:
+        """Opens Julia kernels resource dir."""
+        try:
+            index = self.ui.comboBox_julia_kernel.view().selectedIndexes()[0]
+            item = self._julia_kernel_model.item(index.row())
+        except IndexError:
+            row = self.ui.comboBox_julia_kernel.currentIndex()
+            item = self._julia_kernel_model.item(row)
+        self.open_rsc_dir(item)
+
+    def open_rsc_dir(self, item):
+        """Open path hidden in given item's tooltip in file browser."""
+        resource_dir = item.toolTip()
+        if not os.path.exists(resource_dir):
+            Notification(self, f"Path '{resource_dir}' does not exist").show()
+
     def _show_python_context_menu(self, menu_parent, global_pos, data):
         """Creates and shows the context menu for both python interpreters and kernels comboBoxes."""
         if not data:
             return
-        m = QMenu(menu_parent)
-        if not data["is_jupyter"]:
-            m.addAction(
-                QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter
-            )
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open containing folder...",
-                self._open_python_interpreter_dir,
-            )
-        else:
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open resource folder...",
-                self._open_python_kernel_resource_dir,
-            )
-        m.popup(global_pos)
+            m = QMenu(menu_parent)
+            if not data["is_jupyter"]:
+                m.addAction(
+                    QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter
+                )
+                m.addAction(
+                    QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                    "Open containing folder...",
+                    self._open_python_interpreter_dir,
+                )
+            else:
+                m.addAction(
+                    QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                    "Open resource folder...",
+                    self._open_python_kernel_resource_dir,
+                )
+            m.popup(global_pos)
 
     @Slot(int)
     def _set_combobox_tooltip(self, row):
@@ -679,7 +721,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         prevent_overlapping = self._qsettings.value("appSettings/preventOverlapping", defaultValue="false")
         data_flow_anim_dur = int(self._qsettings.value("appSettings/dataFlowAnimationDuration", defaultValue="100"))
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
-        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
+        theme = self._qsettings.value("appSettings/theme", defaultValue="os")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_julia_jupyter_console = self._qsettings.value("appSettings/useJuliaKernel", defaultValue="0")
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
@@ -728,10 +770,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             self.ui.radioButton_bg_tree.setChecked(True)
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
-        if bg_color == "false":
-            pass
+        if theme == "light":
+            self.ui.radioButton_theme_light.setChecked(True)
+        elif theme == "dark":
+            self.ui.radioButton_theme_dark.setChecked(True)
         else:
-            self.bg_color = bg_color
+            self.ui.radioButton_theme_os.setChecked(True)
         self.update_bg_color()
         self.ui.lineEdit_gams_path.setPlaceholderText(resolve_gams_executable(""))
         self.ui.lineEdit_gams_path.setText(gams_path)
@@ -881,7 +925,19 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             bg_choice = "solid"
         self._qsettings.setValue("appSettings/bgChoice", bg_choice)
-        self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        if self.ui.radioButton_theme_light.isChecked():
+            theme = "light"
+        elif self.ui.radioButton_theme_dark.isChecked():
+            theme = "dark"
+        else:
+            theme = "os"
+        old_theme = self._qsettings.value("appSettings/theme", defaultValue="os")
+        if theme != old_theme:
+            # Reset bg color to palette default when theme changes
+            self._qsettings.remove("appSettings/bgColor")
+        else:
+            self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        self._qsettings.setValue("appSettings/theme", theme)
         save_spec = str(self.ui.checkBox_save_spec_before_closing.checkState().value)
         self._qsettings.setValue("appSettings/saveSpecBeforeClosing", save_spec)
         spec_show_undo = str(self.ui.checkBox_spec_show_undo.checkState().value)
@@ -1027,12 +1083,61 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if self.orig_work_dir != new_work_dir:
             self._toolbox.set_work_directory(new_work_dir)
 
+    @Slot(bool)
+    def _open_work_directory(self, _=True) -> None:
+        work_dir = self.ui.lineEdit_work_dir.text()
+        if not work_dir:
+            work_dir = DEFAULT_WORK_DIR
+        QDesktopServices.openUrl(QUrl.fromLocalFile(work_dir))
+
+    @Slot(str)
+    def _handle_work_directory_changed(self, work_directory: str) -> None:
+        if not work_directory:
+            work_directory = DEFAULT_WORK_DIR
+        dir_exists = os.path.exists(work_directory)
+        self.ui.open_work_dir_button.setEnabled(dir_exists)
+        self.ui.work_dir_cleanup_button.setEnabled(dir_exists)
+        if dir_exists:
+            self.ui.work_dir_info_label.setText("Calculating directory size...")
+            self._work_directory_size_aggregator.start_aggregating([work_directory])
+        else:
+            self.ui.work_dir_info_label.setText("Cannot find work directory.")
+
+    @Slot(str)
+    def set_work_directory_size(self, size: int | str) -> None:
+        if isinstance(size, str):
+            size = int(size)
+        rounded_size, unit = display_byte_size(size)
+        self.ui.work_dir_info_label.setText(f"Work directory size: {rounded_size}{unit}")
+
+    @Slot(bool)
+    def _clean_work_directory(self, _: bool = True) -> None:
+        message_box = QMessageBox(
+            QMessageBox.Icon.Warning,
+            "Confirm work directory cleanup",
+            "All work directory content will be deleted. Are you sure?",
+            parent=self,
+        )
+        yes_button = message_box.addButton("Delete all content", QMessageBox.ButtonRole.YesRole)
+        cancel_button = message_box.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
+        message_box.setDefaultButton(cancel_button)
+        message_box.exec_()
+        if message_box.clickedButton() is yes_button:
+            work_directory = self.ui.lineEdit_work_dir.text()
+            if not work_directory:
+                work_directory = DEFAULT_WORK_DIR
+            for path in pathlib.Path(work_directory).iterdir():
+                if path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
+                elif path.is_file():
+                    path.unlink()
+            self._handle_work_directory_changed(work_directory)
+
     def update_ui(self):
         super().update_ui()
         curved_links = self._qsettings.value("appSettings/curvedLinks", defaultValue="false")
         rounded_items = self._qsettings.value("appSettings/roundedItems", defaultValue="false")
         bg_choice = self._qsettings.value("appSettings/bgChoice", defaultValue="solid")
-        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         color_toolbar_icons = self._qsettings.value("appSettings/colorToolbarIcons", defaultValue="false")
         self.set_toolbar_colored_icons(color_toolbar_icons == "true")
         self.update_links_geometry(curved_links == "true")
@@ -1044,8 +1149,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         else:
             self.ui.radioButton_bg_solid.setChecked(True)
         self.update_scene_bg()
-        if not bg_color == "false":
-            self.bg_color = bg_color
         self.update_bg_color()
 
     @Slot(str)
@@ -1249,5 +1352,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def closeEvent(self, ev):
         self._models.stop_fetching_julia_kernels()
         self._models.stop_fetching_python_kernels()
+        self._work_directory_size_aggregator.tear_down()
         super().closeEvent(ev)
         self._toolbox.update_properties_ui()

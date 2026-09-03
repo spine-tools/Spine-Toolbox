@@ -11,10 +11,18 @@
 ######################################################################################################################
 
 """Helper utilities for Database editor's tests."""
+
 from unittest import mock
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication
+
+
+def fetch_entity_tree_model(db_editor):
+    for item in db_editor.entity_tree_model.visit_all():
+        while item.can_fetch_more():
+            item.fetch_more()
+            QApplication.processEvents()
 
 
 class TestBase(TestCaseWithQApplication):
@@ -58,7 +66,8 @@ class TestBase(TestCaseWithQApplication):
         self._db_editor.deleteLater()
         self._db_editor = None  # pylint: disable=attribute-defined-outside-init
 
-    def _commit_changes_to_database(self, commit_message):
-        with mock.patch.object(self._db_editor, "_get_commit_msg") as commit_msg:
-            commit_msg.return_value = commit_message
-            self._db_editor.ui.actionCommit.trigger()
+
+def commit_changes_to_database(commit_message: str, db_editor: SpineDBEditor) -> None:
+    with mock.patch.object(db_editor, "_get_commit_msg") as commit_msg:
+        commit_msg.return_value = commit_message
+        db_editor.ui.actionCommit.trigger()

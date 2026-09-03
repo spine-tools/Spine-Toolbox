@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Qt-based thread pool executor."""
+
 import os
 from PySide6.QtCore import QMutex, QSemaphore, QThread
 

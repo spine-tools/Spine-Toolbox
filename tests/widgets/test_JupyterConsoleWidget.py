@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the JupyterConsoleWidget."""
+
 import queue
 from threading import Event
 from unittest import mock
@@ -85,7 +86,6 @@ class TestJupyterConsoleWidget(TestCaseWithQApplication):
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
 
     def test_connect_jcw_to_kernel_manager_on_engine(self):
-        QApplication.clipboard().clear()
         self.assertEqual(0, _kernel_manager_factory.n_kernel_managers())
         jcw = JupyterConsoleWidget(self.toolbox, NATIVE_KERNEL_NAME)
         connection_file = jcw.request_start_kernel()

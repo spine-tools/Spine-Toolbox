@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -43,13 +43,13 @@ class Ui_SettingsForm(object):
         if not SettingsForm.objectName():
             SettingsForm.setObjectName(u"SettingsForm")
         SettingsForm.setWindowModality(Qt.WindowModality.ApplicationModal)
-        SettingsForm.resize(783, 692)
+        SettingsForm.resize(783, 800)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(SettingsForm.sizePolicy().hasHeightForWidth())
         SettingsForm.setSizePolicy(sizePolicy)
-        SettingsForm.setMinimumSize(QSize(500, 350))
+        SettingsForm.setMinimumSize(QSize(700, 800))
         SettingsForm.setMaximumSize(QSize(16777215, 16777215))
         SettingsForm.setMouseTracking(False)
         SettingsForm.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -65,24 +65,24 @@ class Ui_SettingsForm(object):
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem.setIcon(icon);
-        __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
+        __qlistwidgetitem.setIcon(icon)
+        __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled)
         icon1 = QIcon()
         icon1.addFile(u":/icons/project_item_icons/hammer.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem1 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem1.setIcon(icon1);
+        __qlistwidgetitem1.setIcon(icon1)
         icon2 = QIcon()
         icon2.addFile(u":/icons/database.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem2 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem2.setIcon(icon2);
+        __qlistwidgetitem2.setIcon(icon2)
         icon3 = QIcon()
         icon3.addFile(u":/icons/wrench.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem3.setIcon(icon3);
+        __qlistwidgetitem3.setIcon(icon3)
         icon4 = QIcon()
         icon4.addFile(u":/icons/tractor.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem4.setIcon(icon4);
+        __qlistwidgetitem4.setIcon(icon4)
         self.listWidget.setObjectName(u"listWidget")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(1)
@@ -131,6 +131,74 @@ class Ui_SettingsForm(object):
         self.gridLayout = QGridLayout(self.groupBox_general)
         self.gridLayout.setSpacing(6)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.checkBox_delete_data = QCheckBox(self.groupBox_general)
+        self.checkBox_delete_data.setObjectName(u"checkBox_delete_data")
+
+        self.gridLayout.addWidget(self.checkBox_delete_data, 2, 0, 1, 1)
+
+        self.checkBox_exit_prompt = QCheckBox(self.groupBox_general)
+        self.checkBox_exit_prompt.setObjectName(u"checkBox_exit_prompt")
+        self.checkBox_exit_prompt.setTristate(False)
+
+        self.gridLayout.addWidget(self.checkBox_exit_prompt, 4, 0, 1, 1)
+
+        self.formLayout_2 = QFormLayout()
+        self.formLayout_2.setObjectName(u"formLayout_2")
+        self.label_2 = QLabel(self.groupBox_general)
+        self.label_2.setObjectName(u"label_2")
+
+        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_2)
+
+        self.project_save_options_combo_box = QComboBox(self.groupBox_general)
+        self.project_save_options_combo_box.addItem("")
+        self.project_save_options_combo_box.addItem("")
+        self.project_save_options_combo_box.setObjectName(u"project_save_options_combo_box")
+
+        self.formLayout_2.setWidget(0, QFormLayout.ItemRole.FieldRole, self.project_save_options_combo_box)
+
+
+        self.gridLayout.addLayout(self.formLayout_2, 5, 0, 1, 1)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.open_work_dir_button = QPushButton(self.groupBox_general)
+        self.open_work_dir_button.setObjectName(u"open_work_dir_button")
+
+        self.horizontalLayout_3.addWidget(self.open_work_dir_button)
+
+        self.work_dir_info_label = QLabel(self.groupBox_general)
+        self.work_dir_info_label.setObjectName(u"work_dir_info_label")
+
+        self.horizontalLayout_3.addWidget(self.work_dir_info_label)
+
+        self.work_dir_cleanup_button = QPushButton(self.groupBox_general)
+        self.work_dir_cleanup_button.setObjectName(u"work_dir_cleanup_button")
+
+        self.horizontalLayout_3.addWidget(self.work_dir_cleanup_button)
+
+        self.horizontalSpacer_9 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_9)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout_3, 15, 0, 1, 1)
+
+        self.checkBox_custom_open_project_dialog = QCheckBox(self.groupBox_general)
+        self.checkBox_custom_open_project_dialog.setObjectName(u"checkBox_custom_open_project_dialog")
+        self.checkBox_custom_open_project_dialog.setChecked(False)
+
+        self.gridLayout.addWidget(self.checkBox_custom_open_project_dialog, 1, 0, 1, 1)
+
+        self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
+        self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
+        self.checkBox_open_previous_project.setSizePolicy(sizePolicy4)
+
+        self.gridLayout.addWidget(self.checkBox_open_previous_project, 3, 0, 1, 1)
+
         self.horizontalLayout_6 = QHBoxLayout()
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
         self.label = QLabel(self.groupBox_general)
@@ -147,11 +215,11 @@ class Ui_SettingsForm(object):
 
         self.toolButton_browse_work = QToolButton(self.groupBox_general)
         self.toolButton_browse_work.setObjectName(u"toolButton_browse_work")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
-        self.toolButton_browse_work.setSizePolicy(sizePolicy4)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
+        self.toolButton_browse_work.setSizePolicy(sizePolicy5)
         icon5 = QIcon()
         icon5.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.toolButton_browse_work.setIcon(icon5)
@@ -160,50 +228,6 @@ class Ui_SettingsForm(object):
 
 
         self.gridLayout.addLayout(self.horizontalLayout_6, 13, 0, 1, 1)
-
-        self.formLayout_2 = QFormLayout()
-        self.formLayout_2.setObjectName(u"formLayout_2")
-        self.label_2 = QLabel(self.groupBox_general)
-        self.label_2.setObjectName(u"label_2")
-
-        self.formLayout_2.setWidget(0, QFormLayout.LabelRole, self.label_2)
-
-        self.project_save_options_combo_box = QComboBox(self.groupBox_general)
-        self.project_save_options_combo_box.addItem("")
-        self.project_save_options_combo_box.addItem("")
-        self.project_save_options_combo_box.setObjectName(u"project_save_options_combo_box")
-
-        self.formLayout_2.setWidget(0, QFormLayout.FieldRole, self.project_save_options_combo_box)
-
-
-        self.gridLayout.addLayout(self.formLayout_2, 5, 0, 1, 1)
-
-        self.checkBox_custom_open_project_dialog = QCheckBox(self.groupBox_general)
-        self.checkBox_custom_open_project_dialog.setObjectName(u"checkBox_custom_open_project_dialog")
-        self.checkBox_custom_open_project_dialog.setChecked(False)
-
-        self.gridLayout.addWidget(self.checkBox_custom_open_project_dialog, 1, 0, 1, 1)
-
-        self.checkBox_delete_data = QCheckBox(self.groupBox_general)
-        self.checkBox_delete_data.setObjectName(u"checkBox_delete_data")
-
-        self.gridLayout.addWidget(self.checkBox_delete_data, 2, 0, 1, 1)
-
-        self.checkBox_exit_prompt = QCheckBox(self.groupBox_general)
-        self.checkBox_exit_prompt.setObjectName(u"checkBox_exit_prompt")
-        self.checkBox_exit_prompt.setTristate(False)
-
-        self.gridLayout.addWidget(self.checkBox_exit_prompt, 4, 0, 1, 1)
-
-        self.checkBox_open_previous_project = QCheckBox(self.groupBox_general)
-        self.checkBox_open_previous_project.setObjectName(u"checkBox_open_previous_project")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())
-        self.checkBox_open_previous_project.setSizePolicy(sizePolicy5)
-
-        self.gridLayout.addWidget(self.checkBox_open_previous_project, 3, 0, 1, 1)
 
 
         self.verticalLayout_6.addWidget(self.groupBox_general)
@@ -229,10 +253,11 @@ class Ui_SettingsForm(object):
 
         self.formLayout = QFormLayout()
         self.formLayout.setObjectName(u"formLayout")
+        self.formLayout.setVerticalSpacing(6)
         self.label_7 = QLabel(self.groupBox_ui)
         self.label_7.setObjectName(u"label_7")
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_7)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_7)
 
         self.frame_2 = QFrame(self.groupBox_ui)
         self.frame_2.setObjectName(u"frame_2")
@@ -273,12 +298,12 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_4.addWidget(self.toolButton_bg_color)
 
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.frame_2)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.frame_2)
 
         self.label_4 = QLabel(self.groupBox_ui)
         self.label_4.setObjectName(u"label_4")
 
-        self.formLayout.setWidget(1, QFormLayout.LabelRole, self.label_4)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.LabelRole, self.label_4)
 
         self.frame_1 = QFrame(self.groupBox_ui)
         self.frame_1.setObjectName(u"frame_1")
@@ -314,7 +339,48 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_17.addWidget(self.label_8)
 
 
-        self.formLayout.setWidget(1, QFormLayout.FieldRole, self.frame_1)
+        self.formLayout.setWidget(1, QFormLayout.ItemRole.FieldRole, self.frame_1)
+
+        self.label_theme = QLabel(self.groupBox_ui)
+        self.label_theme.setObjectName(u"label_theme")
+
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.LabelRole, self.label_theme)
+
+        self.frame_theme = QFrame(self.groupBox_ui)
+        self.frame_theme.setObjectName(u"frame_theme")
+        self.frame_theme.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_theme.setFrameShadow(QFrame.Shadow.Sunken)
+        self.horizontalLayout_theme = QHBoxLayout(self.frame_theme)
+        self.horizontalLayout_theme.setObjectName(u"horizontalLayout_theme")
+        self.horizontalLayout_theme.setContentsMargins(0, 0, 0, 0)
+        self.radioButton_theme_os = QRadioButton(self.frame_theme)
+        self.radioButton_theme_os.setObjectName(u"radioButton_theme_os")
+        self.radioButton_theme_os.setChecked(True)
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_os)
+
+        self.radioButton_theme_light = QRadioButton(self.frame_theme)
+        self.radioButton_theme_light.setObjectName(u"radioButton_theme_light")
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_light)
+
+        self.radioButton_theme_dark = QRadioButton(self.frame_theme)
+        self.radioButton_theme_dark.setObjectName(u"radioButton_theme_dark")
+
+        self.horizontalLayout_theme.addWidget(self.radioButton_theme_dark)
+
+        self.label_theme_restart = QLabel(self.frame_theme)
+        self.label_theme_restart.setObjectName(u"label_theme_restart")
+        self.label_theme_restart.setEnabled(True)
+
+        self.horizontalLayout_theme.addWidget(self.label_theme_restart)
+
+        self.horizontalSpacer_theme = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_theme.addItem(self.horizontalSpacer_theme)
+
+
+        self.formLayout.setWidget(2, QFormLayout.ItemRole.FieldRole, self.frame_theme)
 
 
         self.gridLayout_2.addLayout(self.formLayout, 8, 0, 1, 1)
@@ -415,24 +481,24 @@ class Ui_SettingsForm(object):
         self.groupBox_julia.setObjectName(u"groupBox_julia")
         self.verticalLayout_5 = QVBoxLayout(self.groupBox_julia)
         self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.horizontalLayout_31 = QHBoxLayout()
+        self.horizontalLayout_31.setObjectName(u"horizontalLayout_31")
         self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
-        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+        self.horizontalLayout_31.addItem(self.horizontalSpacer_3)
 
         self.pushButton_install_julia = QPushButton(self.groupBox_julia)
         self.pushButton_install_julia.setObjectName(u"pushButton_install_julia")
 
-        self.horizontalLayout_3.addWidget(self.pushButton_install_julia)
+        self.horizontalLayout_31.addWidget(self.pushButton_install_julia)
 
         self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
         self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
 
-        self.horizontalLayout_3.addWidget(self.pushButton_add_up_spine_opt)
+        self.horizontalLayout_31.addWidget(self.pushButton_add_up_spine_opt)
 
 
-        self.verticalLayout_5.addLayout(self.horizontalLayout_3)
+        self.verticalLayout_5.addLayout(self.horizontalLayout_31)
 
         self.horizontalLayout_12 = QHBoxLayout()
         self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
@@ -1039,34 +1105,18 @@ class Ui_SettingsForm(object):
         __sortingEnabled = self.listWidget.isSortingEnabled()
         self.listWidget.setSortingEnabled(False)
         ___qlistwidgetitem = self.listWidget.item(0)
-        ___qlistwidgetitem.setText(QCoreApplication.translate("SettingsForm", u"General", None));
+        ___qlistwidgetitem.setText(QCoreApplication.translate("SettingsForm", u"General", None))
         ___qlistwidgetitem1 = self.listWidget.item(1)
-        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsForm", u"Tools", None));
+        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsForm", u"Tools", None))
         ___qlistwidgetitem2 = self.listWidget.item(2)
-        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
+        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None))
         ___qlistwidgetitem3 = self.listWidget.item(3)
-        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None));
+        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None))
         ___qlistwidgetitem4 = self.listWidget.item(4)
-        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Engine", None));
+        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Engine", None))
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"Main", None))
-        self.label.setText(QCoreApplication.translate("SettingsForm", u"Work directory", None))
-#if QT_CONFIG(tooltip)
-        self.lineEdit_work_dir.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Work directory location. Leave empty to use default.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.lineEdit_work_dir.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using default directory", None))
-#if QT_CONFIG(tooltip)
-        self.toolButton_browse_work.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"When there are unsaved changes at exit:", None))
-        self.project_save_options_combo_box.setItemText(0, QCoreApplication.translate("SettingsForm", u"Ask what to do", None))
-        self.project_save_options_combo_box.setItemText(1, QCoreApplication.translate("SettingsForm", u"Automatically save project", None))
-
-#if QT_CONFIG(tooltip)
-        self.checkBox_custom_open_project_dialog.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select the type of dialog used in File-&gt;Open project...</p><p>Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.checkBox_custom_open_project_dialog.setText(QCoreApplication.translate("SettingsForm", u"Custom open project dialog", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_delete_data.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Check this box to delete project item's data when a project item is removed from project. This means, that the project item directory and its contens will be deleted from your HD.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
@@ -1075,10 +1125,29 @@ class Ui_SettingsForm(object):
         self.checkBox_exit_prompt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Checking this shows the 'confirm exit' question box when quitting the app</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_exit_prompt.setText(QCoreApplication.translate("SettingsForm", u"Always confirm exit", None))
+        self.label_2.setText(QCoreApplication.translate("SettingsForm", u"When there are unsaved changes at exit:", None))
+        self.project_save_options_combo_box.setItemText(0, QCoreApplication.translate("SettingsForm", u"Ask what to do", None))
+        self.project_save_options_combo_box.setItemText(1, QCoreApplication.translate("SettingsForm", u"Automatically save project", None))
+
+        self.open_work_dir_button.setText(QCoreApplication.translate("SettingsForm", u"Open work directory...", None))
+        self.work_dir_info_label.setText(QCoreApplication.translate("SettingsForm", u"Calculating directory size...", None))
+        self.work_dir_cleanup_button.setText(QCoreApplication.translate("SettingsForm", u"Delete files...", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_custom_open_project_dialog.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select the type of dialog used in File-&gt;Open project...</p><p>Checking this box shows a custom dialog. Unchecking this box shows the OS provided 'select folder' dialog.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_custom_open_project_dialog.setText(QCoreApplication.translate("SettingsForm", u"Custom open project dialog", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_open_previous_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, application opens the project at startup that was open the last time the application was quit</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.checkBox_open_previous_project.setText(QCoreApplication.translate("SettingsForm", u"Open previous project at startup", None))
+        self.label.setText(QCoreApplication.translate("SettingsForm", u"Work directory:", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_work_dir.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Work directory location. Leave empty to use default.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_work_dir.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using default directory", None))
+#if QT_CONFIG(tooltip)
+        self.toolButton_browse_work.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick Work directory with file browser</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.groupBox_ui.setTitle(QCoreApplication.translate("SettingsForm", u"UI", None))
         self.checkBox_prevent_overlapping.setText(QCoreApplication.translate("SettingsForm", u"Prevent items from overlapping", None))
         self.checkBox_use_rounded_items.setText(QCoreApplication.translate("SettingsForm", u"Rounded items", None))
@@ -1097,6 +1166,11 @@ class Ui_SettingsForm(object):
         self.label_4.setText(QCoreApplication.translate("SettingsForm", u"Link flash speed", None))
         self.label_5.setText(QCoreApplication.translate("SettingsForm", u"Slow", None))
         self.label_8.setText(QCoreApplication.translate("SettingsForm", u"Fast", None))
+        self.label_theme.setText(QCoreApplication.translate("SettingsForm", u"Light/dark theme", None))
+        self.radioButton_theme_os.setText(QCoreApplication.translate("SettingsForm", u"OS", None))
+        self.radioButton_theme_light.setText(QCoreApplication.translate("SettingsForm", u"Light", None))
+        self.radioButton_theme_dark.setText(QCoreApplication.translate("SettingsForm", u"Dark", None))
+        self.label_theme_restart.setText(QCoreApplication.translate("SettingsForm", u"(Requires restart)", None))
         self.checkBox_drag_to_draw_links.setText(QCoreApplication.translate("SettingsForm", u"Drag to draw links", None))
 #if QT_CONFIG(tooltip)
         self.checkBox_datetime.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None))

@@ -11,32 +11,42 @@
 ######################################################################################################################
 
 """Base classes to represent items from multiple databases in a tree."""
+
+from __future__ import annotations
+from collections.abc import Callable
+from typing import ClassVar
 from PySide6.QtCore import Qt
 from spinedb_api import DatabaseMapping
-from ...fetch_parent import FlexibleFetchParent
+from spinedb_api.helpers import ItemType
+from spinedb_api.temp_id import TempId
+from ...fetch_parent import FetchIndex, FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
-from ...mvcmodels.minimal_tree_model import TreeItem
+from ...mvcmodels.minimal_tree_model import FilterableChildrenMixin, MinimalTreeModel, TreeItem
+from ...mvcmodels.shared import ITEM_ID_ROLE
 
 
-class MultiDBTreeItem(TreeItem):
+class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
     """A tree item that may belong in multiple databases."""
 
-    item_type = None
+    item_type: ClassVar[ItemType] = None
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
-    visual_key = ["name"]
-    _fetch_index = None
+    visual_key: ClassVar[list[str]] = ["name"]
 
-    def __init__(self, model, db_map_ids=None):
+    def __init__(self, model: MinimalTreeModel, db_map_ids: dict[DatabaseMapping, TempId] | None = None):
         """
         Args:
-            model (MinimalTreeModel, optional): item's model
-            db_map_ids (dict, optional): maps instances of DatabaseMapping to the id of the item in that db
+            model: item's model
+            db_map_ids: maps instances of DatabaseMapping to the id of the item in that db
         """
         super().__init__(model)
         if db_map_ids is None:
             db_map_ids = {}
         self._db_map_ids = db_map_ids
-        self._child_map = {}  # Maps db_map to id to row number
+        self._child_map: dict[DatabaseMapping, dict[TempId, int]] = {}
+        # Memoized filtered child list, rebuilt in lockstep with ``_child_map`` so that ``child``/
+        # ``row_count`` (list access) and ``child_number`` (``_child_map`` lookup) always agree.
+        self._visible_children_cache: list | None = None
+        self._fetch_index: FetchIndex | None = None
         self._fetch_parent = FlexibleFetchParent(
             self.fetch_item_type,
             accepts_item=self.accepts_item,
@@ -47,24 +57,19 @@ class MultiDBTreeItem(TreeItem):
             key_for_index=self._key_for_index,
             owner=self,
         )
-        if self._fetch_index is not None:
-            self._fetch_index.connect(model.db_mngr)
 
     @property
-    def visible_children(self):
-        return self._children
+    def visible_children(self) -> list:
+        """Returns the memoized filtered child list, building it (and the child map) on first access.
 
-    def row_count(self):
-        """Overriden to use visible_children."""
-        return len(self.visible_children)
+        The list is cached and rebuilt only by :meth:`rebuild_child_map`, which every structural change and
+        every filter (re)apply already calls - so paint/scroll queries never recompute the filter.
+        """
+        if self._visible_children_cache is None:
+            self.rebuild_child_map()
+        return self._visible_children_cache
 
-    def child(self, row):
-        """Overriden to use visible_children."""
-        if 0 <= row < self.row_count():
-            return self.visible_children[row]
-        return None
-
-    def child_number(self):
+    def child_number(self) -> int | None:
         """Overriden to use find_row which is a dict-lookup rather than a list.index() call."""
         if not self.parent_item:
             return None
@@ -76,14 +81,23 @@ class MultiDBTreeItem(TreeItem):
             return self.parent_item.find_row(db_map, id_)
         return 0
 
-    def refresh_child_map(self):
-        """Recomputes the child map."""
-        self.model.layoutAboutToBeChanged.emit()
+    def rebuild_child_map(self) -> None:
+        """Recomputes the child map without emitting any layout-change signal.
+
+        Kept separate so a model can rebuild many items' maps under a single layout change.
+        """
         self._child_map.clear()
-        for row, child in enumerate(self.visible_children):
+        visible = self._compute_visible_children()
+        self._visible_children_cache = visible
+        for row, child in enumerate(visible):
             for db_map in child.db_maps:
                 id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, {})[id_] = row
+
+    def refresh_child_map(self) -> None:
+        """Recomputes the child map, emitting a layout-change pair."""
+        self.model.layoutAboutToBeChanged.emit()
+        self.rebuild_child_map()
         self.model.layoutChanged.emit()
 
     def set_data(self, column, value, role):
@@ -109,7 +123,7 @@ class MultiDBTreeItem(TreeItem):
         return next(iter(ids))
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self.db_map_data_field(self.first_db_map, "name", default="")
 
     @property
@@ -295,8 +309,16 @@ class MultiDBTreeItem(TreeItem):
             self.insert_children(pos, chunk)
 
     @property
-    def _children_sort_key(self):
-        return lambda item: (len(item.display_id[1]), order_key(item.display_id[0].casefold()), item.display_id[1:])
+    def _children_sort_key(self) -> Callable[[MultiDBTreeItem], tuple]:
+        def sort_key(item):
+            display_id = item.display_id
+            return (
+                len(display_id[1]),
+                order_key(display_id[0].casefold()),
+                tuple(value if value is not None else "" for value in display_id[1:]),
+            )
+
+        return sort_key
 
     @property
     def fetch_item_type(self):
@@ -419,30 +441,26 @@ class MultiDBTreeItem(TreeItem):
         bottom_right = self.model.index(self.row_count() - 1, 0, self.index())
         self.model.dataChanged.emit(top_left, bottom_right)
 
-    def insert_children(self, position, children):
-        """Inserts new children at given position.
-
-        Args:
-            position (int): insert new items here
-            children (Iterable of MultiDBTreeItem): insert items from this iterable
-
-        Returns:
-            bool: True if children were inserted successfully, False otherwise
-        """
-        bad_types = [type(child) for child in children if not isinstance(child, MultiDBTreeItem)]
-        if bad_types:
-            raise TypeError(f"Can't insert children of type {bad_types} to an item of type {type(self)}")
+    def insert_children(self, position, children) -> bool:
+        """Inserts new children at given position."""
         if not super().insert_children(position, children):
             return False
         self.refresh_child_map()
         for child in children:
             child.register_fetch_parent()
+        if self.model.has_level_filters():
+            # Newly fetched children (e.g. from a force-fetch or user expansion) must be filtered; the
+            # debounced re-apply also refines any now-empty parent that a filter should hide, and continues
+            # any active force-fetch cascade onto the next level down.
+            self.model._schedule_level_filter_refresh()
         return True
 
-    def remove_children(self, position, count):
+    def remove_children(self, position, count) -> bool:
         """Removes count children starting from the given position."""
         if super().remove_children(position, count):
             self.refresh_child_map()
+            if self.model.has_level_filters():
+                self.model._schedule_level_filter_refresh()
             return True
         return False
 
@@ -491,6 +509,9 @@ class MultiDBTreeItem(TreeItem):
                 return self.display_icon
         if role == Qt.ItemDataRole.EditRole:
             return self.edit_data
+        if role == ITEM_ID_ROLE:
+            return self._db_map_ids
+        return None
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""

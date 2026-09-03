@@ -11,12 +11,14 @@
 ######################################################################################################################
 
 """Provides pivot table models for the Tabular View."""
+
+from __future__ import annotations
 from collections import defaultdict
 from contextlib import suppress
 from functools import partial
 from itertools import product
 from operator import itemgetter
-from typing import Iterable, Union
+from typing import TYPE_CHECKING, Iterable, Union
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QFont
 from spinedb_api import DatabaseMapping
@@ -24,34 +26,34 @@ from spinedb_api.helpers import name_from_elements
 from spinedb_api.parameter_value import IndexedValue, join_value_and_type, split_value_and_type
 from spinedb_api.temp_id import TempId
 from spinetoolbox.fetch_parent import FlexibleFetchParent
-from spinetoolbox.helpers import DB_ITEM_SEPARATOR, DBMapTypedDictItems, parameter_identifier, plain_to_tool_tip
+from spinetoolbox.helpers import DB_ITEM_SEPARATOR, parameter_identifier, plain_to_tool_tip
 from ...mvcmodels.shared import PARSED_ROLE
 from ..widgets.custom_delegates import (
     ParameterPivotTableDelegate,
     RelationshipPivotTableDelegate,
     ScenarioAlternativeTableDelegate,
 )
-from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
+from .colors import fixed_field_color, pivot_table_header_color
 from .pivot_model import PivotModel
+
+if TYPE_CHECKING:
+    from spinetoolbox.spine_db_manager import SpineDBManager
+    from ..widgets.spine_db_editor import SpineDBEditor
 
 
 class TopLeftHeaderItem:
     """Base class for all 'top left pivot headers'.
     Represents a header located in the top left area of the pivot table."""
 
-    def __init__(self, model):
-        """
-        Args:
-            model (PivotTableModelBase)
-        """
+    def __init__(self, model: PivotTableModelBase):
         self._model = model
 
     @property
-    def model(self):
+    def model(self) -> PivotTableModelBase:
         return self._model
 
     @property
-    def db_mngr(self):
+    def db_mngr(self) -> SpineDBManager:
         return self._model.db_mngr
 
     def _get_header_data_from_db(self, item_type, header_id, field_name, role):
@@ -332,12 +334,9 @@ class PivotTableModelBase(QAbstractTableModel):
     model_data_changed = Signal()
     frozen_values_added = Signal(set)
     frozen_values_removed = Signal(set)
+    big_data_refused = Signal()
 
-    def __init__(self, db_editor):
-        """
-        Args:
-            db_editor (SpineDBEditor)
-        """
+    def __init__(self, db_editor: SpineDBEditor):
         super().__init__(db_editor)
         self._parent = db_editor
         self.db_mngr = db_editor.db_mngr
@@ -377,9 +376,8 @@ class PivotTableModelBase(QAbstractTableModel):
             return False
         result = False
         for fetch_parent in self._fetch_parents():
-            if not fetch_parent.is_fetched:
-                for db_map in self._parent.db_maps:
-                    result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
+            for db_map in self._parent.db_maps:
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):
@@ -773,11 +771,11 @@ class PivotTableModelBase(QAbstractTableModel):
         is_top = index.row() < self.headerRowCount()
         is_left = index.column() < self.headerColumnCount()
         if is_top and is_left:
-            return PIVOT_TABLE_HEADER_COLOR
+            return pivot_table_header_color()
         if is_top or is_left:
             id_ = self.top_left_id(index)
             if id_ is not None and isinstance(self.top_left_headers[id_], TopLeftDatabaseHeaderItem):
-                return FIXED_FIELD_COLOR
+                return fixed_field_color()
         return None
 
     def _text_alignment_data(self, index):
@@ -1192,20 +1190,15 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
         alternative_name = self.db_mngr.get_item(db_map, "alternative", alternative_id).get("name", "")
         return entity_names, parameter_name, alternative_name, self.db_mngr.name_registry.display_name(db_map.sa_url)
 
-    def index_name(self, index):
+    def index_name(self, index: QModelIndex) -> str:
         """Returns a string that concatenates the object and parameter names corresponding to the given data index.
+
         Used by plotting and ParameterValueEditor.
-
-        Args:
-            index (QModelIndex)
-
-        Returns:
-            str
         """
         if not self.index_in_data(index):
             return ""
         entity_names, parameter_name, alternative_name, db_name = self.all_header_names(index)
-        return parameter_identifier(db_name, parameter_name, entity_names, alternative_name)
+        return parameter_identifier(db_name, None, parameter_name, entity_names, alternative_name)
 
     def column_name(self, column):
         """Returns a string that concatenates the object and parameter names corresponding to the given column.
@@ -1261,6 +1254,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             return None
         db_map, id_ = data[0][0]
         item = self.db_mngr.get_item(db_map, "parameter_value", id_)
+        if item is None:
+            return None
         return self.db_mngr.get_value(db_map, item, role)
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):
@@ -1511,6 +1506,7 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
             db_map_parameter_values = self._get_db_map_parameter_values_or_defs("parameter_value")
         full_data = {}
         get_id = _make_get_id(action)
+        big_data_refused = False
         for db_map, items in db_map_parameter_values.items():
             for item in items:
                 element_ids = tuple((db_map, id_) for id_ in item["element_id_list"])
@@ -1527,6 +1523,11 @@ class IndexExpansionPivotTableModel(ParameterValuePivotTableModel):
                     full_data[element_ids + ((None, value_index), parameter_id, alternative_ids, db_map)] = get_id(
                         db_map, item
                     )
+                if len(full_data) > 100000:
+                    big_data_refused = True
+                    break
+        if big_data_refused:
+            self.big_data_refused.emit()
         return full_data
 
     def _data(self, index, role):
@@ -1604,6 +1605,7 @@ class ElementPivotTableModel(PivotTableModelBase):
             for item in items:
                 class_entities.setdefault(item["class_id"], []).append(item)
         data = {}
+        big_data_refused = False
         for db_map in self.db_maps:
             element_id_lists = []
             all_given_ids = set()
@@ -1617,12 +1619,16 @@ class ElementPivotTableModel(PivotTableModelBase):
                     ids.update(given_ids)
                     all_given_ids.update(given_ids.keys())
                 element_id_lists.append(list(ids.keys()))
-            db_map_data = {
-                tuple((db_map, id_) for id_ in element_ids) + (db_map,): None
-                for element_ids in product(*element_id_lists)
-                if not all_given_ids or all_given_ids.intersection(element_ids)
-            }
+            db_map_data = {}
+            for i, element_ids in enumerate(product(*element_id_lists)):
+                if i == 100000:
+                    big_data_refused = True
+                    break
+                if not all_given_ids or not all_given_ids.isdisjoint(element_ids):
+                    db_map_data[tuple((db_map, id_) for id_ in element_ids) + (db_map,)] = None
             data.update(db_map_data)
+        if big_data_refused:
+            self.big_data_refused.emit()
         return data
 
     def _handle_elements_added(self, db_map_data):
@@ -1926,12 +1932,18 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
             identifier (int): index identifier
             filter_value (set, None): A set of accepted values, or None if no filter (all pass)
         """
+        self.beginFilterChange()
         self.index_filters[identifier] = filter_value
-        self.invalidateFilter()  # trigger filter update
+        if identifier in self.sourceModel().model.pivot_columns:
+            direction = QSortFilterProxyModel.Direction.Columns
+        else:
+            direction = QSortFilterProxyModel.Direction.Rows
+        self.endFilterChange(direction)
 
     def clear_filter(self):
+        self.beginFilterChange()
         self.index_filters = {}
-        self.invalidateFilter()  # trigger filter update
+        self.endFilterChange(QSortFilterProxyModel.Direction.Both)
 
     def accept_index(self, index, index_ids):
         for i, identifier in zip(index, index_ids):

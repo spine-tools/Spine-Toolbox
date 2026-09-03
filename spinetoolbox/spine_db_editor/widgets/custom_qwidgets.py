@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom QWidgets."""
+
 import os
 import numpy as np
 from PySide6.QtCore import (
@@ -25,7 +26,7 @@ from PySide6.QtCore import (
     Signal,
     Slot,
 )
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPalette
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPainterPath, QPalette, QResizeEvent
 from PySide6.QtWidgets import (
     QDateTimeEdit,
     QDialog,
@@ -81,23 +82,17 @@ class OpenFileButton(QWidget):
         open_file_action.triggered.connect(self.open_file)
         open_containing_folder_action.triggered.connect(self.open_containing_folder)
         self._button.clicked.connect(open_file_action.triggered)
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             QToolButton {{
                 padding-left: 16px; padding-right: {16 + menu_button_size}px; padding-top: 6px; padding-bottom: 6px;
-                background-color: #fff;
-                border: 1px solid #ccc;
+                border: 1px solid;
                 border-style: outset;
             }}
-            QToolButton:hover {{
-                background-color: #eee;
-            }}
             QToolButton:pressed {{
-                background-color: #ddd;
                 border-style: inset;
             }}
             QToolButton::menu-button {{
-                border: 1px solid #ccc;
+                border: 1px solid;
                 border-style: outset;
                 width: {menu_button_size}px;
             }}
@@ -106,12 +101,10 @@ class OpenFileButton(QWidget):
             }}
             QProgressBar {{
                 text-align: center;
-                background-color: #fff;
-                border: 1px solid #ccc;
+                border: 1px solid;
                 border-style: inset;
             }}
-            """
-        )
+            """)
         self._button.adjustSize()
         size = self._button.size()
         self.setFixedSize(size)
@@ -502,3 +495,12 @@ class AddedEntitiesPopup(QDialog):
                     str(entity["entity_byname"])
                 )
         self._entity_names = entity_names
+
+
+class ResizeSignallingWidget(QWidget):
+    height_changed = Signal()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        if event.oldSize().height() != event.size().height:
+            self.height_changed.emit()
+        super().resizeEvent(event)

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Context menus for parameter value editor widgets."""
+
 from operator import itemgetter
 from PySide6.QtCore import Slot
 from PySide6.QtGui import QAction

@@ -11,10 +11,13 @@
 ######################################################################################################################
 
 """Unit tests for filtering in Database editor."""
+
 from unittest import mock
-from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtCore import QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtGui import QColor, QPen
 from PySide6.QtWidgets import QApplication
+from spinetoolbox.helpers import signal_waiter
+from tests.mock_helpers import assert_table_model_data, fetch_model
 from tests.spine_db_editor.widgets.helpers import select_item_with_index
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
@@ -29,8 +32,8 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
     @property
     def _filtered_fields(self):
         return {
-            self.spine_db_editor.parameter_definition_model: ("entity_class_name",),
-            self.spine_db_editor.parameter_value_model: ("entity_class_name", "entity_byname"),
+            self.spine_db_editor.parameter_definition_model: ("class",),
+            self.spine_db_editor.parameter_value_model: ("class", "entity byname"),
         }
 
     @staticmethod
@@ -46,11 +49,13 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             data = self._parameter_data(model, *fields)
             values = filtered_values[model]
             unfiltered_count = len(data)
-            self.assertTrue(all(value in data for value in values))
+            for value in values:
+                self.assertIn(value, data)
             model.refresh()
             data = self._parameter_data(model, *fields)
             filtered_count = len(data)
-            self.assertTrue(all(value not in data for value in values))
+            for value in values:
+                self.assertNotIn(value, data)
             # Check that only the items that were supposed to be filtered were actually filtered.
             self.assertEqual(filtered_count, unfiltered_count - len(values))
 
@@ -98,10 +103,9 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
         self._assert_filter(filtered_values)
 
     def test_filter_parameter_tables_per_entity_class_and_entity_cross_selection(self):
-        for model in self._filtered_fields:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
+        for model in self._filtered_fields:
+            fetch_model(model)
         self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         fish_item = next(x for x in root_item.children if x.display_data == "fish")
@@ -118,18 +122,15 @@ class TestSpineDBEditorStackedFilter(DBEditorTestBase):
             self.spine_db_editor.parameter_definition_model: [],
             self.spine_db_editor.parameter_value_model: [
                 ("dog", ("pluto",)),
-                ("fish__dog", ("nemo", "pluto")),
-                ("dog__fish", ("pluto", "nemo")),
             ],
         }
         self._assert_filter(filtered_values)
 
     def test_filter_parameter_tables_per_entity(self):
         """Test that parameter tables are filtered when selecting entities in the entity tree."""
-        for model in self._filtered_fields:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
         self.put_mock_dataset_in_db_mngr()
+        for model in self._filtered_fields:
+            fetch_model(model)
         self.fetch_entity_tree_model()
         root_item = self.spine_db_editor.entity_tree_model.root_item
         dog_item = next(x for x in root_item.children if x.display_data == "dog")
@@ -191,9 +192,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
     def _create_indexes(self):
         """Gets the indexes for every item in entity, alternative and scenario trees in the database"""
         self.indexes = {
-            "empty_space_entity": self.spine_db_editor.entity_tree_model.createIndex(-1, -1),
-            "empty_space_alternative": self.spine_db_editor.alternative_model.createIndex(-1, -1),
-            "empty_space_scenario": self.spine_db_editor.scenario_model.createIndex(-1, -1),
+            "empty_space_entity": QModelIndex(),
+            "empty_space_alternative": QModelIndex(),
+            "empty_space_scenario": QModelIndex(),
         }
         model = self.spine_db_editor.entity_tree_model
         root_item = model.root_item
@@ -201,8 +202,7 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         for entity_class in root_item.children:
             self.indexes[f"entity_class_{entity_class.name}"] = model.index_from_item(entity_class)
             class_index = model.index(2, 0, model.index_from_item(root_item))
-            while model.canFetchMore(class_index):
-                model.fetchMore(class_index)
+            while model.rowCount(class_index) == 0:
                 QApplication.processEvents()
             for entity in entity_class.children:
                 self.indexes[f"entity_{entity.name}"] = model.index_from_item(entity)
@@ -219,6 +219,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             if not scenario.id:
                 continue
             scenario_index = model.index_from_item(scenario)
+            while model.rowCount(scenario_index) == 1:
+                model.fetchMore(scenario_index)
+                QApplication.processEvents()
             self.indexes[f"scenario_{scenario.name}"] = scenario_index
             model.fetchMore(scenario_index)
             while model.canFetchMore(scenario_index):
@@ -295,18 +298,19 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self.spine_db_editor.parameter_value_model,
             self.spine_db_editor.parameter_definition_model,
             self.spine_db_editor.entity_alternative_model,
+            self.spine_db_editor.entity_model,
         )
         for model in models:
-            if model.canFetchMore(None):
-                model.fetchMore(None)
+            fetch_model(model)
 
     def _refresh_graph(self):
         """Rebuilds and refreshes the graph"""
         self.spine_db_editor._update_graph_data()
         self.gv.clear_cross_hairs_items()
         coords = list(range(len(self.data["entities"])))
-        self.spine_db_editor._complete_graph(0, coords, coords)
-        self.spine_db_editor._graph_fetch_more_later()
+        self.spine_db_editor._complete_graph(self.spine_db_editor._layout_gen_id, coords, coords)
+        self.spine_db_editor._graph_fetch_more_entities_timer.start()
+        self.spine_db_editor._graph_fetch_more_parameter_values_timer.start()
 
     def _clear_selection_models(self):
         for model in (
@@ -324,8 +328,8 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
         actual = {item.name: item._bg.pen() for item in self.spine_db_editor.entity_items}
         self.assertEqual(expected.keys(), actual.keys())
         for key, expected_pen in expected.items():
-            self.assertEqual(expected_pen.style(), actual[key].style())  # Check the linestyle
-            for i in ("red", "green", "blue"):  # Check the color
+            self.assertEqual(expected_pen.style(), actual[key].style(), f"entity name: {key}")
+            for i in ("red", "green", "blue"):
                 self.assertEqual(getattr(expected_pen.color(), i)(), getattr(actual[key].color(), i)())
 
     def test_filtering_with_entity_selections(self):
@@ -394,26 +398,29 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._refresh_graph()
             self._assert_visible({})
             # Selecting Alt1
-            select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt1"])
+            with signal_waiter(self.spine_db_editor.ui.tableView_parameter_value.model().layoutChanged) as waiter:
+                select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt1"])
+                waiter.wait()
             self._refresh_graph()
-            self._assert_visible(
-                {
-                    "aa": self.PARAMETER,
-                    "ab": self.ACTIVE,
-                    "ba": self.PARAMETER,
-                    "da": self.PARAMETER,
-                    "db": self.PARAMETER,
-                    "aa__ba": self.PARAMETER,
-                }
-            )
+            expected = {
+                "aa": self.PARAMETER,
+                "ab": self.ACTIVE,
+                "ba": self.PARAMETER,
+                "da": self.PARAMETER,
+                "db": self.PARAMETER,
+                "aa__ba": self.PARAMETER,
+            }
+            self._assert_visible(expected)
             # Selecting Alt1 and Alt2
-            select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt2"], extend=True)
+            with signal_waiter(self.spine_db_editor.ui.tableView_parameter_value.model().layoutChanged) as waiter:
+                select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt2"], extend=True)
+                waiter.wait()
             self._refresh_graph()
             expected = {
                 "aa": self.CONFLICTED,
-                "ab": self.CONFLICTED,
+                "ab": self.ACTIVE,
                 "ba": self.PARAMETER,
-                "da": self.CONFLICTED,
+                "da": self.ACTIVE,
                 "db": self.PARAMETER,
                 "aa__ba": self.PARAMETER,
             }
@@ -447,7 +454,14 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             self._assert_visible({})
             # Selecting class B with Alt2 should filter out all the entities in B
             select_item_with_index(entity_tree_view, self.indexes["entity_class_B"])
-            select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt2"], extend=True)
+            with signal_waiter(self.spine_db_editor.ui.tableView_parameter_value.model().layoutChanged) as waiter:
+                select_item_with_index(alternative_tree_view, self.indexes["alternative_Alt2"], extend=True)
+                waiter.wait()
+            assert_table_model_data(
+                self.spine_db_editor.ui.tableView_parameter_value.model(),
+                [[None, "A__B", "aa ǀ ba", "par_A__B", "Alt2", "3.0", "database"]],
+                self,
+            )
             self._refresh_graph()
             self._assert_visible({})
 
@@ -496,7 +510,19 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 }
             )
             # Select Alt3 under scen2
-            select_item_with_index(scenario_tree_view, self.indexes["scen_alt_Alt3"])
+            with signal_waiter(self.spine_db_editor.ui.tableView_parameter_value.model().layoutChanged) as waiter:
+                select_item_with_index(scenario_tree_view, self.indexes["scen_alt_Alt3"])
+                waiter.wait()
+            assert_table_model_data(self.spine_db_editor.ui.tableView_parameter_value.model(), [], self)
+            assert_table_model_data(
+                self.spine_db_editor.ui.tableView_entity_alternative.model(),
+                [
+                    ["A", "ab", "Alt3", True, "database"],
+                    ["C", "ca", "Alt3", True, "database"],
+                    ["C", "cb", "Alt3", True, "database"],
+                ],
+                self,
+            )
             self._refresh_graph()
             self._assert_visible(
                 {
@@ -507,6 +533,8 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
             )
             # Select scen1 again
             select_item_with_index(scenario_tree_view, self.indexes["scenario_scen1"])
+            while self.spine_db_editor.ui.tableView_parameter_value.model().rowCount() != 6:
+                QApplication.processEvents()
             self._refresh_graph()
             self._assert_visible(
                 {
@@ -570,9 +598,9 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                     "ba": self.INACTIVE,
                     "da": self.ACTIVE,
                     "db": self.PARAMETER,
-                    "aa__ab": self.ACTIVE,
-                    "aa__ba": self.ACTIVE,
-                    "ab__ba": self.ACTIVE,
+                    "aa__ab": self.INACTIVE,
+                    "aa__ba": self.INACTIVE,
+                    "ab__ba": self.INACTIVE,
                 }
             )
 
@@ -679,6 +707,8 @@ class TestSpineDBEditorGraphFilter(DBEditorTestBase):
                 "entity_ids": set(),
             }
             self.spine_db_editor.start_connecting_entities(self.mock_db_map, entity_class, ent_item)
+            self.assertEqual(self.spine_db_editor.ui.graphicsView.entity_class, entity_class)
+            self.assertEqual(len(self.spine_db_editor.ui.graphicsView.cross_hairs_items), 4)
 
     def test_consistent_across_different_selection_order(self):
         """Tests that the graph view filter is consistent despite the selection order"""

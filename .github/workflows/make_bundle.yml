@@ -14,25 +14,48 @@ jobs:
     name: Bundle
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.git-ref }}
           fetch-depth: 0
+      - name: Test if tag
+        id: commit
+        continue-on-error: true
+        run: |
+          git describe --tags --exact-match
+          Write-Output "is_tag=$(if ($?) { 'true' } else { 'false' })" >> $Env:GITHUB_OUTPUT
       - name: "Set up Python"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: |
             pyproject.toml
             requirements.txt
-      - name: Install dependencies
+            dev-requirements.txt
+      - name: Python full version
+        id: py-full
+        run: |
+          python --version | ForEach-Object { 'ver=' + ($_.Trim() -split '\s+')[1] } >> $Env:GITHUB_OUTPUT
+      - name: Install Toolbox from PyPI
+        if: steps.commit.outputs.is_tag == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install spinetoolbox
+          python -m pip install setuptools_scm
+          python -m setuptools_scm --force-write-version-files
+          python -m pip uninstall -y setuptools_scm
+      - name: Install Toolbox from repo
+        if: steps.commit.outputs.is_tag == 'false'
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
+          python -m pip install -r dev-requirements.txt
+          python -m pip install PySide6==6.10.0  # Temporary solution; unit tests fail inexplicably on 6.10.1
       - name: Run tests
+        if: steps.commit.outputs.is_tag == 'false'
         run: |
-          python -m unittest discover --verbose
+          python -m pytest tests/ --verbose
       - name: Install PyInstaller
         run: |
           python -m pip install PyInstaller
@@ -43,7 +66,7 @@ jobs:
         run: |
           mkdir embedded-python
           cd embedded-python
-          curl -o python.zip https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip
+          curl -o python.zip https://www.python.org/ftp/python/${{ steps.py-full.outputs.ver }}/python-${{ steps.py-full.outputs.ver }}-embed-amd64.zip
           tar xf python.zip
           del python.zip
       - name: Edit embedded Python search paths
@@ -64,7 +87,7 @@ jobs:
         run: |
           cd embedded-python/Scripts
           ./pip.exe --version
-          ./pip.exe install spinedb-api ipykernel jill
+          ./pip.exe install setuptools spinedb-api ipykernel jill
       - name: List packages in embedded Python
         run: |
           cd embedded-python/Scripts
@@ -77,8 +100,22 @@ jobs:
         shell: bash
         run: |
           python -c "from importlib.metadata import version; print('version=' + version('spinetoolbox'))" >> $GITHUB_OUTPUT
+      - name: Zip bundle
+        if: steps.commit.outputs.is_tag == 'true'
+        run: |
+          python -c "import shutil; shutil.make_archive('Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}','zip', 'dist/Spine Toolbox')"
+      - name: Create GitHub release for version ${{ inputs.git-ref }}
+        if: steps.commit.outputs.is_tag == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.git-ref }}
+          body: |
+            See [CHANGELOG.md](https://github.com/spine-tools/Spine-Toolbox/blob/${{ inputs.git-ref }}/CHANGELOG.md) for release notes.
+          files: |
+            Spine-Toolbox-win-${{ inputs.git-ref }}.zip
       - name: Upload archive
-        uses: actions/upload-artifact@v4
+        if: steps.commit.outputs.is_tag == 'false'
+        uses: actions/upload-artifact@v7
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: "./dist/Spine Toolbox"

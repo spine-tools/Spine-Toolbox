@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the EmptyParameterModel subclasses."""
+
 from unittest import mock
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QUndoStack
@@ -25,7 +26,7 @@ from spinedb_api import (
 from spinedb_api.parameter_value import join_value_and_type, to_database
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import EmptyParameterDefinitionModel, EmptyParameterValueModel
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, fetch_model, q_object
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, fetch_model, q_object
 
 
 def _empty_indexes(model):
@@ -65,7 +66,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             self.assertTrue(
                 model.batch_set_data(
                     _empty_indexes(model),
-                    ["dog", "pluto", "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
+                    [None, "dog", ("pluto",), "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
                 )
             )
             values = self._db_map.get_items("parameter_value")
@@ -82,7 +83,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
-                model.batch_set_data(_empty_indexes(model), ["fish", "nemo", "water", "Base", "salty", "mock_db"])
+                model.batch_set_data(_empty_indexes(model), ["fish", ("nemo",), "water", "Base", "salty", "mock_db"])
             )
             values = [x for x in self._db_map.get_items("parameter_value") if not x["dimension_id_list"]]
             self.assertEqual(values, [])
@@ -97,10 +98,11 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             value, value_type = to_database("bloodhound")
             self.assertTrue(
                 model.batch_set_data(
-                    indexes, ["cat", "pluto", "breed", "Base", join_value_and_type(value, value_type), "mock_db"]
+                    indexes,
+                    [None, "cat", ("pluto",), "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
                 )
             )
-            self.assertEqual(indexes[0].data(), "dog")
+            self.assertEqual(indexes[1].data(), "dog")
             values = [x for x in self._db_map.get_items("parameter_value") if not x["dimension_id_list"]]
             self.assertEqual(len(values), 1)
             self.assertEqual(values[0]["entity_class_name"], "dog")
@@ -119,8 +121,9 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 model.batch_set_data(
                     _empty_indexes(model),
                     [
+                        None,
                         "dog__fish",
-                        DB_ITEM_SEPARATOR.join(["pluto", "nemo"]),
+                        ("pluto", "nemo"),
                         "relative_speed",
                         "Base",
                         join_value_and_type(value, value_type),
@@ -156,7 +159,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             model.set_undo_stack(self._undo_stack)
             fetch_model(model)
             self.assertTrue(
-                model.batch_set_data(_empty_indexes(model), ["dog", "color", (), None, None, None, "mock_db"])
+                model.batch_set_data(_empty_indexes(model), ["dog", "color", (), None, None, None, None, "mock_db"])
             )
             definitions = [x for x in self._db_map.get_items("parameter_definition") if not x["dimension_id_list"]]
             self.assertEqual(len(definitions), 2)
@@ -171,7 +174,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(
-                    _empty_indexes(model), ["dog", "color", ("string", "array"), None, None, None, "mock_db"]
+                    _empty_indexes(model), ["dog", "color", ("string", "array"), None, None, None, None, "mock_db"]
                 )
             )
             definitions = [x for x in self._db_map.get_items("parameter_definition") if not x["dimension_id_list"]]
@@ -198,7 +201,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
             fetch_model(model)
             self.assertTrue(
                 model.batch_set_data(
-                    _empty_indexes(model), ["dog__fish", "combined_mojo", (), None, None, None, "mock_db"]
+                    _empty_indexes(model), ["dog__fish", "combined_mojo", (), None, None, None, None, "mock_db"]
                 )
             )
             definitions = [x for x in self._db_map.get_items("parameter_definition") if x["dimension_id_list"]]
@@ -232,7 +235,7 @@ class TestEmptyParameterModel(TestCaseWithQApplication):
                 self.assertTrue(
                     model.batch_set_data(
                         _empty_indexes(model),
-                        ["dog", "plato", "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
+                        [None, "dog", ("plato",), "breed", "Base", join_value_and_type(value, value_type), "mock_db"],
                     )
                 )
                 self.assertEqual(

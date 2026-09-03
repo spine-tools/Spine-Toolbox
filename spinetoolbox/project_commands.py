@@ -11,8 +11,15 @@
 ######################################################################################################################
 
 """QUndoCommand subclasses for modifying the project."""
+
+import typing
 from PySide6.QtGui import QUndoCommand
 from spine_engine.project_item.connection import Jump
+from .project_settings import ProjectSettings
+from .pydantic_models.consumer_replay import MoveItem
+
+if typing.TYPE_CHECKING:
+    from .project import SpineToolboxProject
 
 
 class SpineToolboxCommand(QUndoCommand):
@@ -91,6 +98,9 @@ class MoveIconCommand(SpineToolboxCommand):
         self._representative.update_links_geometry()
         self._representative.notify_item_move()
 
+    def to_replay_commands(self) -> list[MoveItem]:
+        return [MoveItem(item_name=name, x=pos.x(), y=pos.y()) for name, pos in self._current_pos.items()]
+
 
 class SetProjectDescriptionCommand(SpineToolboxCommand):
     """Command to set the project description."""
@@ -112,6 +122,23 @@ class SetProjectDescriptionCommand(SpineToolboxCommand):
 
     def undo(self):
         self.project.set_description(self.undo_desc)
+
+
+class SetProjectSettings(SpineToolboxCommand):
+    """Command to set project settings."""
+
+    def __init__(self, project: "SpineToolboxProject", settings: ProjectSettings):
+        super().__init__()
+        self.project = project
+        self.redo_settings = settings.to_dict()
+        self.undo_settings = self.project.settings.to_dict()
+        self.setText("set project settings")
+
+    def redo(self):
+        self.project.set_settings(ProjectSettings.from_dict(self.redo_settings))
+
+    def undo(self):
+        self.project.set_settings(ProjectSettings.from_dict(self.undo_settings))
 
 
 class AddProjectItemsCommand(SpineToolboxCommand):

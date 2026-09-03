@@ -11,12 +11,17 @@
 ######################################################################################################################
 
 """Custom item delegates."""
+
 from numbers import Number
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QRect, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon
-from PySide6.QtWidgets import QStyledItemDelegate
-from spinedb_api import to_database
+import re
+from typing import ClassVar
+from PySide6.QtCore import QAbstractItemModel, QEvent, QModelIndex, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QRegularExpressionValidator
+from PySide6.QtWidgets import QColorDialog, QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from spinedb_api import DatabaseMapping, to_database
+from spinedb_api.helpers import COLOR_RE
 from spinedb_api.parameter_value import join_value_and_type
+from spinedb_api.temp_id import TempId
 from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     BooleanSearchBarEditor,
     CheckListEditor,
@@ -30,8 +35,14 @@ from spinetoolbox.spine_db_editor.widgets.custom_editors import (
     SearchBarEditorWithCreation,
 )
 from ...font import TOOLBOX_FONT
-from ...helpers import object_icon
-from ...mvcmodels.shared import DB_MAP_ROLE, INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE
+from ...helpers import DB_ITEM_SEPARATOR, object_icon
+from ...mvcmodels.shared import (
+    DB_MAP_ROLE,
+    HAS_METADATA_ROLE,
+    INVALID_TYPE,
+    PARAMETER_TYPE_VALIDATION_ROLE,
+    PARSED_ROLE,
+)
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_delegates import CheckBoxDelegate, RankDelegate
 from ..mvcmodels.metadata_table_model_base import Column as MetadataColumn
@@ -116,7 +127,7 @@ class ScenarioAlternativeTableDelegate(PivotTableDelegateMixin, RankDelegate):
     @staticmethod
     def _is_scenario_alternative_index(index):
         """
-        Checks whether or not the given index corresponds to a scenario alternative,
+        Checks whether the given index corresponds to a scenario alternative,
         in which case we need to use the rank delegate.
 
         Returns:
@@ -232,16 +243,16 @@ class TableDelegate(QStyledItemDelegate):
     """Base class for all custom stacked table delegates.
 
     Attributes:
-        db_mngr (SpineDBManager): database manager
+        db_mngr: database manager
     """
 
     data_committed = Signal(QModelIndex, object)
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent: QWidget, db_mngr: SpineDBManager):
         """
         Args:
-            parent (QWidget): parent widget
-            db_mngr (SpineDBManager): database manager
+            parent: parent widget
+            db_mngr: database manager
         """
         super().__init__(parent)
         self.db_mngr = db_mngr
@@ -258,12 +269,12 @@ class TableDelegate(QStyledItemDelegate):
         if isinstance(editor, (SearchBarEditor, CheckListEditor)):
             editor.update_geometry(option)
 
-    def _close_editor(self, editor, index):
+    def _close_editor(self, editor: QWidget, index: QModelIndex) -> None:
         """Closes editor. Needed by SearchBarEditor."""
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
-    def _get_db_map(self, index):
+    def _get_db_map(self, index: QModelIndex) -> DatabaseMapping:
         """Returns the db_map for the database at given index or None if not set yet."""
         model = index.model()
         header = model.horizontal_header_labels()
@@ -302,8 +313,6 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
     """A delegate for either the value or the default value."""
 
     parameter_value_editor_requested = Signal(QModelIndex)
-    EXCLAMATION_COLOR = QColor("red")
-    INDICATOR_WIDTH = 18
 
     def __init__(self, parent, db_mngr):
         """
@@ -312,25 +321,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
             db_mngr (SpineDBManager): database manager
         """
         super().__init__(parent, db_mngr)
-        self._exclamation_font = _make_exclamation_font()
         self._db_value_list_lookup = {}
-
-    def paint(self, painter, option, index):
-        validation_state = index.data(PARAMETER_TYPE_VALIDATION_ROLE)
-        if validation_state == INVALID_TYPE:
-            left = option.rect.x()
-            width = option.rect.width()
-            height = option.rect.height()
-            indicator_left = left + width - self.INDICATOR_WIDTH
-            indicator_rect = QRect(indicator_left, option.rect.y(), self.INDICATOR_WIDTH, height)
-            option.rect.setRight(indicator_left)
-            text_position = indicator_rect.center()
-            text_position.setY(text_position.y() + 5)
-            text_position.setX(text_position.x() - 5)
-            painter.setFont(self._exclamation_font)
-            painter.setPen(self.EXCLAMATION_COLOR)
-            painter.drawText(text_position, "\uf06a")
-        super().paint(painter, option, index)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -358,15 +349,15 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
             return editor
         self.parameter_value_editor_requested.emit(index)
 
-    def _get_value_list_id(self, index, db_map):
+    def _get_value_list_id(self, index: QModelIndex, db_map: DatabaseMapping) -> TempId | None:
         """Returns a value list id for the given index and db_map.
 
         Args:
-            index (QModelIndex): value list's index
-            db_map (DatabaseMapping): database mapping
+            index: value list's index
+            db_map: database mapping
 
         Returns:
-            int: value list id
+            value list id
         """
         raise NotImplementedError()
 
@@ -379,7 +370,7 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
         if not db_map:
             return None
         value_list_id = self._get_value_list_id(index, db_map)
-        if value_list_id:
+        if value_list_id is not None:
             display_value_list = self.db_mngr.get_parameter_value_list(
                 db_map, value_list_id, Qt.ItemDataRole.DisplayRole
             )
@@ -392,16 +383,46 @@ class ParameterValueOrDefaultValueDelegate(TableDelegate):
         return self._create_or_request_parameter_value_editor(parent, index)
 
 
+class TypeValidationIndicatorMixin:
+    EXCLAMATION_COLOR: ClassVar[QColor] = QColor("red")
+    INDICATOR_WIDTH: ClassVar[int] = 18
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._exclamation_font = _make_exclamation_font()
+
+    def paint(self, painter, option, index):
+        validation_state = index.data(PARAMETER_TYPE_VALIDATION_ROLE)
+        if validation_state == INVALID_TYPE:
+            rect = option.rect
+            left = rect.x()
+            width = rect.width()
+            height = rect.height()
+            indicator_left = left + width - self.INDICATOR_WIDTH
+            indicator_rect = QRect(indicator_left - 5, rect.y() + 5, self.INDICATOR_WIDTH, height)
+            rect.setRight(indicator_left)
+            text_position = indicator_rect.center()
+            painter.setFont(self._exclamation_font)
+            painter.setPen(self.EXCLAMATION_COLOR)
+            painter.drawText(text_position, "\uf06a")
+        super().paint(painter, option, index)
+
+
 class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
     """A delegate for the default value."""
 
     def _get_value_list_id(self, index, db_map):
         """See base class"""
         h = index.model().header.index
-        value_list_name = index.sibling(index.row(), h("value_list_name")).data()
+        value_list_name = index.sibling(index.row(), h("value list")).data()
         value_lists = self.db_mngr.get_items_by_field(db_map, "parameter_value_list", "name", value_list_name)
         if len(value_lists) == 1:
             return value_lists[0]["id"]
+        return None
+
+
+class DefaultValueDelegateWithIndicator(TypeValidationIndicatorMixin, ParameterDefaultValueDelegate):
+    pass
 
 
 class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
@@ -410,7 +431,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
     def _get_value_list_id(self, index, db_map):
         """See base class."""
         h = index.model().header.index
-        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
+        parameter_name = index.sibling(index.row(), h("parameter name")).data()
         parameters = self.db_mngr.get_items_by_field(db_map, "parameter_definition", "name", parameter_name)
         entity_class_id = entity_class_id_for_row(index, db_map)
         parameter_ids = {p["id"] for p in parameters if p["entity_class_id"] == entity_class_id}
@@ -419,6 +440,11 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         }
         if len(value_list_ids) == 1:
             return next(iter(value_list_ids))
+        return None
+
+
+class ValueDelegateWithIndicator(TypeValidationIndicatorMixin, ParameterValueDelegate):
+    pass
 
 
 class ValueListDelegate(TableDelegate):
@@ -437,7 +463,7 @@ class ValueListDelegate(TableDelegate):
 
 
 class EntityClassNameDelegate(TableDelegate):
-    """A delegate for the object_class name."""
+    """A delegate for the entity class name."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -451,8 +477,40 @@ class EntityClassNameDelegate(TableDelegate):
         return editor
 
 
+class ParameterGroupDelegate(TableDelegate):
+    """A delegate for the parameter group."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        if not db_map:
+            return None
+        editor = SearchBarEditor(self.parent(), parent)
+        name_list = [x["name"] for x in self.db_mngr.get_items(db_map, "parameter_group")]
+        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
+        return editor
+
+
+class MetadataIndicatorMixin:
+    INDICATOR_WIDTH: ClassVar[int] = 18
+    ICON: ClassVar[QIcon] = QIcon(":icons/metadata-indicator.svg")
+
+    def paint(self, painter, option, index):
+        if index.data(HAS_METADATA_ROLE):
+            rect = option.rect
+            left = rect.x()
+            width = rect.width()
+            height = rect.height()
+            indicator_left = left + width - self.INDICATOR_WIDTH
+            indicator_rect = QRect(indicator_left, rect.y(), self.INDICATOR_WIDTH, height)
+            rect.setRight(indicator_left)
+            self.ICON.paint(painter, indicator_rect)
+        super().paint(painter, option, index)
+
+
 class ParameterNameDelegate(TableDelegate):
-    """A delegate for the object parameter name."""
+    """A delegate for the entity parameter name."""
 
     def createEditor(self, parent, option, index):
         """Returns editor."""
@@ -473,6 +531,10 @@ class ParameterNameDelegate(TableDelegate):
         return editor
 
 
+class ParameterNameDelegateWithIndicator(MetadataIndicatorMixin, ParameterNameDelegate):
+    pass
+
+
 class EntityBynameDelegate(TableDelegate):
     """A delegate for the entity byname."""
 
@@ -488,13 +550,15 @@ class EntityBynameDelegate(TableDelegate):
             entity_class = self.db_mngr.get_item(db_map, "entity_class", entity_class_id)
             if entity_class["dimension_id_list"]:
                 self.element_name_list_editor_requested.emit(index, entity_class_id, db_map)
-                return
+                return None
             entities = self.db_mngr.get_items_by_field(db_map, "entity", "class_id", entity_class_id)
         else:
             entities = self.db_mngr.get_items(db_map, "entity")
         editor = GroupEditor(self.parent(), parent)
         name_list = list({x["name"]: None for x in entities})
-        editor.set_data(index.data(Qt.ItemDataRole.EditRole), name_list)
+        current_byname = index.data(Qt.ItemDataRole.EditRole)
+        current_name = current_byname[0] if current_byname else None
+        editor.set_data(current_name, name_list)
         editor.data_committed.connect(lambda *_: self._close_editor(editor, index))
         return editor
 
@@ -657,14 +721,62 @@ class ScenarioDelegate(QStyledItemDelegate):
         self.setModelData(editor, index.model(), index)
 
 
-class ParameterDefinitionNameAndDescriptionDelegate(TableDelegate):
-    """A delegate for the parameter_name and description columns in Parameter Definition Table View."""
+class PlainTextDelegate(TableDelegate):
+    """A delegate for the plain text columns."""
 
     def setEditorData(self, editor, index):
         editor.setText(index.data(Qt.ItemDataRole.DisplayRole))
 
     def createEditor(self, parent, option, index):
         editor = CustomLineEditor(parent)
+        return editor
+
+
+class PlainTextDelegateWithMetadataIndicator(MetadataIndicatorMixin, PlainTextDelegate):
+    pass
+
+
+class PlainNumberDelegate(TableDelegate):
+    """A delegate for non-localized numeric columns."""
+
+    _NUMBER_REGEXP = r"^[+-]?[0-9]*($|\.[0-9]*$)"
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        text = editor.data()
+        data = float(text) if text else None
+        self.data_committed.emit(index, data)
+
+    def setEditorData(self, editor, index):
+        data = index.data(Qt.ItemDataRole.DisplayRole)
+        text = str(data) if data is not None else ""
+        editor.setText(text)
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        editor.setValidator(QRegularExpressionValidator(self._NUMBER_REGEXP, editor))
+        return editor
+
+
+class PlainIntegerDelegate(QStyledItemDelegate):
+    """A delegate for non-localized numeric columns."""
+
+    _INTEGER_REGEXP = r"^[+-]?[0-9]*$"
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        text = editor.text()
+        data = int(text) if text else None
+        model.setData(index, data)
+
+    def setEditorData(self, editor, index):
+        data = index.data(Qt.ItemDataRole.EditRole)
+        text = str(data) if data is not None else ""
+        editor.setText(text)
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        editor.setValidator(QRegularExpressionValidator(self._INTEGER_REGEXP, editor))
         return editor
 
 
@@ -700,6 +812,7 @@ class ParameterValueListDelegate(QStyledItemDelegate):
             editor.set_data(value)
             return editor
         self.parameter_value_editor_requested.emit(index)
+        return None
 
     def _close_editor(self, editor, index):
         """Closes editor.
@@ -986,7 +1099,7 @@ class AddEntityButtonDelegate(QStyledItemDelegate):
 
     @staticmethod
     def get_text_width_and_icon_size(option, index):
-        text = index.data(Qt.DisplayRole)
+        text = index.data(Qt.ItemDataRole.DisplayRole)
         font_metrics = QFontMetrics(option.font)
         text_width = font_metrics.horizontalAdvance(text)
         # For some reason the longer the text, the more its length is underestimated. Manual correction
@@ -1049,3 +1162,42 @@ class ParameterTypeListDelegate(QStyledItemDelegate):
         editor.setGeometry(
             popup_position.x(), popup_position.y(), max(option.rect.width(), size_hint.width()), size_hint.height()
         )
+
+
+class ColorPickerDelegate(QStyledItemDelegate):
+    RADIUS: ClassVar[int] = 7
+
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+        color = index.data()
+        if color and COLOR_RE.fullmatch(color) is not None:
+            initial_color = QColor("#" + color)
+        else:
+            initial_color = QColor("grey")
+        return QColorDialog(initial_color, parent)
+
+    def setEditorData(self, editor: QColorDialog, index: QModelIndex) -> None:
+        color = index.data()
+        if color and COLOR_RE.fullmatch(color) is not None:
+            editor.setCurrentColor(QColor("#" + color))
+
+    def setModelData(self, editor: QColorDialog, model: QAbstractItemModel, index: QModelIndex) -> None:
+        color = editor.currentColor().name()[1:]
+        model.setData(index, color)
+
+    def paint(self, painter, option, index):
+        color = index.data()
+        if color and COLOR_RE.fullmatch(color) is not None:
+            rect = option.rect
+            left = rect.x()
+            width = rect.width()
+            new_width = width - 2 * (self.RADIUS + 2)
+            indicator_rect = rect.adjusted(new_width, 0, 0, 0)
+            rect.setRight(left + new_width)
+            indicator_center = indicator_rect.center()
+            circle_rect = QRect(indicator_center, indicator_center)
+            circle_rect.adjust(-self.RADIUS, -self.RADIUS, self.RADIUS, self.RADIUS)
+            color = QColor("#" + color)
+            painter.setPen(QColor("black"))
+            painter.setBrush(color)
+            painter.drawEllipse(circle_rect)
+        super().paint(painter, option, index)

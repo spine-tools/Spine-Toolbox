@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Functions for plotting on PlotWidget."""
+
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 import datetime
@@ -610,7 +611,7 @@ def plot_parameter_table_selection(model, model_indexes, table_header_sections, 
             index = model.index(row, index_column).data()
             node = _set_default_node(node, index, header_data(index_columns[i + 1]))
         node.content[model.index(row, index_columns[-1]).data()] = leaf_content
-    y_label_position = index_columns.index(header_columns["parameter_name"])
+    y_label_position = index_columns.index(header_columns["parameter name"])
     data_list = list(turn_node_to_xy_data(root_node, y_label_position))
     return plot_data(data_list, plot_widget)
 

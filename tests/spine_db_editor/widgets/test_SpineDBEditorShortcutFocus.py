@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the `setup_focus_widgets` function in SpineDBEditor."""
+
 import unittest
 from unittest.mock import patch
 from PySide6.QtCore import QEvent

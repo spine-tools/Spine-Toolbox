@@ -11,6 +11,8 @@
 ######################################################################################################################
 
 """Custom QWidgets for Filtering and Zooming."""
+
+from typing import Generic, ParamSpec, TypeVar
 from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
     QAction,
@@ -24,6 +26,7 @@ from PySide6.QtGui import (
     QUndoStack,
 )
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QDialogButtonBox,
     QFrame,
@@ -45,6 +48,7 @@ from PySide6.QtWidgets import (
 )
 from ..font import TOOLBOX_FONT
 from ..helpers import format_log_message
+from ..mvcmodels.filter_checkbox_list_model import SimpleFilterCheckboxListModel
 from .custom_qtextbrowser import MonoSpaceFontTextBrowser
 from .select_database_items import SelectDatabaseItems
 
@@ -99,27 +103,32 @@ class UndoRedoMixin:
             super().keyPressEvent(e)
 
 
-class FilterWidget(QWidget):
+P = ParamSpec("P")
+T = TypeVar("T")
+
+
+class FilterWidget(Generic[T], QWidget):
     """Filter widget class."""
 
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent, make_filter_model, *args, **kwargs):
-        """Init class.
-
+    def __init__(
+        self,
+        parent: QWidget | None,
+        filter_model: SimpleFilterCheckboxListModel[T],
+    ):
+        """
         Args:
-            parent (QWidget, optional): parent widget
-            make_filter_model (Callable): callable that constructs the filter model
-            *args: arguments forwarded to ``make_filter_model``
-            **kwargs: keyword arguments forwarded to ``make_filter_model``
+            parent: parent widget
+            filter_model: callable that constructs the filter model
         """
         super().__init__(parent)
         # parameters
-        self._filter_state = set()
-        self._filter_empty_state = None
+        self.filter_state: set[T] = set()
+        self.filter_empty_state: bool | None = None
         self._search_text = ""
-        self.search_delay = 200
+        self.search_delay: int = 200
         # create ui elements
         self._ui_vertical_layout = QVBoxLayout(self)
         self._ui_list = QListView()
@@ -132,62 +141,64 @@ class FilterWidget(QWidget):
         self._ui_vertical_layout.addWidget(self._ui_buttons)
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
-        self._filter_model = make_filter_model(*args, **kwargs)
+        self._filter_model = filter_model
         self._filter_model.setParent(self)
-        self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
         self.connect_signals()
 
-    # For tests
-    def set_filter_list(self, items):
-        self._filter_state = items
-        self._filter_model.set_list(self._filter_state)
+    def model(self) -> SimpleFilterCheckboxListModel[T]:
+        return self._filter_model
 
-    def connect_signals(self):
-        self._ui_list.clicked.connect(self._filter_model._handle_index_clicked)
+    # For tests
+    def set_filter_list(self, items: list[T] | set[T]) -> None:
+        self.filter_state = set(items)
+        self._filter_model.set_list(items)
+
+    def connect_signals(self) -> None:
+        self._ui_list.clicked.connect(self._filter_model.handle_index_clicked)
         self._search_timer.timeout.connect(self._filter_list)
         self._ui_edit.textChanged.connect(self._text_edited)
-        self._ui_buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self._apply_filter)
+        self._ui_buttons.button(QDialogButtonBox.StandardButton.Ok).clicked.connect(self.apply_filter)
         self._ui_buttons.button(QDialogButtonBox.StandardButton.Cancel).clicked.connect(self._cancel_filter)
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Saves the state of the FilterCheckboxListModel."""
-        self._filter_state = self._filter_model.get_selected()
-        if self._filter_model._show_empty:
-            self._filter_empty_state = self._filter_model._empty_selected
+        self.filter_state = self._filter_model.get_selected()
+        if self._filter_model.show_empty:
+            self.filter_empty_state = self._filter_model.empty_selected
 
-    def reset_state(self):
+    def reset_state(self) -> None:
         """Sets the state of the FilterCheckboxListModel to saved state."""
-        self._filter_model.set_selected(self._filter_state, self._filter_empty_state)
+        self._filter_model.set_selected(self.filter_state, self.filter_empty_state)
 
-    def clear_filter(self):
+    def clear_filter(self) -> None:
         """Selects all items in FilterCheckBoxListModel."""
         self._filter_model.reset_selection()
         self.save_state()
 
-    def has_filter(self):
+    def has_filter(self) -> bool:
         """Returns true if any item is filtered in FilterCheckboxListModel false otherwise."""
-        return not self._filter_model._all_selected
+        return not self._filter_model.all_selected
 
-    def _apply_filter(self):
+    def apply_filter(self) -> None:
         """Apply current filter and save state."""
         self._filter_model.apply_filter()
         self.save_state()
         self._ui_edit.setText("")
         self.okPressed.emit()
 
-    def _cancel_filter(self):
+    def _cancel_filter(self) -> None:
         """Cancel current edit of filter and set the state to the stored state."""
         self._filter_model.remove_filter()
         self.reset_state()
         self._ui_edit.setText("")
         self.cancelPressed.emit()
 
-    def _filter_list(self):
+    def _filter_list(self) -> None:
         """Filter list with current text."""
         self._filter_model.set_filter(self._search_text)
 
-    def _text_edited(self, new_text):
+    def _text_edited(self, new_text: str) -> None:
         """Callback for edit text, starts/restarts timer.
         Start timer after text is edited, restart timer if text
         is edited before last time out.
@@ -199,17 +210,16 @@ class FilterWidget(QWidget):
 class CustomWidgetAction(QWidgetAction):
     """A QWidgetAction with custom hovering."""
 
-    def __init__(self, parent=None):
-        """Class constructor.
-
+    def __init__(self, parent: QWidget | None = None):
+        """
         Args:
-            parent (QMenu): the widget's parent
+            parent: the widget's parent
         """
         super().__init__(parent)
         self.hovered.connect(self._handle_hovered)
 
     @Slot()
-    def _handle_hovered(self):
+    def _handle_hovered(self) -> None:
         """Hides other menus that might be shown in the parent widget and repaints it.
         This is to emulate the behavior of QAction."""
         for menu in self.parent().findChildren(QMenu):
@@ -282,7 +292,7 @@ class ToolBarWidgetBase(QWidget):
         layout.addStretch()
         layout.addWidget(self.tool_bar)
         # pylint: disable=undefined-variable
-        icon_extent = qApp.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
+        icon_extent = QApplication.style().pixelMetric(QStyle.PixelMetric.PM_SmallIconSize)
         self.tool_bar.setIconSize(QSize(icon_extent, icon_extent))
         self.tool_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
 
@@ -313,7 +323,7 @@ class MenuItemToolBarWidget(ToolBarWidgetBase):
             self.tool_bar.setFixedHeight(self.option.rect.height())
         text_width = self.option.fontMetrics.horizontalAdvance(self._text)
         # pylint: disable=undefined-variable
-        icon_width = qApp.style().pixelMetric(QStyle.PixelMetric.PM_ToolBarIconSize)
+        icon_width = QApplication.style().pixelMetric(QStyle.PixelMetric.PM_ToolBarIconSize)
         spacing = text_width + 3 * icon_width
         self.option.rect.setWidth(spacing)
         self.layout().insertSpacing(0, spacing)
@@ -593,23 +603,23 @@ class QWizardProcessPage(QWizardPage):
     @Slot(bool)
     def _handle_copy_clicked(self, _=False):
         self._label_copy.show()
-        qApp.clipboard().setText(self._log.toPlainText())  # pylint: disable=undefined-variable
+        QApplication.clipboard().setText(self._log.toPlainText())
 
     @Slot(str)
     def _add_msg(self, msg):
-        self._log.append(format_log_message("msg", msg, show_datetime=False))
+        self._log.append(format_log_message("msg", msg, self._log, show_datetime=False))
 
     @Slot(str)
     def _add_msg_warning(self, msg):
-        self._log.append(format_log_message("msg_warning", msg, show_datetime=False))
+        self._log.append(format_log_message("msg_warning", msg, self._log, show_datetime=False))
 
     @Slot(str)
     def _add_msg_error(self, msg):
-        self._log.append(format_log_message("msg_error", msg, show_datetime=False))
+        self._log.append(format_log_message("msg_error", msg, self._log, show_datetime=False))
 
     @Slot(str)
     def _add_msg_success(self, msg):
-        self._log.append(format_log_message("msg_success", msg, show_datetime=False))
+        self._log.append(format_log_message("msg_success", msg, self._log, show_datetime=False))
 
     def isComplete(self):
         return self._exec_mngr is None
@@ -640,7 +650,7 @@ class LabelWithCopyButton(QWidget):
         layout.addWidget(line_edit)
         layout.addWidget(button)
         # pylint: disable=undefined-variable
-        button.clicked.connect(lambda _=False, le=line_edit: qApp.clipboard().setText(le.text()))
+        button.clicked.connect(lambda _=False, le=line_edit: QApplication.clipboard().setText(le.text()))
 
 
 class ElidedLabel(ElidedTextMixin, QLabel):

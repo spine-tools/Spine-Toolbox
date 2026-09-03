@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides OptionsDialog."""
+
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QButtonGroup, QDialog, QDialogButtonBox, QFrame, QLabel, QRadioButton, QStyle, QVBoxLayout
 
