@@ -25,7 +25,6 @@ from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE, ITEM_ID_ROLE
 class StandardTreeItem(FilterableChildrenMixin, TreeItem):
     """A tree item that fetches their children as they are inserted."""
 
-    item_type: ClassVar[str] = None
     icon_code: ClassVar[str] = None
 
     def __init__(self, *args, **kwargs):
@@ -103,13 +102,7 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
 
     @property
     def visible_children(self) -> list:
-        """Returns the children that pass the active level filters, plus the phantom add-row.
-
-        When no level filter is active this is ``self.children`` unchanged, so the filtered path adds no
-        overhead to normal operation. Otherwise the filtered list is memoized and only recomputed when the
-        model's :attr:`~.level_filter.LevelFilterMixin.filter_generation` moves, so repeated Qt
-        layout/paint/scroll queries are served from the cache rather than rebuilt every time.
-        """
+        """Returns the children that pass the active level filters."""
         if not self.model.has_level_filters():
             return self.children
         self._ensure_visible_cache()

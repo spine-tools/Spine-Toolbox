@@ -15,6 +15,7 @@
 import numpy as np
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesVariableResolution
+from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT
 from .indexed_value_table_model import IndexedValueTableModel
 
 
@@ -157,7 +158,9 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             try:
                 self._value.indexes[row] = value
             except ValueError:
-                self._value.indexes[row] = np.datetime64()  # pylint: disable=no-value-for-parameter
+                self._value.indexes[row] = np.datetime64(
+                    "nat", NUMPY_DATETIME64_UNIT
+                )  # pylint: disable=no-value-for-parameter
         else:
             try:
                 self._value.values[row] = value
