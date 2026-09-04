@@ -17,7 +17,6 @@ from collections.abc import Callable
 from typing import ClassVar
 from PySide6.QtCore import Qt
 from spinedb_api import DatabaseMapping
-from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from ...fetch_parent import FetchIndex, FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
@@ -28,7 +27,6 @@ from ...mvcmodels.shared import ITEM_ID_ROLE
 class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
     """A tree item that may belong in multiple databases."""
 
-    item_type: ClassVar[ItemType] = None
     """Item type identifier string. Should be set to a meaningful value by subclasses."""
     visual_key: ClassVar[list[str]] = ["name"]
 
@@ -43,8 +41,6 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
             db_map_ids = {}
         self._db_map_ids = db_map_ids
         self._child_map: dict[DatabaseMapping, dict[TempId, int]] = {}
-        # Memoized filtered child list, rebuilt in lockstep with ``_child_map`` so that ``child``/
-        # ``row_count`` (list access) and ``child_number`` (``_child_map`` lookup) always agree.
         self._visible_children_cache: list | None = None
         self._fetch_index: FetchIndex | None = None
         self._fetch_parent = FlexibleFetchParent(
@@ -60,11 +56,7 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
 
     @property
     def visible_children(self) -> list:
-        """Returns the memoized filtered child list, building it (and the child map) on first access.
-
-        The list is cached and rebuilt only by :meth:`rebuild_child_map`, which every structural change and
-        every filter (re)apply already calls - so paint/scroll queries never recompute the filter.
-        """
+        """Returns the memoized filtered child list, building it (and the child map) on first access."""
         if self._visible_children_cache is None:
             self.rebuild_child_map()
         return self._visible_children_cache
@@ -82,10 +74,7 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
         return 0
 
     def rebuild_child_map(self) -> None:
-        """Recomputes the child map without emitting any layout-change signal.
-
-        Kept separate so a model can rebuild many items' maps under a single layout change.
-        """
+        """Recomputes the child map without emitting any layout-change signal."""
         self._child_map.clear()
         visible = self._compute_visible_children()
         self._visible_children_cache = visible
