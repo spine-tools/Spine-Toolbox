@@ -15,6 +15,7 @@
 import numpy
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import TimeSeriesVariableResolution
+from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from tests.mock_helpers import TestCaseWithQApplication
 
@@ -228,7 +229,9 @@ class TestTimeSeriesModelVariableResolution(TestCaseWithQApplication):
         model_index = model.index(0, 0)
         model.setData(model_index, "what happened to Tuesday")
         # pylint: disable=no-value-for-parameter
-        expected = TimeSeriesVariableResolution([numpy.datetime64(), "1992-01-01T13:30"], [2.3, -5.0], True, False)
+        expected = TimeSeriesVariableResolution(
+            [numpy.datetime64("nat", NUMPY_DATETIME64_UNIT), "1992-01-01T13:30"], [2.3, -5.0], True, False
+        )
         self.assertEqual([str(x) for x in model.value.indexes], [str(x) for x in expected.indexes])
         self.assertTrue(numpy.array_equal(model.value.values, expected.values))
         self.assertEqual(model.value.ignore_year, expected.ignore_year)
