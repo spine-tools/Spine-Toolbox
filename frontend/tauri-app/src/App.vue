@@ -41,6 +41,7 @@ const projectMenuOpen = ref(false);
 const scenario = ref("Baseline 2030");
 const selectedTool = ref("SpineOpt");
 const inputFile = ref("energy_model.sqlite");
+const dbContent = ref(null);
 const excelInputFile = ref("");
 const inputSourceMenuOpen = ref(false);
 const resultFile = ref("results.sqlite");
@@ -157,6 +158,23 @@ async function importExcel(event) {
     if (result.errors.length) projectLoadError.value = result.errors.join(" ");
   } catch (error) {
     projectLoadError.value = `Excel import failed: ${error.message}`;
+  } finally {
+    event.target.value = "";
+  }
+}
+
+async function openDatabase(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    const result = await callBackend("open_database", { filename: file.name, content: btoa(binary) });
+    dbContent.value = result;
+    inputFile.value = result.filename || file.name;
+  } catch (error) {
+    console.error("Open database failed:", error);
   } finally {
     event.target.value = "";
   }
@@ -378,6 +396,7 @@ onBeforeUnmount(() => {
                   <button type="button" @click="chooseInputSource('excel')"><Upload :size="13" /> Choose Excel file</button>
                 </div>
                 <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
+                <input id="db-input-picker" class="hidden-file-picker" type="file" accept=".sqlite,.db" @change="openDatabase" />
               </template>
             </article>
           </section>
@@ -393,13 +412,21 @@ onBeforeUnmount(() => {
       <section v-else class="database-editor" aria-label="Database editor">
         <nav class="db-menu-bar"><button>File</button><button>Edit</button><button>Session</button><button>View</button><button>Help</button></nav>
         <header class="db-toolbar">
-          <button title="Open database"><FolderOpen :size="17" /></button><button title="Save session"><Save :size="17" /></button><span></span><button title="Undo"><Undo2 :size="17" /></button><button title="Redo"><Redo2 :size="17" /></button><span></span><button title="Commit"><Check :size="17" /></button><button title="History"><History :size="17" /></button><span></span><button title="Graph view"><GitBranch :size="17" /></button><label class="db-search"><Search :size="15" /><input placeholder="Search" /></label>
+          <button title="Open database" @click="document.querySelector('#db-input-picker').click()"><FolderOpen :size="17" /></button><button title="Save session"><Save :size="17" /></button><span></span><button title="Undo"><Undo2 :size="17" /></button><button title="Redo"><Redo2 :size="17" /></button><span></span><button title="Commit"><Check :size="17" /></button><button title="History"><History :size="17" /></button><span></span><button title="Graph view"><GitBranch :size="17" /></button><label class="db-search"><Search :size="15" /><input placeholder="Search" /></label>
         </header>
         <div class="db-tabs"><button class="active"><Database :size="14" /> {{ inputFile }} <b>×</b></button><button title="Open database"><Plus :size="15" /></button></div>
         <div class="db-dock-grid">
           <section class="db-dock entity-tree-dock"><header>Entity tree <span>×</span></header><div class="tree-filter"><Search :size="13" /><input placeholder="Filter" /></div><div class="db-tree"><p><ChevronDown :size="13" /> commodity</p><p class="tree-child">electricity</p><p class="tree-child">gas</p><p><ChevronDown :size="13" /> node</p><p class="tree-child selected-row">North</p><p class="tree-child">South</p><p><ChevronDown :size="13" /> unit</p></div></section>
           <section class="db-dock parameter-values-dock"><header>Parameter value <span>×</span></header><table class="db-table"><thead><tr><th>Entity class</th><th>Entity</th><th>Parameter</th><th>Alternative</th><th>Value</th></tr></thead><tbody><tr class="selected-row"><td>node</td><td>North</td><td>demand</td><td>Base</td><td>120</td></tr><tr><td>node</td><td>South</td><td>demand</td><td>Base</td><td>94</td></tr><tr><td>unit</td><td>Gas plant</td><td>capacity</td><td>Base</td><td>300</td></tr><tr><td>unit</td><td>Wind</td><td>capacity</td><td>Base</td><td>150</td></tr></tbody></table></section>
           <section class="db-dock entity-dock"><header>Entity <span>×</span></header><table class="db-table"><thead><tr><th>Entity class</th><th>Name</th><th>Description</th></tr></thead><tbody><tr class="selected-row"><td>node</td><td>North</td><td>Northern system node</td></tr><tr><td>node</td><td>South</td><td>Southern system node</td></tr><tr><td>unit</td><td>Gas plant</td><td>Combined cycle gas</td></tr></tbody></table></section>
+          <section v-if="dbContent" class="db-dock raw-db-dock"><header>Database: <strong>{{ dbContent.filename }}</strong> <span>×</span></header><div class="db-raw">
+              <div v-for="table in dbContent.tables" :key="table.name" class="db-table-preview">
+                <h4>{{ table.name }} ({{ table.columns.length }} cols / {{ table.rows.length }} rows)</h4>
+                <table class="db-table"><thead><tr><th v-for="col in table.columns" :key="col">{{ col }}</th></tr></thead>
+                <tbody><tr v-for="(row, idx) in table.rows" :key="idx"><td v-for="col in table.columns" :key="col">{{ row[col] }}</td></tr></tbody></table>
+              </div>
+            </div></section>
+
           <section class="db-dock scenario-dock"><header>Scenario <span>×</span></header><div class="tree-filter"><Search :size="13" /><input placeholder="Filter" /></div><div class="db-tree"><p class="selected-row"><ChevronDown :size="13" /> Base</p><p class="tree-child">Base</p><p><ChevronDown :size="13" /> High demand</p><p class="tree-child">Base</p><p class="tree-child">High demand</p></div></section>
         </div>
       </section>
