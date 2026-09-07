@@ -16,7 +16,7 @@ from PySide6.QtCore import QPoint, Qt, Signal, Slot
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QHeaderView, QMenu, QWidget
 from ...plotting import PlottingError, plot_pivot_table_selection
-from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
+from ...widgets.plot_widget import PlotWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ..mvcmodels.colors import pivot_table_header_color
 from .tabular_view_header_widget import TabularViewHeaderWidget
@@ -160,7 +160,6 @@ class ParameterValuePivotHeaderView(PivotTableHeaderView):
             self._plot_action.setEnabled(True)
             self._set_as_x_action.setEnabled(True)
             self._set_as_x_action.setChecked(source_index.column() == self._proxy_model.sourceModel().plot_x_column)
-        prepare_plot_in_window_menu(self._add_to_plot_menu)
         self._menu.show()
 
 

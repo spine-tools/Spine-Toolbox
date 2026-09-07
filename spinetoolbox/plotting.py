@@ -12,78 +12,47 @@
 
 """Functions for plotting on PlotWidget."""
 
-from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import datetime
-from enum import Enum, auto, unique
 import functools
 from importlib import resources
 from itertools import starmap
 from operator import attrgetter, methodcaller
-from pathlib import Path
 import re
-from typing import Dict, Iterable, List, Literal, Optional, TypeVar, Union
+from typing import Iterable, Literal, NamedTuple, Optional, TypeVar, TYPE_CHECKING
 from bokeh.core.properties import String
 from bokeh.embed import file_html
-from bokeh.layouts import column, gridplot
-from bokeh.models import ColumnDataSource, CustomAction, CustomJS, FactorRange, HoverTool, Legend, RangeTool, SaveTool
+from bokeh.layouts import column, gridplot, row
+from bokeh.models import (
+    Row,
+    ColumnDataSource,
+    CustomAction,
+    CustomJS,
+    DataTable,
+    FactorRange,
+    HoverTool,
+    Legend,
+    MultiChoice,
+    RangeTool,
+    SaveTool,
+    TableColumn,
+)
 from bokeh.palettes import TolRainbow
 from bokeh.plotting import figure
 from bokeh.resources import INLINE
 from bokeh.util.compiler import TypeScript
 import numpy as np
 import pandas as pd
-from PySide6.QtCore import QSize, Qt
-from spinedb_api import DateTime, IndexedValue
+from PySide6.QtCore import QSize
 from spinedb_api.dataframes import to_dataframe
-from .mvcmodels.shared import PARAMETER_VALUE_ROLE, PARSED_ROLE
-from .widgets.plot_widget import PlotWidget
+from .mvcmodels.shared import PARAMETER_VALUE_ROLE
 
-LEGEND_PLACEMENT_THRESHOLD = 8
-
-
-@unique
-class PlotType(Enum):
-    SCATTER = auto()
-    SCATTER_LINE = auto()
-    LINE = auto()
-    STACKED_LINE = auto()
-    BAR = auto()
-    STACKED_BAR = auto()
-
-
-_BASE_SETTINGS = {"alpha": 0.7}
-_LINE_PLOT_SETTINGS = {"linestyle": "solid"}
+if TYPE_CHECKING:
+    from .widgets.plot_widget import PlotWidget
 
 
 class PlottingError(Exception):
     """An exception signalling failure in plotting."""
-
-
-@dataclass(frozen=True)
-class IndexName:
-    label: str
-    id: int
-
-
-@dataclass(frozen=True)
-class XYData:
-    """Two-dimensional data for plotting."""
-
-    x: List[Union[float, int, str, np.datetime64]]
-    y: List[Union[float, int]]
-    x_label: IndexName
-    y_label: str
-    data_index: List[str]
-    index_names: List[IndexName]
-
-
-@dataclass
-class TreeNode:
-    """A labeled node in tree structure."""
-
-    label: Union[str, IndexName]
-    content: Dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -233,25 +202,25 @@ def get_variants(sdf: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return nplots, seq_cols
 
 
-def plot_data(dfs, plot_widget: PlotWidget | None = None):
+def plot_data(dfs: list[pd.DataFrame], plot_widget: "PlotWidget | None" = None, **selections):
     """
     Returns a plot widget with plots of the given data.
 
     Args:
-        data_list (list of XYData): data to plot
+        dfs (list[pd.DataFrame()]): data to plot
         plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
-        plot_type (PlotType, optional): plot type
 
     Returns:
         a PlotWidget object
     """
     if plot_widget is None:
+        from .widgets.plot_widget import PlotWidget
+
         plot_widget = PlotWidget()
 
     dfs = [parse_time(df) for df in dfs]
     check_columns(dfs, _raise=True)
 
-    pprint(dfs, max_length=5)
     # combine all dfs to determine type of plot we need
     df_combined = pd.concat(dfs, axis=0)
     sdf, common = squeeze_df(df_combined)
@@ -262,23 +231,36 @@ def plot_data(dfs, plot_widget: PlotWidget | None = None):
     nplots, seq_cols = get_variants(sdf)
 
     plot_title = "|".join(starmap(lambda k, v: f"{k}={v}", common.items()))
-
-    match nplots.empty, nplots.shape, seq_cols.empty, seq_cols.shape:
-        case True, _, False, (seq_len, _):
-            plot = plot_overlayed(sdf, nplots, plot_title)
-        case False, (_, ncols), False, (seq_len, _) if seq_len > 5:
-            plot = plot_overlayed(sdf, nplots, plot_title)
-        case False, (_, ncols), False, (seq_len, _):
-            plot = plot_barchart(sdf, plot_title)
-        case False, (_, ncols), True, _:
-            plot = plot_barchart(sdf, plot_title)
+    match nplots.empty, seq_cols.empty, seq_cols.shape:
+        case True, False, (seq_len, _):
+            # seq-only line plot; array, ts, etc
+            plot = plot_overlayed(sdf, nplots, plot_title, **selections)
+        case False, False, (seq_len, _) if seq_len > 5:
+            # categorical & seq, overlayed line plot: map w/ series (5+)
+            plot = plot_overlayed(sdf, nplots, plot_title, **selections)
+        case False, False, (seq_len, _):
+            # categorical & seq, bar chart: map w/ short series
+            plot = plot_barchart(sdf, plot_title, **selections)
+        case False, True, _:
+            # categorical-only, bar charts: map w/ single values
+            plot = plot_barchart(sdf, plot_title, **selections)
         case _:
             raise ValueError(f"unhandled case:\n{nplots=}\n{seq_cols=}")
 
+    size = plot_widget.size()
+    # Resize to an absolute target, never relative to the current size, so
+    # re-plotting (e.g. from the selector table) can't grow the widget without
+    # bound and blow past QtWebEngine's max surface size (~16384px).
+    match plot:
+        case Row():
+            target = QSize(1200 + 50, 600)
+        case _:
+            target = QSize(800 + 50, 600)
+    plot_widget.set_target_size(QSize(max(size.width(), target.width()), max(size.height(), target.height())))
+    plot_widget.resize(max(size.width(), target.width()), max(size.height(), target.height()))
+
     plot_widget.dataframe = sdf
     plot_widget.write(file_html(plot, INLINE, plot_title))
-    if plot.width and plot.height:
-        plot_widget.resize(QSize(plot.width + 50, plot.height + 50))
 
     return plot_widget
 
@@ -353,9 +335,60 @@ def get_ranges(
     return _x_range(), _y_range()
 
 
+def get_dim_selector(nplots: pd.DataFrame):
+    """Create a Bokeh table with row selection and column reordering.
+
+    Parameters
+    ----------
+    nplots: pandas.DataFrame
+        Dataframe with number of plots metadata; output by
+        `get_variants(squeezed_df)`
+
+    Returns
+    -------
+    bokeh.layouts.column
+        A layout containing a widget to select column-order, and a
+        DataTable and a
+
+    """
+
+    df = nplots.drop(nplots.columns[-1:], axis=1).drop_duplicates()
+    columns = list(df.columns)
+    source = ColumnDataSource(data=df)
+    table_columns = [TableColumn(field=col, title=str(col)) for col in columns]
+    data_table = DataTable(
+        source=source,
+        columns=table_columns,
+        sizing_mode="stretch_both",
+        min_height=400,
+        selectable=True,
+    )
+
+    order_input = MultiChoice(
+        value=columns,
+        options=columns,
+        title="Column Order - remove and reinsert to reorder",
+        sizing_mode="stretch_width",
+        min_height=50,
+    )
+
+    cb = CustomJS(
+        args={"source": source, "column_order": order_input},
+        code=get_resource("selector_cb.js"),
+    )
+    source.selected.js_on_change("indices", cb)
+
+    return column(order_input, data_table)
+
+
 def get_window_selector(
-    fig: figure, x_label: str, y_label: str, x_axis_type: Literal["linear"] | Literal["datetime"], cds: ColumnDataSource
+    fig: figure,
+    x_label: str,
+    y_label: str,
+    x_axis_type: Literal["linear", "datetime"],
+    sources: Iterable[ColumnDataSource],
 ) -> figure:
+    longest: ColumnDataSource = functools.reduce(lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources)
     # TODO: get width from `fig`
     select = figure(
         title="Select time range",
@@ -370,7 +403,7 @@ def get_window_selector(
     range_tool = RangeTool(x_range=fig.x_range, start_gesture="pan")
     range_tool.overlay.fill_color = "navy"
     range_tool.overlay.fill_alpha = 0.2
-    select.line(x_label, y_label, source=cds)
+    select.line(x_label, y_label, source=longest)
     select.ygrid.grid_line_color = None
     select.add_tools(range_tool)
     return select
@@ -423,9 +456,20 @@ def add_download_buttons(fig, legend=None):
     tools.insert(tools.index(save_tool) + 1, download_action)
 
 
-def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 1_000):
+def _get_default_selections(sdf: pd.DataFrame) -> dict:
+    # NOTE: ignore type hints b/c of 2 upstream bugs: 1) itertuples
+    # type hints Iterable, but that doesn't seem to match with
+    # SupportsNext (protocol for __next__), and 2) the items are typed
+    # as tuple, not NamedTuple
+    row: NamedTuple = next(sdf.itertuples(index=False))  # type: ignore
+    ncols = len(row)
+    return {col: val for i, (col, val) in enumerate(row._asdict().items()) if i < (ncols - 3)}
+
+
+def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_points: int = 1_000, **selections):
     match sdf.shape:
         case _, 2:
+            # FIXME: support single column data
             sources = {"value": ColumnDataSource(data=sdf)}
         case _, 3:
             col = sdf.columns[0]
@@ -435,20 +479,35 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
                 for v, idx in grouped.groups.items()
             }
         case _, ncols if ncols > 3:
-            # FIXME: probably doesn't work for ncols == 4
-            grouped = sdf.groupby(sdf.columns[:-3].to_list())
-            figs = [
-                plot_overlayed(
-                    sdf.loc[idx, sdf.columns[-3:]],
-                    nplots,
-                    "|".join([title, *(f"{k}={v}" for k, v in zip(sdf.columns[:-3], vals))]),
-                    max_points=max_points,
-                )
-                for vals, idx in grouped.groups.items()
-            ]
-            return gridplot(figs, ncols=2)
-        case _:
-            raise RuntimeError()
+            selections = selections if len(selections) else _get_default_selections(sdf)
+            _cols = list(selections)
+            if (factors := set(sdf.columns[:-3])) != (query_cols := set(_cols)):
+                # FIXME: warn & fallback, instead of raising an error
+                raise PlottingError(f"{query_cols=} != {factors=}: query doesn't match data")
+
+            grouped = sdf.groupby(_cols)
+            if ncols == 4 and not isinstance(next(iter(grouped.groups)), tuple):
+                # FIXME: Pandas groupby creates scalar group keys when grouping over a single column
+                ks = list(grouped.groups)
+                for k in ks:
+                    v = grouped.groups.pop(k)
+                    grouped.groups.update([((k,), v)])
+
+            selector = get_dim_selector(nplots)
+
+            title = "|".join(
+                [
+                    title,
+                    *(f"{k}={v}" for k, v in selections.items()),
+                ]
+            )
+            idx = tuple(selections.values())
+            sdf = sdf.loc[grouped.groups[idx]].drop(_cols, axis=1)
+            nplots = nplots.drop(_cols, axis=1).drop_duplicates()
+            plot = plot_overlayed(sdf, nplots, title, max_points=max_points)
+            return row(plot, selector)
+        case _, ncols:
+            raise PlottingError(f"{ncols=}: too few columns to plot")
 
     x_label, y_label = sdf.columns[-2:]
     x_axis_type = "datetime" if sdf[x_label].dtype.kind == "M" else "linear"
@@ -474,15 +533,12 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
 
     legend_items = [(key, _draw(cds, idx)) for idx, (key, cds) in enumerate(sources.items())]
     legend = Legend(items=legend_items)
-    fig.add_layout(legend, "right")
+    fig.add_layout(legend, place="right")
     fig.legend.click_policy = "hide"
 
     add_download_buttons(fig, legend=legend)
 
-    longest: ColumnDataSource = functools.reduce(
-        lambda i, j: max(i, j, key=lambda d: len(d.data["index"])), sources.values()
-    )
-    select = get_window_selector(fig, x_label, y_label, x_axis_type, longest)
+    select = get_window_selector(fig, x_label, y_label, x_axis_type, sources.values())
     return column(fig, select)
 
 
@@ -535,18 +591,6 @@ def plot_barchart(sdf: pd.DataFrame, title: str):
     return fig
 
 
-def _table_display_row(row):
-    """Calculates a human-readable row number.
-
-    Args:
-        row (int): model row
-
-    Returns:
-        int: row number
-    """
-    return row + 1
-
-
 def plot_parameter_table_selection(model, model_indexes, table_header_sections, value_section_label, plot_widget=None):
     """
     Returns a plot widget with plots of the selected indexes.
@@ -561,17 +605,11 @@ def plot_parameter_table_selection(model, model_indexes, table_header_sections, 
     Returns:
         PlotWidget: a PlotWidget object
     """
-    pprint(inspect.currentframe().f_code.co_name)
-    pprint(model_indexes, max_length=3)
-    pprint(type(model).mro())
     header_columns = {model.headerData(column): column for column in range(model.columnCount())}
     data_column = header_columns[value_section_label]
-    index_columns = [header_columns[section.label] for section in table_header_sections]
     model_indexes = [i for i in model_indexes if i.column() == data_column]
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
-    pprint(header_columns)
-    pprint(table_header_sections)
     dfs = [
         to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
         for i in sorted(model_indexes, key=methodcaller("row"))
@@ -591,27 +629,9 @@ def plot_value_editor_table_selection(model, model_indexes, plot_widget=None):
     Returns:
         PlotWidget: a PlotWidget object
     """
-    pprint(inspect.currentframe().f_code.co_name)
-    pprint(model_indexes, max_length=3)
-    pprint(type(model).mro())
     model_indexes = [i for i in model_indexes if model.is_leaf_value(i)]
-    pprint(model_indexes, max_length=3)
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
-    header_columns = [model.headerData(column, Qt.Orientation.Horizontal) for column in range(model.columnCount())]
-    root_node = TreeNode(header_columns[0])
-    for model_index in sorted(model_indexes, key=methodcaller("row")):
-        value = _get_parsed_value(model_index, _table_display_row)
-        if value is None:
-            continue
-        row = model_index.row()
-        with add_row_to_exception(row, _table_display_row):
-            leaf_content = _convert_to_leaf(value)
-        indexes = tuple(model.index(row, column).data(PARSED_ROLE) for column in range(model_index.column()))
-        node = root_node
-        for i, index in enumerate(indexes[:-1]):
-            node = _set_default_node(node, index, header_columns[i + 1])
-        node.content[indexes[-1]] = leaf_content
     dfs = [
         to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
         for i in sorted(model_indexes, key=methodcaller("row"))
@@ -631,37 +651,8 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
     Returns:
         PlotWidget: a PlotWidget object
     """
-    pprint(inspect.currentframe().f_code.co_name)
-    pprint(model_indexes, max_length=3)
-    pprint(type(model).mro())
     if not model_indexes:
         raise PlottingError("Nothing to plot.")
-    source_model = model.sourceModel()
-    has_x_column = _has_x_column(model, source_model)
-    root_node = TreeNode("database")
-    display_row = functools.partial(_pivot_display_row, source_model=source_model)
-    x_index_name = source_model.x_parameter_name() if has_x_column else None
-    for model_index in sorted(map(model.mapToSource, model_indexes), key=methodcaller("row")):
-        value = _get_parsed_value(model_index, display_row)
-        if value is None:
-            continue
-        row = model_index.row()
-        with add_row_to_exception(row, display_row):
-            leaf_content = _convert_to_leaf(value)
-        object_names, parameter_name, alternative_name, db_name = source_model.all_header_names(model_index)
-        indexes = (db_name, parameter_name) + tuple(object_names) + (alternative_name,)
-        index_names = _pivot_index_names(indexes)
-        if has_x_column:
-            x = source_model.x_value(model_index)
-            if isinstance(x, IndexedValue):
-                raise PlottingError(f"X column contains an unusable value at row {display_row(row)}")
-            if x is not None:
-                indexes = indexes + (x,)
-                index_names = index_names + (x_index_name,)
-        node = root_node
-        for i, index in enumerate(indexes[:-1]):
-            node = _set_default_node(node, index, index_names[i])
-        node.content[indexes[-1]] = leaf_content
     dfs = [
         to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
         for i in sorted(model_indexes, key=methodcaller("row"))
@@ -669,164 +660,16 @@ def plot_pivot_table_selection(model, model_indexes, plot_widget=None):
     return plot_data(dfs, plot_widget)
 
 
-def plot_db_mngr_items(items, db_maps, db_name_registry, plot_widget=None):
+def plot_db_mngr_items(items, _db_maps, _db_name_registry, plot_widget=None):
     """Returns a plot widget with plots of database manager parameter value items.
 
     Args:
         items (list of dict): parameter value items
-        db_maps (list of DatabaseMapping): database mappings corresponding to items
-        db_name_registry (NameRegistry): database display name registry
         plot_widget (PlotWidget, optional): widget to add plots to
     """
-    pprint(inspect.currentframe().f_code.co_name)
-    pprint(items, max_length=3)
     if not items:
         raise PlottingError("Nothing to plot.")
-    if len(items) != len(db_maps):
-        raise PlottingError("Database maps don't match parameter values.")
-    root_node = TreeNode("database")
-    for item, db_map in zip(items, db_maps):
-        value = item["parsed_value"]
-        db_name = db_name_registry.display_name(db_map.sa_url)
-        if value is None:
-            continue
-        try:
-            leaf_content = _convert_to_leaf(value)
-        except PlottingError as error:
-            raise PlottingError(f"Failed to plot value in {db_name}: {error}") from error
-        parameter_name = item["parameter_definition_name"]
-        entity_byname = item["entity_byname"]
-        if not isinstance(entity_byname, tuple):
-            entity_byname = (entity_byname,)
-        alternative_name = item["alternative_name"]
-        indexes = (db_name, parameter_name) + entity_byname + (alternative_name,)
-        index_names = _pivot_index_names(indexes)
-        node = root_node
-        for i, index in enumerate(indexes[:-1]):
-            node = _set_default_node(node, index, index_names[i])
-        node.content[indexes[-1]] = leaf_content
-    dfs = [
-        to_dataframe(model.index(i.row(), i.column()).data(PARAMETER_VALUE_ROLE))
-        for i in sorted(model_indexes, key=methodcaller("row"))
-    ]
+    dfs = [to_dataframe(item) for item in items if item["value"] is not None]
+    if not dfs:
+        raise PlottingError("Nothing to plot.")
     return plot_data(dfs, plot_widget)
-
-
-def _has_x_column(model, source_model):
-    """Checks if pivot source model has x column.
-
-    Args:
-        model (PivotTableSortFilterProxy): proxy pivot model
-        source_model (PivotTableModelBase): pivot table model
-
-    Returns:
-        bool: True if x pivot table has column, False otherwise
-    """
-    if source_model.plot_x_column is not None:
-        dummy_index = source_model.index(0, source_model.plot_x_column)
-        return model.mapFromSource(dummy_index).isValid()
-    return False
-
-
-def _set_default_node(root_node, key, label):
-    """Gets node from the contents of root_node adding a new node if necessary.
-
-    Args:
-        root_node (TreeNode): root node
-        key (Hashable): key to root_node contents
-        label (str): label of possible new node
-
-    Returns:
-        TreeNode: node at given key
-    """
-    try:
-        node = root_node.content[key]
-    except KeyError:
-        sub_node = TreeNode(label)
-        root_node.content[key] = sub_node
-        node = sub_node
-    return node
-
-
-def _get_parsed_value(model_index, display_row):
-    """Gets parsed value from model.
-
-    Args:
-        model_index (QModelIndex): model index
-        display_row (Callable): callable that returns a display row
-
-    Returns:
-        Any: parsed value
-
-    Raises:
-        PlottingError: raised if parsing of value failed
-    """
-    value = model_index.data(PARSED_ROLE)
-    if isinstance(value, Exception):
-        row = model_index.row()
-        raise PlottingError(f"Failed to plot row {display_row(row)}: {value}")
-    return value
-
-
-def _pivot_index_names(indexes):
-    """Gathers index names from pivot table.
-
-    Args:
-        indexes (tuple of str): "path" of indexes
-
-    Returns:
-        tuple of str: names corresponding to given indexes
-    """
-    excess_dimensions = len(indexes) - 4
-    if excess_dimensions == 0:
-        return "parameter_name", "object_name", "alternative_name"
-    object_index_names = tuple(f"object_{dimension + 1}_name" for dimension in range(excess_dimensions + 1))
-    return ("parameter_name",) + object_index_names + ("alternative_name",)
-
-
-def _pivot_display_row(row, source_model):
-    """Calculates display row for pivot table.
-
-    Args:
-        row (int): row in source table model
-        source_model (QAbstractItemModel): pivot model
-
-    Returns:
-        int: human-readable row number
-    """
-    return row + 1 - source_model.headerRowCount()
-
-
-def _convert_to_leaf(y):
-    """Converts parameter value to leaf TreeElement.
-
-    Args:
-        y (Any): parameter value
-
-    Returns:
-        float or datetime or TreeNode: leaf element
-    """
-    try:
-        if isinstance(y, IndexedValue):
-            return convert_indexed_value_to_tree(y)
-        return float(y)
-    except ValueError as error:
-        raise PlottingError(str(error)) from error
-    except TypeError as error:
-        if isinstance(y, DateTime):
-            return y.value
-        raise PlottingError(f"couldn't convert {type(y).__name__} to float.") from error
-
-
-@contextmanager
-def add_row_to_exception(row, display_row):
-    """Adds row information to PlottingError if it is raised in the with block.
-
-    Args:
-        row (int): row
-        display_row (Callable): function to convert row to display row
-    """
-    try:
-        yield None
-    except PlottingError as error:
-        raise PlottingError(f"Failed to plot row {display_row(row)}: {error}") from error

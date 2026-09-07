@@ -13,7 +13,7 @@
 """Custom QTableView classes that support copy-paste and the like."""
 
 from __future__ import annotations
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPoint, Qt, QTimer, Signal, Slot
@@ -35,7 +35,6 @@ from ...plotting import (
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
-from ...widgets.plot_widget import PlotWidget, prepare_plot_in_window_menu
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
@@ -390,11 +389,7 @@ class ParameterTableView(StackedTableView):
         if is_value:
             plot_in_window_menu = QMenu("Plot in window")
             plot_in_window_menu.triggered.connect(self.plot_in_window)
-            prepare_plot_in_window_menu(plot_in_window_menu)
-            self._menu.insertMenu(self._plot_separator, plot_in_window_menu)
         self._menu.exec(event.globalPos())
-        if is_value:
-            plot_in_window_menu.deleteLater()
 
     def open_in_editor(self):
         """Opens the current index in a parameter_value editor using the connected Spine db editor."""
@@ -410,7 +405,6 @@ class ParameterTableView(StackedTableView):
         except PlottingError as error:
             report_plotting_failure(error, self._spine_db_editor)
         else:
-            plot_widget.use_as_window(self.window(), self.value_column_header)
             plot_widget.show()
 
     def _plot_selection(self, selection, plot_widget=None):
@@ -919,14 +913,6 @@ class PivotTableView(CopyPasteTableView):
             except PlottingError as error:
                 report_plotting_failure(error, self._view)
                 return
-            source_model = model.sourceModel()
-            plotted_column_names = {
-                source_model.column_name(index.column())
-                for index in selected_indexes
-                if source_model.index_in_data(model.mapToSource(index))
-                or source_model.column_is_index_column(model.mapToSource(index).column())
-            }
-            plot_window.use_as_window(self._view, ", ".join(plotted_column_names))
             plot_window.show()
 
         @Slot(QAction)
@@ -974,7 +960,6 @@ class PivotTableView(CopyPasteTableView):
 
         @Slot(QPoint)
         def show_context_menu(self, position):
-            prepare_plot_in_window_menu(self._plot_in_window_menu)
             super().show_context_menu(position)
 
         def _to_selection_lists(self, index):

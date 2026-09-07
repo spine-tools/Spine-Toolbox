@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A Qt widget showing a toolbar and a plotting canvas."""
+
 import json
 from pathlib import Path
 import tempfile
@@ -20,6 +21,8 @@ from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import QWebEngineDownloadRequest, QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFileDialog, QLabel, QVBoxLayout, QWidget
+
+from spinetoolbox.plotting import plot_data
 
 
 class WarnUser(QDialog):
@@ -61,7 +64,15 @@ class PlotWidget(QWidget):
         self.html_path = tempfile.NamedTemporaryFile(suffix=".html")
         self.canvas.setUrl(QUrl.fromLocalFile(self.html_path.name))
         self._layout.addWidget(self.canvas)
-        self.resize(QSize(900, 600))
+        self._target_size = QSize(800, 600)
+
+    def sizeHint(self):
+        """Preferred size so a parent window can auto-fit the plot."""
+        return self._target_size
+
+    def set_target_size(self, size: QSize):
+        """Sets the preferred plot size, used by sizeHint()."""
+        self._target_size = size
 
         # save plot as image
         self.canvas.page().profile().downloadRequested.connect(self.save_as_prompt)
@@ -86,7 +97,9 @@ class PlotWidget(QWidget):
 
     def write(self, html_content: str):
         Path(self.html_path.name).write_bytes(bytes(html_content, "utf8"))
-        self.canvas.reload()
+        # NOTE: doing a simple canvas.reload() returns cached HTML,
+        # setUrl(...) invalidates the cache
+        self.canvas.setUrl(QUrl.fromLocalFile(self.html_path.name))
 
     @Slot(QWebEngineDownloadRequest)
     def save_as_prompt(self, download: QWebEngineDownloadRequest):
@@ -101,13 +114,55 @@ class PlotWidget(QWidget):
             download.setDownloadFileName(path)
             download.accept()
 
+    def use_as_window(self, parent_window, document_name):
+        """
+        Prepares the widget to be used as a window and adds it to plot_windows list.
+
+        Args:
+            parent_window (QWidget): a parent window
+            document_name (str): a string to add to the window title
+        """
+        self.setParent(parent_window)
+        self.setWindowFlag(Qt.WindowType.Window, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        title = "Plot"
+        if document_name:
+            title += f"    -- {document_name} --"
+        self.setWindowTitle(title)
+
 
 class PlotActions(QObject):
     """QWebChannel bridge exposed via JavaScript for CSV download."""
 
-    def __init__(self, plot_widget):
+    def __init__(self, plot_widget: PlotWidget):
         super().__init__()
         self._plot = plot_widget
+
+    @Slot(str, str)
+    def refreshPlot(self, col_order_str: str, selection_str: str):
+        sdf = self._plot.dataframe
+        match json.loads(col_order_str):
+            case [] as col_order:
+                # FIXME: handle case in JS cb
+                cols = [i for i in sdf.columns]
+                warn_user = WarnUser("Column order unspecified, fallback to default")
+                warn_user.exec()
+            case [str(), *_] as col_order:
+                cols: list[str] = [
+                    *col_order,
+                    *(c for c in sdf.columns if c not in col_order),
+                ]
+            case _cols:
+                raise RuntimeError(f"unknown column values: {_cols}", self._plot)
+
+        match json.loads(selection_str):
+            case dict() as row:
+                ks = list(row)
+                [row.pop(k) for k in ks if k not in col_order]
+            case _row:
+                raise RuntimeError(f"unknown selection: {_row}", self._plot)
+
+        plot_data([sdf.loc[:, cols]], self._plot, **row)
 
     @Slot(str)
     def downloadFilteredCsv(self, visible_keys_json: str):
