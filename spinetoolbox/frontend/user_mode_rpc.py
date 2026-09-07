@@ -13,6 +13,8 @@ def handle_request(service: UserModeService, request: dict) -> dict:
         return {"status": "ok", "application": "Spine Toolbox"}
     if method == "project":
         return service.project(params["path"])
+    if method == "project_from_json":
+        return service.project_from_json(params["content"])
     if method == "start_run":
         job_id, job = service.start_run(params["path"], params.get("tool"), params.get("scenario"))
         return {"job_id": job_id, "status": job.status}

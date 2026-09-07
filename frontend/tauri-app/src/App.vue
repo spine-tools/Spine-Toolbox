@@ -39,7 +39,7 @@ const currentView = ref("workflow");
 const selectedProject = ref(projects[0]);
 const projectMenuOpen = ref(false);
 const scenario = ref("Baseline 2030");
-const selectedTool = ref("SpineOpt");
+const selectedTool = ref("");
 const tools = ref([]);
 const toolMenuOpen = ref(false);
 const inputFile = ref("energy_model.sqlite");
@@ -47,7 +47,6 @@ const dbContent = ref(null);
 const excelInputFile = ref("");
 const inputSourceMenuOpen = ref(false);
 const resultFile = ref("results.sqlite");
-const projectPath = ref("execution_tests/active_by_default");
 const projectLoadError = ref("");
 const plotReady = ref(false);
 const isRunning = ref(false);
@@ -72,7 +71,7 @@ const recentRuns = ref([
   { name: "High demand", status: "Ready", time: "Yesterday, 16:08" },
 ]);
 
-const activeMode = computed(() => modes.find((mode) => mode.id === selectedMode.value));
+const projectPath = ref("");
 const workflowConnections = ref([
   ["input", "tool"],
   ["tool", "results"],
@@ -86,6 +85,88 @@ async function callBackend(method, params = {}) {
   const message = JSON.parse(response);
   if (!message.ok) throw new Error(message.error);
   return message.result;
+}
+async function openProjectDialog() {
+  try {
+    // Use eval for the dynamic import to avoid Vite resolving the module at dev-time
+    // when `@tauri-apps/api` is not installed in the browser dev environment.
+    const { open } = await eval('import("@tauri-apps/api/dialog")');
+    const selection = await open({ directory: true, multiple: false });
+    let dir = "";
+    if (Array.isArray(selection)) dir = selection[0] || "";
+    else dir = selection || "";
+    if (!dir) return;
+    projectPath.value = dir;
+    projectMenuOpen.value = false;
+    try {
+      await loadProject();
+    } catch (e) {
+      projectLoadError.value = `Could not load project: ${e.message}`;
+    }
+  } catch (e) {
+    // Dynamic import failed (for example running in Vite dev server). Fall back to hidden picker.
+    document.querySelector('#project-picker').click();
+  }
+}
+
+async function handleProjectPicker(event) {
+  const files = event.target.files;
+  if (!files || !files.length) return;
+  // Try to get a full path from the first File object (available in Tauri/webview).
+  const first = files[0];
+  let dir = "";
+  // Prefer absolute paths exposed via `path` (Tauri); fall back to webkitRelativePath.
+  if (first.path) {
+    try {
+      const p = first.path;
+      dir = p.replace(/\\[^\\]*$/, "");
+    } catch (e) {
+      // ignore
+    }
+  }
+  if (!dir && first.webkitRelativePath) {
+    dir = first.webkitRelativePath.split('/')[0];
+  }
+
+  // If the selected folder contains a project.json file, read it and send its contents
+  // to the backend so we can show project metadata even when absolute paths are not available.
+  const fileArray = Array.from(files);
+  const projectFile = fileArray.find((f) => f.name === 'project.json' || (f.webkitRelativePath && f.webkitRelativePath.endsWith('project.json')) || (f.path && f.path.endsWith('project.json')));
+  projectMenuOpen.value = false;
+  if (projectFile) {
+    try {
+      const text = await projectFile.text();
+      const result = await callBackend('project_from_json', { content: text });
+      // Populate UI from returned project metadata
+      selectedProject.value = result.path || dir || projects[0];
+      const dataStores = result.items.filter((item) => item.type === 'Data Store');
+      if (dataStores.length) {
+        inputFile.value = dataStores[0].database;
+        const inputNode = workflowNodes.value.find((node) => node.id === 'input');
+        if (inputNode) inputNode.label = dataStores[0].name;
+      }
+      const toolItems = result.items.filter((item) => item.type === 'Tool' || item.name.toLowerCase().includes('spineopt') || item.name.toLowerCase().includes('flextool'));
+      tools.value = toolItems.map((t) => t.name);
+      if (tools.value.length && !selectedTool.value) selectedTool.value = tools.value[0];
+      recentRuns.value = result.items.filter((item) => item.type !== 'Data Store').slice(0, 4).map((item) => ({ name: item.name, status: item.type, time: 'Project item' }));
+      projectPath.value = dir || '';
+    } catch (e) {
+      projectLoadError.value = `Could not load project: ${e.message}`;
+    } finally {
+      event.target.value = null;
+    }
+    return;
+  }
+
+  if (!dir) dir = projectPath.value || "";
+  projectPath.value = dir;
+  try {
+    await loadProject();
+  } catch (e) {
+    projectLoadError.value = `Could not load project: ${e.message}`;
+  } finally {
+    event.target.value = null;
+  }
 }
 
 function openProject() {
@@ -257,7 +338,6 @@ function selectNode(node) {
   selectedNode.value = node;
   selectedNodeIds.value = [node.id];
   inputSourceMenuOpen.value = node.id === "input" ? !inputSourceMenuOpen.value : false;
-  toolMenuOpen.value = node.id === "tool" ? !toolMenuOpen.value : false;
 }
 
 function toggleToolMenu() {
@@ -330,7 +410,6 @@ async function loadProject() {
 }
 
 onMounted(() => {
-  loadProject();
   window.addEventListener("keydown", deleteSelectedConnection);
   window.addEventListener("pointerdown", closeInputSourceMenu);
   window.addEventListener("pointerdown", clearCanvasSelection);
@@ -384,7 +463,7 @@ onBeforeUnmount(() => {
                 <button v-for="project in projects" :key="project" @click="selectedProject = project; projectMenuOpen = false">{{ project }}</button>
               </div>
             </div>
-            <div class="project-open-controls"><input v-model="projectPath" class="project-path" aria-label="Project directory" /><button class="secondary-button" @click="loadProject"><FolderOpen :size="16" /> Load project</button></div>
+            <div class="project-open-controls"><input v-model="projectPath" class="project-path" aria-label="Project directory" /><button class="secondary-button" @click="openProjectDialog"><FolderOpen :size="16" /> Load project</button></div>
           </div>
           <p v-if="projectLoadError" class="project-error">{{ projectLoadError }}</p>
 
@@ -407,15 +486,9 @@ onBeforeUnmount(() => {
               <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="24" /></span><span v-if="node.detail">{{ node.detail }}</span></div>
               <strong v-if="node.id !== 'tool'">{{ node.label }}</strong>
               <template v-else>
-                <strong class="tool-card">{{ selectedTool }}</strong>
-                <div v-if="toolMenuOpen" class="input-source-menu" @pointerdown.stop>
-                  <template v-if="tools.length">
-                    <button v-for="t in tools" :key="t" @click="chooseTool(t)">{{ t }}</button>
-                  </template>
-                  <template v-else>
-                    <button @click="chooseTool('SpineOpt')">SpineOpt</button>
-                    <button @click="chooseTool('Flextool')">Flextool</button>
-                  </template>
+                <strong @click.stop="toggleToolMenu" class="tool-card">{{ selectedTool }}</strong>
+                <div v-if="toolMenuOpen" class="tool-menu" @pointerdown.stop>
+                  <button v-for="t in tools" :key="t" @click="chooseTool(t)">{{ t }}</button>
                 </div>
               </template>
               <template v-if="node.id === 'input'">
@@ -425,6 +498,7 @@ onBeforeUnmount(() => {
                 </div>
                 <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
                 <input id="db-input-picker" class="hidden-file-picker" type="file" accept=".sqlite,.db" @change="openDatabase" />
+                <input id="project-picker" class="hidden-file-picker" type="file" webkitdirectory directory multiple @change="handleProjectPicker" />
               </template>
             </article>
           </section>
