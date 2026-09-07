@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from ..headless import open_project
-from ..load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
+from ..load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict, ProjectLoadingFailed
+import json
 from ..load_specification import load_specification_local_data
 
 
@@ -35,8 +36,56 @@ class UserModeService:
         self._jobs_lock = threading.Lock()
 
     def project(self, project_path: str) -> dict[str, Any]:
-        project_dir = self._project_dir(project_path)
-        project = load_project_dict(project_dir)
+        supplied = Path(project_path)
+        # If the user passed a path to a file (e.g. project.json), load it directly
+        if supplied.is_file():
+            try:
+                with supplied.open("r", encoding="utf8") as fh:
+                    project = json.load(fh)
+                    project_dir = supplied.parent
+            except Exception as e:
+                raise ProjectLoadingFailed(f"Could not read project file: {supplied}: {e}")
+        else:
+            # Treat as directory; try normal loader first, then fallbacks
+            project_dir = self._project_dir(project_path)
+            try:
+                project = load_project_dict(project_dir)
+            except ProjectLoadingFailed:
+                # Try project.json at project root
+                alt_path = Path(project_dir) / "project.json"
+                if alt_path.exists():
+                    try:
+                        with alt_path.open("r", encoding="utf8") as fh:
+                            project = json.load(fh)
+                    except Exception as e:
+                        raise ProjectLoadingFailed(f"Could not read project.json at {alt_path}: {e}")
+                else:
+                    # Search up parent directories for a project file (useful if user picked a subfolder)
+                    found = False
+                    for parent in (Path(project_dir),) + tuple(Path(project_dir).parents)[:3]:
+                        p1 = parent / ".spinetoolbox" / "project.json"
+                        p2 = parent / "project.json"
+                        if p1.exists():
+                            with p1.open("r", encoding="utf8") as fh:
+                                project = json.load(fh)
+                            project_dir = parent
+                            found = True
+                            break
+                        if p2.exists():
+                            with p2.open("r", encoding="utf8") as fh:
+                                project = json.load(fh)
+                            project_dir = parent
+                            found = True
+                            break
+                    if not found:
+                        # Build a helpful diagnostic listing
+                        try:
+                            entries = [p.name for p in Path(project_dir).iterdir()]
+                        except Exception:
+                            entries = []
+                        raise ProjectLoadingFailed(
+                            f"Project file not found in {project_dir}. Checked: .spinetoolbox/project.json and project.json. Contents: {entries}"
+                        )
         items = []
         for name, item in project.get("items", {}).items():
             item_data = {"name": name, "type": item.get("type", "Unknown"), "x": item.get("x", 0), "y": item.get("y", 0)}
@@ -47,8 +96,43 @@ class UserModeService:
         return {"path": str(project_dir), "items": items, "connections": project.get("project", {}).get("connections", [])}
 
     def start_run(self, project_path: str, tool: str | None = None, scenario: str | None = None) -> tuple[str, Job]:
-        project_dir = self._project_dir(project_path)
-        project = load_project_dict(project_dir)
+        supplied = Path(project_path)
+        if supplied.is_file():
+            try:
+                with supplied.open("r", encoding="utf8") as fh:
+                    project = json.load(fh)
+                    project_dir = supplied.parent
+            except Exception as e:
+                raise ProjectLoadingFailed(f"Could not read project file: {supplied}: {e}")
+        else:
+            project_dir = self._project_dir(project_path)
+            try:
+                project = load_project_dict(project_dir)
+            except ProjectLoadingFailed:
+                alt_path = Path(project_dir) / "project.json"
+                if alt_path.exists():
+                    with alt_path.open("r", encoding="utf8") as fh:
+                        project = json.load(fh)
+                else:
+                    # Search up a few levels
+                    found = False
+                    for parent in (Path(project_dir),) + tuple(Path(project_dir).parents)[:3]:
+                        p1 = parent / ".spinetoolbox" / "project.json"
+                        p2 = parent / "project.json"
+                        if p1.exists():
+                            with p1.open("r", encoding="utf8") as fh:
+                                project = json.load(fh)
+                            project_dir = parent
+                            found = True
+                            break
+                        if p2.exists():
+                            with p2.open("r", encoding="utf8") as fh:
+                                project = json.load(fh)
+                            project_dir = parent
+                            found = True
+                            break
+                    if not found:
+                        raise
         job_id = uuid.uuid4().hex
         job = Job()
         with self._jobs_lock:
@@ -167,3 +251,22 @@ class UserModeService:
             return {name: True for name in items}
         selected = {name for name, item in items.items() if name == tool or item.get("type") == tool}
         return {name: not selected or name in selected for name in items}
+
+    def project_from_json(self, content: str) -> dict[str, Any]:
+        """Parse a `project.json` content string and return the same metadata as `project()`.
+
+        This is used when the frontend cannot supply an absolute folder path but can read the
+        `project.json` file from a directory picker; it lets the UI show items and connections.
+        """
+        try:
+            project = json.loads(content)
+        except Exception as e:
+            raise ProjectLoadingFailed(f"Invalid project JSON: {e}")
+        items = []
+        for name, item in project.get("items", {}).items():
+            item_data = {"name": name, "type": item.get("type", "Unknown"), "x": item.get("x", 0), "y": item.get("y", 0)}
+            if item.get("type") == "Data Store":
+                database = item.get("url", {}).get("database", {})
+                item_data["database"] = database.get("path", name)
+            items.append(item_data)
+        return {"path": "", "items": items, "connections": project.get("project", {}).get("connections", [])}
