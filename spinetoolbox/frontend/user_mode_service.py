@@ -95,6 +95,36 @@ class UserModeService:
         finally:
             Path(temporary_path).unlink(missing_ok=True)
 
+    def open_database_from_bytes(self, filename: str, content_b64: str) -> dict[str, Any]:
+        """Receive a database file as base64, write to temp file and return introspected schema and sample rows."""
+        import sqlite3
+
+        data = base64.b64decode(content_b64)
+        suffix = Path(filename).suffix or ".sqlite"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(data)
+            tmp_path = Path(tmp.name)
+        try:
+            conn = sqlite3.connect(str(tmp_path))
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            # Get list of tables and views
+            cur.execute("SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name")
+            tables = []
+            for row in cur.fetchall():
+                table_name = row[0]
+                # Get columns
+                cur.execute(f"PRAGMA table_info('{table_name}')")
+                cols = [c[1] for c in cur.fetchall()]
+                # Get first 100 rows
+                cur.execute(f"SELECT * FROM '{table_name}' LIMIT 100")
+                rows = [dict(r) for r in cur.fetchall()]
+                tables.append({"name": table_name, "columns": cols, "rows": rows})
+            conn.close()
+            return {"filename": filename, "tables": tables}
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
     @staticmethod
     def _project_dir(project_path: str) -> Path:
         return Path(project_path).expanduser().resolve()

@@ -23,6 +23,8 @@ def handle_request(service: UserModeService, request: dict) -> dict:
         return {"status": job.status, "events": job.events, "error": job.error}
     if method == "import_excel":
         return service.import_excel(params["path"], params["filename"], params["content"], params.get("data_store"))
+    if method == "open_database":
+        return service.open_database_from_bytes(params["filename"], params["content"])
     raise ValueError(f"Unknown method: {method}")
 
 
