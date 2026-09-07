@@ -40,6 +40,8 @@ const selectedProject = ref(projects[0]);
 const projectMenuOpen = ref(false);
 const scenario = ref("Baseline 2030");
 const selectedTool = ref("SpineOpt");
+const tools = ref([]);
+const toolMenuOpen = ref(false);
 const inputFile = ref("energy_model.sqlite");
 const dbContent = ref(null);
 const excelInputFile = ref("");
@@ -255,6 +257,16 @@ function selectNode(node) {
   selectedNode.value = node;
   selectedNodeIds.value = [node.id];
   inputSourceMenuOpen.value = node.id === "input" ? !inputSourceMenuOpen.value : false;
+  toolMenuOpen.value = node.id === "tool" ? !toolMenuOpen.value : false;
+}
+
+function toggleToolMenu() {
+  toolMenuOpen.value = !toolMenuOpen.value;
+}
+
+function chooseTool(tool) {
+  selectedTool.value = tool;
+  toolMenuOpen.value = false;
 }
 
 function nodePorts(node) {
@@ -304,6 +316,10 @@ async function loadProject() {
       inputFile.value = dataStores[0].database;
       workflowNodes.value.find((node) => node.id === "input").label = dataStores[0].name;
     }
+    // Populate tool list from project items of type 'Tool' or known tool names
+    const toolItems = project.items.filter((item) => item.type === "Tool" || item.name.toLowerCase().includes("spineopt") || item.name.toLowerCase().includes("flextool"));
+    tools.value = toolItems.map((t) => t.name);
+    if (tools.value.length && !selectedTool.value) selectedTool.value = tools.value[0];
     recentRuns.value = project.items
       .filter((item) => item.type !== "Data Store")
       .slice(0, 4)
@@ -389,7 +405,19 @@ onBeforeUnmount(() => {
             <div v-if="selectionBox" class="selection-box" :style="{ left: `${selectionBox.x}px`, top: `${selectionBox.y}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }"></div>
             <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
               <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="24" /></span><span v-if="node.detail">{{ node.detail }}</span></div>
-              <strong>{{ node.id === "tool" ? selectedTool : node.label }}</strong>
+              <strong v-if="node.id !== 'tool'">{{ node.label }}</strong>
+              <template v-else>
+                <strong class="tool-card">{{ selectedTool }}</strong>
+                <div v-if="toolMenuOpen" class="input-source-menu" @pointerdown.stop>
+                  <template v-if="tools.length">
+                    <button v-for="t in tools" :key="t" @click="chooseTool(t)">{{ t }}</button>
+                  </template>
+                  <template v-else>
+                    <button @click="chooseTool('SpineOpt')">SpineOpt</button>
+                    <button @click="chooseTool('Flextool')">Flextool</button>
+                  </template>
+                </div>
+              </template>
               <template v-if="node.id === 'input'">
                 <div v-if="inputSourceMenuOpen" class="input-source-menu" @pointerdown.stop>
                   <button type="button" @click="chooseInputSource('database')"><Database :size="13" /> Use database</button>
