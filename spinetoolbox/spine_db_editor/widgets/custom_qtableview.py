@@ -20,14 +20,12 @@ from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, QPo
 from PySide6.QtGui import QAction, QContextMenuEvent, QKeySequence, QUndoStack
 from PySide6.QtWidgets import QHeaderView, QMenu, QTableView, QWidget
 from ...helpers import (
-    DB_ITEM_SEPARATOR,
     find_section_in_table_model_header,
     preferred_row_height,
     rows_to_row_count_tuples,
 )
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...plotting import (
-    ParameterTableHeaderSection,
     PlottingError,
     plot_parameter_table_selection,
     plot_pivot_table_selection,
@@ -35,6 +33,7 @@ from ...plotting import (
 from ...spine_db_manager import SpineDBManager
 from ...widgets.custom_qtableview import CopyPasteTableView
 from ...widgets.custom_qwidgets import TitleWidgetAction
+from ...widgets.plot_widget import PlotWidget
 from ...widgets.report_plotting_failure import report_plotting_failure
 from ..empty_table_size_hint_provider import SizeHintProvided
 from ..helpers import (
@@ -527,10 +526,7 @@ class ParameterDefinitionTableView(
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class"""
-        header_sections = [ParameterTableHeaderSection(label) for label in ("database", "class", "parameter name")]
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
+        return plot_parameter_table_selection(self.model(), selection, self.value_column_header, plot_widget)
 
 
 class ParameterValueTableViewBase(ParameterTableView):
@@ -605,19 +601,7 @@ class ParameterValueTableView(AboveSeam, HighlightNonCommittedRows, UsesAutoFilt
 
     def _plot_selection(self, selection, plot_widget=None):
         """See base class."""
-        model = self.model()
-        header_sections = [
-            ParameterTableHeaderSection(label)
-            for label in (model.field_to_header("database"),) + self._private_key_headers
-        ]
-        byname_header = model.field_to_header("entity_byname")
-        for i, section in enumerate(header_sections):
-            if section.label == byname_header:
-                header_sections[i] = replace(section, separator=DB_ITEM_SEPARATOR)
-                break
-        return plot_parameter_table_selection(
-            self.model(), selection, header_sections, self.value_column_header, plot_widget
-        )
+        return plot_parameter_table_selection(self.model(), selection, self.value_column_header, plot_widget)
 
 
 class EntityAlternativeTableViewBase(StackedTableView):

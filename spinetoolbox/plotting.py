@@ -55,14 +55,6 @@ class PlottingError(Exception):
     """An exception signalling failure in plotting."""
 
 
-@dataclass(frozen=True)
-class ParameterTableHeaderSection:
-    """Header section info for Database editor's parameter tables."""
-
-    label: str
-    separator: Optional[str] = None
-
-
 # NOTE: POD types like int, float, & str covers extension
 # ExtensionDtypes like Int64Dtype, Float64Dtype, or StringDtype,
 # since: Int64Dtype().type == int
@@ -589,14 +581,13 @@ def plot_barchart(sdf: pd.DataFrame, title: str):
     return fig
 
 
-def plot_parameter_table_selection(model, model_indexes, table_header_sections, value_section_label, plot_widget=None):
+def plot_parameter_table_selection(model, model_indexes, value_section_label, plot_widget=None):
     """
     Returns a plot widget with plots of the selected indexes.
 
     Args:
         model (QAbstractTableModel): a model
         model_indexes (Iterable of QModelIndex): a list of QModelIndex objects for plotting
-        table_header_sections (list of ParameterTableHeaderSection): table header labels
         value_section_label (str): value column's header label
         plot_widget (PlotWidget, optional): an existing plot widget to draw into or None to create a new widget
 
