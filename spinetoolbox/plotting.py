@@ -364,21 +364,19 @@ def get_dim_selector(nplots: pd.DataFrame):
         selectable=True,
     )
 
-    order_input = MultiChoice(
-        value=columns,
-        options=columns,
-        title="Column Order - remove and reinsert to reorder",
-        sizing_mode="stretch_width",
-        min_height=50,
-    )
+    # # NOTE: here as example, create widget, then pass to CustomJS in `args`
+    # order_input = MultiChoice(
+    #     value=columns,
+    #     options=columns,
+    #     title="Column Order - remove and reinsert to reorder",
+    #     sizing_mode="stretch_width",
+    #     min_height=50,
+    # )
 
-    cb = CustomJS(
-        args={"source": source, "column_order": order_input},
-        code=get_resource("selector_cb.js"),
-    )
+    cb = CustomJS(args={"source": source}, code=get_resource("selector_cb.js"))
     source.selected.js_on_change("indices", cb)
 
-    return column(order_input, data_table)
+    return column(data_table)
 
 
 def get_window_selector(

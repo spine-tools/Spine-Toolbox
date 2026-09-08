@@ -139,21 +139,8 @@ class PlotActions(QObject):
         self._plot = plot_widget
 
     @Slot(str, str)
-    def refreshPlot(self, col_order_str: str, selection_str: str):
+    def refreshPlot(self, selection_str: str):
         sdf = self._plot.dataframe
-        match json.loads(col_order_str):
-            case [] as col_order:
-                # FIXME: handle case in JS cb
-                cols = [i for i in sdf.columns]
-                warn_user = WarnUser("Column order unspecified, fallback to default")
-                warn_user.exec()
-            case [str(), *_] as col_order:
-                cols: list[str] = [
-                    *col_order,
-                    *(c for c in sdf.columns if c not in col_order),
-                ]
-            case _cols:
-                raise RuntimeError(f"unknown column values: {_cols}", self._plot)
 
         match json.loads(selection_str):
             case dict() as row:
@@ -162,7 +149,8 @@ class PlotActions(QObject):
             case _row:
                 raise RuntimeError(f"unknown selection: {_row}", self._plot)
 
-        plot_data([sdf.loc[:, cols]], self._plot, **row)
+        # NOTE: if later we reorder columns, then pass sdf.loc[:, new_col_order]
+        plot_data([sdf], self._plot, **row)
 
     @Slot(str)
     def downloadFilteredCsv(self, visible_keys_json: str):
