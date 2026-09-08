@@ -21,6 +21,7 @@ HAS_METADATA_ROLE = Qt.ItemDataRole.UserRole + 3
 ITEM_ID_ROLE = Qt.ItemDataRole.UserRole + 4
 ITEM_ROLE = Qt.ItemDataRole.UserRole + 5
 RAW_ROLE = Qt.ItemDataRole.UserRole + 6
+PARAMETER_VALUE_ROLE = Qt.ItemDataRole.UserRole + 7
 
 INVALID_TYPE = 0
 TYPE_NOT_VALIDATED = 1
