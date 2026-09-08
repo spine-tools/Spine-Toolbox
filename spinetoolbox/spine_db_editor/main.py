@@ -17,7 +17,7 @@ import sys
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.font import TOOLBOX_FONT
-from spinetoolbox.helpers import pyside6_version_check
+from spinetoolbox.helpers import macos_tooltip_style_sheet, pyside6_version_check
 from spinetoolbox.spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
 from spinetoolbox.spine_db_manager import SpineDBManager
 
@@ -31,6 +31,8 @@ def main():
     app = QApplication(sys.argv)
     TOOLBOX_FONT.get_family_from_font_database()
     locale.setlocale(locale.LC_NUMERIC, "C")
+    if sys.platform == "darwin":
+        app.setStyleSheet(macos_tooltip_style_sheet())
     settings = QSettings("SpineProject", "Spine Toolbox")
     db_mngr = SpineDBManager(settings, None)
     editor = MultiSpineDBEditor(db_mngr)

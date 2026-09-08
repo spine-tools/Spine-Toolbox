@@ -58,10 +58,10 @@ from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_p
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import (
     DEFAULT_WORK_DIR,
+    LATEST_PROJECT_VERSION,
     ONLINE_DOCUMENTATION_URL,
     SPINE_DB_API_DOCUMENTATION_URL,
     SPINE_TOOLBOX_REPO_URL,
-    LATEST_PROJECT_VERSION
 )
 from .helpers import (
     ChildCyclingKeyPressFilter,
@@ -74,16 +74,17 @@ from .helpers import (
     create_dir,
     ensure_window_is_on_screen,
     format_log_message,
+    macos_tooltip_style_sheet,
     make_icons_theme_aware,
     open_url,
     recursive_overwrite,
+    remove_path_from_recent_projects,
     same_path,
     set_taskbar_icon,
     solve_connection_file,
     supported_img_formats,
     unique_name,
     update_recent_projects,
-    remove_path_from_recent_projects,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
@@ -410,7 +411,7 @@ class ToolboxUI(QMainWindow):
         )
 
     @staticmethod
-    def set_app_style():
+    def set_app_style() -> None:
         """Sets application style appropriate for each platform.
 
         The user can override the theme via appSettings/theme ("os", "light", or "dark").
@@ -426,10 +427,11 @@ class ToolboxUI(QMainWindow):
         use_dark = theme == "dark" or (
             theme == "os" and QApplication.instance().styleHints().colorScheme() == Qt.ColorScheme.Dark
         )
+        style_sheet_parts = []
         if use_dark:
             QApplication.setStyle("Fusion")
             QApplication.setPalette(_make_dark_palette())
-            QApplication.instance().setStyleSheet(
+            style_sheet_parts.append(
                 "QDockWidget {"
                 "    titlebar-close-icon: url(:/icons/menu_icons/times-white.svg);"
                 "    titlebar-normal-icon: url(:/icons/menu_icons/float-white.svg);"
@@ -438,6 +440,10 @@ class ToolboxUI(QMainWindow):
         elif theme == "light":
             QApplication.setStyle("Fusion")
             QApplication.setPalette(_make_light_palette())
+        if sys.platform == "darwin":
+            style_sheet_parts.append(macos_tooltip_style_sheet())
+        if style_sheet_parts:
+            QApplication.instance().setStyleSheet("\n".join(style_sheet_parts))
 
     @staticmethod
     def set_error_mode():
