@@ -160,13 +160,9 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot(QModelIndex, QModelIndex, list)
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
-        from rich.pretty import pprint
-
         value = self._model.value
-        pprint(value.to_dict(), max_length=5, max_depth=3)
         x_label = "x" if value.index_name is None else value.index_name
         df = pd.DataFrame({x_label: value.indexes, "value": value.values})
-        pprint(df, max_length=5, max_depth=3)
         plot_data([df], self._ui.plot_widget)
         # self._ui.plot_widget.show()
 
