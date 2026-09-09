@@ -11,6 +11,7 @@ import {
   FolderOpen,
   GitBranch,
   History,
+  Layers,
   LineChart,
   LayoutDashboard,
   Redo2,
@@ -52,10 +53,10 @@ const plotReady = ref(false);
 const isRunning = ref(false);
 const workflowNodes = ref([
   { id: "input", label: "Input data", detail: "", icon: Database, className: "canvas-input", x: 20, y: 52 },
-  { id: "tool", label: "SpineOpt", detail: "Tool", icon: Wrench, className: "canvas-tool", x: 210, y: 52 },
-  { id: "results", label: "Results", detail: "", icon: Table2, className: "canvas-results", x: 400, y: 52 },
-  { id: "excel-results", label: "Excel results", detail: "", icon: Table2, className: "canvas-excel", x: 400, y: 265 },
-  { id: "plot", label: "Plot results", detail: "", icon: LineChart, className: "canvas-plot", x: 400, y: 430 },
+  { id: "stack-card", label: "Stack", detail: "", icon: Layers, className: "canvas-stack-card", x: 210, y: 52 },
+  { id: "database", label: "Database", detail: "", icon: Database, className: "canvas-database", x: 400, y: 52 },
+  { id: "tool", label: "Tool", detail: "", icon: Wrench, className: "canvas-tool", x: 590, y: 52 },
+  { id: "results", label: "Results", detail: "", icon: Table2, className: "canvas-results", x: 780, y: 52 },
 ]);
 const draggingNodes = ref([]);
 const dragOrigins = ref({});
@@ -72,12 +73,73 @@ const recentRuns = ref([
 ]);
 
 const projectPath = ref("");
+const LAST_PROJECT_PATH_KEY = "spinetoolbox:lastProjectPath";
+const lastProjectPath = ref(localStorage.getItem(LAST_PROJECT_PATH_KEY) || "");
 const workflowConnections = ref([
-  ["input", "tool"],
+  ["input", "stack-card"],
+  ["stack-card", "database"],
+  ["database", "tool"],
   ["tool", "results"],
-  ["results", "excel-results"],
-  ["results", "plot"],
 ]);
+
+// Stacks group several canvas nodes (e.g. a Tool + an Exporter) into one collapsible card,
+// mirroring how the old Toolbox design view lets you chain multiple items together.
+const stacks = ref([]);
+
+function resolveStackEndpoint(nodeId) {
+  const owner = stacks.value.find((stack) => stack.collapsed && stack.memberIds.includes(nodeId));
+  return owner ? owner.id : nodeId;
+}
+
+const canvasNodes = computed(() => {
+  const hiddenIds = new Set(stacks.value.filter((stack) => stack.collapsed).flatMap((stack) => stack.memberIds));
+  const visibleReal = workflowNodes.value.filter((node) => !hiddenIds.has(node.id));
+  const stackNodes = stacks.value.map((stack) => ({
+    id: stack.id,
+    label: stack.label,
+    detail: stack.collapsed ? `${stack.memberIds.length} steps` : "Stack",
+    icon: Layers,
+    className: "canvas-stack",
+    x: stack.x,
+    y: stack.y,
+    isStack: true,
+    stackRef: stack,
+  }));
+  return [...visibleReal, ...stackNodes];
+});
+
+const canvasConnections = computed(() => {
+  const seen = new Set();
+  const result = [];
+  for (const [source, target] of workflowConnections.value) {
+    const resolvedSource = resolveStackEndpoint(source);
+    const resolvedTarget = resolveStackEndpoint(target);
+    if (resolvedSource === resolvedTarget) continue;
+    const key = `${resolvedSource}-${resolvedTarget}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push([resolvedSource, resolvedTarget]);
+  }
+  return result;
+});
+
+function groupSelectedIntoStack() {
+  const members = workflowNodes.value.filter((node) => selectedNodeIds.value.includes(node.id));
+  if (members.length < 2) return;
+  const x = members.reduce((sum, node) => sum + node.x, 0) / members.length;
+  const y = members.reduce((sum, node) => sum + node.y, 0) / members.length;
+  stacks.value.push({ id: `stack-${Date.now()}`, label: `Stack (${members.length})`, x, y, memberIds: members.map((node) => node.id), collapsed: true });
+  selectedNodeIds.value = [];
+  selectedNode.value = null;
+}
+
+function toggleStack(stack) {
+  stack.collapsed = !stack.collapsed;
+}
+
+function ungroupStack(stack) {
+  stacks.value = stacks.value.filter((candidate) => candidate.id !== stack.id);
+}
 
 async function callBackend(method, params = {}) {
   const request = JSON.stringify({ method, params });
@@ -359,8 +421,8 @@ function nodePorts(node) {
 }
 
 function connectionPorts([sourceId, targetId]) {
-  const source = workflowNodes.value.find((node) => node.id === sourceId);
-  const target = workflowNodes.value.find((node) => node.id === targetId);
+  const source = canvasNodes.value.find((node) => node.id === sourceId);
+  const target = canvasNodes.value.find((node) => node.id === targetId);
   return nodePorts(source).flatMap((sourcePort) => nodePorts(target).map((targetPort) => ({ sourcePort, targetPort }))).reduce(
     (nearest, pair) => (Math.hypot(pair.targetPort.x - pair.sourcePort.x, pair.targetPort.y - pair.sourcePort.y) < Math.hypot(nearest.targetPort.x - nearest.sourcePort.x, nearest.targetPort.y - nearest.sourcePort.y) ? pair : nearest)
   );
@@ -391,6 +453,10 @@ async function loadProject() {
   try {
     const project = await callBackend("project", { path: projectPath.value });
     selectedProject.value = project.path;
+    if (project.path) {
+      lastProjectPath.value = project.path;
+      localStorage.setItem(LAST_PROJECT_PATH_KEY, project.path);
+    }
     const dataStores = project.items.filter((item) => item.type === "Data Store");
     if (dataStores.length) {
       inputFile.value = dataStores[0].database;
@@ -407,6 +473,12 @@ async function loadProject() {
   } catch (error) {
     projectLoadError.value = `Could not load project: ${error.message}`;
   }
+}
+
+async function reopenLastProject() {
+  if (!lastProjectPath.value) return;
+  projectPath.value = lastProjectPath.value;
+  await loadProject();
 }
 
 onMounted(() => {
@@ -463,12 +535,13 @@ onBeforeUnmount(() => {
                 <button v-for="project in projects" :key="project" @click="selectedProject = project; projectMenuOpen = false">{{ project }}</button>
               </div>
             </div>
-            <div class="project-open-controls"><input v-model="projectPath" class="project-path" aria-label="Project directory" /><button class="secondary-button" @click="openProjectDialog"><FolderOpen :size="16" /> Load project</button></div>
+            <div class="project-open-controls"><input v-model="projectPath" class="project-path" aria-label="Project directory" /><button class="secondary-button" @click="openProjectDialog"><FolderOpen :size="16" /> Load project</button><button v-if="lastProjectPath" class="secondary-button" :title="lastProjectPath" @click="reopenLastProject"><History :size="16" /> Reopen last project</button></div>
           </div>
           <p v-if="projectLoadError" class="project-error">{{ projectLoadError }}</p>
 
           <div class="section-heading">
             <div><p class="eyebrow">Workflow</p><h2>Build your run</h2></div>
+            <button v-if="selectedNodeIds.length > 1" class="text-button" @click="groupSelectedIntoStack"><Layers :size="16" /> Group into stack</button>
             <button class="text-button"><Plus :size="16" /> New workflow</button>
           </div>
 
@@ -476,29 +549,35 @@ onBeforeUnmount(() => {
             <div class="canvas-toolbar"><span><span class="canvas-live-dot"></span> Design View</span><small>Drag boxes to arrange your workflow</small></div>
             <svg class="canvas-links" aria-hidden="true" @pointerdown.self="resetCanvasSelection">
               <defs><marker id="connection-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M 0 0 L 8 4 L 0 8 z" /></marker></defs>
-              <g v-for="connection in workflowConnections" :key="connection.join('-')">
+              <g v-for="connection in canvasConnections" :key="connection.join('-')">
                 <path class="connection-hit" :d="connectionPath(connection)" @pointerdown.stop @click.stop="selectConnection(connection)" />
                 <path :class="{ selected: selectedConnection === connection.join('-') }" :d="connectionPath(connection)" marker-end="url(#connection-arrow)" />
               </g>
             </svg>
             <div v-if="selectionBox" class="selection-box" :style="{ left: `${selectionBox.x}px`, top: `${selectionBox.y}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }"></div>
-            <article v-for="node in workflowNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
+            <article v-for="node in canvasNodes" :key="node.id" class="canvas-node" :class="[node.className, { selected: selectedNodeIds.includes(node.id) }]" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @pointerdown="startDrag($event, node)">
               <div class="canvas-node-head"><span class="canvas-node-icon"><component :is="node.icon" :size="24" /></span><span v-if="node.detail">{{ node.detail }}</span></div>
-              <strong v-if="node.id !== 'tool'">{{ node.label }}</strong>
-              <template v-else>
-                <strong @click.stop="toggleToolMenu" class="tool-card">{{ selectedTool }}</strong>
-                <div v-if="toolMenuOpen" class="tool-menu" @pointerdown.stop>
-                  <button v-for="t in tools" :key="t" @click="chooseTool(t)">{{ t }}</button>
-                </div>
+              <template v-if="node.isStack">
+                <strong @click.stop="toggleStack(node.stackRef)" class="tool-card">{{ node.label }} <ChevronDown :size="14" /></strong>
+                <button class="stack-ungroup" title="Ungroup" @click.stop="ungroupStack(node.stackRef)">×</button>
               </template>
-              <template v-if="node.id === 'input'">
-                <div v-if="inputSourceMenuOpen" class="input-source-menu" @pointerdown.stop>
-                  <button type="button" @click="chooseInputSource('database')"><Database :size="13" /> Use database</button>
-                  <button type="button" @click="chooseInputSource('excel')"><Upload :size="13" /> Choose Excel file</button>
-                </div>
-                <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
-                <input id="db-input-picker" class="hidden-file-picker" type="file" accept=".sqlite,.db" @change="openDatabase" />
-                <input id="project-picker" class="hidden-file-picker" type="file" webkitdirectory directory multiple @change="handleProjectPicker" />
+              <template v-else>
+                <strong v-if="node.id !== 'tool'">{{ node.label }}</strong>
+                <template v-else>
+                  <strong @click.stop="toggleToolMenu" class="tool-card">{{ selectedTool || node.label }}</strong>
+                  <div v-if="toolMenuOpen" class="tool-menu" @pointerdown.stop>
+                    <button v-for="t in tools" :key="t" @click="chooseTool(t)">{{ t }}</button>
+                  </div>
+                </template>
+                <template v-if="node.id === 'input'">
+                  <div v-if="inputSourceMenuOpen" class="input-source-menu" @pointerdown.stop>
+                    <button type="button" @click="chooseInputSource('database')"><Database :size="13" /> Use database</button>
+                    <button type="button" @click="chooseInputSource('excel')"><Upload :size="13" /> Choose Excel file</button>
+                  </div>
+                  <input id="excel-input-picker" class="hidden-file-picker" type="file" accept=".xlsx,.xls" @change="importExcel" />
+                  <input id="db-input-picker" class="hidden-file-picker" type="file" accept=".sqlite,.db" @change="openDatabase" />
+                  <input id="project-picker" class="hidden-file-picker" type="file" webkitdirectory directory multiple @change="handleProjectPicker" />
+                </template>
               </template>
             </article>
           </section>
