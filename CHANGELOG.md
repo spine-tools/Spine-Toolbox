@@ -3,7 +3,7 @@ All **notable** changes to Spine Toolbox are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
-## [unreleased]
+## [0.10.10]
 
 ### Added
 
@@ -12,18 +12,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
   Entity, Entity alternative) in the Spine database editor for live, case-insensitive filtering.
 - Added a per-level regex filter to the Entity, Scenario, Alternative and Parameter value list trees.
 
-### Changed
-
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - The parameter name column in parameter value tables now shows the parameter definition's
   description as a tooltip on hover.
-
-### Security
 
 ## [0.10.9]
 
