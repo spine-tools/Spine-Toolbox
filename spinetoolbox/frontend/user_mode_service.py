@@ -1,6 +1,8 @@
 """Backend application service for the parallel User Mode frontend."""
 import threading
 import base64
+import subprocess
+import sys
 import tempfile
 import uuid
 from dataclasses import dataclass, field
@@ -178,6 +180,71 @@ class UserModeService:
             return {"filename": filename, "data_store": store_name, "imported": imported, "errors": errors + import_errors}
         finally:
             Path(temporary_path).unlink(missing_ok=True)
+
+    def list_scenarios(self, project_path: str, data_store: str | None = None) -> dict[str, Any]:
+        """List scenario names found in a project's Data Store database."""
+        from sqlalchemy.engine.url import URL
+        from spinedb_api import DatabaseMapping, SpineDBAPIError, SpineDBVersionError
+
+        project_dir = self._project_dir(project_path)
+        project = load_project_dict(project_dir)
+        stores = {
+            name: item for name, item in project.get("items", {}).items() if item.get("type") == "Data Store"
+        }
+        if not stores:
+            raise ValueError("The project has no Data Store to read scenarios from")
+        store_name = data_store or next(iter(stores))
+        if store_name not in stores:
+            raise ValueError(f"Unknown Data Store: {store_name}")
+        database = stores[store_name].get("url", {}).get("database", {})
+        database_path = Path(database.get("path", f"{store_name}.sqlite"))
+        if database.get("relative", True):
+            database_path = project_dir / database_path
+        if not database_path.exists():
+            return {"data_store": store_name, "scenarios": []}
+        url = URL.create("sqlite", database=str(database_path))
+        try:
+            with DatabaseMapping(url) as db_map:
+                scenarios = [row.name for row in db_map.query(db_map.scenario_sq)]
+        except (SpineDBAPIError, SpineDBVersionError) as error:
+            raise ValueError(f"Could not read scenarios from {store_name}: {error}")
+        return {"data_store": store_name, "scenarios": scenarios}
+
+    def open_database_editor(self, project_path: str, data_store: str | None = None) -> dict[str, Any]:
+        """Open the classic Spine DB Editor for a project's Data Store."""
+        from sqlalchemy.engine.url import URL
+
+        supplied = Path(project_path).expanduser()
+        if not supplied.is_absolute() and not supplied.exists():
+            raise ValueError("Classic DB Editor needs an absolute project path. Open the project with the Load project button.")
+        project_dir = self._project_dir(project_path)
+        try:
+            project = load_project_dict(project_dir)
+        except ProjectLoadingFailed:
+            project_dir = Path(self.project(project_path)["path"])
+            project = load_project_dict(project_dir)
+        stores = {
+            name: item for name, item in project.get("items", {}).items() if item.get("type") == "Data Store"
+        }
+        if not stores:
+            raise ValueError("The project has no Data Store to open")
+        store_name = data_store or next(iter(stores))
+        if store_name not in stores:
+            raise ValueError(f"Unknown Data Store: {store_name}")
+        database = stores[store_name].get("url", {}).get("database", {})
+        database_path = Path(database.get("path", f"{store_name}.sqlite"))
+        if database.get("relative", True):
+            database_path = project_dir / database_path
+        if not database_path.exists():
+            raise ValueError(f"Database file for {store_name} does not exist: {database_path}")
+        url = URL.create("sqlite", database=database_path.as_posix())
+        subprocess.Popen(
+            [sys.executable, "-m", "spinetoolbox.spine_db_editor.main", str(url)],
+            cwd=Path(__file__).resolve().parents[2],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+        )
+        return {"data_store": store_name, "url": str(url)}
 
     def open_database_from_bytes(self, filename: str, content_b64: str) -> dict[str, Any]:
         """Receive a database file as base64, write to temp file and return introspected schema and sample rows."""

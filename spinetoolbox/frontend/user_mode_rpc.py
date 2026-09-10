@@ -25,6 +25,10 @@ def handle_request(service: UserModeService, request: dict) -> dict:
         return {"status": job.status, "events": job.events, "error": job.error}
     if method == "import_excel":
         return service.import_excel(params["path"], params["filename"], params["content"], params.get("data_store"))
+    if method == "list_scenarios":
+        return service.list_scenarios(params["path"], params.get("data_store"))
+    if method == "open_database_editor":
+        return service.open_database_editor(params["path"], params.get("data_store"))
     if method == "open_database":
         return service.open_database_from_bytes(params["filename"], params["content"])
     raise ValueError(f"Unknown method: {method}")
@@ -37,7 +41,7 @@ def main() -> None:
         try:
             request = json.loads(line)
             response = {"id": request.get("id"), "ok": True, "result": handle_request(service, request)}
-        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+        except Exception as error:
             response = {"id": request.get("id") if "request" in locals() else None, "ok": False, "error": str(error)}
         print(json.dumps(response), flush=True)
 
