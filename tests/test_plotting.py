@@ -47,6 +47,13 @@ from spinetoolbox.plotting import (
 from tests.mock_helpers import TestCaseWithQApplication
 
 
+# TODO: still relevant, but needs refactoring. `plot_pivot_table_selection`
+# still exists, but it now returns a Bokeh-based PlotWidget (`plot_data`
+# writes `file_html(...)` and sets `plot_widget.dataframe`). These tests
+# assert the old matplotlib API (`canvas.axes`, `canvas.legend_axes`,
+# `lines[i].get_xdata(orig=True)`), which no longer exists. Rewrite assertions
+# against the new Bokeh output (e.g. `plot_widget.dataframe` / rendered HTML),
+# and re-check the `_fill_pivot`/`set_filter`/`set_plot_x_column` model helpers.
 class TestPlotPivotTableSelection:
     @staticmethod
     def _add_object_parameter_values(values, db_map, db_mngr):
@@ -509,6 +516,12 @@ class TestPlotPivotTableSelection:
 
 
 class TestPlotData(TestCaseWithQApplication):
+    # TODO: still relevant, but needs refactoring. `plot_data` now has signature
+    # `plot_data(dfs: list[pd.DataFrame], plot_widget=None, **selections)` and
+    # takes squeezed DataFrame(s), not `XYData`. The `XYData`/`IndexName`/`TreeNode`
+    # types and `LEGEND_PLACEMENT_THRESHOLD` are gone, and the widget is Bokeh-based
+    # (no `canvas.axes`/`lines`). Rewrite to build DataFrames and assert on
+    # `plot_widget.dataframe` / the rendered HTML.
     def test_nothing_to_plot(self):
         plot_widget = plot_data([])
         self.assertEqual(len(plot_widget.canvas.axes.lines), 0)
