@@ -13,38 +13,206 @@
 """Unit tests for the plotting module."""
 
 from contextlib import contextmanager
-import unittest
 from unittest.mock import patch
 from matplotlib.gridspec import GridSpec
 import numpy
 from PySide6.QtCore import QItemSelectionModel, QModelIndex, QObject
 from PySide6.QtWidgets import QApplication
+import pandas as pd
 import pytest
 from spinedb_api import (
-    Array,
     DateTime,
     Map,
-    TimePattern,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
     to_database,
 )
 from spinetoolbox.plotting import (
-    LEGEND_PLACEMENT_THRESHOLD,
-    IndexName,
     PlottingError,
-    TreeNode,
-    XYData,
-    add_row_to_exception,
-    combine_data_with_same_indexes,
-    convert_indexed_value_to_tree,
+    get_ranges,
+    get_resource,
+    get_variants,
+    check_columns,
+    check_shapes,
+    is_sequence,
+    pad_num,
+    parse_time,
     plot_data,
     plot_pivot_table_selection,
-    raise_if_incompatible_x,
-    reduce_indexes,
-    turn_node_to_xy_data,
+    squeeze_df,
 )
 from tests.mock_helpers import TestCaseWithQApplication
+
+
+@pytest.mark.parametrize(
+    "data,seq",
+    [
+        (["P1", "P01", "P314", "P001"], [1, 1, 314, 1]),
+        (["T1", "Z01", "h314", "y001"], [1, 1, 314, 1]),
+    ],
+)
+@pytest.mark.parametrize("col_t", [object, pd.StringDtype(na_value=pd.NA)])
+def test_parse_sequence_patterns(col_t: type, data: list[str], seq: list[str]):
+    df = pd.DataFrame(data, columns=["col"], dtype=col_t)
+    res = parse_time(df)
+    assert res.col.tolist() == seq
+
+
+@pytest.mark.parametrize(
+    "col1,col2,col3,col4,scols",
+    [
+        (["a"], ["aa"], ["foo", "bar"], [1, 2], 2),
+        (["a"], ["aa"], ["foo", "bar", "baz"], [1, pd.NA, 3], 2),
+        (["a"], ["aa"], ["foo", "bar", "baz"], [1, 2, 2], 2),
+        (["a"], ["aa"], ["foo", "bar", "bar"], [1, 2, 2], 2),
+    ],
+)
+def test_squeeze_df(col1: list, col2: list, col3: list, col4: list, scols: int):
+    rows = len(col4)
+    df = pd.DataFrame({"a": col1 * rows, "b": col2 * rows, "label": col3, "value": col4})
+    expect = df.loc[:, df.columns[scols:]]
+    res, common = squeeze_df(df)
+    assert pd.testing.assert_frame_equal(res, expect) is None
+    assert common == {"a": col1[0], "b": col2[0]}
+
+
+@pytest.mark.parametrize(
+    "data,match_",
+    [
+        (
+            [
+                {"a": ["foo", "bar"], "value": [1, 2]},
+                {"a": ["foo", "bar"], "value": [1, 2]},
+            ],
+            True,
+        ),
+        (
+            [
+                {"a": [1, 2], "value": [2.71, 3.14]},
+                {"a": [1, 2], "value": [3, 4]},
+            ],
+            False,  # type mismatch
+        ),
+        (
+            [
+                {"a": [1, 2], "value": [2.71, 3.14]},
+                {"a": [1, 2], "value": [1.11, 0.0]},
+            ],
+            True,
+        ),
+        (
+            [
+                {"a": [1, 2], "value": [2.71, 3.14]},
+                {"b": [1, 2], "value": [1.11, 0.0]},
+            ],
+            False,  # column name mismatch
+        ),
+    ],
+)
+def test_check_columns(data: dict[str, list], match_: bool):
+    dfs = [pd.DataFrame(d) for d in data]
+    assert match_ == check_columns(dfs)
+    if not match_:
+        with pytest.raises(PlottingError):
+            check_columns(dfs, _raise=True)
+
+
+@pytest.mark.parametrize(
+    "data,match_",
+    [
+        (
+            [
+                {"a": ["foo", "bar"], "value": [1, 2]},
+                {"a": ["foo", "bar"], "value": [1, 2]},
+            ],
+            True,
+        ),
+        (
+            [
+                {"a": [1, 2, 3], "value": [2.71, 3.14, 1.11]},
+                {"a": [1, 2], "value": [3, 4]},
+            ],
+            False,
+        ),
+    ],
+)
+def test_check_shapes(data: dict[str, list], match_: bool):
+    dfs = [pd.DataFrame(d) for d in data]
+    assert match_ == check_shapes(dfs)
+    if not match_:
+        with pytest.raises(PlottingError):
+            check_shapes(dfs, _raise=True)
+
+
+@pytest.mark.parametrize(
+    "data,seq",
+    [
+        ([1, 2], True),  # integers
+        (pd.date_range("2020-01-01", "2020-01-02", freq="1D"), True),  # dt
+        (["foo", "bar"], False),  # string
+        ([2.71, 3.14], False),  # float
+    ],
+)
+def test_is_sequence(data, seq: bool):
+    assert seq == is_sequence(pd.Series(data).dtype)
+
+
+def test_variants():
+    sdf = pd.DataFrame(
+        {
+            "a": ["foo", "foo", "bar", "bar"],
+            "b": [1, 2, 1, 2],
+            "value": [2.71, 3.14, 1.2, 3.2],
+        }
+    )
+    nplots, seq_cols = get_variants(sdf)
+    pd.testing.assert_frame_equal(nplots, pd.DataFrame({"a": ["foo", "bar"]}))
+    pd.testing.assert_frame_equal(seq_cols, pd.DataFrame({"b": [1, 2]}))
+
+
+def test_variants_multiple_sequence_columns():
+    sdf = pd.DataFrame(
+        {
+            "b": [1, 2],
+            "c": [3, 4],
+            "value": [2.71, 3.14],
+        }
+    )
+    with pytest.raises(PlottingError, match="multiple sequence columns"):
+        get_variants(sdf)
+
+
+def test_pad_num():
+    assert pad_num(100) == 105.0
+    assert pad_num(-100) == -95.0
+    assert pad_num(0) == 0.0
+
+
+def test_get_ranges():
+    sdf = pd.DataFrame(
+        {
+            "x": [0, 1, 2, 3],
+            "value": [0.1, 0.5, 0.9, 1.5],
+        }
+    )
+    assert get_ranges(sdf, []) == ((0, 3), (0, 2))
+
+
+def test_get_ranges_categorical():
+    sdf = pd.DataFrame(
+        {
+            "cat": [0, 0, 1, 1],
+            "x": [0, 1, 2, 3],
+            "value": [0.1, 0.5, 0.9, 1.5],
+        }
+    )
+    assert get_ranges(sdf, ["cat"]) == ((0, 3), (0, 2))
+
+
+def test_get_resource():
+    content = get_resource("download_action_cb.js")
+    expected = open("spinetoolbox/plotting_resources/download_action_cb.js").read()
+    assert content == expected
 
 
 # TODO: still relevant, but needs refactoring. `plot_pivot_table_selection`

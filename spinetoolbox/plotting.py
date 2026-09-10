@@ -12,14 +12,13 @@
 
 """Functions for plotting on PlotWidget."""
 
-from dataclasses import dataclass
 import datetime
 import functools
 from importlib import resources
 from itertools import starmap
 from operator import attrgetter, methodcaller
 import re
-from typing import Iterable, Literal, NamedTuple, Optional, TypeVar, TYPE_CHECKING
+from typing import Iterable, Literal, NamedTuple, TypeVar, TYPE_CHECKING
 from bokeh.core.properties import String
 from bokeh.embed import file_html
 from bokeh.layouts import column, gridplot, row
@@ -32,7 +31,6 @@ from bokeh.models import (
     FactorRange,
     HoverTool,
     Legend,
-    MultiChoice,
     RangeTool,
     SaveTool,
     TableColumn,
@@ -122,10 +120,6 @@ def check_columns(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
     col_types = pd.concat(map(attrgetter("dtypes"), dfs), axis=1).map(_get_type, na_action="ignore")
     type_count = col_types.nunique(axis=1, dropna=True)
 
-    # TODO: fallback, try dropping DFs to find a working set
-    stringified = col_types.loc[type_count != 1].astype(str)
-    # type_counts = stringified.agg(Counter, axis=1).apply(pd.Series).astype("Int64").fillna(0)
-
     # check if all column names match
     cols = np.array([df.columns.values for df in dfs])
     cols_neq = cols[:-1] != cols[1:]
@@ -135,9 +129,12 @@ def check_columns(dfs: Iterable[pd.DataFrame], _raise: bool = False) -> bool:
     # after the set of columns from the 1st DF.
 
     if not _raise:
-        return (type_count == 1).all() and bool(mismatched_cols.any())
+        return (type_count == 1).all() and (mismatched_cols.size == 0)
 
     if (type_count != 1).any():
+        # TODO: fallback, try dropping DFs to find a working set
+        stringified = col_types.loc[type_count != 1].astype(str)
+        # type_counts = stringified.agg(Counter, axis=1).apply(pd.Series).astype("Int64").fillna(0)
         msgs = stringified.apply(lambda r: f"{r.name}: " + ", ".join([i for i in r if i != "nan"]), axis=1)
         raise PlottingError("\n".join(["incompatible column types:", *msgs]))
     elif mismatched_cols.any():
@@ -572,8 +569,8 @@ def plot_barchart(sdf: pd.DataFrame, title: str):
                 for vals, idx in grouped.groups.items()
             ]
             return gridplot(figs, ncols=2)
-        case _:
-            raise RuntimeError()
+        case shape:
+            raise RuntimeError(f"plot_barchart: unsupported {shape=}")
 
     fig.vbar(x=str(x_label), top=str(y_label), source=source)
     fig.y_range.start = -10
