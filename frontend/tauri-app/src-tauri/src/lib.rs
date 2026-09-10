@@ -39,7 +39,7 @@ impl PythonBridge {
             let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
             let python = resolve_python_executable();
             let mut process = Command::new(&python)
-                .args(["-m", "spinetoolbox.frontend.user_mode_rpc"])
+                .args(["-m", "spinetoolbox.frontend.shared_backend"])
                 .current_dir(root)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -71,6 +71,7 @@ fn python_bridge_request(state: tauri::State<'_, Mutex<PythonBridge>>, request: 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(Mutex::new(PythonBridge::new()))
         .invoke_handler(tauri::generate_handler![python_bridge_request])
         .run(tauri::generate_context!())

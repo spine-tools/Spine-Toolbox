@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Permissions for the Spine Toolbox User Mode window.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "dialog:default"]
 }
