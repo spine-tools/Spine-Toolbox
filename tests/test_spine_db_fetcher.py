@@ -75,15 +75,13 @@ class TestSpineDBFetcher:
             }
         )
         alternative_id = db_map.alternative(name="alt")["id"]
-        assert (
-            db_mngr.get_item(db_map, "alternative", alternative_id)
-            == {
-                "commit_id": 2,
-                "description": None,
-                "id": db_map.get_alternative_item(id=2)["id"],
-                "name": "alt",
-            },
-        )
+        expected = {
+            "commit_id": 2,
+            "description": None,
+            "id": db_map.get_alternative_item(id=2)["id"],
+            "name": "alt",
+        }
+        assert db_mngr.get_item(db_map, "alternative", alternative_id) == expected
         fetcher.set_obsolete(True)
 
     def test_fetch_scenarios(self, db_mngr, db_map, parent_object):
