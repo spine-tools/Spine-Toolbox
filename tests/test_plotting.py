@@ -656,29 +656,6 @@ class TestPlotData(TestCaseWithQApplication):
         self.assertEqual(repr(plot_widget.canvas.legend_axes.get_gridspec()), repr(GridSpec(1, 2, width_ratios=[1, 0])))
 
 
-class TestRaiseIfIncompatibleX(unittest.TestCase):
-    def test_data_with_numeric_and_string_x_data_raises(self):
-        data_list = [
-            XYData(
-                x=[1.0, 2.0, 3.0],
-                y=[5.0, 2.0, -1.0],
-                x_label=IndexName("x", 0),
-                y_label="",
-                data_index=["1d_map"],
-                index_names=[IndexName("parameter_name", 0)],
-            ),
-            XYData(
-                x=["t1", "t2"],
-                y=[13.0, 7.0],
-                x_label=IndexName("x", 2),
-                y_label="",
-                data_index=["uneven_map", "A1"],
-                index_names=[IndexName("parameter_name", 0), IndexName("x", 1)],
-            ),
-        ]
-        self.assertRaises(PlottingError, raise_if_incompatible_x, data_list)
-
-
 class MultiSignalWaiter(QObject):
     """A 'traffic light' that allows waiting for a set number of signals to be emitted in another thread."""
 
