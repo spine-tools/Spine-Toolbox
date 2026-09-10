@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import {
   ArrowRight,
   BarChart3,
@@ -40,6 +41,8 @@ const currentView = ref("workflow");
 const selectedProject = ref(projects[0]);
 const projectMenuOpen = ref(false);
 const scenario = ref("Baseline 2030");
+const scenarios = ref([]);
+const scenarioMenuOpen = ref(false);
 const selectedTool = ref("");
 const tools = ref([]);
 const toolMenuOpen = ref(false);
@@ -49,6 +52,7 @@ const excelInputFile = ref("");
 const inputSourceMenuOpen = ref(false);
 const resultFile = ref("results.sqlite");
 const projectLoadError = ref("");
+const classicDbEditorStatus = ref("");
 const plotReady = ref(false);
 const isRunning = ref(false);
 const workflowNodes = ref([
@@ -150,10 +154,7 @@ async function callBackend(method, params = {}) {
 }
 async function openProjectDialog() {
   try {
-    // Use eval for the dynamic import to avoid Vite resolving the module at dev-time
-    // when `@tauri-apps/api` is not installed in the browser dev environment.
-    const { open } = await eval('import("@tauri-apps/api/dialog")');
-    const selection = await open({ directory: true, multiple: false });
+    const selection = await openDialog({ directory: true, multiple: false });
     let dir = "";
     if (Array.isArray(selection)) dir = selection[0] || "";
     else dir = selection || "";
@@ -166,7 +167,10 @@ async function openProjectDialog() {
       projectLoadError.value = `Could not load project: ${e.message}`;
     }
   } catch (e) {
-    // Dynamic import failed (for example running in Vite dev server). Fall back to hidden picker.
+    if (window.__TAURI_INTERNALS__) {
+      projectLoadError.value = `Could not open native project dialog: ${e.message}`;
+      return;
+    }
     document.querySelector('#project-picker').click();
   }
 }
@@ -268,6 +272,7 @@ function chooseInputSource(source) {
 
 function closeInputSourceMenu(event) {
   if (!event.target.closest(".canvas-input")) inputSourceMenuOpen.value = false;
+  if (!event.target.closest(".canvas-stack-card")) scenarioMenuOpen.value = false;
 }
 
 function resetCanvasSelection() {
@@ -322,6 +327,21 @@ async function openDatabase(event) {
     console.error("Open database failed:", error);
   } finally {
     event.target.value = "";
+  }
+}
+
+async function openClassicDatabaseEditor() {
+  projectLoadError.value = "";
+  classicDbEditorStatus.value = "Opening classic DB Editor...";
+  try {
+    const result = await callBackend("open_database_editor", {
+      path: projectPath.value,
+      data_store: workflowNodes.value.find((node) => node.id === "input").label,
+    });
+    classicDbEditorStatus.value = `Opened ${result.data_store} in classic DB Editor`;
+  } catch (error) {
+    classicDbEditorStatus.value = "";
+    projectLoadError.value = `Could not open classic database editor: ${error.message}`;
   }
 }
 
@@ -411,6 +431,15 @@ function chooseTool(tool) {
   toolMenuOpen.value = false;
 }
 
+function toggleScenarioMenu() {
+  scenarioMenuOpen.value = !scenarioMenuOpen.value;
+}
+
+function chooseScenario(nextScenario) {
+  scenario.value = nextScenario;
+  scenarioMenuOpen.value = false;
+}
+
 function nodePorts(node) {
   return [
     { x: node.x + 66, y: node.y, dx: 0, dy: -1 },
@@ -461,6 +490,11 @@ async function loadProject() {
     if (dataStores.length) {
       inputFile.value = dataStores[0].database;
       workflowNodes.value.find((node) => node.id === "input").label = dataStores[0].name;
+      const scenarioResult = await callBackend("list_scenarios", { path: project.path, data_store: dataStores[0].name });
+      scenarios.value = scenarioResult.scenarios;
+      if (scenarios.value.length && !scenarios.value.includes(scenario.value)) scenario.value = scenarios.value[0];
+    } else {
+      scenarios.value = [];
     }
     // Populate tool list from project items of type 'Tool' or known tool names
     const toolItems = project.items.filter((item) => item.type === "Tool" || item.name.toLowerCase().includes("spineopt") || item.name.toLowerCase().includes("flextool"));
@@ -562,7 +596,15 @@ onBeforeUnmount(() => {
                 <button class="stack-ungroup" title="Ungroup" @click.stop="ungroupStack(node.stackRef)">×</button>
               </template>
               <template v-else>
-                <strong v-if="node.id !== 'tool'">{{ node.label }}</strong>
+                <template v-if="node.id === 'stack-card'">
+                  <strong @click.stop="toggleScenarioMenu" class="tool-card">{{ node.label }} <ChevronDown :size="14" /></strong>
+                  <small>{{ scenario || "Choose scenario" }}</small>
+                  <div v-if="scenarioMenuOpen" class="scenario-menu" @pointerdown.stop>
+                    <button v-for="item in scenarios" :key="item" type="button" :class="{ active: item === scenario }" @click="chooseScenario(item)">{{ item }}</button>
+                    <span v-if="!scenarios.length">No scenarios found</span>
+                  </div>
+                </template>
+                <strong v-else-if="node.id !== 'tool'">{{ node.label }}</strong>
                 <template v-else>
                   <strong @click.stop="toggleToolMenu" class="tool-card">{{ selectedTool || node.label }}</strong>
                   <div v-if="toolMenuOpen" class="tool-menu" @pointerdown.stop>
@@ -593,9 +635,10 @@ onBeforeUnmount(() => {
       <section v-else class="database-editor" aria-label="Database editor">
         <nav class="db-menu-bar"><button>File</button><button>Edit</button><button>Session</button><button>View</button><button>Help</button></nav>
         <header class="db-toolbar">
-          <button title="Open database" @click="document.querySelector('#db-input-picker').click()"><FolderOpen :size="17" /></button><button title="Save session"><Save :size="17" /></button><span></span><button title="Undo"><Undo2 :size="17" /></button><button title="Redo"><Redo2 :size="17" /></button><span></span><button title="Commit"><Check :size="17" /></button><button title="History"><History :size="17" /></button><span></span><button title="Graph view"><GitBranch :size="17" /></button><label class="db-search"><Search :size="15" /><input placeholder="Search" /></label>
+          <button title="Open database" @click="document.querySelector('#db-input-picker').click()"><FolderOpen :size="17" /></button><button title="Open in classic DB Editor" @click="openClassicDatabaseEditor"><LayoutDashboard :size="17" /></button><button title="Save session"><Save :size="17" /></button><span></span><button title="Undo"><Undo2 :size="17" /></button><button title="Redo"><Redo2 :size="17" /></button><span></span><button title="Commit"><Check :size="17" /></button><button title="History"><History :size="17" /></button><span></span><button title="Graph view"><GitBranch :size="17" /></button><label class="db-search"><Search :size="15" /><input placeholder="Search" /></label>
         </header>
-        <div class="db-tabs"><button class="active"><Database :size="14" /> {{ inputFile }} <b>×</b></button><button title="Open database"><Plus :size="15" /></button></div>
+        <div class="db-tabs"><button class="active"><Database :size="14" /> {{ inputFile }} <b>×</b></button><button title="Open database"><Plus :size="15" /></button><button class="classic-db-button" type="button" @click="openClassicDatabaseEditor"><LayoutDashboard :size="14" /> Classic DB Editor</button></div>
+        <p v-if="projectLoadError || classicDbEditorStatus" class="db-status" :class="{ error: projectLoadError }">{{ projectLoadError || classicDbEditorStatus }}</p>
         <div class="db-dock-grid">
           <section class="db-dock entity-tree-dock"><header>Entity tree <span>×</span></header><div class="tree-filter"><Search :size="13" /><input placeholder="Filter" /></div><div class="db-tree"><p><ChevronDown :size="13" /> commodity</p><p class="tree-child">electricity</p><p class="tree-child">gas</p><p><ChevronDown :size="13" /> node</p><p class="tree-child selected-row">North</p><p class="tree-child">South</p><p><ChevronDown :size="13" /> unit</p></div></section>
           <section class="db-dock parameter-values-dock"><header>Parameter value <span>×</span></header><table class="db-table"><thead><tr><th>Entity class</th><th>Entity</th><th>Parameter</th><th>Alternative</th><th>Value</th></tr></thead><tbody><tr class="selected-row"><td>node</td><td>North</td><td>demand</td><td>Base</td><td>120</td></tr><tr><td>node</td><td>South</td><td>demand</td><td>Base</td><td>94</td></tr><tr><td>unit</td><td>Gas plant</td><td>capacity</td><td>Base</td><td>300</td></tr><tr><td>unit</td><td>Wind</td><td>capacity</td><td>Base</td><td>150</td></tr></tbody></table></section>
