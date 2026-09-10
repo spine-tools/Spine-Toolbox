@@ -16,10 +16,30 @@ from contextlib import contextmanager
 from typing import Any
 import unittest
 from unittest import mock
-from PySide6.QtCore import QAbstractListModel, QAbstractTableModel, QMimeData, QModelIndex, Qt, QTimer
+from PySide6.QtCore import QAbstractListModel, QAbstractTableModel, QMimeData, QModelIndex, QEvent, Qt, QTimer
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_manager import SpineDBManager
 from spinetoolbox.ui_main import ToolboxUI
+
+
+_qapplication_quit = False
+
+
+def quit_qapplication(application):
+    """Quit the QApplication's event loop exactly once per process.
+
+    Re-entering ``exec()`` after the app has already been quit crashes
+    QtWebEngine (a dangling ``aboutToQuit`` connection); subsequent teardowns
+    just drain pending deferred deletions instead.
+    """
+    global _qapplication_quit
+    if _qapplication_quit:
+        application.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+        application.processEvents()
+        return
+    _qapplication_quit = True
+    QTimer.singleShot(0, application.quit)
+    application.exec()
 
 
 class TestCaseWithQApplication(unittest.TestCase):
@@ -31,8 +51,7 @@ class TestCaseWithQApplication(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        QTimer.singleShot(0, lambda: cls._q_app.quit())
-        cls._q_app.exec()
+        quit_qapplication(cls._q_app)
 
 
 def create_toolboxui():

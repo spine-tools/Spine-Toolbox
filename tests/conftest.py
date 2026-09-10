@@ -10,11 +10,17 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from unittest import mock
-from PySide6.QtCore import QObject, QTimer
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
-from tests.mock_helpers import MockSpineDBManager, clean_up_toolbox, create_toolboxui, create_toolboxui_with_project
+from tests.mock_helpers import (
+    MockSpineDBManager,
+    clean_up_toolbox,
+    create_toolboxui,
+    create_toolboxui_with_project,
+    quit_qapplication,
+)
 
 
 @pytest.fixture(scope="module")
@@ -23,8 +29,7 @@ def application():
         QApplication()
     application_instance = QApplication.instance()
     yield application_instance
-    QTimer.singleShot(0, lambda: application_instance.quit())
-    application_instance.exec()
+    quit_qapplication(application_instance)
 
 
 @pytest.fixture
