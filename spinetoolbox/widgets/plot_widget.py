@@ -138,14 +138,14 @@ class PlotActions(QObject):
         super().__init__()
         self._plot = plot_widget
 
-    @Slot(str, str)
+    @Slot(str)
     def refreshPlot(self, selection_str: str):
         sdf = self._plot.dataframe
 
         match json.loads(selection_str):
             case dict() as row:
                 ks = list(row)
-                [row.pop(k) for k in ks if k not in col_order]
+                [row.pop(k) for k in ks if k not in sdf.columns]
             case _row:
                 raise RuntimeError(f"unknown selection: {_row}", self._plot)
 

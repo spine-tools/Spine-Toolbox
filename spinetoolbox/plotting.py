@@ -53,6 +53,9 @@ class PlottingError(Exception):
     """An exception signalling failure in plotting."""
 
 
+PLOT_WIDTH = 800
+PLOT_HEIGHT = 400
+
 # NOTE: POD types like int, float, & str covers extension
 # ExtensionDtypes like Int64Dtype, Float64Dtype, or StringDtype,
 # since: Int64Dtype().type == int
@@ -348,24 +351,17 @@ def get_dim_selector(nplots: pd.DataFrame):
     data_table = DataTable(
         source=source,
         columns=table_columns,
-        sizing_mode="stretch_both",
-        min_height=400,
+        sizing_mode="scale_width",
+        min_height=PLOT_HEIGHT,
         selectable=True,
     )
 
-    # # NOTE: here as example, create widget, then pass to CustomJS in `args`
-    # order_input = MultiChoice(
-    #     value=columns,
-    #     options=columns,
-    #     title="Column Order - remove and reinsert to reorder",
-    #     sizing_mode="stretch_width",
-    #     min_height=50,
-    # )
-
+    # NOTE: to add more selection widgets, pass to CustomJS via `args`.
+    # You'll also have to adapt the JS code, and the webchannel bridge.
     cb = CustomJS(args={"source": source}, code=get_resource("selector_cb.js"))
     source.selected.js_on_change("indices", cb)
 
-    return column(data_table)
+    return column(data_table, sizing_mode="scale_width")
 
 
 def get_window_selector(
@@ -381,7 +377,7 @@ def get_window_selector(
         title="Select time range",
         y_axis_type=None,
         height=100,
-        width=800,
+        width=PLOT_WIDTH,
         tools="",
         toolbar_location=None,
         y_range=(0, 100),
@@ -492,7 +488,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
             sdf = sdf.loc[grouped.groups[idx]].drop(_cols, axis=1)
             nplots = nplots.drop(_cols, axis=1).drop_duplicates()
             plot = plot_overlayed(sdf, nplots, title, max_points=max_points)
-            return row(plot, selector)
+            return row(plot, selector, sizing_mode="scale_width")
         case _, ncols:
             raise PlottingError(f"{ncols=}: too few columns to plot")
 
@@ -501,8 +497,8 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     x_range, y_range = get_ranges(sdf, nplots.columns.to_list(), max_points)
     fig = figure(
         title=title,
-        width=800,
-        height=400,
+        width=PLOT_WIDTH,
+        height=PLOT_HEIGHT,
         x_axis_label=x_label,
         y_axis_label=y_label,
         x_range=x_range,
@@ -526,7 +522,7 @@ def plot_overlayed(sdf: pd.DataFrame, nplots: pd.DataFrame, title: str, *, max_p
     add_download_buttons(fig, legend=legend)
 
     select = get_window_selector(fig, x_label, y_label, x_axis_type, sources.values())
-    return column(fig, select)
+    return column(fig, select, sizing_mode="stretch_both")
 
 
 def plot_barchart(sdf: pd.DataFrame, title: str):
