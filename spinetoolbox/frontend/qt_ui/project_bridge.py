@@ -3,11 +3,15 @@ import json
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QUrl, Slot
+from PySide6.QtCore import QObject, QSettings, QUrl, Slot
 
 from ...config import PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME, LATEST_PROJECT_VERSION
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
+
+# same QSettings location and "appSettings/recentProjects" format the classic Qt UI uses
+_SETTINGS_ORGANIZATION = "SpineProject"
+_SETTINGS_APPLICATION = "Spine Toolbox"
 
 
 def _serialize_path(path: str, project_dir: str) -> dict:
@@ -47,6 +51,42 @@ class ProjectBridge(QObject):
             if item.get("type") == "Data Connection":
                 return name, item
         return None, None
+
+    def _add_recent_project(self, name: str, project_dir: str) -> None:
+        """Mirrors spinetoolbox.helpers.update_recent_projects so both UIs share the same recent-projects list."""
+        settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
+        entry = name + "<>" + project_dir
+        recents = settings.value("appSettings/recentProjects", defaultValue=None)
+        if not recents:
+            recents_list = [entry]
+        else:
+            recents_list = str(recents).split("\n")
+            normalized = [os.path.normcase(item) for item in recents_list]
+            try:
+                recents_list.insert(0, recents_list.pop(normalized.index(os.path.normcase(entry))))
+            except ValueError:
+                recents_list.insert(0, entry)
+                del recents_list[20:]
+        settings.setValue("appSettings/recentProjects", "\n".join(recents_list))
+        settings.sync()
+
+    @Slot(result=str)
+    def get_project_name(self) -> str:
+        """Returns the current project folder's name, or an empty string if it isn't a valid project yet."""
+        if not (self._project_dir / PROJECT_CONFIG_DIR_NAME).is_dir():
+            return ""
+        return self._project_dir.name
+
+    @Slot(str, result=str)
+    def open_project(self, folder_url: str) -> str:
+        """Switches to the project at folder_url and registers it as a recent project; empty string means invalid."""
+        local_path = Path(QUrl(folder_url).toLocalFile() or folder_url)
+        if not (local_path / PROJECT_CONFIG_DIR_NAME).is_dir():
+            return ""
+        self._project_dir = local_path
+        self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+        self._add_recent_project(local_path.name, str(local_path))
+        return local_path.name
 
     @Slot(result=str)
     def get_input_reference(self) -> str:
