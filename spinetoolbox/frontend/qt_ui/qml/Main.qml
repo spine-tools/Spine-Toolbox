@@ -16,6 +16,14 @@ ApplicationWindow {
     property bool compactSidebar: width < 900
     property bool showProperties: width >= 1150
 
+    // name of the project currently open in the shared .spinetoolbox project.json
+    property string currentProjectName: ""
+
+    Component.onCompleted: {
+        if (typeof projectBridge !== "undefined")
+            currentProjectName = projectBridge.get_project_name()
+    }
+
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows
     readonly property real designContentWidth: 1080 + 220 + 80
     property real cardScale: Math.max(0.5, Math.min(1, designFlick.width / designContentWidth))
@@ -247,7 +255,7 @@ ApplicationWindow {
                         spacing: 1
 
                         Label {
-                            text: "My Project"
+                            text: root.currentProjectName || "No project open"
                             font.pixelSize: 19
                             font.bold: true
                         }
@@ -258,6 +266,25 @@ ApplicationWindow {
                             font.pixelSize: 12
 
                             visible: root.width >= 700
+                        }
+                    }
+
+                    Button {
+                        text: "Open project"
+
+                        onClicked: openProjectDialog.open()
+
+                        FolderDialog {
+                            id: openProjectDialog
+
+                            title: "Choose a project folder (must contain .spinetoolbox)"
+
+                            onAccepted: {
+                                var name = projectBridge.open_project(selectedFolder.toString())
+
+                                if (name)
+                                    root.currentProjectName = name
+                            }
                         }
                     }
 
