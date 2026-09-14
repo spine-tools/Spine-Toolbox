@@ -141,6 +141,8 @@ ApplicationWindow {
                     text: "Data"
                     iconText: "◇"
                     compact: root.compactSidebar
+
+                    onClicked: projectBridge.open_database_editor()
                 }
 
                 SidebarButton {
