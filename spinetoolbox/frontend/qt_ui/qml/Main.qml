@@ -281,32 +281,70 @@ ApplicationWindow {
 
                     // subtle grid
                     Canvas {
-                        anchors.fill: parent
+                        id: connectionsCanvas
 
-                        opacity: 0.35
+                        anchors.fill: parent
+                        z: 0
+
+                        function drawConnection(ctx, fromItem, toItem) {
+                            var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
+                            var to = toItem.mapToItem(connectionsCanvas, 0, 0)
+
+                            var startX = from.x + fromItem.width
+                            var startY = from.y + fromItem.height / 2
+
+                            var endX = to.x
+                            var endY = to.y + toItem.height / 2
+
+                            // Horizontal distance used to create a smooth curve
+                            var distance = endX - startX
+                            var controlOffset = Math.max(50, distance * 0.45)
+
+                            ctx.beginPath()
+
+                            ctx.moveTo(startX, startY)
+
+                            ctx.bezierCurveTo(
+                                startX + controlOffset,
+                                startY,
+                                endX - controlOffset,
+                                endY,
+                                endX,
+                                endY
+                            )
+
+                            ctx.strokeStyle = "#94a3b8"
+                            ctx.lineWidth = 2
+                            ctx.stroke()
+
+                            // Arrow head
+                            var arrowSize = 7
+
+                            ctx.beginPath()
+
+                            ctx.moveTo(endX, endY)
+                            ctx.lineTo(
+                                endX - arrowSize,
+                                endY - arrowSize / 2
+                            )
+                            ctx.lineTo(
+                                endX - arrowSize,
+                                endY + arrowSize / 2
+                            )
+                            ctx.closePath()
+
+                            ctx.fillStyle = "#94a3b8"
+                            ctx.fill()
+                        }
 
                         onPaint: {
                             var ctx = getContext("2d")
+
                             ctx.clearRect(0, 0, width, height)
 
-                            ctx.strokeStyle = "#e5e7eb"
-                            ctx.lineWidth = 1
-
-                            var size = 32
-
-                            for (var x = 0; x < width; x += size) {
-                                ctx.beginPath()
-                                ctx.moveTo(x, 0)
-                                ctx.lineTo(x, height)
-                                ctx.stroke()
-                            }
-
-                            for (var y = 0; y < height; y += size) {
-                                ctx.beginPath()
-                                ctx.moveTo(0, y)
-                                ctx.lineTo(width, y)
-                                ctx.stroke()
-                            }
+                            drawConnection(ctx, inputCard, modelCard)
+                            drawConnection(ctx, modelCard, databaseCard)
+                            drawConnection(ctx, databaseCard, resultCard)
                         }
                     }
 
@@ -339,43 +377,6 @@ ApplicationWindow {
 
                         ToolButton {
                             text: "Fit"
-                        }
-                    }
-
-                    // =================================================
-                    // CONNECTIONS
-                    // =================================================
-
-                    Canvas {
-                        anchors.fill: parent
-
-                        z: 1
-
-                        onPaint: {
-                            var ctx = getContext("2d")
-
-                            ctx.clearRect(0, 0, width, height)
-
-                            ctx.strokeStyle = "#94a3b8"
-                            ctx.lineWidth = 2
-
-                            // Input -> Model
-                            ctx.beginPath()
-                            ctx.moveTo(290, 260)
-                            ctx.lineTo(440, 260)
-                            ctx.stroke()
-
-                            // Model -> Database
-                            ctx.beginPath()
-                            ctx.moveTo(640, 260)
-                            ctx.lineTo(790, 260)
-                            ctx.stroke()
-
-                            // Database -> Results
-                            ctx.beginPath()
-                            ctx.moveTo(990, 260)
-                            ctx.lineTo(1140, 260)
-                            ctx.stroke()
                         }
                     }
 
