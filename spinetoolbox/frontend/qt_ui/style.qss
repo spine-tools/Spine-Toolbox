@@ -1,0 +1,9 @@
+/* Minimal Qt stylesheet inspired by frontend/tauri-app/src/style.css */
+QWidget { background: #f5f7f4; color: #25322e; font-family: 'Segoe UI', 'DM Sans', sans-serif; }
+#sidebar { background: #20372f; color: #eaf2eb; min-width: 200px; }
+#sidebar QLabel#brand { font-weight: 700; color: #d1ee86; padding: 6px; border-radius: 6px; background: transparent; }
+#nav-list { background: transparent; color: #a9bdb0; border: none; }
+#workspace { background: transparent; }
+#project-label { font-weight: 700; font-size: 18px; color: #30453a; }
+QPushButton#classic-db-button { border: 1px solid #9aaea1; border-radius: 4px; background: #f8fbf8; color: #315b47; padding: 6px 8px; }
+#canvas-placeholder { background: #f3f5f3; border: 1px solid #dce4df; border-radius: 8px; padding: 12px; }
