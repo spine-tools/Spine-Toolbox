@@ -329,7 +329,7 @@ ApplicationWindow {
 
                         anchors.fill: parent
 
-                        contentWidth: Math.max(width, 1010 + 220 + 80)
+                        contentWidth: Math.max(width, 1320 + 220 + 80)
                         contentHeight: Math.max(height, 190 + 140 + 80)
 
                         clip: true
@@ -397,9 +397,10 @@ ApplicationWindow {
 
                                 ctx.clearRect(0, 0, width, height)
 
-                                drawConnection(ctx, inputCard, modelCard)
-                                drawConnection(ctx, modelCard, databaseCard)
-                                drawConnection(ctx, databaseCard, resultCard)
+                                drawConnection(ctx, inputCard, databaseCard)
+                                drawConnection(ctx, databaseCard, modelCard)
+                                drawConnection(ctx, modelCard, resultsDbCard)
+                                drawConnection(ctx, resultsDbCard, resultCard)
                             }
                         }
 
@@ -421,24 +422,53 @@ ApplicationWindow {
 
                             onClicked: inputFileDialog.open()
 
+                            // reflect the reference already stored in the project (e.g. set by the classic Qt UI)
+                            Component.onCompleted: {
+                                if (typeof projectBridge === "undefined")
+                                    return
+
+                                var existing = projectBridge.get_input_reference()
+
+                                if (existing) {
+                                    var parts = existing.split(/[\\/]/)
+
+                                    inputCard.subtitle = parts[parts.length - 1]
+                                    inputCard.status = "File selected"
+                                }
+                            }
+
                             FileDialog {
                                 id: inputFileDialog
 
                                 title: "Select input data file"
 
                                 onAccepted: {
-                                    var parts = selectedFile.toString().split("/")
+                                    // persisted to the project's Data Connection so the classic Qt UI sees the same file
+                                    var displayName = projectBridge.set_input_reference(selectedFile.toString())
 
-                                    inputCard.subtitle = parts[parts.length - 1]
+                                    inputCard.subtitle = displayName
                                     inputCard.status = "File selected"
                                 }
                             }
                         }
 
                         WorkflowCard {
-                            id: modelCard
+                            id: databaseCard
 
                             x: 390
+                            y: 190
+
+                            title: "Database"
+                            subtitle: "Data"
+                            iconText: "▤"
+                            accent: "#14b8a6"
+                            status: "Ready"
+                        }
+
+                        WorkflowCard {
+                            id: modelCard
+
+                            x: 700
                             y: 190
 
                             title: "Energy model"
@@ -449,9 +479,9 @@ ApplicationWindow {
                         }
 
                         WorkflowCard {
-                            id: databaseCard
+                            id: resultsDbCard
 
-                            x: 700
+                            x: 1010
                             y: 190
 
                             title: "Results DB"
@@ -464,7 +494,7 @@ ApplicationWindow {
                         WorkflowCard {
                             id: resultCard
 
-                            x: 1010
+                            x: 1320
                             y: 190
 
                             title: "Results"
