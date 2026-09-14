@@ -29,6 +29,7 @@ dependencies = [
     "spine_items>=0.24.9",
     "pywin32; os_name == 'nt'",
     "pydantic>=2.12",
+    "FluentPySide @ git+https://github.com/notlousybook/FluentPySide.git",
 ]
 
 [project.urls]

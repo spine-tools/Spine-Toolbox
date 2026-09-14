@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QListWidget,
-    QTextEdit,
 )
 from PySide6.QtCore import Qt
 from pathlib import Path
@@ -60,12 +59,11 @@ class MainWindow(QMainWindow):
         # Content area (left canvas + right panel)
         content = QWidget()
         content_layout = QHBoxLayout(content)
-        # Canvas placeholder
-        canvas = QTextEdit()
-        canvas.setReadOnly(True)
-        canvas.setObjectName("canvas-placeholder")
-        canvas.setText("Workflow canvas placeholder\n(Implement nodes and drag/drop later)")
-        content_layout.addWidget(canvas, 3)
+        # Canvas (graphics scene)
+        from .canvas import CanvasView
+
+        self.canvas = CanvasView()
+        content_layout.addWidget(self.canvas, 3)
         # Right panel placeholder
         right_panel = QWidget()
         rp_layout = QVBoxLayout(right_panel)
@@ -89,6 +87,36 @@ class MainWindow(QMainWindow):
                     self.setStyleSheet(f.read())
             except Exception:
                 pass
+        # add default nodes matching Tauri layout and auto-connect them
+        self._add_default_cards()
+
+    def _add_default_cards(self):
+        # create nodes and keep references
+        # linear workflow: Input -> Stack A -> Database -> Tool X -> Results
+        n1 = self.canvas.add_node(40, 60, label="Input Source", kind="input")
+        n2 = self.canvas.add_node(240, 60, label="Stack A", kind="stack")
+        n3 = self.canvas.add_node(460, 60, label="Database 1", kind="database")
+        n4 = self.canvas.add_node(680, 60, label="Tool X", kind="tool")
+        n5 = self.canvas.add_node(900, 60, label="Results", kind="results")
+
+        # auto-connect to form a ready-made linear workflow
+        self.canvas.connect_nodes(n1, n2)
+        self.canvas.connect_nodes(n2, n3)
+        self.canvas.connect_nodes(n3, n4)
+        self.canvas.connect_nodes(n4, n5)
+
+    def _on_add_node(self):
+        count = len(self.canvas.nodes)
+        x = 60 + (count % 4) * 180
+        y = 60 + (count // 4) * 130
+        label = f"Card {count + 1}"
+        self.canvas.add_node(x, y, label=label)
+
+    def _on_connect_last_two(self):
+        if len(self.canvas.nodes) >= 2:
+            a = self.canvas.nodes[-2]
+            b = self.canvas.nodes[-1]
+            self.canvas.connect_nodes(a, b)
 
 
 if __name__ == "__main__":

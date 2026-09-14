@@ -10,6 +10,7 @@ except Exception as e:  # pragma: no cover - runtime environment
     raise
 
 from .ui_main_window import MainWindow
+from .fluent_integration import init_fluent_for_app
 
 
 def start_qt_ui(app: Optional[QApplication] = None, exec_loop: bool = False) -> Tuple[MainWindow, Optional[int]]:
@@ -26,6 +27,12 @@ def start_qt_ui(app: Optional[QApplication] = None, exec_loop: bool = False) -> 
     if app is None:
         app = QApplication(sys.argv)
         created_app = True
+
+    # Try to initialize Fluent theme if available
+    try:
+        init_fluent_for_app(app, theme="dark")
+    except Exception:
+        pass
 
     window = MainWindow()
     window.show()
