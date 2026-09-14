@@ -14,7 +14,6 @@ ApplicationWindow {
 
     // responsive breakpoints
     property bool compactSidebar: width < 900
-    property bool showProperties: width >= 1150
 
     // name of the project currently open in the shared .spinetoolbox project.json
     property string currentProjectName: ""
@@ -576,95 +575,6 @@ ApplicationWindow {
 
                         ToolTip.visible: hovered
                         ToolTip.text: "Add item"
-                    }
-                }
-
-                // =================================================
-                // PROPERTIES PANEL
-                // =================================================
-
-                Rectangle {
-                    Layout.preferredWidth: 300
-                    Layout.fillHeight: true
-
-                    visible: root.showProperties
-
-                    color: "#ffffff"
-
-                    border.color: "#e5e7eb"
-                    border.width: 1
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 20
-
-                        spacing: 16
-
-                        Label {
-                            text: "Properties"
-                            font.pixelSize: 16
-                            font.bold: true
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: "#e5e7eb"
-                        }
-
-                        Label {
-                            text: "Selected item"
-                            opacity: 0.5
-                            font.pixelSize: 11
-                        }
-
-                        Label {
-                            text: "Energy model"
-                            font.pixelSize: 15
-                            font.bold: true
-                        }
-
-                        Label {
-                            text: "Model"
-                            opacity: 0.55
-                        }
-
-                        Item {
-                            height: 8
-                        }
-
-                        Label {
-                            text: "Name"
-                            font.pixelSize: 11
-                            opacity: 0.55
-                        }
-
-                        TextField {
-                            Layout.fillWidth: true
-                            text: "Energy model"
-                        }
-
-                        Label {
-                            text: "Description"
-                            font.pixelSize: 11
-                            opacity: 0.55
-                        }
-
-                        TextArea {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 100
-
-                            placeholderText: "Add a description..."
-                        }
-
-                        Item {
-                            Layout.fillHeight: true
-                        }
-
-                        Button {
-                            Layout.fillWidth: true
-                            text: "Open in Advanced Mode"
-                        }
                     }
                 }
             }
