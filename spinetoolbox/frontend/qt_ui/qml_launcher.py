@@ -1,7 +1,7 @@
 import sys
 
-from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtWidgets import QApplication
 
 from pathlib import Path
 import fluentpyside
@@ -19,7 +19,8 @@ def _find_project_dir(start: Path) -> Path:
 
 
 def main():
-    app = QGuiApplication(sys.argv)
+    # QApplication (not QGuiApplication) so the classic QWidget-based DB Editor can be opened in-process
+    app = QApplication(sys.argv)
 
     # Apply FluentPySide styling before loading QML
     fluentpyside.apply()

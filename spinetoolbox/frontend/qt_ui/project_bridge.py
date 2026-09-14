@@ -27,6 +27,21 @@ def _deserialize_path(serialized: dict, project_dir: str) -> str:
     return os.path.normpath(os.path.join(project_dir, path) if serialized["relative"] else path)
 
 
+def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
+    """Builds a SQLAlchemy URL string from a Data Store item's "url" dict."""
+    database = url_dict.get("database")
+    if not database:
+        return None
+    if isinstance(database, dict):
+        database = _deserialize_path(database, project_dir)
+    dialect = url_dict.get("dialect") or "sqlite"
+    if dialect == "sqlite":
+        return "sqlite:///" + database.replace(os.sep, "/")
+    host = url_dict.get("host") or ""
+    port = f":{url_dict['port']}" if url_dict.get("port") else ""
+    return f"{dialect}://{host}{port}/{database}"
+
+
 class ProjectBridge(QObject):
     """Exposes a project's Data Connection file references to QML."""
 
@@ -34,6 +49,7 @@ class ProjectBridge(QObject):
         super().__init__(parent)
         self._project_dir = Path(project_dir)
         self._config_file = self._project_dir / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+        self._db_editor = None
 
     def _load(self) -> dict:
         if not self._config_file.exists():
@@ -87,6 +103,40 @@ class ProjectBridge(QObject):
         self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._add_recent_project(local_path.name, str(local_path))
         return local_path.name
+
+    def _database_urls(self) -> list[str]:
+        data = self._load()
+        urls = []
+        for item in data["items"].values():
+            if item.get("type") != "Data Store":
+                continue
+            url = _data_store_url(item.get("url") or {}, str(self._project_dir))
+            if url:
+                urls.append(url)
+        return urls
+
+    @Slot()
+    def open_database_editor(self) -> None:
+        """Opens the classic Qt DB Editor (in-process) with the project's Data Store URLs."""
+        if self._db_editor is not None:
+            self._db_editor.show()
+            self._db_editor.raise_()
+            self._db_editor.activateWindow()
+            return
+        # imported lazily: pulls in the full widget/spinedb_api stack, only needed once the user asks for it
+        from ...spine_db_manager import SpineDBManager
+        from ...spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+
+        settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
+        db_mngr = SpineDBManager(settings, None)
+        editor = MultiSpineDBEditor(db_mngr)
+        editor.add_new_tab(self._database_urls())
+        editor.destroyed.connect(self._forget_db_editor)
+        editor.show()
+        self._db_editor = editor
+
+    def _forget_db_editor(self) -> None:
+        self._db_editor = None
 
     @Slot(result=str)
     def get_input_reference(self) -> str:
