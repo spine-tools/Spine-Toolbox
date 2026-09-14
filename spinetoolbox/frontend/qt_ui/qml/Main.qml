@@ -16,6 +16,10 @@ ApplicationWindow {
     property bool compactSidebar: width < 900
     property bool showProperties: width >= 1150
 
+    // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows
+    readonly property real designContentWidth: 1080 + 220 + 80
+    property real cardScale: Math.max(0.5, Math.min(1, designFlick.width / designContentWidth))
+
     title: "Spine Toolbox"
 
     color: "#f4f9f5"
@@ -329,8 +333,8 @@ ApplicationWindow {
 
                         anchors.fill: parent
 
-                        contentWidth: Math.max(width, 1320 + 220 + 80)
-                        contentHeight: Math.max(height, 190 + 140 + 80)
+                        contentWidth: Math.max(width, root.designContentWidth * root.cardScale)
+                        contentHeight: Math.max(height, (190 + 100 + 80) * root.cardScale)
 
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
@@ -411,14 +415,13 @@ ApplicationWindow {
                         WorkflowCard {
                             id: inputCard
 
-                            x: 80
-                            y: 190
+                            designX: 80
+                            designY: 190
+                            sizeFactor: root.cardScale
 
                             title: "Input data"
-                            subtitle: "Source"
                             iconText: "↓"
                             accent: "#3b82f6"
-                            status: "Connected"
 
                             onClicked: inputFileDialog.open()
 
@@ -433,7 +436,6 @@ ApplicationWindow {
                                     var parts = existing.split(/[\\/]/)
 
                                     inputCard.subtitle = parts[parts.length - 1]
-                                    inputCard.status = "File selected"
                                 }
                             }
 
@@ -444,10 +446,7 @@ ApplicationWindow {
 
                                 onAccepted: {
                                     // persisted to the project's Data Connection so the classic Qt UI sees the same file
-                                    var displayName = projectBridge.set_input_reference(selectedFile.toString())
-
-                                    inputCard.subtitle = displayName
-                                    inputCard.status = "File selected"
+                                    inputCard.subtitle = projectBridge.set_input_reference(selectedFile.toString())
                                 }
                             }
                         }
@@ -455,53 +454,50 @@ ApplicationWindow {
                         WorkflowCard {
                             id: databaseCard
 
-                            x: 390
-                            y: 190
+                            designX: 330
+                            designY: 190
+                            sizeFactor: root.cardScale
 
                             title: "Database"
-                            subtitle: "Data"
                             iconText: "▤"
                             accent: "#14b8a6"
-                            status: "Ready"
                         }
 
                         WorkflowCard {
                             id: modelCard
 
-                            x: 700
-                            y: 190
+                            designX: 580
+                            designY: 190
+                            sizeFactor: root.cardScale
 
                             title: "Energy model"
-                            subtitle: "Model"
                             iconText: "◇"
                             accent: "#8b5cf6"
-                            status: "Ready"
                         }
 
                         WorkflowCard {
                             id: resultsDbCard
 
-                            x: 1010
-                            y: 190
+                            designX: 830
+                            designY: 190
+                            sizeFactor: root.cardScale
 
                             title: "Results DB"
-                            subtitle: "Database"
                             iconText: "▣"
                             accent: "#ec4899"
-                            status: "Ready"
                         }
 
                         WorkflowCard {
                             id: resultCard
 
-                            x: 1320
-                            y: 190
+                            designX: 1080
+                            designY: 190
+
+                            sizeFactor: root.cardScale
 
                             title: "Results"
-                            subtitle: "Output"
                             iconText: "✓"
                             accent: "#10b981"
-                            status: "Ready"
                         }
                     }
 
@@ -718,10 +714,17 @@ ApplicationWindow {
         property string accent: "#3b82f6"
         property string status: ""
 
-        width: 220
-        height: 140
+        property real designX: 0
+        property real designY: 0
+        property real sizeFactor: 1
 
-        radius: 12
+        x: designX * sizeFactor
+        y: designY * sizeFactor
+
+        width: 220 * sizeFactor
+        height: 100 * sizeFactor
+
+        radius: 12 * sizeFactor
 
         color: "#ffffff"
 
@@ -769,18 +772,18 @@ ApplicationWindow {
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 16
+            anchors.margins: 16 * card.sizeFactor
 
-            spacing: 8
+            spacing: 10 * card.sizeFactor
 
             RowLayout {
                 Layout.fillWidth: true
 
                 Rectangle {
-                    width: 34
-                    height: 34
+                    width: 40 * card.sizeFactor
+                    height: 40 * card.sizeFactor
 
-                    radius: 9
+                    radius: 10 * card.sizeFactor
 
                     color: card.accent
 
@@ -790,7 +793,7 @@ ApplicationWindow {
                         text: card.iconText
 
                         color: "white"
-                        font.pixelSize: 16
+                        font.pixelSize: 20 * card.sizeFactor
                         font.bold: true
                     }
                 }
@@ -803,49 +806,23 @@ ApplicationWindow {
                     text: "⋮"
 
                     opacity: 0.4
-                    font.pixelSize: 18
+                    font.pixelSize: 18 * card.sizeFactor
                 }
             }
 
-            ColumnLayout {
+            Label {
+                text: card.title
+
                 Layout.fillWidth: true
-                spacing: 2
 
-                Label {
-                    text: card.title
+                font.pixelSize: 18 * card.sizeFactor
+                font.bold: true
 
-                    font.pixelSize: 14
-                    font.bold: true
-                }
-
-                Label {
-                    text: card.subtitle
-
-                    font.pixelSize: 11
-                    opacity: 0.5
-                }
+                elide: Text.ElideRight
             }
 
-            RowLayout {
-                Layout.fillWidth: true
-
-                Rectangle {
-                    width: 7
-                    height: 7
-
-                    radius: 4
-
-                    color: "#22c55e"
-                }
-
-                Label {
-                    text: card.status
-
-                    font.pixelSize: 10
-                    opacity: 0.6
-
-                    Layout.fillWidth: true
-                }
+            Item {
+                Layout.fillHeight: true
             }
         }
     }
