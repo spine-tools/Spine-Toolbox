@@ -17,7 +17,7 @@ ApplicationWindow {
 
     title: "Spine Toolbox"
 
-    color: "#f7f8fa"
+    color: "#f4f9f5"
 
     // ---------------------------------------------------------
     // Main application layout
@@ -37,9 +37,9 @@ ApplicationWindow {
             Layout.preferredWidth: root.compactSidebar ? 68 : 240
             Layout.fillHeight: true
 
-            color: "#ffffff"
+            color: "#173d2b"
 
-            border.color: "#e5e7eb"
+            border.color: "#12301f"
             border.width: 1
 
             ColumnLayout {
@@ -60,7 +60,7 @@ ApplicationWindow {
                         height: 34
                         radius: 9
 
-                        color: "#2563eb"
+                        color: "#22c55e"
 
                         Label {
                             anchors.centerIn: parent
@@ -80,13 +80,15 @@ ApplicationWindow {
 
                         Label {
                             text: "Spine Toolbox"
+                            color: "white"
                             font.pixelSize: 15
                             font.bold: true
                         }
 
                         Label {
                             text: "Easy Mode"
-                            opacity: 0.55
+                            color: "#bbf7d0"
+                            opacity: 0.7
                             font.pixelSize: 11
                         }
                     }
@@ -98,7 +100,8 @@ ApplicationWindow {
 
                 Label {
                     text: "WORKSPACE"
-                    opacity: 0.45
+                    color: "#86efac"
+                    opacity: 0.6
                     font.pixelSize: 10
                     font.bold: true
 
@@ -141,7 +144,7 @@ ApplicationWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 1
-                    color: "#e5e7eb"
+                    color: "#2f5a41"
                 }
 
                 SidebarButton {
@@ -169,8 +172,8 @@ ApplicationWindow {
                     height: 68
                     radius: 10
 
-                    color: "#f5f6f8"
-                    border.color: "#e5e7eb"
+                    color: "#1f4d34"
+                    border.color: "#2f6b4a"
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -179,8 +182,9 @@ ApplicationWindow {
 
                         Label {
                             text: "Interface"
+                            color: "#bbf7d0"
                             font.pixelSize: 11
-                            opacity: 0.5
+                            opacity: 0.7
                         }
 
                         RowLayout {
@@ -188,6 +192,7 @@ ApplicationWindow {
 
                             Label {
                                 text: "Easy Mode"
+                                color: "white"
                                 font.bold: true
 
                                 Layout.fillWidth: true
@@ -252,7 +257,25 @@ ApplicationWindow {
                     }
 
                     Button {
+                        id: runProjectButton
                         text: "Run project"
+
+                        background: Rectangle {
+                            radius: 8
+                            color: runProjectButton.hovered ? "#15803d" : "#16a34a"
+                        }
+
+                        contentItem: Label {
+                            text: runProjectButton.text
+                            color: "white"
+                            font.bold: true
+
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+
+                            leftPadding: 12
+                            rightPadding: 12
+                        }
                     }
 
                     ToolButton {
@@ -297,7 +320,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    color: "#f7f8fa"
+                    color: "#f2f8f4"
 
                     // subtle grid, scrollable so fixed-position cards stay reachable on narrow windows
                     Flickable {
@@ -344,7 +367,7 @@ ApplicationWindow {
                                     endY
                                 )
 
-                                ctx.strokeStyle = "#94a3b8"
+                                ctx.strokeStyle = "#7c9c88"
                                 ctx.lineWidth = 2
                                 ctx.stroke()
 
@@ -364,7 +387,7 @@ ApplicationWindow {
                                 )
                                 ctx.closePath()
 
-                                ctx.fillStyle = "#94a3b8"
+                                ctx.fillStyle = "#7c9c88"
                                 ctx.fill()
                             }
 
@@ -600,9 +623,9 @@ ApplicationWindow {
             radius: 8
 
             color: sidebarButton.selected
-                   ? "#eef2ff"
+                   ? "#2f6b4a"
                    : sidebarButton.hovered
-                     ? "#f5f6f8"
+                     ? "#1f4d34"
                      : "transparent"
         }
 
@@ -616,6 +639,7 @@ ApplicationWindow {
 
                 horizontalAlignment: Text.AlignHCenter
 
+                color: "white"
                 font.pixelSize: 16
 
                 opacity: sidebarButton.selected ? 1 : 0.6
@@ -628,8 +652,11 @@ ApplicationWindow {
 
                 visible: !sidebarButton.compact
 
+                color: "white"
                 font.pixelSize: 13
                 font.bold: sidebarButton.selected
+
+                opacity: sidebarButton.selected ? 1 : 0.75
             }
         }
     }
