@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 ApplicationWindow {
     id: root
@@ -417,6 +418,21 @@ ApplicationWindow {
                             iconText: "↓"
                             accent: "#3b82f6"
                             status: "Connected"
+
+                            onClicked: inputFileDialog.open()
+
+                            FileDialog {
+                                id: inputFileDialog
+
+                                title: "Select input data file"
+
+                                onAccepted: {
+                                    var parts = selectedFile.toString().split("/")
+
+                                    inputCard.subtitle = parts[parts.length - 1]
+                                    inputCard.status = "File selected"
+                                }
+                            }
                         }
 
                         WorkflowCard {
@@ -687,6 +703,8 @@ ApplicationWindow {
 
         property bool hovered: false
 
+        signal clicked()
+
         scale: hovered ? 1.015 : 1
 
         Behavior on scale {
@@ -712,9 +730,11 @@ ApplicationWindow {
             anchors.fill: parent
 
             hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
 
             onEntered: card.hovered = true
             onExited: card.hovered = false
+            onClicked: card.clicked()
         }
 
         ColumnLayout {
