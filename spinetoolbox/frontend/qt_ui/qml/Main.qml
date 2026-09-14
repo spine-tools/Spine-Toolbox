@@ -8,8 +8,12 @@ ApplicationWindow {
     visible: true
     width: 1400
     height: 850
-    minimumWidth: 1100
-    minimumHeight: 650
+    minimumWidth: 480
+    minimumHeight: 560
+
+    // responsive breakpoints
+    property bool compactSidebar: width < 900
+    property bool showProperties: width >= 1150
 
     title: "Spine Toolbox"
 
@@ -30,7 +34,7 @@ ApplicationWindow {
         Rectangle {
             id: sidebar
 
-            Layout.preferredWidth: 240
+            Layout.preferredWidth: root.compactSidebar ? 68 : 240
             Layout.fillHeight: true
 
             color: "#ffffff"
@@ -72,6 +76,8 @@ ApplicationWindow {
                         Layout.fillWidth: true
                         spacing: 0
 
+                        visible: !root.compactSidebar
+
                         Label {
                             text: "Spine Toolbox"
                             font.pixelSize: 15
@@ -96,6 +102,8 @@ ApplicationWindow {
                     font.pixelSize: 10
                     font.bold: true
 
+                    visible: !root.compactSidebar
+
                     Layout.leftMargin: 10
                     Layout.bottomMargin: 4
                 }
@@ -104,22 +112,26 @@ ApplicationWindow {
                     text: "Home"
                     iconText: "⌂"
                     selected: false
+                    compact: root.compactSidebar
                 }
 
                 SidebarButton {
                     text: "Projects"
                     iconText: "▣"
                     selected: true
+                    compact: root.compactSidebar
                 }
 
                 SidebarButton {
                     text: "Data"
                     iconText: "◇"
+                    compact: root.compactSidebar
                 }
 
                 SidebarButton {
                     text: "Runs"
                     iconText: "▶"
+                    compact: root.compactSidebar
                 }
 
                 Item {
@@ -135,11 +147,13 @@ ApplicationWindow {
                 SidebarButton {
                     text: "Settings"
                     iconText: "⚙"
+                    compact: root.compactSidebar
                 }
 
                 SidebarButton {
                     text: "Help"
                     iconText: "?"
+                    compact: root.compactSidebar
                 }
 
                 // -------------------------------------------------
@@ -149,6 +163,8 @@ ApplicationWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.topMargin: 12
+
+                    visible: !root.compactSidebar
 
                     height: 68
                     radius: 10
@@ -230,6 +246,8 @@ ApplicationWindow {
                             text: "Project workspace"
                             opacity: 0.5
                             font.pixelSize: 12
+
+                            visible: root.width >= 700
                         }
                     }
 
@@ -246,6 +264,8 @@ ApplicationWindow {
                         width: 34
                         height: 34
                         radius: 17
+
+                        visible: root.width >= 640
 
                         color: "#e0e7ff"
 
@@ -279,77 +299,145 @@ ApplicationWindow {
 
                     color: "#f7f8fa"
 
-                    // subtle grid
-                    Canvas {
-                        id: connectionsCanvas
+                    // subtle grid, scrollable so fixed-position cards stay reachable on narrow windows
+                    Flickable {
+                        id: designFlick
 
                         anchors.fill: parent
-                        z: 0
 
-                        function drawConnection(ctx, fromItem, toItem) {
-                            var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
-                            var to = toItem.mapToItem(connectionsCanvas, 0, 0)
+                        contentWidth: Math.max(width, 1010 + 220 + 80)
+                        contentHeight: Math.max(height, 190 + 140 + 80)
 
-                            var startX = from.x + fromItem.width
-                            var startY = from.y + fromItem.height / 2
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
 
-                            var endX = to.x
-                            var endY = to.y + toItem.height / 2
+                        Canvas {
+                            id: connectionsCanvas
 
-                            // Horizontal distance used to create a smooth curve
-                            var distance = endX - startX
-                            var controlOffset = Math.max(50, distance * 0.45)
+                            anchors.fill: parent
+                            z: 0
 
-                            ctx.beginPath()
+                            function drawConnection(ctx, fromItem, toItem) {
+                                var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
+                                var to = toItem.mapToItem(connectionsCanvas, 0, 0)
 
-                            ctx.moveTo(startX, startY)
+                                var startX = from.x + fromItem.width
+                                var startY = from.y + fromItem.height / 2
 
-                            ctx.bezierCurveTo(
-                                startX + controlOffset,
-                                startY,
-                                endX - controlOffset,
-                                endY,
-                                endX,
-                                endY
-                            )
+                                var endX = to.x
+                                var endY = to.y + toItem.height / 2
 
-                            ctx.strokeStyle = "#94a3b8"
-                            ctx.lineWidth = 2
-                            ctx.stroke()
+                                // Horizontal distance used to create a smooth curve
+                                var distance = endX - startX
+                                var controlOffset = Math.max(50, distance * 0.45)
 
-                            // Arrow head
-                            var arrowSize = 7
+                                ctx.beginPath()
 
-                            ctx.beginPath()
+                                ctx.moveTo(startX, startY)
 
-                            ctx.moveTo(endX, endY)
-                            ctx.lineTo(
-                                endX - arrowSize,
-                                endY - arrowSize / 2
-                            )
-                            ctx.lineTo(
-                                endX - arrowSize,
-                                endY + arrowSize / 2
-                            )
-                            ctx.closePath()
+                                ctx.bezierCurveTo(
+                                    startX + controlOffset,
+                                    startY,
+                                    endX - controlOffset,
+                                    endY,
+                                    endX,
+                                    endY
+                                )
 
-                            ctx.fillStyle = "#94a3b8"
-                            ctx.fill()
+                                ctx.strokeStyle = "#94a3b8"
+                                ctx.lineWidth = 2
+                                ctx.stroke()
+
+                                // Arrow head
+                                var arrowSize = 7
+
+                                ctx.beginPath()
+
+                                ctx.moveTo(endX, endY)
+                                ctx.lineTo(
+                                    endX - arrowSize,
+                                    endY - arrowSize / 2
+                                )
+                                ctx.lineTo(
+                                    endX - arrowSize,
+                                    endY + arrowSize / 2
+                                )
+                                ctx.closePath()
+
+                                ctx.fillStyle = "#94a3b8"
+                                ctx.fill()
+                            }
+
+                            onPaint: {
+                                var ctx = getContext("2d")
+
+                                ctx.clearRect(0, 0, width, height)
+
+                                drawConnection(ctx, inputCard, modelCard)
+                                drawConnection(ctx, modelCard, databaseCard)
+                                drawConnection(ctx, databaseCard, resultCard)
+                            }
                         }
 
-                        onPaint: {
-                            var ctx = getContext("2d")
+                        // =================================================
+                        // DESIGN CARDS
+                        // =================================================
 
-                            ctx.clearRect(0, 0, width, height)
+                        WorkflowCard {
+                            id: inputCard
 
-                            drawConnection(ctx, inputCard, modelCard)
-                            drawConnection(ctx, modelCard, databaseCard)
-                            drawConnection(ctx, databaseCard, resultCard)
+                            x: 80
+                            y: 190
+
+                            title: "Input data"
+                            subtitle: "Source"
+                            iconText: "↓"
+                            accent: "#3b82f6"
+                            status: "Connected"
+                        }
+
+                        WorkflowCard {
+                            id: modelCard
+
+                            x: 390
+                            y: 190
+
+                            title: "Energy model"
+                            subtitle: "Model"
+                            iconText: "◇"
+                            accent: "#8b5cf6"
+                            status: "Ready"
+                        }
+
+                        WorkflowCard {
+                            id: databaseCard
+
+                            x: 700
+                            y: 190
+
+                            title: "Results DB"
+                            subtitle: "Database"
+                            iconText: "▣"
+                            accent: "#ec4899"
+                            status: "Ready"
+                        }
+
+                        WorkflowCard {
+                            id: resultCard
+
+                            x: 1010
+                            y: 190
+
+                            title: "Results"
+                            subtitle: "Output"
+                            iconText: "✓"
+                            accent: "#10b981"
+                            status: "Ready"
                         }
                     }
 
                     // -------------------------------------------------
-                    // Canvas header
+                    // Canvas header (overlays the scrollable canvas)
                     // -------------------------------------------------
 
                     RowLayout {
@@ -380,62 +468,6 @@ ApplicationWindow {
                         }
                     }
 
-                    // =================================================
-                    // DESIGN CARDS
-                    // =================================================
-
-                    WorkflowCard {
-                        id: inputCard
-
-                        x: 80
-                        y: 190
-
-                        title: "Input data"
-                        subtitle: "Source"
-                        iconText: "↓"
-                        accent: "#3b82f6"
-                        status: "Connected"
-                    }
-
-                    WorkflowCard {
-                        id: modelCard
-
-                        x: 390
-                        y: 190
-
-                        title: "Energy model"
-                        subtitle: "Model"
-                        iconText: "◇"
-                        accent: "#8b5cf6"
-                        status: "Ready"
-                    }
-
-                    WorkflowCard {
-                        id: databaseCard
-
-                        x: 700
-                        y: 190
-
-                        title: "Results DB"
-                        subtitle: "Database"
-                        iconText: "▣"
-                        accent: "#ec4899"
-                        status: "Ready"
-                    }
-
-                    WorkflowCard {
-                        id: resultCard
-
-                        x: 1010
-                        y: 190
-
-                        title: "Results"
-                        subtitle: "Output"
-                        iconText: "✓"
-                        accent: "#10b981"
-                        status: "Ready"
-                    }
-
                     // -------------------------------------------------
                     // Floating add button
                     // -------------------------------------------------
@@ -462,6 +494,8 @@ ApplicationWindow {
                 Rectangle {
                     Layout.preferredWidth: 300
                     Layout.fillHeight: true
+
+                    visible: root.showProperties
 
                     color: "#ffffff"
 
@@ -554,9 +588,13 @@ ApplicationWindow {
 
         property string iconText: ""
         property bool selected: false
+        property bool compact: false
 
         Layout.fillWidth: true
         implicitHeight: 42
+
+        ToolTip.visible: compact && hovered
+        ToolTip.text: sidebarButton.text
 
         background: Rectangle {
             radius: 8
@@ -587,6 +625,8 @@ ApplicationWindow {
                 text: sidebarButton.text
 
                 Layout.fillWidth: true
+
+                visible: !sidebarButton.compact
 
                 font.pixelSize: 13
                 font.bold: sidebarButton.selected
