@@ -13,12 +13,15 @@
 """Models to represent items in a tree."""
 
 from __future__ import annotations
-from typing import Optional
+from typing import ClassVar, Optional
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, Qt
+from spinedb_api.helpers import ItemType
 
 
 class TreeItem:
     """A tree item that can fetch its children."""
+
+    item_type: ClassVar[ItemType] = None
 
     def __init__(self, model):
         """
@@ -32,6 +35,10 @@ class TreeItem:
         self._set_up_once = False
         self._has_children_initially = False
         self._created_children = {}
+
+    @property
+    def visible_children(self) -> list:
+        return self._children
 
     def set_has_children_initially(self, has_children_initially):
         self._has_children_initially = has_children_initially

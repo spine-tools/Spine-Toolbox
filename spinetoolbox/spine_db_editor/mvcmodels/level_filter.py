@@ -184,12 +184,7 @@ class LevelFilterMixin:
         return matches
 
     def has_visible_match(self) -> bool:
-        """Returns whether any real item on the deepest filtered level is currently visible.
-
-        Used by the view to decide, once the filter has settled, whether to expand the tree onto the
-        matches or collapse it because nothing matched. With no filter active this is trivially True. The
-        phantom add-row is ignored, so an otherwise empty tree does not count as a match.
-        """
+        """Returns whether any real item on the deepest filtered level is currently visible."""
         if self._deepest_filtered_type() is None:
             return True
         return bool(self.collect_visible_matches())
@@ -203,32 +198,16 @@ class LevelFilterMixin:
 
     @Slot()
     def _run_force_fetch(self) -> None:
-        """Drives the lazy child fetch so a lower-level filter is accurate across collapsed parents.
-
-        Does nothing unless a lower-level filter is active. Otherwise it walks the tree and fetches every
-        item that (a) is not hidden by an upper-level filter and (b) still has children to fetch down to the
-        deepest filtered level. Fetching is async and batched, so as children land the insert hook continues
-        the cascade (see :meth:`_schedule_level_filter_refresh`) until nothing is left to fetch.
-        """
+        """Drives the lazy child fetch so a lower-level filter is accurate across collapsed parents."""
         if not self.lower_level_filter_active():
             self._force_fetching = False
             return
         self._force_fetching = self._force_fetch_lower_levels()
         if self._force_fetching:
-            # Keep driving the cascade until nothing is left to fetch. A fetch that lands no new rows still
-            # needs one more pass to flip ``can_fetch_more`` off, and deeper levels only become fetchable
-            # once their parents' children have arrived; the batched fetch keeps the UI responsive meanwhile.
             self._force_fetch_timer.start(FORCE_FETCH_CONTINUE_INTERVAL)
 
     def _force_fetch_lower_levels(self) -> bool:
         """Advances the force-fetch cascade by one step over a frontier of still-fetchable items.
-
-        Instead of re-walking the whole subtree from the root on every 0 ms reschedule (which re-tested
-        already-settled branches, making the cascade O(cascade steps x tree size)), this keeps a frontier
-        worklist: only items that may still need fetching are examined, and a fetched item's children are
-        enqueued once they have arrived. The scoping is unchanged - a child is only visited when it is under
-        a parent that passes its own filter, down to the deepest active level - so the cascade fetches
-        exactly the same set of branches as before, just without the repeated rescans.
 
         Returns:
             whether any fetch was issued (i.e. the cascade has not settled yet)

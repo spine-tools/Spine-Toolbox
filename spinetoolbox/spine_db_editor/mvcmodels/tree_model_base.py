@@ -34,13 +34,7 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
         return str(item.data(0, Qt.ItemDataRole.DisplayRole))
 
     def item_is_visible(self, item) -> bool:
-        """Returns whether a tree item passes the active level filters.
-
-        The phantom add-row is always visible. An item on a filtered level must match its own regex. When a
-        lower level has an active filter, a parent is kept only if a LOADED descendant matches, or -
-        optimistically - if it can still fetch more (no fetch is forced); it is hidden only once it is fully
-        loaded and nothing matches. Items on unfiltered levels (e.g. the db root) always pass.
-        """
+        """Returns whether a tree item passes the active level filters."""
         if item.item_type not in self.LEVEL_ITEM_TYPES or item.is_empty_row():
             return True
         if not self.item_passes_own_filter(item):
@@ -53,11 +47,7 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
         return True
 
     def _apply_level_filters(self) -> None:
-        """Refreshes the whole tree so the current level filters take effect.
-
-        These trees keep no child-position map, so a single ``layoutAboutToBeChanged``/``layoutChanged`` pair
-        is enough for the view to re-query the visible rows.
-        """
+        """Refreshes the whole tree so the current level filters take effect."""
         self.layoutAboutToBeChanged.emit()
         self._bump_filter_generation()
         self.layoutChanged.emit()
