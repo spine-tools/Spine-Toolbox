@@ -17,7 +17,10 @@ from pathlib import Path
 import sys
 from typing import Literal
 
-LATEST_PROJECT_VERSION: Literal[13] = 13
+LATEST_PROJECT_VERSION: Literal[14] = 14
+
+# For the Add/Update SpineOpt wizard
+REQUIRED_SPINE_OPT_VERSION = "0.10.0"
 
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is

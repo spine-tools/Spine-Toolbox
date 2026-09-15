@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'db_commit_viewer.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.11.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -44,7 +44,7 @@ class Ui_DBCommitViewer(object):
         self.splitter.setChildrenCollapsible(False)
         self.commit_list = QTreeWidget(self.splitter)
         __qtreewidgetitem = QTreeWidgetItem()
-        __qtreewidgetitem.setText(0, u"1");
+        __qtreewidgetitem.setText(0, u"1")
         self.commit_list.setHeaderItem(__qtreewidgetitem)
         self.commit_list.setObjectName(u"commit_list")
         self.splitter.addWidget(self.commit_list)
