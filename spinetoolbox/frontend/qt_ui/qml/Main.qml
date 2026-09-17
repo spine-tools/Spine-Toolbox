@@ -232,8 +232,22 @@ ApplicationWindow {
         loadWorkflow()
     }
 
-    // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows
-    property real cardScale: Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth))
+    // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows,
+    // multiplied by a user-controlled zoom factor from the −/+/Fit buttons (or Ctrl+wheel)
+    property real zoomLevel: 1.0
+    property real cardScale: root.zoomLevel * Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth))
+
+    function zoomIn() {
+        root.zoomLevel = Math.min(2.5, root.zoomLevel * 1.2)
+    }
+
+    function zoomOut() {
+        root.zoomLevel = Math.max(0.3, root.zoomLevel / 1.2)
+    }
+
+    function zoomReset() {
+        root.zoomLevel = 1.0
+    }
 
     title: "Spine Toolbox"
 
@@ -565,6 +579,18 @@ ApplicationWindow {
 
                     color: "#f2f8f4"
 
+                    // Ctrl+wheel zooms the canvas in/out
+                    WheelHandler {
+                        acceptedModifiers: Qt.ControlModifier
+
+                        onWheel: function (event) {
+                            if (event.angleDelta.y > 0)
+                                root.zoomIn()
+                            else if (event.angleDelta.y < 0)
+                                root.zoomOut()
+                        }
+                    }
+
                     // subtle grid, scrollable so fixed-position cards stay reachable on narrow windows
                     Flickable {
                         id: designFlick
@@ -749,14 +775,20 @@ ApplicationWindow {
 
                         ToolButton {
                             text: "−"
+
+                            onClicked: root.zoomOut()
                         }
 
                         ToolButton {
                             text: "+"
+
+                            onClicked: root.zoomIn()
                         }
 
                         ToolButton {
                             text: "Fit"
+
+                            onClicked: root.zoomReset()
                         }
                     }
 
