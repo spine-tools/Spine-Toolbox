@@ -53,7 +53,106 @@ ApplicationWindow {
         }
     }
 
-    // fetches project.json's items/connections and spreads their (often cramped) coordinates apart for display
+    // assigns each item a (rank, lane) grid slot: rank = column by dependency depth (from -> to),
+    // lane = row, reused from a node's single predecessor so linear chains stay on the same row
+    function layoutWorkflow(items, connections) {
+        var incoming = ({})
+        var rank = ({})
+
+        for (var i = 0; i < items.length; i++) {
+            incoming[items[i].name] = []
+            rank[items[i].name] = 0
+        }
+
+        for (var c = 0; c < connections.length; c++) {
+            var connection = connections[c]
+            if (incoming[connection.to] !== undefined && incoming[connection.from] !== undefined)
+                incoming[connection.to].push(connection.from)
+        }
+
+        // longest path from a source node, found by relaxing edges until nothing changes
+        var changed = true
+        var guard = 0
+
+        while (changed && guard < items.length + 5) {
+            changed = false
+            guard++
+
+            for (var j = 0; j < connections.length; j++) {
+                var conn = connections[j]
+                if (rank[conn.from] === undefined || rank[conn.to] === undefined)
+                    continue
+                if (rank[conn.from] + 1 > rank[conn.to]) {
+                    rank[conn.to] = rank[conn.from] + 1
+                    changed = true
+                }
+            }
+        }
+
+        var maxRank = 0
+        for (var k = 0; k < items.length; k++)
+            maxRank = Math.max(maxRank, rank[items[k].name])
+
+        var laneUsedByRank = []
+        for (var r = 0; r <= maxRank; r++)
+            laneUsedByRank.push(({}))
+
+        function claimLane(atRank, preferredLane) {
+            var used = laneUsedByRank[atRank]
+            var candidate = preferredLane
+
+            while (used[candidate] !== undefined)
+                candidate++
+
+            used[candidate] = true
+            return candidate
+        }
+
+        var lane = ({})
+        var ordered = items.slice().sort(function (a, b) { return rank[a.name] - rank[b.name] })
+
+        for (var o = 0; o < ordered.length; o++) {
+            var item = ordered[o]
+            var preds = incoming[item.name] || []
+            var preferred = 0
+
+            if (preds.length === 1 && lane[preds[0]] !== undefined) {
+                preferred = lane[preds[0]]
+            } else if (preds.length > 1) {
+                var sum = 0
+                var count = 0
+
+                for (var p = 0; p < preds.length; p++) {
+                    if (lane[preds[p]] !== undefined) {
+                        sum += lane[preds[p]]
+                        count++
+                    }
+                }
+
+                preferred = count > 0 ? Math.round(sum / count) : 0
+            }
+
+            lane[item.name] = claimLane(rank[item.name], preferred)
+        }
+
+        var columnWidth = 190
+        var rowHeight = 96
+        var padding = 40
+        var maxLane = 0
+
+        for (var m = 0; m < items.length; m++) {
+            items[m].px = padding + rank[items[m].name] * columnWidth
+            items[m].py = padding + lane[items[m].name] * rowHeight
+            maxLane = Math.max(maxLane, lane[items[m].name])
+        }
+
+        return {
+            width: padding * 2 + (maxRank + 1) * columnWidth,
+            height: padding * 2 + (maxLane + 1) * rowHeight
+        }
+    }
+
+    // fetches project.json's items/connections and lays them out on a rank/lane grid
     function loadWorkflow() {
         if (typeof projectBridge === "undefined")
             return
@@ -65,23 +164,13 @@ ApplicationWindow {
 
         var parsed = JSON.parse(raw)
         var items = parsed.items || []
+        var connections = parsed.connections || []
 
         if (items.length > 0) {
-            var minX = Math.min.apply(null, items.map(function (i) { return i.x }))
-            var minY = Math.min.apply(null, items.map(function (i) { return i.y }))
-            var maxX = Math.max.apply(null, items.map(function (i) { return i.x }))
-            var maxY = Math.max.apply(null, items.map(function (i) { return i.y }))
+            var size = layoutWorkflow(items, connections)
 
-            var spread = 1.15
-            var padding = 40
-
-            for (var i = 0; i < items.length; i++) {
-                items[i].px = (items[i].x - minX) * spread + padding
-                items[i].py = (items[i].y - minY) * spread + padding
-            }
-
-            root.designContentWidth = (maxX - minX) * spread + padding * 2 + 150
-            root.designContentHeight = (maxY - minY) * spread + padding * 2 + 74
+            root.designContentWidth = size.width + 110
+            root.designContentHeight = size.height + 34
         }
 
         root.nodeItems = ({})
@@ -89,6 +178,7 @@ ApplicationWindow {
 
         connectionsCanvas.requestPaint()
     }
+
 
     Component.onCompleted: {
         if (typeof projectBridge !== "undefined")

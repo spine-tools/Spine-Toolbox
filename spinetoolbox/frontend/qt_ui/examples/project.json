@@ -18,6 +18,10 @@
             "output_settings_stack": {
                 "name": "Output settings",
                 "items": ["Output settings", "Re-create results"]
+            },
+            "scenario_comparison_stack": {
+                "name": "Scenario comparison",
+                "items": ["Comparison settings", "Scenario comparison"]
             }
         },
         "hidden_items": ["Migrate database", "Output settings"],
