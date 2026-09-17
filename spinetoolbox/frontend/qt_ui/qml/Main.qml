@@ -663,7 +663,9 @@ ApplicationWindow {
                             id: connectionsCanvas
 
                             anchors.fill: parent
-                            z: 0
+                            // above idle cards (z: 1) so arrows are never hidden behind them,
+                            // but below a card actively being dragged (z: 10)
+                            z: 5
 
                             function drawConnection(ctx, fromItem, toItem) {
                                 var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
@@ -675,25 +677,34 @@ ApplicationWindow {
                                 var endX = to.x
                                 var endY = to.y + toItem.height / 2
 
-                                // Horizontal distance used to create a smooth curve
-                                var distance = endX - startX
-                                var controlOffset = Math.max(50, Math.abs(distance) * 0.45)
-
-                                ctx.beginPath()
-
-                                ctx.moveTo(startX, startY)
-
-                                ctx.bezierCurveTo(
-                                    startX + controlOffset,
-                                    startY,
-                                    endX - controlOffset,
-                                    endY,
-                                    endX,
-                                    endY
-                                )
-
                                 ctx.strokeStyle = "#7c9c88"
                                 ctx.lineWidth = 2
+
+                                ctx.beginPath()
+                                ctx.moveTo(startX, startY)
+
+                                // Every connector uses the same elbow routing: stay on the source's
+                                // row (which is otherwise clear) and only turn towards the target row
+                                // right before reaching it, instead of cutting diagonally across other
+                                // cards. When both cards share a row this naturally collapses to a
+                                // straight line.
+                                var dir = endY > startY ? 1 : (endY < startY ? -1 : 0)
+                                var span = endX - startX
+
+                                if (dir !== 0 && span > 0) {
+                                    var radius = Math.max(2, Math.min(16, span / 2, Math.abs(endY - startY) / 2))
+                                    var turnX = span > 60
+                                        ? Math.max(startX + radius, endX - Math.max(24, span * 0.15))
+                                        : startX + span / 2
+
+                                    ctx.lineTo(turnX - radius, startY)
+                                    ctx.quadraticCurveTo(turnX, startY, turnX, startY + radius * dir)
+                                    ctx.lineTo(turnX, endY - radius * dir)
+                                    ctx.quadraticCurveTo(turnX, endY, turnX + radius, endY)
+                                }
+
+                                ctx.lineTo(endX, endY)
+
                                 ctx.stroke()
 
                                 // Arrow head
