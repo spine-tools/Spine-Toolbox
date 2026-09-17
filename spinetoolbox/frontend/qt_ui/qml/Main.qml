@@ -18,14 +18,85 @@ ApplicationWindow {
     // name of the project currently open in the shared .spinetoolbox project.json
     property string currentProjectName: ""
 
+    // items/connections loaded from project.json, rendered by the design canvas below
+    property var workflow: ({ "items": [], "connections": [] })
+    property var nodeItems: ({})
+
+    property real designContentWidth: 1400
+    property real designContentHeight: 640
+
+    function iconForType(kind) {
+        switch (kind) {
+        case "Data Store": return "▤"
+        case "Data Connection": return "↓"
+        case "Tool": return "◇"
+        case "Importer": return "⇥"
+        case "Exporter": return "⇤"
+        case "Merger": return "⇄"
+        case "View": return "✓"
+        default: return "●"
+        }
+    }
+
+    function accentForType(kind) {
+        switch (kind) {
+        case "Data Store": return "#14b8a6"
+        case "Data Connection": return "#3b82f6"
+        case "Tool": return "#8b5cf6"
+        case "Importer": return "#f59e0b"
+        case "Exporter": return "#ec4899"
+        case "Merger": return "#0ea5e9"
+        case "View": return "#10b981"
+        default: return "#64748b"
+        }
+    }
+
+    // fetches project.json's items/connections and spreads their (often cramped) coordinates apart for display
+    function loadWorkflow() {
+        if (typeof projectBridge === "undefined")
+            return
+
+        var raw = projectBridge.get_workflow()
+
+        if (!raw)
+            return
+
+        var parsed = JSON.parse(raw)
+        var items = parsed.items || []
+
+        if (items.length > 0) {
+            var minX = Math.min.apply(null, items.map(function (i) { return i.x }))
+            var minY = Math.min.apply(null, items.map(function (i) { return i.y }))
+            var maxX = Math.max.apply(null, items.map(function (i) { return i.x }))
+            var maxY = Math.max.apply(null, items.map(function (i) { return i.y }))
+
+            var spread = 1.6
+            var padding = 60
+
+            for (var i = 0; i < items.length; i++) {
+                items[i].px = (items[i].x - minX) * spread + padding
+                items[i].py = (items[i].y - minY) * spread + padding
+            }
+
+            root.designContentWidth = (maxX - minX) * spread + padding * 2 + 220
+            root.designContentHeight = (maxY - minY) * spread + padding * 2 + 100
+        }
+
+        root.nodeItems = ({})
+        root.workflow = parsed
+
+        connectionsCanvas.requestPaint()
+    }
+
     Component.onCompleted: {
         if (typeof projectBridge !== "undefined")
             currentProjectName = projectBridge.get_project_name()
+
+        loadWorkflow()
     }
 
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows
-    readonly property real designContentWidth: 1080 + 220 + 80
-    property real cardScale: Math.max(0.5, Math.min(1, designFlick.width / designContentWidth))
+    property real cardScale: Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth))
 
     title: "Spine Toolbox"
 
@@ -285,6 +356,8 @@ ApplicationWindow {
 
                                 if (name)
                                     root.currentProjectName = name
+
+                                root.loadWorkflow()
                             }
                         }
                     }
@@ -362,7 +435,7 @@ ApplicationWindow {
                         anchors.fill: parent
 
                         contentWidth: Math.max(width, root.designContentWidth * root.cardScale)
-                        contentHeight: Math.max(height, (190 + 100 + 80) * root.cardScale)
+                        contentHeight: Math.max(height, root.designContentHeight * root.cardScale)
 
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
@@ -385,7 +458,7 @@ ApplicationWindow {
 
                                 // Horizontal distance used to create a smooth curve
                                 var distance = endX - startX
-                                var controlOffset = Math.max(50, distance * 0.45)
+                                var controlOffset = Math.max(50, Math.abs(distance) * 0.45)
 
                                 ctx.beginPath()
 
@@ -429,103 +502,41 @@ ApplicationWindow {
 
                                 ctx.clearRect(0, 0, width, height)
 
-                                drawConnection(ctx, inputCard, databaseCard)
-                                drawConnection(ctx, databaseCard, modelCard)
-                                drawConnection(ctx, modelCard, resultsDbCard)
-                                drawConnection(ctx, resultsDbCard, resultCard)
-                            }
-                        }
+                                var connections = root.workflow.connections || []
 
-                        // =================================================
-                        // DESIGN CARDS
-                        // =================================================
+                                for (var i = 0; i < connections.length; i++) {
+                                    var connection = connections[i]
+                                    var fromItem = root.nodeItems[connection.from]
+                                    var toItem = root.nodeItems[connection.to]
 
-                        WorkflowCard {
-                            id: inputCard
-
-                            designX: 80
-                            designY: 190
-                            sizeFactor: root.cardScale
-
-                            title: "Input data"
-                            iconText: "↓"
-                            accent: "#3b82f6"
-
-                            onClicked: inputFileDialog.open()
-
-                            // reflect the reference already stored in the project (e.g. set by the classic Qt UI)
-                            Component.onCompleted: {
-                                if (typeof projectBridge === "undefined")
-                                    return
-
-                                var existing = projectBridge.get_input_reference()
-
-                                if (existing) {
-                                    var parts = existing.split(/[\\/]/)
-
-                                    inputCard.subtitle = parts[parts.length - 1]
-                                }
-                            }
-
-                            FileDialog {
-                                id: inputFileDialog
-
-                                title: "Select input data file"
-
-                                onAccepted: {
-                                    // persisted to the project's Data Connection so the classic Qt UI sees the same file
-                                    inputCard.subtitle = projectBridge.set_input_reference(selectedFile.toString())
+                                    if (fromItem && toItem)
+                                        drawConnection(ctx, fromItem, toItem)
                                 }
                             }
                         }
 
-                        WorkflowCard {
-                            id: databaseCard
+                        // =================================================
+                        // DESIGN CARDS (one per project.json item)
+                        // =================================================
 
-                            designX: 330
-                            designY: 190
-                            sizeFactor: root.cardScale
+                        Repeater {
+                            model: root.workflow.items
 
-                            title: "Database"
-                            iconText: "▤"
-                            accent: "#14b8a6"
-                        }
+                            WorkflowCard {
+                                designX: modelData.px || 0
+                                designY: modelData.py || 0
+                                sizeFactor: root.cardScale
 
-                        WorkflowCard {
-                            id: modelCard
+                                title: modelData.name
+                                subtitle: modelData.type
+                                iconText: root.iconForType(modelData.type)
+                                accent: root.accentForType(modelData.type)
 
-                            designX: 580
-                            designY: 190
-                            sizeFactor: root.cardScale
-
-                            title: "Energy model"
-                            iconText: "◇"
-                            accent: "#8b5cf6"
-                        }
-
-                        WorkflowCard {
-                            id: resultsDbCard
-
-                            designX: 830
-                            designY: 190
-                            sizeFactor: root.cardScale
-
-                            title: "Results DB"
-                            iconText: "▣"
-                            accent: "#ec4899"
-                        }
-
-                        WorkflowCard {
-                            id: resultCard
-
-                            designX: 1080
-                            designY: 190
-
-                            sizeFactor: root.cardScale
-
-                            title: "Results"
-                            iconText: "✓"
-                            accent: "#10b981"
+                                Component.onCompleted: {
+                                    root.nodeItems[modelData.name] = this
+                                    connectionsCanvas.requestPaint()
+                                }
+                            }
                         }
                     }
 
@@ -756,6 +767,19 @@ ApplicationWindow {
 
                 font.pixelSize: 18 * card.sizeFactor
                 font.bold: true
+
+                elide: Text.ElideRight
+            }
+
+            Label {
+                text: card.subtitle
+
+                visible: card.subtitle.length > 0
+
+                Layout.fillWidth: true
+
+                font.pixelSize: 12 * card.sizeFactor
+                opacity: 0.55
 
                 elide: Text.ElideRight
             }

@@ -13,6 +13,10 @@ _INPUT_DATA_CONNECTION_NAME = "Input data"
 _SETTINGS_ORGANIZATION = "SpineProject"
 _SETTINGS_APPLICATION = "Spine Toolbox"
 
+# shown until the user opens a real project, so the UI has something to demonstrate
+_EXAMPLE_PROJECT_FILE = Path(__file__).parent / "examples" / "project.json"
+_EXAMPLE_PROJECT_NAME = "FlexTool (example)"
+
 
 def _serialize_path(path: str, project_dir: str) -> dict:
     """Mirrors spine_engine.utils.serialization.serialize_path without importing the heavy spine_engine package."""
@@ -52,10 +56,13 @@ class ProjectBridge(QObject):
         self._db_editor = None
 
     def _load(self) -> dict:
-        if not self._config_file.exists():
-            return {"project": {"version": LATEST_PROJECT_VERSION, "settings": {}}, "items": {}}
-        with self._config_file.open(encoding="utf-8") as input_file:
-            return json.load(input_file)
+        if self._config_file.exists():
+            with self._config_file.open(encoding="utf-8") as input_file:
+                return json.load(input_file)
+        if _EXAMPLE_PROJECT_FILE.exists():
+            with _EXAMPLE_PROJECT_FILE.open(encoding="utf-8") as input_file:
+                return json.load(input_file)
+        return {"project": {"version": LATEST_PROJECT_VERSION, "settings": {}}, "items": {}}
 
     def _save(self, data: dict) -> None:
         self._config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -88,10 +95,26 @@ class ProjectBridge(QObject):
 
     @Slot(result=str)
     def get_project_name(self) -> str:
-        """Returns the current project folder's name, or an empty string if it isn't a valid project yet."""
-        if not (self._project_dir / PROJECT_CONFIG_DIR_NAME).is_dir():
-            return ""
-        return self._project_dir.name
+        """Returns the current project's name, falling back to the bundled example when none is open yet."""
+        if (self._project_dir / PROJECT_CONFIG_DIR_NAME).is_dir():
+            return self._project_dir.name
+        if _EXAMPLE_PROJECT_FILE.exists():
+            return _EXAMPLE_PROJECT_NAME
+        return ""
+
+    @Slot(result=str)
+    def get_workflow(self) -> str:
+        """Returns the project's items and connections as JSON, for rendering the design canvas."""
+        data = self._load()
+        items = [
+            {"name": name, "type": item.get("type", ""), "x": item.get("x", 0.0), "y": item.get("y", 0.0)}
+            for name, item in data.get("items", {}).items()
+        ]
+        connections = [
+            {"from": connection["from"][0], "to": connection["to"][0]}
+            for connection in data.get("project", {}).get("connections", [])
+        ]
+        return json.dumps({"items": items, "connections": connections})
 
     @Slot(str, result=str)
     def open_project(self, folder_url: str) -> str:
