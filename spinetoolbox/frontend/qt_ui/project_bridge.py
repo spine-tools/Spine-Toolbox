@@ -152,6 +152,12 @@ class ProjectBridge(QObject):
             seen.add(key)
             connections.append({"from": from_name, "to": to_name})
 
+        # items/stacks listed here stay in project.json untouched, just hidden from this simplified view
+        hidden = set(project.get("hidden_items", []))
+        items = [item for item in items if item["name"] not in hidden]
+        visible_names = {item["name"] for item in items}
+        connections = [c for c in connections if c["from"] in visible_names and c["to"] in visible_names]
+
         return json.dumps({"items": items, "connections": connections})
 
     @Slot(str, result=str)
