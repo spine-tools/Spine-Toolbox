@@ -743,11 +743,7 @@ ApplicationWindow {
 
                         anchors.margins: 24
 
-                        Label {
-                            text: "Design"
-                            font.pixelSize: 15
-                            font.bold: true
-
+                        Item {
                             Layout.fillWidth: true
                         }
 
@@ -1026,6 +1022,17 @@ ApplicationWindow {
                     }
                 }
 
+                Label {
+                    text: card.subtitle
+
+                    visible: card.subtitle.length > 0
+
+                    font.pixelSize: 11 * card.sizeFactor
+                    opacity: 0.6
+
+                    elide: Text.ElideRight
+                }
+
                 Item {
                     Layout.fillWidth: true
                 }
@@ -1045,19 +1052,6 @@ ApplicationWindow {
 
                 font.pixelSize: 13 * card.sizeFactor
                 font.bold: true
-
-                elide: Text.ElideRight
-            }
-
-            Label {
-                text: card.subtitle
-
-                visible: card.subtitle.length > 0
-
-                Layout.fillWidth: true
-
-                font.pixelSize: 9 * card.sizeFactor
-                opacity: 0.55
 
                 elide: Text.ElideRight
             }
