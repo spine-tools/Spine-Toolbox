@@ -1091,6 +1091,11 @@ ApplicationWindow {
             }
 
             onClicked: card.clicked()
+
+            onDoubleClicked: {
+                if (typeof projectBridge !== "undefined")
+                    projectBridge.open_item_directory(card.nodeName)
+            }
         }
 
         ColumnLayout {
