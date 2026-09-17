@@ -111,12 +111,13 @@ class ProjectBridge(QObject):
         stacks = project.get("stacks", {})
 
         item_to_stack = {}
-        for stack_name, stack in stacks.items():
+        for stack_key, stack in stacks.items():
+            display_name = stack.get("name", stack_key)
             for member in stack.get("items", []):
-                item_to_stack[member] = stack_name
+                item_to_stack[member] = display_name
 
         items = []
-        for stack_name, stack in stacks.items():
+        for stack_key, stack in stacks.items():
             members = [name for name in stack.get("items", []) if name in raw_items]
             if not members:
                 continue
@@ -125,7 +126,8 @@ class ProjectBridge(QObject):
             if x is None or y is None:
                 x = sum(raw_items[name].get("x", 0.0) for name in members) / len(members)
                 y = sum(raw_items[name].get("y", 0.0) for name in members) / len(members)
-            items.append({"name": stack_name, "type": "Stack", "x": x, "y": y, "subtitle": ""})
+            display_name = stack.get("name", stack_key)
+            items.append({"name": display_name, "type": "Stack", "x": x, "y": y, "subtitle": ""})
         for name, item in raw_items.items():
             if name in item_to_stack:
                 continue
