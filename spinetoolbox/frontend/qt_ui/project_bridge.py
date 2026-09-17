@@ -127,7 +127,7 @@ class ProjectBridge(QObject):
                 x = sum(raw_items[name].get("x", 0.0) for name in members) / len(members)
                 y = sum(raw_items[name].get("y", 0.0) for name in members) / len(members)
             display_name = stack.get("name", stack_key)
-            items.append({"name": display_name, "type": "Stack", "x": x, "y": y, "subtitle": ""})
+            items.append({"name": display_name, "type": "Stack", "x": x, "y": y, "subtitle": "Stack"})
         for name, item in raw_items.items():
             if name in item_to_stack:
                 continue
