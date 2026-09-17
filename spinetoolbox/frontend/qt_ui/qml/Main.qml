@@ -22,6 +22,51 @@ ApplicationWindow {
     property var workflow: ({ "items": [], "connections": [] })
     property var nodeItems: ({})
 
+    // names of the currently selected cards, so a drag on any one of them moves the whole group
+    property var selectedNames: ({})
+    property rect rubberRect: Qt.rect(0, 0, 0, 0)
+    property bool rubberActive: false
+
+    function clearSelection() {
+        root.selectedNames = ({})
+    }
+
+    function selectOnly(name) {
+        var only = ({})
+        only[name] = true
+        root.selectedNames = only
+    }
+
+    function toggleSelection(name) {
+        var copy = Object.assign({}, root.selectedNames)
+
+        if (copy[name])
+            delete copy[name]
+        else
+            copy[name] = true
+
+        root.selectedNames = copy
+    }
+
+    function rectsIntersect(a, b) {
+        return a.x < b.x + b.width && a.x + a.width > b.x
+               && a.y < b.y + b.height && a.y + a.height > b.y
+    }
+
+    // selects every card whose bounds overlap the given rectangle, drawn while dragging on empty canvas
+    function selectWithinRect(area, additive) {
+        var selection = additive ? Object.assign({}, root.selectedNames) : ({})
+
+        for (var name in root.nodeItems) {
+            var nodeItem = root.nodeItems[name]
+
+            if (nodeItem && root.rectsIntersect(area, Qt.rect(nodeItem.x, nodeItem.y, nodeItem.width, nodeItem.height)))
+                selection[name] = true
+        }
+
+        root.selectedNames = selection
+    }
+
     property real designContentWidth: 1400
     property real designContentHeight: 640
 
@@ -607,6 +652,42 @@ ApplicationWindow {
                             }
                         }
 
+                        // draws a selection box when dragging on empty canvas, and clears/starts selection
+                        MouseArea {
+                            id: selectionArea
+
+                            width: designFlick.contentWidth
+                            height: designFlick.contentHeight
+
+                            property point pressPoint
+
+                            onPressed: function (mouse) {
+                                pressPoint = Qt.point(mouse.x, mouse.y)
+                                root.rubberActive = true
+                                root.rubberRect = Qt.rect(mouse.x, mouse.y, 0, 0)
+
+                                if (!(mouse.modifiers & Qt.ControlModifier))
+                                    root.clearSelection()
+                            }
+
+                            onPositionChanged: function (mouse) {
+                                if (!pressed)
+                                    return
+
+                                var x = Math.min(pressPoint.x, mouse.x)
+                                var y = Math.min(pressPoint.y, mouse.y)
+                                var w = Math.abs(mouse.x - pressPoint.x)
+                                var h = Math.abs(mouse.y - pressPoint.y)
+
+                                root.rubberRect = Qt.rect(x, y, w, h)
+                                root.selectWithinRect(root.rubberRect, (mouse.modifiers & Qt.ControlModifier) !== 0)
+                            }
+
+                            onReleased: {
+                                root.rubberActive = false
+                            }
+                        }
+
                         // =================================================
                         // DESIGN CARDS (one per project.json item)
                         // =================================================
@@ -624,12 +705,30 @@ ApplicationWindow {
                                 iconText: root.iconForType(modelData.type)
                                 accent: root.accentForType(modelData.type)
                                 isStack: modelData.type === "Stack"
+                                nodeName: modelData.name
+                                selected: root.selectedNames[modelData.name] === true
 
                                 Component.onCompleted: {
                                     root.nodeItems[modelData.name] = this
                                     connectionsCanvas.requestPaint()
                                 }
                             }
+                        }
+
+                        // visual feedback for the in-progress rubber-band selection
+                        Rectangle {
+                            visible: root.rubberActive
+
+                            x: root.rubberRect.x
+                            y: root.rubberRect.y
+                            width: root.rubberRect.width
+                            height: root.rubberRect.height
+
+                            z: 20
+
+                            color: "#3b82f61a"
+                            border.color: "#3b82f6"
+                            border.width: 1
                         }
                     }
 
@@ -757,6 +856,8 @@ ApplicationWindow {
         property string accent: "#3b82f6"
         property string status: ""
         property bool isStack: false
+        property string nodeName: ""
+        property bool selected: false
 
         property real designX: 0
         property real designY: 0
@@ -771,13 +872,13 @@ ApplicationWindow {
 
         radius: 10 * sizeFactor
 
-        color: "#ffffff"
+        color: selected ? "#eff6ff" : "#ffffff"
 
-        border.color: hovered
-                      ? accent
-                      : (isStack ? Qt.lighter(accent, 1.6) : "#e2e8f0")
+        border.color: selected
+                      ? "#2563eb"
+                      : (hovered ? accent : (isStack ? Qt.lighter(accent, 1.6) : "#e2e8f0"))
 
-        border.width: hovered ? 2 : (isStack ? 2 : 1)
+        border.width: selected ? 3 : (hovered ? 2 : (isStack ? 2 : 1))
 
         property bool hovered: false
 
@@ -849,8 +950,51 @@ ApplicationWindow {
             drag.target: card
             drag.axis: Drag.XAndYAxis
 
+            property real lastX: 0
+            property real lastY: 0
+
             onEntered: card.hovered = true
             onExited: card.hovered = false
+
+            onPressed: function (mouse) {
+                lastX = card.x
+                lastY = card.y
+
+                if (mouse.modifiers & Qt.ControlModifier)
+                    root.toggleSelection(card.nodeName)
+                else if (!card.selected)
+                    root.selectOnly(card.nodeName)
+            }
+
+            // while this card is dragged, move every other selected card by the same amount
+            onPositionChanged: {
+                if (!drag.active || !card.selected)
+                    return
+
+                var dx = card.x - lastX
+                var dy = card.y - lastY
+
+                if (dx === 0 && dy === 0)
+                    return
+
+                lastX = card.x
+                lastY = card.y
+
+                var names = Object.keys(root.selectedNames)
+
+                for (var i = 0; i < names.length; i++) {
+                    if (names[i] === card.nodeName)
+                        continue
+
+                    var other = root.nodeItems[names[i]]
+
+                    if (other) {
+                        other.x += dx
+                        other.y += dy
+                    }
+                }
+            }
+
             onClicked: card.clicked()
         }
 
