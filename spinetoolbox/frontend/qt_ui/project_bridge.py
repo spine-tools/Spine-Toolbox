@@ -6,6 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QSettings, QUrl, Slot
 
 from ...config import PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME, LATEST_PROJECT_VERSION
+from ...helpers import open_url
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
 
@@ -46,6 +47,11 @@ def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
     return f"{dialect}://{host}{port}/{database}"
 
 
+def _data_dir(name: str, project_dir: str) -> str:
+    """Mirrors spine_engine.project_item.executable_item_base's item data directory convention."""
+    return os.path.join(project_dir, PROJECT_CONFIG_DIR_NAME, "items", name.lower().replace(" ", "_"))
+
+
 class ProjectBridge(QObject):
     """Exposes a project's Data Connection file references to QML."""
 
@@ -74,6 +80,13 @@ class ProjectBridge(QObject):
             if item.get("type") == "Data Connection":
                 return name, item
         return None, None
+
+    def _base_dir(self) -> Path:
+        """Returns the project directory items are relative to, falling back to the bundled example's own
+        folder when no real project is open (self._project_dir is then just the launch cwd)."""
+        if self._config_file.exists():
+            return self._project_dir
+        return _EXAMPLE_PROJECT_FILE.parent
 
     def _add_recent_project(self, name: str, project_dir: str) -> None:
         """Mirrors spinetoolbox.helpers.update_recent_projects so both UIs share the same recent-projects list."""
@@ -159,6 +172,46 @@ class ProjectBridge(QObject):
         connections = [c for c in connections if c["from"] in visible_names and c["to"] in visible_names]
 
         return json.dumps({"items": items, "connections": connections})
+
+    def _resolve_item_directory(self, name: str, item: dict) -> Path | None:
+        """Prefers the item's real (executed) data directory, then the folder holding its first file
+        reference, then falls back to the project root; returns None if nothing usable exists."""
+        project_dir = self._base_dir()
+        data_dir = Path(_data_dir(name, str(project_dir)))
+        if data_dir.is_dir():
+            return data_dir
+        for reference in item.get("file_references") or []:
+            reference_path = Path(_deserialize_path(reference, str(project_dir)))
+            if reference_path.exists():
+                return reference_path.parent
+        return project_dir if project_dir.is_dir() else None
+
+    @Slot(str, result=bool)
+    def open_item_directory(self, display_name: str) -> bool:
+        """Opens the data directory of the Data Connection item called display_name, or, if display_name is a
+        collapsed stack, of the first Data Connection item inside it. Returns whether a directory was opened."""
+        data = self._load()
+        raw_items = data.get("items", {})
+        stacks = data.get("project", {}).get("stacks", {})
+
+        member_names = stacks.get(display_name, {}).get("items") if display_name not in raw_items else [display_name]
+        if member_names is None:
+            for stack in stacks.values():
+                if stack.get("name") == display_name:
+                    member_names = stack.get("items", [])
+                    break
+        if not member_names:
+            return False
+
+        for name in member_names:
+            item = raw_items.get(name, {})
+            if item.get("type") != "Data Connection":
+                continue
+            directory = self._resolve_item_directory(name, item)
+            if directory is None:
+                return False
+            return open_url(directory.as_uri())
+        return False
 
     @Slot(str, result=str)
     def open_project(self, folder_url: str) -> str:
