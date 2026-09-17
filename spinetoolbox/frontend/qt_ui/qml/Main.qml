@@ -156,8 +156,35 @@ ApplicationWindow {
         var lane = ({})
         var ordered = items.slice().sort(function (a, b) { return rank[a.name] - rank[b.name] })
 
+        // Anchor specific known inputs so they appear in the desired vertical order.
+        // Keep the main chain (Input data -> FlexTool -> Output info) on the middle
+        // lane, with `Excel input`/`Examples` straddling it above/below so their
+        // midpoint lines up with the chain, and `Project folder` clearly lower.
+        var namePreferences = {
+            "Excel input": 0,
+            "Input data": 1,
+            "FlexTool": 1,
+            "Output info": 1,
+            "Examples": 2,
+            "Project folder": 4
+        }
+
+        for (var prefName in namePreferences) {
+            if (rank[prefName] !== undefined && lane[prefName] === undefined) {
+                try {
+                    lane[prefName] = claimLane(rank[prefName], namePreferences[prefName])
+                } catch (e) {
+                    // ignore and continue if something unexpected occurs
+                }
+            }
+        }
+
         for (var o = 0; o < ordered.length; o++) {
             var item = ordered[o]
+
+            // If a lane was preassigned (anchored) for this item, keep it.
+            if (lane[item.name] !== undefined)
+                continue
             var preds = incoming[item.name] || []
             var preferred = 0
 
@@ -166,15 +193,44 @@ ApplicationWindow {
             } else if (preds.length > 1) {
                 var sum = 0
                 var count = 0
+                var predLanes = []
+                var predRanks = []
 
                 for (var p = 0; p < preds.length; p++) {
-                    if (lane[preds[p]] !== undefined) {
-                        sum += lane[preds[p]]
+                    var pn = preds[p]
+                    if (lane[pn] !== undefined) {
+                        sum += lane[pn]
                         count++
+                        predLanes.push(lane[pn])
+                        predRanks.push(rank[pn])
                     }
                 }
 
-                preferred = count > 0 ? Math.round(sum / count) : 0
+                // If predecessors come from different lanes/ranks, prefer placing this
+                // node on a new lane below the maximum predecessor lane to avoid
+                // connectors crossing through unrelated nodes.
+                var allPredLanesEqual = predLanes.length > 0
+                for (var i = 1; i < predLanes.length; i++) {
+                    if (predLanes[i] !== predLanes[0]) {
+                        allPredLanesEqual = false
+                        break
+                    }
+                }
+
+                var allPredRanksEqual = predRanks.length > 0
+                for (var i = 1; i < predRanks.length; i++) {
+                    if (predRanks[i] !== predRanks[0]) {
+                        allPredRanksEqual = false
+                        break
+                    }
+                }
+
+                if (!allPredLanesEqual || !allPredRanksEqual) {
+                    // push below the lowest (max) predecessor lane
+                    preferred = predLanes.length > 0 ? Math.max.apply(Math, predLanes) + 1 : 0
+                } else {
+                    preferred = count > 0 ? Math.round(sum / count) : 0
+                }
             }
 
             lane[item.name] = claimLane(rank[item.name], preferred)
@@ -320,7 +376,7 @@ ApplicationWindow {
                         }
 
                         Label {
-                            text: "Easy Mode"
+                            text: "User Mode"
                             color: "#bbf7d0"
                             opacity: 0.7
                             font.pixelSize: 11
@@ -427,7 +483,7 @@ ApplicationWindow {
                             Layout.fillWidth: true
 
                             Label {
-                                text: "Easy Mode"
+                                text: "User Mode"
                                 color: "white"
                                 font.bold: true
 
