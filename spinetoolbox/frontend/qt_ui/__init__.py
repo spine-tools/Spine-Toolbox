@@ -1,2 +1,6 @@
 # Qt frontend package for Spine Toolbox
-__all__ = ["app", "ui_main_window"]
+# Export the primary modules intended for external import.
+__all__ = [
+	"qml_launcher",
+	"project_bridge",
+]
