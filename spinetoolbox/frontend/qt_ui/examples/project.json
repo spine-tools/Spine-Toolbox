@@ -7,10 +7,12 @@
             "store_external_paths_as_relative": false
         },
         "stacks": {
-            "Examples stack": {
+            "examples_stack": {
+                "name": "Examples",
                 "items": ["Examples", "Replace with examples"]
             },
-            "Excel input stack": {
+            "excel_input_stack": {
+                "name": "Excel input",
                 "items": ["Excel input", "Read input spreadsheet"]
             }
         },
