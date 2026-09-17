@@ -27,6 +27,7 @@ ApplicationWindow {
 
     function iconForType(kind) {
         switch (kind) {
+        case "Stack": return "▦"
         case "Data Store": return "▤"
         case "Data Connection": return "↓"
         case "Tool": return "◇"
@@ -40,6 +41,7 @@ ApplicationWindow {
 
     function accentForType(kind) {
         switch (kind) {
+        case "Stack": return "#8a6fd8"
         case "Data Store": return "#14b8a6"
         case "Data Connection": return "#3b82f6"
         case "Tool": return "#8b5cf6"
@@ -70,16 +72,16 @@ ApplicationWindow {
             var maxX = Math.max.apply(null, items.map(function (i) { return i.x }))
             var maxY = Math.max.apply(null, items.map(function (i) { return i.y }))
 
-            var spread = 1.6
-            var padding = 60
+            var spread = 1.15
+            var padding = 40
 
             for (var i = 0; i < items.length; i++) {
                 items[i].px = (items[i].x - minX) * spread + padding
                 items[i].py = (items[i].y - minY) * spread + padding
             }
 
-            root.designContentWidth = (maxX - minX) * spread + padding * 2 + 220
-            root.designContentHeight = (maxY - minY) * spread + padding * 2 + 100
+            root.designContentWidth = (maxX - minX) * spread + padding * 2 + 150
+            root.designContentHeight = (maxY - minY) * spread + padding * 2 + 74
         }
 
         root.nodeItems = ({})
@@ -528,9 +530,10 @@ ApplicationWindow {
                                 sizeFactor: root.cardScale
 
                                 title: modelData.name
-                                subtitle: modelData.type
+                                subtitle: modelData.subtitle
                                 iconText: root.iconForType(modelData.type)
                                 accent: root.accentForType(modelData.type)
+                                isStack: modelData.type === "Stack"
 
                                 Component.onCompleted: {
                                     root.nodeItems[modelData.name] = this
@@ -663,38 +666,45 @@ ApplicationWindow {
         property string iconText: ""
         property string accent: "#3b82f6"
         property string status: ""
+        property bool isStack: false
 
         property real designX: 0
         property real designY: 0
         property real sizeFactor: 1
 
+        // initial layout from project.json; dragging then takes over and owns x/y directly
         x: designX * sizeFactor
         y: designY * sizeFactor
 
-        width: 220 * sizeFactor
-        height: 100 * sizeFactor
+        width: 150 * sizeFactor
+        height: 74 * sizeFactor
 
-        radius: 12 * sizeFactor
+        radius: 10 * sizeFactor
 
         color: "#ffffff"
 
         border.color: hovered
                       ? accent
-                      : "#e2e8f0"
+                      : (isStack ? Qt.lighter(accent, 1.6) : "#e2e8f0")
 
-        border.width: hovered ? 2 : 1
+        border.width: hovered ? 2 : (isStack ? 2 : 1)
 
         property bool hovered: false
 
         signal clicked()
 
         scale: hovered ? 1.015 : 1
+        z: dragArea.drag.active ? 10 : 1
 
         Behavior on scale {
             NumberAnimation {
                 duration: 120
             }
         }
+
+        // redraw arrows as the card is dragged around
+        onXChanged: connectionsCanvas.requestPaint()
+        onYChanged: connectionsCanvas.requestPaint()
 
         // Shadow-ish background
         Rectangle {
@@ -709,11 +719,45 @@ ApplicationWindow {
             opacity: 0.04
         }
 
+        // extra offset layers behind the card give a collapsed stack a "deck of cards" look
+        Rectangle {
+            visible: card.isStack
+            anchors.fill: parent
+            anchors.topMargin: 6 * card.sizeFactor
+            anchors.leftMargin: 6 * card.sizeFactor
+
+            z: -2
+
+            radius: parent.radius
+            color: "#ffffff"
+            border.color: "#e2e8f0"
+            border.width: 1
+        }
+
+        Rectangle {
+            visible: card.isStack
+            anchors.fill: parent
+            anchors.topMargin: 12 * card.sizeFactor
+            anchors.leftMargin: 12 * card.sizeFactor
+
+            z: -3
+
+            radius: parent.radius
+            color: "#ffffff"
+            border.color: "#e2e8f0"
+            border.width: 1
+        }
+
         MouseArea {
+            id: dragArea
+
             anchors.fill: parent
 
             hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
+            cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+
+            drag.target: card
+            drag.axis: Drag.XAndYAxis
 
             onEntered: card.hovered = true
             onExited: card.hovered = false
@@ -722,18 +766,18 @@ ApplicationWindow {
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 16 * card.sizeFactor
+            anchors.margins: 11 * card.sizeFactor
 
-            spacing: 10 * card.sizeFactor
+            spacing: 6 * card.sizeFactor
 
             RowLayout {
                 Layout.fillWidth: true
 
                 Rectangle {
-                    width: 40 * card.sizeFactor
-                    height: 40 * card.sizeFactor
+                    width: 28 * card.sizeFactor
+                    height: 28 * card.sizeFactor
 
-                    radius: 10 * card.sizeFactor
+                    radius: 8 * card.sizeFactor
 
                     color: card.accent
 
@@ -743,7 +787,7 @@ ApplicationWindow {
                         text: card.iconText
 
                         color: "white"
-                        font.pixelSize: 20 * card.sizeFactor
+                        font.pixelSize: 14 * card.sizeFactor
                         font.bold: true
                     }
                 }
@@ -756,7 +800,7 @@ ApplicationWindow {
                     text: "⋮"
 
                     opacity: 0.4
-                    font.pixelSize: 18 * card.sizeFactor
+                    font.pixelSize: 13 * card.sizeFactor
                 }
             }
 
@@ -765,7 +809,7 @@ ApplicationWindow {
 
                 Layout.fillWidth: true
 
-                font.pixelSize: 18 * card.sizeFactor
+                font.pixelSize: 13 * card.sizeFactor
                 font.bold: true
 
                 elide: Text.ElideRight
@@ -778,7 +822,7 @@ ApplicationWindow {
 
                 Layout.fillWidth: true
 
-                font.pixelSize: 12 * card.sizeFactor
+                font.pixelSize: 9 * card.sizeFactor
                 opacity: 0.55
 
                 elide: Text.ElideRight
