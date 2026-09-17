@@ -104,16 +104,52 @@ class ProjectBridge(QObject):
 
     @Slot(result=str)
     def get_workflow(self) -> str:
-        """Returns the project's items and connections as JSON, for rendering the design canvas."""
+        """Returns items/connections as JSON, collapsing any project.json "stacks" into a single node each."""
         data = self._load()
-        items = [
-            {"name": name, "type": item.get("type", ""), "x": item.get("x", 0.0), "y": item.get("y", 0.0)}
-            for name, item in data.get("items", {}).items()
-        ]
-        connections = [
-            {"from": connection["from"][0], "to": connection["to"][0]}
-            for connection in data.get("project", {}).get("connections", [])
-        ]
+        project = data.get("project", {})
+        raw_items = data.get("items", {})
+        stacks = project.get("stacks", {})
+
+        item_to_stack = {}
+        for stack_name, stack in stacks.items():
+            for member in stack.get("items", []):
+                item_to_stack[member] = stack_name
+
+        items = []
+        for stack_name, stack in stacks.items():
+            members = [name for name in stack.get("items", []) if name in raw_items]
+            if not members:
+                continue
+            x = stack.get("x")
+            y = stack.get("y")
+            if x is None or y is None:
+                x = sum(raw_items[name].get("x", 0.0) for name in members) / len(members)
+                y = sum(raw_items[name].get("y", 0.0) for name in members) / len(members)
+            items.append({"name": stack_name, "type": "Stack", "x": x, "y": y, "subtitle": ""})
+        for name, item in raw_items.items():
+            if name in item_to_stack:
+                continue
+            item_type = item.get("type", "")
+            items.append(
+                {"name": name, "type": item_type, "x": item.get("x", 0.0), "y": item.get("y", 0.0), "subtitle": item_type}
+            )
+
+        def resolve(name: str) -> str:
+            return item_to_stack.get(name, name)
+
+        connections = []
+        seen = set()
+        for connection in project.get("connections", []):
+            from_name = resolve(connection["from"][0])
+            to_name = resolve(connection["to"][0])
+            if from_name == to_name:
+                continue  # internal to a stack, hidden while collapsed
+            key = (from_name, to_name)
+            if key in seen:
+                continue
+            seen.add(key)
+            connections.append({"from": from_name, "to": to_name})
+
         return json.dumps({"items": items, "connections": connections})
 
     @Slot(str, result=str)

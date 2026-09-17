@@ -6,6 +6,14 @@
             "enable_execute_all": false,
             "store_external_paths_as_relative": false
         },
+        "stacks": {
+            "Examples stack": {
+                "items": ["Examples", "Replace with examples"]
+            },
+            "Excel input stack": {
+                "items": ["Excel input", "Read input spreadsheet"]
+            }
+        },
         "specifications": {
             "Importer": [
                 {
