@@ -14,9 +14,13 @@
             "excel_input_stack": {
                 "name": "Excel input",
                 "items": ["Excel input", "Read input spreadsheet"]
+            },
+            "output_settings_stack": {
+                "name": "Output settings",
+                "items": ["Output settings", "Re-create results"]
             }
         },
-        "hidden_items": ["Migrate database"],
+        "hidden_items": ["Migrate database", "Output settings"],
         "specifications": {
             "Importer": [
                 {
