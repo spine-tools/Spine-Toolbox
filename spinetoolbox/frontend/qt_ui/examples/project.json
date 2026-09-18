@@ -24,7 +24,7 @@
                 "items": ["Comparison settings", "Scenario comparison"]
             }
         },
-        "hidden_items": ["Migrate database", "Output settings"],
+        "hidden_items": ["Migrate database", "Output settings", "Project folder"],
         "specifications": {
             "Importer": [
                 {
