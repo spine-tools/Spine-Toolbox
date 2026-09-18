@@ -296,6 +296,76 @@ class ProjectBridge(QObject):
         self._db_editor = None
 
     @Slot(result=str)
+    def get_databases(self) -> str:
+        """Returns [{"name": ..., "url": ...}, ...] for every Data Store in the project."""
+        data = self._load()
+        project_dir = str(self._base_dir())
+        databases = []
+        for name, item in data.get("items", {}).items():
+            if item.get("type") != "Data Store":
+                continue
+            url = _data_store_url(item.get("url") or {}, project_dir)
+            if url:
+                databases.append({"name": name, "url": url})
+        return json.dumps(databases)
+
+    @Slot(str, result=str)
+    def get_database_contents(self, url: str) -> str:
+        """Returns {"entity_classes": [{"name": ..., "entity_count": ...}], "alternatives": [...],
+        "scenarios": [...]} read live from the database at url, or {"error": ...} if it couldn't be opened."""
+        from spinedb_api import DatabaseMapping  # imported lazily: only needed once the user opens this page
+
+        try:
+            with DatabaseMapping(url) as db_map:
+                entity_classes = []
+                for row in db_map.query(db_map.entity_class_sq):
+                    count = db_map.query(db_map.entity_sq).filter_by(class_id=row.id).count()
+                    entity_classes.append({"name": row.name, "entity_count": count})
+                alternatives = [row.name for row in db_map.query(db_map.alternative_sq)]
+                scenarios = [row.name for row in db_map.query(db_map.scenario_sq)]
+        except Exception as error:
+            return json.dumps({"error": str(error)})
+        return json.dumps({"entity_classes": entity_classes, "alternatives": alternatives, "scenarios": scenarios})
+
+    @Slot(str, str, result=str)
+    def get_entity_class_values(self, url: str, class_name: str) -> str:
+        """Returns [{"entity": ..., "parameter": ..., "alternative": ..., "value": ...}, ...] for every
+        parameter value of class_name's entities in the database at url."""
+        from spinedb_api import DatabaseMapping, from_database  # imported lazily, same reason as above
+
+        try:
+            with DatabaseMapping(url) as db_map:
+                class_row = db_map.query(db_map.entity_class_sq).filter_by(name=class_name).first()
+                if class_row is None:
+                    return json.dumps([])
+                entities = {row.id: row.name for row in db_map.query(db_map.entity_sq).filter_by(class_id=class_row.id)}
+                definitions = {
+                    row.id: row.name
+                    for row in db_map.query(db_map.parameter_definition_sq).filter_by(entity_class_id=class_row.id)
+                }
+                alternatives = {row.id: row.name for row in db_map.query(db_map.alternative_sq)}
+
+                rows = []
+                for value_row in db_map.query(db_map.parameter_value_sq):
+                    if value_row.entity_id not in entities or value_row.parameter_definition_id not in definitions:
+                        continue
+                    try:
+                        parsed_value = from_database(value_row.value, value_row.type)
+                    except Exception:
+                        parsed_value = None
+                    rows.append(
+                        {
+                            "entity": entities[value_row.entity_id],
+                            "parameter": definitions[value_row.parameter_definition_id],
+                            "alternative": alternatives.get(value_row.alternative_id, ""),
+                            "value": str(parsed_value),
+                        }
+                    )
+        except Exception:
+            return json.dumps([])
+        return json.dumps(rows)
+
+    @Slot(result=str)
     def get_input_reference(self) -> str:
         """Returns the first Data Connection file reference, or an empty string if there is none."""
         data = self._load()

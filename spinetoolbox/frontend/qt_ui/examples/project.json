@@ -444,7 +444,7 @@
                 "database": {
                     "type": "path",
                     "relative": true,
-                    "path": "templates/examples.sqlite"
+                    "path": "examples.sqlite"
                 },
                 "schema": ""
             }
