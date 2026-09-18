@@ -1098,6 +1098,20 @@ ApplicationWindow {
             }
         }
 
+        ToolTip {
+            visible: card.hovered
+            text: {
+                // item-specific guidance for double-click actions
+                if (card.title === "Excel input")
+                    return "Double-click to choose the Excel input file"
+                if (card.isStack)
+                    return "Double-click to open the first data connection in this stack"
+                if (card.subtitle === "Data Connection")
+                    return "Double-click to open the data connection directory"
+                return "Double-click to open"
+            }
+        }
+
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 11 * card.sizeFactor
