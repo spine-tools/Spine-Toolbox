@@ -81,6 +81,43 @@ class ProjectBridge(QObject):
                 return name, item
         return None, None
 
+    def _scenario_selectable_name(self, data: dict, display_name: str) -> str | None:
+        """Returns display_name if it (or the stack it names) is listed in project.json's
+        "scenario_selectable_items", None otherwise."""
+        project = data.get("project", {})
+        if display_name in project.get("scenario_selectable_items", []):
+            return display_name
+        return None
+
+    @Slot(str, result=str)
+    def get_item_scenarios(self, display_name: str) -> str:
+        """Returns [{"name": ..., "enabled": ...}, ...] for display_name, demo-only: scenarios and their
+        per-item enabled state both come straight from project.json ("scenarios"/"item_scenario_selection"),
+        no database is queried. Returns an empty list if display_name isn't scenario-selectable."""
+        data = self._load()
+        project = data.get("project", {})
+        name = self._scenario_selectable_name(data, display_name)
+        if name is None:
+            return json.dumps([])
+
+        scenarios = project.get("scenarios", [])
+        selection = project.get("item_scenario_selection", {}).get(name, {})
+        return json.dumps([{"name": scenario, "enabled": selection.get(scenario, True)} for scenario in scenarios])
+
+    @Slot(str, str, bool, result=bool)
+    def set_item_scenario_enabled(self, display_name: str, scenario_name: str, enabled: bool) -> bool:
+        """Stores whether scenario_name is enabled for display_name in project.json's
+        "item_scenario_selection". Returns whether display_name is scenario-selectable."""
+        data = self._load()
+        project = data.setdefault("project", {})
+        name = self._scenario_selectable_name(data, display_name)
+        if name is None:
+            return False
+
+        project.setdefault("item_scenario_selection", {}).setdefault(name, {})[scenario_name] = enabled
+        self._save(data)
+        return True
+
     def _base_dir(self) -> Path:
         """Returns the project directory items are relative to, falling back to the bundled example's own
         folder when no real project is open (self._project_dir is then just the launch cwd)."""
