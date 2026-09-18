@@ -18,6 +18,57 @@ ApplicationWindow {
     // name of the project currently open in the shared .spinetoolbox project.json
     property string currentProjectName: ""
 
+    // "workflow" (project canvas) or "database" (data browser), switched from the sidebar
+    property string currentView: "workflow"
+
+    // Data page state: project.json's Data Stores, the selected one's contents, and the selected
+    // entity class' parameter values, all fetched from ProjectBridge on demand
+    property var databases: []
+    property bool databasesLoaded: false
+    property string selectedDatabaseUrl: ""
+    property var databaseContents: ({ "entity_classes": [], "alternatives": [], "scenarios": [] })
+    property string selectedEntityClass: ""
+    property var entityClassValues: []
+
+    function loadDatabases() {
+        root.databasesLoaded = true
+
+        if (typeof projectBridge === "undefined")
+            return
+
+        var raw = projectBridge.get_databases()
+        root.databases = raw ? JSON.parse(raw) : []
+
+        if (root.databases.length > 0)
+            root.selectDatabase(root.databases[0].url)
+    }
+
+    function selectDatabase(url) {
+        root.selectedDatabaseUrl = url
+        root.selectedEntityClass = ""
+        root.entityClassValues = []
+
+        if (typeof projectBridge === "undefined" || !url) {
+            root.databaseContents = ({ "entity_classes": [], "alternatives": [], "scenarios": [] })
+            return
+        }
+
+        var raw = projectBridge.get_database_contents(url)
+        root.databaseContents = raw ? JSON.parse(raw) : ({ "entity_classes": [], "alternatives": [], "scenarios": [] })
+    }
+
+    function selectEntityClass(name) {
+        root.selectedEntityClass = name
+
+        if (typeof projectBridge === "undefined" || !root.selectedDatabaseUrl) {
+            root.entityClassValues = []
+            return
+        }
+
+        var raw = projectBridge.get_entity_class_values(root.selectedDatabaseUrl, name)
+        root.entityClassValues = raw ? JSON.parse(raw) : []
+    }
+
     // items/connections loaded from project.json, rendered by the design canvas below
     property var workflow: ({ "items": [], "connections": [] })
     property var nodeItems: ({})
@@ -411,16 +462,24 @@ ApplicationWindow {
                 SidebarButton {
                     text: "Projects"
                     iconText: "▣"
-                    selected: true
+                    selected: root.currentView === "workflow"
                     compact: root.compactSidebar
+
+                    onClicked: root.currentView = "workflow"
                 }
 
                 SidebarButton {
                     text: "Data"
                     iconText: "◇"
+                    selected: root.currentView === "database"
                     compact: root.compactSidebar
 
-                    onClicked: projectBridge.open_database_editor()
+                    onClicked: {
+                        root.currentView = "database"
+
+                        if (!root.databasesLoaded)
+                            root.loadDatabases()
+                    }
                 }
 
                 SidebarButton {
@@ -633,6 +692,7 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
+                    visible: root.currentView === "workflow"
                     color: "#f2f8f4"
 
                     // Ctrl+wheel zooms the canvas in/out
@@ -940,6 +1000,211 @@ ApplicationWindow {
                         }
                     }
                 }
+            // =================================================
+            // DATA PAGE (Entity/Alternative/Scenario browser, real spinedb_api reads)
+            // =================================================
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                visible: root.currentView === "database"
+                color: "#f2f8f4"
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 20
+
+                    spacing: 16
+
+                    // -------------------------------------------------
+                    // LEFT: database picker + entity/alternative/scenario lists
+                    // -------------------------------------------------
+
+                    Rectangle {
+                        Layout.preferredWidth: 260
+                        Layout.fillHeight: true
+
+                        radius: 10
+                        color: "#ffffff"
+                        border.color: "#e2e8f0"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 14
+
+                            spacing: 8
+
+                            Label {
+                                text: "Database"
+                                font.bold: true
+                                font.pixelSize: 12
+                                opacity: 0.6
+                            }
+
+                            ComboBox {
+                                Layout.fillWidth: true
+
+                                model: root.databases
+                                textRole: "name"
+
+                                onActivated: root.selectDatabase(root.databases[currentIndex].url)
+                            }
+
+                            Label {
+                                visible: root.databaseContents.error !== undefined
+                                text: root.databaseContents.error || ""
+                                color: "#dc2626"
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                            }
+
+                            // everything below scrolls as one column, so the panel never overflows
+                            // its bounds regardless of window height or how many rows each list has
+                            ScrollView {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                clip: true
+
+                                ColumnLayout {
+                                    width: parent.width
+                                    spacing: 8
+
+                                    Label {
+                                        text: "Entity classes"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        opacity: 0.6
+                                    }
+
+                                    Repeater {
+                                        model: root.databaseContents.entity_classes || []
+
+                                        Button {
+                                            Layout.fillWidth: true
+                                            flat: true
+                                            highlighted: modelData.name === root.selectedEntityClass
+                                            text: modelData.name + " (" + modelData.entity_count + ")"
+
+                                            onClicked: root.selectEntityClass(modelData.name)
+                                        }
+                                    }
+
+                                    Label {
+                                        text: "Alternatives"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        opacity: 0.6
+                                        Layout.topMargin: 6
+                                    }
+
+                                    Repeater {
+                                        model: root.databaseContents.alternatives || []
+
+                                        Label {
+                                            text: modelData
+                                            font.pixelSize: 12
+                                            leftPadding: 4
+                                        }
+                                    }
+
+                                    Label {
+                                        text: "Scenarios"
+                                        font.bold: true
+                                        font.pixelSize: 12
+                                        opacity: 0.6
+                                        Layout.topMargin: 6
+                                    }
+
+                                    Repeater {
+                                        model: root.databaseContents.scenarios || []
+
+                                        Label {
+                                            text: modelData
+                                            font.pixelSize: 12
+                                            leftPadding: 4
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // -------------------------------------------------
+                    // CENTER: parameter value table for the selected entity class
+                    // -------------------------------------------------
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+
+                        radius: 10
+                        color: "#ffffff"
+                        border.color: "#e2e8f0"
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: 14
+
+                            spacing: 8
+
+                            Label {
+                                text: root.selectedEntityClass
+                                      ? "Parameter values – " + root.selectedEntityClass
+                                      : "Select an entity class"
+                                font.bold: true
+                                font.pixelSize: 14
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: root.entityClassValues.length > 0
+                                spacing: 0
+
+                                Label { Layout.preferredWidth: 160; text: "Entity"; font.bold: true; opacity: 0.6; font.pixelSize: 11 }
+                                Label { Layout.preferredWidth: 160; text: "Parameter"; font.bold: true; opacity: 0.6; font.pixelSize: 11 }
+                                Label { Layout.preferredWidth: 120; text: "Alternative"; font.bold: true; opacity: 0.6; font.pixelSize: 11 }
+                                Label { Layout.fillWidth: true; text: "Value"; font.bold: true; opacity: 0.6; font.pixelSize: 11 }
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                height: 1
+                                color: "#e2e8f0"
+                                visible: root.entityClassValues.length > 0
+                            }
+
+                            ScrollView {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                clip: true
+
+                                ColumnLayout {
+                                    width: parent.width
+                                    spacing: 0
+
+                                    Repeater {
+                                        model: root.entityClassValues
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 0
+
+                                            Label { Layout.preferredWidth: 160; text: modelData.entity; font.pixelSize: 12; elide: Text.ElideRight }
+                                            Label { Layout.preferredWidth: 160; text: modelData.parameter; font.pixelSize: 12; elide: Text.ElideRight }
+                                            Label { Layout.preferredWidth: 120; text: modelData.alternative; font.pixelSize: 12; elide: Text.ElideRight }
+                                            Label { Layout.fillWidth: true; text: modelData.value; font.pixelSize: 12; elide: Text.ElideRight }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // closes the Data page Rectangle above; this next brace closes the WORKSPACE
+            // RowLayout itself, so the Data page is a sibling of the design canvas
             }
         }
     }
