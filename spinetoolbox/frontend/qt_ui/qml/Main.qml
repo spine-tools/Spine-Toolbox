@@ -876,6 +876,69 @@ ApplicationWindow {
                         ToolTip.visible: hovered
                         ToolTip.text: "Add item"
                     }
+
+                    // -------------------------------------------------
+                    // Scenario selection dialog (double-click on Tool/Stack items listed in
+                    // project.json's "scenario_selectable_items")
+                    // -------------------------------------------------
+
+                    Dialog {
+                        id: scenarioDialog
+
+                        anchors.centerIn: parent
+                        modal: true
+                        width: 320
+
+                        property string itemName: ""
+                        property var scenarios: []
+
+                        title: "Scenarios – " + scenarioDialog.itemName
+                        standardButtons: Dialog.Close
+
+                        function openFor(name) {
+                            scenarioDialog.itemName = name
+                            scenarioDialog.scenarios = []
+
+                            if (typeof projectBridge === "undefined")
+                                return
+
+                            var raw = projectBridge.get_item_scenarios(name)
+                            var parsed = raw ? JSON.parse(raw) : []
+
+                            if (parsed.length === 0)
+                                return
+
+                            scenarioDialog.scenarios = parsed
+                            scenarioDialog.open()
+                        }
+
+                        contentItem: ColumnLayout {
+                            spacing: 4
+
+                            Label {
+                                text: "Select which scenarios " + scenarioDialog.itemName + " runs:"
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                Layout.bottomMargin: 6
+                                opacity: 0.7
+                            }
+
+                            Repeater {
+                                model: scenarioDialog.scenarios
+
+                                CheckBox {
+                                    text: modelData.name
+                                    checked: modelData.enabled
+
+                                    onToggled: {
+                                        if (typeof projectBridge !== "undefined")
+                                            projectBridge.set_item_scenario_enabled(
+                                                scenarioDialog.itemName, modelData.name, checked)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1093,8 +1156,15 @@ ApplicationWindow {
             onClicked: card.clicked()
 
             onDoubleClicked: {
-                if (typeof projectBridge !== "undefined")
+                if (typeof projectBridge === "undefined")
+                    return
+
+                if (card.subtitle === "Data Connection") {
                     projectBridge.open_item_directory(card.nodeName)
+                    return
+                }
+
+                scenarioDialog.openFor(card.nodeName)
             }
         }
 
@@ -1104,10 +1174,14 @@ ApplicationWindow {
                 // item-specific guidance for double-click actions
                 if (card.title === "Excel input")
                     return "Double-click to choose the Excel input file"
-                if (card.isStack)
-                    return "Double-click to open the first data connection in this stack"
                 if (card.subtitle === "Data Connection")
                     return "Double-click to open the data connection directory"
+                if (typeof projectBridge !== "undefined") {
+                    var raw = projectBridge.get_item_scenarios(card.title)
+                    var parsed = raw ? JSON.parse(raw) : []
+                    if (parsed.length > 0)
+                        return "Double-click to choose scenarios to run"
+                }
                 return "Double-click to open"
             }
         }

@@ -25,6 +25,12 @@
             }
         },
         "hidden_items": ["Migrate database", "Output settings", "Project folder"],
+        "scenarios": ["Base", "High demand", "Low demand"],
+        "scenario_selectable_items": ["FlexTool", "Scenario comparison"],
+        "item_scenario_selection": {
+            "FlexTool": {"Base": true, "High demand": true, "Low demand": false},
+            "Scenario comparison": {"Base": true, "High demand": true, "Low demand": true}
+        },
         "specifications": {
             "Importer": [
                 {
