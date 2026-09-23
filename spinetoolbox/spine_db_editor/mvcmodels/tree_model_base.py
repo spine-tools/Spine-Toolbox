@@ -49,7 +49,7 @@ class TreeModelBase(LevelFilterMixin, MinimalTreeModel):
     def _apply_level_filters(self) -> None:
         """Refreshes the whole tree so the current level filters take effect."""
         self.layoutAboutToBeChanged.emit()
-        self._bump_filter_generation()
+        self.bump_filter_generation()
         self.layoutChanged.emit()
 
     def _level_filter_root(self):

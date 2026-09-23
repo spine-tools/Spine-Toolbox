@@ -342,7 +342,9 @@ class EntityItem(MultiDBTreeItem):
         self.append_children_by_id(db_map_member_ids, is_member=True)
         if not self._is_group:
             self._is_group = True
-            self.parent_item.reposition_child(self.child_number())
+            child_number = self.child_number()
+            if child_number is not None:
+                self.parent_item.reposition_child(child_number)
 
     def _handle_entity_group_items_removed(self, db_map_data):
         db_map_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}
