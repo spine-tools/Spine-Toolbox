@@ -177,7 +177,11 @@ class DefaultRowGenerator(QObject):
                 class_name = default_db_map.entity_class(id=item_id)["name"]
                 class_id = item_id
             else:
-                entity = default_db_map.entity(id=item_id)
+                try:
+                    entity = default_db_map.entity(id=item_id)
+                except SpineDBAPIError:
+                    # Entity may have been deleted in some rare cases where entity groups are involved.
+                    return False
                 class_name = entity["entity_class_name"]
                 class_id = entity["class_id"]
                 entity_byname = entity["entity_byname"]

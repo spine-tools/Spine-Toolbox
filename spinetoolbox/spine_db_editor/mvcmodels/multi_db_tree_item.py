@@ -153,7 +153,7 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
         sibling = index.sibling(index.row(), 1)
         self.model.dataChanged.emit(sibling, sibling)
 
-    def take_db_map(self, db_map):
+    def take_db_map(self, db_map: DatabaseMapping) -> TempId | None:
         """Removes the mapping for given db_map and returns it."""
         return self._db_map_ids.pop(db_map, None)
 
@@ -161,32 +161,31 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
         """Refreshes children after taking db_maps from them.
         Called after removing and updating children for this item."""
         removed_rows = []
-        for row, child in reversed(list(enumerate(self.children))):
+        for row, child in enumerate(self.children):
             if not child.db_map_ids:
                 removed_rows.append(row)
         for row, count in reversed(rows_to_row_count_tuples(removed_rows)):
             self.remove_children(row, count)
         for row, child in enumerate(self.children):
             child.deep_refresh_children()
-        if self.children:
+        visible_children = self.visible_children
+        if self.visible_children:
+            parent_index = self.index()
             top_row = 0
-            bottom_row = self.row_count() - 1
-            top_index = self.children[top_row].index().sibling(top_row, 1)
-            bottom_index = self.children[bottom_row].index().sibling(bottom_row, 1)
+            bottom_row = len(visible_children) - 1
+            top_index = self.model.createIndex(top_row, 1, parent_index)
+            bottom_index = self.model.createIndex(bottom_row, 1, parent_index)
             self.model.dataChanged.emit(top_index, bottom_index)
 
-    def deep_remove_db_map(self, db_map):
+    def deep_remove_db_map(self, db_map: DatabaseMapping) -> None:
         """Removes given db_map from this item and all its descendants."""
         for child in reversed(self.children):
             child.deep_remove_db_map(db_map)
-        _ = self.take_db_map(db_map)
+        self.take_db_map(db_map)
 
-    def deep_take_db_map(self, db_map):
+    def deep_take_db_map(self, db_map: DatabaseMapping) -> MultiDBTreeItem | None:
         """Removes given db_map from this item and all its descendants, and
         returns a new item from the db_map's data.
-
-        Returns:
-            MultiDBTreeItem, NoneType
         """
         id_ = self.take_db_map(db_map)
         if id_ is None:
@@ -367,8 +366,15 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
             db_map_ids (dict): maps DatabaseMapping instances to list of ids
         """
         for db_map, ids in db_map_ids.items():
-            for child in self.find_children_by_id(db_map, *ids, reverse=True):
-                child.deep_remove_db_map(db_map)
+            ids = set(ids)
+            for child in self.children:
+                if db_map in child.db_map_ids:
+                    child_id = child.db_map_ids[db_map]
+                    if child_id in ids:
+                        child.deep_remove_db_map(db_map)
+                        ids.remove(child_id)
+                        if not ids:
+                            break
         self.deep_refresh_children()
 
     def is_valid(self):
@@ -441,16 +447,32 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
             self.model.schedule_level_filter_refresh()
         return True
 
-    def remove_children(self, position, count) -> bool:
+    def remove_children(self, position: int, count: int) -> bool:
         """Removes count children starting from the given position."""
-        if super().remove_children(position, count):
-            self.refresh_child_map()
-            if self.model.has_level_filters():
-                self.model.schedule_level_filter_refresh()
+        if self.model.has_level_filters():
+            if self in self.parent_item._visible_children_cache:
+                parent_index = self.index()
+                for child in self._children[position : position + count]:
+                    for row, visible_child in enumerate(self._visible_children_cache):
+                        if child is visible_child:
+                            self.model.beginRemoveRows(parent_index, row, row)
+                            del self._visible_children_cache[row]
+                            self.model.endRemoveRows()
+                            break
+                self._child_map.clear()
+                for row, child in enumerate(self._visible_children_cache):
+                    for db_map in child.db_maps:
+                        id_ = child.db_map_id(db_map)
+                        self._child_map.setdefault(db_map, {})[id_] = row
+            del self._children[position : position + count]
+            self._has_children_initially = False
             return True
-        return False
+        if not super().remove_children(position, count):
+            return False
+        self._visible_children_cache = None
+        return True
 
-    def reposition_child(self, row):
+    def reposition_child(self, row: int) -> None:
         child = self.child(row)
         if not child:
             return
@@ -460,28 +482,17 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
     def find_row(self, db_map, id_):
         return self._child_map.get(db_map, {}).get(id_)
 
-    def find_children_by_id(self, db_map, *ids, reverse=True):
-        """Generates children with the given ids in the given db_map.
-        If the first id is None, then generates *all* children with the given db_map."""
-        for row in self.find_rows_by_id(db_map, *ids, reverse=reverse):
+    def find_children_by_id(self, db_map, *ids):
+        """Generates children with the given ids in the given db_map."""
+        for row in self._find_unsorted_rows_by_id(db_map, *ids):
             yield self.children[row]
 
-    def find_rows_by_id(self, db_map, *ids, reverse=True):
-        yield from sorted(self._find_unsorted_rows_by_id(db_map, *ids), reverse=reverse)
-
     def _find_unsorted_rows_by_id(self, db_map, *ids):
-        """Generates rows corresponding to children with the given ids in the given db_map.
-        If the only id given is None, then generates rows corresponding to *all* children with the given db_map."""
-        if len(ids) == 1 and ids[0] is None:
-            d = self._child_map.get(db_map)
-            if d:
-                yield from d.values()
-        else:
-            # Yield all children with the db_map *and* the id
-            for id_ in ids:
-                row = self.find_row(db_map, id_)
-                if row is not None:
-                    yield row
+        """Generates rows corresponding to children with the given ids in the given db_map."""
+        for id_ in ids:
+            row = self.find_row(db_map, id_)
+            if row is not None:
+                yield row
 
     def data(self, column, role=Qt.ItemDataRole.DisplayRole):
         """Returns data for given column and role."""

@@ -215,6 +215,79 @@ class TestEntityTreeModel:
             QApplication.processEvents()
         assert not group_item.is_group
 
+    def test_remove_regex_filtered_entity(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="a")
+            db_map.add_entity(entity_class_name="A", name="b")
+            db_map.commit_session("Add test data.")
+        db_map = db_mngr.get_db_map(url, logger)
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_map,
+        )
+        model.build_tree()
+        model._level_filter_timer.setInterval(0)
+        with signal_waiter(model.layoutChanged, timeout=5.0) as waiter:
+            model.set_level_filter("entity", "b")
+            waiter.wait()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.visible_children) != 1:
+            QApplication.processEvents()
+        visible_item = class_item.visible_children[0]
+        assert visible_item.display_data == "b"
+        db_mngr.remove_items({db_map: {"entity": {db_map.entity(entity_class_name="A", name="b")["id"]}}})
+        while len(class_item.visible_children) != 0:
+            QApplication.processEvents()
+        assert len(class_item.children) == 1
+        assert class_item.children[0].display_data == "a"
+
+    def test_remove_regex_unfiltered_entity_from_middle(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="a")
+            db_map.add_entity(entity_class_name="A", name="b")
+            db_map.add_entity(entity_class_name="A", name="c")
+            db_map.add_entity(entity_class_name="A", name="d")
+            db_map.commit_session("Add test data.")
+        db_map = db_mngr.get_db_map(url, logger)
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_map,
+        )
+        model.build_tree()
+        model._level_filter_timer.setInterval(0)
+        with signal_waiter(model.layoutChanged, timeout=5.0) as waiter:
+            model.set_level_filter("entity", "b|c")
+            waiter.wait()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.visible_children) != 2:
+            QApplication.processEvents()
+        db_mngr.remove_items({db_map: {"entity": {db_map.entity(entity_class_name="A", name="b")["id"]}}})
+        while len(class_item.visible_children) != 1:
+            QApplication.processEvents()
+        assert class_item.visible_children[0].display_data == "c"
+        assert len(class_item.children) == 3
+        assert class_item.children[0].display_data == "a"
+        assert class_item.children[1].display_data == "c"
+        assert class_item.children[2].display_data == "d"
+
     @staticmethod
     def _built_model_with_entities(parent_object, app_settings, db_mngr, db_map):
         """Builds a fully fetched entity tree with three classes each holding one entity.

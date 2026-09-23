@@ -182,22 +182,23 @@ class TreeItem:
             child.tear_down_recursively()
         self.tear_down()
 
-    def remove_children(self, position, count):
+    def remove_children(self, position: int, count: int) -> bool:
         """Removes count children starting from the given position.
 
         Args:
-            position (int): position of the first child to remove
-            count (int): number of children to remove
+            position: position of the first child to remove
+            count: number of children to remove
 
         Returns:
-            bool: True if operation was successful, False otherwise
+            True if operation was successful, False otherwise
         """
         first = position
         last = position + count - 1
-        if first >= self.child_count() or first < 0:
+        child_count = self.child_count()
+        if first >= child_count or first < 0:
             return False
-        if last >= self.child_count():
-            last = self.child_count() - 1
+        if last >= child_count:
+            last = child_count - 1
         self.model.beginRemoveRows(self.index(), first, last)
         del self.children[first : last + 1]
         self.model.endRemoveRows()
