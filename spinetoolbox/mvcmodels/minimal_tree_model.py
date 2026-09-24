@@ -13,8 +13,11 @@
 """Models to represent items in a tree."""
 
 from __future__ import annotations
-from typing import ClassVar, Optional
+import collections
+from collections.abc import Iterator
+from typing import ClassVar
 from PySide6.QtCore import QAbstractItemModel, QModelIndex, QObject, Qt
+from PySide6.QtWidgets import QTreeView
 from spinedb_api.helpers import ItemType
 
 
@@ -23,34 +26,34 @@ class TreeItem:
 
     item_type: ClassVar[ItemType] = None
 
-    def __init__(self, model):
+    def __init__(self, model: MinimalTreeModel):
         """
         Args:
-            model (MinimalTreeModel): The model where the item belongs.
+            model: The model where the item belongs.
         """
         self._children: list[TreeItem] = []
         self._model = model
-        self._parent_item: Optional[TreeItem] = None
+        self._parent_item: TreeItem | None = None
         self._fetched = False
         self._set_up_once = False
         self._has_children_initially = False
         self._created_children = {}
 
     @property
-    def visible_children(self) -> list:
+    def visible_children(self) -> list[TreeItem]:
         return self._children
 
-    def set_has_children_initially(self, has_children_initially):
+    def set_has_children_initially(self, has_children_initially: bool) -> None:
         self._has_children_initially = has_children_initially
 
-    def has_children(self):
+    def has_children(self) -> bool:
         """Returns whether this item has or could have children."""
         if self._has_children_initially:
             return True
         return bool(self._children)
 
     @property
-    def model(self):
+    def model(self) -> MinimalTreeModel:
         return self._model
 
     @property
@@ -64,42 +67,42 @@ class TreeItem:
         self._children = children
 
     @property
-    def parent_item(self) -> TreeItem:
+    def parent_item(self) -> TreeItem | None:
         return self._parent_item
 
     @parent_item.setter
-    def parent_item(self, parent_item: Optional[TreeItem]) -> None:
+    def parent_item(self, parent_item: TreeItem | None) -> None:
         self._parent_item = parent_item
 
-    def is_valid(self):
+    def is_valid(self) -> bool:
         """Tests if item is valid.
 
         Return:
-            bool: True if item is valid, False otherwise
+            True if item is valid, False otherwise
         """
         return True
 
-    def child(self, row):
+    def child(self, row: int) -> TreeItem | None:
         """Returns the child at given row or None if out of bounds."""
         if 0 <= row < len(self._children):
             return self._children[row]
         return None
 
-    def last_child(self):
+    def last_child(self) -> TreeItem | None:
         """Returns the last child."""
         return self.child(len(self._children) - 1)
 
-    def child_count(self):
+    def child_count(self) -> int:
         """Returns the number of children."""
         return len(self.children)
 
-    def row_count(self):
+    def row_count(self) -> int:
         """Returns the number of rows, which may be different from the number of children.
         This allows subclasses to hide children."""
         return self.child_count()
 
-    def child_number(self):
-        """Returns the rank of this item within its parent or -1 if it's an orphan."""
+    def child_number(self) -> int | None:
+        """Returns the rank of this item within its parent or None if it's an orphan."""
         if self.parent_item:
             return self.parent_item.children.index(self)
         return None
@@ -114,25 +117,29 @@ class TreeItem:
         """Returns first child that meet condition expressed as a lambda function or None."""
         return next(self.find_children(cond), None)
 
-    def next_sibling(self):
+    def next_sibling(self) -> TreeItem | None:
         """Returns the next sibling or None if it's the last."""
-        return self.parent_item.child(self.child_number() + 1)
-
-    def previous_sibling(self):
-        """Returns the previous sibling or None if it's the first."""
-        if self.child_number() is None:
+        child_number = self.child_number()
+        if child_number is None:
             return None
-        return self.parent_item.child(self.child_number() - 1)
+        return self.parent_item.child(child_number + 1)
 
-    def index(self):
+    def previous_sibling(self) -> TreeItem | None:
+        """Returns the previous sibling or None if it's the first."""
+        child_number = self.child_number()
+        if child_number is None:
+            return None
+        return self.parent_item.child(child_number - 1)
+
+    def index(self) -> QModelIndex:
         return self.model.index_from_item(self)
 
-    def set_up(self):
+    def set_up(self) -> None:
         if not self._set_up_once:
             self._set_up_once = True
             self._do_set_up()
 
-    def _do_set_up(self):
+    def _do_set_up(self) -> None:
         """Do stuff after the item has been inserted."""
 
     def _polish_children(self, children):
@@ -175,22 +182,23 @@ class TreeItem:
             child.tear_down_recursively()
         self.tear_down()
 
-    def remove_children(self, position, count):
+    def remove_children(self, position: int, count: int) -> bool:
         """Removes count children starting from the given position.
 
         Args:
-            position (int): position of the first child to remove
-            count (int): number of children to remove
+            position: position of the first child to remove
+            count: number of children to remove
 
         Returns:
-            bool: True if operation was successful, False otherwise
+            True if operation was successful, False otherwise
         """
         first = position
         last = position + count - 1
-        if first >= self.child_count() or first < 0:
+        child_count = self.child_count()
+        if first >= child_count or first < 0:
             return False
-        if last >= self.child_count():
-            last = self.child_count() - 1
+        if last >= child_count:
+            last = child_count - 1
         self.model.beginRemoveRows(self.index(), first, last)
         del self.children[first : last + 1]
         self.model.endRemoveRows()
@@ -275,13 +283,13 @@ class MinimalTreeModel(QAbstractItemModel):
         super().__init__(parent)
         self._invisible_root_item = TreeItem(self)
 
-    def visit_all(self, index=QModelIndex(), view=None):
+    def visit_all(self, index: QModelIndex = QModelIndex(), view: QTreeView | None = None) -> Iterator[TreeItem]:
         """Iterates all items in the model including and below the given index.
         Iterative implementation so we don't need to worry about Python recursion limits.
 
         Args:
-            index (QModelIndex): an index to start. If not given, we start at the root
-            view (QTreeView): a tree view. If given, we only yield items that are visible
+            index: an index to start. If not given, we start at the root
+            view: a tree view. If given, we only yield items that are visible
                 to that view. So for example, if a tree item is not expanded then we don't yield
                 its children.
 
@@ -297,25 +305,31 @@ class MinimalTreeModel(QAbstractItemModel):
         if not child:
             return
         current = child
+        current_row = ancient_one.child_count() - 1
+        visited_rows = collections.deque()
         visit_children = True
         while True:
             if visit_children:
                 yield current
-                if view is None or view.isExpanded(self.index_from_item(current)):
+                if view is None or view.isExpanded(self.createIndex(current_row, 0, current)):
                     child = current.last_child()
                     if child:
+                        visited_rows.append(current_row)
+                        current_row = current.child_count() - 1
                         current = child
                         continue
-            sibling = current.previous_sibling()
+            sibling = current.parent_item.child(current_row - 1)
             if sibling:
                 visit_children = True
+                current_row -= 1
                 current = sibling
                 continue
             parent_item = current.parent_item
-            if parent_item == ancient_one:
+            if parent_item is ancient_one:
                 break
             visit_children = False  # To make sure we don't visit children again
             current = parent_item
+            current_row = visited_rows.pop()
 
     def item_from_index(self, index: QModelIndex) -> TreeItem:
         """Return the item corresponding to the given index.
@@ -360,7 +374,10 @@ class MinimalTreeModel(QAbstractItemModel):
         parent_item = item.parent_item
         if parent_item is None or parent_item is self._invisible_root_item:
             return QModelIndex()
-        return self.createIndex(parent_item.child_number(), 0, parent_item)
+        child_number = parent_item.child_number()
+        if child_number is None:
+            return QModelIndex()
+        return self.createIndex(child_number, 0, parent_item)
 
     def columnCount(self, parent=QModelIndex()):
         return 1

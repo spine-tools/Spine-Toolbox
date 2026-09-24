@@ -11,6 +11,7 @@
 ######################################################################################################################
 from PySide6.QtWidgets import QApplication
 from spinedb_api import DatabaseMapping
+from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.entity_tree_models import EntityTreeModel
 
 
@@ -88,6 +89,204 @@ class TestEntityTreeModel:
         while len(model.root_item.children) != 3:
             QApplication.processEvents()
         assert [child.display_data for child in model.root_item.children] == ["A", "A (Superclass)", "Superclass"]
+
+    def test_entity_groups(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="group_leader")
+            db_map.add_entity(entity_class_name="A", name="member1")
+            db_map.add_entity_group(entity_class_name="A", group_name="group_leader", member_name="member1")
+            db_map.commit_session("Add test data.")
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_mngr.get_db_map(url, logger),
+        )
+        model.build_tree()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.children) != 2:
+            QApplication.processEvents()
+        group_item = class_item.children[0]
+        assert group_item.display_data == "group_leader"
+        assert not group_item.is_group
+        group_item.fetch_more()
+        while len(group_item.children) != 1:
+            QApplication.processEvents()
+        assert group_item.is_group
+        group_child_item = group_item.children[0]
+        assert group_child_item.display_data == "member1"
+        assert not group_child_item.is_group
+        member_item = class_item.children[1]
+        assert member_item.display_data == "member1"
+        assert not member_item.is_group
+
+    def test_fetch_hidden_entity_group(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="group_leader")
+            db_map.add_entity(entity_class_name="A", name="member1")
+            db_map.add_entity_group(entity_class_name="A", group_name="group_leader", member_name="member1")
+            db_map.commit_session("Add test data.")
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_mngr.get_db_map(url, logger),
+        )
+        model.build_tree()
+        model._level_filter_timer.setInterval(0)
+        with signal_waiter(model.layoutChanged, timeout=5.0) as waiter:
+            model.set_level_filter("entity", "nothing")
+            waiter.wait()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.children) != 2:
+            QApplication.processEvents()
+        assert class_item.row_count() == 0
+        group_item = class_item.children[0]
+        assert group_item.display_data == "group_leader"
+        assert not group_item.is_group
+        group_item.fetch_more()
+        while len(group_item.children) != 1:
+            QApplication.processEvents()
+        assert group_item.is_group
+        group_child_item = group_item.children[0]
+        assert group_child_item.display_data == "member1"
+        assert not group_child_item.is_group
+        member_item = class_item.children[1]
+        assert member_item.display_data == "member1"
+        assert not member_item.is_group
+
+    def test_entity_group_removed(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="group_leader")
+            db_map.add_entity(entity_class_name="A", name="member1")
+            db_map.add_entity_group(entity_class_name="A", group_name="group_leader", member_name="member1")
+            db_map.commit_session("Add test data.")
+        db_map = db_mngr.get_db_map(url, logger)
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_map,
+        )
+        model.build_tree()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.children) != 2:
+            QApplication.processEvents()
+        group_item = class_item.children[0]
+        assert group_item.display_data == "group_leader"
+        group_item.fetch_more()
+        while len(group_item.children) != 1:
+            QApplication.processEvents()
+        group_child_item = group_item.children[0]
+        assert group_child_item.display_data == "member1"
+        db_mngr.remove_items(
+            {
+                db_map: {
+                    "entity_group": {
+                        db_map.entity_group(entity_class_name="A", group_name="group_leader", member_name="member1")[
+                            "id"
+                        ]
+                    }
+                }
+            }
+        )
+        while len(group_item.children) != 0:
+            QApplication.processEvents()
+        assert not group_item.is_group
+
+    def test_remove_regex_filtered_entity(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="a")
+            db_map.add_entity(entity_class_name="A", name="b")
+            db_map.commit_session("Add test data.")
+        db_map = db_mngr.get_db_map(url, logger)
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_map,
+        )
+        model.build_tree()
+        model._level_filter_timer.setInterval(0)
+        with signal_waiter(model.layoutChanged, timeout=5.0) as waiter:
+            model.set_level_filter("entity", "b")
+            waiter.wait()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.visible_children) != 1:
+            QApplication.processEvents()
+        visible_item = class_item.visible_children[0]
+        assert visible_item.display_data == "b"
+        db_mngr.remove_items({db_map: {"entity": {db_map.entity(entity_class_name="A", name="b")["id"]}}})
+        while len(class_item.visible_children) != 0:
+            QApplication.processEvents()
+        assert len(class_item.children) == 1
+        assert class_item.children[0].display_data == "a"
+
+    def test_remove_regex_unfiltered_entity_from_middle(self, parent_object, app_settings, db_mngr, logger, tmp_path):
+        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        with DatabaseMapping(url, create=True) as db_map:
+            db_map.add_entity_class(name="A")
+            db_map.add_entity(entity_class_name="A", name="a")
+            db_map.add_entity(entity_class_name="A", name="b")
+            db_map.add_entity(entity_class_name="A", name="c")
+            db_map.add_entity(entity_class_name="A", name="d")
+            db_map.commit_session("Add test data.")
+        db_map = db_mngr.get_db_map(url, logger)
+        model = EntityTreeModel(
+            parent_object,
+            app_settings,
+            db_mngr,
+            db_map,
+        )
+        model.build_tree()
+        model._level_filter_timer.setInterval(0)
+        with signal_waiter(model.layoutChanged, timeout=5.0) as waiter:
+            model.set_level_filter("entity", "b|c")
+            waiter.wait()
+        model.root_item.fetch_more()
+        while len(model.root_item.children) != 1:
+            QApplication.processEvents()
+        class_item = model.root_item.children[0]
+        assert class_item.display_data == "A"
+        class_item.fetch_more()
+        while len(class_item.visible_children) != 2:
+            QApplication.processEvents()
+        db_mngr.remove_items({db_map: {"entity": {db_map.entity(entity_class_name="A", name="b")["id"]}}})
+        while len(class_item.visible_children) != 1:
+            QApplication.processEvents()
+        assert class_item.visible_children[0].display_data == "c"
+        assert len(class_item.children) == 3
+        assert class_item.children[0].display_data == "a"
+        assert class_item.children[1].display_data == "c"
+        assert class_item.children[2].display_data == "d"
 
     @staticmethod
     def _built_model_with_entities(parent_object, app_settings, db_mngr, db_map):
