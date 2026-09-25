@@ -13,7 +13,7 @@
 """Widget for showing the progress of making a Julia or Python kernel."""
 
 import subprocess
-from PySide6.QtCore import Qt, QTimer, Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QMessageBox, QWidget, QPushButton
 from spine_engine.utils.helpers import (
@@ -26,12 +26,10 @@ from spinetoolbox.helpers import (
     busy_effect,
     dir_is_valid,
     ensure_window_is_on_screen,
-    file_is_valid,
     get_datetime,
     get_current_item_data,
     issamefile,
 )
-from spinetoolbox.logger_interface import LoggerInterface
 
 
 class KernelEditorBase(QDialog):
@@ -84,11 +82,11 @@ class KernelEditorBase(QDialog):
 
     def connect_signals(self):
         """Connects signals to slots."""
-        self._logger.msg.connect(self.add_message)
-        self._logger.msg_success.connect(self.add_success_message)
-        self._logger.msg_warning.connect(self.add_warning_message)
-        self._logger.msg_proc.connect(self.add_process_message)
-        self._logger.msg_error.connect(self.add_process_error_message)
+        self.msg.connect(self.add_message)
+        self.msg_success.connect(self.add_success_message)
+        self.msg_warning.connect(self.add_warning_message)
+        self.msg_proc.connect(self.add_process_message)
+        self.msg_error.connect(self.add_process_error_message)
         self.make_kernel_button.clicked.connect(self.make_kernel)
 
     def _show_close_button(self, failed=False):
@@ -132,11 +130,11 @@ class KernelEditorBase(QDialog):
         missing from the selected Python environment. Overwrites existing kernel
         with the same name if this is ok by user."""
         if not self._python_exe:
-            self._logger.msg.emit("Please select a Python interpreter")
+            self.msg.emit("Please select a Python interpreter")
             return False
         if self._ipykernel_install_failed:
             # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
-            self._logger.msg_error.emit(
+            self.msg_error.emit(
                 f"Installing iPyKernel for {self._python_exe} failed. Please install it manually."
             )
             self._ipykernel_install_failed = False
@@ -184,8 +182,8 @@ class KernelEditorBase(QDialog):
             err_msg = exc.output.decode("utf-8")
             err_msgs = err_msg.split("\n")
             for i in range(len(err_msgs)):
-                self._logger.msg_error.emit(err_msgs[i].strip("\r"))
-            self._logger.msg_warning.emit(
+                self.msg_error.emit(err_msgs[i].strip("\r"))
+            self.msg_warning.emit(
                 f"It seems that running the command <b>{self._python_exe} -m pip "
                 f"freeze -q</b> failed for some reason. Please try "
                 f"installing the Jupyter kernel manually."
@@ -201,9 +199,9 @@ class KernelEditorBase(QDialog):
         Args:
             package_name (str): Package name to install using pip
         """
-        self._logger.msg.emit(f"Installing {package_name} into {self._python_exe}")
+        self.msg.emit(f"Installing {package_name} into {self._python_exe}")
         args = ["-m", "pip", "install", package_name]
-        self._install_package_process = QProcessExecutionManager(self._logger, self._python_exe, args)
+        self._install_package_process = QProcessExecutionManager(self, self._python_exe, args)
         self._install_package_process.execution_finished.connect(self.handle_package_install_process_finished)
         self._install_package_process.start_execution()
 
@@ -253,9 +251,9 @@ class KernelEditorBase(QDialog):
         """
         k_name = self._python_kernel_name
         kd_name = k_name + "_spinetoolbox"
-        self._logger.msg.emit("Starting Python kernel spec install process")
+        self.msg.emit("Starting Python kernel spec install process")
         args = ["-m", "ipykernel", "install", "--user", "--name", k_name, "--display-name", kd_name]
-        self._install_kernel_process = QProcessExecutionManager(self._logger, self._python_exe, args)  # semisilent=True
+        self._install_kernel_process = QProcessExecutionManager(self, self._python_exe, args)  # semisilent=True
         self._install_kernel_process.execution_finished.connect(self.handle_kernelspec_install_process_finished)
         self._install_kernel_process.start_execution()
 
@@ -272,9 +270,9 @@ class KernelEditorBase(QDialog):
         self._install_kernel_process = None
         self._show_close_button(failed=retval != 0)
         if retval != 0:
-            self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
+            self.msg_error.emit("Installing kernel specs failed. Please install them manually.")
             return
-        self._logger.msg_success.emit("New kernel installed")
+        self.msg_success.emit("New kernel installed")
         self._solve_new_kernel_name()  # TODO: This is probably not necessary for Python kernels
         self.ui.label_python_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
 
@@ -284,7 +282,7 @@ class KernelEditorBase(QDialog):
         missing from the selected Julia project. Overwrites existing kernel
         with the same name if this is ok by user."""
         if not self._julia_exe:
-            self._logger.msg.emit("Please select a Julia executable")
+            self.msg.emit("Please select a Julia executable")
             return False
         if self._julia_project != "@." and not dir_is_valid(
             self, self._julia_project, "Invalid Julia Project directory"
@@ -337,7 +335,7 @@ class KernelEditorBase(QDialog):
         Returns:
             int: 0 when process failed to start, 1 when IJulia is installed, 2 when IJulia is not installed.
         """
-        self._logger.msg.emit(f"Checking if IJulia is installed for project {self._julia_project}")
+        self.msg.emit(f"Checking if IJulia is installed for project {self._julia_project}")
         args = [
             f"--project={self._julia_project}",
             "-e",
@@ -346,7 +344,7 @@ class KernelEditorBase(QDialog):
             "True",  # This could be anything, as long as we just match this down below
             "False",
         ]
-        exec_mngr = QProcessExecutionManager(self._logger, self._julia_exe, args, silent=True)
+        exec_mngr = QProcessExecutionManager(self, self._julia_exe, args, silent=True)
         exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=8000):
             self.add_process_error_message(
@@ -364,10 +362,10 @@ class KernelEditorBase(QDialog):
     @busy_effect
     def start_ijulia_install_process(self):
         """Starts installing IJulia package to given Julia project."""
-        self._logger.msg.emit(f"Installing IJulia for project {self._julia_project}")
-        self._logger.msg.emit("Depending on your system, this process can take a few minutes...")
+        self.msg.emit(f"Installing IJulia for project {self._julia_project}")
+        self.msg.emit("Depending on your system, this process can take a few minutes...")
         args = [f"--project={self._julia_project}", "-e", "try using Pkg catch; end; Pkg.add(ARGS[1])", "IJulia"]
-        self._install_ijulia_process = QProcessExecutionManager(self._logger, self._julia_exe, args)
+        self._install_ijulia_process = QProcessExecutionManager(self, self._julia_exe, args)
         self._install_ijulia_process.execution_finished.connect(self.handle_ijulia_install_finished)
         self._install_ijulia_process.start_execution()
 
@@ -393,10 +391,10 @@ class KernelEditorBase(QDialog):
     @busy_effect
     def start_ijulia_rebuild_process(self):
         """Starts rebuilding IJulia."""
-        self._logger.msg.emit("Rebuilding IJulia")
-        self._logger.msg.emit("Depending on your system, this process can take a few minutes...")
+        self.msg.emit("Rebuilding IJulia")
+        self.msg.emit("Depending on your system, this process can take a few minutes...")
         args = [f"--project={self._julia_project}", "-e", "try using Pkg catch; end; Pkg.build(ARGS[1])", "IJulia"]
-        self._rebuild_ijulia_process = QProcessExecutionManager(self._logger, self._julia_exe, args, semisilent=True)
+        self._rebuild_ijulia_process = QProcessExecutionManager(self, self._julia_exe, args, semisilent=True)
         self._rebuild_ijulia_process.execution_finished.connect(self.handle_ijulia_rebuild_finished)
         self._rebuild_ijulia_process.start_execution()
 
@@ -437,7 +435,7 @@ class KernelEditorBase(QDialog):
         # TODO: IJulia.installkernel() should return new kernel path. If we can get
         #  it, there's no need for _solve_new_kernel_name()
         self._install_julia_kernel_process = QProcessExecutionManager(
-            self._logger, self._julia_exe, args, semisilent=True
+            self, self._julia_exe, args, semisilent=True
         )
         self._install_julia_kernel_process.execution_finished.connect(self.handle_installkernel_process_finished)
         self._install_julia_kernel_process.start_execution()
@@ -456,9 +454,9 @@ class KernelEditorBase(QDialog):
         self._ready_to_install_kernel = False
         self._show_close_button(failed=retval != 0)
         if retval != 0:
-            self._logger.msg_error.emit("Installing kernel specs failed. Please install them manually.")
+            self.msg_error.emit("Installing kernel specs failed. Please install them manually.")
             return
-        self._logger.msg_success.emit("New kernel installed")
+        self.msg_success.emit("New kernel installed")
         self._solve_new_kernel_name()
         self.ui.label_julia_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
 
@@ -598,7 +596,7 @@ class MiniPythonKernelEditor(KernelEditorBase):
 
     def _activate_selections(self):
         if not self._set_python_exe(0):
-            self._logger.msg_warning.emit("Please select a Python interpreter")
+            self.msg_warning.emit("Please select a Python interpreter")
             return False
         self.ui.label_message.setText("Finalizing Python configuration... ")
         return True
@@ -618,7 +616,7 @@ class MiniPythonKernelEditor(KernelEditorBase):
             self._python_exe = resolve_current_python_interpreter()
         python_kernel_found = _get_python_kernel_name_by_exe(self._python_exe, self._models.python_kernel_model)
         if python_kernel_found:
-            self._logger.msg.emit(
+            self.msg.emit(
                 f"Python kernel <b>{python_kernel_found}</b> using Python "
                 f"<b>{self._python_exe}</b> already exists. Click Close to activate it or edit "
                 f"kernel name below to make a new one."
@@ -632,7 +630,7 @@ class MiniPythonKernelEditor(KernelEditorBase):
         prefix = self.ui.lineEdit_python_kernel_name_prefix.text().strip()
         self._python_kernel_name = self.make_kernel_name(self._python_exe, prefix)
         if not self._python_kernel_name:
-            self._logger.msg_error.emit(
+            self.msg_error.emit(
                 f"Something went wrong. Retrieving version of python {self._python_exe} failed. "
                 f"Please select another Python or try reinstalling"
             )
@@ -693,7 +691,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(True)
         self.make_kernel_button.setVisible(True)
         if not self._julia_exe:
-            self._logger.msg_warning.emit("Please select a Julia executable")
+            self.msg_warning.emit("Please select a Julia executable")
             return False
         self.ui.label_message.setText("Finalizing Julia configuration... ")
         return True
@@ -711,7 +709,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         prefix = self.ui.lineEdit_julia_kernel_name_prefix.text().strip()
         kernel_name = self.make_kernel_name(self._julia_exe, prefix)
         if not kernel_name:
-            self._logger.msg_error.emit(
+            self.msg_error.emit(
                 f"Something went wrong. Retrieving version of Julia {self._julia_exe} failed. "
                 f"Please select another Julia or try reinstalling"
             )
@@ -733,7 +731,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
             return False
         kernel_name = self.make_kernel_name(self._julia_exe, prefix)
         if not kernel_name:
-            self._logger.msg_error.emit(
+            self.msg_error.emit(
                 f"Something went wrong. Retrieving version of Julia {self._julia_exe} failed. "
                 f"Please select another Julia or try reinstalling"
             )
@@ -767,7 +765,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
             kernel_exe = _get_kernel_exe(kname, self._models.julia_kernel_model)
             kernel_project = _get_julia_kernel_project(kname, self._models.julia_kernel_model)
             kernel_project = "HOME" if not kernel_project else kernel_project
-            self._logger.msg.emit(
+            self.msg.emit(
                 f"Kernel <b>{kname}</b> using exe <b>{kernel_exe}</b> and project <b>{kernel_project}</b> "
                 f"already exists. Edit the Julia kernel prefix to make a new one."
             )
@@ -793,7 +791,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
                 self.ui.label_message.setText(
                     f"Kernel {existing_kernel} using your selections already exists. " f"Click Close to activate it."
                 )
-                self._logger.msg.emit(
+                self.msg.emit(
                     f"Kernel <b>{existing_kernel}</b> executable <b>{self._julia_exe}</b> and "
                     f"project <b>{kernel_project}</b> match your selections."
                 )
@@ -803,7 +801,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
                     f"Kernel {existing_kernel} is available but project does not match your "
                     f"selection. Click Close to activate it anyway."
                 )
-                self._logger.msg.emit(
+                self.msg.emit(
                     f"Kernel <b>{existing_kernel}</b> using the selected Julia "
                     f"is available but the project does not match your selection. Kernel "
                     f"<b>{existing_kernel}</b> uses project <b>{kernels_project}</b>. Click "

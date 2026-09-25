@@ -13,7 +13,7 @@
 """Contains a class for storing saved Python and Julia executables in a model."""
 import os
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon
+from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QBrush
 from PySide6.QtCore import QObject, Qt, Slot, QModelIndex
 from .kernel_fetcher import KernelFetcher
 from .helpers import (
@@ -96,11 +96,20 @@ class ExecutableCompoundModels(QObject):
             item.setData({"is_jupyter": False, "is_conda": False, "exe": path})
             item.setIcon(QIcon(":/symbols/julia-logo.svg"))
             item.setToolTip(displayed_path)
+            item = self._make_item_red_if_path_doesnt_exist(item, displayed_path)
             self._julia_executables_model.appendRow(item)
         if self._julia_executables_model.rowCount() == 0:
             item = QStandardItem("Add path to Julia Executable...")
             item.setToolTip("Add Julia into your Path environment variable or click 'Add Julia executable' button.")
             self._julia_executables_model.appendRow(item)
+
+    def _make_item_red_if_path_doesnt_exist(self, item, p):
+        """Makes given items foreground color red if given path doesn't exist."""
+        if not os.path.exists(p):
+            print(f"path:{p} doesn't exist")
+            item.setForeground(QBrush(Qt.GlobalColor.red))
+            item.setToolTip(f"[Path doesn't exist] {p}")
+        return item
 
     def add_julia_executable(self, path_to_add):
         """Adds given path to the model and returns the index of the new item in the model."""

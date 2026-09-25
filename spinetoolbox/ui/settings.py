@@ -447,6 +447,207 @@ class Ui_SettingsForm(object):
         self.ExternalTools.setObjectName(u"ExternalTools")
         self.verticalLayout_13 = QVBoxLayout(self.ExternalTools)
         self.verticalLayout_13.setObjectName(u"verticalLayout_13")
+        self.groupBox_python = QGroupBox(self.ExternalTools)
+        self.groupBox_python.setObjectName(u"groupBox_python")
+        self.verticalLayout_5 = QVBoxLayout(self.groupBox_python)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.label_20 = QLabel(self.groupBox_python)
+        self.label_20.setObjectName(u"label_20")
+
+        self.verticalLayout_5.addWidget(self.label_20)
+
+        self.horizontalLayout_12 = QHBoxLayout()
+        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
+        self.comboBox_python_execution_method = QComboBox(self.groupBox_python)
+        self.comboBox_python_execution_method.setObjectName(u"comboBox_python_execution_method")
+
+        self.horizontalLayout_12.addWidget(self.comboBox_python_execution_method)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_12)
+
+        self.label_21 = QLabel(self.groupBox_python)
+        self.label_21.setObjectName(u"label_21")
+
+        self.verticalLayout_5.addWidget(self.label_21)
+
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
+        self.comboBox_python_interpreters = CustomQComboBox(self.groupBox_python)
+        self.comboBox_python_interpreters.setObjectName(u"comboBox_python_interpreters")
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.comboBox_python_interpreters.sizePolicy().hasHeightForWidth())
+        self.comboBox_python_interpreters.setSizePolicy(sizePolicy6)
+        self.comboBox_python_interpreters.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        self.horizontalLayout_8.addWidget(self.comboBox_python_interpreters)
+
+        self.toolButton_browse_python = QToolButton(self.groupBox_python)
+        self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
+        icon7 = QIcon()
+        icon7.addFile(u":/symbols/python-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.toolButton_browse_python.setIcon(icon7)
+        self.toolButton_browse_python.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.horizontalLayout_8.addWidget(self.toolButton_browse_python)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_8)
+
+        self.label_22 = QLabel(self.groupBox_python)
+        self.label_22.setObjectName(u"label_22")
+
+        self.verticalLayout_5.addWidget(self.label_22)
+
+        self.horizontalLayout_13 = QHBoxLayout()
+        self.horizontalLayout_13.setObjectName(u"horizontalLayout_13")
+        self.comboBox_python_kernels = CustomQComboBox(self.groupBox_python)
+        self.comboBox_python_kernels.setObjectName(u"comboBox_python_kernels")
+        sizePolicy6.setHeightForWidth(self.comboBox_python_kernels.sizePolicy().hasHeightForWidth())
+        self.comboBox_python_kernels.setSizePolicy(sizePolicy6)
+        self.comboBox_python_kernels.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        self.horizontalLayout_13.addWidget(self.comboBox_python_kernels)
+
+        self.toolButton_make_python_kernel = QToolButton(self.groupBox_python)
+        self.toolButton_make_python_kernel.setObjectName(u"toolButton_make_python_kernel")
+        icon8 = QIcon()
+        icon8.addFile(u":/symbols/Jupyter-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.toolButton_make_python_kernel.setIcon(icon8)
+        self.toolButton_make_python_kernel.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.horizontalLayout_13.addWidget(self.toolButton_make_python_kernel)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_13)
+
+
+        self.verticalLayout_13.addWidget(self.groupBox_python)
+
+        self.groupBox_julia = QGroupBox(self.ExternalTools)
+        self.groupBox_julia.setObjectName(u"groupBox_julia")
+        self.verticalLayout = QVBoxLayout(self.groupBox_julia)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout_31 = QHBoxLayout()
+        self.horizontalLayout_31.setObjectName(u"horizontalLayout_31")
+        self.pushButton_install_julia = QPushButton(self.groupBox_julia)
+        self.pushButton_install_julia.setObjectName(u"pushButton_install_julia")
+        icon9 = QIcon()
+        icon9.addFile(u":/symbols/julia-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton_install_julia.setIcon(icon9)
+
+        self.horizontalLayout_31.addWidget(self.pushButton_install_julia)
+
+        self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
+        self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
+
+        self.horizontalLayout_31.addWidget(self.pushButton_add_up_spine_opt)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_31.addItem(self.horizontalSpacer_3)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_31)
+
+        self.label_19 = QLabel(self.groupBox_julia)
+        self.label_19.setObjectName(u"label_19")
+
+        self.verticalLayout.addWidget(self.label_19)
+
+        self.horizontalLayout_11 = QHBoxLayout()
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.comboBox_julia_execution_method = QComboBox(self.groupBox_julia)
+        self.comboBox_julia_execution_method.setObjectName(u"comboBox_julia_execution_method")
+
+        self.horizontalLayout_11.addWidget(self.comboBox_julia_execution_method)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_11)
+
+        self.label_23 = QLabel(self.groupBox_julia)
+        self.label_23.setObjectName(u"label_23")
+
+        self.verticalLayout.addWidget(self.label_23)
+
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.comboBox_julia_path = CustomQComboBox(self.groupBox_julia)
+        self.comboBox_julia_path.setObjectName(u"comboBox_julia_path")
+        sizePolicy6.setHeightForWidth(self.comboBox_julia_path.sizePolicy().hasHeightForWidth())
+        self.comboBox_julia_path.setSizePolicy(sizePolicy6)
+        self.comboBox_julia_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        self.horizontalLayout_5.addWidget(self.comboBox_julia_path)
+
+        self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
+        self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
+        self.toolButton_browse_julia.setIcon(icon9)
+        self.toolButton_browse_julia.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.horizontalLayout_5.addWidget(self.toolButton_browse_julia)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_5)
+
+        self.label_24 = QLabel(self.groupBox_julia)
+        self.label_24.setObjectName(u"label_24")
+
+        self.verticalLayout.addWidget(self.label_24)
+
+        self.horizontalLayout_7 = QHBoxLayout()
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.comboBox_julia_project_path = CustomQComboBox(self.groupBox_julia)
+        self.comboBox_julia_project_path.setObjectName(u"comboBox_julia_project_path")
+        sizePolicy6.setHeightForWidth(self.comboBox_julia_project_path.sizePolicy().hasHeightForWidth())
+        self.comboBox_julia_project_path.setSizePolicy(sizePolicy6)
+        self.comboBox_julia_project_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+
+        self.horizontalLayout_7.addWidget(self.comboBox_julia_project_path)
+
+        self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
+        self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
+        self.toolButton_browse_julia_project.setIcon(icon5)
+        self.toolButton_browse_julia_project.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.horizontalLayout_7.addWidget(self.toolButton_browse_julia_project)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_7)
+
+        self.label_25 = QLabel(self.groupBox_julia)
+        self.label_25.setObjectName(u"label_25")
+
+        self.verticalLayout.addWidget(self.label_25)
+
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
+        self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
+        sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
+        self.comboBox_julia_kernel.setSizePolicy(sizePolicy6)
+        self.comboBox_julia_kernel.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.comboBox_julia_kernel.setEditable(False)
+        self.comboBox_julia_kernel.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
+        self.comboBox_julia_kernel.setFrame(True)
+
+        self.horizontalLayout_9.addWidget(self.comboBox_julia_kernel)
+
+        self.toolButton_make_julia_kernel = QToolButton(self.groupBox_julia)
+        self.toolButton_make_julia_kernel.setObjectName(u"toolButton_make_julia_kernel")
+        self.toolButton_make_julia_kernel.setIcon(icon8)
+        self.toolButton_make_julia_kernel.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+
+        self.horizontalLayout_9.addWidget(self.toolButton_make_julia_kernel)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_9)
+
+
+        self.verticalLayout_13.addWidget(self.groupBox_julia)
+
         self.groupBox_gams = QGroupBox(self.ExternalTools)
         self.groupBox_gams.setObjectName(u"groupBox_gams")
         self.verticalLayout_14 = QVBoxLayout(self.groupBox_gams)
@@ -476,169 +677,6 @@ class Ui_SettingsForm(object):
 
 
         self.verticalLayout_13.addWidget(self.groupBox_gams)
-
-        self.groupBox_julia = QGroupBox(self.ExternalTools)
-        self.groupBox_julia.setObjectName(u"groupBox_julia")
-        self.verticalLayout_5 = QVBoxLayout(self.groupBox_julia)
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.horizontalLayout_31 = QHBoxLayout()
-        self.horizontalLayout_31.setObjectName(u"horizontalLayout_31")
-        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_31.addItem(self.horizontalSpacer_3)
-
-        self.pushButton_install_julia = QPushButton(self.groupBox_julia)
-        self.pushButton_install_julia.setObjectName(u"pushButton_install_julia")
-
-        self.horizontalLayout_31.addWidget(self.pushButton_install_julia)
-
-        self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
-        self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
-
-        self.horizontalLayout_31.addWidget(self.pushButton_add_up_spine_opt)
-
-
-        self.verticalLayout_5.addLayout(self.horizontalLayout_31)
-
-        self.horizontalLayout_12 = QHBoxLayout()
-        self.horizontalLayout_12.setObjectName(u"horizontalLayout_12")
-        self.horizontalSpacer_5 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_12.addItem(self.horizontalSpacer_5)
-
-        self.toolButton_browse_julia = QToolButton(self.groupBox_julia)
-        self.toolButton_browse_julia.setObjectName(u"toolButton_browse_julia")
-        icon7 = QIcon()
-        icon7.addFile(u":/symbols/julia-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.toolButton_browse_julia.setIcon(icon7)
-        self.toolButton_browse_julia.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.horizontalLayout_12.addWidget(self.toolButton_browse_julia)
-
-        self.toolButton_browse_julia_project = QToolButton(self.groupBox_julia)
-        self.toolButton_browse_julia_project.setObjectName(u"toolButton_browse_julia_project")
-        self.toolButton_browse_julia_project.setIcon(icon5)
-        self.toolButton_browse_julia_project.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.horizontalLayout_12.addWidget(self.toolButton_browse_julia_project)
-
-        self.toolButton_make_julia_kernel = QToolButton(self.groupBox_julia)
-        self.toolButton_make_julia_kernel.setObjectName(u"toolButton_make_julia_kernel")
-        icon8 = QIcon()
-        icon8.addFile(u":/symbols/Jupyter-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.toolButton_make_julia_kernel.setIcon(icon8)
-        self.toolButton_make_julia_kernel.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.horizontalLayout_12.addWidget(self.toolButton_make_julia_kernel)
-
-
-        self.verticalLayout_5.addLayout(self.horizontalLayout_12)
-
-        self.verticalLayout = QVBoxLayout()
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.radioButton_use_julia_basic_console = QRadioButton(self.groupBox_julia)
-        self.radioButton_use_julia_basic_console.setObjectName(u"radioButton_use_julia_basic_console")
-
-        self.verticalLayout.addWidget(self.radioButton_use_julia_basic_console)
-
-        self.comboBox_julia_path = CustomQComboBox(self.groupBox_julia)
-        self.comboBox_julia_path.setObjectName(u"comboBox_julia_path")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.comboBox_julia_path.sizePolicy().hasHeightForWidth())
-        self.comboBox_julia_path.setSizePolicy(sizePolicy6)
-        self.comboBox_julia_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-        self.verticalLayout.addWidget(self.comboBox_julia_path)
-
-        self.comboBox_julia_project_path = CustomQComboBox(self.groupBox_julia)
-        self.comboBox_julia_project_path.setObjectName(u"comboBox_julia_project_path")
-        sizePolicy6.setHeightForWidth(self.comboBox_julia_project_path.sizePolicy().hasHeightForWidth())
-        self.comboBox_julia_project_path.setSizePolicy(sizePolicy6)
-        self.comboBox_julia_project_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-        self.verticalLayout.addWidget(self.comboBox_julia_project_path)
-
-        self.radioButton_use_julia_jupyter_console = QRadioButton(self.groupBox_julia)
-        self.radioButton_use_julia_jupyter_console.setObjectName(u"radioButton_use_julia_jupyter_console")
-
-        self.verticalLayout.addWidget(self.radioButton_use_julia_jupyter_console)
-
-        self.comboBox_julia_kernel = CustomQComboBox(self.groupBox_julia)
-        self.comboBox_julia_kernel.setObjectName(u"comboBox_julia_kernel")
-        sizePolicy6.setHeightForWidth(self.comboBox_julia_kernel.sizePolicy().hasHeightForWidth())
-        self.comboBox_julia_kernel.setSizePolicy(sizePolicy6)
-        self.comboBox_julia_kernel.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.comboBox_julia_kernel.setEditable(False)
-        self.comboBox_julia_kernel.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContentsOnFirstShow)
-        self.comboBox_julia_kernel.setFrame(True)
-
-        self.verticalLayout.addWidget(self.comboBox_julia_kernel)
-
-
-        self.verticalLayout_5.addLayout(self.verticalLayout)
-
-
-        self.verticalLayout_13.addWidget(self.groupBox_julia)
-
-        self.groupBox_python = QGroupBox(self.ExternalTools)
-        self.groupBox_python.setObjectName(u"groupBox_python")
-        self.verticalLayout_10 = QVBoxLayout(self.groupBox_python)
-        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
-        self.horizontalLayout_9 = QHBoxLayout()
-        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
-        self.horizontalSpacer_8 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_9.addItem(self.horizontalSpacer_8)
-
-        self.toolButton_browse_python = QToolButton(self.groupBox_python)
-        self.toolButton_browse_python.setObjectName(u"toolButton_browse_python")
-        icon9 = QIcon()
-        icon9.addFile(u":/symbols/python-logo.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.toolButton_browse_python.setIcon(icon9)
-        self.toolButton_browse_python.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.horizontalLayout_9.addWidget(self.toolButton_browse_python)
-
-        self.toolButton_make_python_kernel = QToolButton(self.groupBox_python)
-        self.toolButton_make_python_kernel.setObjectName(u"toolButton_make_python_kernel")
-        self.toolButton_make_python_kernel.setIcon(icon8)
-        self.toolButton_make_python_kernel.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-
-        self.horizontalLayout_9.addWidget(self.toolButton_make_python_kernel)
-
-
-        self.verticalLayout_10.addLayout(self.horizontalLayout_9)
-
-        self.radioButton_use_python_basic_console = QRadioButton(self.groupBox_python)
-        self.radioButton_use_python_basic_console.setObjectName(u"radioButton_use_python_basic_console")
-
-        self.verticalLayout_10.addWidget(self.radioButton_use_python_basic_console)
-
-        self.comboBox_python_interpreters = CustomQComboBox(self.groupBox_python)
-        self.comboBox_python_interpreters.setObjectName(u"comboBox_python_interpreters")
-        sizePolicy6.setHeightForWidth(self.comboBox_python_interpreters.sizePolicy().hasHeightForWidth())
-        self.comboBox_python_interpreters.setSizePolicy(sizePolicy6)
-        self.comboBox_python_interpreters.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-        self.verticalLayout_10.addWidget(self.comboBox_python_interpreters)
-
-        self.radioButton_use_python_jupyter_console = QRadioButton(self.groupBox_python)
-        self.radioButton_use_python_jupyter_console.setObjectName(u"radioButton_use_python_jupyter_console")
-
-        self.verticalLayout_10.addWidget(self.radioButton_use_python_jupyter_console)
-
-        self.comboBox_python_kernels = CustomQComboBox(self.groupBox_python)
-        self.comboBox_python_kernels.setObjectName(u"comboBox_python_kernels")
-        sizePolicy6.setHeightForWidth(self.comboBox_python_kernels.sizePolicy().hasHeightForWidth())
-        self.comboBox_python_kernels.setSizePolicy(sizePolicy6)
-        self.comboBox_python_kernels.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-
-        self.verticalLayout_10.addWidget(self.comboBox_python_kernels)
-
-
-        self.verticalLayout_13.addWidget(self.groupBox_python)
 
         self.groupBox_conda = QGroupBox(self.ExternalTools)
         self.groupBox_conda.setObjectName(u"groupBox_conda")
@@ -1032,13 +1070,16 @@ class Ui_SettingsForm(object):
 
         self.verticalLayout_7.addWidget(self.buttonBox)
 
+        QWidget.setTabOrder(self.listWidget, self.checkBox_custom_open_project_dialog)
         QWidget.setTabOrder(self.checkBox_custom_open_project_dialog, self.checkBox_delete_data)
         QWidget.setTabOrder(self.checkBox_delete_data, self.checkBox_open_previous_project)
         QWidget.setTabOrder(self.checkBox_open_previous_project, self.checkBox_exit_prompt)
         QWidget.setTabOrder(self.checkBox_exit_prompt, self.project_save_options_combo_box)
         QWidget.setTabOrder(self.project_save_options_combo_box, self.lineEdit_work_dir)
         QWidget.setTabOrder(self.lineEdit_work_dir, self.toolButton_browse_work)
-        QWidget.setTabOrder(self.toolButton_browse_work, self.checkBox_color_toolbar_icons)
+        QWidget.setTabOrder(self.toolButton_browse_work, self.open_work_dir_button)
+        QWidget.setTabOrder(self.open_work_dir_button, self.work_dir_cleanup_button)
+        QWidget.setTabOrder(self.work_dir_cleanup_button, self.checkBox_color_toolbar_icons)
         QWidget.setTabOrder(self.checkBox_color_toolbar_icons, self.checkBox_color_properties_widgets)
         QWidget.setTabOrder(self.checkBox_color_properties_widgets, self.checkBox_use_curved_links)
         QWidget.setTabOrder(self.checkBox_use_curved_links, self.checkBox_drag_to_draw_links)
@@ -1051,12 +1092,27 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.radioButton_bg_tree, self.radioButton_bg_solid)
         QWidget.setTabOrder(self.radioButton_bg_solid, self.toolButton_bg_color)
         QWidget.setTabOrder(self.toolButton_bg_color, self.horizontalSlider_data_flow_animation_duration)
-        QWidget.setTabOrder(self.horizontalSlider_data_flow_animation_duration, self.toolButton_reset_all_settings)
-        QWidget.setTabOrder(self.toolButton_reset_all_settings, self.lineEdit_gams_path)
+        QWidget.setTabOrder(self.horizontalSlider_data_flow_animation_duration, self.radioButton_theme_os)
+        QWidget.setTabOrder(self.radioButton_theme_os, self.radioButton_theme_light)
+        QWidget.setTabOrder(self.radioButton_theme_light, self.radioButton_theme_dark)
+        QWidget.setTabOrder(self.radioButton_theme_dark, self.toolButton_reset_all_settings)
+        QWidget.setTabOrder(self.toolButton_reset_all_settings, self.comboBox_python_execution_method)
+        QWidget.setTabOrder(self.comboBox_python_execution_method, self.comboBox_python_interpreters)
+        QWidget.setTabOrder(self.comboBox_python_interpreters, self.toolButton_browse_python)
+        QWidget.setTabOrder(self.toolButton_browse_python, self.comboBox_python_kernels)
+        QWidget.setTabOrder(self.comboBox_python_kernels, self.toolButton_make_python_kernel)
+        QWidget.setTabOrder(self.toolButton_make_python_kernel, self.pushButton_install_julia)
+        QWidget.setTabOrder(self.pushButton_install_julia, self.pushButton_add_up_spine_opt)
+        QWidget.setTabOrder(self.pushButton_add_up_spine_opt, self.comboBox_julia_execution_method)
+        QWidget.setTabOrder(self.comboBox_julia_execution_method, self.comboBox_julia_path)
+        QWidget.setTabOrder(self.comboBox_julia_path, self.toolButton_browse_julia)
+        QWidget.setTabOrder(self.toolButton_browse_julia, self.comboBox_julia_project_path)
+        QWidget.setTabOrder(self.comboBox_julia_project_path, self.toolButton_browse_julia_project)
+        QWidget.setTabOrder(self.toolButton_browse_julia_project, self.comboBox_julia_kernel)
+        QWidget.setTabOrder(self.comboBox_julia_kernel, self.toolButton_make_julia_kernel)
+        QWidget.setTabOrder(self.toolButton_make_julia_kernel, self.lineEdit_gams_path)
         QWidget.setTabOrder(self.lineEdit_gams_path, self.toolButton_browse_gams)
-        QWidget.setTabOrder(self.toolButton_browse_gams, self.radioButton_use_julia_basic_console)
-        QWidget.setTabOrder(self.radioButton_use_julia_basic_console, self.radioButton_use_julia_jupyter_console)
-        QWidget.setTabOrder(self.radioButton_use_julia_jupyter_console, self.lineEdit_conda_path)
+        QWidget.setTabOrder(self.toolButton_browse_gams, self.lineEdit_conda_path)
         QWidget.setTabOrder(self.lineEdit_conda_path, self.toolButton_browse_conda)
         QWidget.setTabOrder(self.toolButton_browse_conda, self.checkBox_commit_at_exit)
         QWidget.setTabOrder(self.checkBox_commit_at_exit, self.checkBox_db_editor_show_undo)
@@ -1087,7 +1143,6 @@ class Ui_SettingsForm(object):
         QWidget.setTabOrder(self.spinBox_port, self.comboBox_security)
         QWidget.setTabOrder(self.comboBox_security, self.lineEdit_secfolder)
         QWidget.setTabOrder(self.lineEdit_secfolder, self.toolButton_pick_secfolder)
-        QWidget.setTabOrder(self.toolButton_pick_secfolder, self.listWidget)
 
         self.retranslateUi(SettingsForm)
         self.listWidget.currentRowChanged.connect(self.stackedWidget.setCurrentIndex)
@@ -1190,15 +1245,24 @@ class Ui_SettingsForm(object):
 #if QT_CONFIG(tooltip)
         self.toolButton_reset_all_settings.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Resets all settings to factory defaults.</p><p><span style=\" font-weight:700;\">The app must be shutdown</span> for the changes to take effect, so make sure to close all windows and save the project before clicking this button.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
-        self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
+        self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
+        self.label_20.setText(QCoreApplication.translate("SettingsForm", u"Default execution method", None))
+        self.label_21.setText(QCoreApplication.translate("SettingsForm", u"Python interpreter", None))
+#if QT_CONFIG(whatsthis)
+        self.comboBox_python_interpreters.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Path to the default Python interpreter. First entry in the list is the Python that is currently running Spine Toolbox.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:700;\">global setting</span> for Python Tools. You can override this for each Tool separately.</p></body></html>", None))
+#endif // QT_CONFIG(whatsthis)
 #if QT_CONFIG(tooltip)
-        self.lineEdit_gams_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system's default</p></body></html>", None))
+        self.toolButton_browse_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add an existing Python interpreter (system or venv) using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.lineEdit_gams_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using system's default GAMS", None))
+        self.toolButton_browse_python.setText(QCoreApplication.translate("SettingsForm", u"Add Existing Python", None))
+        self.label_22.setText(QCoreApplication.translate("SettingsForm", u"Python Jupyter kernel", None))
+#if QT_CONFIG(whatsthis)
+        self.comboBox_python_kernels.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>List of available Python Jupyter kernels, add a path to a Conda executable to the line edit below to see available Conda Jupyter kernels</p></body></html>", None))
+#endif // QT_CONFIG(whatsthis)
 #if QT_CONFIG(tooltip)
-        self.toolButton_browse_gams.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick GAMS executable using a file browser (eg. gams.exe on Windows)</p></body></html>", None))
+        self.toolButton_make_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Python Jupyter kernel into the list</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
+        self.toolButton_make_python_kernel.setText(QCoreApplication.translate("SettingsForm", u"Manage Python kernels", None))
 #if QT_CONFIG(tooltip)
         self.groupBox_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p><span style=\" font-weight:600;\">Default settings</span> for new Julia Tool specs. Defaults can be changed for each Tool specification separately.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
@@ -1211,58 +1275,40 @@ class Ui_SettingsForm(object):
         self.pushButton_add_up_spine_opt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Adds or updates <span style=\" font-weight:700;\">SpineOpt.jl</span> package using the Julia executable &amp; project selected above</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_add_up_spine_opt.setText(QCoreApplication.translate("SettingsForm", u"Add/Update SpineOpt", None))
-#if QT_CONFIG(tooltip)
-        self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add Julia executable to the list using a file browser</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.toolButton_browse_julia.setText(QCoreApplication.translate("SettingsForm", u"Add Julia executable", None))
-#if QT_CONFIG(tooltip)
-        self.toolButton_browse_julia_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Julia project/environment folder using a file browser</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"Add Julia project", None))
-#if QT_CONFIG(tooltip)
-        self.toolButton_make_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Julia Jupyter kernel into the list</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.toolButton_make_julia_kernel.setText(QCoreApplication.translate("SettingsForm", u"Add Julia Jupyter kernel", None))
-#if QT_CONFIG(tooltip)
-        self.radioButton_use_julia_basic_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Julia Tool specifications using a Julia executable and Julia project.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for Julia Tools. You can override this for each Tool separately in the Tool Properties.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.radioButton_use_julia_basic_console.setText(QCoreApplication.translate("SettingsForm", u"Use Julia executable / Julia project", None))
+        self.label_19.setText(QCoreApplication.translate("SettingsForm", u"Default execution method", None))
+        self.label_23.setText(QCoreApplication.translate("SettingsForm", u"Julia executable", None))
 #if QT_CONFIG(whatsthis)
         self.comboBox_julia_path.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Path to the Julia executable. Leave blank to use the Julia in your system PATH env. If Julia is not in your PATH, this line edit will be empty, indicating that Julia Tools won't execute.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:700;\">global setting</span> for Julia Tools. You can override this for each Tool separately.</p></body></html>", None))
 #endif // QT_CONFIG(whatsthis)
+#if QT_CONFIG(tooltip)
+        self.toolButton_browse_julia.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add an existing Julia executable using a file browser</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.toolButton_browse_julia.setText(QCoreApplication.translate("SettingsForm", u"Add Existing Julia", None))
+        self.label_24.setText(QCoreApplication.translate("SettingsForm", u"Julia environment", None))
 #if QT_CONFIG(whatsthis)
         self.comboBox_julia_project_path.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:700;\">global setting</span> for Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(whatsthis)
 #if QT_CONFIG(tooltip)
-        self.radioButton_use_julia_jupyter_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Julia Tool specifications using a Jupyter kernel.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for Julia Tools. You can override this for each Tool separately in the Tool Properties.</p></body></html>", None))
+        self.toolButton_browse_julia_project.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Julia environment/project folder using a file browser</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.radioButton_use_julia_jupyter_console.setText(QCoreApplication.translate("SettingsForm", u"Use Jupyter kernel", None))
+        self.toolButton_browse_julia_project.setText(QCoreApplication.translate("SettingsForm", u"Add Julia environment", None))
+        self.label_25.setText(QCoreApplication.translate("SettingsForm", u"Julia Jupyter kernel", None))
 #if QT_CONFIG(whatsthis)
         self.comboBox_julia_kernel.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Select a Julia kernel spec for Jupyter Console.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">global setting</span> for Julia Tool specs. You can override this for each Tool spec separately.</p></body></html>", None))
 #endif // QT_CONFIG(whatsthis)
-        self.groupBox_python.setTitle(QCoreApplication.translate("SettingsForm", u"Python", None))
 #if QT_CONFIG(tooltip)
-        self.toolButton_browse_python.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Python interpreter (system or venv) into the list using a file browser</p></body></html>", None))
+        self.toolButton_make_julia_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Julia Jupyter kernel into the list</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.toolButton_browse_python.setText(QCoreApplication.translate("SettingsForm", u"Add Python interpreter", None))
+        self.toolButton_make_julia_kernel.setText(QCoreApplication.translate("SettingsForm", u"Manage Julia kernels", None))
+        self.groupBox_gams.setTitle(QCoreApplication.translate("SettingsForm", u"GAMS", None))
+        self.label_11.setText(QCoreApplication.translate("SettingsForm", u"GAMS executable", None))
 #if QT_CONFIG(tooltip)
-        self.toolButton_make_python_kernel.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Add a Python Jupyter kernel into the list</p></body></html>", None))
+        self.lineEdit_gams_path.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system's default</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.toolButton_make_python_kernel.setText(QCoreApplication.translate("SettingsForm", u"Add Python Jupyter kernel", None))
+        self.lineEdit_gams_path.setPlaceholderText(QCoreApplication.translate("SettingsForm", u"Using system's default GAMS", None))
 #if QT_CONFIG(tooltip)
-        self.radioButton_use_python_basic_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Python Tool specifications using a Python interpreter.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for Python Tools. You can override this for each Tool separately in the Tool Properties.</p></body></html>", None))
+        self.toolButton_browse_gams.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Pick GAMS executable using a file browser (eg. gams.exe on Windows)</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.radioButton_use_python_basic_console.setText(QCoreApplication.translate("SettingsForm", u"Use system or virtualenv Python interpreter", None))
-#if QT_CONFIG(whatsthis)
-        self.comboBox_python_interpreters.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Path to the default Python interpreter. First entry in the list is the Python that is currently running Spine Toolbox.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:700;\">global setting</span> for Python Tools. You can override this for each Tool separately.</p></body></html>", None))
-#endif // QT_CONFIG(whatsthis)
-#if QT_CONFIG(tooltip)
-        self.radioButton_use_python_jupyter_console.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Execute Python Tool specifications using a Jupyter kernel.</p><p><span style=\" font-weight:600;\">NOTE:</span> This is the <span style=\" font-weight:600;\">default setting</span> for Python Tools. You can override this for each Tool separately in the Tool Properties.</p></body></html>", None))
-#endif // QT_CONFIG(tooltip)
-        self.radioButton_use_python_jupyter_console.setText(QCoreApplication.translate("SettingsForm", u"Use Jupyter kernel", None))
-#if QT_CONFIG(whatsthis)
-        self.comboBox_python_kernels.setWhatsThis(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>List of available Python Jupyter kernels, add a path to a Conda executable to the line edit below to see available Conda Jupyter kernels</p></body></html>", None))
-#endif // QT_CONFIG(whatsthis)
         self.groupBox_conda.setTitle(QCoreApplication.translate("SettingsForm", u"Conda", None))
         self.label_18.setText(QCoreApplication.translate("SettingsForm", u"Conda executable", None))
 #if QT_CONFIG(tooltip)

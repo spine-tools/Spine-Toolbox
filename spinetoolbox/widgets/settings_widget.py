@@ -15,6 +15,7 @@
 import os
 import pathlib
 import shutil
+from enum import Enum
 from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Signal, Slot, QUrl
 from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
@@ -25,7 +26,7 @@ from spine_engine.utils.helpers import (
     resolve_default_julia_executable,
     resolve_gams_executable,
 )
-from ..config import DEFAULT_WORK_DIR
+from ..config import DEFAULT_WORK_DIR, PYTHON_EXECUTION_MODES, JULIA_EXECUTION_MODES
 from ..file_size_aggregator import AggregatorProcess
 from ..helpers import (
     dir_is_valid,
@@ -53,6 +54,11 @@ from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEdito
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
 from .notification import Notification
+
+
+class ExecutionMethod(Enum):
+    DIRECT = "direct"
+    JUPYTER = "jupyter"
 
 
 class SettingsWidgetBase(QWidget):
@@ -321,6 +327,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._toolbox = toolbox
         self._models = ExecutableCompoundModels(self._qsettings)
         self.orig_work_dir = ""  # Work dir when this widget was opened
+        self.ui.comboBox_python_execution_method.addItem(PYTHON_EXECUTION_MODES[0], ExecutionMethod.DIRECT)
+        self.ui.comboBox_python_execution_method.addItem(PYTHON_EXECUTION_MODES[1], ExecutionMethod.JUPYTER)
+        self.ui.comboBox_julia_execution_method.addItem(JULIA_EXECUTION_MODES[0], ExecutionMethod.DIRECT)
+        self.ui.comboBox_julia_execution_method.addItem(JULIA_EXECUTION_MODES[1], ExecutionMethod.JUPYTER)
         self.ui.comboBox_julia_path.setModel(self._models.julia_executables_model)
         self.ui.comboBox_julia_project_path.setModel(self._models.julia_projects_model)
         self.ui.comboBox_julia_kernel.setModel(self._models.julia_kernel_model)
@@ -337,10 +347,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.connect_signals()
         self.read_settings()
-        #
         self.ui.lineEdit_work_dir.textChanged.connect(self._handle_work_directory_changed)
-        self._update_python_widgets_enabled(self.ui.radioButton_use_python_jupyter_console.isChecked())
-        self._update_julia_widgets_enabled(self.ui.radioButton_use_julia_jupyter_console.isChecked())
         self._update_remote_execution_page_widget_status(self.ui.checkBox_enable_remote_exec.isChecked())
         self._work_directory_size_aggregator = AggregatorProcess(self)
         self._work_directory_size_aggregator.aggregated.connect(self.set_work_directory_size)
@@ -382,8 +389,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.checkBox_use_rounded_items.clicked.connect(self.update_items_path)
         self.ui.pushButton_install_julia.clicked.connect(self._show_install_julia_wizard)
         self.ui.pushButton_add_up_spine_opt.clicked.connect(self._show_add_up_spine_opt_wizard)
-        self.ui.radioButton_use_python_jupyter_console.toggled.connect(self._update_python_widgets_enabled)
-        self.ui.radioButton_use_julia_jupyter_console.toggled.connect(self._update_julia_widgets_enabled)
         self.ui.checkBox_enable_remote_exec.clicked.connect(self._update_remote_execution_page_widget_status)
         self.ui.lineEdit_host.textEdited.connect(self._edit_remote_host)
         self.ui.user_defined_engine_process_limit_radio_button.toggled.connect(
@@ -394,19 +399,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         )
         self.ui.open_work_dir_button.clicked.connect(self._open_work_directory)
         self.ui.work_dir_cleanup_button.clicked.connect(self._clean_work_directory)
-
-    @Slot(bool)
-    def _update_python_widgets_enabled(self, state):
-        """Enables or disables some widgets based on given boolean state."""
-        self.ui.comboBox_python_kernels.setEnabled(state)
-        self.ui.comboBox_python_interpreters.setEnabled(not state)
-
-    @Slot(bool)
-    def _update_julia_widgets_enabled(self, state):
-        """Enables or disables some widgets based on given boolean state."""
-        self.ui.comboBox_julia_kernel.setEnabled(state)
-        self.ui.comboBox_julia_path.setEnabled(not state)
-        self.ui.comboBox_julia_project_path.setEnabled(not state)
 
     @Slot(bool)
     def _update_remote_execution_page_widget_status(self, state):
@@ -491,18 +483,24 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Calls static method that shows a file browser for selecting the security folder for Engine Server."""
         select_certificate_directory(self, self.ui.lineEdit_secfolder)
 
+    def _set_execution_method(self, combo, execution_method):
+        """Sets given combobox selection according to given execution method."""
+        index = combo.findData(execution_method)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
     @Slot(bool)
     def add_python_kernel(self, _=False):
         """Makes a Python kernel for Jupyter Console based on selected Python interpreter.
         If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
-        use_python_jupyter_console, python_exe, python_kernel = self._get_python_settings()
+        _, python_exe, python_kernel = self._get_python_settings()
         # python_kernel_found = _get_python_kernel_name_by_exe(python_exe, self._models.python_kernel_model)
         # if not python_kernel_found:
         mpke = MiniPythonKernelEditor(self, self._models)
         mpke.exec()
         self._saved_python_kernel = python_kernel if not mpke.new_kernel_name() else mpke.new_kernel_name()
-        activate_jupyter_kernel = True if mpke.new_kernel_name() else False
-        self.ui.radioButton_use_python_jupyter_console.setChecked(activate_jupyter_kernel)
+        execution_method = ExecutionMethod.DIRECT if mpke.new_kernel_name() else ExecutionMethod.JUPYTER
+        self._set_execution_method(self.ui.comboBox_python_execution_method, execution_method)
         self._models.refresh_python_interpreters_model()
         ind = self._models.find_python_interpreter_index(python_exe)
         if not ind.isValid():
@@ -520,8 +518,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         mjke = MiniJuliaKernelEditor(self, self._models)
         mjke.exec()
         self._saved_julia_kernel = julia_kernel if not mjke.new_kernel_name() else mjke.new_kernel_name()
-        activate_jupyter_kernel = True if mjke.new_kernel_name() else False
-        self.ui.radioButton_use_julia_jupyter_console.setChecked(activate_jupyter_kernel)
+        execution_method = ExecutionMethod.DIRECT if mjke.new_kernel_name() else ExecutionMethod.JUPYTER
+        self._set_execution_method(self.ui.comboBox_julia_execution_method, execution_method)
         self._models.refresh_julia_executables_model()
         self._models.refresh_julia_projects_model()
         ind = self._models.find_julia_executable_index(julia_exe)
@@ -593,55 +591,27 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         global_pos = self.ui.comboBox_python_kernels.mapToGlobal(pos)
         self._show_python_context_menu(self.ui.comboBox_python_kernels, global_pos, data)
 
-    @Slot()
-    def _open_python_kernel_resource_dir(self) -> None:
-        """Opens Python kernels resource dir."""
-        try:
-            index = self.ui.comboBox_python_kernel.view().selectedIndexes()[0]
-            item = self._python_kernel_model.item(index.row())
-        except IndexError:
-            row = self.ui.comboBox_python_kernel.currentIndex()
-            item = self._python_kernel_model.item(row)
-        self.open_rsc_dir(item)
-
-    @Slot()
-    def _open_julia_kernel_resource_dir(self) -> None:
-        """Opens Julia kernels resource dir."""
-        try:
-            index = self.ui.comboBox_julia_kernel.view().selectedIndexes()[0]
-            item = self._julia_kernel_model.item(index.row())
-        except IndexError:
-            row = self.ui.comboBox_julia_kernel.currentIndex()
-            item = self._julia_kernel_model.item(row)
-        self.open_rsc_dir(item)
-
-    def open_rsc_dir(self, item):
-        """Open path hidden in given item's tooltip in file browser."""
-        resource_dir = item.toolTip()
-        if not os.path.exists(resource_dir):
-            Notification(self, f"Path '{resource_dir}' does not exist").show()
-
     def _show_python_context_menu(self, menu_parent, global_pos, data):
         """Creates and shows the context menu for both python interpreters and kernels comboBoxes."""
         if not data:
             return
-            m = QMenu(menu_parent)
-            if not data["is_jupyter"]:
-                m.addAction(
-                    QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter
-                )
-                m.addAction(
-                    QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                    "Open containing folder...",
-                    self._open_python_interpreter_dir,
-                )
-            else:
-                m.addAction(
-                    QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                    "Open resource folder...",
-                    self._open_python_kernel_resource_dir,
-                )
-            m.popup(global_pos)
+        m = QMenu(menu_parent)
+        if not data["is_jupyter"]:
+            m.addAction(
+                QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter
+            )
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open containing folder...",
+                self._open_python_interpreter_dir,
+            )
+        else:
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open resource folder...",
+                self._open_python_kernel_resource_dir,
+            )
+        m.popup(global_pos)
 
     @Slot(int)
     def _set_combobox_tooltip(self, row):
@@ -791,10 +761,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             julia_projects = save_path_to_qsettings(
                 self._qsettings, "appSettings/juliaProjects", str(julia_project_path)
             )
-        if use_python_jupyter_console == "0":
-            self.ui.radioButton_use_python_basic_console.setChecked(True)
-        else:
-            self.ui.radioButton_use_python_jupyter_console.setChecked(True)
+        p_execution_method = ExecutionMethod.DIRECT if use_python_jupyter_console == "0" else ExecutionMethod.JUPYTER
+        self._set_execution_method(self.ui.comboBox_python_execution_method, p_execution_method)
         self._models.refresh_python_interpreters_model(python_interpreters)
         python_ind = self._models.find_python_interpreter_index(python_path)
         if not python_ind.isValid():
@@ -804,10 +772,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._saved_python_kernel = python_kernel
         # Fetch Python jupyter and conda kernels
         self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected)
-        if use_julia_jupyter_console == "0":
-            self.ui.radioButton_use_julia_basic_console.setChecked(True)
-        else:
-            self.ui.radioButton_use_julia_jupyter_console.setChecked(True)
+        j_execution_method = ExecutionMethod.DIRECT if use_julia_jupyter_console == "0" else ExecutionMethod.JUPYTER
+        self._set_execution_method(self.ui.comboBox_julia_execution_method, j_execution_method)
         self._models.refresh_julia_executables_model(julia_executables)
         julia_ind = self._models.find_julia_executable_index(julia_path)
         if not julia_ind.isValid():
@@ -952,10 +918,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         use_julia_jupyter_console, julia_exe, julia_project, julia_kernel = self._get_julia_settings()
         if use_julia_jupyter_console == "2" and not julia_kernel:
             msg = (
-                "You have selected <b>Use Jupyter kernel</b> for Julia Tools "
-                "but you did not select a kernel, please select a <b>Jupyter "
-                "kernel</b> from the dropdown menu or select <b>Use Julia "
-                "executable / Julia project</b>"
+                "You have selected <b>Jupyter kernel</b> as the <b>default execution method</b> for <b>Julia</b> "
+                "Tools but you did not select a kernel. Please select a kernel from the dropdown menu or select "
+                "<b>Julia executable & environment</b> as the default execution method."
             )
             box = QMessageBox(QMessageBox.Icon.Warning, "No Julia kernel selected", msg, parent=self)
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
@@ -975,10 +940,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         use_python_jupyter_console, python_exe, python_kernel = self._get_python_settings()
         if use_python_jupyter_console == "2" and not python_kernel:
             msg = (
-                "You have selected <b>Use Jupyter kernel</b> for Python Tools "
-                "but you did not select a kernel, please select a <b>Jupyter "
-                "kernel</b> from the dropdown menu or select <b>Use system or "
-                "virtualenv Python interpreter</b>"
+                "You have selected <b>Jupyter kernel</b> as the <b>default execution method</b> for <b>Python</b> "
+                "Tools but you did not select a kernel. Please select a kernel from the dropdown menu or select "
+                "<b>Python interpreter</b> as the default execution method."
             )
             box = QMessageBox(QMessageBox.Icon.Warning, "No Python kernel selected", msg, parent=self)
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
@@ -1044,7 +1008,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _get_julia_settings(self):
         """Returns current Julia settings on Settings->Tools page."""
-        use_julia_jupyter_console = "2" if self.ui.radioButton_use_julia_jupyter_console.isChecked() else "0"
+        method = self.ui.comboBox_julia_execution_method.currentData()
+        use_julia_jupyter_console = "2" if method == ExecutionMethod.JUPYTER else "0"
         data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
         if not data:
             julia_exe = ""
@@ -1060,7 +1025,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     def _get_python_settings(self):
         """Returns current Python settings on Settings->Tools page."""
-        use_python_jupyter_console = "2" if self.ui.radioButton_use_python_jupyter_console.isChecked() else "0"
+        method = self.ui.comboBox_python_execution_method.currentData()
+        use_python_jupyter_console = "2" if method == ExecutionMethod.JUPYTER else "0"
         data = get_current_item_data(self.ui.comboBox_python_interpreters, self._models.python_interpreters_model)
         python_exe = data["exe"]
         python_kernel = ""
