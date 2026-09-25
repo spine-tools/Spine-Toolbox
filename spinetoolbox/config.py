@@ -17,7 +17,10 @@ from pathlib import Path
 import sys
 from typing import Literal
 
-LATEST_PROJECT_VERSION: Literal[13] = 13
+LATEST_PROJECT_VERSION: Literal[14] = 14
+
+# For the Add/Update SpineOpt wizard
+REQUIRED_SPINE_OPT_VERSION = "0.10.0"
 
 # Invalid characters for directory names
 # NOTE: "." is actually valid in a directory name but this is
@@ -61,4 +64,7 @@ PROJECT_CONSUMER_REPLAY_FILENAME: Literal["consumer_replay.json"] = "consumer_re
 SPECIFICATION_LOCAL_DATA_FILENAME: Literal["specification_local_data.json"] = "specification_local_data.json"
 PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file name for remote execution
 
+# Misc.
 FG_COLOR = "#F0F0F0"
+PYTHON_EXECUTION_MODES = ["Python interpreter", "Jupyter kernel"]
+JULIA_EXECUTION_MODES = ["Julia executable & environment", "Jupyter kernel"]
