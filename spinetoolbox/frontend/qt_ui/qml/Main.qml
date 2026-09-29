@@ -72,6 +72,9 @@ ApplicationWindow {
     // items/connections loaded from project.json, rendered by the design canvas below
     property var workflow: ({ "items": [], "connections": [] })
     property var nodeItems: ({})
+    // nodeItems is mutated in place (see WorkflowCard.onCompleted below), which doesn't emit a change
+    // signal on its own; bindings that need to react to it becoming populated depend on this instead
+    property int nodeItemsTick: 0
 
     // names of the currently selected cards, so a drag on any one of them moves the whole group
     property var selectedNames: ({})
@@ -302,6 +305,23 @@ ApplicationWindow {
             width: padding * 2 + (maxRank + 1) * columnWidth,
             height: padding * 2 + (maxLane + 1) * rowHeight
         }
+    }
+
+    // midpoint of the connector between two design cards, in the same coordinate space they live in;
+    // used to place the scenario/alternative filter badge for a connection
+    function connectionAnchor(fromName, toName) {
+        var fromItem = root.nodeItems[fromName]
+        var toItem = root.nodeItems[toName]
+
+        if (!fromItem || !toItem)
+            return Qt.point(0, 0)
+
+        var startX = fromItem.x + fromItem.width
+        var startY = fromItem.y + fromItem.height / 2
+        var endX = toItem.x
+        var endY = toItem.y + toItem.height / 2
+
+        return Qt.point((startX + endX) / 2, (startY + endY) / 2)
     }
 
     // fetches project.json's items/connections and lays them out on a rank/lane grid
@@ -863,7 +883,62 @@ ApplicationWindow {
 
                                 Component.onCompleted: {
                                     root.nodeItems[modelData.name] = this
+                                    root.nodeItemsTick += 1
                                     connectionsCanvas.requestPaint()
+                                }
+                            }
+                        }
+
+                        // =================================================
+                        // FILTER BADGES (one per connection that has scenario/alternative filters,
+                        // positioned at the connector's midpoint; red when a required filter has
+                        // nothing checked, so missing selections are visible without opening anything)
+                        // =================================================
+
+                        Repeater {
+                            model: root.workflow.connections
+
+                            Rectangle {
+                                // root.nodeItemsTick forces this binding to re-evaluate once cards finish
+                                // registering themselves in root.nodeItems (see comment on nodeItemsTick)
+                                visible: !!(root.nodeItemsTick >= 0 && modelData.filter_type
+                                        && root.nodeItems[modelData.from] && root.nodeItems[modelData.to])
+
+                                property point anchorPoint: visible
+                                        ? root.connectionAnchor(modelData.from, modelData.to) : Qt.point(0, 0)
+
+                                x: anchorPoint.x - width / 2
+                                y: anchorPoint.y - height / 2
+                                z: 6
+
+                                width: 20
+                                height: 20
+                                radius: 10
+
+                                color: modelData.filter_satisfied ? "#ffffff" : "#fee2e2"
+                                border.color: modelData.filter_satisfied ? "#7c9c88" : "#dc2626"
+                                border.width: modelData.filter_satisfied ? 1 : 2
+
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: modelData.filter_type === "scenario" ? "S" : "A"
+                                    font.pixelSize: 10
+                                    font.bold: true
+                                    color: modelData.filter_satisfied ? "#3d6b4f" : "#dc2626"
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: linkFiltersDialog.openFor(modelData.from, modelData.to)
+                                }
+
+                                ToolTip.visible: hoverHandler.hovered
+                                ToolTip.text: (modelData.filter_type === "scenario" ? "Scenario filter" : "Alternative filter")
+                                        + (modelData.filter_satisfied ? "" : " – needs at least one selection")
+
+                                HoverHandler {
+                                    id: hoverHandler
                                 }
                             }
                         }
@@ -995,6 +1070,103 @@ ApplicationWindow {
                                             projectBridge.set_item_scenario_enabled(
                                                 scenarioDialog.itemName, modelData.name, checked)
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    // -------------------------------------------------
+                    // Link filter dialog (click on a connection's filter badge): checklist of the
+                    // scenarios/alternatives online for that link, with a notice when a required
+                    // filter has nothing checked
+                    // -------------------------------------------------
+
+                    Dialog {
+                        id: linkFiltersDialog
+
+                        anchors.centerIn: parent
+                        modal: true
+                        width: 340
+
+                        property string fromName: ""
+                        property string toName: ""
+                        property string filterType: ""
+                        property bool required: false
+                        property var items: []
+
+                        readonly property bool nothingSelected: !items.some(function (item) { return item.enabled })
+
+                        title: "Link filter – " + linkFiltersDialog.fromName + " → " + linkFiltersDialog.toName
+                        standardButtons: Dialog.Close
+
+                        function openFor(fromName, toName) {
+                            linkFiltersDialog.fromName = fromName
+                            linkFiltersDialog.toName = toName
+                            linkFiltersDialog.filterType = ""
+                            linkFiltersDialog.required = false
+                            linkFiltersDialog.items = []
+
+                            if (typeof projectBridge === "undefined")
+                                return
+
+                            var raw = projectBridge.get_connection_filters(fromName, toName)
+                            var parsed = raw ? JSON.parse(raw) : {}
+
+                            if (!parsed.filter_type)
+                                return
+
+                            linkFiltersDialog.filterType = parsed.filter_type
+                            linkFiltersDialog.required = parsed.required
+                            linkFiltersDialog.items = parsed.items
+                            linkFiltersDialog.open()
+                        }
+
+                        function toggle(itemName, enabled) {
+                            var updated = linkFiltersDialog.items.map(function (item) {
+                                return item.name === itemName ? { "name": item.name, "enabled": enabled } : item
+                            })
+                            linkFiltersDialog.items = updated
+
+                            if (typeof projectBridge !== "undefined")
+                                projectBridge.set_connection_filter_enabled(
+                                    linkFiltersDialog.fromName, linkFiltersDialog.toName,
+                                    linkFiltersDialog.filterType, itemName, enabled)
+
+                            root.loadWorkflow()
+                        }
+
+                        contentItem: ColumnLayout {
+                            spacing: 4
+
+                            Label {
+                                text: (linkFiltersDialog.filterType === "scenario" ? "Scenario filter" : "Alternative filter")
+                                        + ": select which " + linkFiltersDialog.filterType
+                                        + "(s) may pass through this link."
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                Layout.bottomMargin: 6
+                                opacity: 0.7
+                            }
+
+                            Label {
+                                visible: linkFiltersDialog.required && linkFiltersDialog.nothingSelected
+                                text: "⚠ At least one " + linkFiltersDialog.filterType
+                                        + " must be selected for this link to run."
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                Layout.bottomMargin: 6
+                                color: "#dc2626"
+                                font.bold: true
+                            }
+
+                            Repeater {
+                                model: linkFiltersDialog.items
+
+                                CheckBox {
+                                    text: modelData.name
+                                    checked: modelData.enabled
+
+                                    onToggled: linkFiltersDialog.toggle(modelData.name, checked)
                                 }
                             }
                         }
