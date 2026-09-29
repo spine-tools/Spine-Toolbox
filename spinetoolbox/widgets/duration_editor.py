@@ -12,43 +12,37 @@
 
 """An editor widget for editing duration database (relationship) parameter values."""
 
+from contextlib import suppress
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QWidget
-from spinedb_api import Duration, ParameterValueFormatError, duration_to_relativedelta
+from spinedb_api import Duration, ParameterValueFormatError
 
 
 class DurationEditor(QWidget):
-    """
-    An editor widget for Duration type parameter values.
+    """An editor widget for Duration type parameter values."""
 
-    Attributes:
-        parent (QWidget): a parent widget
-    """
-
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget = None):
         from ..ui.duration_editor import Ui_DurationEditor  # pylint: disable=import-outside-toplevel
 
         super().__init__(parent)
         self._value = Duration()
         self._ui = Ui_DurationEditor()
         self._ui.setupUi(self)
-        self._ui.duration_edit.editingFinished.connect(self._change_duration)
+        self._ui.duration_edit.textEdited.connect(self._change_duration)
         self._ui.duration_edit.setText(str(self._value))
 
     @Slot(name="_change_duration")
-    def _change_duration(self):
+    def _change_duration(self) -> None:
         """Updates the value being edited."""
         text = self._ui.duration_edit.text()
-        try:
+        with suppress(ParameterValueFormatError):
             self._value = Duration(text)
-        except ParameterValueFormatError:
-            self._ui.duration_edit.setText(str(self._value))
 
-    def set_value(self, value):
+    def set_value(self, value: Duration) -> None:
         """Sets the value for editing."""
         self._value = value
         self._ui.duration_edit.setText(str(self._value))
 
-    def value(self):
+    def value(self) -> Duration:
         """Returns the current Duration."""
         return self._value
