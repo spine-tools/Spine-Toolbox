@@ -89,6 +89,118 @@ class ProjectBridge(QObject):
             return display_name
         return None
 
+    def _stack_resolver(self, data: dict):
+        """Returns a function mapping a raw project.json item name to the display name of the stack
+        it belongs to, or to itself if it isn't part of one."""
+        stacks = data.get("project", {}).get("stacks", {})
+        item_to_stack = {}
+        for stack_key, stack in stacks.items():
+            display_name = stack.get("name", stack_key)
+            for member in stack.get("items", []):
+                item_to_stack[member] = display_name
+        return lambda name: item_to_stack.get(name, name)
+
+    def _find_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
+        """Finds the raw project.json connection whose (possibly stacked) endpoints resolve to
+        from_name/to_name, as returned by get_workflow."""
+        resolve = self._stack_resolver(data)
+        for connection in data.get("project", {}).get("connections", []):
+            if resolve(connection["from"][0]) == from_name and resolve(connection["to"][0]) == to_name:
+                return connection
+        return None
+
+    def _connection_filter_type(self, connection: dict) -> str | None:
+        """Returns "scenario" or "alternative", whichever filter type is enabled on connection, or None
+        if the connection has no filters."""
+        enabled_types = connection.get("filter_settings", {}).get("enabled_filter_types", {})
+        if enabled_types.get("scenario_filter"):
+            return "scenario"
+        if enabled_types.get("alternative_filter"):
+            return "alternative"
+        return None
+
+    def _connection_requires_filter(self, connection: dict, filter_type: str) -> bool:
+        return bool(connection.get("options", {}).get(f"require_{filter_type}_filter"))
+
+    def _connection_filter_selection(self, data: dict, from_name: str, to_name: str, filter_type: str) -> dict:
+        """Returns the stored online-state overrides (name -> bool) for filter_type on the from_name/to_name
+        link, from project.json's "connection_filter_selection"."""
+        key = f"{from_name}->{to_name}"
+        return data.get("project", {}).get("connection_filter_selection", {}).get(key, {}).get(filter_type, {})
+
+    def _connection_database_url(self, data: dict, connection: dict) -> str | None:
+        """Returns the URL of whichever endpoint of connection is a Data Store, or None if neither is."""
+        raw_items = data.get("items", {})
+        project_dir = str(self._base_dir())
+        for raw_name in (connection["from"][0], connection["to"][0]):
+            item = raw_items.get(raw_name, {})
+            if item.get("type") == "Data Store":
+                url = _data_store_url(item.get("url") or {}, project_dir)
+                if url:
+                    return url
+        return None
+
+    def _connection_filter_names(self, data: dict, connection: dict, filter_type: str) -> list[str]:
+        """Returns available scenario/alternative names for connection's filter_type, read live from
+        whichever endpoint is a Data Store. Falls back to project.json's flat "scenarios"/"alternatives"
+        list (used by the bundled demo project, which has no real database) if there's no Data Store
+        endpoint or it can't be opened."""
+        db_url = self._connection_database_url(data, connection)
+        if db_url:
+            from spinedb_api import DatabaseMapping  # imported lazily, same reason as get_database_contents
+
+            try:
+                with DatabaseMapping(db_url) as db_map:
+                    query = db_map.scenario_sq if filter_type == "scenario" else db_map.alternative_sq
+                    return [row.name for row in db_map.query(query)]
+            except Exception:
+                pass
+        return data.get("project", {}).get(filter_type + "s", [])
+
+    def _connection_filter_items(
+        self, data: dict, connection: dict, from_name: str, to_name: str, filter_type: str
+    ) -> list[dict]:
+        """Returns [{"name", "enabled"}, ...] for filter_type on the from_name/to_name link: names read
+        live from the connected database, online state from "connection_filter_selection" (default True)."""
+        names = self._connection_filter_names(data, connection, filter_type)
+        selection = self._connection_filter_selection(data, from_name, to_name, filter_type)
+        return [{"name": name, "enabled": selection.get(name, True)} for name in names]
+
+    @Slot(str, str, result=str)
+    def get_connection_filters(self, from_name: str, to_name: str) -> str:
+        """Returns the scenario/alternative filter checklist for the link between from_name and to_name,
+        with item names read live from the connected database. Returns {} if there's no such connection
+        or it has no filters enabled."""
+        data = self._load()
+        connection = self._find_connection(data, from_name, to_name)
+        if connection is None:
+            return json.dumps({})
+        filter_type = self._connection_filter_type(connection)
+        if filter_type is None:
+            return json.dumps({})
+        items = self._connection_filter_items(data, connection, from_name, to_name, filter_type)
+        required = self._connection_requires_filter(connection, filter_type)
+        return json.dumps({"filter_type": filter_type, "required": required, "items": items})
+
+    @Slot(str, str, str, str, bool, result=bool)
+    def set_connection_filter_enabled(
+        self, from_name: str, to_name: str, filter_type: str, item_name: str, enabled: bool
+    ) -> bool:
+        """Stores whether item_name is online for filter_type ("scenario"/"alternative") on the connection
+        between from_name and to_name, in project.json's "connection_filter_selection". Returns whether
+        such a connection exists."""
+        data = self._load()
+        if self._find_connection(data, from_name, to_name) is None:
+            return False
+        project = data.setdefault("project", {})
+        key = f"{from_name}->{to_name}"
+        selection = project.setdefault("connection_filter_selection", {}).setdefault(key, {}).setdefault(
+            filter_type, {}
+        )
+        selection[item_name] = enabled
+        self._save(data)
+        return True
+
     @Slot(str, result=str)
     def get_item_scenarios(self, display_name: str) -> str:
         """Returns [{"name": ..., "enabled": ...}, ...] for display_name, demo-only: scenarios and their
@@ -200,7 +312,21 @@ class ProjectBridge(QObject):
             if key in seen:
                 continue
             seen.add(key)
-            connections.append({"from": from_name, "to": to_name})
+            filter_type = self._connection_filter_type(connection)
+            filter_required = filter_type is not None and self._connection_requires_filter(connection, filter_type)
+            filter_satisfied = True
+            if filter_required:
+                filter_items = self._connection_filter_items(data, connection, from_name, to_name, filter_type)
+                filter_satisfied = any(item["enabled"] for item in filter_items)
+            connections.append(
+                {
+                    "from": from_name,
+                    "to": to_name,
+                    "filter_type": filter_type,
+                    "filter_required": filter_required,
+                    "filter_satisfied": filter_satisfied,
+                }
+            )
 
         # items/stacks listed here stay in project.json untouched, just hidden from this simplified view
         hidden = set(project.get("hidden_items", []))
