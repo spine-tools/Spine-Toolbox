@@ -218,7 +218,7 @@ class TestJupyterConsoleWidget(TestCaseWithQApplication):
             jcw.connect_to_kernel()
         jcw.kernel_client.shell_channel.kernel_info_event.wait(timeout=10)  # Wait until we get a kernel_info_reply
         kernel_info_reply = jcw.kernel_client.shell_channel.last_msg
-        self.assertTrue(kernel_info_reply["content"]["status"] == "ok")  # If status == "ok" -> assume we're connected
+        self.assertEqual(kernel_info_reply["content"]["status"], "ok")  # If status == "ok" -> assume we're connected
         self.assertTrue(jcw.kernel_client.is_alive())
         with mock.patch("PySide6.QtWidgets.QMessageBox.exec") as mock_msgbox_exec:
             mock_msgbox_exec.return_value = QMessageBox.StandardButton.Ok
