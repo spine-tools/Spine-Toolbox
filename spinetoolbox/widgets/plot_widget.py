@@ -66,14 +66,6 @@ class PlotWidget(QWidget):
         self._layout.addWidget(self.canvas)
         self._target_size = QSize(800, 600)
 
-    def sizeHint(self):
-        """Preferred size so a parent window can auto-fit the plot."""
-        return self._target_size
-
-    def set_target_size(self, size: QSize):
-        """Sets the preferred plot size, used by sizeHint()."""
-        self._target_size = size
-
         # save plot as image
         self.canvas.page().profile().downloadRequested.connect(self.save_as_prompt)
 
@@ -83,6 +75,19 @@ class PlotWidget(QWidget):
         self._channel = WebChannel(self.canvas, "bridge", self._bridge)
 
         QMetaObject.connectSlotsByName(self)
+
+    def sizeHint(self):
+        """Preferred size so a parent window can auto-fit the plot."""
+        return self._target_size
+
+    def set_target_size(self, size: QSize):
+        """Sets the preferred plot size, used by sizeHint()."""
+        self._target_size = size
+
+    def resize_plot(self, width: int, height: int):
+        size = QSize(width, height)
+        self.set_target_size(size)
+        self.resize(size)
 
     @property
     def dataframe(self) -> pd.DataFrame:

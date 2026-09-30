@@ -248,8 +248,7 @@ def plot_data(dfs: list[pd.DataFrame], plot_widget: "PlotWidget | None" = None, 
             target = QSize(1200 + 50, 600)
         case _:
             target = QSize(800 + 50, 600)
-    plot_widget.set_target_size(QSize(max(size.width(), target.width()), max(size.height(), target.height())))
-    plot_widget.resize(max(size.width(), target.width()), max(size.height(), target.height()))
+    plot_widget.resize_plot(max(size.width(), target.width()), max(size.height(), target.height()))
 
     plot_widget.dataframe = sdf
     plot_widget.write(file_html(plot, INLINE, plot_title))
