@@ -150,11 +150,13 @@ class PlotActions(QObject):
         match json.loads(selection_str):
             case dict() as row:
                 ks = list(row)
+                # drop "columns" added by bokeh
                 [row.pop(k) for k in ks if k not in sdf.columns]
             case _row:
                 raise RuntimeError(f"unknown selection: {_row}", self._plot)
 
-        # NOTE: if later we reorder columns, then pass sdf.loc[:, new_col_order]
+        # NOTE: if reordering columns is implemented, then have to
+        # pass sdf.loc[:, new_col_order] instead
         plot_data([sdf], self._plot, **row)
 
     @Slot(str)

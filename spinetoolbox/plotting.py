@@ -210,6 +210,9 @@ def plot_data(dfs: list[pd.DataFrame], plot_widget: "PlotWidget | None" = None, 
 
         plot_widget = PlotWidget()
 
+    if len(dfs) == 0:
+        return plot_widget
+
     dfs = [parse_time(df) for df in dfs]
     check_columns(dfs, _raise=True)
 
