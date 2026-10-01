@@ -1819,6 +1819,11 @@ ApplicationWindow {
                     return
                 }
 
+                if (card.subtitle === "Data Store") {
+                    projectBridge.open_database(card.nodeName)
+                    return
+                }
+
                 scenarioDialog.openFor(card.nodeName)
             }
         }
@@ -1831,6 +1836,8 @@ ApplicationWindow {
                     return "Double-click to choose the Excel input file"
                 if (card.subtitle === "Data Connection")
                     return "Double-click to open the data connection directory"
+                if (card.subtitle === "Data Store")
+                    return "Double-click to open in the database editor"
                 if (typeof projectBridge !== "undefined") {
                     var raw = projectBridge.get_item_scenarios(card.title)
                     var parsed = raw ? JSON.parse(raw) : []
