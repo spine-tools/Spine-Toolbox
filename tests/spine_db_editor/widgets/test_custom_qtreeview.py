@@ -290,7 +290,7 @@ class TestEntityTreeViewWithInitiallyEmptyDatabase(TestBase):
         self.assertEqual(model.rowCount(class_index), 1)
         entity_index = model.index(0, 0, class_index)
         self.assertEqual(model.rowCount(entity_index), 0)
-        self.assertEqual(entity_index.data(), "an_entity")
+        self.assertEqual(entity_index.data(), "an_entity (a_relationship_class)")
         database_index = model.index(0, 1, class_index)
         self.assertEqual(database_index.data(), self.db_codename)
         commit_changes_to_database("Add an entities.", self._db_editor)
@@ -561,13 +561,13 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities:
         entity_ndex = model.index(0, 0, class_index)
         assert model.rowCount(entity_ndex) == 0
         assert model.columnCount(entity_ndex) == 2
-        assert entity_ndex.data() == "object_11 ǀ object_21"
+        assert entity_ndex.data() == "object_11 ǀ object_21 (relationship_class)"
         database_index = model.index(0, 1, class_index)
         assert database_index.data() == db_name
         entity_ndex = model.index(1, 0, class_index)
         assert model.rowCount(entity_ndex) == 0
         assert model.columnCount(entity_ndex) == 2
-        assert entity_ndex.data() == "object_11 ǀ object_22"
+        assert entity_ndex.data() == "object_11 ǀ object_22 (relationship_class)"
         database_index = model.index(1, 1, class_index)
         assert database_index.data() == db_name
 
@@ -626,7 +626,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities:
         view.setCurrentIndex(entity_index)
         _edit_entity_tree_item({0: "object_12"}, view, "Edit...", EditEntitiesDialog)
         QApplication.processEvents()  # Fixes "silent" Traceback.
-        assert entity_index.data() == "object_12 ǀ object_21"
+        assert entity_index.data() == "object_12 ǀ object_21 (relationship_class)"
         commit_changes_to_database("Change relationship's objects.", db_editor)
         with db_map:
             class_id = (
@@ -727,7 +727,7 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities:
         while model.rowCount(class_index) != 1:
             QApplication.processEvents()
         entity_index = model.index(0, 0, class_index)
-        assert entity_index.data() == "object_11 ǀ object_22"
+        assert entity_index.data() == "object_11 ǀ object_22 (relationship_class)"
         commit_changes_to_database("Remove object.", db_editor)
         with db_map:
             data = db_map.query(db_map.entity_sq).all()
@@ -769,8 +769,8 @@ class TestEntityTreeViewWithExistingMultidimensionalEntities:
         model.fetchMore(object_index)
         while model.rowCount(object_index) != 2:
             QApplication.processEvents()
-        assert model.index(0, 0, object_index).data() == "٭ ǀ object_21"
-        assert model.index(1, 0, object_index).data() == "٭ ǀ object_22"
+        assert model.index(0, 0, object_index).data() == "٭ ǀ object_21 (relationship_class)"
+        assert model.index(1, 0, object_index).data() == "٭ ǀ object_22 (relationship_class)"
 
     @staticmethod
     def _rename_class(class_name, db_editor):

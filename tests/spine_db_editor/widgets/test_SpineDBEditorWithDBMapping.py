@@ -50,7 +50,7 @@ class TestSpineDBEditorWithDBMapping:
         fish_dog_item.fetch_more()
         assert fish_dog_item.row_count() == 2
         nemo_pluto_dupe = fish_dog_item.child(1)
-        assert nemo_pluto_dupe.display_data == "nemo (1) ǀ pluto"
+        assert nemo_pluto_dupe.display_data == "nemo (1) ǀ pluto (fish__dog)"
         root_index = db_editor.entity_tree_model.index_from_item(root_item)
         db_editor.ui.treeView_entity.selectionModel().setCurrentIndex(
             root_index, QItemSelectionModel.SelectionFlags.ClearAndSelect
