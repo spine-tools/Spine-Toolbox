@@ -55,13 +55,15 @@ class TestEntityTreeModel:
         entity_a.fetch_more()
         while len(entity_a.children) != 1:
             QApplication.processEvents()
-        assert [entity_item.display_data for entity_item in entity_a.children] == ["٭ ǀ b"]
+        assert [entity_item.display_data for entity_item in entity_a.children] == ["٭ ǀ b (A__B)"]
         assert all(entity_item.has_children() for entity_item in entity_a.children)
         relationship_a_b = entity_a.children[0]
         relationship_a_b.fetch_more()
         while len(relationship_a_b.children) != 1:
             QApplication.processEvents()
-        assert [relationship.display_data for relationship in relationship_a_b.children] == ["٭ ǀ ٭ ǀ ٭ ǀ ٭"]
+        assert [relationship.display_data for relationship in relationship_a_b.children] == [
+            "٭ ǀ ٭ ǀ ٭ ǀ ٭ (A__B__A__B)"
+        ]
         assert all(not relationship.has_children() for relationship in relationship_a_b.children)
 
     def test_same_class_in_two_databases_but_one_has_superclass(

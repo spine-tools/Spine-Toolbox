@@ -258,15 +258,14 @@ class EntityItem(MultiDBTreeItem):
     def display_data(self):
         element_byname_list = self.element_byname_list
         if element_byname_list:
-            element_byname_list = [
-                (
-                    x
-                    if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.byname
-                    else ["\u066d"] * len(x)
-                )
-                for x in element_byname_list
-            ]
-            return DB_ITEM_SEPARATOR.join([DB_ITEM_SEPARATOR.join(x) for x in element_byname_list])
+            if isinstance(self.parent_item, EntityItem):
+                element_byname_list = [
+                    (x if x != self.parent_item.byname else ["\u066d"] * len(x)) for x in element_byname_list
+                ]
+            return (
+                DB_ITEM_SEPARATOR.join([DB_ITEM_SEPARATOR.join(x) for x in element_byname_list])
+                + f" ({self.entity_class_name})"
+            )
         return self.name
 
     @property
