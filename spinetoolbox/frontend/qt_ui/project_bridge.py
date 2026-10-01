@@ -547,11 +547,9 @@ class ProjectBridge(QObject):
                 return reference_path.parent
         return project_dir if project_dir.is_dir() else None
 
-    @Slot(str, result=bool)
-    def open_item_directory(self, display_name: str) -> bool:
-        """Opens the data directory of the Data Connection item called display_name, or, if display_name is a
-        collapsed stack, of the first Data Connection item inside it. Returns whether a directory was opened."""
-        data = self._load()
+    def _stack_member_of_type(self, data: dict, display_name: str, item_type: str) -> tuple[str, dict] | None:
+        """Returns (name, item) of display_name itself if it matches item_type, or of the first item_type
+        member of the stack display_name names; None if neither applies."""
         raw_items = data.get("items", {})
         stacks = data.get("project", {}).get("stacks", {})
 
@@ -561,18 +559,45 @@ class ProjectBridge(QObject):
                 if stack.get("name") == display_name:
                     member_names = stack.get("items", [])
                     break
-        if not member_names:
-            return False
 
-        for name in member_names:
+        for name in member_names or []:
             item = raw_items.get(name, {})
-            if item.get("type") != "Data Connection":
-                continue
-            directory = self._resolve_item_directory(name, item)
-            if directory is None:
-                return False
-            return open_url(directory.as_uri())
-        return False
+            if item.get("type") == item_type:
+                return name, item
+        return None
+
+    @Slot(str, result=bool)
+    def open_item_directory(self, display_name: str) -> bool:
+        """Opens the data directory of the Data Connection item called display_name, or, if display_name is a
+        collapsed stack, of the first Data Connection item inside it. Returns whether a directory was opened."""
+        data = self._load()
+        found = self._stack_member_of_type(data, display_name, "Data Connection")
+        if found is None:
+            return False
+        name, item = found
+        directory = self._resolve_item_directory(name, item)
+        if directory is None:
+            return False
+        return open_url(directory.as_uri())
+
+    @Slot(str, result=bool)
+    def open_database(self, display_name: str) -> bool:
+        """Opens the Data Store item called display_name (or the first Data Store inside the stack it names)
+        in the classic Qt DB Editor, reusing the same tab if that database is already open there."""
+        data = self._load()
+        found = self._stack_member_of_type(data, display_name, "Data Store")
+        if found is None:
+            return False
+        _name, item = found
+        url = _data_store_url(item.get("url") or {}, str(self._base_dir()))
+        if not url:
+            return False
+        self._ensure_db_editor()
+        self._db_editor.open_url_in_new_tab(url)
+        self._db_editor.show()
+        self._db_editor.raise_()
+        self._db_editor.activateWindow()
+        return True
 
     @Slot(str, result=str)
     def open_project(self, folder_url: str) -> str:
@@ -596,13 +621,9 @@ class ProjectBridge(QObject):
                 urls.append(url)
         return urls
 
-    @Slot()
-    def open_database_editor(self) -> None:
-        """Opens the classic Qt DB Editor (in-process) with the project's Data Store URLs."""
+    def _ensure_db_editor(self) -> None:
+        """Creates self._db_editor, with no tabs open yet, if it doesn't already exist."""
         if self._db_editor is not None:
-            self._db_editor.show()
-            self._db_editor.raise_()
-            self._db_editor.activateWindow()
             return
         # imported lazily: pulls in the full widget/spinedb_api stack, only needed once the user asks for it
         from ...spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -611,10 +632,19 @@ class ProjectBridge(QObject):
         settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
         db_mngr = SpineDBManager(settings, None)
         editor = MultiSpineDBEditor(db_mngr)
-        editor.add_new_tab(self._database_urls())
         editor.destroyed.connect(self._forget_db_editor)
-        editor.show()
         self._db_editor = editor
+
+    @Slot()
+    def open_database_editor(self) -> None:
+        """Opens the classic Qt DB Editor (in-process) with every Data Store in the project, each in its own tab."""
+        is_new = self._db_editor is None
+        self._ensure_db_editor()
+        if is_new:
+            self._db_editor.add_new_tab(self._database_urls())
+        self._db_editor.show()
+        self._db_editor.raise_()
+        self._db_editor.activateWindow()
 
     def _forget_db_editor(self) -> None:
         self._db_editor = None
