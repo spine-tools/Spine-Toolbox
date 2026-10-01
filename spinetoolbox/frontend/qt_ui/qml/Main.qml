@@ -29,13 +29,13 @@ ApplicationWindow {
     property bool executionRunning: false
     property ListModel executionLogModel: ListModel {}
 
-    // asks the user (via setupDialog) to install/run a project's bundled setup script, if it has one
+    // installs/runs a project's bundled setup script automatically, if it has one
     function offerProjectSetup() {
         if (typeof projectBridge === "undefined")
             return
 
         if (projectBridge.has_setup_script())
-            setupDialog.open()
+            projectBridge.install_project_dependencies()
     }
 
     Connections {
@@ -75,28 +75,6 @@ ApplicationWindow {
         id: runStatusTimer
         interval: 6000
         onTriggered: root.runStatusMessage = ""
-    }
-
-    Dialog {
-        id: setupDialog
-
-        anchors.centerIn: parent
-        modal: true
-        width: 360
-
-        title: "Install project dependencies?"
-        standardButtons: Dialog.Yes | Dialog.No
-
-        contentItem: Label {
-            text: "This project bundles a setup script. Install/update its dependencies into the " +
-                  "current Python environment and run the setup script now?"
-            wrapMode: Text.WordWrap
-        }
-
-        onAccepted: {
-            if (typeof projectBridge !== "undefined")
-                projectBridge.install_project_dependencies()
-        }
     }
 
     // "workflow" (project canvas) or "database" (data browser), switched from the sidebar
