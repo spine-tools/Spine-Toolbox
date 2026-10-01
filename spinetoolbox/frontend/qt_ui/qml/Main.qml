@@ -1323,14 +1323,27 @@ ApplicationWindow {
                                 font.bold: true
                             }
 
-                            Repeater {
-                                model: linkFiltersDialog.items
+                            // caps the checklist's height so dozens of scenarios scroll instead of
+                            // stretching the dialog off the screen
+                            ScrollView {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Math.min(linkFiltersDialog.items.length * 32, 260)
+                                clip: true
 
-                                CheckBox {
-                                    text: modelData.name
-                                    checked: modelData.enabled
+                                ColumnLayout {
+                                    width: parent.width
+                                    spacing: 0
 
-                                    onToggled: linkFiltersDialog.toggle(modelData.name, checked)
+                                    Repeater {
+                                        model: linkFiltersDialog.items
+
+                                        CheckBox {
+                                            text: modelData.name
+                                            checked: modelData.enabled
+
+                                            onToggled: linkFiltersDialog.toggle(modelData.name, checked)
+                                        }
+                                    }
                                 }
                             }
                         }
