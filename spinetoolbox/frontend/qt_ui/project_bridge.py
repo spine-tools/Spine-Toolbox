@@ -4,7 +4,14 @@ import os
 from pathlib import Path
 import sys
 from PySide6.QtCore import QObject, QSettings, QUrl, Signal, Slot
-from ...config import LATEST_PROJECT_VERSION, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME, PROJECT_SETUP_SCRIPT
+from ...config import (
+    LATEST_PROJECT_VERSION,
+    PROJECT_CONFIG_DIR_NAME,
+    PROJECT_FILENAME,
+    PROJECT_LOCAL_DATA_DIR_NAME,
+    PROJECT_LOCAL_DATA_FILENAME,
+    PROJECT_SETUP_SCRIPT,
+)
 from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url
 from ...logger import QtLogger
@@ -51,6 +58,11 @@ def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
 def _data_dir(name: str, project_dir: str) -> str:
     """Mirrors spine_engine.project_item.executable_item_base's item data directory convention."""
     return os.path.join(project_dir, PROJECT_CONFIG_DIR_NAME, "items", name.lower().replace(" ", "_"))
+
+
+def _database_resource_label(item_name: str) -> str:
+    """Mirrors spine_items.utils.database_label: the resource label spine_engine keys "known_filters" by."""
+    return "db_url@" + item_name
 
 
 def _resolve_python_interpreter() -> str:
@@ -162,23 +174,63 @@ class ProjectBridge(QObject):
     def _connection_requires_filter(self, connection: dict, filter_type: str) -> bool:
         return bool(connection.get("options", {}).get(f"require_{filter_type}_filter"))
 
-    def _connection_filter_selection(self, data: dict, from_name: str, to_name: str, filter_type: str) -> dict:
-        """Returns the stored online-state overrides (name -> bool) for filter_type on the from_name/to_name
-        link, from project.json's "connection_filter_selection"."""
-        key = f"{from_name}->{to_name}"
-        return data.get("project", {}).get("connection_filter_selection", {}).get(key, {}).get(filter_type, {})
-
-    def _connection_database_url(self, data: dict, connection: dict) -> str | None:
-        """Returns the URL of whichever endpoint of connection is a Data Store, or None if neither is."""
+    def _connection_data_store(self, data: dict, connection: dict) -> tuple[str, dict] | None:
+        """Returns (name, item) of whichever endpoint of connection is a Data Store, or None if neither is."""
         raw_items = data.get("items", {})
-        project_dir = str(self._base_dir())
         for raw_name in (connection["from"][0], connection["to"][0]):
             item = raw_items.get(raw_name, {})
             if item.get("type") == "Data Store":
-                url = _data_store_url(item.get("url") or {}, project_dir)
-                if url:
-                    return url
+                return raw_name, item
         return None
+
+    def _connection_database_url(self, data: dict, connection: dict) -> str | None:
+        """Returns the URL of whichever endpoint of connection is a Data Store, or None if neither is."""
+        endpoint = self._connection_data_store(data, connection)
+        if endpoint is None:
+            return None
+        return _data_store_url(endpoint[1].get("url") or {}, str(self._base_dir()))
+
+    def _connection_resource_label(self, data: dict, connection: dict) -> str | None:
+        """Returns the resource label spine_engine uses to key "known_filters" for connection's Data Store
+        endpoint, or None if neither endpoint is one."""
+        endpoint = self._connection_data_store(data, connection)
+        return _database_resource_label(endpoint[0]) if endpoint is not None else None
+
+    def _local_data_path(self) -> Path:
+        """Path to this project's local_data.json, which (like the classic Qt UI) holds per-user data such as
+        connections' scenario/alternative filter selections, kept out of the shared project.json."""
+        return self._base_dir() / PROJECT_CONFIG_DIR_NAME / PROJECT_LOCAL_DATA_DIR_NAME / PROJECT_LOCAL_DATA_FILENAME
+
+    def _load_local_data(self) -> dict:
+        local_data_path = self._local_data_path()
+        if not local_data_path.exists():
+            return {}
+        with local_data_path.open(encoding="utf-8") as input_file:
+            return json.load(input_file)
+
+    def _save_local_data(self, local_data: dict) -> None:
+        local_data_path = self._local_data_path()
+        local_data_path.parent.mkdir(parents=True, exist_ok=True)
+        with local_data_path.open("w", encoding="utf-8") as output_file:
+            json.dump(local_data, output_file, indent=4)
+
+    def _connection_filter_selection(
+        self, local_data: dict, connection: dict, resource_label: str, filter_type: str
+    ) -> dict:
+        """Returns the stored online-state overrides (name -> bool) for resource_label/filter_type, read from
+        local_data.json's "known_filters" -- the same file and schema spine_engine itself reads when running
+        (see spine_engine.project_item.connection.FilterSettings and spinetoolbox.load_project)."""
+        raw_from, raw_to = connection["from"][0], connection["to"][0]
+        known_filters = (
+            local_data.get("project", {})
+            .get("connections", {})
+            .get(raw_from, {})
+            .get(raw_to, {})
+            .get("filter_settings", {})
+            .get("known_filters", {})
+            .get(resource_label, {})
+        )
+        return known_filters.get(f"{filter_type}_filter", {})
 
     def _connection_filter_names(self, data: dict, connection: dict, filter_type: str) -> list[str]:
         """Returns available scenario/alternative names for connection's filter_type, read live from
@@ -197,14 +249,19 @@ class ProjectBridge(QObject):
                 pass
         return data.get("project", {}).get(filter_type + "s", [])
 
-    def _connection_filter_items(
-        self, data: dict, connection: dict, from_name: str, to_name: str, filter_type: str
-    ) -> list[dict]:
-        """Returns [{"name", "enabled"}, ...] for filter_type on the from_name/to_name link: names read
-        live from the connected database, online state from "connection_filter_selection" (default True)."""
+    def _connection_filter_items(self, data: dict, local_data: dict, connection: dict, filter_type: str) -> list[dict]:
+        """Returns [{"name", "enabled"}, ...] for filter_type on connection: names read live from the
+        connected database, online state from local_data.json's "known_filters", defaulting to the link's
+        "auto_online" setting for names with no stored override (mirrors spine_engine's own behavior)."""
         names = self._connection_filter_names(data, connection, filter_type)
-        selection = self._connection_filter_selection(data, from_name, to_name, filter_type)
-        return [{"name": name, "enabled": selection.get(name, True)} for name in names]
+        resource_label = self._connection_resource_label(data, connection)
+        auto_online = connection.get("filter_settings", {}).get("auto_online", True)
+        selection = (
+            self._connection_filter_selection(local_data, connection, resource_label, filter_type)
+            if resource_label is not None
+            else {}
+        )
+        return [{"name": name, "enabled": selection.get(name, auto_online)} for name in names]
 
     @Slot(str, str, result=str)
     def get_connection_filters(self, from_name: str, to_name: str) -> str:
@@ -218,7 +275,7 @@ class ProjectBridge(QObject):
         filter_type = self._connection_filter_type(connection)
         if filter_type is None:
             return json.dumps({})
-        items = self._connection_filter_items(data, connection, from_name, to_name, filter_type)
+        items = self._connection_filter_items(data, self._load_local_data(), connection, filter_type)
         required = self._connection_requires_filter(connection, filter_type)
         return json.dumps({"filter_type": filter_type, "required": required, "items": items})
 
@@ -227,18 +284,28 @@ class ProjectBridge(QObject):
         self, from_name: str, to_name: str, filter_type: str, item_name: str, enabled: bool
     ) -> bool:
         """Stores whether item_name is online for filter_type ("scenario"/"alternative") on the connection
-        between from_name and to_name, in project.json's "connection_filter_selection". Returns whether
-        such a connection exists."""
+        between from_name and to_name, in local_data.json's "known_filters" -- the same place and schema
+        spine_engine reads when actually running the project. Returns whether such a connection exists."""
         data = self._load()
-        if self._find_connection(data, from_name, to_name) is None:
+        connection = self._find_connection(data, from_name, to_name)
+        if connection is None:
             return False
-        project = data.setdefault("project", {})
-        key = f"{from_name}->{to_name}"
-        selection = project.setdefault("connection_filter_selection", {}).setdefault(key, {}).setdefault(
-            filter_type, {}
+        resource_label = self._connection_resource_label(data, connection)
+        if resource_label is None:
+            return False
+        raw_from, raw_to = connection["from"][0], connection["to"][0]
+        local_data = self._load_local_data()
+        known_filters = (
+            local_data.setdefault("project", {})
+            .setdefault("connections", {})
+            .setdefault(raw_from, {})
+            .setdefault(raw_to, {})
+            .setdefault("filter_settings", {})
+            .setdefault("known_filters", {})
+            .setdefault(resource_label, {})
         )
-        selection[item_name] = enabled
-        self._save(data)
+        known_filters.setdefault(f"{filter_type}_filter", {})[item_name] = enabled
+        self._save_local_data(local_data)
         return True
 
     @Slot(str, result=str)
@@ -431,6 +498,7 @@ class ProjectBridge(QObject):
         def resolve(name: str) -> str:
             return item_to_stack.get(name, name)
 
+        local_data = self._load_local_data()
         connections = []
         seen = set()
         for connection in project.get("connections", []):
@@ -446,7 +514,7 @@ class ProjectBridge(QObject):
             filter_required = filter_type is not None and self._connection_requires_filter(connection, filter_type)
             filter_satisfied = True
             if filter_required:
-                filter_items = self._connection_filter_items(data, connection, from_name, to_name, filter_type)
+                filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
                 filter_satisfied = any(item["enabled"] for item in filter_items)
             connections.append(
                 {
