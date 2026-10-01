@@ -58,11 +58,13 @@ from spine_engine.utils.helpers import resolve_julia_executable, resolve_julia_p
 from spinetoolbox.server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .config import (
     DEFAULT_WORK_DIR,
+    LATEST_PROJECT_VERSION,
     ONLINE_DOCUMENTATION_URL,
+    PROJECT_SETUP_SCRIPT,
     SPINE_DB_API_DOCUMENTATION_URL,
     SPINE_TOOLBOX_REPO_URL,
-    LATEST_PROJECT_VERSION
 )
+from .execution_managers import QProcessExecutionManager
 from .helpers import (
     ChildCyclingKeyPressFilter,
     ColoredIcon,
@@ -77,13 +79,13 @@ from .helpers import (
     make_icons_theme_aware,
     open_url,
     recursive_overwrite,
+    remove_path_from_recent_projects,
     same_path,
     set_taskbar_icon,
     solve_connection_file,
     supported_img_formats,
     unique_name,
     update_recent_projects,
-    remove_path_from_recent_projects,
 )
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
@@ -271,6 +273,7 @@ class ToolboxUI(QMainWindow):
         self._persistent_consoles: dict[str, PersistentConsoleWidget] = {}
         self._jupyter_consoles: dict[str, JupyterConsoleWidget] = {}
         self._current_execution_keys: dict[ProjectItem, str] = {}
+        self._project_setup_manager: QProcessExecutionManager | None = None
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -766,7 +769,58 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.reset_zoom()
         update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
+        self._offer_project_setup(self._project.project_dir)
         return True
+
+    def _offer_project_setup(self, project_dir: str) -> None:
+        """Asks the user whether to install/update the current project's own dependencies and run its setup script."""
+        script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
+        if not os.path.isfile(script_path):
+            return
+        button = QMessageBox.question(
+            self,
+            "Install project dependencies?",
+            f"This project bundles a setup script (<b>{PROJECT_SETUP_SCRIPT}</b>). <br><br>Install/update its "
+            f"dependencies into the current Python environment and run the setup script now?",
+        )
+        if button != QMessageBox.StandardButton.Yes:
+            return
+        self._install_project_dependencies(project_dir)
+
+    def _install_project_dependencies(self, project_dir: str) -> None:
+        """Editable-installs the project directory so its setup script can be imported and run."""
+        python = resolve_python_interpreter(self._qsettings)
+        args = ["-m", "pip", "install", "--upgrade", "-e", project_dir]
+        self._project_setup_manager = QProcessExecutionManager(self, python, args, semisilent=True)
+        self._project_setup_manager.execution_finished.connect(
+            lambda exit_code: self._handle_project_install_finished(exit_code, project_dir)
+        )
+        self.msg.emit(f"Installing dependencies for <b>{project_dir}</b>...")
+        self._project_setup_manager.start_execution()
+
+    def _handle_project_install_finished(self, exit_code: int, project_dir: str) -> None:
+        """Runs the project's setup script once its dependencies have been installed."""
+        self._project_setup_manager = None
+        if exit_code != 0:
+            self.msg_error.emit("Installing project dependencies failed, setup script was not run")
+            return
+        python = resolve_python_interpreter(self._qsettings)
+        script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
+        self._project_setup_manager = QProcessExecutionManager(
+            self, python, [script_path, "--skip-git"], semisilent=True
+        )
+        self._project_setup_manager.execution_finished.connect(self._handle_project_setup_finished)
+        self.msg.emit(f"Running <b>{PROJECT_SETUP_SCRIPT}</b>...")
+        self._project_setup_manager.start_execution(workdir=project_dir)
+
+    @Slot(int)
+    def _handle_project_setup_finished(self, exit_code: int) -> None:
+        """Reports the outcome of the project setup script."""
+        self._project_setup_manager = None
+        if exit_code == 0:
+            self.msg_success.emit("Project setup finished successfully")
+        else:
+            self.msg_error.emit("Project setup script failed")
 
     def _confirm_project_upgrade(self, project_dir: pathlib.Path | str) -> bool:
         """Asks user whether to upgrade the project to a new version."""

@@ -18,6 +18,58 @@ ApplicationWindow {
     // name of the project currently open in the shared .spinetoolbox project.json
     property string currentProjectName: ""
 
+    // transient banner shown while/after a project's setup script runs (see offerProjectSetup());
+    // status is "info", "success" or "error"
+    property string setupStatusMessage: ""
+    property string setupStatusKind: "info"
+
+    // asks the user (via setupDialog) to install/run a project's bundled setup script, if it has one
+    function offerProjectSetup() {
+        if (typeof projectBridge === "undefined")
+            return
+
+        if (projectBridge.has_setup_script())
+            setupDialog.open()
+    }
+
+    Connections {
+        target: typeof projectBridge !== "undefined" ? projectBridge : null
+
+        function onSetupStatusChanged(message, status) {
+            root.setupStatusMessage = message
+            root.setupStatusKind = status
+            setupStatusTimer.restart()
+        }
+    }
+
+    Timer {
+        id: setupStatusTimer
+        interval: 6000
+        onTriggered: root.setupStatusMessage = ""
+    }
+
+    Dialog {
+        id: setupDialog
+
+        anchors.centerIn: parent
+        modal: true
+        width: 360
+
+        title: "Install project dependencies?"
+        standardButtons: Dialog.Yes | Dialog.No
+
+        contentItem: Label {
+            text: "This project bundles a setup script. Install/update its dependencies into the " +
+                  "current Python environment and run the setup script now?"
+            wrapMode: Text.WordWrap
+        }
+
+        onAccepted: {
+            if (typeof projectBridge !== "undefined")
+                projectBridge.install_project_dependencies()
+        }
+    }
+
     // "workflow" (project canvas) or "database" (data browser), switched from the sidebar
     property string currentView: "workflow"
 
@@ -357,6 +409,7 @@ ApplicationWindow {
             currentProjectName = projectBridge.get_project_name()
 
         loadWorkflow()
+        offerProjectSetup()
     }
 
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows,
@@ -644,6 +697,7 @@ ApplicationWindow {
                                     root.currentProjectName = name
 
                                 root.loadWorkflow()
+                                root.offerProjectSetup()
                             }
                         }
                     }
@@ -691,6 +745,31 @@ ApplicationWindow {
                             font.bold: true
                         }
                     }
+                }
+            }
+
+            // -------------------------------------------------
+            // SETUP STATUS BANNER (shown while/after a project's setup script runs)
+            // -------------------------------------------------
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 32
+
+                visible: root.setupStatusMessage !== ""
+
+                color: root.setupStatusKind === "error" ? "#fee2e2"
+                     : root.setupStatusKind === "success" ? "#dcfce7" : "#e0e7ff"
+
+                Label {
+                    anchors.fill: parent
+                    anchors.leftMargin: 28
+                    anchors.rightMargin: 24
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    text: root.setupStatusMessage
+                    color: root.setupStatusKind === "error" ? "#991b1b"
+                         : root.setupStatusKind === "success" ? "#166534" : "#3730a3"
                 }
             }
 
