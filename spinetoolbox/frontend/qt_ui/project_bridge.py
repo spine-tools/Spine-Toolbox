@@ -68,6 +68,12 @@ class ProjectBridge(QObject):
 
     # emitted for setup progress/result; status is "info", "success" or "error"
     setupStatusChanged = Signal(str, str)
+    # emitted for run progress/result; status is "info", "success" or "error"
+    runStatusChanged = Signal(str, str)
+    # emitted whenever a workflow run starts or stops
+    executionStateChanged = Signal(bool)
+    # emitted per output line from a workflow run; kind is "stdout" or "stderr"
+    executionLogAppended = Signal(str, str)
 
     def __init__(self, project_dir: str | Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -79,6 +85,12 @@ class ProjectBridge(QObject):
         self._setup_logger.msg.connect(lambda text: self.setupStatusChanged.emit(text, "info"))
         self._setup_logger.msg_success.connect(lambda text: self.setupStatusChanged.emit(text, "success"))
         self._setup_logger.msg_error.connect(lambda text: self.setupStatusChanged.emit(text, "error"))
+        self._run_manager: QProcessExecutionManager | None = None
+        self._run_logger = QtLogger()
+        self._run_logger.msg.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
+        self._run_logger.msg_proc.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
+        self._run_logger.msg_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
+        self._run_logger.msg_proc_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
 
     def _load(self) -> dict:
         if self._config_file.exists():
@@ -118,6 +130,15 @@ class ProjectBridge(QObject):
             for member in stack.get("items", []):
                 item_to_stack[member] = display_name
         return lambda name: item_to_stack.get(name, name)
+
+    def _stack_members(self, data: dict, display_name: str) -> list[str]:
+        """Returns the raw project.json item names display_name stands for (inverse of _stack_resolver);
+        a single-element list of display_name itself if it doesn't name a stack."""
+        stacks = data.get("project", {}).get("stacks", {})
+        for stack_key, stack in stacks.items():
+            if stack.get("name", stack_key) == display_name:
+                return list(stack.get("items", []))
+        return [display_name]
 
     def _find_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
         """Finds the raw project.json connection whose (possibly stacked) endpoints resolve to
@@ -297,6 +318,54 @@ class ProjectBridge(QObject):
             self._setup_logger.msg_success.emit("Project setup finished successfully")
         else:
             self._setup_logger.msg_error.emit("Project setup script failed")
+
+    @Slot(list)
+    def run_workflow(self, selected_names: list) -> None:
+        """Runs the project (or, if selected_names is non-empty, just those items/stacks) via the
+        existing headless CLI, so execution reuses the real engine instead of reimplementing it here."""
+        if self._run_manager is not None:
+            self.runStatusChanged.emit("A run is already in progress", "error")
+            return
+        data = self._load()
+        real_names = sorted(
+            {name for display_name in selected_names for name in self._stack_members(data, display_name)}
+        )
+        project_dir = str(self._base_dir())
+        args = [project_dir, "--execute-only"]
+        if real_names:
+            args += ["--select", *real_names]
+        python = _resolve_python_interpreter()
+        self._run_logger.msg.emit("Running: " + " ".join([python, "-m", "spinetoolbox", *args]))
+        self._run_manager = QProcessExecutionManager(
+            self._run_logger, python, ["-m", "spinetoolbox", *args], semisilent=True
+        )
+        self._run_manager.execution_finished.connect(self._handle_run_finished)
+        self.executionStateChanged.emit(True)
+        self.runStatusChanged.emit("Running project...", "info")
+        self._run_manager.start_execution(workdir=project_dir)
+
+    @Slot()
+    def stop_workflow(self) -> None:
+        """Stops the currently running workflow, if any."""
+        if self._run_manager is not None:
+            self._run_manager.stop_execution()
+
+    def _handle_run_finished(self, exit_code: int) -> None:
+        """Reports the outcome of a workflow run."""
+        user_stopped = self._run_manager.user_stopped
+        self._run_manager = None
+        self.executionStateChanged.emit(False)
+        if user_stopped:
+            self.runStatusChanged.emit("Execution stopped", "info")
+        elif exit_code == 0:
+            self.runStatusChanged.emit("Execution finished successfully", "success")
+        else:
+            self.runStatusChanged.emit("Execution failed", "error")
+
+    @Slot(result=bool)
+    def is_execution_running(self) -> bool:
+        """Returns whether a workflow run is currently in progress."""
+        return self._run_manager is not None
 
     def _add_recent_project(self, name: str, project_dir: str) -> None:
         """Mirrors spinetoolbox.helpers.update_recent_projects so both UIs share the same recent-projects list."""
