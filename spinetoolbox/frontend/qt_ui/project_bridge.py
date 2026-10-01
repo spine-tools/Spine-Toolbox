@@ -2,11 +2,12 @@
 import json
 import os
 from pathlib import Path
-
-from PySide6.QtCore import QObject, QSettings, QUrl, Slot
-
-from ...config import PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME, LATEST_PROJECT_VERSION
+import sys
+from PySide6.QtCore import QObject, QSettings, QUrl, Signal, Slot
+from ...config import LATEST_PROJECT_VERSION, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME, PROJECT_SETUP_SCRIPT
+from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url
+from ...logger import QtLogger
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
 
@@ -52,14 +53,32 @@ def _data_dir(name: str, project_dir: str) -> str:
     return os.path.join(project_dir, PROJECT_CONFIG_DIR_NAME, "items", name.lower().replace(" ", "_"))
 
 
+def _resolve_python_interpreter() -> str:
+    """Returns the Python interpreter configured in Spine Toolbox settings, or the current one if none is set.
+
+    Reimplemented locally instead of using spine_engine.utils.helpers.resolve_python_interpreter: importing
+    spine_engine here (which pulls in networkx) after PySide6 triggers a very slow shiboken signature scan.
+    """
+    settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
+    return settings.value("appSettings/pythonPath") or sys.executable
+
+
 class ProjectBridge(QObject):
     """Exposes a project's Data Connection file references to QML."""
+
+    # emitted for setup progress/result; status is "info", "success" or "error"
+    setupStatusChanged = Signal(str, str)
 
     def __init__(self, project_dir: str | Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._project_dir = Path(project_dir)
         self._config_file = self._project_dir / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._db_editor = None
+        self._setup_manager: QProcessExecutionManager | None = None
+        self._setup_logger = QtLogger()
+        self._setup_logger.msg.connect(lambda text: self.setupStatusChanged.emit(text, "info"))
+        self._setup_logger.msg_success.connect(lambda text: self.setupStatusChanged.emit(text, "success"))
+        self._setup_logger.msg_error.connect(lambda text: self.setupStatusChanged.emit(text, "error"))
 
     def _load(self) -> dict:
         if self._config_file.exists():
@@ -237,6 +256,48 @@ class ProjectBridge(QObject):
             return self._project_dir
         return _EXAMPLE_PROJECT_FILE.parent
 
+    @Slot(result=bool)
+    def has_setup_script(self) -> bool:
+        """Returns whether the open project bundles a dependency/setup script (e.g. FlexTool's update_flextool.py)."""
+        return (self._base_dir() / PROJECT_SETUP_SCRIPT).is_file()
+
+    @Slot()
+    def install_project_dependencies(self) -> None:
+        """Editable-installs the project directory, then runs its setup script once that finishes."""
+        project_dir = str(self._base_dir())
+        python = _resolve_python_interpreter()
+        self._setup_manager = QProcessExecutionManager(
+            self._setup_logger, python, ["-m", "pip", "install", "--upgrade", "-e", project_dir], semisilent=True
+        )
+        self._setup_manager.execution_finished.connect(
+            lambda exit_code: self._handle_install_finished(exit_code, project_dir)
+        )
+        self._setup_logger.msg.emit(f"Installing dependencies for {project_dir}...")
+        self._setup_manager.start_execution()
+
+    def _handle_install_finished(self, exit_code: int, project_dir: str) -> None:
+        """Runs the project's setup script once its dependencies have been installed."""
+        self._setup_manager = None
+        if exit_code != 0:
+            self._setup_logger.msg_error.emit("Installing project dependencies failed, setup script was not run")
+            return
+        python = _resolve_python_interpreter()
+        script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
+        self._setup_manager = QProcessExecutionManager(
+            self._setup_logger, python, [script_path, "--skip-git"], semisilent=True
+        )
+        self._setup_manager.execution_finished.connect(self._handle_setup_finished)
+        self._setup_logger.msg.emit(f"Running {PROJECT_SETUP_SCRIPT}...")
+        self._setup_manager.start_execution(workdir=project_dir)
+
+    def _handle_setup_finished(self, exit_code: int) -> None:
+        """Reports the outcome of the project setup script."""
+        self._setup_manager = None
+        if exit_code == 0:
+            self._setup_logger.msg_success.emit("Project setup finished successfully")
+        else:
+            self._setup_logger.msg_error.emit("Project setup script failed")
+
     def _add_recent_project(self, name: str, project_dir: str) -> None:
         """Mirrors spinetoolbox.helpers.update_recent_projects so both UIs share the same recent-projects list."""
         settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
@@ -407,8 +468,8 @@ class ProjectBridge(QObject):
             self._db_editor.activateWindow()
             return
         # imported lazily: pulls in the full widget/spinedb_api stack, only needed once the user asks for it
-        from ...spine_db_manager import SpineDBManager
         from ...spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
+        from ...spine_db_manager import SpineDBManager
 
         settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
         db_mngr = SpineDBManager(settings, None)
