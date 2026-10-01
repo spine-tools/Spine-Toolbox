@@ -23,6 +23,12 @@ ApplicationWindow {
     property string setupStatusMessage: ""
     property string setupStatusKind: "info"
 
+    // transient banner shown while/after a workflow run; status is "info", "success" or "error"
+    property string runStatusMessage: ""
+    property string runStatusKind: "info"
+    property bool executionRunning: false
+    property ListModel executionLogModel: ListModel {}
+
     // asks the user (via setupDialog) to install/run a project's bundled setup script, if it has one
     function offerProjectSetup() {
         if (typeof projectBridge === "undefined")
@@ -40,12 +46,35 @@ ApplicationWindow {
             root.setupStatusKind = status
             setupStatusTimer.restart()
         }
+
+        function onRunStatusChanged(message, status) {
+            root.runStatusMessage = message
+            root.runStatusKind = status
+            runStatusTimer.restart()
+        }
+
+        function onExecutionStateChanged(running) {
+            root.executionRunning = running
+        }
+
+        function onExecutionLogAppended(line, kind) {
+            root.executionLogModel.append({ "text": line, "kind": kind })
+
+            if (root.executionLogModel.count > 2000)
+                root.executionLogModel.remove(0)
+        }
     }
 
     Timer {
         id: setupStatusTimer
         interval: 6000
         onTriggered: root.setupStatusMessage = ""
+    }
+
+    Timer {
+        id: runStatusTimer
+        interval: 6000
+        onTriggered: root.runStatusMessage = ""
     }
 
     Dialog {
@@ -558,7 +587,10 @@ ApplicationWindow {
                 SidebarButton {
                     text: "Runs"
                     iconText: "▶"
+                    selected: root.currentView === "runs"
                     compact: root.compactSidebar
+
+                    onClicked: root.currentView = "runs"
                 }
 
                 Item {
@@ -704,11 +736,17 @@ ApplicationWindow {
 
                     Button {
                         id: runProjectButton
-                        text: "Run project"
+
+                        property int selectedCount: Object.keys(root.selectedNames).length
+
+                        text: root.executionRunning ? "Stop"
+                            : selectedCount > 0 ? "Run selected (" + selectedCount + ")" : "Run project"
 
                         background: Rectangle {
                             radius: 8
-                            color: runProjectButton.hovered ? "#15803d" : "#16a34a"
+                            color: root.executionRunning
+                                ? (runProjectButton.hovered ? "#b91c1c" : "#dc2626")
+                                : (runProjectButton.hovered ? "#15803d" : "#16a34a")
                         }
 
                         contentItem: Label {
@@ -721,6 +759,16 @@ ApplicationWindow {
 
                             leftPadding: 12
                             rightPadding: 12
+                        }
+
+                        onClicked: {
+                            if (typeof projectBridge === "undefined")
+                                return
+
+                            if (root.executionRunning)
+                                projectBridge.stop_workflow()
+                            else
+                                projectBridge.run_workflow(Object.keys(root.selectedNames))
                         }
                     }
 
@@ -770,6 +818,31 @@ ApplicationWindow {
                     text: root.setupStatusMessage
                     color: root.setupStatusKind === "error" ? "#991b1b"
                          : root.setupStatusKind === "success" ? "#166534" : "#3730a3"
+                }
+            }
+
+            // -------------------------------------------------
+            // RUN STATUS BANNER (shown while/after a workflow run)
+            // -------------------------------------------------
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 32
+
+                visible: root.runStatusMessage !== ""
+
+                color: root.runStatusKind === "error" ? "#fee2e2"
+                     : root.runStatusKind === "success" ? "#dcfce7" : "#e0e7ff"
+
+                Label {
+                    anchors.fill: parent
+                    anchors.leftMargin: 28
+                    anchors.rightMargin: 24
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                    text: root.runStatusMessage
+                    color: root.runStatusKind === "error" ? "#991b1b"
+                         : root.runStatusKind === "success" ? "#166534" : "#3730a3"
                 }
             }
 
@@ -1454,8 +1527,49 @@ ApplicationWindow {
                     }
                 }
             }
-            // closes the Data page Rectangle above; this next brace closes the WORKSPACE
-            // RowLayout itself, so the Data page is a sibling of the design canvas
+
+            // =================================================
+            // RUNS PAGE (streamed stdout/stderr from projectBridge.run_workflow())
+            // =================================================
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                visible: root.currentView === "runs"
+                color: "#f2f8f4"
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 20
+
+                    radius: 10
+                    color: "#0f172a"
+
+                    ListView {
+                        id: runLogView
+
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        clip: true
+
+                        model: root.executionLogModel
+
+                        onCountChanged: positionViewAtEnd()
+
+                        delegate: Label {
+                            width: runLogView.width
+                            text: model.text
+                            wrapMode: Text.Wrap
+                            font.family: "Consolas, monospace"
+                            font.pixelSize: 12
+                            color: model.kind === "stderr" ? "#f87171" : "#e2e8f0"
+                        }
+                    }
+                }
+            }
+            // closes the Runs page Rectangle above; this next brace closes the WORKSPACE
+            // RowLayout itself, so each page is a sibling of the design canvas
             }
         }
     }
