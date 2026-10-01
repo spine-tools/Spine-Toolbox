@@ -388,6 +388,29 @@ ApplicationWindow {
         }
     }
 
+    // geometry shared by the connector canvas and the filter badge anchor, so a badge always sits
+    // on the actual drawn path: a straight line when both cards share a row, otherwise the elbow's
+    // vertical turn (see connectionsCanvas.drawConnection)
+    function connectionRoute(from, to) {
+        var startX = from.x + from.width
+        var startY = from.y + from.height / 2
+        var endX = to.x
+        var endY = to.y + to.height / 2
+
+        var dir = endY > startY ? 1 : (endY < startY ? -1 : 0)
+        var span = endX - startX
+        var bent = dir !== 0 && span > 0
+        var radius = bent ? Math.max(2, Math.min(16, span / 2, Math.abs(endY - startY) / 2)) : 0
+        var turnX = bent
+                ? (span > 60 ? Math.max(startX + radius, endX - Math.max(24, span * 0.15)) : startX + span / 2)
+                : (startX + endX) / 2
+
+        return {
+            startX: startX, startY: startY, endX: endX, endY: endY,
+            dir: dir, bent: bent, radius: radius, turnX: turnX
+        }
+    }
+
     // midpoint of the connector between two design cards, in the same coordinate space they live in;
     // used to place the scenario/alternative filter badge for a connection
     function connectionAnchor(fromName, toName) {
@@ -397,12 +420,10 @@ ApplicationWindow {
         if (!fromItem || !toItem)
             return Qt.point(0, 0)
 
-        var startX = fromItem.x + fromItem.width
-        var startY = fromItem.y + fromItem.height / 2
-        var endX = toItem.x
-        var endY = toItem.y + toItem.height / 2
-
-        return Qt.point((startX + endX) / 2, (startY + endY) / 2)
+        var route = root.connectionRoute(fromItem, toItem)
+        return route.bent
+                ? Qt.point(route.turnX, (route.startY + route.endY) / 2)
+                : Qt.point((route.startX + route.endX) / 2, (route.startY + route.endY) / 2)
     }
 
     // fetches project.json's items/connections and lays them out on a rank/lane grid
@@ -903,39 +924,30 @@ ApplicationWindow {
                                 var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
                                 var to = toItem.mapToItem(connectionsCanvas, 0, 0)
 
-                                var startX = from.x + fromItem.width
-                                var startY = from.y + fromItem.height / 2
-
-                                var endX = to.x
-                                var endY = to.y + toItem.height / 2
+                                var route = root.connectionRoute(
+                                    {x: from.x, y: from.y, width: fromItem.width, height: fromItem.height},
+                                    {x: to.x, y: to.y, width: toItem.width, height: toItem.height}
+                                )
 
                                 ctx.strokeStyle = "#7c9c88"
                                 ctx.lineWidth = 2
 
                                 ctx.beginPath()
-                                ctx.moveTo(startX, startY)
+                                ctx.moveTo(route.startX, route.startY)
 
                                 // Every connector uses the same elbow routing: stay on the source's
                                 // row (which is otherwise clear) and only turn towards the target row
                                 // right before reaching it, instead of cutting diagonally across other
                                 // cards. When both cards share a row this naturally collapses to a
                                 // straight line.
-                                var dir = endY > startY ? 1 : (endY < startY ? -1 : 0)
-                                var span = endX - startX
-
-                                if (dir !== 0 && span > 0) {
-                                    var radius = Math.max(2, Math.min(16, span / 2, Math.abs(endY - startY) / 2))
-                                    var turnX = span > 60
-                                        ? Math.max(startX + radius, endX - Math.max(24, span * 0.15))
-                                        : startX + span / 2
-
-                                    ctx.lineTo(turnX - radius, startY)
-                                    ctx.quadraticCurveTo(turnX, startY, turnX, startY + radius * dir)
-                                    ctx.lineTo(turnX, endY - radius * dir)
-                                    ctx.quadraticCurveTo(turnX, endY, turnX + radius, endY)
+                                if (route.bent) {
+                                    ctx.lineTo(route.turnX - route.radius, route.startY)
+                                    ctx.quadraticCurveTo(route.turnX, route.startY, route.turnX, route.startY + route.radius * route.dir)
+                                    ctx.lineTo(route.turnX, route.endY - route.radius * route.dir)
+                                    ctx.quadraticCurveTo(route.turnX, route.endY, route.turnX + route.radius, route.endY)
                                 }
 
-                                ctx.lineTo(endX, endY)
+                                ctx.lineTo(route.endX, route.endY)
 
                                 ctx.stroke()
 
@@ -944,14 +956,14 @@ ApplicationWindow {
 
                                 ctx.beginPath()
 
-                                ctx.moveTo(endX, endY)
+                                ctx.moveTo(route.endX, route.endY)
                                 ctx.lineTo(
-                                    endX - arrowSize,
-                                    endY - arrowSize / 2
+                                    route.endX - arrowSize,
+                                    route.endY - arrowSize / 2
                                 )
                                 ctx.lineTo(
-                                    endX - arrowSize,
-                                    endY + arrowSize / 2
+                                    route.endX - arrowSize,
+                                    route.endY + arrowSize / 2
                                 )
                                 ctx.closePath()
 
