@@ -258,15 +258,14 @@ class EntityItem(MultiDBTreeItem):
     def display_data(self):
         element_byname_list = self.element_byname_list
         if element_byname_list:
-            element_byname_list = [
-                (
-                    x
-                    if not isinstance(self.parent_item, EntityItem) or x != self.parent_item.byname
-                    else ["\u066d"] * len(x)
-                )
-                for x in element_byname_list
-            ]
-            return DB_ITEM_SEPARATOR.join([DB_ITEM_SEPARATOR.join(x) for x in element_byname_list])
+            if isinstance(self.parent_item, EntityItem):
+                element_byname_list = [
+                    (x if x != self.parent_item.byname else ["\u066d"] * len(x)) for x in element_byname_list
+                ]
+            return (
+                DB_ITEM_SEPARATOR.join([DB_ITEM_SEPARATOR.join(x) for x in element_byname_list])
+                + f" ({self.entity_class_name})"
+            )
         return self.name
 
     @property
@@ -342,7 +341,9 @@ class EntityItem(MultiDBTreeItem):
         self.append_children_by_id(db_map_member_ids, is_member=True)
         if not self._is_group:
             self._is_group = True
-            self.parent_item.reposition_child(self.child_number())
+            child_number = self.child_number()
+            if child_number is not None:
+                self.parent_item.reposition_child(child_number)
 
     def _handle_entity_group_items_removed(self, db_map_data):
         db_map_ids = {db_map: [x["member_id"] for x in data] for db_map, data in db_map_data.items()}

@@ -67,7 +67,7 @@ class LevelFilterMixin:
         """
         return self._filter_generation
 
-    def _bump_filter_generation(self) -> None:
+    def bump_filter_generation(self) -> None:
         """Invalidates every item's cached filtered child list by advancing the generation counter."""
         self._filter_generation += 1
 
@@ -105,7 +105,7 @@ class LevelFilterMixin:
         self._force_fetching = False
         self._force_fetch_frontier = None
         self._force_fetch_iterations = 0
-        self._bump_filter_generation()
+        self.bump_filter_generation()
 
     def _reschedule_level_filters(self) -> None:
         """Restarts both debounces so the latest keystroke wins.
@@ -120,13 +120,8 @@ class LevelFilterMixin:
         self._level_filter_timer.start()
         self._force_fetch_timer.start(FORCE_FETCH_DELAY)
 
-    def _schedule_level_filter_refresh(self) -> None:
-        """Reschedules the cheap recompute after a child insert/remove and continues any force-fetch.
-
-        Called from the item insert/remove hooks. The cheap recompute always runs so freshly loaded rows
-        are filtered; while a force-fetch cascade is active it is also continued promptly so the next level
-        down gets fetched as soon as the current batch lands.
-        """
+    def schedule_level_filter_refresh(self) -> None:
+        """Reschedules the cheap recompute after a child insert/remove and continues any force-fetch."""
         self._level_filter_timer.start()
         if self._force_fetching:
             self._force_fetch_timer.start(FORCE_FETCH_CONTINUE_INTERVAL)

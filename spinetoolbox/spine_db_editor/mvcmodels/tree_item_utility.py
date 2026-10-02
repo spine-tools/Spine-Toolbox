@@ -148,8 +148,8 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
             # Newly fetched/inserted children must be filtered; invalidate the cached filtered lists so the
             # new rows are reflected. The debounced re-apply also refines any now-non-empty (or still-empty)
             # parent that a filter should show or hide, and continues any active force-fetch cascade.
-            self.model._bump_filter_generation()
-            self.model._schedule_level_filter_refresh()
+            self.model.bump_filter_generation()
+            self.model.schedule_level_filter_refresh()
         return True
 
     def remove_children(self, position, count) -> bool:
@@ -157,8 +157,8 @@ class StandardTreeItem(FilterableChildrenMixin, TreeItem):
         if not super().remove_children(position, count):
             return False
         if self.model.has_level_filters():
-            self.model._bump_filter_generation()
-            self.model._schedule_level_filter_refresh()
+            self.model.bump_filter_generation()
+            self.model.schedule_level_filter_refresh()
         return True
 
 
