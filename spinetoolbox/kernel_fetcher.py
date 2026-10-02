@@ -36,6 +36,7 @@ class KernelFetcher(QThread):
               3: Fetch only regular Python kernels,
               4: Fetch only regular Julia kernels,
               5: Fetch kernels that are neither Python nor Julia
+              6: Fetch regular and Conda Julia kernels
         """
         super().__init__()
         self.conda_path = conda_path
@@ -71,6 +72,23 @@ class KernelFetcher(QThread):
                 if not self.keep_going:
                     return
 
+    def get_conda_kernels(self, language):
+        """Finds auto-generated Conda kernels with the given language."""
+        conda_path = resolve_conda_executable(self.conda_path)
+        if conda_path != "":
+            cksm = CondaKernelSpecManager(conda_exe=conda_path)
+            # Get Conda Kernel names and resource dirs
+            for conda_kernel_name, spec_deats in cksm._all_specs().items():  # This is expensive
+                rsc_dir = spec_deats.get("resource_dir", "Resource_dir not found")
+                icon = self.get_icon(rsc_dir)
+                print(f"conda kernel {conda_kernel_name} d:{spec_deats}")
+                lang = spec_deats.get("language")
+                if lang == language:
+                    spec_deats["kernel_name"] = conda_kernel_name
+                    self.kernel_found.emit(conda_kernel_name, rsc_dir, True, icon, spec_deats)
+                if not self.keep_going:
+                    return
+
     def run(self):
         """Finds kernel specs based on selected fetch mode. Sends found kernels one-by-one via signals."""
         if self.fetch_mode == 1:
@@ -78,7 +96,7 @@ class KernelFetcher(QThread):
             self.get_all_regular_kernels()
             self.get_all_conda_kernels()
             return
-        # To find just a subset of kernels, we need to open kernel.json file and check the language
+        # Finding a subset of kernels requires opening the kernel.json file and checking the language
         for kernel_name, resource_dir in custom_find_kernel_specs().items():
             d = self.get_kernel_deats(resource_dir)
             icon = self.get_icon(resource_dir)
@@ -86,7 +104,7 @@ class KernelFetcher(QThread):
                 if self.fetch_mode in {2, 3}:
                     self.kernel_found.emit(kernel_name, resource_dir, False, icon, d)
             elif d["language"].lower().strip() == "julia":  # Regular Julia kernel found
-                if self.fetch_mode == 4:
+                if self.fetch_mode in {4, 6}:
                     self.kernel_found.emit(kernel_name, resource_dir, False, icon, d)
             else:  # Some other kernel found
                 if self.fetch_mode == 5:
@@ -94,7 +112,9 @@ class KernelFetcher(QThread):
             if not self.keep_going:
                 return
         if self.fetch_mode == 2:
-            self.get_all_conda_kernels()
+            self.get_conda_kernels("python")
+        elif self.fetch_mode == 6:
+            self.get_conda_kernels("julia")
 
     @staticmethod
     def get_icon(p):
@@ -128,6 +148,7 @@ class KernelFetcher(QThread):
         kernel_json = os.path.join(kernel_path, "kernel.json")
         if not os.path.exists(kernel_json):
             return deats
+        _, kernel_name = os.path.split(kernel_path)
         if os.stat(kernel_json).st_size == 0:  # File is empty
             return deats
         with open(kernel_json, "r") as fh:
@@ -148,4 +169,5 @@ class KernelFetcher(QThread):
                         deats["project"] = arg[10:]
             except (KeyError, IndexError):
                 pass
+            deats["kernel_name"] = kernel_name
             return deats
