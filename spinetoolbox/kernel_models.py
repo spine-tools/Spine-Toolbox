@@ -21,6 +21,7 @@ from .helpers import (
     remove_path_from_qsettings,
     load_list_of_paths_from_qsettings,
     restore_override_cursor,
+    is_valid_conda_executable,
 )
 from spine_engine.utils.helpers import resolve_default_julia_executable, resolve_current_python_interpreter
 
@@ -193,7 +194,7 @@ class ExecutableCompoundModels(QObject):
                 return item.index()
         return QModelIndex()
 
-    def start_fetching_julia_kernels(self, finalize_slot=None, conda=""):
+    def start_fetching_julia_kernels(self, finalize_slot, conda):
         """Starts a thread for fetching Julia kernels."""
         if self.julia_kernel_fetcher is not None and self.julia_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
@@ -202,9 +203,9 @@ class ExecutableCompoundModels(QObject):
         self.julia_kernel_model.clear()
         first_item = QStandardItem("Select Jupyter kernel...")
         self.julia_kernel_model.appendRow(first_item)
-        if not conda:
-            conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
-        self.julia_kernel_fetcher = KernelFetcher(conda, fetch_mode=4)
+        if not is_valid_conda_executable(conda):
+            conda = ""
+        self.julia_kernel_fetcher = KernelFetcher(conda, fetch_mode=6)
         self.julia_kernel_fetcher.kernel_found.connect(self._add_julia_kernel)
         if finalize_slot is not None:
             self.julia_kernel_fetcher.finished.connect(finalize_slot)
@@ -316,7 +317,7 @@ class ExecutableCompoundModels(QObject):
             return QModelIndex()
         return items[0].index()
 
-    def start_fetching_python_kernels(self, finalize_slot, conda=""):
+    def start_fetching_python_kernels(self, finalize_slot, conda):
         """Starts a thread for fetching Python kernels."""
         if self.python_kernel_fetcher is not None and self.python_kernel_fetcher.isRunning():
             # Trying to start a new thread when the old one is still running
@@ -325,8 +326,8 @@ class ExecutableCompoundModels(QObject):
         self.python_kernel_model.clear()
         first_item = QStandardItem("Select Jupyter kernel...")
         self.python_kernel_model.appendRow(first_item)
-        if not conda:
-            conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
+        if not is_valid_conda_executable(conda):
+            conda = ""
         self.python_kernel_fetcher = KernelFetcher(conda, fetch_mode=2)
         self.python_kernel_fetcher.kernel_found.connect(self._add_python_kernel)
         if finalize_slot is not None:
@@ -368,8 +369,9 @@ class ExecutableCompoundModels(QObject):
             QApplication.restoreOverrideCursor()
 
     def load_all(self):
+        conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
         self.refresh_python_interpreters_model()
         self.refresh_julia_executables_model()
         self.refresh_julia_projects_model()
-        self.start_fetching_python_kernels(finalize_slot=None)
-        self.start_fetching_julia_kernels(finalize_slot=None)
+        self.start_fetching_python_kernels(finalize_slot=None, conda=conda)
+        self.start_fetching_julia_kernels(finalize_slot=None, conda=conda)

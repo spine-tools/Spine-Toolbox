@@ -67,4 +67,6 @@ PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file
 # Misc.
 FG_COLOR = "#F0F0F0"
 PYTHON_EXECUTION_MODES = ["Python interpreter", "Jupyter kernel"]
+PYTHON_TOOL_EXECUTION_MODES = ["Default", "Python interpreter", "Jupyter kernel"]
 JULIA_EXECUTION_MODES = ["Julia executable & environment", "Jupyter kernel"]
+JULIA_TOOL_EXECUTION_MODES = ["Default", "Julia executable & environment", "Jupyter kernel"]
