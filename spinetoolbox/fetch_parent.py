@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The FetchParent and FlexibleFetchParent classes."""
+
 from __future__ import annotations
 from collections.abc import Callable, Hashable
 from contextlib import suppress
@@ -18,6 +19,7 @@ from typing import TYPE_CHECKING, Optional, TypeAlias
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import MappedItemBase, PublicItem
+from spinedb_api.helpers import ItemType
 from spinedb_api.temp_id import TempId
 from .helpers import busy_effect
 
@@ -52,8 +54,8 @@ class FetchParent(QObject):
             DatabaseMapping, list[tuple[Callable[[DBMapMixedItems], None], MappedItemBase | PublicItem]]
         ] = {}
         self._obsolete = False
-        self._fetched = False
-        self._busy = False
+        self._fetched: dict[DatabaseMapping, bool] = {}
+        self._busy_db_maps: set[DatabaseMapping] = set()
         self._position: dict[DatabaseMapping, int] = {}
         self._timer = QTimer()
         self._timer.setSingleShot(True)
@@ -85,8 +87,8 @@ class FetchParent(QObject):
         self._remove_item_callbacks.clear()
         self._timer.stop()
         self._changes_by_db_map.clear()
-        self._fetched = False
-        self._busy = False
+        self._fetched.clear()
+        self._busy_db_maps.clear()
         self._position.clear()
 
     def position(self, db_map: DatabaseMapping) -> int:
@@ -112,7 +114,7 @@ class FetchParent(QObject):
                 items = [item]
                 last_handler = handler
             last_handler({db_map: items})
-        QTimer.singleShot(0, lambda: self.set_busy(False))
+            QTimer.singleShot(0, lambda db_map=db_map: self.set_busy(db_map, False))
 
     def bind_item(self, item: PublicItem, db_map: DatabaseMapping) -> None:
         # NOTE: If `item` is in the process of calling callbacks in another thread,
@@ -197,34 +199,37 @@ class FetchParent(QObject):
             obsolete: whether parent has become obsolete
         """
         if obsolete:
-            self.set_busy(False)
+            self._busy_db_maps.clear()
         self._obsolete = obsolete
 
-    @property
-    def is_fetched(self) -> bool:
-        return self._fetched
+    def is_fetched(self, db_map: DatabaseMapping) -> bool:
+        return self._fetched.get(db_map, False)
 
-    def set_fetched(self, fetched: bool) -> None:
+    def set_fetched(self, db_map: DatabaseMapping, fetched: bool) -> None:
         """Sets the fetched status.
 
         Args:
+            db_map: Database mapping where fetch status has changed.
             fetched: whether parent has been fetched completely
         """
         if fetched:
-            self.set_busy(False)
-        self._fetched = fetched
+            self.set_busy(db_map, False)
+        self._fetched[db_map] = fetched
 
-    @property
-    def is_busy(self) -> bool:
-        return self._busy
+    def is_busy(self, db_map: DatabaseMapping) -> bool:
+        return db_map in self._busy_db_maps
 
-    def set_busy(self, busy: bool) -> None:
+    def set_busy(self, db_map: DatabaseMapping, busy: bool) -> None:
         """Sets the busy status.
 
         Args:
+            db_map: Database mapping where busy status has changed.
             busy: whether parent is busy fetching
         """
-        self._busy = busy
+        if busy:
+            self._busy_db_maps.add(db_map)
+        else:
+            self._busy_db_maps.discard(db_map)
 
     def handle_items_added(self, db_map_data: DBMapMixedItems) -> None:
         """
@@ -292,13 +297,13 @@ class ItemTypeFetchParent(FetchParent):
 class FlexibleFetchParent(ItemTypeFetchParent):
     def __init__(
         self,
-        fetch_item_type: str,
+        fetch_item_type: ItemType,
         handle_items_added: Optional[Callable[[DBMapMixedItems], None]] = None,
         handle_items_removed: Optional[Callable[[DBMapMixedItems], None]] = None,
         handle_items_updated: Optional[Callable[[DBMapMixedItems], None]] = None,
         accepts_item: Optional[Callable[[MappedItemBase | PublicItem, DatabaseMapping], bool]] = None,
         shows_item: Optional[Callable[[MappedItemBase | PublicItem, DatabaseMapping], bool]] = None,
-        key_for_index: Optional[Callable[[DatabaseMapping], TempId]] = None,
+        key_for_index: Optional[Callable[[DatabaseMapping], TempId | None]] = None,
         index: Optional[FetchIndex] = None,
         owner: Optional[object] = None,
         chunk_size: int | None = 1000,

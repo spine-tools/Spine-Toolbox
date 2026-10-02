@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Tests for Remote Spine Engine Manager."""
+
 import unittest
 from unittest import mock
 from spine_engine import ItemExecutionFinishState
@@ -136,7 +137,3 @@ class TestRemoteSpineEngineManager(unittest.TestCase):
             json_event = EventDataConverter.convert(event_type, data)
             rcv_events_list.append([json_event.encode("utf-8")])
         yield from rcv_events_list
-
-
-if __name__ == "__main__":
-    unittest.main()

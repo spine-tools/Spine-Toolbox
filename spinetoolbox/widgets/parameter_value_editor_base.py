@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A base for editor windows for editing parameter values."""
+
 from enum import Enum, auto, unique
 from numbers import Number
 from PySide6.QtCore import Qt, Slot
@@ -135,7 +136,7 @@ class ParameterValueEditorBase(QWidget):
             variable_resolution_value = self._editors[ValueType.TIME_SERIES_VARIABLE_RESOLUTION].value()
             stamps = variable_resolution_value.indexes
             start = stamps[0]
-            difference = stamps[1] - start
+            difference = stamps[1] - start if len(stamps) > 1 else "1h"
             resolution = [duration_to_relativedelta(str(difference))]
             fixed_resolution_value = TimeSeriesFixedResolution(
                 start,

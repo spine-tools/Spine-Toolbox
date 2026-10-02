@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Custom item delegates."""
+
 from PySide6.QtCore import QEvent, QModelIndex, QPoint, QRect, Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,

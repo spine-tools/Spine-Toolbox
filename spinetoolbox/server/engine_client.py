@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Client for exchanging messages between the toolbox and the Spine Engine Server."""
+
 from enum import Enum
 import json
 import os

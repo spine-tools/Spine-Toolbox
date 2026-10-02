@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A model for indexed parameter values, used by the parameter_value editors."""
+
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QColor
 

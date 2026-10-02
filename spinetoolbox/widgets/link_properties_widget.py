@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Link properties widget."""
+
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMenu
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE

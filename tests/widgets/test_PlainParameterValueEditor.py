@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the PlainParameterValueEditor widget."""
+
 import unittest
 from PySide6.QtWidgets import QWidget
 from spinetoolbox.widgets.plain_parameter_value_editor import PlainParameterValueEditor

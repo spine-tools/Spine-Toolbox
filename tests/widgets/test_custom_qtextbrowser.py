@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the custom QTextBrowser."""
+
 import unittest
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
 from tests.mock_helpers import TestCaseWithQApplication

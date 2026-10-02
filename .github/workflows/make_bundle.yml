@@ -14,7 +14,7 @@ jobs:
     name: Bundle
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.git-ref }}
           fetch-depth: 0
@@ -25,7 +25,7 @@ jobs:
           git describe --tags --exact-match
           Write-Output "is_tag=$(if ($?) { 'true' } else { 'false' })" >> $Env:GITHUB_OUTPUT
       - name: "Set up Python"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -51,6 +51,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           python -m pip install -r dev-requirements.txt
+          python -m pip install PySide6==6.10.0  # Temporary solution; unit tests fail inexplicably on 6.10.1
       - name: Run tests
         if: steps.commit.outputs.is_tag == 'false'
         run: |
@@ -86,7 +87,7 @@ jobs:
         run: |
           cd embedded-python/Scripts
           ./pip.exe --version
-          ./pip.exe install spinedb-api ipykernel jill
+          ./pip.exe install setuptools spinedb-api ipykernel jill
       - name: List packages in embedded Python
         run: |
           cd embedded-python/Scripts
@@ -105,7 +106,7 @@ jobs:
           python -c "import shutil; shutil.make_archive('Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}','zip', 'dist/Spine Toolbox')"
       - name: Create GitHub release for version ${{ inputs.git-ref }}
         if: steps.commit.outputs.is_tag == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.git-ref }}
           body: |
@@ -114,7 +115,7 @@ jobs:
             Spine-Toolbox-win-${{ inputs.git-ref }}.zip
       - name: Upload archive
         if: steps.commit.outputs.is_tag == 'false'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Spine-Toolbox-win-${{ steps.toolbox-version.outputs.version }}
           path: "./dist/Spine Toolbox"

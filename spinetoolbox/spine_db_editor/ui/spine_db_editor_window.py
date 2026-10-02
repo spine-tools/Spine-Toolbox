@@ -33,11 +33,13 @@ from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplicat
     QSpacerItem, QVBoxLayout, QWidget)
 
 from spinetoolbox.spine_db_editor.widgets.custom_qgraphicsviews import EntityQGraphicsView
-from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterValueTableView, EntityAlternativeTableView,
-    EntityTableView, FrozenTableView, ItemMetadataTableView, MetadataTableView,
-    ParameterDefinitionTableView, ParameterValueTableView, PivotTableView)
+from spinetoolbox.spine_db_editor.widgets.custom_qtableview import (EmptyEntityAlternativeTableView, EmptyParameterDefinitionTableView, EmptyParameterGroupTableView, EmptyParameterValueTableView,
+    EntityAlternativeTableView, EntityTableView, FrozenTableView, ItemMetadataTableView,
+    MetadataTableView, ParameterDefinitionTableView, ParameterGroupTableView, ParameterValueTableView,
+    PivotTableView)
 from spinetoolbox.spine_db_editor.widgets.custom_qtreeview import (AlternativeTreeView, EntityTreeView, ParameterValueListTreeView, ScenarioTreeView)
 from spinetoolbox.spine_db_editor.widgets.custom_qwidgets import (LegendWidget, ProgressBarWidget, ResizeSignallingWidget, TimeLineWidget)
+from spinetoolbox.spine_db_editor.widgets.tree_filter_bar import TreeLevelFilterBar
 from spinetoolbox import resources_icons_rc
 
 class Ui_MainWindow(object):
@@ -149,6 +151,9 @@ class Ui_MainWindow(object):
         icon16 = QIcon()
         icon16.addFile(u":/icons/menu_icons/folder-open-solid.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionOpen_db_file.setIcon(icon16)
+        self.actionOpen_in_new_tab = QAction(MainWindow)
+        self.actionOpen_in_new_tab.setObjectName(u"actionOpen_in_new_tab")
+        self.actionOpen_in_new_tab.setIcon(icon16)
         self.actionAdd_db_file = QAction(MainWindow)
         self.actionAdd_db_file.setObjectName(u"actionAdd_db_file")
         self.actionAdd_db_file.setIcon(icon16)
@@ -206,6 +211,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_18.setSpacing(0)
         self.verticalLayout_18.setObjectName(u"verticalLayout_18")
         self.verticalLayout_18.setContentsMargins(0, 0, 0, 0)
+        self.alternative_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents_15)
+        self.alternative_tree_filter_bar.setObjectName(u"alternative_tree_filter_bar")
+
+        self.verticalLayout_18.addWidget(self.alternative_tree_filter_bar)
+
         self.alternative_tree_view = AlternativeTreeView(self.dockWidgetContents_15)
         self.alternative_tree_view.setObjectName(u"alternative_tree_view")
         self.alternative_tree_view.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
@@ -226,6 +236,11 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
+        self.value_list_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents)
+        self.value_list_tree_filter_bar.setObjectName(u"value_list_tree_filter_bar")
+
+        self.verticalLayout.addWidget(self.value_list_tree_filter_bar)
+
         self.treeView_parameter_value_list = ParameterValueListTreeView(self.dockWidgetContents)
         self.treeView_parameter_value_list.setObjectName(u"treeView_parameter_value_list")
         self.treeView_parameter_value_list.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed)
@@ -321,6 +336,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setSpacing(0)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.verticalLayout_4.setContentsMargins(0, 0, 0, 0)
+        self.entity_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents_6)
+        self.entity_tree_filter_bar.setObjectName(u"entity_tree_filter_bar")
+
+        self.verticalLayout_4.addWidget(self.entity_tree_filter_bar)
+
         self.treeView_entity = EntityTreeView(self.dockWidgetContents_6)
         self.treeView_entity.setObjectName(u"treeView_entity")
         sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -330,7 +350,7 @@ class Ui_MainWindow(object):
         self.treeView_entity.setSizePolicy(sizePolicy2)
         self.treeView_entity.setEditTriggers(QAbstractItemView.EditTrigger.EditKeyPressed)
         self.treeView_entity.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectItems)
+        self.treeView_entity.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.treeView_entity.setIconSize(QSize(20, 20))
         self.treeView_entity.setUniformRowHeights(False)
 
@@ -482,6 +502,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_12.setSpacing(0)
         self.verticalLayout_12.setObjectName(u"verticalLayout_12")
         self.verticalLayout_12.setContentsMargins(0, 0, 0, 0)
+        self.scenario_tree_filter_bar = TreeLevelFilterBar(self.dockWidgetContents_9)
+        self.scenario_tree_filter_bar.setObjectName(u"scenario_tree_filter_bar")
+
+        self.verticalLayout_12.addWidget(self.scenario_tree_filter_bar)
+
         self.scenario_tree_view = ScenarioTreeView(self.dockWidgetContents_9)
         self.scenario_tree_view.setObjectName(u"scenario_tree_view")
         self.scenario_tree_view.setAcceptDrops(True)
@@ -568,6 +593,43 @@ class Ui_MainWindow(object):
 
         self.entity_dock_widget.setWidget(self.dockWidgetContents_4)
         MainWindow.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.entity_dock_widget)
+        self.parameter_group_dock_widget = QDockWidget(MainWindow)
+        self.parameter_group_dock_widget.setObjectName(u"parameter_group_dock_widget")
+        self.parameter_group_contents_widget = ResizeSignallingWidget()
+        self.parameter_group_contents_widget.setObjectName(u"parameter_group_contents_widget")
+        self.verticalLayout_6 = QVBoxLayout(self.parameter_group_contents_widget)
+        self.verticalLayout_6.setSpacing(0)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.parameter_group_table_view = ParameterGroupTableView(self.parameter_group_contents_widget)
+        self.parameter_group_table_view.setObjectName(u"parameter_group_table_view")
+        self.parameter_group_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.parameter_group_table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.parameter_group_table_view.setTabKeyNavigation(False)
+        self.parameter_group_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.parameter_group_table_view.horizontalHeader().setHighlightSections(False)
+        self.parameter_group_table_view.verticalHeader().setVisible(False)
+        self.parameter_group_table_view.verticalHeader().setHighlightSections(False)
+
+        self.verticalLayout_6.addWidget(self.parameter_group_table_view)
+
+        self.empty_parameter_group_table_view = EmptyParameterGroupTableView(self.parameter_group_contents_widget)
+        self.empty_parameter_group_table_view.setObjectName(u"empty_parameter_group_table_view")
+        sizePolicy1.setHeightForWidth(self.empty_parameter_group_table_view.sizePolicy().hasHeightForWidth())
+        self.empty_parameter_group_table_view.setSizePolicy(sizePolicy1)
+        self.empty_parameter_group_table_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+        self.empty_parameter_group_table_view.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustToContents)
+        self.empty_parameter_group_table_view.setTabKeyNavigation(False)
+        self.empty_parameter_group_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.empty_parameter_group_table_view.horizontalHeader().setVisible(False)
+        self.empty_parameter_group_table_view.horizontalHeader().setHighlightSections(False)
+        self.empty_parameter_group_table_view.verticalHeader().setVisible(False)
+        self.empty_parameter_group_table_view.verticalHeader().setHighlightSections(False)
+
+        self.verticalLayout_6.addWidget(self.empty_parameter_group_table_view)
+
+        self.parameter_group_dock_widget.setWidget(self.parameter_group_contents_widget)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.parameter_group_dock_widget)
 
         self.menuBar.addAction(self.menuFile_2.menuAction())
         self.menuBar.addAction(self.menuEdit.menuAction())
@@ -587,6 +649,7 @@ class Ui_MainWindow(object):
         self.menuSession.addAction(self.actionClose)
         self.menuFile_2.addAction(self.actionNew_db_file)
         self.menuFile_2.addAction(self.actionOpen_db_file)
+        self.menuFile_2.addAction(self.actionOpen_in_new_tab)
         self.menuFile_2.addAction(self.actionOpen_recent)
         self.menuFile_2.addAction(self.actionAdd_db_file)
         self.menuFile_2.addSeparator()
@@ -689,9 +752,13 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionNew_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Create new SQLite database file</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.actionOpen_db_file.setText(QCoreApplication.translate("MainWindow", u"&Open...", None))
+        self.actionOpen_db_file.setText(QCoreApplication.translate("MainWindow", u"Open in &current tab...", None))
 #if QT_CONFIG(tooltip)
-        self.actionOpen_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open SQLite database file</p></body></html>", None))
+        self.actionOpen_db_file.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open SQLite database file in the current tab</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.actionOpen_in_new_tab.setText(QCoreApplication.translate("MainWindow", u"Open in new &tab...", None))
+#if QT_CONFIG(tooltip)
+        self.actionOpen_in_new_tab.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open SQLite database file in a new tab</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.actionAdd_db_file.setText(QCoreApplication.translate("MainWindow", u"&Add...", None))
 #if QT_CONFIG(tooltip)
@@ -722,7 +789,7 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(tooltip)
         self.actionGitHub.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Open Spine-Toolbox repository in GitHub</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative (Alt+5)", None))
+        self.alternative_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Alternative (Alt+6)", None))
 #if QT_CONFIG(accessibility)
         self.alternative_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"alternative tree", None))
 #endif // QT_CONFIG(accessibility)
@@ -748,7 +815,7 @@ class Ui_MainWindow(object):
         self.dockWidget_exports.setWindowTitle(QCoreApplication.translate("MainWindow", u"Exports", None))
         self.metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Metadata", None))
         self.item_metadata_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Item metadata", None))
-        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree (Alt+6)", None))
+        self.scenario_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Scenario tree (Alt+7)", None))
 #if QT_CONFIG(accessibility)
         self.scenario_tree_view.setAccessibleName(QCoreApplication.translate("MainWindow", u"scenario tree", None))
 #endif // QT_CONFIG(accessibility)
@@ -757,6 +824,7 @@ class Ui_MainWindow(object):
         self.menuEdit.setTitle(QCoreApplication.translate("MainWindow", u"&Edit", None))
         self.menuSession.setTitle(QCoreApplication.translate("MainWindow", u"Sess&ion", None))
         self.menuFile_2.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
-        self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity", None))
+        self.entity_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Entity (Alt+5)", None))
+        self.parameter_group_dock_widget.setWindowTitle(QCoreApplication.translate("MainWindow", u"Parameter group", None))
     # retranslateUi
 

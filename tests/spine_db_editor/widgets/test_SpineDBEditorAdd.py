@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for adding database items in Database editor."""
+
 from unittest import mock
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.spine_db_editor.mvcmodels.single_models import SingleParameterDefinitionModel

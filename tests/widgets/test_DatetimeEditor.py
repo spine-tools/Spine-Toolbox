@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the DatetimeEditor widget."""
+
 import unittest
 from PySide6.QtWidgets import QWidget
 from spinedb_api import DateTime

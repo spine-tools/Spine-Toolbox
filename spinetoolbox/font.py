@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides Toolbox icon font."""
+
 import logging
 from typing import ClassVar, Optional
 from PySide6.QtGui import QFontDatabase

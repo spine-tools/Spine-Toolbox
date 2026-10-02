@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``toolbar`` module."""
+
 from tempfile import TemporaryDirectory
 from unittest import mock
 from spinetoolbox.spine_db_editor.widgets.toolbar import DBEditorToolBar
@@ -32,7 +33,7 @@ class TestDBEditorToolBar(DBEditorTestBase):
     def test_toolbar(self):
         self.db_mngr.setParent(self._toolbox)
         tb = DBEditorToolBar(self.spine_db_editor)
-        self.assertEqual([{"database": "sqlite://"}], self.spine_db_editor._history)
+        self.assertEqual([("sqlite://", "database")], self.spine_db_editor._history)
         with mock.patch("spinetoolbox.spine_db_editor.widgets.toolbar._URLDialog.show") as mock_show_dialog:
             mock_show_dialog.show.return_value = True
             tb._show_url_codename_widget()

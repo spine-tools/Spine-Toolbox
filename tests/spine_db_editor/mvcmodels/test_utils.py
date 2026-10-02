@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``utils`` module."""
+
 import unittest
 from PySide6.QtCore import QObject, QSize
 from PySide6.QtGui import QStandardItem, QStandardItemModel

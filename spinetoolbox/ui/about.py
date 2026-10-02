@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.3
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -36,8 +36,8 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.setWindowModality(Qt.ApplicationModal)
-        Form.resize(400, 614)
+        Form.setWindowModality(Qt.WindowModality.ApplicationModal)
+        Form.resize(400, 619)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -45,13 +45,13 @@ class Ui_Form(object):
         Form.setSizePolicy(sizePolicy)
         palette = QPalette()
         brush = QBrush(QColor(255, 255, 255, 255))
-        brush.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.Base, brush)
-        palette.setBrush(QPalette.Active, QPalette.Window, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Base, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Window, brush)
-        palette.setBrush(QPalette.Disabled, QPalette.Base, brush)
-        palette.setBrush(QPalette.Disabled, QPalette.Window, brush)
+        brush.setStyle(Qt.BrushStyle.SolidPattern)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, brush)
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, brush)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, brush)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, brush)
         Form.setPalette(palette)
         Form.setAutoFillBackground(True)
         self.verticalLayout_2 = QVBoxLayout(Form)
@@ -69,10 +69,10 @@ class Ui_Form(object):
         sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy1)
         self.label.setMaximumSize(QSize(199, 132))
-        self.label.setFrameShape(QFrame.NoFrame)
+        self.label.setFrameShape(QFrame.Shape.NoFrame)
         self.label.setPixmap(QPixmap(u":/symbols/spinetoolbox_on_wht.png"))
         self.label.setScaledContents(True)
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setWordWrap(False)
         self.label.setMargin(15)
         self.label.setIndent(-1)
@@ -85,14 +85,16 @@ class Ui_Form(object):
         self.frame_9.setSizePolicy(sizePolicy)
         self.frame_9.setMaximumSize(QSize(199, 215))
         palette1 = QPalette()
-        palette1.setBrush(QPalette.Active, QPalette.Base, brush)
+        palette1.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.WindowText, brush)
+        palette1.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Base, brush)
         brush1 = QBrush(QColor(0, 74, 194, 255))
-        brush1.setStyle(Qt.SolidPattern)
-        palette1.setBrush(QPalette.Active, QPalette.Window, brush1)
-        palette1.setBrush(QPalette.Inactive, QPalette.Base, brush)
-        palette1.setBrush(QPalette.Inactive, QPalette.Window, brush1)
-        palette1.setBrush(QPalette.Disabled, QPalette.Base, brush1)
-        palette1.setBrush(QPalette.Disabled, QPalette.Window, brush1)
+        brush1.setStyle(Qt.BrushStyle.SolidPattern)
+        palette1.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Window, brush1)
+        palette1.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.WindowText, brush)
+        palette1.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Base, brush)
+        palette1.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Window, brush1)
+        palette1.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Base, brush1)
+        palette1.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Window, brush1)
         self.frame_9.setPalette(palette1)
         self.frame_9.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
         self.frame_9.setAutoFillBackground(True)
@@ -114,14 +116,14 @@ class Ui_Form(object):
         self.label_spine_toolbox.setMaximumSize(QSize(16777215, 16777215))
         self.label_spine_toolbox.setBaseSize(QSize(0, 0))
         font = QFont()
-        font.setFamilies([u"Arial Black"])
-        font.setPointSize(6)
+        font.setFamilies([u"Segoe UI"])
+        font.setPointSize(8)
         font.setBold(False)
         font.setStyleStrategy(QFont.PreferDefault)
         self.label_spine_toolbox.setFont(font)
-        self.label_spine_toolbox.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
+        self.label_spine_toolbox.setStyleSheet(u"")
         self.label_spine_toolbox.setScaledContents(True)
-        self.label_spine_toolbox.setAlignment(Qt.AlignCenter)
+        self.label_spine_toolbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_toolbox)
 
@@ -130,12 +132,12 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_spinedb_api.sizePolicy().hasHeightForWidth())
         self.label_spinedb_api.setSizePolicy(sizePolicy2)
         font1 = QFont()
-        font1.setFamilies([u"Arial Black"])
-        font1.setPointSize(6)
+        font1.setFamilies([u"Segoe UI"])
+        font1.setPointSize(8)
         font1.setStyleStrategy(QFont.PreferDefault)
         self.label_spinedb_api.setFont(font1)
-        self.label_spinedb_api.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
-        self.label_spinedb_api.setAlignment(Qt.AlignCenter)
+        self.label_spinedb_api.setStyleSheet(u"")
+        self.label_spinedb_api.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spinedb_api)
 
@@ -144,8 +146,8 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_spine_engine.sizePolicy().hasHeightForWidth())
         self.label_spine_engine.setSizePolicy(sizePolicy2)
         self.label_spine_engine.setFont(font1)
-        self.label_spine_engine.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
-        self.label_spine_engine.setAlignment(Qt.AlignCenter)
+        self.label_spine_engine.setStyleSheet(u"")
+        self.label_spine_engine.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_engine)
 
@@ -154,8 +156,8 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_spine_items.sizePolicy().hasHeightForWidth())
         self.label_spine_items.setSizePolicy(sizePolicy2)
         self.label_spine_items.setFont(font1)
-        self.label_spine_items.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
-        self.label_spine_items.setAlignment(Qt.AlignCenter)
+        self.label_spine_items.setStyleSheet(u"")
+        self.label_spine_items.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_spine_items)
 
@@ -164,8 +166,8 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.label_python.sizePolicy().hasHeightForWidth())
         self.label_python.setSizePolicy(sizePolicy2)
         self.label_python.setFont(font1)
-        self.label_python.setStyleSheet(u"QLabel {color: rgb(255, 255, 255);}")
-        self.label_python.setAlignment(Qt.AlignCenter)
+        self.label_python.setStyleSheet(u"")
+        self.label_python.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_python)
 
@@ -204,10 +206,10 @@ class Ui_Form(object):
         font2.setPointSize(7)
         font2.setStyleStrategy(QFont.PreferDefault)
         self.textBrowser.setFont(font2)
-        self.textBrowser.setFrameShape(QFrame.StyledPanel)
-        self.textBrowser.setFrameShadow(QFrame.Sunken)
+        self.textBrowser.setFrameShape(QFrame.Shape.StyledPanel)
+        self.textBrowser.setFrameShadow(QFrame.Shadow.Sunken)
         self.textBrowser.setLineWidth(1)
-        self.textBrowser.setTextInteractionFlags(Qt.LinksAccessibleByMouse|Qt.TextSelectableByMouse)
+        self.textBrowser.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse|Qt.TextInteractionFlag.TextSelectableByMouse)
         self.textBrowser.setOpenExternalLinks(True)
 
         self.horizontalLayout_7.addWidget(self.textBrowser)
@@ -215,9 +217,42 @@ class Ui_Form(object):
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_7)
 
+        self.label_3 = QLabel(Form)
+        self.label_3.setObjectName(u"label_3")
+        self.label_3.setMinimumSize(QSize(200, 0))
+        font3 = QFont()
+        font3.setFamilies([u"Arial Black"])
+        font3.setPointSize(8)
+        font3.setBold(True)
+        font3.setStyleStrategy(QFont.PreferDefault)
+        self.label_3.setFont(font3)
+        self.label_3.setStyleSheet(u"background-color: rgb(0, 74, 194);")
+        self.label_3.setTextFormat(Qt.TextFormat.RichText)
+        self.label_3.setScaledContents(True)
+        self.label_3.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_3.setMargin(1)
+        self.label_3.setOpenExternalLinks(True)
+
+        self.verticalLayout_2.addWidget(self.label_3)
+
         self.gridLayout = QGridLayout()
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
+        self.horizontalLayout_6 = QHBoxLayout()
+        self.horizontalLayout_6.setSpacing(0)
+        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
+        self.label_5 = QLabel(Form)
+        self.label_5.setObjectName(u"label_5")
+        self.label_5.setMaximumSize(QSize(89, 60))
+        self.label_5.setPixmap(QPixmap(u":/partner_logos/VTT_Multicolour_Logo.jpg"))
+        self.label_5.setScaledContents(True)
+        self.label_5.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout_6.addWidget(self.label_5)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout_6, 1, 0, 1, 1)
+
         self.horizontalLayout_2 = QHBoxLayout()
         self.horizontalLayout_2.setSpacing(0)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
@@ -228,65 +263,12 @@ class Ui_Form(object):
         self.label_7.setMaximumSize(QSize(67, 67))
         self.label_7.setPixmap(QPixmap(u":/partner_logos/UCD_Dublin_logo.png"))
         self.label_7.setScaledContents(True)
-        self.label_7.setAlignment(Qt.AlignCenter)
+        self.label_7.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout_2.addWidget(self.label_7)
 
 
         self.gridLayout.addLayout(self.horizontalLayout_2, 2, 0, 1, 1)
-
-        self.horizontalLayout_6 = QHBoxLayout()
-        self.horizontalLayout_6.setSpacing(0)
-        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
-        self.label_5 = QLabel(Form)
-        self.label_5.setObjectName(u"label_5")
-        self.label_5.setMaximumSize(QSize(89, 60))
-        self.label_5.setPixmap(QPixmap(u":/partner_logos/VTT_Multicolour_Logo.jpg"))
-        self.label_5.setScaledContents(True)
-        self.label_5.setAlignment(Qt.AlignCenter)
-
-        self.horizontalLayout_6.addWidget(self.label_5)
-
-
-        self.gridLayout.addLayout(self.horizontalLayout_6, 1, 0, 1, 1)
-
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setSpacing(0)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.label_6 = QLabel(Form)
-        self.label_6.setObjectName(u"label_6")
-        self.label_6.setMaximumSize(QSize(68, 68))
-        self.label_6.setPixmap(QPixmap(u":/partner_logos/KTH_logo.png"))
-        self.label_6.setScaledContents(True)
-        self.label_6.setAlignment(Qt.AlignCenter)
-
-        self.horizontalLayout_3.addWidget(self.label_6)
-
-
-        self.gridLayout.addLayout(self.horizontalLayout_3, 3, 0, 1, 1)
-
-        self.label_3 = QLabel(Form)
-        self.label_3.setObjectName(u"label_3")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
-        self.label_3.setSizePolicy(sizePolicy3)
-        self.label_3.setMinimumSize(QSize(200, 0))
-        font3 = QFont()
-        font3.setFamilies([u"Arial Black"])
-        font3.setPointSize(8)
-        font3.setBold(True)
-        font3.setStyleStrategy(QFont.PreferDefault)
-        self.label_3.setFont(font3)
-        self.label_3.setStyleSheet(u"background-color: rgb(0, 74, 194);")
-        self.label_3.setTextFormat(Qt.RichText)
-        self.label_3.setScaledContents(True)
-        self.label_3.setAlignment(Qt.AlignCenter)
-        self.label_3.setMargin(1)
-        self.label_3.setOpenExternalLinks(True)
-
-        self.gridLayout.addWidget(self.label_3, 3, 1, 1, 1)
 
         self.horizontalLayout_5 = QHBoxLayout()
         self.horizontalLayout_5.setSpacing(0)
@@ -298,12 +280,27 @@ class Ui_Form(object):
         self.label_4.setMaximumSize(QSize(166, 34))
         self.label_4.setPixmap(QPixmap(u":/partner_logos/Energy_Reform_logo.png"))
         self.label_4.setScaledContents(True)
-        self.label_4.setAlignment(Qt.AlignCenter)
+        self.label_4.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout_5.addWidget(self.label_4)
 
 
         self.gridLayout.addLayout(self.horizontalLayout_5, 1, 1, 1, 1)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setSpacing(0)
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.label_6 = QLabel(Form)
+        self.label_6.setObjectName(u"label_6")
+        self.label_6.setMaximumSize(QSize(68, 68))
+        self.label_6.setPixmap(QPixmap(u":/partner_logos/KTH_logo.png"))
+        self.label_6.setScaledContents(True)
+        self.label_6.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout_3.addWidget(self.label_6)
+
+
+        self.gridLayout.addLayout(self.horizontalLayout_3, 3, 0, 1, 1)
 
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setSpacing(0)
@@ -315,7 +312,7 @@ class Ui_Form(object):
         self.label_2.setMaximumSize(QSize(90, 32))
         self.label_2.setPixmap(QPixmap(u":/partner_logos/KU_Leuven_logo.png"))
         self.label_2.setScaledContents(True)
-        self.label_2.setAlignment(Qt.AlignCenter)
+        self.label_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.horizontalLayout_4.addWidget(self.label_2)
 
@@ -349,6 +346,6 @@ class Ui_Form(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'Segoe UI'; font-size:7pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;\"><br /></p></body></html>", None))
-        self.label_3.setText(QCoreApplication.translate("Form", u"<html><head/><body><p><a href=\"http://www.spine-model.org\"><span style=\" color:#ffffff; text-decoration: none\">www.spine-model.org</span></a></p></body></html>", None))
+        self.label_3.setText(QCoreApplication.translate("Form", u"<html><head/><body><p align=\"center\"><a href=\"https://www.tools-for-energy-system-modelling.org/\"><span style=\" text-decoration: underline; color:#ffffff;\">tools-for-energy-system-modelling.org</span></a></p></body></html>", None))
     # retranslateUi
 

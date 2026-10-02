@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a generic File list model and an Item for that model."""
+
 from collections import namedtuple
 from functools import cache, cached_property
 from itertools import takewhile
@@ -18,7 +19,7 @@ import json
 from pathlib import Path
 from typing import Any
 from PySide6.QtCore import QAbstractItemModel, QFileInfo, QMimeData, QModelIndex, QObject, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPalette, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QApplication, QFileIconProvider
 from spine_engine.project_item.project_item_resource import CmdLineArg, LabelArg, ProjectItemResource, extract_packs
 from spinetoolbox.helpers import plain_to_rich
@@ -212,9 +213,11 @@ class CommandLineArgItem(QStandardItem):
 
     @staticmethod
     def _make_icon(rank: int | None = None) -> QIcon:
+        palette = QApplication.instance().palette()
         pixmap = QPixmap(16, 16)
-        pixmap.fill(Qt.GlobalColor.white)
+        pixmap.fill(palette.color(QPalette.ColorRole.Base))
         painter = QPainter(pixmap)
+        painter.setPen(palette.color(QPalette.ColorRole.Text))
         painter.drawText(0, 0, 16, 16, Qt.AlignmentFlag.AlignCenter, f"{rank}:")
         painter.end()
         return QIcon(pixmap)

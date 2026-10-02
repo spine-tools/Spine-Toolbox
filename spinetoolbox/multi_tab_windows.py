@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains functionality to keep track on open MultiTabWindow instances."""
+
 from spinetoolbox.widgets.multi_tab_window import MultiTabWindow
 
 

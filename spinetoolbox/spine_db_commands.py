@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """QUndoCommand subclasses for modifying the db."""
+
 from __future__ import annotations
 from collections.abc import Iterable
 from contextlib import suppress

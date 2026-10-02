@@ -11,12 +11,8 @@
 ######################################################################################################################
 
 """Unit tests for the spine_db_manager module."""
-import gc
-import json
-from pathlib import Path
-from tempfile import TemporaryDirectory
+
 import time
-import unittest
 from unittest.mock import MagicMock
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtWidgets import QApplication
@@ -29,7 +25,6 @@ from spinedb_api import (
     import_functions,
     to_database,
 )
-from spinedb_api.incomplete_values import join_value_and_type
 from spinedb_api.parameter_value import Map, ParameterValueFormatError, from_database
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from spinetoolbox.fetch_parent import FlexibleFetchParent
@@ -92,7 +87,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = 2.3
         item = self._add_value(value)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(b"2.3", "float"))
+        self.assertEqual(formatted, (b"2.3", "float"))
 
     def test_plain_number_in_tool_tip_role(self):
         value = 2.3
@@ -110,7 +105,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = DateTime("2019-07-12T16:00")
         item = self._add_value(value)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(*to_database(value)))
+        self.assertEqual(formatted, to_database(value))
 
     def test_date_time_in_tool_tip_role(self):
         value = DateTime("2019-07-12T16:00")
@@ -128,7 +123,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = Duration("2M")
         item = self._add_value(value)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(*to_database(value)))
+        self.assertEqual(formatted, to_database(value))
 
     def test_duration_in_tool_tip_role(self):
         value = Duration("13D")
@@ -146,7 +141,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = TimePattern(["M1-12"], [5.0])
         item = self._add_value(value)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(*to_database(value)))
+        self.assertEqual(formatted, to_database(value))
 
     def test_time_pattern_in_tool_tip_role(self):
         value = TimePattern(["M1-12"], [5.0])
@@ -172,11 +167,11 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         value = TimeSeriesFixedResolution("2019-07-12T08:00", "7 hours", [1.1, 2.2, 3.3], False, False)
         item = self._add_value(value, "fixed_resolution")
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(*to_database(value)))
+        self.assertEqual(formatted, to_database(value))
         value = TimeSeriesVariableResolution(["2019-07-12T08:00", "2019-07-12T16:00"], [0.0, 100.0], False, False)
         item = self._add_value(value, "variable_resolution")
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, join_value_and_type(*to_database(value)))
+        self.assertEqual(formatted, to_database(value))
 
     def test_time_series_in_tool_tip_role(self):
         self._db_map.add_alternative_item(name="fixed_resolution")
@@ -216,7 +211,7 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         )
         self.assertIsNone(error)
         formatted = self.db_mngr.get_value(self._db_map, item, Qt.ItemDataRole.EditRole)
-        self.assertEqual(formatted, json.dumps(["diibadaaba", "str"]))
+        self.assertEqual(formatted, (b"diibadaaba", "str"))
 
     def test_broken_value_in_tool_tip_role(self):
         value = b"diibadaaba"
@@ -233,104 +228,60 @@ class TestParameterValueFormatting(TestCaseWithQApplication):
         self.assertTrue(formatted.startswith("<qt>Could not decode the value"))
 
 
-class TestAddItems(TestCaseWithQApplication):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        db_path = Path(self._temp_dir.name, "db.sqlite")
-        self._db_url = "sqlite:///" + str(db_path)
-        self._db_mngr = SpineDBManager(None, None)
-        self._logger = MagicMock()
-
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_add_metadata(self):
-        db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
+class TestAddItems:
+    def test_add_metadata(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
         db_map_data = {db_map: [{"name": "my_metadata", "value": "Metadata value."}]}
-        self._db_mngr.add_items("metadata", db_map_data)
+        db_mngr.add_items("metadata", db_map_data)
         metadata_id = db_map.metadata(name="my_metadata", value="Metadata value.")["id"]
-        self.assertEqual(
-            self._db_mngr.get_item(db_map, "metadata", metadata_id).resolve(),
-            {"name": "my_metadata", "value": "Metadata value.", "id": None},
-        )
+        assert db_mngr.get_item(db_map, "metadata", metadata_id).resolve() == {
+            "name": "my_metadata",
+            "value": "Metadata value.",
+            "id": None,
+        }
 
-    def test_add_object_metadata(self):
-        db_map = self._db_mngr.get_db_map(self._db_url, None, create=True)
+    def test_add_object_metadata(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
         with db_map:
             import_functions.import_entity_classes(db_map, ("my_class",))
             import_functions.import_entities(db_map, (("my_class", "my_object"),))
-            import_functions.import_metadata(db_map, ('{"metaname": "metavalue"}',))
+            import_functions.import_metadata(db_map, [("metaname", "metavalue")])
             db_map.commit_session("Add test data.")
             entity_id = db_map.entity(entity_class_name="my_class", name="my_object")["id"]
             metadata_id = db_map.metadata(name="metaname", value="metavalue")["id"]
-
         db_map_data = {db_map: [{"entity_id": entity_id, "metadata_id": metadata_id}]}
-        self._db_mngr.add_items("entity_metadata", db_map_data)
+        db_mngr.add_items("entity_metadata", db_map_data)
         entity_metadata_id = db_map.entity_metadata(
             entity_class_name="my_class",
             entity_byname=("my_object",),
             metadata_name="metaname",
             metadata_value="metavalue",
         )["id"]
-        self.assertEqual(
-            self._db_mngr.get_item(db_map, "entity_metadata", entity_metadata_id)._asdict(),
-            {"entity_id": entity_id, "metadata_id": metadata_id, "id": entity_metadata_id},
-        )
+        assert db_mngr.get_item(db_map, "entity_metadata", entity_metadata_id)._asdict() == {
+            "entity_id": entity_id,
+            "metadata_id": metadata_id,
+            "id": entity_metadata_id,
+        }
 
 
-class TestDoRestoreItems(TestCaseWithQApplication):
-    def setUp(self):
-        self._temp_dir = TemporaryDirectory()
-        db_path = Path(self._temp_dir.name, "db.sqlite")
-        self._db_url = "sqlite:///" + str(db_path)
-        self._db_mngr = SpineDBManager(None, None)
-        self._logger = MagicMock()
-
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        self._db_mngr.clean_up()
-        # Database connection may still be open. Retry cleanup until it succeeds.
-        running = True
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_restore_entity_class(self):
-        db_map = self._db_mngr.get_db_map(self._db_url, self._logger, create=True)
+class TestDoRestoreItems:
+    def test_restore_entity_class(self, db_map_generator, db_mngr):
+        db_map = db_map_generator()
         entity_class, error = db_map.add_entity_class_item(name="Gadget")
-        self.assertIsNone(error)
-        class_item = self._db_mngr.get_item(db_map, "entity_class", entity_class["id"])
-        self.assertIs(entity_class, class_item)
-        self._db_mngr.remove_items({db_map: {"entity_class": {entity_class["id"]}}})
-        self.assertFalse(class_item.is_valid())
-        self._db_mngr.do_restore_items(db_map, "entity_class", {entity_class["id"]})
-        self.assertTrue(class_item.is_valid())
+        assert error is None
+        class_item = db_mngr.get_item(db_map, "entity_class", entity_class["id"])
+        assert entity_class is class_item
+        db_mngr.remove_items({db_map: {"entity_class": {entity_class["id"]}}})
+        assert not class_item.is_valid()
+        db_mngr.do_restore_items(db_map, "entity_class", {entity_class["id"]})
+        assert class_item.is_valid()
 
 
-class TestImportExportData(TestCaseWithQApplication):
-    def setUp(self):
-        mock_settings = MagicMock()
-        mock_settings.value.side_effect = lambda *args, **kwargs: 0
-        self._db_mngr = SpineDBManager(mock_settings, None)
-        logger = MagicMock()
-        self.editor = MagicMock()
-        self._temp_dir = TemporaryDirectory()
-        url = "sqlite:///" + self._temp_dir.name + "/db.sqlite"
-        self._db_map = self._db_mngr.get_db_map(url, logger, create=True)
-        self._db_mngr.name_registry.register(url, "test_import_export_data_db")
+class TestImportExportData:
 
-    def tearDown(self):
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
-        gc.collect()
-        self._temp_dir.cleanup()
-
-    def test_export_then_import_time_series_parameter_value(self):
-        file_path = str(Path(self._temp_dir.name) / "test.xlsx")
+    def test_export_then_import_time_series_parameter_value(self, db_map_generator, db_mngr, tmp_path):
+        db_map = db_map_generator()
+        file_path = str(tmp_path / "test.xlsx")
         data = {
             "entity_classes": [("A", (), None, None, False)],
             "entities": [("A", "aa", None)],
@@ -355,13 +306,14 @@ class TestImportExportData(TestCaseWithQApplication):
             ],
             "alternatives": [("Base", "Base alternative")],
         }
-        self._db_mngr.export_to_excel(file_path, data, self.editor)
+        caller = MagicMock()
+        db_mngr.export_to_excel(file_path, data, caller)
         mapped_data, errors = get_mapped_data_from_xlsx(file_path)
-        self.assertEqual(errors, [])
-        self._db_mngr.import_data({self._db_map: mapped_data}, command_text="Import Excel data")
-        self._db_map.commit_session("imported items")
-        with self._db_map:
-            value = self._db_map.query(self._db_map.entity_parameter_value_sq).one()
+        assert errors == []
+        db_mngr.import_data({db_map: mapped_data}, command_text="Import Excel data")
+        db_map.commit_session("imported items")
+        with db_map:
+            value = db_map.query(db_map.entity_parameter_value_sq).one()
         time_series = from_database(value.value, value.type)
         expected_result = TimeSeriesVariableResolution(
             (
@@ -376,34 +328,33 @@ class TestImportExportData(TestCaseWithQApplication):
             False,
             False,
         )
-        self.assertEqual(time_series, expected_result)
+        assert time_series == expected_result
 
-    def test_export_empty_data_does_not_traceback_because_there_is_nothing_to_commit(self):
-        file_path = str(Path(self._temp_dir.name) / "test.xlsx")
+    def test_export_empty_data_does_not_traceback_because_there_is_nothing_to_commit(self, db_mngr, tmp_path):
+        file_path = str(tmp_path / "test.xlsx")
         data = {}
-        self._db_mngr.export_to_excel(file_path, data, self.editor)
+        caller = MagicMock()
+        db_mngr.export_to_excel(file_path, data, caller)
         mapped_data, errors = get_mapped_data_from_xlsx(file_path)
-        self.assertEqual(errors, [])
-        self.assertEqual(mapped_data, {"alternatives": ["Base"]})
+        assert errors == []
+        assert mapped_data == {"alternatives": ["Base"]}
 
-    def test_import_parameter_value_lists(self):
-        with signal_waiter(
-            self._db_mngr.items_added, condition=lambda item_type, _: item_type == "list_value"
-        ) as waiter:
-            self._db_mngr.import_data(
-                {self._db_map: {"parameter_value_lists": [("list_1", "first value"), ("list_1", "second value")]}},
+    def test_import_parameter_value_lists(self, db_map, db_mngr):
+        with signal_waiter(db_mngr.items_added, condition=lambda item_type, _: item_type == "list_value") as waiter:
+            db_mngr.import_data(
+                {db_map: {"parameter_value_lists": [("list_1", "first value"), ("list_1", "second value")]}},
                 "import value lists",
             )
             waiter.wait()
-        value_lists = self._db_map.get_items("parameter_value_list")
-        list_values = self._db_map.get_items("list_value")
-        self.assertEqual(len(value_lists), 1)
+        value_lists = db_map.get_items("parameter_value_list")
+        list_values = db_map.get_items("list_value")
+        assert len(value_lists) == 1
         value_list = value_lists[0]
-        self.assertEqual(value_list["name"], "list_1")
-        self.assertEqual(
-            [(from_database(x["value"], x["type"]), x["index"]) for x in list_values],
-            [("first value", 0), ("second value", 1)],
-        )
+        assert value_list["name"] == "list_1"
+        assert [(from_database(x["value"], x["type"]), x["index"]) for x in list_values] == [
+            ("first value", 0),
+            ("second value", 1),
+        ]
 
 
 class TestDuplicateEntity(TestCaseWithQApplication):
@@ -837,7 +788,3 @@ class TestCommitSession(TestCaseWithQApplication):
         self._db_mngr.remove_items({self._db_map: {"entity_class": [class_id]}})
         self.assertEqual(self._db_mngr.commit_session("Nothing to commit.", self._db_map), [])
         error_listener.receive_error_msg.assert_not_called()
-
-
-if __name__ == "__main__":
-    unittest.main()

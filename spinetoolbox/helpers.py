@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """General helper functions and classes."""
+
 from __future__ import annotations
 import bisect
 from collections.abc import Callable, Iterable, Iterator, Mapping
@@ -18,6 +19,7 @@ from contextlib import contextmanager
 import datetime
 from enum import Enum, unique
 import functools
+import gc
 import glob
 from html.parser import HTMLParser
 import itertools
@@ -31,7 +33,7 @@ import shutil
 import sys
 import tempfile
 import time
-from typing import TYPE_CHECKING, Any, Optional, Sequence, Union  # pylint: disable=unused-import
+from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeAlias, Union
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -88,18 +90,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from spine_engine.logger_interface import LoggerInterface
-from spine_engine.utils.serialization import deserialize_path
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
-    PLUGINS_PATH,
-    PROJECT_FILENAME,
-    PROJECT_LOCAL_DATA_DIR_NAME,
-    PROJECT_LOCAL_DATA_FILENAME,
-    SPECIFICATION_LOCAL_DATA_FILENAME,
 )
 from .font import TOOLBOX_FONT
 
@@ -139,21 +135,77 @@ def home_dir() -> str:
     return str(pathlib.Path.home())
 
 
-def format_log_message(msg_type: str, message: str, show_datetime: bool = True) -> str:
+MessageType: TypeAlias = Literal["msg", "msg_success", "msg_error", "msg_warning"]
+
+
+def format_log_message(msg_type: MessageType, message: str, widget: QWidget, show_datetime: bool = True) -> str:
     """Adds color tags and optional time stamp to message.
 
     Args:
-        msg_type: message's type; accepts only 'msg', 'msg_success', 'msg_warning', or 'msg_error'
+        msg_type: message's type
         message: message to format
+        widget: widget where the message will be shown
         show_datetime: True to add time stamp, False to omit it
 
     Returns:
         formatted message
     """
-    color = {"msg": "white", "msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "yellow"}[msg_type]
-    open_tag = f"<span style='color:{color};white-space: pre-wrap;'>"
+    is_dark_theme = widget.palette().color(QPalette.ColorRole.Text).lightnessF() > 0.5
+    parser = LogMessageHtmlParser(is_dark_theme)
+    parser.feed(message)
+    message = parser.drain()
+    if msg_type == "msg":
+        color = None
+    else:
+        if is_dark_theme:
+            colors = {"msg_success": "#00ff00", "msg_error": "#ff3333", "msg_warning": "#ffcc00"}
+        else:
+            colors = {"msg_success": "#007a00", "msg_error": "#cc0000", "msg_warning": "#c38f06"}
+        color = colors.get(msg_type)
+        if color is None:
+            raise RuntimeError(f"logic error: no such message type {msg_type}")
+    color_tag = f"color:{color};" if color else ""
+    open_tag = f"<span style='{color_tag}white-space:pre-wrap;'>"
     date_str = get_datetime(show=show_datetime)
     return open_tag + date_str + message + "</span>"
+
+
+class LogMessageHtmlParser(HTMLParser):
+    """Adds colors to <a> tags in HTML text."""
+
+    def __init__(self, is_dark: bool):
+        super().__init__()
+        self._is_dark = is_dark
+        self._text = ""
+
+    def drain(self) -> str:
+        text = self._text
+        self._text = ""
+        return text
+
+    def handle_data(self, data):
+        self._text += data
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            color = "#bb99ff" if self._is_dark else "#7755bb"
+            self._text += f"<a style='color:{color};'"
+            for key, value in attrs:
+                if key == "style":
+                    continue
+                if not self._text.endswith(" "):
+                    self._text += " "
+                self._text += f"{key}='{value}'"
+            self._text += ">"
+        else:
+            self._text += self.get_starttag_text()
+
+    def handle_endtag(self, tag):
+        self._text += f"</{tag}>"
+
+    def handle_startendtag(self, tag, attrs):
+        attributes = " ".join(f"{key}={value}" for key, value in attrs)
+        self._text += f"<{tag} {attributes}/>"
 
 
 def busy_effect(func: Callable) -> Any:
@@ -208,6 +260,7 @@ def rename_dir(old_dir: str, new_dir: str, toolbox: ToolboxUI, box_title: str) -
     Returns:
         True if operation was successful, False otherwise
     """
+    gc.collect()
     if os.path.exists(new_dir):
         msg = f"Directory <b>{new_dir}</b> already exists.<br/><br/>Would you like to overwrite its contents?"
         box = QMessageBox(
@@ -299,8 +352,7 @@ def pyside6_version_check() -> bool:
     qt_version_info (tuple) contains each version component separately e.g. (6, 4, 1)
     """
     if not (qt_version_info[0] == 6 and qt_version_info[1] >= 4):
-        print(
-            f"""Sorry for the inconvenience but,
+        print(f"""Sorry for the inconvenience but,
 
             Spine Toolbox does not support PySide6 version {qt_version}.
             At the moment, PySide6 version must be 6.4 or greater.
@@ -310,8 +362,7 @@ def pyside6_version_check() -> bool:
                 pip install -r requirements.txt --upgrade
 
             And start the application again.
-            """
-        )
+            """)
         return False
     return True
 
@@ -547,7 +598,7 @@ class CharIconEngine(TransparentIconEngine):
         size = int(0.875 * round(min(rect.width(), rect.height())))
         self.font.setPixelSize(max(1, size))
         painter.setFont(self.font)
-        if self.color:
+        if self.color.isValid():
             color = self.color
         else:
             palette = QPalette(QApplication.palette())
@@ -562,8 +613,8 @@ class CharIconEngine(TransparentIconEngine):
 
 
 class ColoredIcon(QIcon):
-    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size, colored: bool = False):
-        self._engine = ColoredIconEngine(icon_file_name, icon_color, icon_size, colored=colored)
+    def __init__(self, icon_or_file_name, icon_color: QColor, icon_size, colored: bool = False):
+        self._engine = ColoredIconEngine(icon_or_file_name, icon_color, icon_size, colored=colored)
         super().__init__(self._engine)
 
     def set_colored(self, colored: bool) -> None:
@@ -574,9 +625,9 @@ class ColoredIcon(QIcon):
 
 
 class ColoredIconEngine(QIconEngine):
-    def __init__(self, icon_file_name: str, icon_color: QColor, icon_size: QSize, colored: bool = False):
+    def __init__(self, icon_or_file_name, icon_color: QColor, icon_size: QSize, colored: bool = False):
         super().__init__()
-        self._icon = QIcon(icon_file_name)
+        self._icon = icon_or_file_name if isinstance(icon_or_file_name, QIcon) else QIcon(icon_or_file_name)
         self._icon_color = icon_color
         self._base_pixmap = self._icon.pixmap(icon_size)
         self._colored = False
@@ -584,7 +635,7 @@ class ColoredIconEngine(QIconEngine):
         self.set_colored(colored)
 
     def color(self, mode: QIcon.Mode = QIcon.Mode.Normal) -> QColor:
-        color = self._icon_color if self._colored else QColor("black")
+        color = self._icon_color if self._colored else QApplication.palette().color(QPalette.ColorRole.WindowText)
         if mode == QIcon.Mode.Disabled:
             r, g, b, a = color.getRgbF()
             tint = 0.37255
@@ -619,6 +670,27 @@ def color_pixmap(pixmap: QPixmap, color: QColor) -> QPixmap:
             color.setAlpha(img.pixelColor(x, y).alpha())
             img.setPixelColor(x, y, color)
     return QPixmap.fromImage(img)
+
+
+def make_icons_theme_aware(widget):
+    """Replaces static SVG icons on all child widgets and actions with theme-aware ColoredIcon versions.
+
+    Args:
+        widget (QWidget): parent widget whose children will be processed
+    """
+    from PySide6.QtWidgets import QAbstractButton  # pylint: disable=import-outside-toplevel
+
+    icon_size = QSize(16, 16)
+    for button in widget.findChildren(QAbstractButton):
+        icon = button.icon()
+        if icon.isNull() or isinstance(icon, ColoredIcon):
+            continue
+        button.setIcon(ColoredIcon(icon, None, button.iconSize()))
+    for action in widget.findChildren(QAction):
+        icon = action.icon()
+        if icon.isNull() or isinstance(icon, ColoredIcon):
+            continue
+        action.setIcon(ColoredIcon(icon, None, icon_size))
 
 
 def make_icon_id(icon_code: int, color_code: int) -> int:
@@ -681,11 +753,14 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
         if not info.isDir():
             return super().icon(info)
         p = info.filePath()
-        # logging.debug("In dir:{0}".format(p))
-        if os.path.exists(os.path.join(p, ".spinetoolbox")):
-            # logging.debug("found project dir:{0}".format(p))
+        if is_spine_toolbox_project_dir(p):
             return self.spine_icon
         return super().icon(info)
+
+
+def is_spine_toolbox_project_dir(p):
+    """Returns True when given path looks like it contains a valid Spine Toolbox project."""
+    return os.path.isfile(os.path.join(p, ".spinetoolbox", "project.json"))
 
 
 def basic_console_icon(language: str) -> QIcon:
@@ -1019,22 +1094,24 @@ def get_current_path(line_edit: QLineEdit) -> str:
     return os.path.abspath(current_path)
 
 
-def get_path_from_native_open_file_dialog(parent, current_path, title, initial_path=None):
+def get_path_from_native_open_file_dialog(
+    parent: QWidget | None, current_path: str, title: str, initial_path: str | None = None
+) -> tuple[str, str, int]:
     """Opens the native open file dialog on Windows.
 
     Args:
-        parent (QWidget, optional): Parent widget for the file dialog
-        current_path (str): If not None, the open file dialog initial dir is set according to the 'File' keyword.
+        parent: Parent widget for the file dialog
+        current_path: If not None, the open file dialog initial dir is set according to the 'File' keyword.
             If None, initial dir set according to the 'InitialDir' keyword.
-        title (str): Dialog title
-        initial_path (str): Initial dir if something else than home_dir()
+        title: Dialog title
+        initial_path: Initial dir if something else than home_dir()
 
     Returns:
-        tuple: [0] is the selected path, [1] is the calling function, [2] is the error message
+        [0] is the selected path, [1] is user selected filter, [2] user input flags (OFN_")
     """
     init_path = initial_path if initial_path is not None else home_dir()
     # pylint: disable= possibly-used-before-assignment
-    hwnd = win32gui.FindWindow(None, parent.windowTitle())
+    hwnd = int(parent.winId())
     pyhandle = pywintypes.HANDLE(hwnd)
     try:
         # NOTE: Paths must use Windows path separators (\) !
@@ -1053,7 +1130,7 @@ def get_path_from_native_open_file_dialog(parent, current_path, title, initial_p
             Title=title,
         )
     except BaseException:  # GetOpenFileNameW throws pywinerror.error or similar when the user cancels the operation
-        r = [""]
+        r = ("", "", 0)
     return r
 
 
@@ -1232,178 +1309,7 @@ def unique_name(prefix, existing):
     return f"{prefix} ({free})"
 
 
-def parse_specification_file(spec_path, logger):
-    """Parses specification file.
-
-    Args:
-        spec_path (str): path to specification file
-        logger (LoggerInterface): a logger
-
-    Returns:
-        dict: specification dict or None if the operation failed
-    """
-    try:
-        with open(spec_path, "r") as fp:
-            try:
-                return json.load(fp)
-            except ValueError:
-                logger.msg_error.emit("Item specification file not valid")
-                return None
-    except FileNotFoundError:
-        logger.msg_error.emit(f"Specification file <b>{spec_path}</b> does not exist")
-        return None
-    except OSError:
-        logger.msg_error.emit(f"Specification file <b>{spec_path}</b> not found")
-        return None
-
-
-def load_specification_from_file(spec_path, local_data_dict, spec_factories, app_settings, logger):
-    """Returns an Item specification from a definition file.
-
-    Args:
-        spec_path (str): Path of the specification definition file
-        local_data_dict (dict): specifications local data dict
-        spec_factories (dict): Dictionary mapping specification type to ProjectItemSpecificationFactory
-        app_settings (QSettings): Toolbox settings
-        logger (LoggerInterface): a logger
-
-    Returns:
-        ProjectItemSpecification: item specification or None if reading the file failed
-    """
-    spec_dict = parse_specification_file(spec_path, logger)
-    if spec_dict is None:
-        return None
-    spec_dict["definition_file_path"] = spec_path
-    try:
-        spec = specification_from_dict(spec_dict, local_data_dict, spec_factories, app_settings, logger)
-    except KeyError:
-        spec = None
-    if spec is not None:
-        spec.definition_file_path = spec_path
-    return spec
-
-
-def specification_from_dict(spec_dict, local_data_dict, spec_factories, app_settings, logger):
-    """Returns item specification from a dictionary.
-
-    Args:
-        spec_dict (dict): Dictionary with the specification
-        local_data_dict (dict): specifications local data
-        spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
-        app_settings (QSettings): Toolbox settings
-        logger (LoggerInterface): a logger
-
-    Returns:
-        ProjectItemSpecification or NoneType: specification or None if factory isn't found.
-    """
-    # NOTE: If the spec doesn't have the "item_type" key, we can assume it's a tool spec
-    item_type = spec_dict.get("item_type", "Tool")
-    local_data = local_data_dict.get(item_type, {}).get(spec_dict["name"])
-    if local_data is not None:
-        merge_dicts(local_data, spec_dict)
-    spec_factory = spec_factories.get(item_type)
-    if spec_factory is None:
-        return None
-    return spec_factory.make_specification(spec_dict, app_settings, logger)
-
-
-def plugins_dirs(app_settings):
-    """Loads plugins.
-
-    Args:
-        app_settings (QSettings): Toolbox settings
-
-    Returns:
-        list of str: plugin directories
-    """
-    search_paths = {PLUGINS_PATH}
-    search_paths |= set(app_settings.value("appSettings/pluginSearchPaths", defaultValue="").split(";"))
-    # Plugin dirs are top-level dirs in all search paths
-    plugin_dirs = []
-    for path in search_paths:
-        try:
-            top_level_items = [os.path.join(path, item) for item in os.listdir(path)]
-        except FileNotFoundError:
-            continue
-        plugin_dirs += [item for item in top_level_items if os.path.isdir(item)]
-    return plugin_dirs
-
-
-def load_plugin_dict(plugin_dir, logger):
-    """Loads plugin dict from plugin directory.
-
-    Args:
-        plugin_dir (str): path of plugin dir with "plugin.json" in it
-        logger (LoggerInterface): a logger
-
-    Returns:
-        dict: plugin dict or None if the operation failed
-    """
-    plugin_file = os.path.join(plugin_dir, "plugin.json")
-    if not os.path.isfile(plugin_file):
-        return None
-    with open(plugin_file, "r") as fh:
-        try:
-            plugin_dict = json.load(fh)
-        except json.decoder.JSONDecodeError:
-            logger.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Invalid JSON.")
-            return None
-    try:
-        plugin_dict["plugin_dir"] = plugin_dir
-    except KeyError as key:
-        logger.msg_error.emit(f"Error in plugin file <b>{plugin_file}</b>. Key '{key}' not found.")
-        return None
-    return plugin_dict
-
-
-def load_plugin_specifications(plugin_dict, local_data_dict, spec_factories, app_settings, logger):
-    """Loads plugin's specifications.
-
-    Args:
-        plugin_dict (dict): plugin dict
-        local_data_dict (dict): specifications local data dictionary
-        spec_factories (dict): Dictionary mapping specification name to ProjectItemSpecificationFactory
-        app_settings (QSettings): Toolbox settings
-        logger (LoggerInterface): a logger
-
-    Returns:
-        dict: mapping from plugin name to list of specifications or None if the operation failed
-    """
-    plugin_dir = plugin_dict["plugin_dir"]
-    try:
-        name = plugin_dict["name"]
-        specifications = plugin_dict["specifications"]
-    except KeyError as key:
-        logger.msg_error.emit(f"Error in plugin file <b>{plugin_dir}</b>. Key '{key}' not found.")
-        return None
-    deserialized_paths = [deserialize_path(path, plugin_dir) for paths in specifications.values() for path in paths]
-    plugin_specs = []
-    for path in deserialized_paths:
-        spec = load_specification_from_file(path, local_data_dict, spec_factories, app_settings, logger)
-        if not spec:
-            continue
-        spec.plugin = name
-        plugin_specs.append(spec)
-    return {name: plugin_specs}
-
-
-def load_specification_local_data(config_dir):
-    """Loads specifications' project-specific data.
-
-    Args:
-        config_dir (str or Path): project config dir
-
-    Returns:
-        dict: specifications local data
-    """
-    local_data_path = pathlib.Path(config_dir, PROJECT_LOCAL_DATA_DIR_NAME, SPECIFICATION_LOCAL_DATA_FILENAME)
-    if not local_data_path.exists():
-        return {}
-    with open(local_data_path) as data_file:
-        return json.load(data_file)
-
-
-DB_ITEM_SEPARATOR = " \u01C0 "
+DB_ITEM_SEPARATOR = " \u01c0 "
 """Display string to separate items such as entity names."""
 
 
@@ -1455,14 +1361,14 @@ def disconnect(signal, *slots):
             signal.connect(slot)
 
 
-class SignalWaiter(QObject):
+class SignalWaiter:
     """A 'traffic light' that allows waiting for a signal to be emitted in another thread."""
 
-    def __init__(self, condition=None, timeout=None):
+    def __init__(self, condition: Callable[[...], bool] | None = None, timeout: float | None = None):
         """
         Args:
-            condition (function, optional): receiving the self.args and returning whether to stop waiting.
-            timeout (float, optional): timeout in seconds; wait will raise after timeout
+            condition: receiving the self.args and returning whether to stop waiting.
+            timeout: timeout in seconds; wait will raise after timeout
         """
         super().__init__()
         self._triggered = False
@@ -1475,14 +1381,14 @@ class SignalWaiter(QObject):
     def triggered(self) -> bool:
         return self._triggered
 
-    def trigger(self, *args):
+    def trigger(self, *args) -> None:
         """Signal receiving slot."""
         if self._triggered:
             return
         self._triggered = True if self._condition is None else self._condition(*args)
         self.args = args
 
-    def wait(self):
+    def wait(self) -> None:
         """Wait for signal to be received."""
         while not self._triggered:
             QApplication.processEvents()
@@ -1491,16 +1397,18 @@ class SignalWaiter(QObject):
 
 
 @contextmanager
-def signal_waiter(signal, condition=None, timeout=None):
+def signal_waiter(
+    signal: Any, condition: Callable[[...], bool] | None = None, timeout: float | None = None
+) -> Iterator[SignalWaiter]:
     """Gives a context manager that waits for the emission of given Qt signal.
 
     Args:
-        signal (Any): signal to wait
-        condition (Callable, optional): a callable that takes the signal's parameters and returns True to stop waiting
-        timeout (float, optional): timeout in seconds; if None, wait indefinitely
+        signal: signal to wait
+        condition: a callable that takes the signal's parameters and returns True to stop waiting
+        timeout: timeout in seconds; if None, wait indefinitely
 
     Yields:
-        SignalWaiter: waiter instance
+        waiter instance
     """
     waiter = SignalWaiter(condition=condition, timeout=timeout)
     signal.connect(waiter.trigger)
@@ -1508,7 +1416,6 @@ def signal_waiter(signal, condition=None, timeout=None):
         yield waiter
     finally:
         signal.disconnect(waiter.trigger)
-        waiter.deleteLater()
 
 
 class CustomSyntaxHighlighter(QSyntaxHighlighter):
@@ -1571,8 +1478,8 @@ def inquire_index_name(model, column, title, parent_widget):
     model.setHeaderData(column, Qt.Orientation.Horizontal, new_name)
 
 
-def preferred_row_height(widget: QWidget, factor: float = 1.5) -> float:
-    return factor * widget.fontMetrics().lineSpacing()
+def preferred_row_height(widget: QWidget, factor: float = 1.5) -> int:
+    return int(factor * widget.fontMetrics().lineSpacing())
 
 
 def restore_ui(window: QMainWindow, app_settings: QSettings, settings_group: str) -> None:
@@ -1655,52 +1562,6 @@ def bisect_chunks(
         chunk = [item]
         lo = row + count
     yield chunk, lo
-
-
-def load_project_dict(project_config_dir: str | pathlib.Path, logger: LoggerInterface) -> dict | None:
-    """Loads project dictionary from project directory.
-
-    Args:
-        project_config_dir: project's .spinetoolbox directory
-        logger: a logger
-
-    Returns:
-        project dictionary
-    """
-    load_path = os.path.abspath(os.path.join(project_config_dir, PROJECT_FILENAME))
-    try:
-        with open(load_path, "r") as fh:
-            try:
-                project_dict = json.load(fh)
-            except json.decoder.JSONDecodeError:
-                logger.msg_error.emit(f"Error in project file <b>{load_path}</b>. Invalid JSON.")
-                return None
-    except OSError:
-        logger.msg_error.emit(f"Project file <b>{load_path}</b> missing")
-        return None
-    return project_dict
-
-
-def load_local_project_data(project_config_dir: str | pathlib.Path, logger: LoggerInterface) -> dict:
-    """Loads local project data.
-
-    Args:
-        project_config_dir: project's .spinetoolbox directory
-        logger: a logger
-
-    Returns:
-        project's local data
-    """
-    load_path = pathlib.Path(project_config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME)
-    if not load_path.exists():
-        return {}
-    with load_path.open() as fh:
-        try:
-            local_data_dict = json.load(fh)
-        except json.decoder.JSONDecodeError:
-            logger.msg_error.emit(f"Error in project's local data file <b>{load_path}</b>. Invalid JSON.")
-            return {}
-    return local_data_dict
 
 
 def merge_dicts(source: dict, target: dict) -> None:
@@ -1870,43 +1731,6 @@ def plain_to_tool_tip(text: str | None) -> str | None:
     return plain_to_rich(text) if text else None
 
 
-class CustomPopupMenu(QMenu):
-    """Popup menu master class for several popup menus."""
-
-    def __init__(self, parent: QWidget):
-        """
-        Args:
-            parent: Parent widget of this pop-up menu
-        """
-        super().__init__(parent=parent)
-        self._parent = parent
-
-    def add_action(
-        self,
-        text: str,
-        slot: Callable[[bool], None],
-        enabled: bool = True,
-        tooltip: str | None = None,
-        icon: QIcon | None = None,
-    ):
-        """Adds an action to the popup menu.
-
-        Args:
-            text: Text description of the action
-            slot: Method to connect to action's triggered signal
-            enabled: Is action enabled?
-            tooltip: Tool tip for the action
-            icon: Action icon
-        """
-        if icon is not None:
-            action = self.addAction(icon, text, slot)
-        else:
-            action = self.addAction(text, slot)
-        action.setEnabled(enabled)
-        if tooltip is not None:
-            action.setToolTip(tooltip)
-
-
 _SPLIT_PATTERN = re.compile(r"(\d+)")
 
 
@@ -1918,7 +1742,7 @@ def order_key(name: str) -> list[str]:
     """
     key_list = [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
     if key_list and key_list[0].isdigit():
-        key_list.insert(0, "\U0010FFFF")
+        key_list.insert(0, "\U0010ffff")
     return key_list
 
 
@@ -1928,7 +1752,7 @@ def order_key_from_names(names: Iterable[str]) -> list[str]:
     for name in names:
         key_list += [f"{int(text):#012}" if text.isdigit() else text for text in _SPLIT_PATTERN.split(name) if text]
     if key_list and key_list[0].isdigit():
-        key_list.insert(0, "\U0010FFFF")
+        key_list.insert(0, "\U0010ffff")
     return key_list
 
 
@@ -1992,7 +1816,7 @@ def display_byte_size(size_bytes: int) -> tuple[float | int, str]:
 
 
 def normcase_database_url_path(url: str) -> str:
-    if not url.startswith("sqlite://"):
+    if not url.startswith("sqlite:///"):
         return url
     path = url[len("sqlite:///") :]
     return "sqlite:///" + os.path.normcase(path)
@@ -2006,3 +1830,71 @@ def find_section_in_table_model_header(
         if model.headerData(section, orientation) == data:
             return section
     raise ValueError(f"{data} not found in header")
+
+
+def remove_path_from_recent_projects(settings: QSettings, p: str) -> None:
+    """Removes entry that contains given path from the recent project files list in QSettings.
+
+    Args:
+        settings (QSettings): Application settings object
+        p (str): Full path to a project directory
+    """
+    recents = settings.value("appSettings/recentProjects", defaultValue=None)
+    if not recents:
+        return
+    recents = str(recents)
+    recents_list = recents.split("\n")
+    for entry in recents_list:
+        _, path = entry.split("<>")
+        if same_path(path, p):
+            recents_list.pop(recents_list.index(entry))
+            break
+    updated_recents = "\n".join(recents_list)
+    # Save updated recent paths
+    settings.setValue("appSettings/recentProjects", updated_recents)
+    settings.sync()  # Commit change immediately
+
+
+def clear_recent_projects(parent: QWidget, settings: QSettings) -> None:
+    """Clears recent projects list in File->Open recent menu."""
+    msg = "Are you sure?"
+    title = "Clear recent projects?"
+    message_box = QMessageBox(
+        QMessageBox.Icon.Question,
+        title,
+        msg,
+        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        parent=parent,
+    )
+    answer = message_box.exec()
+    if answer == QMessageBox.StandardButton.No:
+        return
+    settings.remove("appSettings/recentProjects")
+    settings.remove("appSettings/recentProjectStorages")
+    settings.sync()
+
+
+def update_recent_projects(settings: QSettings, project_name: str, project_dir: str) -> None:
+    """Adds a recent project entry to QSettings if not already present. Max amount of recent projects is 20."""
+    recents = settings.value("appSettings/recentProjects", defaultValue=None)
+    entry = project_name + "<>" + project_dir
+    if not recents:
+        updated_recents = entry
+    else:
+        recents = str(recents)
+        recents_list = recents.split("\n")
+        normalized_recents = list(map(os.path.normcase, recents_list))
+        try:
+            index = normalized_recents.index(os.path.normcase(entry))
+        except ValueError:
+            # Add path only if it's not in the list already
+            recents_list.insert(0, entry)
+            if len(recents_list) > 20:
+                recents_list.pop()
+        else:
+            # If entry was on the list, move it as the first item
+            recents_list.insert(0, recents_list.pop(index))
+        updated_recents = "\n".join(recents_list)
+    # Save updated recent paths
+    settings.setValue("appSettings/recentProjects", updated_recents)
+    settings.sync()  # Commit change immediately

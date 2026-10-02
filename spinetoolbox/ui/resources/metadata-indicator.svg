@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="32"
+   height="32"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="metadata-indicator.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="8"
+     inkscape:cx="14.375"
+     inkscape:cy="17.5625"
+     inkscape:window-width="1920"
+     inkscape:window-height="1129"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Taso 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#2a8200;fill-opacity:1;stroke:#264d0c;stroke-width:1.88236;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1"
+       width="30.117645"
+       height="30.117645"
+       x="0.94117641"
+       y="0.94117635"
+       ry="4.9210415" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Berlin Sans FB';-inkscape-font-specification:'Berlin Sans FB';text-align:center;letter-spacing:0.3px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#e5ffcc;fill-opacity:1;stroke:none;stroke-opacity:1;font-size:14.66666667px"
+       x="16.061523"
+       y="12.211771"
+       id="text1"><tspan
+         sodipodi:role="line"
+         x="16.261524"
+         y="12.211771"
+         id="tspan5">meta</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;font-family:'Berlin Sans FB';-inkscape-font-specification:'Berlin Sans FB';text-align:center;letter-spacing:0.3px;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#e5ffcc;fill-opacity:1;stroke:none;stroke-opacity:1"
+       x="16.061523"
+       y="27.305807"
+       id="text6"><tspan
+         sodipodi:role="line"
+         id="tspan6"
+         x="16.261524"
+         y="27.305807">data</tspan></text>
+  </g>
+</svg>

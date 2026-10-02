@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``plot_widget`` module."""
+
 from itertools import product
 import unittest
 from unittest import mock

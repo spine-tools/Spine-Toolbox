@@ -11,10 +11,16 @@
 ######################################################################################################################
 
 """Class for a custom QTextBrowser for showing the logs and tool output."""
+
 from PySide6.QtCore import Slot
-from PySide6.QtGui import QAction, QBrush, QFontDatabase, QPalette, QTextBlockFormat, QTextCursor, QTextFrameFormat
+from PySide6.QtGui import (
+    QAction,
+    QFontDatabase,
+    QTextBlockFormat,
+    QTextCursor,
+    QTextFrameFormat,
+)
 from PySide6.QtWidgets import QMenu, QTextBrowser
-from ..config import TEXTBROWSER_SS
 from ..helpers import scrolling_to_bottom
 
 
@@ -31,7 +37,6 @@ class CustomQTextBrowser(QTextBrowser):
         super().__init__(parent=parent)
         self._toolbox = None
         self.document().setMaximumBlockCount(2000)
-        self.setStyleSheet(TEXTBROWSER_SS)
         self.setOpenExternalLinks(True)
         self.setOpenLinks(False)  # Don't try open file:/// links in the browser widget, we'll open them externally
         self._executions_menu = QMenu(self)
@@ -41,14 +46,16 @@ class CustomQTextBrowser(QTextBrowser):
         self._visible_timestamp = None
         self._executing_timestamp = None
         self._execution_blocks = {}
-        self._frame_format = QTextFrameFormat()
-        self._frame_format.setMargin(4)
-        self._frame_format.setLeftMargin(8)
-        self._frame_format.setPadding(2)
-        self._frame_format.setBorder(1)
-        self._selected_frame_format = QTextFrameFormat(self._frame_format)
-        palette = self.palette()
-        self._selected_frame_format.setBackground(QBrush(palette.color(QPalette.ColorRole.Highlight).darker()))
+        self._base_frame_format = QTextFrameFormat()
+        self._base_frame_format.setMargin(4)
+        self._base_frame_format.setLeftMargin(8)
+        self._base_frame_format.setPadding(2)
+        self._base_frame_format.setBorder(1)
+        self._base_frame_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Dotted)
+        self._frame_format = QTextFrameFormat(self._base_frame_format)
+        self._selected_frame_format = QTextFrameFormat(self._base_frame_format)
+        self._selected_frame_format.setBorder(3)
+        self._selected_frame_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Ridge)
         self._executions_menu.aboutToShow.connect(self._populate_executions_menu)
         self._executions_menu.triggered.connect(self._select_execution)
 
@@ -211,7 +218,7 @@ class CustomQTextBrowser(QTextBrowser):
                     frame.setFrameFormat(frame_format)
         self.set_item_log_selected(True)
 
-    def set_item_log_selected(self, selected):
+    def set_item_log_selected(self, selected) -> None:
         active_item = self._toolbox.active_project_item or self._toolbox.active_link_item
         if not active_item:
             return
@@ -222,8 +229,14 @@ class CustomQTextBrowser(QTextBrowser):
         cursor = self._item_cursors.get((self._visible_timestamp, item_name))
         if cursor is not None:
             frame = cursor.currentFrame()
-            frame_format = self._selected_frame_format if selected else self._frame_format
-            frame.setFrameFormat(frame_format)
+            if selected:
+                frame.setFrameFormat(self._selected_frame_format)
+                for child_frame in frame.childFrames():
+                    child_frame.setFrameFormat(self._selected_frame_format)
+            else:
+                frame.setFrameFormat(self._frame_format)
+                for child_frame in frame.childFrames():
+                    child_frame.setFrameFormat(self._frame_format)
 
 
 class MonoSpaceFontTextBrowser(QTextBrowser):
@@ -233,6 +246,5 @@ class MonoSpaceFontTextBrowser(QTextBrowser):
             parent (QWidget): Parent widget
         """
         super().__init__(parent=parent)
-        self.setStyleSheet(TEXTBROWSER_SS)
         font = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
         self.setFont(font)

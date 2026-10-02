@@ -11,9 +11,11 @@
 ######################################################################################################################
 
 """A model for variable resolution time series, used by the parameter_value editors."""
+
 import numpy as np
 from PySide6.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesVariableResolution
+from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT
 from .indexed_value_table_model import IndexedValueTableModel
 
 
@@ -114,9 +116,10 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         """
         if len(self._value) == 1:
             return False
-        if count == len(self._value):
-            count = len(self._value) - 1
-            row = 1
+        if count + row >= len(self._value):
+            if row == 0:
+                row = 1
+            count = len(self._value) - row
         self.beginRemoveRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
         old_values = self._value.values
@@ -155,7 +158,9 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
             try:
                 self._value.indexes[row] = value
             except ValueError:
-                self._value.indexes[row] = np.datetime64()  # pylint: disable=no-value-for-parameter
+                self._value.indexes[row] = np.datetime64(
+                    "nat", NUMPY_DATETIME64_UNIT
+                )  # pylint: disable=no-value-for-parameter
         else:
             try:
                 self._value.values[row] = value

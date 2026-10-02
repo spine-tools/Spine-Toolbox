@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for ``spine_engine_worker`` module."""
+
 import time
 import unittest
 from unittest.mock import MagicMock

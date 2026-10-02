@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains Spine Database editor's window registry."""
+
 from spinetoolbox.multi_tab_windows import MultiTabWindowRegistry
 
 db_editor_registry = MultiTabWindowRegistry()

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``tree_item_utility`` module."""
+
 from operator import attrgetter
 import unittest
 from spinetoolbox.spine_db_editor.mvcmodels.tree_item_utility import SortChildrenMixin

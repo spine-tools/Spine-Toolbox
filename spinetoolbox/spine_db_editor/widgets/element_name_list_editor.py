@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains the ElementNameListEditor class."""
+
 from PySide6.QtCore import QCoreApplication, QEvent, QModelIndex, Qt, Signal, Slot
 from PySide6.QtGui import QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QItemDelegate

@@ -10,25 +10,25 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for the helpers module."""
-import json
+"""Unit tests for the ``helpers`` module."""
+
 from pathlib import Path
 import re
 import sys
 from tempfile import TemporaryDirectory
 import unittest
-from unittest.mock import MagicMock, patch
-from PySide6.QtCore import QObject, QSettings, Qt, Signal
-from PySide6.QtGui import QAction, QKeySequence, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QLineEdit, QWidget
+from unittest import mock
+from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtGui import QAction, QKeySequence, QPalette, QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import QLineEdit, QMessageBox, QWidget
 import pytest
-from spine_engine.load_project_items import load_item_specification_factories
-from spinetoolbox.config import PROJECT_FILENAME, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_LOCAL_DATA_FILENAME
 from spinetoolbox.helpers import (
     DB_ITEM_SEPARATOR,
     HTMLTagFilter,
+    LogMessageHtmlParser,
     add_keyboard_shortcut_to_tool_tip,
     add_keyboard_shortcuts_to_action_tool_tips,
+    clear_recent_projects,
     copy_files,
     create_dir,
     dir_is_valid,
@@ -44,9 +44,6 @@ from spinetoolbox.helpers import (
     home_dir,
     interpret_icon_id,
     list_to_rich_text,
-    load_local_project_data,
-    load_project_dict,
-    load_specification_from_file,
     make_icon_id,
     merge_dicts,
     normcase_database_url_path,
@@ -56,6 +53,7 @@ from spinetoolbox.helpers import (
     plain_to_rich,
     plain_to_tool_tip,
     recursive_overwrite,
+    remove_path_from_recent_projects,
     rename_dir,
     rows_to_row_count_tuples,
     select_directory_with_dialog,
@@ -66,30 +64,12 @@ from spinetoolbox.helpers import (
     try_number_from_string,
     tuple_itemgetter,
     unique_name,
+    update_recent_projects,
 )
 from tests.mock_helpers import TestCaseWithQApplication, q_object
 
 
 class TestHelpers(TestCaseWithQApplication):
-
-    def test_format_log_message(self):
-        stamp_pattern = re.compile(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
-        message = "test msg"
-
-        def test_correctness(message_type, expected_color):
-            formatted = format_log_message(message_type, message)
-            stamp_start = formatted.find("[")
-            stamp_end = formatted.find("]")
-            without_stamp = formatted[:stamp_start] + formatted[stamp_end + 1 :]
-            stamp = formatted[stamp_start : stamp_end + 1]
-            expected = f"<span style='color:{expected_color};white-space: pre-wrap;'> {message}</span>"
-            self.assertEqual(without_stamp, expected)
-            self.assertIsNotNone(stamp_pattern.match(stamp))
-
-        test_correctness("msg", "white")
-        test_correctness("msg_success", "#00ff00")
-        test_correctness("msg_error", "#ff3333")
-        test_correctness("msg_warning", "yellow")
 
     def test_make_icon_id(self):
         icon_id = make_icon_id(3, 7)
@@ -122,7 +102,7 @@ class TestHelpers(TestCaseWithQApplication):
             file_in_dir = Path(old_dir, "file.fff")
             file_in_dir.touch()
             new_dir = Path(temp_dir, "new directory")
-            logger = MagicMock()
+            logger = mock.MagicMock()
             self.assertTrue(rename_dir(str(old_dir), str(new_dir), logger, "box_title"))
             self.assertFalse(old_dir.exists())
             self.assertTrue(new_dir.exists())
@@ -135,8 +115,8 @@ class TestHelpers(TestCaseWithQApplication):
             old_dir.mkdir()
             new_dir = Path(temp_dir, "new directory")
             new_dir.mkdir()
-            logger = MagicMock()
-            with unittest.mock.patch("spinetoolbox.helpers.QMessageBox") as mock_msg_box:
+            logger = mock.MagicMock()
+            with mock.patch("spinetoolbox.helpers.QMessageBox") as mock_msg_box:
                 self.assertFalse(rename_dir(str(old_dir), str(new_dir), logger, "box_title"))
                 mock_msg_box.assert_called_once()
             self.assertTrue(old_dir.exists())
@@ -214,7 +194,7 @@ class TestHelpers(TestCaseWithQApplication):
             (destination_dir / sub_dir).mkdir()
             overwritten_file = destination_dir / sub_dir / file_name
             overwritten_file.touch()
-            logger = MagicMock()
+            logger = mock.MagicMock()
             recursive_overwrite(logger, str(source_dir), str(destination_dir))
             with open(overwritten_file) as input_:
                 self.assertEqual(input_.readline(), "source")
@@ -247,12 +227,12 @@ class TestHelpers(TestCaseWithQApplication):
             line_edit = QLineEdit()
             parent_widget = QWidget()
             if sys.platform == "win32":
-                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                with mock.patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
                     mock_native_dialog.return_value = [str(executable)]
                     select_julia_executable(parent_widget, line_edit)
                     mock_native_dialog.assert_called()
             else:
-                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                with mock.patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
                     select_julia_executable(None, line_edit)
             self.assertEqual(line_edit.text(), str(executable))
             line_edit.deleteLater()
@@ -262,7 +242,7 @@ class TestHelpers(TestCaseWithQApplication):
         with TemporaryDirectory() as temp_dir:
             project_dir = Path(temp_dir, "project")
             project_dir.mkdir()
-            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory", lambda *args: str(project_dir)):
+            with mock.patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory", lambda *args: str(project_dir)):
                 line_edit = QLineEdit()
                 select_julia_project(None, line_edit)
                 self.assertEqual(line_edit.text(), str(project_dir))
@@ -275,12 +255,12 @@ class TestHelpers(TestCaseWithQApplication):
             line_edit = QLineEdit()
             parent_widget = QWidget()
             if sys.platform == "win32":
-                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                with mock.patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
                     mock_native_dialog.return_value = [str(executable)]
                     select_python_interpreter(parent_widget, line_edit)
                     mock_native_dialog.assert_called()
             else:
-                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
+                with mock.patch("spinetoolbox.helpers.QFileDialog.getOpenFileName", lambda *args: [str(executable)]):
                     select_python_interpreter(None, line_edit)
             self.assertEqual(line_edit.text(), str(executable))
             line_edit.deleteLater()
@@ -296,15 +276,15 @@ class TestHelpers(TestCaseWithQApplication):
             line_edit.setPlaceholderText(python_in_path)
             parent_widget = QWidget()
             if sys.platform == "win32":
-                with patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
+                with mock.patch("spinetoolbox.helpers.win32gui.GetOpenFileNameW") as mock_native_dialog:
                     mock_native_dialog.return_value = [str(executable)]
                     select_python_interpreter(parent_widget, line_edit)
                     # initial dir should be according to the text in line edit
                     self.assertEqual(mock_native_dialog.call_args[1]["File"], str(executable))
                     self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
                     with (
-                        patch("spinetoolbox.helpers.os.path.exists") as mock_exists,
-                        patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath,
+                        mock.patch("spinetoolbox.helpers.os.path.exists") as mock_exists,
+                        mock.patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath,
                     ):
                         mock_exists.return_value = True
                         mock_abspath.return_value = python_in_path
@@ -322,14 +302,14 @@ class TestHelpers(TestCaseWithQApplication):
                     self.assertEqual(mock_native_dialog.call_args[1]["File"], "")
                     self.assertEqual(mock_native_dialog.call_args[1]["InitialDir"], home_dir())
             else:  # Linux et al.
-                with patch("spinetoolbox.helpers.QFileDialog.getOpenFileName") as mock_open_file_dialog:
+                with mock.patch("spinetoolbox.helpers.QFileDialog.getOpenFileName") as mock_open_file_dialog:
                     mock_open_file_dialog.return_value = [str(executable)]
                     select_python_interpreter(None, line_edit)
                     # initial dir should be according to the text in line edit
                     mock_open_file_dialog.assert_called_with(None, "Select Python Interpreter", str(executable))
                     with (
-                        patch("spinetoolbox.helpers.os.path.exists") as mock_exists,
-                        patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath,
+                        mock.patch("spinetoolbox.helpers.os.path.exists") as mock_exists,
+                        mock.patch("spinetoolbox.helpers.os.path.abspath") as mock_abspath,
                     ):
                         mock_exists.return_value = True
                         mock_abspath.return_value = python_in_path
@@ -351,12 +331,12 @@ class TestHelpers(TestCaseWithQApplication):
         with TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir, "file")
             file_path.touch()
-            with patch("spinetoolbox.helpers.QMessageBox"):
+            with mock.patch("spinetoolbox.helpers.QMessageBox"):
                 self.assertTrue(file_is_valid(None, str(file_path), "Message title"))
 
     def test_dir_is_valid(self):
         with TemporaryDirectory() as temp_dir:
-            with patch("spinetoolbox.helpers.QMessageBox"):
+            with mock.patch("spinetoolbox.helpers.QMessageBox"):
                 self.assertTrue(dir_is_valid(None, temp_dir, "Message title"))
 
     def test_unique_name(self):
@@ -381,37 +361,6 @@ class TestHelpers(TestCaseWithQApplication):
             "p (11)",
         )
 
-    def test_load_tool_specification_from_file(self):
-        """Tests creating a PythonTool (specification) instance from a valid tool specification file."""
-        spec_path = Path(__file__).parent / "test_resources" / "test_tool_spec.json"
-        specification_factories = load_item_specification_factories("spine_items")
-        logger = MagicMock()
-        app_settings = QSettings("SpineProject", "Spine Toolbox")
-        tool_spec = load_specification_from_file(str(spec_path), {}, specification_factories, app_settings, logger)
-        self.assertIsNotNone(tool_spec)
-        self.assertEqual(tool_spec.name, "Python Tool Specification")
-        app_settings.deleteLater()
-
-    def test_load_project_dict(self):
-        with TemporaryDirectory() as project_dir:
-            project_file = Path(project_dir, PROJECT_FILENAME)
-            with project_file.open("w") as fp:
-                json.dump("don't panic this is a test", fp)
-            logger = MagicMock()
-            project_dict = load_project_dict(project_dir, logger)
-            self.assertEqual(project_dict, "don't panic this is a test")
-
-    def test_load_local_project_data(self):
-        with TemporaryDirectory() as project_dir:
-            local_data_path = Path(project_dir, PROJECT_LOCAL_DATA_DIR_NAME)
-            local_data_path.mkdir()
-            local_data_file = local_data_path / PROJECT_LOCAL_DATA_FILENAME
-            with local_data_file.open("w") as fp:
-                json.dump("don't panic this is a test", fp)
-            logger = MagicMock()
-            project_dict = load_local_project_data(project_dir, logger)
-            self.assertEqual(project_dict, "don't panic this is a test")
-
     def test_merge_dicts_with_empty_source(self):
         target = {}
         merge_dicts({}, target)
@@ -433,11 +382,85 @@ class TestHelpers(TestCaseWithQApplication):
         self.assertEqual(target, {"a": {"b": 2}})
 
 
+class TestFormatLogMessage:
+    STAMP_PATTERN = re.compile(r"\[\d\d-\d\d-\d\d\d\d \d\d:\d\d:\d\d]")
+
+    @pytest.mark.parametrize(
+        "msg_type,expected_text_color",
+        [("msg", None), ("msg_success", "#007a00"), ("msg_error", "#cc0000"), ("msg_warning", "#c38f06")],
+    )
+    def test_with_black_text(self, msg_type, expected_text_color, parent_widget):
+        self._set_text_color(parent_widget, Qt.GlobalColor.black)
+        self._assert(msg_type, "test msg", parent_widget, expected_text_color)
+
+    @pytest.mark.parametrize(
+        "msg_type,expected_text_color",
+        [("msg", None), ("msg_success", "#00ff00"), ("msg_error", "#ff3333"), ("msg_warning", "#ffcc00")],
+    )
+    def test_with_white_text(self, msg_type, expected_text_color, parent_widget):
+        self._set_text_color(parent_widget, Qt.GlobalColor.white)
+        self._assert(msg_type, "test msg", parent_widget, expected_text_color)
+
+    @staticmethod
+    def _set_text_color(widget, color):
+        palette = widget.palette()
+        palette.setColor(QPalette.ColorRole.Text, color)
+        widget.setPalette(palette)
+
+    @staticmethod
+    def _assert(message_type, message, widget, expected_color):
+        formatted = format_log_message(message_type, message, widget)
+        stamp_start = formatted.find("[")
+        stamp_end = formatted.find("]")
+        without_stamp = formatted[:stamp_start] + formatted[stamp_end + 1 :]
+        stamp = formatted[stamp_start : stamp_end + 1]
+        if expected_color is not None:
+            color_tag = f"color:{expected_color};"
+        else:
+            color_tag = ""
+        expected = f"<span style='{color_tag}white-space:pre-wrap;'> {message}</span>"
+        assert without_stamp == expected
+        assert TestFormatLogMessage.STAMP_PATTERN.match(stamp) is not None
+
+
+@pytest.mark.parametrize("is_dark", [(True,), (False,)])
+class TestLogMessageHtmlParser:
+    @pytest.fixture
+    def color(self, is_dark):
+        return "#bb99ff" if is_dark else "#7755bb"
+
+    def test_raw_text(self, is_dark):
+        text = "Some text."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        assert parser.drain() == text
+
+    def test_text_with_ignored_tag(self, is_dark):
+        text = "This word is <b>bold</b>."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        assert parser.drain() == text
+
+    def test_text_with_unstyled_a_tag(self, is_dark, color):
+        text = "Link to <a href='http://example.com'>somewhere</a>."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        expected = f"Link to <a style='color:{color};' href='http://example.com'>somewhere</a>."
+        assert parser.drain() == expected
+
+    def test_styled_tag_is_replaced_by_color(self, is_dark, color):
+        text = "Link to <a style='color:white;' href='http://example.com'>somewhere</a>."
+        parser = LogMessageHtmlParser(is_dark)
+        parser.feed(text)
+        expected = f"Link to <a style='color:{color};' href='http://example.com'>somewhere</a>."
+        assert parser.drain() == expected
+
+
 class TestOrderKey:
     def test_order_key(self):
         assert ["Humphrey_Bogart"] == order_key("Humphrey_Bogart")
         assert ["Wes_", "000000001969", "_Anderson"] == order_key("Wes_1969_Anderson")
-        assert ["\U0010FFFF", "000000001899", "_Alfred-", "000000001980", "Hitchcock"] == order_key(
+        assert ["\U0010ffff", "000000001899", "_Alfred-", "000000001980", "Hitchcock"] == order_key(
             "1899_Alfred-1980Hitchcock"
         )
         assert [] == order_key("")
@@ -448,7 +471,7 @@ class TestOrderKeyFromNames:
         assert order_key_from_names([]) == []
         assert order_key_from_names(["c", "b", "a"]) == ["c", "b", "a"]
         assert order_key_from_names(["a", "23b", "c"]) == ["a", "000000000023", "b", "c"]
-        assert order_key_from_names(["23a", "b", "c"]) == ["\U0010FFFF", "000000000023", "a", "b", "c"]
+        assert order_key_from_names(["23a", "b", "c"]) == ["\U0010ffff", "000000000023", "a", "b", "c"]
 
 
 class TestHTMLTagFilter(unittest.TestCase):
@@ -588,6 +611,7 @@ class TestDisplayByteSize:
 class TestNormcaseDatabaseUrlPath:
     def test_correctness(self):
         assert normcase_database_url_path("mysql://example.com/Path/MY_DB") == "mysql://example.com/Path/MY_DB"
+        assert normcase_database_url_path("sqlite://") == "sqlite://"
         if sys.platform == "win32":
             assert (
                 normcase_database_url_path("sqlite:///C:\\Users\\SansSerif\\in.sqlite")
@@ -616,7 +640,7 @@ class TestSelectDirectoryWithDialog:
         default_path = Path(__file__).parent
         selected_path = Path(sys.executable).parent
         with q_object(QLineEdit()) as line_edit:
-            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
+            with mock.patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
                 mock_dialog.return_value = selected_path.as_posix()  # The dialog returns a POSIX path even on Windows.
                 select_directory_with_dialog(line_edit, "Select test directory", line_edit, str(default_path))
                 mock_dialog.assert_called_once_with(line_edit, "Select test directory", str(default_path))
@@ -627,7 +651,7 @@ class TestSelectDirectoryWithDialog:
         selected_path = Path(sys.executable).parent
         with q_object(QLineEdit()) as line_edit:
             line_edit.setText(str(tmp_path))
-            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
+            with mock.patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
                 mock_dialog.return_value = selected_path.as_posix()  # The dialog returns a POSIX path even on Windows.
                 select_directory_with_dialog(line_edit, "Select test directory", line_edit, str(default_path))
                 mock_dialog.assert_called_once_with(line_edit, "Select test directory", str(tmp_path))
@@ -638,7 +662,7 @@ class TestSelectDirectoryWithDialog:
         current_path = Path(sys.executable).parent
         with q_object(QLineEdit()) as line_edit:
             line_edit.setText(str(current_path))
-            with patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
+            with mock.patch("spinetoolbox.helpers.QFileDialog.getExistingDirectory") as mock_dialog:
                 mock_dialog.return_value = ""
                 select_directory_with_dialog(line_edit, "Select test directory", line_edit, str(default_path))
                 mock_dialog.assert_called_once_with(line_edit, "Select test directory", str(current_path))
@@ -664,3 +688,64 @@ class TestFindSectionInTableModelHeader:
             model.setHorizontalHeaderLabels(["a", "b", "c"])
             with pytest.raises(ValueError, match="^d not found in header$"):
                 find_section_in_table_model_header("d", model)
+
+
+class TestRecentProjects:
+    def test_update_recent_projects(self, qsettings_file):
+        # Test add first project
+        update_recent_projects(qsettings_file, "ProjectA", "C:/Projects/A")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        assert recents == "ProjectA<>C:/Projects/A"
+        # Add second and check that it goes to the front
+        update_recent_projects(qsettings_file, "ProjectB", "C:/Projects/B")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        assert recents.split("\n") == ["ProjectB<>C:/Projects/B", "ProjectA<>C:/Projects/A"]
+        # Test duplicate is not created, but it's moved to the front
+        update_recent_projects(qsettings_file, "ProjectC", "C:/Projects/C")
+        update_recent_projects(qsettings_file, "ProjectA", "C:/Projects/A")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectC<>C:/Projects/C", "ProjectB<>C:/Projects/B"]
+
+    def test_recent_projects_limited_to_twenty(self, qsettings_file):
+        for i in range(21):
+            update_recent_projects(qsettings_file, f"Project{i}", f"C:/Projects/{i}")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        items = recents.split("\n")
+        assert len(items) == 20
+        assert items[0] == "Project20<>C:/Projects/20"
+        assert "Project0<>C:/Projects/0" not in items
+
+    def test_clear_recent_projects(self, application, parent_widget, qsettings_file):
+        update_recent_projects(qsettings_file, "ProjectB", "C:/Projects/B")
+        update_recent_projects(qsettings_file, "ProjectA", "C:/Projects/A")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
+        with mock.patch(
+            "spinetoolbox.helpers.QMessageBox.exec", return_value=QMessageBox.StandardButton.No
+        ) as mock_exec1:
+            clear_recent_projects(parent_widget, qsettings_file)
+            mock_exec1.assert_called()
+            recents = qsettings_file.value("appSettings/recentProjects")
+            assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
+        with mock.patch(
+            "spinetoolbox.helpers.QMessageBox.exec", return_value=QMessageBox.StandardButton.Yes
+        ) as mock_exec2:
+            clear_recent_projects(parent_widget, qsettings_file)
+            mock_exec2.assert_called()
+            assert qsettings_file.value("appSettings/recentProjects") is None
+            assert qsettings_file.value("appSettings/recentProjectStorages") is None
+
+    def test_remove_path_from_recent_projects(self, qsettings_file):
+        update_recent_projects(qsettings_file, "ProjectC", "C:/Projects/C")
+        update_recent_projects(qsettings_file, "ProjectB", "C:/Projects/B")
+        update_recent_projects(qsettings_file, "ProjectA", "C:/Projects/A")
+        remove_path_from_recent_projects(qsettings_file, "C:/Projects/B")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectC<>C:/Projects/C"]
+
+    def test_remove_nonexistent_path_from_recent_projects(self, qsettings_file):
+        update_recent_projects(qsettings_file, "ProjectB", "C:/Projects/B")
+        update_recent_projects(qsettings_file, "ProjectA", "C:/Projects/A")
+        remove_path_from_recent_projects(qsettings_file, "C:/Projects/DoesNotExist")
+        recents = qsettings_file.value("appSettings/recentProjects")
+        assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a class for fetching kernel specs in a thread."""
+
 import json
 import os
 from PySide6.QtCore import QThread, Signal, Slot

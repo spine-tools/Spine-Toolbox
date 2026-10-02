@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor widget for editing a time pattern type (relationship) parameter values."""
+
 from PySide6.QtCore import QPoint, Qt, Slot
 from PySide6.QtWidgets import QHeaderView, QWidget
 from spinedb_api import TimePattern
@@ -35,10 +36,9 @@ class TimePatternEditor(QWidget):
         self._ui.setupUi(self)
         self._ui.pattern_edit_table.init_copy_and_paste_actions()
         self._ui.pattern_edit_table.setModel(self._model)
-        self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._ui.pattern_edit_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
         header = self._ui.pattern_edit_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         header.sectionDoubleClicked.connect(self._open_header_editor)
 
     @Slot(QPoint)

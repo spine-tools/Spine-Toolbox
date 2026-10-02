@@ -19,7 +19,8 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         if self._database_path.exists():
             self._database_path.unlink()
         self._url = "sqlite:///" + str(self._database_path)
-        create_new_spine_database(self._url)
+        engine = create_new_spine_database(self._url)
+        engine.dispose()
 
     def test_execution(self):
         completed = subprocess.run(
@@ -39,6 +40,7 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
                 self.assertEqual(value_row.parameter_name, "info")
                 self.assertEqual(value_row.alternative_name, "Base")
                 values[value_row.entity_name] = from_database(value_row.value, value_row.type)
+        db_map.close()
         self.assertEqual(len(values), 4)
         self.assertEqual(values["b"], 23.0)
         self.assertEqual(values["c"], 50.0)
@@ -46,5 +48,5 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         self.assertEqual(values["e"], -50.0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

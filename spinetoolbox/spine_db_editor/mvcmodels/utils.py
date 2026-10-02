@@ -11,10 +11,13 @@
 ######################################################################################################################
 
 """General helper functions and classes for DB editor's models."""
-from collections.abc import Sequence
+
+from collections.abc import Callable, Sequence
 import csv
+from dataclasses import dataclass
 from io import StringIO
 from itertools import takewhile
+import re
 from typing import TYPE_CHECKING, Optional, TypeAlias
 from PySide6.QtCore import QModelIndex
 from spinedb_api import DatabaseMapping, SpineDBAPIError
@@ -26,16 +29,47 @@ if TYPE_CHECKING:
 
 FilterIds: TypeAlias = dict[tuple[DatabaseMapping, TempId], set[TempId]]
 
-PARAMETER_DEFINITION_FIELD_MAP = {
+
+def make_search_matcher(pattern: str) -> Callable[[str], bool]:
+    """Builds a predicate for a regex search pattern shared by the stacked and tree filters.
+
+    Uses a case-insensitive regex; on an invalid pattern falls back to a case-insensitive substring
+    match so rows/nodes do not vanish erratically while a pattern is being typed.
+
+    Args:
+        pattern: raw pattern text
+
+    Returns:
+        a predicate that returns whether a string matches the pattern
+    """
+    try:
+        regex = re.compile(pattern, re.IGNORECASE)
+    except re.error:
+        needle = pattern.casefold()
+        return lambda text: needle in text.casefold()
+    return lambda text: regex.search(text) is not None
+
+
+@dataclass
+class Matcher:
+    """A regex search filter: its raw pattern text and the predicate built from it."""
+
+    pattern: str
+    matcher: Callable[[str], bool]
+
+
+PARAMETER_DEFINITION_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",
     "parameter name": "name",
     "valid types": "parameter_type_list",
     "value list": "parameter_value_list_name",
     "default value": "default_value",
     "description": "description",
+    "group": "parameter_group_name",
     "database": "database",
 }
-PARAMETER_VALUE_FIELD_MAP = {
+PARAMETER_VALUE_FIELD_MAP: dict[str, str] = {
+    "group": "parameter_group_name",
     "class": "entity_class_name",
     "entity byname": "entity_byname",
     "parameter name": "parameter_definition_name",
@@ -43,14 +77,14 @@ PARAMETER_VALUE_FIELD_MAP = {
     "value": "value",
     "database": "database",
 }
-ENTITY_ALTERNATIVE_FIELD_MAP = {
+ENTITY_ALTERNATIVE_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",
     "entity byname": "entity_byname",
     "alternative": "alternative_name",
     "active": "active",
     "database": "database",
 }
-ENTITY_FIELD_MAP = {
+ENTITY_FIELD_MAP: dict[str, str] = {
     "class": "entity_class_name",
     "name": "name",
     "byname": "entity_byname",
@@ -60,6 +94,13 @@ ENTITY_FIELD_MAP = {
     "altitude": "alt",
     "shape name": "shape_name",
     "shape blob": "shape_blob",
+    "database": "database",
+}
+
+PARAMETER_GROUP_FIELD_MAP: dict[str, str] = {
+    "name": "name",
+    "color": "color",
+    "priority": "priority",
     "database": "database",
 }
 

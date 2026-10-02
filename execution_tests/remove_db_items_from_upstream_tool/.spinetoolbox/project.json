@@ -1,0 +1,123 @@
+{
+    "project": {
+        "version": 13,
+        "description": "",
+        "settings": {
+            "enable_execute_all": true,
+            "store_external_paths_as_relative": false
+        },
+        "specifications": {
+            "Tool": [
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/remove_entities.json"
+                },
+                {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/specifications/Tool/assert_data.json"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "name": "from Remove entities to Data Store",
+                "from": [
+                    "Remove entities",
+                    "right"
+                ],
+                "to": [
+                    "Data Store",
+                    "left"
+                ],
+                "filter_settings": {
+                    "known_filters": {},
+                    "auto_online": true,
+                    "enabled_filter_types": {
+                        "alternative_filter": false,
+                        "scenario_filter": true
+                    }
+                }
+            },
+            {
+                "name": "from Data Store to Assert no orphan data",
+                "from": [
+                    "Data Store",
+                    "right"
+                ],
+                "to": [
+                    "Assert no orphan data",
+                    "left"
+                ],
+                "filter_settings": {
+                    "known_filters": {
+                        "db_url@Data Store": {
+                            "scenario_filter": {},
+                            "alternative_filter": {
+                                "Base": true
+                            }
+                        }
+                    },
+                    "auto_online": true,
+                    "enabled_filter_types": {
+                        "alternative_filter": false,
+                        "scenario_filter": true
+                    }
+                }
+            }
+        ],
+        "jumps": []
+    },
+    "items": {
+        "Data Store": {
+            "type": "Data Store",
+            "description": "",
+            "x": -45.703125,
+            "y": 7.109375,
+            "url": {
+                "dialect": "sqlite",
+                "host": "",
+                "port": null,
+                "database": {
+                    "type": "path",
+                    "relative": true,
+                    "path": ".spinetoolbox/items/data_store/Data Store.sqlite"
+                },
+                "schema": ""
+            }
+        },
+        "Remove entities": {
+            "type": "Tool",
+            "description": "",
+            "x": -210.234375,
+            "y": 6.09375,
+            "specification": "Remove entities",
+            "execute_in_work": true,
+            "cmd_line_args": [
+                {
+                    "type": "resource",
+                    "arg": "db_url@Data Store"
+                }
+            ],
+            "kill_completed_processes": false,
+            "log_process_output": false
+        },
+        "Assert no orphan data": {
+            "type": "Tool",
+            "description": "",
+            "x": 101.5625,
+            "y": 10.15625,
+            "specification": "Assert data",
+            "execute_in_work": true,
+            "cmd_line_args": [
+                {
+                    "type": "resource",
+                    "arg": "db_url@Data Store"
+                }
+            ],
+            "kill_completed_processes": false,
+            "log_process_output": false
+        }
+    }
+}

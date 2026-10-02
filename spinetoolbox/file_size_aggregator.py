@@ -53,7 +53,10 @@ class AggregatorProcess(QObject):
 
 def _aggregation_process(paths: Iterable[str | pathlib.Path], sender: connection.Connection) -> None:
     size = sum(map(aggregate_file_sizes, paths))
-    sender.send(size)
+    try:
+        sender.send(size)
+    except BrokenPipeError:
+        pass
 
 
 def aggregate_file_sizes(base_path: str | pathlib.Path) -> int:

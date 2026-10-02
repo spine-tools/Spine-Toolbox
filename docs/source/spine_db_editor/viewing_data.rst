@@ -9,13 +9,20 @@ This section describes the available tools to view data.
 .. contents::
    :local:
 
-Using the **Entity Tree**
-=========================
+Using the Entity Tree
+=====================
 
 The **Entity tree** presents the structure of entity classes and entities in all databases in the shape of a tree:
 
 .. image:: img/entity_tree.png
    :align: center
+
+Above the **Entity tree** there is a row of regular-expression search fields, one per level
+(**class** and **entity**). Type a pattern to show only the entity classes, or entities, whose name
+matches. A pattern in the **entity** field also reveals matching entities across *all* classes without
+expanding them first, and hides classes that contain no match; clearing the field restores the tree.
+This search row is a reusable component and appears above **Alternative**, **Scenario tree** and
+**Parameter value list** as well.
 
 - To view all entities of a class, expand the corresponding entity class item.
 - To view all multidimensional entities where a specific entity is an member, expand that entity.
@@ -48,7 +55,7 @@ Unavailable options are still visible but they are greyed out:
 - **Remove...** removes the selection.
 - **Duplicate entity** duplicates the whole entity.
 
-- **Export** creates a new Spine Database in an `.sqlite` file with all of the relevant data to the selection.
+- **Export** creates a new Spine Database in an ``.sqlite`` file with all of the relevant data to the selection.
 
 - **Fully expand** expands the selection and all its children.
 - **Fully collapse** collapses the selection and all its children.
@@ -67,8 +74,8 @@ Unavailable options are still visible but they are greyed out:
    extend the selection by clicking on items *without pressing* **Ctrl**. To enable **Sticky selection**, select
    **Settings** from **Menu bar -> File**, and check the corresponding box.
 
-Using the **Graph View**
-========================
+Using the Graph View
+====================
 
 **Graph view** presents the structure of entities from one database in the shape of a graph:
 
@@ -123,13 +130,15 @@ via the **Graph view**'s context menu, or from the settings **Ctrl+,**.
 Entity Highlights
 *****************
 
-As mentioned before, **Scenario tree** and **Alternative** may cause the entity items in the graph to become
-highlighted. The highlighting is done by adding a border around the entity item. This is what it looks like:
+As mentioned before, selecting items in **Scenario tree** and **Alternative**
+may cause the entity items in the graph to become highlighted.
+The highlighting is done by adding a border around the entity item.
+This is how it looks like:
 
 .. image:: img/graph_alt_selection.png
    :align: center
 
-Note that the icons of the entities or colors don't change, only the border may change.
+Note that the icons of the entities or colors don't change, only the border.
 
 There are four different borders:
 
@@ -179,7 +188,7 @@ The context menu has the following options:
 - **Zoom** has three options: zoom out, zoom in and reset zoom. Using the scroll wheel of the mouse on the **Graph view**
   also works.
 - **Arc-length** has two buttons: one for making the arcs between the entities longer and one for making them shorter.
-- **Rotate** rotates the whole graph by 15° per step. Also can be done by holding down **SHIFT** while scrolling with
+- **Rotate** rotates the whole graph by 15° per step. Also can be done by holding down **Shift** while scrolling with
   the mouse wheel.
 
 - **Auto-expand entities** If enabled, the graph will also include entities where the selections are members besides
@@ -195,7 +204,7 @@ The context menu has the following options:
   vertices when drawing the graph.
 
 - **Select graph parameters** is where different aspects of the graph can be mapped to for example parameter values.
-- **Select background image** can be used to set any `.svg` image as the background for the graph.
+- **Select background image** can be used to set any ``.svg`` image as the background for the graph.
 
 - **Save positions** Saves the positions of the selected items into the database. To clear the saved position select
   **Clear saved positions**.
@@ -203,7 +212,8 @@ The context menu has the following options:
 - **Save state...** saves the drawn graph. Selecting a specific state from **Load state...** will load that state
   into the **Graph view**. Saved states can be deleted from **Remove state**.
 
-- **Export as image...** can be used to export the image of the graph in either `.svg` or `.pdf` formats
+- **Export as image...** can be used to export the image of the graph in either ``.svg`` or ``.pdf`` formats.
+  Note, that for viewing the exported ``.svg``, you need to have `Font Awesome <https://fontawesome.com/>`_ fonts installed.
 - **Export as video...** can be used to export the video of the graph.
 
 - **Rebuild** to rebuild the whole graph.
@@ -229,8 +239,8 @@ To display an entity item's context menu, just right-click on it. The context me
 - **Edit**, **Remove** and **Duplicate** work as they do in the **Entity tree**.
 
 
-Using **Table Views**
-=====================
+Using Table Views
+=================
 
 **Table view**'s: *Parameter value*, *Parameter definition*, *Entity alternative* and *Entity* present entity data
 from all databases in the form of tables:
@@ -238,20 +248,19 @@ from all databases in the form of tables:
 .. image:: img/entity_parameter_value_table.png
    :align: center
 
-To filter a **Table view** by any entities and/or classes,
-select the corresponding items in either **Entity tree** or **Graph view**.
-To remove all these filters, select the root item in **Entity tree**.
-Hold the **Ctrl** key while selecting to
-
-A **Table view** can also be filtered by selecting alternatives or scenarios from **Alternative**
-and **Scenario tree**. This filter is orthogonal to the entity/class filter and can be used together with it.
+Similarly to **Graph view**, the tables in **Table view** can be filtered
+by selections in **Entity tree**, **Alternative** and **Scenario tree**.
 Hold the **Ctrl** key while selecting to extend the selection across the trees and tables.
 
-To remove all these filters, simply select the root item in **Entity tree** or deselect all items from
-**Alternative** and **Scenario tree**.
+Additionally, entity selections in **Graph view** also filter the **Table view** tables.
+This filter is applied cumulatively to the entities and classes selected in **Entity tree**.
 
-All the filters described above can also be cleared with the *Clear all filters* item available in the right-click
-context menu of the **Parameter value** table:
+Note, that **Alternative** selections do no affect the **Entity** table.
+
+To remove all these filters, simply select the root item in **Entity tree**
+or deselect all items from **Alternative** and **Scenario tree**.
+Additionally, the filters be cleared with the *Clear all filters* item available in the right-click
+context menu of any of the **Table view** tables:
 
 .. image:: img/clear_all_filters.png
    :align: center
@@ -270,13 +279,28 @@ To filter a **Table view** according to a selection of items in the table itself
 to show the context menu, and then select **Filter by** or **Filter excluding**. To remove these filters, select
 **Remove filters** from the header menus of the filtered columns.
 
+Searching Table Views with Regular Expressions
+**********************************************
+
+Each **Table view** table has a search row directly below the header, with one field per column.
+Type a `regular expression <https://docs.python.org/3/library/re.html>`_ into a column's field to show
+only the rows whose value in that column matches. Matching is case-insensitive and updates as you type;
+an incomplete or invalid pattern falls back to a plain substring match. The search fields combine with
+each other and with the column filters described above, so the table can be narrowed from several columns
+at once.
+
+.. tip:: A search field with a pattern in it is highlighted. Use the **Up** and **Down** arrow keys to move
+   between the search row and the table rows, and **Left**/**Right** to move between the search fields (once
+   you start typing, **Left**/**Right** move within the text instead). Pressing a table's focus shortcut
+   again (for example **Alt+3** for *Parameter value*) jumps into its search row.
+
 .. tip:: You can rearrange columns in *Table Views* by dragging the headers with your mouse.
    The ordering will be remembered the next time you open Spine DB editor.
 
 .. _using_pivot_table_and_frozen_table:
 
-Using **Pivot View** and **Frozen Table**
-=========================================
+Using Pivot View and Frozen Table
+=================================
 
 **Pivot view** and **Frozen table** present data for an individual class from one database in the form of a pivot table,
 optionally with frozen dimensions:
@@ -350,6 +374,8 @@ You can find alternatives from all databases under **Alternative**:
 .. image:: img/alternative_tree.png
    :align: center
 
+A regular-expression search field above **Alternative** filters the list to alternatives whose name matches.
+
 To view the alternatives from each database,
 expand the root item for that database.
 
@@ -360,6 +386,9 @@ You can find scenarios from all databases under **Scenario tree**:
 
 .. image:: img/scenario_tree.png
    :align: center
+
+Two regular-expression search fields above **Scenario tree** (**scenario** and **alternative**) filter the
+scenarios and, within a scenario, its alternatives by name.
 
 To view the scenarios from each database,
 expand the root item for that database.
@@ -374,7 +403,10 @@ You can find parameter value lists from all databases under **Parameter value li
 .. image:: img/parameter_value_list.png
    :align: center
 
-To view the parameter value lists from each database, 
+Two regular-expression search fields above **Parameter value list** (**list name** and **value name**)
+filter the value lists and their values by name.
+
+To view the parameter value lists from each database,
 expand the root item for that database.
 To view the values for each list, expand the corresponding list item.
 
@@ -393,7 +425,23 @@ in Spine Database API documentation.
 Viewing Item Metadata
 =====================
 
-You can find metadata for currently selected entities or parameter values under **Item metadata**:
+The entities and parameter values that have metadata associated with them get a metadata tag next to their names
+in **Entity** and **Parameter value** tables:
+
+.. image:: img/entity_metadata_indicator.png
+   :align: center
+
+**Item metadata** shows the associated metadata when any cell on a tagged row is selected:
 
 .. image:: img/item_metadata.png
    :align: center
+
+Viewing Parameter Groups
+========================
+
+You can find parameter groups from all databases under **Parameter group**:
+
+.. image:: img/parameter_group.png
+   :align: center
+
+The view works very similar to the other table views.

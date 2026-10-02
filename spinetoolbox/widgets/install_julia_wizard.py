@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs for julia setup."""
+
 from enum import IntEnum, auto
 import os
 import sys
@@ -59,6 +60,7 @@ class InstallJuliaWizard(QWizard):
             parent: the parent widget (SettingsWidget)
         """
         super().__init__(parent)
+        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         if jill_install is None:
             self.addPage(JillNotFoundPage(self))
             return
@@ -195,7 +197,6 @@ class InstallJuliaPage(QWizardProcessPage):
             "-m",
             "jill",
             "install",
-            "1.11",  # as of 17.10.2025, SpineOpt doesn't work with Julia >= 1.12; revise later!
             "--confirm",
             "--install_dir",
             self.field("install_dir"),

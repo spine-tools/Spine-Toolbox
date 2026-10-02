@@ -10,6 +10,7 @@
 ######################################################################################################################
 
 """Unit tests for ``select_database_items`` module."""
+
 from contextlib import contextmanager
 import unittest
 from spinedb_api import DatabaseMapping

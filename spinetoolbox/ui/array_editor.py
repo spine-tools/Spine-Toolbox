@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'array_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.10.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -43,7 +43,7 @@ class Ui_Form(object):
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.splitter = QSplitter(Form)
         self.splitter.setObjectName(u"splitter")
-        self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
         self.splitter.setChildrenCollapsible(False)
         self.verticalLayoutWidget = QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName(u"verticalLayoutWidget")
@@ -55,7 +55,7 @@ class Ui_Form(object):
         self.label_2 = QLabel(self.verticalLayoutWidget)
         self.label_2.setObjectName(u"label_2")
 
-        self.formLayout.setWidget(0, QFormLayout.LabelRole, self.label_2)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.LabelRole, self.label_2)
 
         self.value_type_combo_box = QComboBox(self.verticalLayoutWidget)
         self.value_type_combo_box.addItem("")
@@ -64,7 +64,7 @@ class Ui_Form(object):
         self.value_type_combo_box.addItem("")
         self.value_type_combo_box.setObjectName(u"value_type_combo_box")
 
-        self.formLayout.setWidget(0, QFormLayout.FieldRole, self.value_type_combo_box)
+        self.formLayout.setWidget(0, QFormLayout.ItemRole.FieldRole, self.value_type_combo_box)
 
 
         self.verticalLayout_3.addLayout(self.formLayout)
@@ -72,7 +72,8 @@ class Ui_Form(object):
         self.array_table_view = ArrayTableView(self.verticalLayoutWidget)
         self.array_table_view.setObjectName(u"array_table_view")
         self.array_table_view.setMinimumSize(QSize(250, 0))
-        self.array_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.array_table_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.array_table_view.horizontalHeader().setDefaultSectionSize(50)
         self.array_table_view.horizontalHeader().setStretchLastSection(True)
         self.array_table_view.verticalHeader().setVisible(False)
 

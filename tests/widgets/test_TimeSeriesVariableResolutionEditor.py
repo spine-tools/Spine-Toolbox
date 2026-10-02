@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the TimeSeriesVariableResolutionEditor widget."""
+
 import unittest
 from PySide6.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution

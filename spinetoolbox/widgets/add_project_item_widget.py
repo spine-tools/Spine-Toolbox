@@ -11,10 +11,10 @@
 ######################################################################################################################
 
 """Widget shown to user when a new Project Item is created."""
+
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import QStatusBar, QWidget
 from spine_engine.utils.helpers import shorten
-from ..config import STATUSBAR_SS
 from ..helpers import unique_name
 from ..project import ItemNameStatus
 
@@ -36,7 +36,6 @@ class AddProjectItemWidget(QWidget):
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         if toolbox.supports_specifications(class_.item_type()):
             self.ui.comboBox_specification.setModel(toolbox.filtered_spec_factory_models[class_.item_type()])

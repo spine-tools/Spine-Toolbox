@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for drawing graphics items on QGraphicsScene."""
+
 import functools
 from math import cos, pi, radians, sin
 from PySide6.QtCore import QLineF, QPointF, QRectF, Qt, QVariantAnimation, Slot
@@ -271,8 +272,7 @@ class _IconBase(QGraphicsEllipseItem):
     def __init__(self, x, y, w, h, parent, tooltip=None, active=True):
         super().__init__(x, y, w, h, parent)
         palette = qApp.palette()  # pylint: disable=undefined-variable
-        brush = palette.highlight() if active else palette.mid()
-        self._fg_color = brush.color()
+        self._fg_color = palette.highlight().color() if active else palette.windowText().color()
         if tooltip:
             self.setToolTip(tooltip)
         self.setAcceptHoverEvents(True)

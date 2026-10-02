@@ -1,10 +1,11 @@
 coverage[toml]
-black == 24.4.2
+black == 26.3.1
 pre-commit
 pyperf
 sphinx
 sphinx_rtd_theme
 sphinx-autoapi < 3.4
+sphinx-copybutton
 recommonmark
 pylint
 pytest-cov >= 6

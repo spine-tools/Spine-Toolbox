@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for PivotModel class."""
+
 import unittest
 from spinetoolbox.spine_db_editor.mvcmodels.pivot_model import PivotModel
 
@@ -285,7 +286,3 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model.frozen_value, (1,))
         self.assertEqual(model._row_data_header, [("a",), ("b",), ("c",)])
         self.assertEqual(model._column_data_header, [("aa",), ("cc",)])
-
-
-if __name__ == "__main__":
-    unittest.main()

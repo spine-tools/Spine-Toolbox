@@ -23,6 +23,7 @@ class ScenarioFilters(unittest.TestCase):
             import_scenarios(db_map, (("scenario_1", True), ("scenario_2", True)))
             import_scenario_alternatives(db_map, (("scenario_1", "alternative_1"), ("scenario_2", "alternative_2")))
             db_map.commit_session("Add test data.")
+        db_map.close()
 
     def test_execution(self):
         this_file = Path(__file__)
@@ -64,5 +65,5 @@ class ScenarioFilters(unittest.TestCase):
             return filter_id_file.readline().strip()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

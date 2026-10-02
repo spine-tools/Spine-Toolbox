@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for database item removal functionality in Database editor."""
+
 from PySide6.QtWidgets import QApplication
 from tests.spine_db_editor.widgets.spine_db_editor_test_base import DBEditorTestBase
 
@@ -74,7 +75,6 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
     def test_remove_object_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
         model = self.spine_db_editor.parameter_definition_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -96,7 +96,6 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
     def test_remove_relationship_parameter_definitions_from_model(self):
         """Test that object parameter definitions are removed from the model."""
         model = self.spine_db_editor.parameter_definition_model
-        model.init_model()
         if model.canFetchMore(None):
             model.fetchMore(None)
         self.put_mock_object_classes_in_db_mngr()
@@ -120,7 +119,6 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
     def test_remove_object_parameter_values_from_model(self):
         """Test that object parameter values are removed from the model."""
         model = self.spine_db_editor.parameter_value_model
-        model.init_model()
         self.put_mock_object_classes_in_db_mngr()
         self.put_mock_objects_in_db_mngr()
         self.put_mock_object_parameter_definitions_in_db_mngr()
@@ -147,7 +145,6 @@ class TestSpineDBEditorRemove(DBEditorTestBase):
     def test_remove_relationship_parameter_values_from_model(self):
         """Test that relationship parameter values are removed from the model."""
         model = self.spine_db_editor.parameter_value_model
-        model.init_model()
         self.put_mock_dataset_in_db_mngr()
         self.fetch_entity_tree_model()
         self.assertEqual(model.rowCount(), 6)

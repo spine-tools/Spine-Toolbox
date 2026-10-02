@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the Add/Update SpineOpt Wizard."""
+
 from unittest import mock
 from PySide6.QtWidgets import QWizard
 from spinetoolbox.widgets.add_up_spine_opt_wizard import AddUpSpineOptWizard

@@ -11,11 +11,12 @@
 ######################################################################################################################
 
 """Contains a widget acting as a console for Julia & Python REPL's."""
+
+import multiprocessing
 import os
+from queue import Empty
 import sys
 import uuid
-import multiprocessing
-from queue import Empty
 from pygments.lexers import get_lexer_by_name
 from pygments.styles import get_style_by_name
 from pygments.token import Token
@@ -26,16 +27,17 @@ from PySide6.QtGui import (
     QFont,
     QFontDatabase,
     QKeySequence,
+    QPalette,
     QTextBlockFormat,
     QTextCharFormat,
     QTextCursor,
     QTextOption,
 )
-from PySide6.QtWidgets import QPlainTextEdit, QSizePolicy, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QApplication, QPlainTextEdit, QSizePolicy, QVBoxLayout, QWidget
 from spine_engine.exception import RemoteEngineInitFailed
 from spine_engine.execution_managers.persistent_execution_manager import (
-    PythonPersistentExecutionManager,
     JuliaPersistentExecutionManager,
+    PythonPersistentExecutionManager,
 )
 from spine_engine.utils.queue_logger import QueueLogger
 from spinetoolbox.helpers import CustomSyntaxHighlighter
@@ -405,8 +407,8 @@ class PersistentConsoleWidget(QPlainTextEdit):
         if self._text_buffer:
             address = uuid.uuid4().hex
             char_format = cursor.charFormat()
-            char_format.setBackground(QColor("white"))
-            char_format.setForeground(QColor("blue"))
+            char_format.setBackground(QApplication.palette().color(QPalette.ColorRole.Base))
+            char_format.setForeground(QApplication.palette().color(QPalette.ColorRole.Link))
             char_format.setAnchor(True)
             char_format.setAnchorHref(address)
             self._skipped[address] = self._text_buffer[-self._MAX_LINES_COUNT :]

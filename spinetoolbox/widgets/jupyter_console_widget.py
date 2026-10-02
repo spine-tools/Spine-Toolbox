@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Class for a custom RichJupyterWidget that can run Tool instances."""
+
 import logging
 import multiprocessing
 from queue import Empty

@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains functions for automatically generating scenarios from a set of alternatives."""
+
 from itertools import compress, permutations
 
 

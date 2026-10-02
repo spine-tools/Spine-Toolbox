@@ -45,11 +45,13 @@ class ParallelImporterWithDatapackage(unittest.TestCase):
                 ),
             )
             db_map.commit_session("Add test data.")
+        db_map.close()
         self._sink_database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._sink_database_path.exists():
             self._sink_database_path.unlink()
         self._sink_url = "sqlite:///" + str(self._sink_database_path)
-        create_new_spine_database(self._sink_url)
+        engine = create_new_spine_database(self._sink_url)
+        engine.dispose()
 
     def test_execution(self):
         this_file = Path(__file__)
@@ -57,6 +59,7 @@ class ParallelImporterWithDatapackage(unittest.TestCase):
         self.assertEqual(completed.returncode, 0)
         with DatabaseMapping(self._sink_url) as db_map:
             value_rows = db_map.query(db_map.entity_parameter_value_sq).all()
+        db_map.close()
         self.assertEqual(len(value_rows), 2)
         expected_common_data = {
             "entity_class_name": "result",

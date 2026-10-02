@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Classes for custom QDialogs to add edit and remove database items."""
+
 from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QCheckBox, QDialogButtonBox, QWidget
 from spinetoolbox.widgets.custom_qwidgets import SelectDatabaseItemsDialog

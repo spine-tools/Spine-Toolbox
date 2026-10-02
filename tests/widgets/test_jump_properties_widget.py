@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the jump properties widget."""
+
 from tempfile import TemporaryDirectory
 import unittest
 from PySide6.QtGui import QTextCursor

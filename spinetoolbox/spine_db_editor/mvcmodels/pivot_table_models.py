@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Provides pivot table models for the Tabular View."""
+
 from __future__ import annotations
 from collections import defaultdict
 from contextlib import suppress
@@ -33,7 +34,7 @@ from ..widgets.custom_delegates import (
     RelationshipPivotTableDelegate,
     ScenarioAlternativeTableDelegate,
 )
-from .colors import FIXED_FIELD_COLOR, PIVOT_TABLE_HEADER_COLOR
+from .colors import fixed_field_color, pivot_table_header_color
 from .pivot_model import PivotModel
 
 if TYPE_CHECKING:
@@ -376,9 +377,8 @@ class PivotTableModelBase(QAbstractTableModel):
             return False
         result = False
         for fetch_parent in self._fetch_parents():
-            if not fetch_parent.is_fetched:
-                for db_map in self._parent.db_maps:
-                    result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
+            for db_map in self._parent.db_maps:
+                result |= self.db_mngr.can_fetch_more(db_map, fetch_parent)
         return result
 
     def fetchMore(self, _):
@@ -772,11 +772,11 @@ class PivotTableModelBase(QAbstractTableModel):
         is_top = index.row() < self.headerRowCount()
         is_left = index.column() < self.headerColumnCount()
         if is_top and is_left:
-            return PIVOT_TABLE_HEADER_COLOR
+            return pivot_table_header_color()
         if is_top or is_left:
             id_ = self.top_left_id(index)
             if id_ is not None and isinstance(self.top_left_headers[id_], TopLeftDatabaseHeaderItem):
-                return FIXED_FIELD_COLOR
+                return fixed_field_color()
         return None
 
     def _text_alignment_data(self, index):
@@ -1255,6 +1255,8 @@ class ParameterValuePivotTableModel(PivotTableModelBase):
             return None
         db_map, id_ = data[0][0]
         item = self.db_mngr.get_item(db_map, "parameter_value", id_)
+        if item is None:
+            return None
         return self.db_mngr.get_value(db_map, item, role)
 
     def _do_batch_set_inner_data(self, row_map, column_map, data, values):

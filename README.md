@@ -1,7 +1,7 @@
 # Spine Toolbox
 Link to the documentation: [https://spine-toolbox.readthedocs.io/en/latest/?badge=latest](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 
-[![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Python](https://img.shields.io/badge/python-3.10%20|%203.11%20|%203.12%20|%203.13%20|%203.14-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
 [![Test suite](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml/badge.svg)](https://github.com/spine-tools/Spine-Toolbox/actions/workflows/test_runner.yml)
 [![codecov](https://codecov.io/gh/spine-tools/Spine-Toolbox/branch/master/graph/badge.svg)](https://codecov.io/gh/spine-tools/Spine-Toolbox)
@@ -363,6 +363,11 @@ The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide6` application, those 
 are not needed and there is a chance of conflicts between the packages.
 
+#### Problems in running the application
+
+Creating arrows may fail on Fedora Linux, as described in [issue #3286](https://github.com/spine-tools/Spine-Toolbox/issues/3286).
+A workaround is to install a separate Python and use that to install Spine Toolbox.
+
 ## Recorded Webinars showing the use of Spine Tools
 
 ### Spine Toolbox: Data, workflow and scenario management for modelling
@@ -468,10 +473,10 @@ The project root includes a configuration file for `pylint`.
 
 ### Unit tests
 
-Unit tests are located in the `tests` directory.
+Unit tests are located in the `tests` directory while execution tests are in `execution_tests`.
 You can run the entire test suite from project root by
 
-    python -m unittest
+    python -m pytest
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 

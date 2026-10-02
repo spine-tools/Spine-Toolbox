@@ -1,0 +1,13 @@
+{
+    "name": "Remove entities",
+    "tooltype": "python",
+    "includes": [
+        "remove_entities.py"
+    ],
+    "description": "Removes entities and entity references in cascade.",
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [],
+    "cmdline_args": [],
+    "includes_main_path": "../../.."
+}

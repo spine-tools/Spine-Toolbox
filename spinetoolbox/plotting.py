@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Functions for plotting on PlotWidget."""
+
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 import datetime

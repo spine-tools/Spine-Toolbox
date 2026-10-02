@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Widget for showing the progress of making a Julia or Python kernel."""
+
 import subprocess
 from PySide6.QtCore import Qt, QTimer, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon

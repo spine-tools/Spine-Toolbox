@@ -11,15 +11,16 @@
 ######################################################################################################################
 
 """Unit tests for the TimeSeriesModelVariableResolution class."""
-import unittest
+
 import numpy
 from PySide6.QtCore import QObject, Qt
 from spinedb_api import TimeSeriesVariableResolution
+from spinedb_api.parameter_value import NUMPY_DATETIME64_UNIT
 from spinetoolbox.mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from tests.mock_helpers import TestCaseWithQApplication
 
 
-class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
+class TestTimeSeriesModelVariableResolution(TestCaseWithQApplication):
     def setUp(self):
         self._parent = QObject()
 
@@ -175,7 +176,15 @@ class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], True, False), self._parent
         )
-        self.assertFalse(model.removeRows(0, 1))
+        self.assertFalse(model.removeRows(1, 1))
+
+    def test_empty_row_can_be_included_in_removed_rows(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-05T12:00"], [2.3, 3.2], False, False),
+            self._parent,
+        )
+        self.assertTrue(model.removeRows(1, 2))
+        self.assertEqual(model.value, TimeSeriesVariableResolution(["2019-07-05T12:00"], [2.3], False, False))
 
     def test_reset_updates_indexes(self):
         model = TimeSeriesModelVariableResolution(
@@ -220,7 +229,9 @@ class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
         model_index = model.index(0, 0)
         model.setData(model_index, "what happened to Tuesday")
         # pylint: disable=no-value-for-parameter
-        expected = TimeSeriesVariableResolution([numpy.datetime64(), "1992-01-01T13:30"], [2.3, -5.0], True, False)
+        expected = TimeSeriesVariableResolution(
+            [numpy.datetime64("nat", NUMPY_DATETIME64_UNIT), "1992-01-01T13:30"], [2.3, -5.0], True, False
+        )
         self.assertEqual([str(x) for x in model.value.indexes], [str(x) for x in expected.indexes])
         self.assertTrue(numpy.array_equal(model.value.values, expected.values))
         self.assertEqual(model.value.ignore_year, expected.ignore_year)
@@ -241,7 +252,3 @@ class TestTimeSeriesModelFixedStep(TestCaseWithQApplication):
             ["2018-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, 55.5, -55.5], True, False
         )
         self.assertEqual(model.value, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()

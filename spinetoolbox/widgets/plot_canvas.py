@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """A Qt widget to use as a matplotlib backend."""
+
 from enum import Enum, auto, unique
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure

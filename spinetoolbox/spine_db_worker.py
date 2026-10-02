@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """The SpineDBWorker class."""
+
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Asterisk, DatabaseMapping
@@ -115,18 +116,18 @@ class SpineDBWorker(QObject):
             return False
         return added_count > 0
 
-    def can_fetch_more(self, parent):
+    def can_fetch_more(self, parent: FetchParent) -> bool:
         """Returns whether more data can be fetched for parent.
         Also, registers the parent to notify it of any relevant DB modifications later on.
 
         Args:
-            parent (FetchParent): fetch parent
+            parent: fetch parent
 
         Returns:
-            bool: True if more data is available, False otherwise
+            True if more data is available, False otherwise
         """
         self.register_fetch_parent(parent)
-        return not parent.is_fetched
+        return not parent.is_fetched(self._db_map)
 
     def fetch_more(self, parent):
         """Fetches items from the database.
@@ -135,8 +136,8 @@ class SpineDBWorker(QObject):
             parent (FetchParent): fetch parent
         """
         self.register_fetch_parent(parent)
-        if not parent.is_busy:
-            parent.set_busy(True)
+        if not parent.is_busy(self._db_map):
+            parent.set_busy(self._db_map, True)
             self._do_fetch_more(parent)
 
     def _do_fetch_more(self, parent):  # pylint: disable=method-hidden
@@ -148,13 +149,13 @@ class SpineDBWorker(QObject):
         with self._db_mngr.get_lock(self._db_map):
             has_external_commits = self._db_map.has_external_commits()
         if not has_external_commits or fully_fetched:
-            if self._iterate_mapping(parent):
-                # Something fetched from mapping
+            something_fetched = self._iterate_mapping(parent)
+            if fully_fetched:
+                if not something_fetched:
+                    parent.set_fetched(self._db_map, True)
                 return
-        if fully_fetched:
-            # Nothing left in the DB
-            parent.set_fetched(True)
-            return
+            if something_fetched:
+                return
         # Query the DB
         if item_type in self._parents_fetching:
             self._parents_fetching[item_type].add(parent)
@@ -184,6 +185,7 @@ class SpineDBWorker(QObject):
     def _handle_query_advanced(self, item_type, chunk):
         self._populate_commit_cache(item_type, chunk)
         self._db_mngr.update_icons(self._db_map, item_type, chunk)
+        self._db_mngr.more_data_fetched.emit(self._db_map, item_type)
         parents = self._parents_fetching.pop(item_type, ())
         if parents and not self._db_map.closed:
             self._query_advanced.emit(parents)
@@ -203,7 +205,7 @@ class SpineDBWorker(QObject):
                     if not parent.is_obsolete:
                         parent.set_obsolete(True)
             while any(
-                parent.is_busy and not parent.is_fetched
+                parent.is_busy(self._db_map) and not parent.is_fetched(self._db_map)
                 for parents in self._parents_by_type.values()
                 for parent in parents
             ):
@@ -266,10 +268,10 @@ class SpineDBWorker(QObject):
             added, updated, errors = self._db_map.add_update_items(item_type, *orig_items, check=check)
         if errors:
             self._db_mngr.error_msg.emit({self._db_map: errors})
-        self._db_mngr.update_icons(self._db_map, item_type, added + updated)
-        self._wake_up_parents(item_type, added)
         self._db_mngr.items_added.emit(item_type, {self._db_map: added})
         self._db_mngr.items_updated.emit(item_type, {self._db_map: updated})
+        self._db_mngr.update_icons(self._db_map, item_type, added + updated)
+        self._wake_up_parents(item_type, added)
         return added, updated
 
     @busy_effect

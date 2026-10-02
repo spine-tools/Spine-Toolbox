@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Helpers and utilities for Spine Database editor."""
+
 import locale
 from typing import Any, Optional, Union
 from PySide6.QtGui import QColor

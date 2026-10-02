@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """An editor dialog for map indexes and values."""
+
 from PySide6.QtCore import Qt
 from .array_editor import ArrayEditor
 from .datetime_editor import DatetimeEditor

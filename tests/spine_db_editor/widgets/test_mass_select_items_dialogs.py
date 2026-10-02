@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Test for `mass_select_items_dialogs` module."""
+
 import unittest
 from unittest import mock
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
@@ -54,6 +55,7 @@ class TestMassRemoveItemsDialog(TestCaseWithQApplication):
                 "entity_alternative": False,
                 "entity_class": True,
                 "parameter_definition": False,
+                "parameter_group": False,
                 "parameter_type": False,
                 "parameter_value": False,
                 "parameter_value_list": False,

@@ -11,12 +11,13 @@
 ######################################################################################################################
 
 """Contains unit tests for the ``frozen_table_model`` module."""
+
 import unittest
 from unittest.mock import MagicMock
 from PySide6.QtCore import QModelIndex, QObject, Qt
 from PySide6.QtWidgets import QApplication
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
-from tests.mock_helpers import TestCaseWithQApplication, MockSpineDBManager, model_data_to_table
+from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, model_data_to_table
 
 
 class TestFrozenTableModel(TestCaseWithQApplication):

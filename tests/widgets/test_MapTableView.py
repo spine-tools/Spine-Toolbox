@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for MapTableView class."""
+
 import csv
 from io import StringIO
 import locale

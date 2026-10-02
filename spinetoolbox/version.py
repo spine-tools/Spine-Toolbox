@@ -45,21 +45,14 @@ if dev:
     if match := re.search(r"[0-9]+", rel):
         split = match.span()[0]
         releaselevel, serial = rel[:split], int(rel[split:])
-
-        # name cleanup
         del split
     else:
         # shouldn't happen
         releaselevel, serial = rel, 0
-
-    # name cleanup
     del match, rel
 else:
     # compat: move away gradually
     releaselevel, serial = "final", 0
-
-# name cleanup
 del dev
-
 __version_info__ = VersionInfo(major, minor, micro, releaselevel, serial)
 __version__ = str(__version_info__)
