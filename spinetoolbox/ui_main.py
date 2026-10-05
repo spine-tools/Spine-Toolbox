@@ -76,7 +76,6 @@ from .helpers import (
     make_icons_theme_aware,
     open_url,
     recursive_overwrite,
-    same_path,
     set_taskbar_icon,
     solve_connection_file,
     supported_img_formats,
@@ -253,6 +252,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
         self.exec_compound_models = ExecutableCompoundModels(self._qsettings)
+        self.exec_compound_models.all_kernels_loaded.connect(self._check_item_notifications)
         self.exec_compound_models.load_all()
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
@@ -1791,11 +1791,21 @@ class ToolboxUI(QMainWindow):
         """Updates Tool Properties options widgets if the current active item is a Tool."""
         if self.active_project_item is not None and self.active_project_item.item_type() == "Tool":
             print(f"Tool {self.active_project_item.name} active")
-            self.active_project_item._get_options_widget()
+            self.active_project_item.update_options_widget()
 
         # TODO: Reload models
         # self.exec_compound_models.load_all()
         # TODO: Check notifications for all items
+
+    @Slot()
+    def _check_item_notifications(self):
+        """Checks project item notifications when all kernels have been loaded.
+        This verifies that Tools are using existing Conda kernels."""
+        if not self._project:
+            return
+        tools = self._project.get_items_by_type("Tool")
+        for tool in tools:
+            tool._check_notifications()
 
     def show_about(self) -> None:
         """Shows the About Spine Toolbox widget."""

@@ -14,7 +14,7 @@
 import os
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QBrush
-from PySide6.QtCore import QObject, Qt, Slot, QModelIndex
+from PySide6.QtCore import QObject, Qt, Slot, Signal, QModelIndex
 from .kernel_fetcher import KernelFetcher
 from .helpers import (
     save_path_to_qsettings,
@@ -27,11 +27,15 @@ from spine_engine.utils.helpers import resolve_default_julia_executable, resolve
 
 
 class ExecutableCompoundModels(QObject):
-    """Class for storing Python's and Julia's."""
+    """Class for storing execution methods (Pythons, Julias and other kernels)."""
+
+    """Emitted when all kernels have been loaded."""
+    all_kernels_loaded = Signal()
 
     def __init__(self, qsettings):
         super().__init__()
         self._qsettings = qsettings
+        self._remaining_tasks = 0
         self._julia_executables_model = QStandardItemModel(self)
         self._julia_projects_model = QStandardItemModel(self)
         self._julia_kernel_model = QStandardItemModel(self)
@@ -369,9 +373,17 @@ class ExecutableCompoundModels(QObject):
             QApplication.restoreOverrideCursor()
 
     def load_all(self):
-        conda = self._qsettings.value("appSettings/condaPath", defaultValue="")
+        self._remaining_tasks = 2
+        conda_path = self._qsettings.value("appSettings/condaPath", defaultValue="")
         self.refresh_python_interpreters_model()
         self.refresh_julia_executables_model()
         self.refresh_julia_projects_model()
-        self.start_fetching_python_kernels(finalize_slot=None, conda=conda)
-        self.start_fetching_julia_kernels(finalize_slot=None, conda=conda)
+        self.start_fetching_python_kernels(finalize_slot=self._task_finished, conda=conda_path)
+        self.start_fetching_julia_kernels(finalize_slot=self._task_finished, conda=conda_path)
+
+    @Slot()
+    def _task_finished(self):
+        """Emits a signal when all kernels have been loaded."""
+        self._remaining_tasks -= 1
+        if self._remaining_tasks == 0:
+            self.all_kernels_loaded.emit()
