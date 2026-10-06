@@ -1791,11 +1791,8 @@ class ToolboxUI(QMainWindow):
         """Updates Tool Properties options widgets if the current active item is a Tool."""
         if self.active_project_item is not None and self.active_project_item.item_type() == "Tool":
             print(f"Tool {self.active_project_item.name} active")
-            self.active_project_item.update_options_widget()
-
-        # TODO: Reload models
-        # self.exec_compound_models.load_all()
-        # TODO: Check notifications for all items
+            self.active_project_item.refresh_options_widget()
+        self.exec_compound_models.load_all()
 
     @Slot()
     def _check_item_notifications(self):

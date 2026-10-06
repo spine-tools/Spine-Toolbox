@@ -81,7 +81,6 @@ class KernelFetcher(QThread):
             for conda_kernel_name, spec_deats in cksm._all_specs().items():  # This is expensive
                 rsc_dir = spec_deats.get("resource_dir", "Resource_dir not found")
                 icon = self.get_icon(rsc_dir)
-                print(f"conda kernel {conda_kernel_name} d:{spec_deats}")
                 lang = spec_deats.get("language")
                 if lang == language:
                     spec_deats["kernel_name"] = conda_kernel_name
