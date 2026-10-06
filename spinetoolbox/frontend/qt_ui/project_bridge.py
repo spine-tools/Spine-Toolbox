@@ -86,6 +86,8 @@ class ProjectBridge(QObject):
     executionStateChanged = Signal(bool)
     # emitted per output line from a workflow run; kind is "stdout" or "stderr"
     executionLogAppended = Signal(str, str)
+    # emitted when the user asks (via the User Mode switch) to go back to the classic Qt UI
+    devModeRequested = Signal()
 
     def __init__(self, project_dir: str | Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -344,6 +346,11 @@ class ProjectBridge(QObject):
             return self._project_dir
         return _EXAMPLE_PROJECT_FILE.parent
 
+    @property
+    def project_dir(self) -> str:
+        """Directory of the project currently open, or "" if none (e.g. the bundled example is shown instead)."""
+        return str(self._project_dir) if self._config_file.exists() else ""
+
     @Slot(result=bool)
     def has_setup_script(self) -> bool:
         """Returns whether the open project bundles a dependency/setup script (e.g. FlexTool's update_flextool.py)."""
@@ -374,14 +381,20 @@ class ProjectBridge(QObject):
         self._setup_manager = QProcessExecutionManager(
             self._setup_logger, python, [script_path, "--skip-git"], semisilent=True
         )
-        self._setup_manager.execution_finished.connect(self._handle_setup_finished)
+        self._setup_manager.execution_finished.connect(
+            lambda exit_code: self._handle_setup_finished(exit_code, project_dir)
+        )
         self._setup_logger.msg.emit(f"Running {PROJECT_SETUP_SCRIPT}...")
         self._setup_manager.start_execution(workdir=project_dir)
 
-    def _handle_setup_finished(self, exit_code: int) -> None:
+    def _handle_setup_finished(self, exit_code: int, project_dir: str) -> None:
         """Reports the outcome of the project setup script."""
         self._setup_manager = None
         if exit_code == 0:
+            # same QSettings key the classic Qt UI checks, so it won't offer to install again for this project
+            QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).setValue(
+                f"appSettings/projectSetupDone/{project_dir}", True
+            )
             self._setup_logger.msg_success.emit("Project setup finished successfully")
         else:
             self._setup_logger.msg_error.emit("Project setup script failed")
@@ -609,6 +622,11 @@ class ProjectBridge(QObject):
         self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._add_recent_project(local_path.name, str(local_path))
         return local_path.name
+
+    @Slot()
+    def open_dev_mode(self) -> None:
+        """Requests switching to the classic Qt UI; the embedder decides how (see devModeRequested)."""
+        self.devModeRequested.emit()
 
     def _database_urls(self) -> list[str]:
         data = self._load()

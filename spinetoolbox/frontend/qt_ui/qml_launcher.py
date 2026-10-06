@@ -1,16 +1,17 @@
+"""Starts Spine Toolbox's main window directly in easy (QML) mode, in the given or default project."""
 import sys
 
-from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtWidgets import QApplication
 
 from pathlib import Path
 import fluentpyside
 
-from .project_bridge import ProjectBridge
 from ...config import PROJECT_CONFIG_DIR_NAME
+from ...font import TOOLBOX_FONT
+from ...ui_main import ToolboxUI
 
 
-_DEFAULT_PROJECT_DIR = Path(r"C:\Users\enessi\Documents\flextool")
+_DEFAULT_PROJECT_DIR = Path(r"C:\Users\enessi\flextool")
 
 
 def _find_project_dir(start: Path) -> Path:
@@ -24,8 +25,10 @@ def _find_project_dir(start: Path) -> Path:
 def main():
     # QApplication (not QGuiApplication) so the classic QWidget-based DB Editor can be opened in-process
     app = QApplication(sys.argv)
+    app.setApplicationName("Spine Toolbox")
+    TOOLBOX_FONT.get_family_from_font_database()
 
-    # Apply FluentPySide styling before loading QML
+    # Apply FluentPySide styling before creating the window
     fluentpyside.apply()
 
     if len(sys.argv) > 1:
@@ -34,15 +37,12 @@ def main():
         project_dir = _DEFAULT_PROJECT_DIR
     else:
         project_dir = _find_project_dir(Path.cwd())
-    project_bridge = ProjectBridge(project_dir)
 
-    engine = QQmlApplicationEngine()
-    engine.rootContext().setContextProperty("projectBridge", project_bridge)
-    qml_path = Path(__file__).parent.joinpath("qml", "Main.qml")
-    engine.load(str(qml_path))
-
-    if not engine.rootObjects():
-        sys.exit(-1)
+    # the classic UI's project (self._project) is loaded lazily, only if/when the user switches to dev
+    # mode (see ToolboxUI._show_dev_mode); starting directly in easy mode skips that heavier machinery
+    window = ToolboxUI()
+    window.show()
+    window._show_easy_mode(str(project_dir))
 
     sys.exit(app.exec())
 
