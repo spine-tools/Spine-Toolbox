@@ -3,14 +3,15 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
 
-ApplicationWindow {
+// root is a plain Item (Rectangle, for its color) rather than ApplicationWindow so this file can be
+// embedded as a widget (see EasyModeWidget) as well as shown via QQuickView from qml_launcher.py
+Rectangle {
     id: root
 
-    visible: true
     width: 1400
     height: 850
-    minimumWidth: 480
-    minimumHeight: 560
+
+    color: "#f4f9f5"
 
     // responsive breakpoints
     property bool compactSidebar: width < 900
@@ -457,10 +458,6 @@ ApplicationWindow {
         root.zoomLevel = 1.0
     }
 
-    title: "Spine Toolbox"
-
-    color: "#f4f9f5"
-
     // ---------------------------------------------------------
     // Main application layout
     // ---------------------------------------------------------
@@ -655,6 +652,12 @@ ApplicationWindow {
 
                             Switch {
                                 checked: true
+
+                                // this UI *is* user mode, so unchecking it means "switch to developer mode"
+                                onToggled: {
+                                    if (!checked && typeof projectBridge !== "undefined")
+                                        projectBridge.open_dev_mode()
+                                }
                             }
                         }
                     }
