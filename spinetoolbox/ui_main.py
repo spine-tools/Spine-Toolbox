@@ -1596,7 +1596,9 @@ class ToolboxUI(QMainWindow):
         self._docks_hidden_for_easy_mode = []
         current_project_dir = self._project.project_dir if self._project is not None else ""
         if new_project_dir and new_project_dir != current_project_dir:
-            self.open_project(new_project_dir, clear_event_log=False)
+            # deferred: the Design View dock was just made visible above and isn't laid out yet, so
+            # open_project's reset_zoom() would compute against a stale viewport size
+            QTimer.singleShot(0, lambda: self.open_project(new_project_dir, clear_event_log=False))
 
     @Slot()
     def restore_dock_widgets(self):
@@ -2193,7 +2195,9 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
-        self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
+        if self._easy_mode_widget is None:
+            # don't persist easy mode's dock/toolbar visibility, or the classic UI would start up hidden
+            self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
         self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized)
         # Save number of screens
         # noinspection PyArgumentList
