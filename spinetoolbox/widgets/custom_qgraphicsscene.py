@@ -20,6 +20,7 @@ from ..helpers import LinkType
 from ..link import ConnectionLinkDrawer, JumpLink, JumpLinkDrawer, Link
 from ..project_item_icon import ProjectItemIcon
 from ..ui.resources.cat import Cat
+from .group_frame_item import GroupFrameItem
 from .project_item_drag import ProjectItemDragMixin
 
 
@@ -73,10 +74,14 @@ class DesignGraphicsScene(CustomGraphicsScene):
         self._jump_drawer.hide()
         self.link_drawer = None
         self.icon_group = set()  # Group of project item icons that are moving together
+        self.group_frames: dict[str, GroupFrameItem] = {}  # stack key -> its outline, see rebuild_group_frames
         self.connect_signals()
 
     def clear_icons_and_links(self):
         self.icon_group.clear()
+        for frame in self.group_frames.values():
+            self.removeItem(frame)
+        self.group_frames = {}
         for item in self.items():
             if isinstance(item, (Link, JumpLink, ProjectItemIcon)):
                 self.removeItem(item)
@@ -151,6 +156,32 @@ class DesignGraphicsScene(CustomGraphicsScene):
 
     def project_item_icons(self):
         return [item for item in self.items() if isinstance(item, ProjectItemIcon)]
+
+    def rebuild_group_frames(self, stacks: dict) -> None:
+        """Redraws every stack's outline from scratch, based on stacks (SpineToolboxProject.stacks)."""
+        for frame in self.group_frames.values():
+            self.removeItem(frame)
+        self.group_frames = {}
+        icons_by_name = {icon.name(): icon for icon in self.project_item_icons()}
+        for key, stack in stacks.items():
+            icons = [icons_by_name[name] for name in stack["items"] if name in icons_by_name]
+            if not icons:
+                continue
+            frame = GroupFrameItem(stack["name"])
+            frame.set_rect_from_members(icons)
+            self.addItem(frame)
+            self.group_frames[key] = frame
+
+    def update_group_frame_for_icon(self, icon: ProjectItemIcon) -> None:
+        """Resizes the one frame icon belongs to, if any, to follow it having moved."""
+        key = self._toolbox.project().stack_of(icon.name())
+        frame = self.group_frames.get(key)
+        if frame is None:
+            return
+        stack_items = self._toolbox.project().stacks[key]["items"]
+        icons_by_name = {i.name(): i for i in self.project_item_icons()}
+        icons = [icons_by_name[name] for name in stack_items if name in icons_by_name]
+        frame.set_rect_from_members(icons)
 
     @Slot()
     def handle_selection_changed(self):
