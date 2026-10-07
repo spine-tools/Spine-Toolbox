@@ -1195,11 +1195,6 @@ class ToolboxUI(QMainWindow):
         self._properties_title.setStyleSheet(ss)
         self._button_item_dir.hide()
 
-    def update_properties_ui(self):
-        widget = self._get_active_properties_widget()
-        if widget is not None:
-            widget.repaint()
-
     def _get_active_properties_widget(self):
         """Returns the active item's or link's properties widget or None if no item or link is active."""
         if self.active_project_item is not None:
@@ -1790,18 +1785,15 @@ class ToolboxUI(QMainWindow):
     def when_settings_widget_closes(self):
         """Updates Tool Properties options widgets if the current active item is a Tool."""
         if self.active_project_item is not None and self.active_project_item.item_type() == "Tool":
-            print(f"Tool {self.active_project_item.name} active")
-            self.active_project_item.refresh_options_widget()
-        self.exec_compound_models.load_all()
+            self.active_project_item.make_options_widget()
 
     @Slot()
     def _check_item_notifications(self):
         """Checks project item notifications when all kernels have been loaded.
-        This verifies that Tools are using existing Conda kernels."""
+        This verifies that Tools use existing Conda kernels."""
         if not self._project:
             return
-        tools = self._project.get_items_by_type("Tool")
-        for tool in tools:
+        for tool in self._project.get_items_by_type("Tool"):
             tool._check_notifications()
 
     def show_about(self) -> None:

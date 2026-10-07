@@ -105,16 +105,8 @@ class ExecutableCompoundModels(QObject):
             self._julia_executables_model.appendRow(item)
         if self._julia_executables_model.rowCount() == 0:
             item = QStandardItem("Add path to Julia Executable...")
-            item.setToolTip("Add Julia into your Path environment variable or click 'Add Julia executable' button.")
+            item.setToolTip("Add Julia into the Path environment variable or click 'Add Julia executable' button.")
             self._julia_executables_model.appendRow(item)
-
-    def _make_item_red_if_path_doesnt_exist(self, item, p):
-        """Makes given items foreground color red if given path doesn't exist."""
-        if not os.path.exists(p):
-            print(f"path:{p} doesn't exist")
-            item.setForeground(QBrush(Qt.GlobalColor.red))
-            item.setToolTip(f"[Path doesn't exist] {p}")
-        return item
 
     def add_julia_executable(self, path_to_add):
         """Adds given path to the model and returns the index of the new item in the model."""
@@ -152,16 +144,16 @@ class ExecutableCompoundModels(QObject):
             show_select_item (bool): If True, adds a 'Select Julia project...' item as the first item
         """
         if show_select_item:
-            select_item = QStandardItem("Select Julia project...")
+            select_item = QStandardItem("Select Julia environment...")
             self._julia_projects_model.appendRow(select_item)
-        first_item = QStandardItem("Home")
+        first_item = QStandardItem("Default Julia environment (@v1.x)")
         first_item.setData({"is_project": True, "path": ""})
         first_item.setIcon(QIcon(":/icons/folder.svg"))
-        first_item.setToolTip(f"This is the Julia Base project")
-        second_item = QStandardItem("@.")
+        first_item.setToolTip(f"This is the default Julia environment")
+        second_item = QStandardItem("Current project environment (@.)")
         second_item.setData({"is_project": True, "path": "@."})
         second_item.setIcon(QIcon(":/icons/folder.svg"))
-        second_item.setToolTip(f"This is the Julia @. project")
+        second_item.setToolTip(f"This is the Julia @. environment")
         self._julia_projects_model.appendRow(first_item)
         self._julia_projects_model.appendRow(second_item)
         for path in julia_projects:
@@ -170,6 +162,7 @@ class ExecutableCompoundModels(QObject):
             item.setData({"is_project": True, "path": path})
             item.setIcon(QIcon(":/icons/folder.svg"))
             item.setToolTip(displayed_path)
+            item = self._make_item_red_if_path_doesnt_exist(item, path)
             self._julia_projects_model.appendRow(item)
 
     def add_julia_project(self, path_to_add):
@@ -281,6 +274,7 @@ class ExecutableCompoundModels(QObject):
             item.setData({"is_jupyter": False, "is_conda": False, "exe": path})
             item.setIcon(QIcon(":/symbols/python-logo.svg"))
             item.setToolTip(displayed_path)
+            item = self._make_item_red_if_path_doesnt_exist(item, path)
             self._python_interpreters_model.appendRow(item)
 
     def add_python_interpreter(self, path_to_add):
@@ -387,3 +381,12 @@ class ExecutableCompoundModels(QObject):
         self._remaining_tasks -= 1
         if self._remaining_tasks == 0:
             self.all_kernels_loaded.emit()
+
+    @staticmethod
+    def _make_item_red_if_path_doesnt_exist(item, p):
+        """Makes given items foreground color red if given path doesn't exist."""
+        if not os.path.exists(p):
+            print(f"path:{p} doesn't exist")
+            item.setForeground(QBrush(Qt.GlobalColor.red))
+            item.setToolTip(f"[Path doesn't exist] {p}")
+        return item

@@ -368,7 +368,9 @@ class JuliaPopupMenu(CustomPopupMenu):
                 project_item_data = self._project_model.itemFromIndex(self._project_model.index(project_row, 0)).data()
                 project_path = project_item_data["path"]
                 if not project_path:
-                    text = "Home"
+                    text = "Default Julia environment (@v1.x)"
+                elif project_path == "@.":
+                    text = "Current project environment (@.)"
                 else:
                     text = project_path
                 action = submenu.addAction(QIcon(":/icons/folder.svg"), text)

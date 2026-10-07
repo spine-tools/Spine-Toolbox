@@ -764,7 +764,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
             self.ui.textBrowser_process.clear()
             kernel_exe = _get_kernel_exe(kname, self._models.julia_kernel_model)
             kernel_project = _get_julia_kernel_project(kname, self._models.julia_kernel_model)
-            kernel_project = "HOME" if not kernel_project else kernel_project
+            kernel_project = "Default Julia environment (@v1.x)" if not kernel_project else kernel_project
             self.msg.emit(
                 f"Kernel <b>{kname}</b> using exe <b>{kernel_exe}</b> and project <b>{kernel_project}</b> "
                 f"already exists. Edit the Julia kernel prefix to make a new one."
@@ -786,7 +786,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
             match_found = _selected_project_matches_kernel_project(
                 existing_kernel, self._julia_project, self._models.julia_kernel_model
             )
-            kernel_project = "HOME" if not self._julia_project else self._julia_project
+            kernel_project = "Default Julia environment (@v1.x)" if not self._julia_project else self._julia_project
             if match_found:
                 self.ui.label_message.setText(
                     f"Kernel {existing_kernel} using your selections already exists. " f"Click Close to activate it."

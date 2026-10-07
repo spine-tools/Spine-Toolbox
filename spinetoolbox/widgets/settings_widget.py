@@ -325,7 +325,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.listWidget.setFocus()
         self.ui.listWidget.setCurrentRow(0)
         self._toolbox = toolbox
-        self._models = ExecutableCompoundModels(self._qsettings)
+        # self._models = ExecutableCompoundModels(self._qsettings)
+        self._models = toolbox.exec_compound_models
         self.orig_work_dir = ""  # Work dir when this widget was opened
         self.ui.comboBox_python_execution_method.addItem(PYTHON_EXECUTION_MODES[0], ExecutionMethod.DIRECT)
         self.ui.comboBox_python_execution_method.addItem(PYTHON_EXECUTION_MODES[1], ExecutionMethod.JUPYTER)
@@ -764,33 +765,33 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             julia_projects = save_path_to_qsettings(
                 self._qsettings, "appSettings/juliaProjects", str(julia_project_path)
             )
+        # Set Python execution settings
         p_execution_method = ExecutionMethod.DIRECT if use_python_jupyter_console == "0" else ExecutionMethod.JUPYTER
         self._set_execution_method(self.ui.comboBox_python_execution_method, p_execution_method)
-        self._models.refresh_python_interpreters_model(python_interpreters)
         python_ind = self._models.find_python_interpreter_index(python_path)
         if not python_ind.isValid():
             python_ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(python_ind.row())
-        # _saved_python_kernel is used to select the correct Python after all kernels have been loaded
-        self._saved_python_kernel = python_kernel
-        # Fetch Python jupyter and conda kernels
-        self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected, conda_path)
+        index = self._models.find_python_kernel_index(python_kernel)
+        if not index.isValid():
+            index = self._models.python_kernel_model.index(0, 0)
+        self.ui.comboBox_python_kernels.setCurrentIndex(index.row())
+        # Set Julia execution settings
         j_execution_method = ExecutionMethod.DIRECT if use_julia_jupyter_console == "0" else ExecutionMethod.JUPYTER
         self._set_execution_method(self.ui.comboBox_julia_execution_method, j_execution_method)
-        self._models.refresh_julia_executables_model(julia_executables)
         julia_ind = self._models.find_julia_executable_index(julia_path)
         if not julia_ind.isValid():
             julia_ind = self._models.julia_executables_model.index(0, 0)
         self.ui.comboBox_julia_path.setCurrentIndex(julia_ind.row())
-        self._models.refresh_julia_projects_model(julia_projects)
         project_ind = self._models.find_julia_project_index(julia_project_path)
         if not project_ind.isValid():
             project_ind = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(project_ind.row())
-        # _saved_julia_kernel is used to select the correct Julia after all kernels have been loaded
-        self._saved_julia_kernel = julia_kernel
-        # Fetch Julia jupyter and conda kernels
-        self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected, conda_path)
+        ind = self._models.find_julia_kernel_index(julia_kernel)
+        if not ind.isValid():
+            ind = self._models.julia_kernel_model.index(0, 0)
+        self.ui.comboBox_julia_kernel.setCurrentIndex(ind.row())
+        # Set Conda settings
         conda_placeholder_txt = resolve_conda_executable("")
         if conda_placeholder_txt:
             self.ui.lineEdit_conda_path.setPlaceholderText(conda_placeholder_txt)
@@ -1201,7 +1202,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Removes the selected system interpreter from the list of known Pythons."""
         data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
         if data["path"] == "@." or data["path"] == "":
-            Notification(self, "This is the Julia base project and cannot be removed").show()
+            Notification(self, "This is a default environment and cannot be removed.").show()
             return
         else:
             self._models.remove_julia_project(data["path"])
@@ -1233,19 +1234,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             path = data["path"]
         self.open_rsc_dir(path)
 
-    @Slot()
-    def _set_saved_julia_kernel_selected(self):
-        """Selects saved Julia after Julia models have been reloaded."""
-        # if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
-        # Settings widget closed while thread still running
-        #     return
-        ind = self._models.find_julia_kernel_index(self._saved_julia_kernel)
-        if not ind.isValid():
-            Notification(self, f"Julia kernel {self._saved_julia_kernel} not found").show()
-            ind = self._models.julia_kernel_model.index(0, 0)
-        self.ui.comboBox_julia_kernel.setCurrentIndex(ind.row())
-        self._saved_julia_kernel = None
-
     @Slot(bool)
     def _add_python_interpreter(self, _=False):
         current_path = self.ui.comboBox_python_interpreters.currentText()
@@ -1262,21 +1250,6 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             ).show()
             ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
-
-    @Slot()
-    def _set_saved_python_kernel_selected(self):
-        """Sets saved python as selected after Pythons have been (re)loaded."""
-        # if self.python_kernel_fetcher is not None and not self.python_kernel_fetcher.keep_going:
-        #     # Settings widget closed while thread still running
-        #     return
-        index = self._models.find_python_kernel_index(self._saved_python_kernel)
-        if not index.isValid():
-            Notification(
-                self, f"Could not activate Python kernel {self._saved_python_kernel}.\n It may have been removed."
-            ).show()
-            index = self._models.python_kernel_model.index(0, 0)
-        self.ui.comboBox_python_kernels.setCurrentIndex(index.row())
-        self._saved_python_kernel = None
 
     @Slot(bool)
     def _remove_python_system_interpreter(self, _=False):
@@ -1324,7 +1297,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot(str)
     def _refresh_kernels(self, new_conda_path):
-        """Refreshes Python kernels when the conda line edit points to a valid conda
+        """Reloads kernels when the conda line edit points to a valid conda
         executable or when the line edit is cleared.
 
         Args:
@@ -1340,9 +1313,36 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected, conda)
         self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected, conda)
 
+    @Slot()
+    def _set_saved_python_kernel_selected(self):
+        """Sets saved python as selected after Pythons have been (re)loaded."""
+        # if self.python_kernel_fetcher is not None and not self.python_kernel_fetcher.keep_going:
+        #     # Settings widget closed while thread still running
+        #     return
+        index = self._models.find_python_kernel_index(self._saved_python_kernel)
+        if not index.isValid():
+            Notification(
+                self, f"Could not activate Python kernel {self._saved_python_kernel}.\n It may have been removed."
+            ).show()
+            index = self._models.python_kernel_model.index(0, 0)
+        self.ui.comboBox_python_kernels.setCurrentIndex(index.row())
+        self._saved_python_kernel = None
+
+    @Slot()
+    def _set_saved_julia_kernel_selected(self):
+        """Selects saved Julia after Julia models have been reloaded."""
+        # if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
+        # Settings widget closed while thread still running
+        #     return
+        ind = self._models.find_julia_kernel_index(self._saved_julia_kernel)
+        if not ind.isValid():
+            Notification(self, f"Julia kernel {self._saved_julia_kernel} not found").show()
+            ind = self._models.julia_kernel_model.index(0, 0)
+        self.ui.comboBox_julia_kernel.setCurrentIndex(ind.row())
+        self._saved_julia_kernel = None
+
     def closeEvent(self, ev):
         self._models.stop_fetching_julia_kernels()
         self._models.stop_fetching_python_kernels()
         self._work_directory_size_aggregator.tear_down()
         super().closeEvent(ev)
-        self._toolbox.update_properties_ui()
