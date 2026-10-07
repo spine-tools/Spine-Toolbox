@@ -35,7 +35,7 @@ Rectangle {
         if (typeof projectBridge === "undefined")
             return
 
-        if (projectBridge.has_setup_script())
+        if (projectBridge.has_setup_script() && !projectBridge.is_project_setup_done())
             projectBridge.install_project_dependencies()
     }
 

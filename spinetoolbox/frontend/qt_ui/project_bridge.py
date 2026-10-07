@@ -356,6 +356,14 @@ class ProjectBridge(QObject):
         """Returns whether the open project bundles a dependency/setup script (e.g. FlexTool's update_flextool.py)."""
         return (self._base_dir() / PROJECT_SETUP_SCRIPT).is_file()
 
+    @Slot(result=bool)
+    def is_project_setup_done(self) -> bool:
+        """Returns whether the setup script has already completed successfully for the open project."""
+        project_dir = str(self._base_dir())
+        return QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).value(
+            f"appSettings/projectSetupDone/{project_dir}", defaultValue=False, type=bool
+        )
+
     @Slot()
     def install_project_dependencies(self) -> None:
         """Editable-installs the project directory, then runs its setup script once that finishes."""
