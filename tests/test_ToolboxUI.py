@@ -916,5 +916,19 @@ class MockQueue:
         return "persistent_execution_msg", {"type": "persistent_started", "key": "123"}
 
 
+def test_set_app_style_adds_macos_tooltip_rule(application, monkeypatch):
+    monkeypatch.setattr("spinetoolbox.ui_main.sys.platform", "darwin")
+    settings = mock.MagicMock()
+    settings.value.return_value = "os"
+    monkeypatch.setattr("spinetoolbox.ui_main.QSettings", mock.MagicMock(return_value=settings))
+    app = QApplication.instance()
+    original_style_sheet = app.styleSheet()
+    try:
+        ToolboxUI.set_app_style()
+        assert "QToolTip" in app.styleSheet()
+    finally:
+        app.setStyleSheet(original_style_sheet)
+
+
 if __name__ == "__main__":
     unittest.main()
