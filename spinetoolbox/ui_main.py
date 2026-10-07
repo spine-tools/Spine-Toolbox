@@ -22,7 +22,20 @@ import threading
 from typing import Optional
 from zipfile import ZipFile
 import numpy as np
-from PySide6.QtCore import QByteArray, QEvent, QMimeData, QModelIndex, QPoint, QSettings, QSize, Qt, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import (
+    QByteArray,
+    QEvent,
+    QMimeData,
+    QModelIndex,
+    QPoint,
+    QSettings,
+    QSize,
+    Qt,
+    QTimer,
+    QUrl,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -101,10 +114,11 @@ from .load_specification import (
 from .mvcmodels.filter_execution_model import FilterExecutionModel
 from .mvcmodels.project_item_specification_models import FilteredSpecificationModel, ProjectItemSpecificationModel
 from .plugin_manager import PluginManager
-from .project import SpineToolboxProject
+from .project import ItemNameStatus, SpineToolboxProject
 from .project_commands import (
     AddProjectItemsCommand,
     AddSpecificationCommand,
+    GroupProjectItemsCommand,
     RemoveAllProjectItemsCommand,
     RemoveProjectItemsCommand,
     RemoveSpecificationCommand,
@@ -112,6 +126,7 @@ from .project_commands import (
     ReplaceSpecificationCommand,
     SaveSpecificationAsCommand,
     SpineToolboxCommand,
+    UngroupProjectItemsCommand,
 )
 from .project_item.logging_connection import LoggingConnection, LoggingJump
 from .project_item.project_item import ProjectItem
@@ -769,6 +784,7 @@ class ToolboxUI(QMainWindow):
         self._project.settings_updated.connect(self._handle_project_settings_update)
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
+        self._rebuild_group_frames()
         update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         self._offer_project_setup(self._project.project_dir)
@@ -2000,6 +2016,15 @@ class ToolboxUI(QMainWindow):
             menu.addAction(self.ui.actionOpen_project_directory)
         else:  # Clicked on an item, show the context menu for that item
             menu = self.project_item_context_menu(item.actions())
+            if len(self._selected_item_names) >= 2:
+                menu.addSeparator()
+                menu.addAction("Group selected items...", self._group_selected_items)
+            else:
+                key = self._project.stack_of(item.name)
+                if key is not None:
+                    menu.addSeparator()
+                    menu.addAction(f"Run group '{self._project.stacks[key]['name']}'", lambda: self._run_group(key))
+                    menu.addAction("Ungroup", lambda: self._ungroup(key))
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
@@ -2388,6 +2413,39 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please create a new project or open an existing one first")
             return
         self._project.execute_selected(self._selected_item_names)
+
+    def _rebuild_group_frames(self) -> None:
+        """Redraws every stack's outline in Design View from the project's current stacks."""
+        self.ui.graphicsView.scene().rebuild_group_frames(self._project.stacks)
+
+    def _group_selected_items(self) -> None:
+        """Prompts for a name and groups the currently selected items into a new stack."""
+        already_grouped = [name for name in self._selected_item_names if self._project.stack_of(name) is not None]
+        if already_grouped:
+            QMessageBox.warning(
+                self, "Cannot group", f"<b>{already_grouped[0]}</b> is already part of a group. Ungroup it first."
+            )
+            return
+        name, ok = QInputDialog.getText(self, "Group items", "Group name:")
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        if self._project.validate_project_item_name(name) != ItemNameStatus.OK or any(
+            stack["name"] == name for stack in self._project.stacks.values()
+        ):
+            QMessageBox.warning(self, "Cannot group", f"Name <b>{name}</b> is already in use.")
+            return
+        self.undo_stack.push(GroupProjectItemsCommand(self._project, name, sorted(self._selected_item_names)))
+        self._rebuild_group_frames()
+
+    def _run_group(self, key: str) -> None:
+        """Executes a stack's member items, same as Execute Selected would for them."""
+        self._project.execute_selected(self._project.stacks[key]["items"])
+
+    def _ungroup(self, key: str) -> None:
+        """Removes a stack, leaving its member items untouched."""
+        self.undo_stack.push(UngroupProjectItemsCommand(self._project, key))
+        self._rebuild_group_frames()
 
     @Slot(bool)
     def _stop_execution(self, _=False):

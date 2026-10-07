@@ -356,8 +356,9 @@ class ProjectItemIcon(QGraphicsPathItem):
             event (QGraphicsSceneMouseEvent): Mouse event
         """
         event.accept()
-        self.scene().clearSelection()
-        self.setSelected(True)
+        if not self.isSelected():
+            self.scene().clearSelection()
+            self.setSelected(True)
         item = self._toolbox.project().get_item(self.name())
         self._toolbox.show_project_or_item_context_menu(event.screenPos(), item)
 
@@ -380,6 +381,7 @@ class ProjectItemIcon(QGraphicsPathItem):
             self._reposition_name_item()
             self.update_links_geometry()
             self._handle_collisions()
+            self.scene().update_group_frame_for_icon(self)
         elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)

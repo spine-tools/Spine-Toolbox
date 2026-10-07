@@ -171,6 +171,54 @@ class AddProjectItemsCommand(SpineToolboxCommand):
             self._project.remove_item_by_name(item_name, delete_data=True)
 
 
+class GroupProjectItemsCommand(SpineToolboxCommand):
+    """Command to group project items into a named stack."""
+
+    def __init__(self, project, name, item_names):
+        """
+        Args:
+            project (SpineToolboxProject): the project
+            name (str): the stack's display name
+            item_names (list of str): member item names
+        """
+        super().__init__()
+        self._project = project
+        self._name = name
+        self._item_names = item_names
+        self._key = None
+        self.setText(f"group {len(item_names)} items as '{name}'")
+
+    def redo(self):
+        self._key = self._project.add_stack(self._name, self._item_names, key=self._key)
+
+    def undo(self):
+        self._project.remove_stack(self._key)
+
+
+class UngroupProjectItemsCommand(SpineToolboxCommand):
+    """Command to remove a stack, leaving its member items untouched."""
+
+    def __init__(self, project, key):
+        """
+        Args:
+            project (SpineToolboxProject): the project
+            key (str): the stack's key
+        """
+        super().__init__()
+        self._project = project
+        self._key = key
+        stack = project.stacks[key]
+        self._name = stack["name"]
+        self._item_names = list(stack["items"])
+        self.setText(f"ungroup '{self._name}'")
+
+    def redo(self):
+        self._project.remove_stack(self._key)
+
+    def undo(self):
+        self._project.add_stack(self._name, self._item_names, key=self._key)
+
+
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     """Command to remove all items from project."""
 

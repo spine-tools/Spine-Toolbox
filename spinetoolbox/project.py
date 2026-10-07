@@ -142,6 +142,7 @@ class SpineToolboxProject(MetaObject):
         self._specifications = dict(enumerate(plugin_specs))
         self._connections = []
         self._jumps = []
+        self._stacks: dict[str, dict] = {}
         self._logger = logger
         self._app_settings = app_settings
         self._settings = settings
@@ -293,6 +294,7 @@ class SpineToolboxProject(MetaObject):
             "specifications": serialized_spec_paths,
             "connections": connection_dicts,
             "jumps": [jump.to_dict() for jump in self._jumps],
+            "stacks": self._stacks,
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
@@ -469,6 +471,7 @@ class SpineToolboxProject(MetaObject):
         jump_dicts = project_info["project"].get("jumps", [])
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
+        self._stacks = project_info["project"].get("stacks", {})
         if self._settings.mode == "consumer":
             replay_file_path = pathlib.Path(
                 self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_CONSUMER_REPLAY_FILENAME
@@ -795,6 +798,40 @@ class SpineToolboxProject(MetaObject):
         if any(i.short_name == short_name for i in self._project_items.values()):
             return ItemNameStatus.SHORT_NAME_EXISTS
         return ItemNameStatus.OK
+
+    @property
+    def stacks(self) -> dict[str, dict]:
+        """Group/stack definitions, as read from and written to project.json's "stacks" key."""
+        return self._stacks
+
+    def stack_of(self, item_name: str) -> str | None:
+        """Returns the stack key containing item_name, or None."""
+        return next((key for key, stack in self._stacks.items() if item_name in stack["items"]), None)
+
+    def add_stack(self, name: str, item_names: list[str], key: str | None = None) -> str:
+        """Adds a new stack, grouping item_names under name.
+
+        Args:
+            name: display name, shown in the QML UI
+            item_names: member project item names
+            key: reuse this stack key instead of generating a new one (for undo/redo)
+
+        Returns:
+            the stack's key
+        """
+        if key is None:
+            base_key = shorten(name) + "_stack"
+            key = base_key
+            suffix = 2
+            while key in self._stacks:
+                key = f"{base_key}_{suffix}"
+                suffix += 1
+        self._stacks[key] = {"name": name, "items": list(item_names)}
+        return key
+
+    def remove_stack(self, key: str) -> None:
+        """Removes the stack with the given key."""
+        del self._stacks[key]
 
     @property
     def connections(self):
