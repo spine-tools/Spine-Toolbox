@@ -169,6 +169,8 @@ class DesignGraphicsScene(CustomGraphicsScene):
                 continue
             frame = GroupFrameItem(stack["name"])
             frame.set_rect_from_members(icons)
+            # Remember which stack this frame represents so clicks can select its members
+            frame.stack_key = key
             self.addItem(frame)
             self.group_frames[key] = frame
 
