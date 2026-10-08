@@ -252,7 +252,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
         self.exec_compound_models = ExecutableCompoundModels(self._qsettings)
-        self.exec_compound_models.all_kernels_loaded.connect(self._check_item_notifications)
+        self.exec_compound_models.all_kernels_loaded.connect(self._check_tool_notifications)
         self.exec_compound_models.load_all()
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
@@ -1788,8 +1788,8 @@ class ToolboxUI(QMainWindow):
             self.active_project_item.make_options_widget()
 
     @Slot()
-    def _check_item_notifications(self):
-        """Checks project item notifications when all kernels have been loaded.
+    def _check_tool_notifications(self):
+        """Checks Tool item notifications when all kernels have been loaded.
         This verifies that Tools use existing Conda kernels."""
         if not self._project:
             return

@@ -443,16 +443,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot(bool)
     def _show_add_up_spine_opt_wizard(self, _=False):
         """Opens the add/update SpineOpt wizard."""
-        use_julia_jupyter_console, julia_path, julia_project_path, julia_kernel, _ = self._get_julia_settings()
-        if julia_project_path != "@." and not dir_is_valid(
+        d = self._get_julia_settings()
+        if d["julia_project"] != "@." and not dir_is_valid(
             self,
-            julia_project_path,
+            d["julia_project"],
             "Invalid Julia Project",
             "Julia project must be an existing directory, @., or empty",
         ):
             return
-        use_jupyter_console = True if use_julia_jupyter_console == "2" else False
-        julia_env = get_julia_env(use_jupyter_console, julia_kernel, julia_path, julia_project_path)
+        use_jupyter_console = True if d["use_julia_jupyter_console"] == "2" else False
+        julia_env = get_julia_env(use_jupyter_console, d["julia_kernel"], d["julia_exe"], d["julia_project"])
         if julia_env is None:
             julia_exe = julia_project = ""
         else:
@@ -495,16 +495,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     def add_python_kernel(self, _=False):
         """Makes a Python kernel for Jupyter Console based on selected Python interpreter.
         If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
-        _, python_exe, python_kernel, _ = self._get_python_settings()
+        d = self._get_python_settings()
         # python_kernel_found = _get_python_kernel_name_by_exe(python_exe, self._models.python_kernel_model)
         # if not python_kernel_found:
         mpke = MiniPythonKernelEditor(self, self._models)
         mpke.exec()
-        self._saved_python_kernel = python_kernel if not mpke.new_kernel_name() else mpke.new_kernel_name()
+        self._saved_python_kernel = d["python_kernel"] if not mpke.new_kernel_name() else mpke.new_kernel_name()
         execution_method = ExecutionMethod.DIRECT if mpke.new_kernel_name() else ExecutionMethod.JUPYTER
         self._set_execution_method(self.ui.comboBox_python_execution_method, execution_method)
         self._models.refresh_python_interpreters_model()
-        ind = self._models.find_python_interpreter_index(python_exe)
+        ind = self._models.find_python_interpreter_index(d["python_exe"])
         if not ind.isValid():
             ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
@@ -516,20 +516,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Makes a Julia kernel for Jupyter Console based on selected Julia executable and Julia project.
         If a kernel using the selected Julia executable and project already exists, sets that kernel
         selected in the comboBox."""
-        _, julia_exe, julia_project, julia_kernel, _ = self._get_julia_settings()
+        d = self._get_julia_settings()
         # Make new kernel or (possibly) overwrite existing one
         mjke = MiniJuliaKernelEditor(self, self._models)
         mjke.exec()
-        self._saved_julia_kernel = julia_kernel if not mjke.new_kernel_name() else mjke.new_kernel_name()
+        self._saved_julia_kernel = d["julia_kernel"] if not mjke.new_kernel_name() else mjke.new_kernel_name()
         execution_method = ExecutionMethod.DIRECT if mjke.new_kernel_name() else ExecutionMethod.JUPYTER
         self._set_execution_method(self.ui.comboBox_julia_execution_method, execution_method)
         self._models.refresh_julia_executables_model()
         self._models.refresh_julia_projects_model()
-        ind = self._models.find_julia_executable_index(julia_exe)
+        ind = self._models.find_julia_executable_index(d["julia_exe"])
         if not ind.isValid():
             ind = self._models.julia_executables_model.index(0, 0)
         self.ui.comboBox_julia_path.setCurrentIndex(ind.row())
-        index = self._models.find_julia_project_index(julia_project)
+        index = self._models.find_julia_project_index(d["julia_project"])
         if not index.isValid():
             index = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(index.row())
@@ -919,8 +919,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return False
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia
-        use_julia_jupyter_console, julia_exe, julia_project, julia_kernel, is_julia_conda_kernel = self._get_julia_settings()
-        if use_julia_jupyter_console == "2" and not julia_kernel:
+        j = self._get_julia_settings()
+        if j["use_julia_jupyter_console"] == "2" and not j["julia_kernel"]:
             msg = (
                 "You have selected <b>Jupyter kernel</b> as the <b>default execution method</b> for <b>Julia</b> "
                 "Tools but you did not select a kernel. Please select a kernel from the dropdown menu or select "
@@ -930,20 +930,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
             box.exec()
             return False
-        self._qsettings.setValue("appSettings/useJuliaKernel", use_julia_jupyter_console)
+        self._qsettings.setValue("appSettings/useJuliaKernel", j["use_julia_jupyter_console"])
         # Check julia_path is a file, it exists, and file name starts with 'julia'
-        if not file_is_valid(self, julia_exe, "Invalid Julia Executable", extra_check="julia"):
+        if not file_is_valid(self, j["julia_exe"], "Invalid Julia Executable", extra_check="julia"):
             return False
-        self._qsettings.setValue("appSettings/juliaPath", julia_exe)
+        self._qsettings.setValue("appSettings/juliaPath", j["julia_exe"])
         # Check julia project is a directory and it exists
-        if julia_project != "@." and not dir_is_valid(self, julia_project, "Invalid Julia Project"):
+        if j["julia_project"] != "@." and not dir_is_valid(self, j["julia_project"], "Invalid Julia Project"):
             return False
-        self._qsettings.setValue("appSettings/juliaProjectPath", julia_project)
-        self._qsettings.setValue("appSettings/juliaKernel", julia_kernel)
-        self._qsettings.setValue("appSettings/juliaCondaKernel", is_julia_conda_kernel)
+        self._qsettings.setValue("appSettings/juliaProjectPath", j["julia_project"])
+        self._qsettings.setValue("appSettings/juliaKernel", j["julia_kernel"])
+        self._qsettings.setValue("appSettings/juliaCondaKernel", j["is_julia_conda_kernel"])
         # Python
-        use_python_jupyter_console, python_exe, python_kernel, is_python_conda_kernel = self._get_python_settings()
-        if use_python_jupyter_console == "2" and not python_kernel:
+        p = self._get_python_settings()
+        if p["use_python_jupyter_console"] == "2" and not p["python_kernel"]:
             msg = (
                 "You have selected <b>Jupyter kernel</b> as the <b>default execution method</b> for <b>Python</b> "
                 "Tools but you did not select a kernel. Please select a kernel from the dropdown menu or select "
@@ -953,13 +953,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             box.setWindowIcon(QIcon(":/symbols/app.ico"))
             box.exec()
             return False
-        self._qsettings.setValue("appSettings/usePythonKernel", use_python_jupyter_console)
+        self._qsettings.setValue("appSettings/usePythonKernel", p["use_python_jupyter_console"])
         # Check python_path is a file, it exists, and file name starts with 'python'
-        if not file_is_valid(self, python_exe, "Invalid Python Interpreter", extra_check="python"):
+        if not file_is_valid(self, p["python_exe"], "Invalid Python Interpreter", extra_check="python"):
             return False
-        self._qsettings.setValue("appSettings/pythonPath", python_exe)
-        self._qsettings.setValue("appSettings/pythonKernel", python_kernel)
-        self._qsettings.setValue("appSettings/pythonCondaKernel", is_python_conda_kernel)
+        self._qsettings.setValue("appSettings/pythonPath", p["python_exe"])
+        self._qsettings.setValue("appSettings/pythonKernel", p["python_kernel"])
+        self._qsettings.setValue("appSettings/pythonCondaKernel", p["is_python_conda_kernel"])
         # Conda
         conda_exe = self.ui.lineEdit_conda_path.text().strip()
         if not is_valid_conda_executable(conda_exe):
@@ -1026,14 +1026,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         julia_kernel = ""
         is_julia_conda_kernel = "0"
         if self.ui.comboBox_julia_kernel.currentIndex() != 0:
-            try:
-                kernel_data = get_current_item_data(self.ui.comboBox_julia_kernel, self._models.julia_kernel_model)
-                julia_kernel = kernel_data["kernel_name"]
-                is_julia_conda_kernel = "2" if kernel_data["is_conda"] else "0"
-            except KeyError:  # Happens when conda kernel is selected and user clears the conda line edit path
-                julia_kernel = ""
-                is_julia_conda_kernel = "0"
-        return use_julia_jupyter_console, julia_exe, julia_project, julia_kernel, is_julia_conda_kernel
+            kernel_data = get_current_item_data(self.ui.comboBox_julia_kernel, self._models.julia_kernel_model)
+            julia_kernel = kernel_data["kernel_name"]
+            is_julia_conda_kernel = "2" if kernel_data["is_conda"] else "0"
+        return {
+            "use_julia_jupyter_console": use_julia_jupyter_console,
+            "julia_exe": julia_exe,
+            "julia_project": julia_project,
+            "julia_kernel": julia_kernel,
+            "is_julia_conda_kernel": is_julia_conda_kernel
+        }
 
     def _get_python_settings(self):
         """Returns current Python settings on Settings->Tools page."""
@@ -1045,20 +1047,15 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         is_python_conda_kernel = "0"
         if self.ui.comboBox_python_kernels.currentIndex() != 0:
             kernel_data = get_current_item_data(self.ui.comboBox_python_kernels, self._models.python_kernel_model)
-            # TODO: Get the current selected items display data because conda kernels don't
-            #  have kernel_name or display_name in the items data
-            # TODO: Also, removing and refreshing python & Julia kernels doesn't work when conda executable is updated
-            # current_item = get_current_item(self.ui.comboBox_python_kernels, self._models.python_kernel_model)
-            # python_kernel = current_item.data(Qt.ItemDataRole.DisplayRole)
-            try:
-                print(f"Python kernel_data.items():{kernel_data.items()}")
-                python_kernel = kernel_data["kernel_name"]
-                is_python_conda_kernel = "2" if kernel_data["is_conda"] else "0"
-            except KeyError:  # Happens when conda kernel is selected and user clears the conda line edit path
-                print(f"[KeyError] kernel_name probably")
-                python_kernel = ""
-                is_python_conda_kernel = "0"
-        return use_python_jupyter_console, python_exe, python_kernel, is_python_conda_kernel
+            print(f"Python kernel_data.items():{kernel_data.items()}")
+            python_kernel = kernel_data["kernel_name"]
+            is_python_conda_kernel = "2" if kernel_data["is_conda"] else "0"
+        return {
+            "use_python_jupyter_console": use_python_jupyter_console,
+            "python_exe": python_exe,
+            "python_kernel": python_kernel,
+            "is_python_conda_kernel": is_python_conda_kernel
+        }
 
     def set_work_directory(self, new_work_dir):
         """Sets new work directory.
@@ -1306,19 +1303,19 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         conda = new_conda_path.strip()
         if conda and not os.path.exists(conda):
             return
-        _, _, python_kernel, _ = self._get_python_settings()
-        _, _, _, julia_kernel, _ = self._get_julia_settings()
-        self._saved_python_kernel = python_kernel
-        self._saved_julia_kernel = julia_kernel
+        p = self._get_python_settings()
+        j = self._get_julia_settings()
+        self._saved_python_kernel = p["python_kernel"]
+        self._saved_julia_kernel = j["julia_kernel"]
         self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected, conda)
         self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected, conda)
 
     @Slot()
     def _set_saved_python_kernel_selected(self):
-        """Sets saved python as selected after Pythons have been (re)loaded."""
-        # if self.python_kernel_fetcher is not None and not self.python_kernel_fetcher.keep_going:
-        #     # Settings widget closed while thread still running
-        #     return
+        """Sets previous Python selected after Python kernels have been reloaded."""
+        if self._models.python_kernel_fetcher is not None and not self._models.python_kernel_fetcher.keep_going:
+            # Settings widget closed while thread still running
+            return
         index = self._models.find_python_kernel_index(self._saved_python_kernel)
         if not index.isValid():
             Notification(
@@ -1330,10 +1327,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot()
     def _set_saved_julia_kernel_selected(self):
-        """Selects saved Julia after Julia models have been reloaded."""
-        # if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
-        # Settings widget closed while thread still running
-        #     return
+        """Sets previous Julia selected after Julia kernels have been reloaded."""
+        if self._models.julia_kernel_fetcher is not None and not self._models.julia_kernel_fetcher.keep_going:
+            # Settings widget closed while thread still running
+            return
         ind = self._models.find_julia_kernel_index(self._saved_julia_kernel)
         if not ind.isValid():
             Notification(self, f"Julia kernel {self._saved_julia_kernel} not found").show()

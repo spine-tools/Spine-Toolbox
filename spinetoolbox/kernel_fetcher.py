@@ -59,8 +59,9 @@ class KernelFetcher(QThread):
             if not self.keep_going:
                 return
 
-    def get_all_conda_kernels(self):
-        """Finds auto-generated Conda kernels."""
+    def get_conda_kernels(self, language=None):
+        """Finds auto-generated Conda kernels with the given language. If given language is
+        None, finds all conda kernels in the system."""
         conda_path = resolve_conda_executable(self.conda_path)
         if conda_path != "":
             cksm = CondaKernelSpecManager(conda_exe=conda_path)
@@ -68,22 +69,10 @@ class KernelFetcher(QThread):
             for conda_kernel_name, spec_deats in cksm._all_specs().items():  # This is expensive
                 rsc_dir = spec_deats.get("resource_dir", "Resource_dir not found")
                 icon = self.get_icon(rsc_dir)
-                self.kernel_found.emit(conda_kernel_name, rsc_dir, True, icon, {})
-                if not self.keep_going:
-                    return
-
-    def get_conda_kernels(self, language):
-        """Finds auto-generated Conda kernels with the given language."""
-        conda_path = resolve_conda_executable(self.conda_path)
-        if conda_path != "":
-            cksm = CondaKernelSpecManager(conda_exe=conda_path)
-            # Get Conda Kernel names and resource dirs
-            for conda_kernel_name, spec_deats in cksm._all_specs().items():  # This is expensive
-                rsc_dir = spec_deats.get("resource_dir", "Resource_dir not found")
-                icon = self.get_icon(rsc_dir)
-                lang = spec_deats.get("language")
-                if lang == language:
-                    spec_deats["kernel_name"] = conda_kernel_name
+                spec_deats["kernel_name"] = conda_kernel_name
+                if not language:
+                    self.kernel_found.emit(conda_kernel_name, rsc_dir, True, icon, spec_deats)
+                elif spec_deats.get("language") == language:
                     self.kernel_found.emit(conda_kernel_name, rsc_dir, True, icon, spec_deats)
                 if not self.keep_going:
                     return
@@ -93,7 +82,7 @@ class KernelFetcher(QThread):
         if self.fetch_mode == 1:
             # Find all kernels as quickly as possible
             self.get_all_regular_kernels()
-            self.get_all_conda_kernels()
+            self.get_conda_kernels()
             return
         # Finding a subset of kernels requires opening the kernel.json file and checking the language
         for kernel_name, resource_dir in custom_find_kernel_specs().items():
