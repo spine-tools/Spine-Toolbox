@@ -1610,13 +1610,17 @@ class ToolboxUI(QMainWindow):
         for dock in self._docks_hidden_for_easy_mode:
             dock.setVisible(True)
         self._docks_hidden_for_easy_mode = []
+        # the central widget swap leaves the design view/event log split skewed, so reapply dock proportions
+        vert_docks = (self.ui.dockWidget_design_view, self.ui.dockWidget_eventlog)
+        height = sum(d.size().height() for d in vert_docks)
+        self.resizeDocks(vert_docks, [0.6 * height, 0.4 * height], Qt.Orientation.Vertical)
         current_project_dir = self._project.project_dir if self._project is not None else ""
-        # Ensure the Design View zoom is recalculated after restoring the classic UI layout.
-        QTimer.singleShot(0, lambda: self.ui.graphicsView.reset_zoom())
         if new_project_dir and new_project_dir != current_project_dir:
-            # deferred: the Design View dock was just made visible above and isn't laid out yet, so
-            # open_project's reset_zoom() would compute against a stale viewport size
             QTimer.singleShot(0, lambda: self.open_project(new_project_dir, clear_event_log=False))
+        else:
+            # deferred: the Design View dock isn't laid out yet right after resizeDocks, so
+            # reset_zoom() would compute against a stale (tiny) viewport size
+            QTimer.singleShot(0, lambda: self.ui.graphicsView.reset_zoom())
 
     @Slot()
     def restore_dock_widgets(self):
