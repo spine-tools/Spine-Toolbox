@@ -13,10 +13,13 @@
 """A dashed outline drawn behind a stack's member icons in the Design View."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QPainterPath, QPen
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsRectItem
+from PySide6.QtGui import QColor, QFontMetricsF, QPainterPath, QPen
+from PySide6.QtWidgets import QApplication, QGraphicsItem, QGraphicsRectItem
+
+from ..project_item_icon import ProjectItemIcon
 
 _MARGIN = 14
+_HEADER_HEIGHT = 26
 
 
 class GroupFrameItem(QGraphicsRectItem):
@@ -27,9 +30,12 @@ class GroupFrameItem(QGraphicsRectItem):
         self._name = name
         self.setPen(QPen(QColor(100, 100, 100), 1, Qt.PenStyle.DashLine))
         self.setBrush(Qt.BrushStyle.NoBrush)
+        # Frame itself should not become the selected item; clicking it selects its members instead
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, False)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, False)
-        self.setAcceptHoverEvents(False)
+        self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.PointingHandCursor)
+        self.stack_key = None
         self.setZValue(-1)
 
     def shape(self) -> QPainterPath:
@@ -39,18 +45,45 @@ class GroupFrameItem(QGraphicsRectItem):
         return path
 
     def set_rect_from_members(self, icons: list) -> None:
-        """Fits the frame around the union of the given icons' scene bounding rects, plus a margin."""
+        """Fits the frame around member icons and labels, leaving room for the group title."""
         if not icons:
             return
-        rect = icons[0].sceneBoundingRect()
+        rect = icons[0].sceneBoundingRect().united(icons[0].name_item.sceneBoundingRect())
         for icon in icons[1:]:
-            rect = rect.united(icon.sceneBoundingRect())
-        rect = rect.adjusted(-_MARGIN, -_MARGIN, _MARGIN, _MARGIN)
+            rect = rect.united(icon.sceneBoundingRect()).united(icon.name_item.sceneBoundingRect())
+        rect = rect.adjusted(-_MARGIN, -_MARGIN - _HEADER_HEIGHT, _MARGIN, _MARGIN)
+        title_width = QFontMetricsF(QApplication.font()).horizontalAdvance(self._name) + 2 * _MARGIN
+        rect.setWidth(max(rect.width(), title_width))
         self.setRect(rect)
 
     def paint(self, painter, option, widget=None) -> None:
         super().paint(painter, option, widget)
         painter.setPen(self.pen())
-        painter.drawText(
-            self.rect().adjusted(4, 2, -4, -2), Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft, self._name
-        )
+        title_rect = self.rect().adjusted(8, 4, -8, 0)
+        title_rect.setHeight(_HEADER_HEIGHT - 4)
+        painter.drawText(title_rect, Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft, self._name)
+
+    def mousePressEvent(self, event) -> None:
+        """Selects all project item icons that belong to this group when the frame is clicked."""
+        if event.button() != Qt.MouseButton.LeftButton:
+            return super().mousePressEvent(event)
+        scene = self.scene()
+        if scene is None or self.stack_key is None:
+            return super().mousePressEvent(event)
+        # Get stack member names from the project via the scene's toolbox
+        try:
+            project = scene._toolbox.project()
+        except Exception:
+            project = None
+        if project is None:
+            return super().mousePressEvent(event)
+        stack = project.stacks.get(self.stack_key)
+        if not stack:
+            return super().mousePressEvent(event)
+        member_names = set(stack.get("items", []))
+        # Clear existing selection and select matching icons
+        scene.clearSelection()
+        for item in scene.items():
+            if isinstance(item, ProjectItemIcon) and item.name() in member_names:
+                item.setSelected(True)
+        event.accept()
