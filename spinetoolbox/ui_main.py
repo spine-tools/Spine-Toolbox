@@ -1611,6 +1611,8 @@ class ToolboxUI(QMainWindow):
             dock.setVisible(True)
         self._docks_hidden_for_easy_mode = []
         current_project_dir = self._project.project_dir if self._project is not None else ""
+        # Ensure the Design View zoom is recalculated after restoring the classic UI layout.
+        QTimer.singleShot(0, lambda: self.ui.graphicsView.reset_zoom())
         if new_project_dir and new_project_dir != current_project_dir:
             # deferred: the Design View dock was just made visible above and isn't laid out yet, so
             # open_project's reset_zoom() would compute against a stale viewport size
