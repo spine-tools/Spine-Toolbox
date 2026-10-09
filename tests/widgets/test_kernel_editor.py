@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Unit tests for the ``kernel_editor`` module."""
+
 import json
 import pathlib
 import subprocess

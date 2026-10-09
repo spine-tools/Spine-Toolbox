@@ -46,7 +46,6 @@ from ..helpers import (
     select_gams_executable,
     select_work_directory,
 )
-from ..kernel_models import ExecutableCompoundModels
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
 from ..spine_db_editor.editors import db_editor_registry
@@ -54,6 +53,7 @@ from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEdito
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
 from .notification import Notification
+from .custom_qwidgets import ComboListView
 
 
 class ExecutionMethod(Enum):
@@ -325,9 +325,23 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.listWidget.setFocus()
         self.ui.listWidget.setCurrentRow(0)
         self._toolbox = toolbox
-        # self._models = ExecutableCompoundModels(self._qsettings)
         self._models = toolbox.exec_compound_models
         self.orig_work_dir = ""  # Work dir when this widget was opened
+        self.ui.comboBox_python_interpreters.setView(
+            ComboListView(self.ui.comboBox_python_interpreters, self._show_python_interpreters_context_menu)
+        )
+        self.ui.comboBox_python_kernels.setView(
+            ComboListView(self.ui.comboBox_python_kernels, self._show_python_kernel_context_menu)
+        )
+        self.ui.comboBox_julia_path.setView(
+            ComboListView(self.ui.comboBox_julia_path, self._show_julia_path_context_menu)
+        )
+        self.ui.comboBox_julia_project_path.setView(
+            ComboListView(self.ui.comboBox_julia_project_path, self._show_julia_projects_context_menu)
+        )
+        self.ui.comboBox_julia_kernel.setView(
+            ComboListView(self.ui.comboBox_julia_kernel, self._show_julia_kernel_context_menu)
+        )
         self.ui.comboBox_python_execution_method.addItem(PYTHON_EXECUTION_MODES[0], ExecutionMethod.DIRECT)
         self.ui.comboBox_python_execution_method.addItem(PYTHON_EXECUTION_MODES[1], ExecutionMethod.JUPYTER)
         self.ui.comboBox_julia_execution_method.addItem(JULIA_EXECUTION_MODES[0], ExecutionMethod.DIRECT)
@@ -537,83 +551,113 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected, conda)
 
     @Slot(QPoint)
-    def _show_julia_path_context_menu(self, pos):
+    def _show_julia_path_context_menu(self, pos, index=None):
         """Shows the context-menu on Julia executables combobox."""
-        data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
-        global_pos = self.ui.comboBox_julia_path.mapToGlobal(pos)
-        self._show_julia_context_menu(self.ui.comboBox_julia_path, global_pos, data)
-
-    @Slot(QPoint)
-    def _show_julia_projects_context_menu(self, pos):
-        """Shows the context-menu on Julia projects combobox."""
-        data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
-        global_pos = self.ui.comboBox_julia_project_path.mapToGlobal(pos)
-        self._show_julia_context_menu(self.ui.comboBox_julia_project_path, global_pos, data)
-
-    @Slot(QPoint)
-    def _show_julia_kernel_context_menu(self, pos):
-        """Shows the context-menu on Julia kernels combobox."""
-        data = get_current_item_data(self.ui.comboBox_julia_kernel, self._models.julia_kernel_model)
-        global_pos = self.ui.comboBox_julia_kernel.mapToGlobal(pos)
-        self._show_julia_context_menu(self.ui.comboBox_julia_kernel, global_pos, data)
-
-    def _show_julia_context_menu(self, menu_parent, global_pos, data):
-        """Creates and shows the context menu for Julia comboBoxes."""
-        if not data:
-            return
-        m = QMenu(menu_parent)
-        if not data.get("is_jupyter", False):
-            if not data.get("is_project", False):
-                m.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_executable)
-                m.addAction(
-                    QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                    "Open containing folder...",
-                    self._open_julia_executable_dir,
-                )
-            else:
-                m.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_project)
-                m.addAction(
-                    QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open folder...", self._open_julia_project_dir
-                )
+        if not index:
+            data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
         else:
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open resource folder...",
-                self._open_julia_kernel_resource_dir,
-            )
-        m.popup(global_pos)
+            item = self._models.julia_executables_model.itemFromIndex(index)
+            data = item.data()
+        path = data["exe"]
+        global_pos = self.ui.comboBox_julia_path.mapToGlobal(pos)
+        self._show_julia_context_menu(self.ui.comboBox_julia_path, global_pos, path, 0)
 
     @Slot(QPoint)
-    def _show_python_interpreters_context_menu(self, pos):
-        data = get_current_item_data(self.ui.comboBox_python_interpreters, self._models.python_interpreters_model)
-        global_pos = self.ui.comboBox_python_interpreters.mapToGlobal(pos)
-        self._show_python_context_menu(self.ui.comboBox_python_interpreters, global_pos, data)
+    def _show_julia_projects_context_menu(self, pos, index=None):
+        """Shows the context-menu on Julia projects combobox."""
+        if not index:
+            data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
+        else:
+            item = self._models.julia_projects_model.itemFromIndex(index)
+            data = item.data()
+        path = data["path"]
+        global_pos = self.ui.comboBox_julia_project_path.mapToGlobal(pos)
+        self._show_julia_context_menu(self.ui.comboBox_julia_project_path, global_pos, path, 1)
 
     @Slot(QPoint)
-    def _show_python_kernel_context_menu(self, pos):
-        data = get_current_item_data(self.ui.comboBox_python_kernels, self._models.python_kernel_model)
-        global_pos = self.ui.comboBox_python_kernels.mapToGlobal(pos)
-        self._show_python_context_menu(self.ui.comboBox_python_kernels, global_pos, data)
+    def _show_julia_kernel_context_menu(self, pos, index=None):
+        """Shows the context-menu on Julia kernels combobox."""
+        if not index:
+            item = get_current_item(self.ui.comboBox_julia_kernel, self._models.julia_kernel_model)
+        else:
+            item = self._models.julia_kernel_model.itemFromIndex(index)
+        global_pos = self.ui.comboBox_julia_kernel.mapToGlobal(pos)
+        path = item.toolTip()
+        self._show_julia_context_menu(self.ui.comboBox_julia_kernel, global_pos, path, 2)
 
-    def _show_python_context_menu(self, menu_parent, global_pos, data):
-        """Creates and shows the context menu for both python interpreters and kernels comboBoxes."""
-        if not data:
-            return
+    def _show_julia_context_menu(self, menu_parent, global_pos, path, menu_mode):
+        """Creates and shows the context menu for Julia comboBoxes."""
         m = QMenu(menu_parent)
-        if not data["is_jupyter"]:
+        if menu_mode == 0:
             m.addAction(
-                QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_python_system_interpreter
+                QIcon(":icons/menu_icons/trash-alt.svg"),
+                "Remove from list",
+                lambda p=path: self._remove_julia_executable(p),
             )
             m.addAction(
                 QIcon(":icons/menu_icons/folder-open-solid.svg"),
                 "Open containing folder...",
-                self._open_python_interpreter_dir,
+                lambda p=path: self._open_julia_executable_dir(p),
+            )
+        elif menu_mode == 1:
+            m.addAction(
+                QIcon(":icons/menu_icons/trash-alt.svg"),
+                "Remove from list",
+                lambda p=path: self._remove_julia_project(p),
+            )
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open folder...",
+                lambda p=path: self._open_julia_project_dir(p),
             )
         else:
             m.addAction(
                 QIcon(":icons/menu_icons/folder-open-solid.svg"),
                 "Open resource folder...",
-                self._open_python_kernel_resource_dir,
+                lambda p=path: self._open_kernel_resource_dir(p),
+            )
+        m.popup(global_pos)
+
+    @Slot(QPoint)
+    def _show_python_interpreters_context_menu(self, pos, index=None):
+        if not index:
+            data = get_current_item_data(self.ui.comboBox_python_interpreters, self._models.python_interpreters_model)
+        else:
+            item = self._models.python_interpreters_model.itemFromIndex(index)
+            data = item.data()
+        global_pos = self.ui.comboBox_python_interpreters.mapToGlobal(pos)
+        path = data["exe"]
+        self._show_python_context_menu(self.ui.comboBox_python_interpreters, global_pos, path, 0)
+
+    @Slot(QPoint)
+    def _show_python_kernel_context_menu(self, pos, index=None):
+        if not index:
+            item = get_current_item(self.ui.comboBox_python_kernels, self._models.python_kernel_model)
+        else:
+            item = self._models.python_kernel_model.itemFromIndex(index)
+        global_pos = self.ui.comboBox_python_kernels.mapToGlobal(pos)
+        path = item.toolTip()
+        self._show_python_context_menu(self.ui.comboBox_python_kernels, global_pos, path, 1)
+
+    def _show_python_context_menu(self, menu_parent, global_pos, path, menu_mode):
+        """Creates and shows the context menu for both python interpreters and kernels comboBoxes."""
+        m = QMenu(menu_parent)
+        if menu_mode == 0:
+            m.addAction(
+                QIcon(":icons/menu_icons/trash-alt.svg"),
+                "Remove from list",
+                lambda p=path: self._remove_python_system_interpreter(p),
+            )
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open containing folder...",
+                lambda p=path: self._open_python_interpreter_dir(p),
+            )
+        else:
+            m.addAction(
+                QIcon(":icons/menu_icons/folder-open-solid.svg"),
+                "Open resource folder...",
+                lambda p=path: self._open_kernel_resource_dir(p),
             )
         m.popup(global_pos)
 
@@ -1034,7 +1078,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             "julia_exe": julia_exe,
             "julia_project": julia_project,
             "julia_kernel": julia_kernel,
-            "is_julia_conda_kernel": is_julia_conda_kernel
+            "is_julia_conda_kernel": is_julia_conda_kernel,
         }
 
     def _get_python_settings(self):
@@ -1054,7 +1098,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             "use_python_jupyter_console": use_python_jupyter_console,
             "python_exe": python_exe,
             "python_kernel": python_kernel,
-            "is_python_conda_kernel": is_python_conda_kernel
+            "is_python_conda_kernel": is_python_conda_kernel,
         }
 
     def set_work_directory(self, new_work_dir):
@@ -1183,41 +1227,33 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             ind = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(ind.row())
 
-    @Slot(bool)
-    def _remove_julia_executable(self, _=False):
-        """Removes the selected system interpreter from the list of known Pythons."""
-        data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
-        if not data["exe"]:
+    def _remove_julia_executable(self, p):
+        """Removes a Julia from the list of known Julias."""
+        if not p:
             Notification(self, "This is the Julia in PATH and cannot be removed").show()
             return
         else:
-            self._models.remove_julia_executable(data["exe"])
+            self._models.remove_julia_executable(p)
             self.ui.comboBox_julia_path.setCurrentIndex(0)
 
-    @Slot(bool)
-    def _remove_julia_project(self, _=False):
-        """Removes the selected system interpreter from the list of known Pythons."""
-        data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
-        if data["path"] == "@." or data["path"] == "":
+    def _remove_julia_project(self, p):
+        """Removes a Julia environment/project from known environments."""
+        if p == "@." or p == "":
             Notification(self, "This is a default environment and cannot be removed.").show()
             return
         else:
-            self._models.remove_julia_project(data["path"])
+            self._models.remove_julia_project(p)
             self.ui.comboBox_julia_project_path.setCurrentIndex(0)
 
-    @Slot(bool)
-    def _open_julia_executable_dir(self, _=False):
-        data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
-        if data["exe"] == "":
+    def _open_julia_executable_dir(self, p):
+        if p == "":
             path, _ = os.path.split(resolve_default_julia_executable())
         else:
-            path, _ = os.path.split(data["exe"])
+            path, _ = os.path.split(p)
         self.open_rsc_dir(path)
 
-    @Slot(bool)
-    def _open_julia_project_dir(self, _=False):
-        data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
-        if data["path"] == "@." or data["path"] == "":
+    def _open_julia_project_dir(self, p):
+        if p == "@." or p == "":
             # Open the dir that contains the current Julia executable
             current_julia_data = get_current_item_data(
                 self.ui.comboBox_julia_path, self._models.julia_executables_model
@@ -1228,7 +1264,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             else:
                 path, _ = os.path.split(current_julia)
         else:
-            path = data["path"]
+            path = p
         self.open_rsc_dir(path)
 
     @Slot(bool)
@@ -1248,38 +1284,28 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
 
-    @Slot(bool)
-    def _remove_python_system_interpreter(self, _=False):
-        """Removes the selected system interpreter from the list of known Pythons."""
-        data = get_current_item_data(self.ui.comboBox_python_interpreters, self._models.python_interpreters_model)
-        path = data["exe"]
+    def _remove_python_system_interpreter(self, path):
+        """Removes given Python interpreter from the list of known Pythons."""
         if not path:
             Notification(self, "This is the current Spine Toolbox interpreter and cannot be removed").show()
         else:
             self._models.remove_python_interpreter(path)
             self.ui.comboBox_python_interpreters.setCurrentIndex(0)
 
-    @Slot(bool)
-    def _open_python_interpreter_dir(self, _=False):
-        """Opens selected Python interpreter folder in File Explorer."""
-        data = get_current_item_data(self.ui.comboBox_python_interpreters, self._models.python_interpreters_model)
-        if data["exe"] == "":
+    def _open_python_interpreter_dir(self, p):
+        """Opens given Python interpreter folder in File Explorer."""
+        if p == "":
             path, _ = os.path.split(resolve_current_python_interpreter())
         else:
-            path, _ = os.path.split(data["exe"])
+            path, _ = os.path.split(p)
         self.open_rsc_dir(path)
 
-    @Slot(bool)
-    def _open_python_kernel_resource_dir(self, _=False):
-        """Opens selected Python kernel's resource folder in File Explorer."""
-        item = get_current_item(self.ui.comboBox_python_kernels, self._models.python_kernel_model)
-        self.open_rsc_dir(item.toolTip())
-
-    @Slot(bool)
-    def _open_julia_kernel_resource_dir(self, _=False):
-        """Opens Julia kernels resource dir."""
-        item = get_current_item(self.ui.comboBox_julia_kernel, self._models.julia_kernel_model)
-        self.open_rsc_dir(item.toolTip())
+    def _open_kernel_resource_dir(self, path):
+        """Opens given kernel's resource folder in File Explorer."""
+        if not path:
+            Notification(self, "Please select a Jupyter kernel").show()
+        else:
+            self.open_rsc_dir(path)
 
     def open_rsc_dir(self, path):
         """Opens given path in file browser."""

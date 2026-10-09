@@ -1093,6 +1093,7 @@ def select_dir(parent, title, initial_path=None):
 #         return None
 #     return answer[0]
 
+
 def select_conda_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a conda executable.
 

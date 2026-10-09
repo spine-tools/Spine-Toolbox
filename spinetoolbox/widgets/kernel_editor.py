@@ -34,6 +34,7 @@ from spinetoolbox.helpers import (
 
 class KernelEditorBase(QDialog):
     """Base class for kernel editors."""
+
     msg = Signal(str)
     msg_success = Signal(str)
     msg_warning = Signal(str)
@@ -134,9 +135,7 @@ class KernelEditorBase(QDialog):
             return False
         if self._ipykernel_install_failed:
             # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
-            self.msg_error.emit(
-                f"Installing iPyKernel for {self._python_exe} failed. Please install it manually."
-            )
+            self.msg_error.emit(f"Installing iPyKernel for {self._python_exe} failed. Please install it manually.")
             self._ipykernel_install_failed = False
             return False
         # Check if ipykernel is installed
@@ -434,9 +433,7 @@ class KernelEditorBase(QDialog):
         ]
         # TODO: IJulia.installkernel() should return new kernel path. If we can get
         #  it, there's no need for _solve_new_kernel_name()
-        self._install_julia_kernel_process = QProcessExecutionManager(
-            self, self._julia_exe, args, semisilent=True
-        )
+        self._install_julia_kernel_process = QProcessExecutionManager(self, self._julia_exe, args, semisilent=True)
         self._install_julia_kernel_process.execution_finished.connect(self.handle_installkernel_process_finished)
         self._install_julia_kernel_process.start_execution()
 

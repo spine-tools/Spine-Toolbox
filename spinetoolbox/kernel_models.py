@@ -11,6 +11,7 @@
 ######################################################################################################################
 
 """Contains a class for storing saved Python and Julia executables in a model."""
+
 import os
 from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QStandardItemModel, QStandardItem, QIcon, QBrush
