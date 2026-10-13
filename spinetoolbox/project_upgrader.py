@@ -579,9 +579,9 @@ def upgrade_v13_to_v14(old: dict, project_dir: str) -> dict:
     Changes:
         - Update version to 14 in project.json
         - Copy execution settings from <project_dir>.spinetoolbox/local/specification_local_data.json to
-        <project_dir>/.spinetoolbox/local/project_local_data.json because they are from now on Tool settings
-        instead of Tool Specification settings.
-        - Execution settings are now found in the 'options' dictionary.
+        <project_dir>/.spinetoolbox/local/project_local_data.json because those are Tool settings instead
+        of Tool Specification settings as of version 14.
+        - Execution settings are now stored into the 'options' dictionary.
         - Move 'options' from project.json's Tool item dicts to local project data. In version 13, the Tool
         'options' only has the 'julia_sysimage' key. This 'julia_sysimage' key-value is moved to the same local
         project data 'options' dict than the execution settings.
@@ -824,8 +824,8 @@ def check_valid_v9_to_v10(project_dict: dict) -> None:
 
 def check_valid_v11_to_v14(project_dict: dict) -> None:
     """Checks that the given project JSON dictionary contains
-    a valid version 11 or 12 Spine Toolbox project. Valid meaning, that
-    it contains all required keys and values are of the correct
+    a valid version 11 to 14 Spine Toolbox project. Valid meaning, that
+    it contains some required keys and values are of the correct
     type.
 
     Args:
@@ -834,7 +834,7 @@ def check_valid_v11_to_v14(project_dict: dict) -> None:
     if "project" not in project_dict:
         raise InvalidProjectDict("Invalid project.json file. Key 'project' not found.")
     if "settings" not in project_dict["project"]:
-        raise InvalidProjectDict("Invalid project.json file. Key 'items' not found in 'project'.")
+        raise InvalidProjectDict("Invalid project.json file. Key 'settings' not found in 'project'.")
     if not isinstance(project_dict["project"]["settings"], dict):
         raise InvalidProjectDict("Invalid project.json file. 'settings' must be a dict.")
 

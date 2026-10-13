@@ -97,7 +97,7 @@
             "execute_in_work": true,
             "cmd_line_args": [],
             "options": {
-                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"
+                "julia_sysimage": "/path/to/sysimg.dll"
             },
             "kill_completed_processes": false,
             "log_process_output": false

@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Unit tests for ProjectUpgrader class."""
+"""Unit tests for project upgrading functions."""
 
 import json
 import os
@@ -19,7 +19,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import mock
 import pytest
-from PySide6.QtWidgets import QMessageBox
 from spinetoolbox.config import LATEST_PROJECT_VERSION
 from spinetoolbox.load_project_items import load_project_items
 from spinetoolbox.project_settings import ProjectSettings
@@ -116,15 +115,17 @@ class TestCheckProjectDictValid:
             check_project_dict_valid(10, p)
 
     def test_is_valid_v11_v14(self):
-        p = make_v13_project_dict()
-        check_project_dict_valid(13, p)
-        # Test that an invalid v13 project dict is not valid
-        p = {
+        p13 = make_v13_project_dict()
+        check_project_dict_valid(13, p13)
+        p14 = make_v14_project_dict()
+        check_project_dict_valid(14, p14)
+        # Test an invalid project dict
+        invalid_p = {
             "project": {},
             "items": {},
         }
-        with pytest.raises(InvalidProjectDict, match="^Invalid project.json file. Key version not found.$"):
-            check_project_dict_valid(13, p)
+        with pytest.raises(InvalidProjectDict, match="^Invalid project.json file. Key 'settings' not found in 'project'.$"):
+            check_project_dict_valid(14, invalid_p)
 
 
 class TestUpgradeProject:
@@ -334,33 +335,33 @@ class TestUpgradeProject:
         check_project_dict_valid(12, proj_v12)
         with TemporaryDirectory() as project_dir:
             with (
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.force_save") as mock_force_save,
                 mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 13),
-                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
             ):
-                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 os.mkdir(os.path.join(project_dir, "tool_specs"))  # Make /tool_specs dir
                 issue_warning = mock.MagicMock()
                 proj_v13 = upgrade_project(proj_v12, project_dir, item_factories, issue_warning)
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
-                mock_mb.assert_called_once()
                 check_project_dict_valid(13, proj_v13)
                 assert proj_v13["project"]["version"] == 13
                 assert "settings" in proj_v13["project"]
 
     def test_upgrade_v13_to_v14(self):
+        """Base upgrade test. Execution settings should be relocated from local specification data
+        (specification_local_data.json) into local project data (project_local_data.json). julia_sysimage
+        keys should be relocated from project.json into project_local_data.json as well. Stuff that is already
+        in project_local_data.json for each Tool (like root_directory) should not be destroyed in the process.
+        """
         proj_v13 = make_v13_project_dict()
         check_project_dict_valid(13, proj_v13)
         with TemporaryDirectory() as project_dir:
             with (
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.force_save") as mock_force_save,
                 mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 14),
-                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
             ):
-                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 local_folder = os.path.join(project_dir, ".spinetoolbox", "local")
                 os.makedirs(local_folder)  # Make dir for specification_local_data.json and project_local_data.json
                 spec_f, project_f = self.copy_test_files_to_tempdir(local_folder)
@@ -369,268 +370,203 @@ class TestUpgradeProject:
                     pld_before_upgrade = json.load(project_fp)
                 self.check_project_local_data_before_upgrade(pld_before_upgrade)
                 issue_warning = mock.MagicMock()
-                proj_v14 = upgrade_project(proj_v13, project_dir, item_factories, issue_warning)
+                proj_v14 = upgrade_project(proj_v13, project_dir, item_factories, issue_warning)  # Upgrade
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
-                mock_mb.assert_called_once()
-                # Check project_local_data.json after upgrade
-                # There should be no changes in the local specification data .json file
-                with open(project_f) as project_fp:
-                    pld_after_upgrade = json.load(project_fp)
-                self.assert_project_local_data1(pld_after_upgrade)
                 check_project_dict_valid(14, proj_v14)
                 assert proj_v14["project"]["version"] == 14
                 assert "settings" in proj_v14["project"]
-
-    def check_project_local_data_before_upgrade(self, pld):
-        self.assertEqual(6, len(pld["items"].keys()))
-        a = pld["items"]["Run SpineOpt"]
-        expected = {}
-        self.assertDictEqual(expected, a)
-        b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {}
-        self.assertDictEqual(expected, b)
-        c = pld["items"]["Python Tool Basic Console"]
-        expected = {"root_directory": {"type": "path", "relative": True, "path": "."}}
-        self.assertDictEqual(expected, c)
-        d = pld["items"]["Python Tool Jupyter Console"]
-        expected = {}
-        self.assertDictEqual(expected, d)
-        e = pld["items"]["Run dir command"]
-        expected = {"root_directory": {"type": "path", "relative": False, "path": "C:/data"}}
-        self.assertDictEqual(expected, e)
-        f = pld["items"]["Run Batch File"]
-        expected = {"root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"}}
-        self.assertDictEqual(expected, f)
-
-    def assert_project_local_data1(self, pld):
-        self.assertEqual(6, len(pld["items"].keys()))
-        a = pld["items"]["Run SpineOpt"]
-        expected = {
-            "options": {
-                "kernel_spec_name": "",
-                "env": "",
-                "use_jupyter_console": False,
-                "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe",
-                "project": "C:/data/JuliaProjects/SpineOptProject",
-            }
-        }
-        self.assertDictEqual(expected, a)
-        b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {
-            "options": {
-                "env": "",
-                "kernel_spec_name": "julia-1.10",
-                "use_jupyter_console": True,
-                "executable": "",
-                "project": "",
-                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll",
-            }
-        }
-        self.assertDictEqual(expected, b)
-        c = pld["items"]["Python Tool Basic Console"]
-        expected = {
-            "root_directory": {"type": "path", "relative": True, "path": "."},
-            "options": {
-                "kernel_spec_name": "",
-                "env": "",
-                "use_jupyter_console": False,
-                "executable": "some/python.exe",
-            },
-        }
-        self.assertDictEqual(expected, c)
-        d = pld["items"]["Python Tool Jupyter Console"]
-        expected = {
-            "options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}
-        }
-        self.assertDictEqual(expected, d)
-        e = pld["items"]["Run dir command"]
-        expected = {
-            "root_directory": {"type": "path", "relative": False, "path": "C:/data"},
-            "options": {"cmd": "dir", "shell": "cmd.exe"},
-        }
-        self.assertDictEqual(expected, e)
-        f = pld["items"]["Run Batch File"]
-        expected = {
-            "root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"},
-            "options": {"cmd": "", "shell": "cmd.exe"},
-        }
-        self.assertDictEqual(expected, f)
+                # Check project_local_data.json after upgrade
+                with open(project_f) as project_fp:
+                    pld_after_upgrade = json.load(project_fp)
+                expected = self.make_expected_project_local_data()
+                assert pld_after_upgrade["items"] == expected
 
     def test_upgrade_v13_to_v14_with_missing_local_data(self):
-        pu = ProjectUpgrader(self.toolbox)
+        """Test case when local specification and project data files (specification_local_data.json and
+        project_local_data.json) are missing for some reason. This means that after the upgrade, Tool execution
+        options in project_local_data.json should be missing (ie. default) and the only thing relocated is
+        the 'julia_sysimage' key from project.json.
+        """
         proj_v13 = make_v13_project_dict()
-        self.assertTrue(pu.is_valid(13, proj_v13))
+        check_project_dict_valid(13, proj_v13)
         with TemporaryDirectory() as project_dir:
             with (
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.force_save") as mock_force_save,
                 mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 14),
-                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
             ):
-                mock_mb.return_value = QMessageBox.StandardButton.Yes
-                # Upgrade
-                proj_v14 = pu.upgrade(proj_v13, project_dir)
+                issue_warning = mock.MagicMock()
+                proj_v14 = upgrade_project(proj_v13, project_dir, item_factories, issue_warning)  # Upgrade
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
-                mock_mb.assert_called_once()
-                self.assertTrue(pu.is_valid(14, proj_v14))
-                self.assertEqual(proj_v14["project"]["version"], 14)
-                self.assertIn("settings", proj_v14["project"])
+                check_project_dict_valid(14, proj_v14)
                 # Check that options dict has vanished from project dict
                 julia_tool_dict = proj_v14["items"]["Julia Tool Jupyter Console"]
-                self.assertIsNone(julia_tool_dict.get("options", None))
-                # Check that julia_sysimage is now in project_local_dict.json
+                assert julia_tool_dict.get("options") is None
+                # Check that julia_sysimage is now the only thing in project_local_dict.json
                 project_local_data_fpath = os.path.join(
                     project_dir, ".spinetoolbox", "local", "project_local_data.json"
                 )
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
-                local_julia_tool_dict_options = pld["items"]["Julia Tool Jupyter Console"]["options"]
-                expected = {
-                    "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"
+                assert pld["items"] == {
+                    "Julia Tool Jupyter Console":
+                        {"options": {"julia_sysimage": "/path/to/sysimg.dll"}}
                 }
-                self.assertDictEqual(expected, local_julia_tool_dict_options)
 
     def test_upgrade_v13_to_v14_with_missing_local_project_data(self):
-        pu = ProjectUpgrader(self.toolbox)
+        """Test case when local project data file (project_local_data.json) is missing for some reason.
+        This means that Tool execution settings will be relocated to project_local_data.json but stuff like
+        the root_directory key will be missing because it didn't exist in the first place.
+        """
         proj_v13 = make_v13_project_dict()
-        self.assertTrue(pu.is_valid(13, proj_v13))
+        check_project_dict_valid(13, proj_v13)
         with TemporaryDirectory() as project_dir:
             with (
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.force_save") as mock_force_save,
                 mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 14),
-                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
             ):
-                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 local_folder = os.path.join(project_dir, ".spinetoolbox", "local")
-                os.makedirs(local_folder)  # Make dir for specification_local_data.json and project_local_data.json
+                os.makedirs(local_folder)  # Make dir for specification_local_data.json
                 spec_f, project_f = self.copy_test_files_to_tempdir(local_folder, copy_mode=2)
-                # Upgrade
-                proj_v14 = pu.upgrade(proj_v13, project_dir)
+                issue_warning = mock.MagicMock()
+                proj_v14 = upgrade_project(proj_v13, project_dir, item_factories, issue_warning)  # Upgrade
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
-                mock_mb.assert_called_once()
                 # Check that options dict has vanished from project dict
                 julia_tool_dict = proj_v14["items"]["Julia Tool Jupyter Console"]
-                self.assertIsNone(julia_tool_dict.get("options", None))
+                assert julia_tool_dict.get("options") is None
+                check_project_dict_valid(14, proj_v14)
                 # Check updated project_local_data.json
                 project_local_data_fpath = os.path.join(
                     project_dir, ".spinetoolbox", "local", "project_local_data.json"
                 )
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
-                self.assert_project_local_data2(pld)
-                self.assertTrue(pu.is_valid(14, proj_v14))
-                self.assertEqual(proj_v14["project"]["version"], 14)
-                self.assertIn("settings", proj_v14["project"])
-
-    def assert_project_local_data2(self, pld):
-        self.assertEqual(6, len(pld["items"].keys()))
-        a = pld["items"]["Run SpineOpt"]
-        expected = {
-            "options": {
-                "kernel_spec_name": "",
-                "env": "",
-                "use_jupyter_console": False,
-                "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe",
-                "project": "C:/data/JuliaProjects/SpineOptProject",
-            }
-        }
-        self.assertDictEqual(expected, a)
-        b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {
-            "options": {
-                "env": "",
-                "kernel_spec_name": "julia-1.10",
-                "use_jupyter_console": True,
-                "executable": "",
-                "project": "",
-                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll",
-            }
-        }
-        self.assertDictEqual(expected, b)
-        c = pld["items"]["Python Tool Basic Console"]
-        expected = {
-            "options": {
-                "kernel_spec_name": "",
-                "env": "",
-                "use_jupyter_console": False,
-                "executable": "some/python.exe",
-            }
-        }
-        self.assertDictEqual(expected, c)
-        d = pld["items"]["Python Tool Jupyter Console"]
-        expected = {
-            "options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}
-        }
-        self.assertDictEqual(expected, d)
-        e = pld["items"]["Run dir command"]
-        expected = {"options": {"cmd": "dir", "shell": "cmd.exe"}}
-        self.assertDictEqual(expected, e)
-        f = pld["items"]["Run Batch File"]
-        expected = {"options": {"cmd": "", "shell": "cmd.exe"}}
-        self.assertDictEqual(expected, f)
+                expected = self.make_expected_project_local_data()
+                # Remove root_directory keys from expected dict
+                expected["Python Tool Basic Console"].pop("root_directory")
+                expected["Run dir command"].pop("root_directory")
+                expected["Run Batch File"].pop("root_directory")
+                assert pld["items"] == expected
 
     def test_upgrade_v13_to_v14_with_missing_local_specification_data(self):
-        pu = ProjectUpgrader(self.toolbox)
+        """Test case when local specification data file (specification_local_data.json) is missing for some reason.
+        This means that after the upgrade, Tool execution options in project_local_data.json should be
+        missing (ie. default) but other keys (like the root_directory) should still be there. The
+        'julia_sysimage' key from project.json should now be in project_local_data.json.
+        """
         proj_v13 = make_v13_project_dict()
-        self.assertTrue(pu.is_valid(13, proj_v13))
+        check_project_dict_valid(13, proj_v13)
         with TemporaryDirectory() as project_dir:
             with (
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.backup_project_file") as mock_backup,
-                mock.patch("spinetoolbox.project_upgrader.ProjectUpgrader.force_save") as mock_force_save,
+                mock.patch("spinetoolbox.project_upgrader.backup_project_file") as mock_backup,
+                mock.patch("spinetoolbox.project_upgrader.force_save") as mock_force_save,
                 mock.patch("spinetoolbox.project_upgrader.LATEST_PROJECT_VERSION", 14),
-                mock.patch("spinetoolbox.project_upgrader.QMessageBox.question") as mock_mb,
             ):
-                mock_mb.return_value = QMessageBox.StandardButton.Yes
                 local_folder = os.path.join(project_dir, ".spinetoolbox", "local")
-                os.makedirs(local_folder)  # Make dir for specification_local_data.json and project_local_data.json
+                os.makedirs(local_folder)  # Make dir for project_local_data.json
                 spec_f, project_f = self.copy_test_files_to_tempdir(local_folder, copy_mode=3)
-                # Upgrade
-                proj_v14 = pu.upgrade(proj_v13, project_dir)
+                issue_warning = mock.MagicMock()
+                proj_v14 = upgrade_project(proj_v13, project_dir, item_factories, issue_warning)  # Upgrade
                 mock_backup.assert_called_once()
                 mock_force_save.assert_called_once()
-                mock_mb.assert_called_once()
                 # Check that options dict has vanished from project dict
                 julia_tool_dict = proj_v14["items"]["Julia Tool Jupyter Console"]
-                self.assertIsNone(julia_tool_dict.get("options", None))
+                assert julia_tool_dict.get("options") is None
+                check_project_dict_valid(14, proj_v14)
                 # Check updated project_local_data.json
                 project_local_data_fpath = os.path.join(
                     project_dir, ".spinetoolbox", "local", "project_local_data.json"
                 )
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
-                self.assert_project_local_data3(pld)
-                self.assertTrue(pu.is_valid(14, proj_v14))
-                self.assertEqual(proj_v14["project"]["version"], 14)
-                self.assertIn("settings", proj_v14["project"])
+                expected = self.make_expected_project_local_data()
+                # Remove 'options' from tools except leave julia_sysimage into Julia Tool Jupyter Console
+                expected["Run SpineOpt"].pop("options")
+                expected["Julia Tool Jupyter Console"].pop("options")
+                expected["Julia Tool Jupyter Console"] = {"options": {"julia_sysimage": "/path/to/sysimg.dll"}}
+                expected["Python Tool Basic Console"].pop("options")
+                expected["Python Tool Jupyter Console"].pop("options")
+                expected["Run dir command"].pop("options")
+                expected["Run Batch File"].pop("options")
+                assert pld["items"] == expected
 
-    def assert_project_local_data3(self, pld):
-        self.assertEqual(6, len(pld["items"].keys()))
-        a = pld["items"]["Run SpineOpt"]
-        expected = {}
-        self.assertDictEqual(expected, a)
-        b = pld["items"]["Julia Tool Jupyter Console"]
-        expected = {
-            "options": {
-                "julia_sysimage": "C:/data/JuliaProjects/SpineOptProject-v0.8-julia-1.9/Run SpineOpt_JuliaSysimage.dll"
+    @staticmethod
+    def check_project_local_data_before_upgrade(pld):
+        expected_items = {
+            "Run SpineOpt": {},
+            "Julia Tool Jupyter Console": {},
+            "Python Tool Basic Console": {
+                "root_directory": {
+                    "type": "path",
+                    "relative": True,
+                    "path": ".",
+                }
+            },
+            "Python Tool Jupyter Console": {},
+            "Run dir command": {
+                "root_directory": {
+                    "type": "path",
+                    "relative": False,
+                    "path": "C:/data",
+                }
+            },
+            "Run Batch File": {
+                "root_directory": {
+                    "type": "path",
+                    "relative": True,
+                    "path": "batch_work_dir",
+                }
+            },
+        }
+        assert pld["items"] == expected_items
+
+    @staticmethod
+    def make_expected_project_local_data():
+        return {
+            "Run SpineOpt": {
+                "options": {
+                    "kernel_spec_name": "",
+                    "env": "",
+                    "use_jupyter_console": False,
+                    "executable": "C:\\Users\\toolbox_user\\AppData\\Local\\julias\\julia-1.11\\bin\\julia.exe",
+                    "project": "C:/data/JuliaProjects/SpineOptProject",
+                }
+            },
+            "Julia Tool Jupyter Console": {
+                "options": {
+                    "env": "",
+                    "kernel_spec_name": "julia-1.10",
+                    "use_jupyter_console": True,
+                    "executable": "",
+                    "project": "",
+                    "julia_sysimage": "/path/to/sysimg.dll",
+                }
+            },
+            "Python Tool Basic Console": {
+                "root_directory": {"type": "path", "relative": True, "path": "."},
+                "options": {
+                    "kernel_spec_name": "",
+                    "env": "",
+                    "use_jupyter_console": False,
+                    "executable": "some/python.exe",
+                }
+            },
+            "Python Tool Jupyter Console": {
+                "options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}
+            },
+            "Run dir command": {
+                "root_directory": {"type": "path", "relative": False, "path": "C:/data"},
+                "options": {"cmd": "dir", "shell": "cmd.exe"},
+            },
+            "Run Batch File": {
+                "root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"},
+                "options": {"cmd": "", "shell": "cmd.exe"},
             }
         }
-        self.assertDictEqual(expected, b)
-        c = pld["items"]["Python Tool Basic Console"]
-        expected = {"root_directory": {"type": "path", "relative": True, "path": "."}}
-        self.assertDictEqual(expected, c)
-        d = pld["items"]["Python Tool Jupyter Console"]
-        expected = {}
-        self.assertDictEqual(expected, d)
-        e = pld["items"]["Run dir command"]
-        expected = {"root_directory": {"type": "path", "relative": False, "path": "C:/data"}}
-        self.assertDictEqual(expected, e)
-        f = pld["items"]["Run Batch File"]
-        expected = {"root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"}}
-        self.assertDictEqual(expected, f)
 
     @staticmethod
     def copy_test_files_to_tempdir(dst_folder, copy_mode=1):
@@ -738,6 +674,10 @@ def make_v12_project_dict():
 
 def make_v13_project_dict():
     return _get_project_dict(13)
+
+
+def make_v14_project_dict():
+    return _get_project_dict(14)
 
 
 def _get_project_dict(v):
