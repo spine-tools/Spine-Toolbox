@@ -327,15 +327,28 @@ class ProjectBridge(QObject):
 
     @Slot(result=bool)
     def has_unselected_scenarios(self) -> bool:
-        """Returns whether any scenario-selectable item has a scenario disabled."""
-        project = self._load().get("project", {})
+        """Returns whether any scenario-selectable item has a scenario disabled, or any connection's
+        scenario/alternative filter has nothing enabled (so no data would pass through that link)."""
+        data = self._load()
+        project = data.get("project", {})
         scenarios = project.get("scenarios", [])
         selections = project.get("item_scenario_selection", {})
-        return any(
+        if any(
             not selections.get(name, {}).get(scenario, True)
             for name in project.get("scenario_selectable_items", [])
             for scenario in scenarios
-        )
+        ):
+            return True
+
+        local_data = self._load_local_data()
+        for connection in project.get("connections", []):
+            filter_type = self._connection_filter_type(connection)
+            if filter_type is None:
+                continue
+            filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
+            if filter_items and not any(item["enabled"] for item in filter_items):
+                return True
+        return False
 
     @Slot(str, str, bool, result=bool)
     def set_item_scenario_enabled(self, display_name: str, scenario_name: str, enabled: bool) -> bool:
@@ -546,7 +559,9 @@ class ProjectBridge(QObject):
             filter_type = self._connection_filter_type(connection)
             filter_required = filter_type is not None and self._connection_requires_filter(connection, filter_type)
             filter_satisfied = True
-            if filter_required:
+            if filter_type is not None:
+                # zero enabled items means nothing actually passes through the link, regardless of
+                # whether "require filter online" is set -- that flag only affects wording, not reality
                 filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
                 filter_satisfied = any(item["enabled"] for item in filter_items)
             connections.append(

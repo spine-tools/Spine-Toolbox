@@ -30,6 +30,17 @@ Rectangle {
     property bool executionRunning: false
     property ListModel executionLogModel: ListModel {}
 
+    // surfaces projectBridge.has_unselected_scenarios() in the top bar, refreshed whenever the
+    // workflow reloads or a scenario checkbox is toggled (see refreshScenarioWarning())
+    property bool hasUnselectedScenarios: false
+
+    function refreshScenarioWarning() {
+        if (typeof projectBridge === "undefined")
+            return
+
+        root.hasUnselectedScenarios = projectBridge.has_unselected_scenarios()
+    }
+
     // installs/runs a project's bundled setup script automatically, if it has one
     function offerProjectSetup() {
         if (typeof projectBridge === "undefined")
@@ -421,6 +432,7 @@ Rectangle {
         root.workflow = parsed
 
         connectionsCanvas.requestPaint()
+        root.refreshScenarioWarning()
     }
 
 
@@ -702,6 +714,44 @@ Rectangle {
                             font.pixelSize: 12
 
                             visible: root.width >= 700
+                        }
+                    }
+
+                    Rectangle {
+                        visible: root.hasUnselectedScenarios
+
+                        Layout.preferredWidth: scenarioWarningRow.width + 20
+                        Layout.preferredHeight: 30
+
+                        radius: 15
+                        color: "#fee2e2"
+                        border.color: "#dc2626"
+                        border.width: 1
+
+                        RowLayout {
+                            id: scenarioWarningRow
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Label {
+                                text: "\u26A0"
+                                color: "#dc2626"
+                                font.bold: true
+                            }
+
+                            Label {
+                                text: "Scenarios not selected"
+                                color: "#991b1b"
+                                font.pixelSize: 12
+                                font.bold: true
+                            }
+                        }
+
+                        ToolTip.visible: scenarioWarningHover.hovered
+                        ToolTip.text: "Some items have scenarios unchecked; those scenarios will be skipped when you run the project."
+
+                        HoverHandler {
+                            id: scenarioWarningHover
                         }
                     }
 
@@ -1072,9 +1122,9 @@ Rectangle {
                                 y: anchorPoint.y - height / 2
                                 z: 6
 
-                                width: 20
-                                height: 20
-                                radius: 10
+                                width: 28
+                                height: 28
+                                radius: 14
 
                                 color: modelData.filter_satisfied ? "#ffffff" : "#fee2e2"
                                 border.color: modelData.filter_satisfied ? "#7c9c88" : "#dc2626"
@@ -1082,8 +1132,9 @@ Rectangle {
 
                                 Label {
                                     anchors.centerIn: parent
-                                    text: modelData.filter_type === "scenario" ? "S" : "A"
-                                    font.pixelSize: 10
+                                    // "!" flags a required-but-unsatisfied filter without relying on the red color alone
+                                    text: modelData.filter_satisfied ? (modelData.filter_type === "scenario" ? "S" : "A") : "!"
+                                    font.pixelSize: 13
                                     font.bold: true
                                     color: modelData.filter_satisfied ? "#3d6b4f" : "#dc2626"
                                 }
@@ -1227,9 +1278,11 @@ Rectangle {
                                     checked: modelData.enabled
 
                                     onToggled: {
-                                        if (typeof projectBridge !== "undefined")
+                                        if (typeof projectBridge !== "undefined") {
                                             projectBridge.set_item_scenario_enabled(
                                                 scenarioDialog.itemName, modelData.name, checked)
+                                            root.refreshScenarioWarning()
+                                        }
                                     }
                                 }
                             }
