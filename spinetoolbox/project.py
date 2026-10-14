@@ -112,6 +112,8 @@ class SpineToolboxProject(MetaObject):
     item_about_to_be_removed = Signal(str)
     """Emitted before project item removal."""
     item_renamed = Signal(str, str)
+
+    item_hidden_changed = Signal(str, bool)
     """Emitted after project item has been renamed."""
     specification_added = Signal(str)
     """Emitted after a specification has been added."""
@@ -143,6 +145,7 @@ class SpineToolboxProject(MetaObject):
         self._connections = []
         self._jumps = []
         self._stacks: dict[str, dict] = {}
+        self._hidden_items: set[str] = set()
         self._logger = logger
         self._app_settings = app_settings
         self._settings = settings
@@ -295,6 +298,7 @@ class SpineToolboxProject(MetaObject):
             "connections": connection_dicts,
             "jumps": [jump.to_dict() for jump in self._jumps],
             "stacks": self._stacks,
+            "hidden_items": sorted(self._hidden_items),
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
@@ -472,6 +476,7 @@ class SpineToolboxProject(MetaObject):
         for jump in map(self.jump_from_dict, jump_dicts):
             self.add_jump(jump, silent=True)
         self._stacks = project_info["project"].get("stacks", {})
+        self._hidden_items = set(project_info["project"].get("hidden_items", []))
         if self._settings.mode == "consumer":
             replay_file_path = pathlib.Path(
                 self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_CONSUMER_REPLAY_FILENAME
@@ -832,6 +837,18 @@ class SpineToolboxProject(MetaObject):
     def remove_stack(self, key: str) -> None:
         """Removes the stack with the given key."""
         del self._stacks[key]
+
+    def is_item_hidden(self, item_name: str) -> bool:
+        """Returns whether item_name is hidden from the QML User Mode UI."""
+        return item_name in self._hidden_items
+
+    def set_item_hidden(self, item_name: str, hidden: bool) -> None:
+        """Adds or removes item_name from the set of items hidden from the QML User Mode UI."""
+        if hidden:
+            self._hidden_items.add(item_name)
+        else:
+            self._hidden_items.discard(item_name)
+        self.item_hidden_changed.emit(item_name, hidden)
 
     @property
     def connections(self):

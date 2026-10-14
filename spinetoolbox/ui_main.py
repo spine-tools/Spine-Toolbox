@@ -119,6 +119,7 @@ from .project_commands import (
     AddProjectItemsCommand,
     AddSpecificationCommand,
     GroupProjectItemsCommand,
+    HideProjectItemCommand,
     RemoveAllProjectItemsCommand,
     RemoveProjectItemsCommand,
     RemoveSpecificationCommand,
@@ -2031,6 +2032,11 @@ class ToolboxUI(QMainWindow):
                     menu.addSeparator()
                     menu.addAction(f"Run group '{self._project.stacks[key]['name']}'", lambda: self._run_group(key))
                     menu.addAction("Ungroup", lambda: self._ungroup(key))
+            menu.addSeparator()
+            hide_targets = {self._hide_target(name) for name in self._selected_item_names}
+            hidden = all(self._project.is_item_hidden(target) for target in hide_targets)
+            label = "Show in User Mode" if hidden else "Hide from User Mode"
+            menu.addAction(label, lambda: self._toggle_hidden_selected_items(not hidden))
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
@@ -2394,6 +2400,8 @@ class ToolboxUI(QMainWindow):
         self._project.project_execution_finished.connect(self._unset_execution_in_progress)
         self._project.item_added.connect(self.set_icon_and_properties_ui)
         self._project.item_added.connect(self.ui.graphicsView.add_icon)
+        self._project.item_added.connect(self._apply_item_hidden_appearance)
+        self._project.item_hidden_changed.connect(self._update_item_hidden_appearance)
         self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
         self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
         self._project.connection_updated.connect(self.ui.graphicsView.do_update_link)
@@ -2452,6 +2460,41 @@ class ToolboxUI(QMainWindow):
         """Removes a stack, leaving its member items untouched."""
         self.undo_stack.push(UngroupProjectItemsCommand(self._project, key))
         self._rebuild_group_frames()
+
+    def _toggle_hidden_selected_items(self, hidden: bool) -> None:
+        """Hides or unhides every selected item (or its stack, see _hide_target()) from User Mode."""
+        targets = {self._hide_target(name) for name in self._selected_item_names}
+        verb = "hide" if hidden else "unhide"
+        self.undo_stack.beginMacro(f"{verb} {len(targets)} item(s) from User Mode")
+        for target in targets:
+            self.undo_stack.push(HideProjectItemCommand(self._project, target, hidden))
+        self.undo_stack.endMacro()
+
+    def _hide_target(self, item_name: str) -> str:
+        """Returns the name project.json's hidden_items is keyed by for item_name: its stack's display
+        name if it belongs to one (stacks collapse to a single node in User Mode), otherwise itself."""
+        key = self._project.stack_of(item_name)
+        return self._project.stacks[key]["name"] if key is not None else item_name
+
+    def _items_for_hide_target(self, target: str) -> list[str]:
+        """Returns the project item name(s) target covers: a stack's member names if target is a
+        stack's display name, otherwise just [target]."""
+        for stack in self._project.stacks.values():
+            if stack["name"] == target:
+                return list(stack["items"])
+        return [target]
+
+    def _apply_item_hidden_appearance(self, item_name: str) -> None:
+        self._update_item_hidden_appearance(
+            self._hide_target(item_name), self._project.is_item_hidden(self._hide_target(item_name))
+        )
+
+    def _update_item_hidden_appearance(self, target: str, hidden: bool) -> None:
+        """Greys out target's icon(s) in Design View when hidden from the QML User Mode UI."""
+        for item_name in self._items_for_hide_target(target):
+            item = self._project.get_item(item_name) if item_name in self._project.all_item_names else None
+            if item is not None:
+                item.get_icon().setOpacity(0.35 if hidden else 1.0)
 
     @Slot(bool)
     def _stop_execution(self, _=False):
