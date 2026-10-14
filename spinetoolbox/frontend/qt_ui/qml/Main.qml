@@ -34,11 +34,16 @@ Rectangle {
     // workflow reloads or a scenario checkbox is toggled (see refreshScenarioWarning())
     property bool hasUnselectedScenarios: false
 
+    // surfaces projectBridge.has_starved_scenarios(): true when some item has no scenarios enabled
+    // and nothing else feeding the same downstream target does either, so it would run with no data
+    property bool hasStarvedScenarios: false
+
     function refreshScenarioWarning() {
         if (typeof projectBridge === "undefined")
             return
 
         root.hasUnselectedScenarios = projectBridge.has_unselected_scenarios()
+        root.hasStarvedScenarios = projectBridge.has_starved_scenarios()
     }
 
     // installs/runs a project's bundled setup script automatically, if it has one
@@ -433,8 +438,16 @@ Rectangle {
 
         connectionsCanvas.requestPaint()
         root.refreshScenarioWarning()
+        root.refreshAllScenarioInfo()
     }
 
+    // re-pulls each card's scenarioInfo; needed after any toggle since merge-group siblings can
+    // flip between "disabled_ok" and "error" depending on each other's state, not just their own
+    function refreshAllScenarioInfo() {
+        var names = Object.keys(root.nodeItems)
+        for (var i = 0; i < names.length; i++)
+            root.nodeItems[names[i]].refreshScenarioInfo()
+    }
 
     Component.onCompleted: {
         if (typeof projectBridge !== "undefined")
@@ -752,6 +765,55 @@ Rectangle {
 
                         HoverHandler {
                             id: scenarioWarningHover
+                        }
+                    }
+
+                    Rectangle {
+                        visible: root.hasStarvedScenarios
+
+                        Layout.preferredWidth: starvedWarningRow.width + 20
+                        Layout.preferredHeight: 30
+
+                        radius: 15
+                        color: "#dc2626"
+
+                        RowLayout {
+                            id: starvedWarningRow
+                            anchors.centerIn: parent
+                            spacing: 6
+
+                            Label {
+                                text: "\u26A0"
+                                color: "white"
+                                font.bold: true
+                            }
+
+                            Label {
+                                text: "No scenarios selected to run"
+                                color: "white"
+                                font.pixelSize: 12
+                                font.bold: true
+                            }
+                        }
+
+                        ToolTip.visible: starvedWarningHover.hovered
+                        ToolTip.text: {
+                            if (typeof projectBridge === "undefined")
+                                return ""
+
+                            var statuses = JSON.parse(projectBridge.get_scenario_status())
+                            var names = []
+                            for (var i = 0; i < statuses.length; i++) {
+                                if (statuses[i].state === "error")
+                                    names.push(statuses[i].name)
+                            }
+                            return names.length > 0
+                                    ? names.join(", ") + ": nothing will run for " + (names.length === 1 ? "this item" : "these items") + " \u2013 no other source supplies them either."
+                                    : ""
+                        }
+
+                        HoverHandler {
+                            id: starvedWarningHover
                         }
                     }
 
@@ -1095,6 +1157,7 @@ Rectangle {
                                 Component.onCompleted: {
                                     root.nodeItems[modelData.name] = this
                                     root.nodeItemsTick += 1
+                                    refreshScenarioInfo()
                                     connectionsCanvas.requestPaint()
                                 }
                             }
@@ -1126,17 +1189,27 @@ Rectangle {
                                 height: 28
                                 radius: 14
 
-                                color: modelData.filter_satisfied ? "#ffffff" : "#fee2e2"
-                                border.color: modelData.filter_satisfied ? "#7c9c88" : "#dc2626"
-                                border.width: modelData.filter_satisfied ? 1 : 2
+                                color: modelData.filter_state === "error" ? "#fee2e2" : "#ffffff"
+                                border.color: modelData.filter_state === "error"
+                                              ? "#dc2626"
+                                              : modelData.filter_state === "disabled_ok"
+                                                ? "#cbd5e1"
+                                                : "#7c9c88"
+                                border.width: modelData.filter_state === "error" ? 2 : 1
 
                                 Label {
                                     anchors.centerIn: parent
                                     // "!" flags a required-but-unsatisfied filter without relying on the red color alone
-                                    text: modelData.filter_satisfied ? (modelData.filter_type === "scenario" ? "S" : "A") : "!"
+                                    text: modelData.filter_state === "error"
+                                          ? "!"
+                                          : (modelData.filter_type === "scenario" ? "S" : "A")
                                     font.pixelSize: 13
                                     font.bold: true
-                                    color: modelData.filter_satisfied ? "#3d6b4f" : "#dc2626"
+                                    color: modelData.filter_state === "error"
+                                           ? "#dc2626"
+                                           : modelData.filter_state === "disabled_ok"
+                                             ? "#94a3b8"
+                                             : "#3d6b4f"
                                 }
 
                                 MouseArea {
@@ -1147,7 +1220,11 @@ Rectangle {
 
                                 ToolTip.visible: hoverHandler.hovered
                                 ToolTip.text: (modelData.filter_type === "scenario" ? "Scenario filter" : "Alternative filter")
-                                        + (modelData.filter_satisfied ? "" : " – needs at least one selection")
+                                        + (modelData.filter_state === "error"
+                                           ? " – needs at least one selection"
+                                           : modelData.filter_state === "disabled_ok"
+                                             ? " – nothing selected here, but another line into the same target is"
+                                             : "")
 
                                 HoverHandler {
                                     id: hoverHandler
@@ -1282,6 +1359,7 @@ Rectangle {
                                             projectBridge.set_item_scenario_enabled(
                                                 scenarioDialog.itemName, modelData.name, checked)
                                             root.refreshScenarioWarning()
+                                            root.refreshAllScenarioInfo()
                                         }
                                     }
                                 }
@@ -1726,6 +1804,25 @@ Rectangle {
         property real designY: 0
         property real sizeFactor: 1
 
+        // {total, enabled, state}: this item's scenario selection, where state is "ok" (will run),
+        // "disabled_ok" (none enabled, but a merge-group sibling covers it) or "error" (nothing
+        // will reach whatever this feeds); refreshed via refreshScenarioInfo()
+        property var scenarioInfo: ({ "total": 0, "enabled": 0, "state": "ok" })
+
+        function refreshScenarioInfo() {
+            if (typeof projectBridge === "undefined")
+                return
+
+            var statuses = JSON.parse(projectBridge.get_scenario_status())
+            for (var i = 0; i < statuses.length; i++) {
+                if (statuses[i].name === card.nodeName) {
+                    card.scenarioInfo = statuses[i]
+                    return
+                }
+            }
+            card.scenarioInfo = { "total": 0, "enabled": 0, "state": "ok" }
+        }
+
         // initial layout from project.json; dragging then takes over and owns x/y directly
         x: designX * sizeFactor
         y: designY * sizeFactor
@@ -1737,11 +1834,21 @@ Rectangle {
 
         color: selected ? "#eff6ff" : "#ffffff"
 
-        border.color: selected
-                      ? "#2563eb"
-                      : (hovered ? accent : (isStack ? Qt.lighter(accent, 1.6) : "#e2e8f0"))
+        // a card that will actually run (scenarios selected) gets a green highlight so the active
+        // path through a multi-branch workflow is traceable; errors stay red regardless of selection
+        border.color: scenarioInfo.state === "error"
+                      ? "#dc2626"
+                      : selected
+                        ? "#2563eb"
+                        : (scenarioInfo.state === "ok" && scenarioInfo.total > 0)
+                          ? "#16a34a"
+                          : (hovered ? accent : (isStack ? Qt.lighter(accent, 1.6) : "#e2e8f0"))
 
-        border.width: selected ? 3 : (hovered ? 2 : (isStack ? 2 : 1))
+        border.width: (scenarioInfo.state === "error" || selected)
+                      ? 3
+                      : (scenarioInfo.state === "ok" && scenarioInfo.total > 0)
+                        ? 2
+                        : (hovered ? 2 : (isStack ? 2 : 1))
 
         property bool hovered: false
 
@@ -1800,6 +1907,60 @@ Rectangle {
             color: "#ffffff"
             border.color: "#e2e8f0"
             border.width: 1
+        }
+
+        // marks whether this item/stack is set to run (green), harmlessly idle because a sibling
+        // branch covers the same target (neutral), or starved with nothing else to cover it (red)
+        Rectangle {
+            visible: card.scenarioInfo.total > 0
+
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.topMargin: -7 * card.sizeFactor
+            anchors.rightMargin: -7 * card.sizeFactor
+
+            z: 5
+
+            width: scenarioBadgeLabel.implicitWidth + 12 * card.sizeFactor
+            height: 18 * card.sizeFactor
+            radius: height / 2
+
+            color: card.scenarioInfo.state === "error"
+                   ? "#fee2e2"
+                   : card.scenarioInfo.state === "ok"
+                     ? "#dcfce7"
+                     : "#eef2ff"
+            border.color: card.scenarioInfo.state === "error"
+                          ? "#dc2626"
+                          : card.scenarioInfo.state === "ok"
+                            ? "#16a34a"
+                            : "#6366f1"
+            border.width: 1
+
+            Label {
+                id: scenarioBadgeLabel
+                anchors.centerIn: parent
+                text: (card.scenarioInfo.state === "error" ? "! " : card.scenarioInfo.state === "ok" ? "\u2713 " : "")
+                        + card.scenarioInfo.enabled + "/" + card.scenarioInfo.total
+                font.pixelSize: 10 * card.sizeFactor
+                font.bold: true
+                color: card.scenarioInfo.state === "error"
+                       ? "#dc2626"
+                       : card.scenarioInfo.state === "ok"
+                         ? "#15803d"
+                         : "#4338ca"
+            }
+
+            ToolTip.visible: scenarioBadgeHover.hovered
+            ToolTip.text: card.scenarioInfo.state === "error"
+                    ? "No scenarios selected and no other source supplies data here; nothing will run for " + card.title + "."
+                    : card.scenarioInfo.state === "disabled_ok"
+                      ? "No scenarios selected for " + card.title + ", but another connected source still supplies data."
+                      : card.scenarioInfo.enabled + " of " + card.scenarioInfo.total + " scenarios selected to run for " + card.title
+
+            HoverHandler {
+                id: scenarioBadgeHover
+            }
         }
 
         MouseArea {
