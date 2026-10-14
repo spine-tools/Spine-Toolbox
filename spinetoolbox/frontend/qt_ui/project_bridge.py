@@ -154,6 +154,41 @@ class ProjectBridge(QObject):
                 return list(stack.get("items", []))
         return [display_name]
 
+    def _visible_display_names(self, data: dict) -> set[str]:
+        """Returns the display names shown on the User Mode canvas (stacks collapsed to their display
+        name), minus anything listed in project.json's "hidden_items"."""
+        resolve = self._stack_resolver(data)
+        hidden = set(data.get("project", {}).get("hidden_items", []))
+        return {resolve(name) for name in data.get("items", {})} - hidden
+
+    def _direct_predecessors(self, data: dict, display_name: str) -> list[str]:
+        """Resolved display names with a direct connection into display_name."""
+        resolve = self._stack_resolver(data)
+        return [
+            resolve(connection["from"][0])
+            for connection in data.get("project", {}).get("connections", [])
+            if resolve(connection["to"][0]) == display_name
+        ]
+
+    def _direct_successors(self, data: dict, display_name: str) -> list[str]:
+        """Resolved display names with a direct connection out of display_name."""
+        resolve = self._stack_resolver(data)
+        return [
+            resolve(connection["to"][0])
+            for connection in data.get("project", {}).get("connections", [])
+            if resolve(connection["from"][0]) == display_name
+        ]
+
+    def _merge_group(self, data: dict, display_name: str) -> list[str]:
+        """Returns display_name plus any other scenario-selectable item that shares a direct downstream
+        target with it (single-hop only), so starvation can be judged per shared target rather than
+        per item in isolation."""
+        selectable = set(data.get("project", {}).get("scenario_selectable_items", []))
+        group = {display_name}
+        for target in self._direct_successors(data, display_name):
+            group.update(name for name in self._direct_predecessors(data, target) if name in selectable)
+        return list(group)
+
     def _find_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
         """Finds the raw project.json connection whose (possibly stacked) endpoints resolve to
         from_name/to_name, as returned by get_workflow."""
@@ -325,30 +360,50 @@ class ProjectBridge(QObject):
         selection = project.get("item_scenario_selection", {}).get(name, {})
         return json.dumps([{"name": scenario, "enabled": selection.get(scenario, True)} for scenario in scenarios])
 
-    @Slot(result=bool)
-    def has_unselected_scenarios(self) -> bool:
-        """Returns whether any scenario-selectable item has a scenario disabled, or any connection's
-        scenario/alternative filter has nothing enabled (so no data would pass through that link)."""
+    @Slot(result=str)
+    def get_scenario_status(self) -> str:
+        """Returns [{"name", "total", "enabled", "state"}, ...] for every visible scenario-selectable
+        item. state is "ok" (it has scenarios enabled), "disabled_ok" (none enabled here, but another
+        item feeding the same direct downstream target does), or "error" (none enabled here and nothing
+        else feeding the same target(s) does either, so that target would get no data from this side)."""
         data = self._load()
         project = data.get("project", {})
+        visible = self._visible_display_names(data)
         scenarios = project.get("scenarios", [])
         selections = project.get("item_scenario_selection", {})
-        if any(
-            not selections.get(name, {}).get(scenario, True)
-            for name in project.get("scenario_selectable_items", [])
-            for scenario in scenarios
-        ):
-            return True
 
-        local_data = self._load_local_data()
-        for connection in project.get("connections", []):
-            filter_type = self._connection_filter_type(connection)
-            if filter_type is None:
+        counts = {}
+        for name in project.get("scenario_selectable_items", []):
+            if name not in visible:
                 continue
-            filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
-            if filter_items and not any(item["enabled"] for item in filter_items):
-                return True
-        return False
+            selection = selections.get(name, {})
+            enabled = sum(1 for scenario in scenarios if selection.get(scenario, True))
+            counts[name] = enabled
+
+        statuses = []
+        for name, enabled in counts.items():
+            if enabled > 0:
+                state = "ok"
+            elif any(counts.get(sibling, 0) > 0 for sibling in self._merge_group(data, name) if sibling != name):
+                state = "disabled_ok"
+            else:
+                state = "error"
+            statuses.append({"name": name, "total": len(scenarios), "enabled": enabled, "state": state})
+        return json.dumps(statuses)
+
+    @Slot(result=bool)
+    def has_starved_scenarios(self) -> bool:
+        """Returns whether any visible scenario-selectable item is in get_scenario_status()'s "error" state."""
+        return any(item["state"] == "error" for item in json.loads(self.get_scenario_status()))
+
+    @Slot(result=bool)
+    def has_unselected_scenarios(self) -> bool:
+        """Returns whether any visible connection's scenario/alternative filter is in an "error" state
+        (nothing enabled on it, and no sibling line into the same target covers it either). Hidden
+        items/connections are ignored since they don't run in User Mode. Item-level scenario starvation
+        is covered separately by has_starved_scenarios()."""
+        data = self._load()
+        return any(connection["filter_state"] == "error" for connection in self._connection_filter_states(data))
 
     @Slot(str, str, bool, result=bool)
     def set_item_scenario_enabled(self, display_name: str, scenario_name: str, enabled: bool) -> bool:
@@ -435,11 +490,15 @@ class ProjectBridge(QObject):
     @Slot(list)
     def run_workflow(self, selected_names: list) -> None:
         """Runs the project (or, if selected_names is non-empty, just those items/stacks) via the
-        existing headless CLI, so execution reuses the real engine instead of reimplementing it here."""
+        existing headless CLI, so execution reuses the real engine instead of reimplementing it here.
+        An empty selected_names means "run project": defaults to every item visible in User Mode,
+        excluding anything hidden there."""
         if self._run_manager is not None:
             self.runStatusChanged.emit("A run is already in progress", "error")
             return
         data = self._load()
+        if not selected_names:
+            selected_names = self._visible_display_names(data)
         real_names = sorted(
             {name for display_name in selected_names for name in self._stack_members(data, display_name)}
         )
@@ -507,6 +566,67 @@ class ProjectBridge(QObject):
             return _EXAMPLE_PROJECT_NAME
         return ""
 
+    def _connection_filter_states(self, data: dict) -> list[dict]:
+        """Returns {"from", "to", "filter_type", "filter_required", "filter_satisfied", "filter_state"} for
+        every visible, de-duplicated (stack-collapsed) connection. filter_state is None when the connection
+        has no filter, else "ok"/"disabled_ok"/"error" -- an unsatisfied filter is only an "error" if no
+        sibling line into the same target is satisfied either (that sibling still supplies the target)."""
+        project = data.get("project", {})
+        resolve = self._stack_resolver(data)
+        visible = self._visible_display_names(data)
+        local_data = self._load_local_data()
+
+        connections = []
+        seen = set()
+        for connection in project.get("connections", []):
+            from_name = resolve(connection["from"][0])
+            to_name = resolve(connection["to"][0])
+            if from_name == to_name or from_name not in visible or to_name not in visible:
+                continue  # internal to a stack, hidden while collapsed, or not shown in User Mode
+            key = (from_name, to_name)
+            if key in seen:
+                continue
+            seen.add(key)
+            # mirrors the classic Qt UI's LoggingConnection.has_filters(): a link only ever carries a
+            # filterable database resource (so only ever needs a scenario/alternative pick) when one of
+            # its endpoints is actually a Data Store -- filter_settings can be present as leftover
+            # metadata on other links (e.g. Tool-to-Tool) where it has no real effect
+            filter_type = (
+                self._connection_filter_type(connection)
+                if self._connection_data_store(data, connection) is not None
+                else None
+            )
+            filter_required = filter_type is not None and self._connection_requires_filter(connection, filter_type)
+            filter_satisfied = True
+            if filter_type is not None:
+                # zero enabled items means nothing actually passes through the link, regardless of
+                # whether "require filter online" is set -- that flag only affects wording, not reality
+                filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
+                filter_satisfied = any(item["enabled"] for item in filter_items)
+            connections.append(
+                {
+                    "from": from_name,
+                    "to": to_name,
+                    "filter_type": filter_type,
+                    "filter_required": filter_required,
+                    "filter_satisfied": filter_satisfied,
+                }
+            )
+
+        for connection in connections:
+            if connection["filter_type"] is None:
+                connection["filter_state"] = None
+            elif connection["filter_satisfied"]:
+                connection["filter_state"] = "ok"
+            else:
+                siblings_satisfied = any(
+                    other["filter_satisfied"]
+                    for other in connections
+                    if other is not connection and other["to"] == connection["to"] and other["filter_type"] is not None
+                )
+                connection["filter_state"] = "disabled_ok" if siblings_satisfied else "error"
+        return connections
+
     @Slot(result=str)
     def get_workflow(self) -> str:
         """Returns items/connections as JSON, collapsing any project.json "stacks" into a single node each."""
@@ -541,44 +661,10 @@ class ProjectBridge(QObject):
                 {"name": name, "type": item_type, "x": item.get("x", 0.0), "y": item.get("y", 0.0), "subtitle": item_type}
             )
 
-        def resolve(name: str) -> str:
-            return item_to_stack.get(name, name)
-
-        local_data = self._load_local_data()
-        connections = []
-        seen = set()
-        for connection in project.get("connections", []):
-            from_name = resolve(connection["from"][0])
-            to_name = resolve(connection["to"][0])
-            if from_name == to_name:
-                continue  # internal to a stack, hidden while collapsed
-            key = (from_name, to_name)
-            if key in seen:
-                continue
-            seen.add(key)
-            filter_type = self._connection_filter_type(connection)
-            filter_required = filter_type is not None and self._connection_requires_filter(connection, filter_type)
-            filter_satisfied = True
-            if filter_type is not None:
-                # zero enabled items means nothing actually passes through the link, regardless of
-                # whether "require filter online" is set -- that flag only affects wording, not reality
-                filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
-                filter_satisfied = any(item["enabled"] for item in filter_items)
-            connections.append(
-                {
-                    "from": from_name,
-                    "to": to_name,
-                    "filter_type": filter_type,
-                    "filter_required": filter_required,
-                    "filter_satisfied": filter_satisfied,
-                }
-            )
-
         # items/stacks listed here stay in project.json untouched, just hidden from this simplified view
         hidden = set(project.get("hidden_items", []))
         items = [item for item in items if item["name"] not in hidden]
-        visible_names = {item["name"] for item in items}
-        connections = [c for c in connections if c["from"] in visible_names and c["to"] in visible_names]
+        connections = self._connection_filter_states(data)
 
         return json.dumps({"items": items, "connections": connections})
 
