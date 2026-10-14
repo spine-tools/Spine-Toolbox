@@ -1061,18 +1061,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         method = self.ui.comboBox_julia_execution_method.currentData()
         use_julia_jupyter_console = "2" if method == ExecutionMethod.JUPYTER else "0"
         data = get_current_item_data(self.ui.comboBox_julia_path, self._models.julia_executables_model)
-        if not data:
-            julia_exe = ""
-        else:
-            julia_exe = data["exe"]
+        julia_exe = data["exe"] if data is not None else ""
         project_data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
-        julia_project = project_data["path"]
+        julia_project = project_data["path"] if project_data is not None else ""
         julia_kernel = ""
         is_julia_conda_kernel = "0"
         if self.ui.comboBox_julia_kernel.currentIndex() != 0:
             kernel_data = get_current_item_data(self.ui.comboBox_julia_kernel, self._models.julia_kernel_model)
-            julia_kernel = kernel_data["kernel_name"]
-            is_julia_conda_kernel = "2" if kernel_data["is_conda"] else "0"
+            julia_kernel = kernel_data["kernel_name"] if kernel_data is not None else ""
+            is_conda = kernel_data["is_conda"] if kernel_data is not None else False
+            is_julia_conda_kernel = "2" if is_conda else "0"
         return {
             "use_julia_jupyter_console": use_julia_jupyter_console,
             "julia_exe": julia_exe,
@@ -1086,14 +1084,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         method = self.ui.comboBox_python_execution_method.currentData()
         use_python_jupyter_console = "2" if method == ExecutionMethod.JUPYTER else "0"
         data = get_current_item_data(self.ui.comboBox_python_interpreters, self._models.python_interpreters_model)
-        python_exe = data["exe"]
+        python_exe = data["exe"] if data is not None else ""
         python_kernel = ""
         is_python_conda_kernel = "0"
         if self.ui.comboBox_python_kernels.currentIndex() != 0:
             kernel_data = get_current_item_data(self.ui.comboBox_python_kernels, self._models.python_kernel_model)
-            print(f"Python kernel_data.items():{kernel_data.items()}")
-            python_kernel = kernel_data["kernel_name"]
-            is_python_conda_kernel = "2" if kernel_data["is_conda"] else "0"
+            python_kernel = kernel_data["kernel_name"] if kernel_data is not None else ""
+            is_conda = kernel_data["is_conda"] if kernel_data is not None else False
+            is_python_conda_kernel = "2" if is_conda else "0"
         return {
             "use_python_jupyter_console": use_python_jupyter_console,
             "python_exe": python_exe,

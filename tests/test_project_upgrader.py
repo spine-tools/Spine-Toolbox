@@ -124,7 +124,9 @@ class TestCheckProjectDictValid:
             "project": {},
             "items": {},
         }
-        with pytest.raises(InvalidProjectDict, match="^Invalid project.json file. Key 'settings' not found in 'project'.$"):
+        with pytest.raises(
+            InvalidProjectDict, match="^Invalid project.json file. Key 'settings' not found in 'project'.$"
+        ):
             check_project_dict_valid(14, invalid_p)
 
 
@@ -411,8 +413,7 @@ class TestUpgradeProject:
                 with open(project_local_data_fpath) as fp:
                     pld = json.load(fp)
                 assert pld["items"] == {
-                    "Julia Tool Jupyter Console":
-                        {"options": {"julia_sysimage": "/path/to/sysimg.dll"}}
+                    "Julia Tool Jupyter Console": {"options": {"julia_sysimage": "/path/to/sysimg.dll"}}
                 }
 
     def test_upgrade_v13_to_v14_with_missing_local_project_data(self):
@@ -553,7 +554,7 @@ class TestUpgradeProject:
                     "env": "",
                     "use_jupyter_console": False,
                     "executable": "some/python.exe",
-                }
+                },
             },
             "Python Tool Jupyter Console": {
                 "options": {"env": "", "kernel_spec_name": "python312", "use_jupyter_console": True, "executable": ""}
@@ -565,7 +566,7 @@ class TestUpgradeProject:
             "Run Batch File": {
                 "root_directory": {"type": "path", "relative": True, "path": "batch_work_dir"},
                 "options": {"cmd": "", "shell": "cmd.exe"},
-            }
+            },
         }
 
     @staticmethod
