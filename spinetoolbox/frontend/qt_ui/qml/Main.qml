@@ -212,158 +212,98 @@ Rectangle {
         }
     }
 
-    // assigns each item a (rank, lane) grid slot: rank = column by dependency depth (from -> to),
-    // lane = row, reused from a node's single predecessor so linear chains stay on the same row
+    // preserves Design View item centers while enlarging the distances to fit the larger cards
     function layoutWorkflow(items, connections) {
-        var incoming = ({})
-        var rank = ({})
+        if (items.length === 0)
+            return { width: root.designContentWidth, height: root.designContentHeight }
 
-        for (var i = 0; i < items.length; i++) {
-            incoming[items[i].name] = []
-            rank[items[i].name] = 0
+        var minX = items[0].x, minY = items[0].y, maxX = items[0].x, maxY = items[0].y
+
+        for (var i = 1; i < items.length; i++) {
+            minX = Math.min(minX, items[i].x)
+            minY = Math.min(minY, items[i].y)
+            maxX = Math.max(maxX, items[i].x)
+            maxY = Math.max(maxY, items[i].y)
         }
 
-        for (var c = 0; c < connections.length; c++) {
-            var connection = connections[c]
-            if (incoming[connection.to] !== undefined && incoming[connection.from] !== undefined)
-                incoming[connection.to].push(connection.from)
-        }
-
-        // longest path from a source node, found by relaxing edges until nothing changes
-        var changed = true
-        var guard = 0
-
-        while (changed && guard < items.length + 5) {
-            changed = false
-            guard++
-
-            for (var j = 0; j < connections.length; j++) {
-                var conn = connections[j]
-                if (rank[conn.from] === undefined || rank[conn.to] === undefined)
-                    continue
-                if (rank[conn.from] + 1 > rank[conn.to]) {
-                    rank[conn.to] = rank[conn.from] + 1
-                    changed = true
-                }
-            }
-        }
-
-        var maxRank = 0
-        for (var k = 0; k < items.length; k++)
-            maxRank = Math.max(maxRank, rank[items[k].name])
-
-        var laneUsedByRank = []
-        for (var r = 0; r <= maxRank; r++)
-            laneUsedByRank.push(({}))
-
-        function claimLane(atRank, preferredLane) {
-            var used = laneUsedByRank[atRank]
-            var candidate = preferredLane
-
-            while (used[candidate] !== undefined)
-                candidate++
-
-            used[candidate] = true
-            return candidate
-        }
-
-        var lane = ({})
-        var ordered = items.slice().sort(function (a, b) { return rank[a.name] - rank[b.name] })
-
-        // Anchor specific known inputs so they appear in the desired vertical order.
-        // Keep the main chain (Input data -> FlexTool -> Output info) on the middle
-        // lane, with `Excel input`/`Examples` straddling it above/below so their
-        // midpoint lines up with the chain, and `Project folder` clearly lower.
-        var namePreferences = {
-            "Excel input": 0,
-            "Input data": 1,
-            "FlexTool": 1,
-            "Output info": 1,
-            "Examples": 2,
-            "Project folder": 4
-        }
-
-        for (var prefName in namePreferences) {
-            if (rank[prefName] !== undefined && lane[prefName] === undefined) {
-                try {
-                    lane[prefName] = claimLane(rank[prefName], namePreferences[prefName])
-                } catch (e) {
-                    // ignore and continue if something unexpected occurs
-                }
-            }
-        }
-
-        for (var o = 0; o < ordered.length; o++) {
-            var item = ordered[o]
-
-            // If a lane was preassigned (anchored) for this item, keep it.
-            if (lane[item.name] !== undefined)
-                continue
-            var preds = incoming[item.name] || []
-            var preferred = 0
-
-            if (preds.length === 1 && lane[preds[0]] !== undefined) {
-                preferred = lane[preds[0]]
-            } else if (preds.length > 1) {
-                var sum = 0
-                var count = 0
-                var predLanes = []
-                var predRanks = []
-
-                for (var p = 0; p < preds.length; p++) {
-                    var pn = preds[p]
-                    if (lane[pn] !== undefined) {
-                        sum += lane[pn]
-                        count++
-                        predLanes.push(lane[pn])
-                        predRanks.push(rank[pn])
-                    }
-                }
-
-                // If predecessors come from different lanes/ranks, prefer placing this
-                // node on a new lane below the maximum predecessor lane to avoid
-                // connectors crossing through unrelated nodes.
-                var allPredLanesEqual = predLanes.length > 0
-                for (var i = 1; i < predLanes.length; i++) {
-                    if (predLanes[i] !== predLanes[0]) {
-                        allPredLanesEqual = false
-                        break
-                    }
-                }
-
-                var allPredRanksEqual = predRanks.length > 0
-                for (var i = 1; i < predRanks.length; i++) {
-                    if (predRanks[i] !== predRanks[0]) {
-                        allPredRanksEqual = false
-                        break
-                    }
-                }
-
-                if (!allPredLanesEqual || !allPredRanksEqual) {
-                    // push below the lowest (max) predecessor lane
-                    preferred = predLanes.length > 0 ? Math.max.apply(Math, predLanes) + 1 : 0
-                } else {
-                    preferred = count > 0 ? Math.round(sum / count) : 0
-                }
-            }
-
-            lane[item.name] = claimLane(rank[item.name], preferred)
-        }
-
-        var columnWidth = 190
-        var rowHeight = 96
-        var padding = 40
-        var maxLane = 0
+        var scale = 1.8
+        var padding = 60
+        var alignedX = []
+        var itemIndex = ({})
+        var layoutOrder = []
 
         for (var m = 0; m < items.length; m++) {
-            items[m].px = padding + rank[items[m].name] * columnWidth
-            items[m].py = padding + lane[items[m].name] * rowHeight
-            maxLane = Math.max(maxLane, lane[items[m].name])
+            alignedX[m] = items[m].x
+            itemIndex[items[m].name] = m
+            layoutOrder.push({index: m, y: items[m].y})
+            items[m].px = padding + (items[m].x - minX) * scale
+            items[m].py = padding + (items[m].y - minY) * scale
+        }
+
+        layoutOrder.sort(function(a, b) { return a.y - b.y })
+
+        var rowForItem = []
+        var rowAnchors = []
+        var rowYTotals = []
+        var rowSizes = []
+        var rowCenters = []
+        var rowCount = 0
+        var rowTolerance = 74 / scale
+        for (var j = 0; j < layoutOrder.length; j++) {
+            var rowEntry = layoutOrder[j]
+            if (rowCount === 0 || rowEntry.y - rowAnchors[rowCount - 1] >= rowTolerance) {
+                rowAnchors.push(rowEntry.y)
+                rowYTotals.push(rowEntry.y)
+                rowSizes.push(1)
+                rowCount++
+            } else {
+                rowYTotals[rowCount - 1] += rowEntry.y
+                rowSizes[rowCount - 1]++
+            }
+            rowForItem[rowEntry.index] = rowCount - 1
+        }
+
+        for (var r = 0; r < rowCount; r++)
+            rowCenters[r] = rowYTotals[r] / rowSizes[r]
+        for (var n = 0; n < items.length; n++)
+            items[n].py = padding + (rowCenters[rowForItem[n]] - minY) * scale
+
+        for (var row = 1; row < rowCount; row++) {
+            for (var targetIndex = 0; targetIndex < items.length; targetIndex++) {
+                if (rowForItem[targetIndex] !== row)
+                    continue
+                var bestAbove = -1
+                var bestAboveRow = -1
+                var bestHorizontalDistance = Infinity
+                for (var c = 0; c < connections.length; c++) {
+                    var connection = connections[c]
+                    var otherName = connection.from === items[targetIndex].name
+                            ? connection.to
+                            : (connection.to === items[targetIndex].name ? connection.from : "")
+                    if (!otherName)
+                        continue
+                    var otherIndex = itemIndex[otherName]
+                    if (otherIndex === undefined || rowForItem[otherIndex] >= row)
+                        continue
+                    var otherRow = rowForItem[otherIndex]
+                    var horizontalDistance = Math.abs(items[targetIndex].x - alignedX[otherIndex])
+                    if (otherRow > bestAboveRow
+                            || (otherRow === bestAboveRow && horizontalDistance < bestHorizontalDistance)) {
+                        bestAbove = otherIndex
+                        bestAboveRow = otherRow
+                        bestHorizontalDistance = horizontalDistance
+                    }
+                }
+                if (bestAbove >= 0) {
+                    alignedX[targetIndex] = alignedX[bestAbove]
+                    items[targetIndex].px = padding + (alignedX[targetIndex] - minX) * scale
+                }
+            }
         }
 
         return {
-            width: padding * 2 + (maxRank + 1) * columnWidth,
-            height: padding * 2 + (maxLane + 1) * rowHeight
+            width: padding * 2 + (maxX - minX) * scale + 150,
+            height: padding * 2 + (maxY - minY) * scale + 74
         }
     }
 
@@ -371,22 +311,66 @@ Rectangle {
     // on the actual drawn path: a straight line when both cards share a row, otherwise the elbow's
     // vertical turn (see connectionsCanvas.drawConnection)
     function connectionRoute(from, to) {
-        var startX = from.x + from.width
-        var startY = from.y + from.height / 2
-        var endX = to.x
-        var endY = to.y + to.height / 2
+        var fromCenterX = from.x + from.width / 2
+        var fromCenterY = from.y + from.height / 2
+        var toCenterX = to.x + to.width / 2
+        var toCenterY = to.y + to.height / 2
 
-        var dir = endY > startY ? 1 : (endY < startY ? -1 : 0)
+        var horizontalOverlap = Math.abs(toCenterX - fromCenterX) < (from.width + to.width) / 2
+        if (horizontalOverlap && Math.abs(toCenterY - fromCenterY) > (from.height + to.height) / 2) {
+            var flowDir = toCenterY > fromCenterY ? 1 : -1
+            var startX = fromCenterX
+            var startY = flowDir > 0 ? from.y + from.height : from.y
+            var endX = toCenterX
+            var endY = flowDir > 0 ? to.y : to.y + to.height
+            var dx = endX - startX
+            var sideDir = dx > 0 ? 1 : (dx < 0 ? -1 : 0)
+            var bent = sideDir !== 0
+            var turnY = (startY + endY) / 2
+            var radius = bent ? Math.max(2, Math.min(12, Math.abs(dx) / 2, Math.abs(endY - startY) / 2)) : 0
+
+            return {
+                orientation: "v", startX: startX, startY: startY, endX: endX, endY: endY,
+                dir: sideDir, bent: bent, radius: radius, turn: turnY, approachDir: flowDir
+            }
+        }
+
+        var startX = from.x + from.width
+        var startY = fromCenterY
+
+        // when the target sits behind the source, enter its right edge instead of its left edge:
+        // entering the left edge would mean looping the line back over the card to reach it
+        var backward = toCenterX < startX
+        var endX = backward ? to.x + to.width : to.x
+        var endY = toCenterY
+
+        // ignore sub-row y differences: cards that look row-aligned shouldn't get an elbow whose
+        // short vertical jog lands right on top of a filter badge
+        var rowTolerance = Math.min(from.height, to.height) / 4
+        var dy = endY - startY
+        var dir = dy > rowTolerance ? 1 : (dy < -rowTolerance ? -1 : 0)
         var span = endX - startX
-        var bent = dir !== 0 && span > 0
-        var radius = bent ? Math.max(2, Math.min(16, span / 2, Math.abs(endY - startY) / 2)) : 0
-        var turnX = bent
-                ? (span > 60 ? Math.max(startX + radius, endX - Math.max(24, span * 0.15)) : startX + span / 2)
-                : (startX + endX) / 2
+        // bend whenever rows differ, even if the target sits behind the source (real design
+        // positions aren't always left-to-right), so we never fall back to a diagonal line
+        // that cuts straight across unrelated cards
+        var bent = dir !== 0
+        var margin = 24
+        var radius = bent ? Math.max(2, Math.min(16, Math.abs(span) / 2 || margin, Math.abs(dy) / 2)) : 0
+        var turnX
+        if (!bent)
+            turnX = (startX + endX) / 2
+        else if (!backward)
+            turnX = span > 60 ? Math.max(startX + radius, endX - Math.max(24, span * 0.15)) : startX + span / 2
+        else
+            turnX = Math.max(startX, endX) + margin  // stay clear of both cards, then drop into the target's right edge
+
+        // which way the final segment arrives at endX, so the arrowhead points the right way
+        var approachDir = bent ? (backward ? -1 : 1) : (endX >= startX ? 1 : -1)
 
         return {
+            orientation: "h",
             startX: startX, startY: startY, endX: endX, endY: endY,
-            dir: dir, bent: bent, radius: radius, turnX: turnX
+            dir: dir, bent: bent, radius: radius, turn: turnX, approachDir: approachDir
         }
     }
 
@@ -400,8 +384,12 @@ Rectangle {
             return Qt.point(0, 0)
 
         var route = root.connectionRoute(fromItem, toItem)
+        if (route.orientation === "v")
+            return route.bent
+                ? Qt.point((route.startX + route.endX) / 2, route.turn)
+                : Qt.point(route.startX, (route.startY + route.endY) / 2)
         return route.bent
-                ? Qt.point(route.turnX, (route.startY + route.endY) / 2)
+                ? Qt.point(route.turn, (route.startY + route.endY) / 2)
                 : Qt.point((route.startX + route.endX) / 2, (route.startY + route.endY) / 2)
     }
 
@@ -426,7 +414,10 @@ Rectangle {
             root.designContentHeight = size.height + 34
         }
 
-        root.nodeItems = ({})
+        // don't clear nodeItems here: the Repeater reuses existing WorkflowCard delegates when the
+        // new items array has the same length, so Component.onCompleted (the only place that
+        // populates nodeItems) wouldn't refire and repopulate them, permanently losing valid
+        // references and making every connection line and filter badge vanish
         root.workflow = parsed
 
         connectionsCanvas.requestPaint()
@@ -769,9 +760,32 @@ Rectangle {
 
                             if (root.executionRunning)
                                 projectBridge.stop_workflow()
-                            else
-                                projectBridge.run_workflow(Object.keys(root.selectedNames))
+                            else {
+                                var selectedNames = Object.keys(root.selectedNames)
+                                if (selectedNames.length === 0 && projectBridge.has_unselected_scenarios())
+                                    unselectedScenariosDialog.open()
+                                else
+                                    projectBridge.run_workflow(selectedNames)
+                            }
                         }
+                    }
+
+                    Dialog {
+                        id: unselectedScenariosDialog
+
+                        anchors.centerIn: parent
+                        modal: true
+                        width: 380
+                        title: "Scenarios not selected"
+                        standardButtons: Dialog.Ok | Dialog.Cancel
+
+                        contentItem: Label {
+                            text: "Some scenarios are unchecked. Run the whole workflow anyway?"
+                            wrapMode: Text.WordWrap
+                            padding: 12
+                        }
+
+                        onAccepted: projectBridge.run_workflow([])
                     }
 
                     ToolButton {
@@ -916,36 +930,38 @@ Rectangle {
                                 ctx.beginPath()
                                 ctx.moveTo(route.startX, route.startY)
 
-                                // Every connector uses the same elbow routing: stay on the source's
-                                // row (which is otherwise clear) and only turn towards the target row
-                                // right before reaching it, instead of cutting diagonally across other
-                                // cards. When both cards share a row this naturally collapses to a
-                                // straight line.
                                 if (route.bent) {
-                                    ctx.lineTo(route.turnX - route.radius, route.startY)
-                                    ctx.quadraticCurveTo(route.turnX, route.startY, route.turnX, route.startY + route.radius * route.dir)
-                                    ctx.lineTo(route.turnX, route.endY - route.radius * route.dir)
-                                    ctx.quadraticCurveTo(route.turnX, route.endY, route.turnX + route.radius, route.endY)
+                                    if (route.orientation === "v") {
+                                        ctx.lineTo(route.startX, route.turn - route.radius * route.approachDir)
+                                        ctx.quadraticCurveTo(route.startX, route.turn, route.startX + route.radius * route.dir, route.turn)
+                                        ctx.lineTo(route.endX - route.radius * route.dir, route.turn)
+                                        ctx.quadraticCurveTo(route.endX, route.turn, route.endX, route.turn + route.radius * route.approachDir)
+                                    } else {
+                                        ctx.lineTo(route.turn - route.radius, route.startY)
+                                        ctx.quadraticCurveTo(route.turn, route.startY, route.turn, route.startY + route.radius * route.dir)
+                                        ctx.lineTo(route.turn, route.endY - route.radius * route.dir)
+                                        ctx.quadraticCurveTo(route.turn, route.endY, route.turn + route.radius * route.approachDir, route.endY)
+                                    }
                                 }
 
                                 ctx.lineTo(route.endX, route.endY)
 
                                 ctx.stroke()
 
-                                // Arrow head
+                                // Arrow head: points against the approach direction (e.g. left-pointing
+                                // when the line arrives from the right, for a connection entering a card's right edge)
                                 var arrowSize = 7
 
                                 ctx.beginPath()
 
                                 ctx.moveTo(route.endX, route.endY)
-                                ctx.lineTo(
-                                    route.endX - arrowSize,
-                                    route.endY - arrowSize / 2
-                                )
-                                ctx.lineTo(
-                                    route.endX - arrowSize,
-                                    route.endY + arrowSize / 2
-                                )
+                                if (route.orientation === "v") {
+                                    ctx.lineTo(route.endX - arrowSize / 2, route.endY - arrowSize * route.approachDir)
+                                    ctx.lineTo(route.endX + arrowSize / 2, route.endY - arrowSize * route.approachDir)
+                                } else {
+                                    ctx.lineTo(route.endX - arrowSize * route.approachDir, route.endY - arrowSize / 2)
+                                    ctx.lineTo(route.endX - arrowSize * route.approachDir, route.endY + arrowSize / 2)
+                                }
                                 ctx.closePath()
 
                                 ctx.fillStyle = "#7c9c88"

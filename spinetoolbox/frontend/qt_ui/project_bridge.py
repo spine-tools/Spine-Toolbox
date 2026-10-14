@@ -325,6 +325,18 @@ class ProjectBridge(QObject):
         selection = project.get("item_scenario_selection", {}).get(name, {})
         return json.dumps([{"name": scenario, "enabled": selection.get(scenario, True)} for scenario in scenarios])
 
+    @Slot(result=bool)
+    def has_unselected_scenarios(self) -> bool:
+        """Returns whether any scenario-selectable item has a scenario disabled."""
+        project = self._load().get("project", {})
+        scenarios = project.get("scenarios", [])
+        selections = project.get("item_scenario_selection", {})
+        return any(
+            not selections.get(name, {}).get(scenario, True)
+            for name in project.get("scenario_selectable_items", [])
+            for scenario in scenarios
+        )
+
     @Slot(str, str, bool, result=bool)
     def set_item_scenario_enabled(self, display_name: str, scenario_name: str, enabled: bool) -> bool:
         """Stores whether scenario_name is enabled for display_name in project.json's
