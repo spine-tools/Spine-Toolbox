@@ -219,6 +219,29 @@ class UngroupProjectItemsCommand(SpineToolboxCommand):
         self._project.add_stack(self._name, self._item_names, key=self._key)
 
 
+class HideProjectItemCommand(SpineToolboxCommand):
+    """Command to hide/unhide a project item from the QML User Mode UI."""
+
+    def __init__(self, project, item_name, hidden):
+        """
+        Args:
+            project (SpineToolboxProject): the project
+            item_name (str): item to hide/unhide
+            hidden (bool): True to hide, False to unhide
+        """
+        super().__init__()
+        self._project = project
+        self._item_name = item_name
+        self._hidden = hidden
+        self.setText(f"{'hide' if hidden else 'unhide'} '{item_name}' from User Mode")
+
+    def redo(self):
+        self._project.set_item_hidden(self._item_name, self._hidden)
+
+    def undo(self):
+        self._project.set_item_hidden(self._item_name, not self._hidden)
+
+
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     """Command to remove all items from project."""
 
