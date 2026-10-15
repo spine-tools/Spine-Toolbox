@@ -1027,7 +1027,7 @@ Rectangle {
                             // but below a card actively being dragged (z: 10)
                             z: 5
 
-                            function drawConnection(ctx, fromItem, toItem) {
+                            function drawConnection(ctx, fromItem, toItem, state) {
                                 var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
                                 var to = toItem.mapToItem(connectionsCanvas, 0, 0)
 
@@ -1036,8 +1036,11 @@ Rectangle {
                                     {x: to.x, y: to.y, width: toItem.width, height: toItem.height}
                                 )
 
-                                ctx.strokeStyle = "#7c9c88"
-                                ctx.lineWidth = 2
+                                // bold + saturated for a line that will actually carry data when run, thin and
+                                // pale when it's idle (another line covers the target), reddish when broken
+                                var lineColor = state === "idle" ? "#c7d2d6" : state === "error" ? "#dc2626" : "#2f6b4a"
+                                ctx.strokeStyle = lineColor
+                                ctx.lineWidth = state === "idle" ? 1.5 : 3
 
                                 ctx.beginPath()
                                 ctx.moveTo(route.startX, route.startY)
@@ -1076,7 +1079,7 @@ Rectangle {
                                 }
                                 ctx.closePath()
 
-                                ctx.fillStyle = "#7c9c88"
+                                ctx.fillStyle = lineColor
                                 ctx.fill()
                             }
 
@@ -1092,8 +1095,12 @@ Rectangle {
                                     var fromItem = root.nodeItems[connection.from]
                                     var toItem = root.nodeItems[connection.to]
 
-                                    if (fromItem && toItem)
-                                        drawConnection(ctx, fromItem, toItem)
+                                    if (fromItem && toItem) {
+                                        var state = connection.filter_type === null || connection.filter_state === "ok"
+                                                ? "active"
+                                                : connection.filter_state === "error" ? "error" : "idle"
+                                        drawConnection(ctx, fromItem, toItem, state)
+                                    }
                                 }
                             }
                         }
@@ -1193,9 +1200,10 @@ Rectangle {
                                 border.color: modelData.filter_state === "error"
                                               ? "#dc2626"
                                               : modelData.filter_state === "disabled_ok"
-                                                ? "#cbd5e1"
-                                                : "#7c9c88"
-                                border.width: modelData.filter_state === "error" ? 2 : 1
+                                                ? "#dbe3de"
+                                                : "#2f6b4a"
+                                border.width: modelData.filter_state === "disabled_ok" ? 1 : 2
+                                opacity: modelData.filter_state === "disabled_ok" ? 0.6 : 1.0
 
                                 Label {
                                     anchors.centerIn: parent
@@ -1204,12 +1212,12 @@ Rectangle {
                                           ? "!"
                                           : (modelData.filter_type === "scenario" ? "S" : "A")
                                     font.pixelSize: 13
-                                    font.bold: true
+                                    font.bold: modelData.filter_state !== "disabled_ok"
                                     color: modelData.filter_state === "error"
                                            ? "#dc2626"
                                            : modelData.filter_state === "disabled_ok"
                                              ? "#94a3b8"
-                                             : "#3d6b4f"
+                                             : "#2f6b4a"
                                 }
 
                                 MouseArea {
@@ -1832,23 +1840,44 @@ Rectangle {
 
         radius: 10 * sizeFactor
 
-        color: selected ? "#eff6ff" : "#ffffff"
+        // true when every scenario/alternative-filtered link leaving this card has nothing chosen
+        // (a stack's own selectable items surface only as filters on its outgoing links)
+        property bool filtersUnchosen: {
+            var connections = root.workflow.connections || []
+            var filtered = 0
+            for (var i = 0; i < connections.length; i++) {
+                var connection = connections[i]
+                if (connection.from !== nodeName || !connection.filter_type)
+                    continue
+                if (connection.filter_state === "ok")
+                    return false
+                filtered++
+            }
+            return filtered > 0
+        }
 
-        // a card that will actually run (scenarios selected) gets a green highlight so the active
-        // path through a multi-branch workflow is traceable; errors stay red regardless of selection
+        color: active ? "#ffffff" : "#e5e7eb"
+
+        // a card that will actually run (scenarios selected) gets a bold green highlight so the active
+        // path through a multi-branch workflow is traceable; one that's idle because a sibling covers
+        // its target instead fades out; errors stay red regardless of selection
+        opacity: scenarioInfo.state === "disabled_ok" ? 0.55 : 1.0
+
+        // stacks and plain items share the same neutral default look; only active/error/selection state
+        // (not item kind) should stand out, so the accent color here is type-coded only for hover/icons
+        property bool active: scenarioInfo.state === "ok" && !filtersUnchosen
+
         border.color: scenarioInfo.state === "error"
                       ? "#dc2626"
                       : selected
                         ? "#2563eb"
-                        : (scenarioInfo.state === "ok" && scenarioInfo.total > 0)
-                          ? "#16a34a"
-                          : (hovered ? accent : (isStack ? Qt.lighter(accent, 1.6) : "#e2e8f0"))
+                        : active
+                          ? "#2f6b4a"
+                          : (hovered ? accent : "#e2e8f0")
 
-        border.width: (scenarioInfo.state === "error" || selected)
+        border.width: (scenarioInfo.state === "error" || selected || active)
                       ? 3
-                      : (scenarioInfo.state === "ok" && scenarioInfo.total > 0)
-                        ? 2
-                        : (hovered ? 2 : (isStack ? 2 : 1))
+                      : (hovered ? 2 : 1)
 
         property bool hovered: false
 
@@ -1866,19 +1895,6 @@ Rectangle {
         // redraw arrows as the card is dragged around
         onXChanged: connectionsCanvas.requestPaint()
         onYChanged: connectionsCanvas.requestPaint()
-
-        // Shadow-ish background
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 2
-
-            z: -1
-
-            radius: parent.radius
-
-            color: "#000000"
-            opacity: 0.04
-        }
 
         // extra offset layers behind the card give a collapsed stack a "deck of cards" look
         Rectangle {
@@ -1929,13 +1945,13 @@ Rectangle {
                    ? "#fee2e2"
                    : card.scenarioInfo.state === "ok"
                      ? "#dcfce7"
-                     : "#eef2ff"
+                     : "#f1f5f9"
             border.color: card.scenarioInfo.state === "error"
                           ? "#dc2626"
                           : card.scenarioInfo.state === "ok"
-                            ? "#16a34a"
-                            : "#6366f1"
-            border.width: 1
+                            ? "#15803d"
+                            : "#cbd5e1"
+            border.width: card.scenarioInfo.state === "disabled_ok" ? 1 : 2
 
             Label {
                 id: scenarioBadgeLabel
@@ -1943,12 +1959,12 @@ Rectangle {
                 text: (card.scenarioInfo.state === "error" ? "! " : card.scenarioInfo.state === "ok" ? "\u2713 " : "")
                         + card.scenarioInfo.enabled + "/" + card.scenarioInfo.total
                 font.pixelSize: 10 * card.sizeFactor
-                font.bold: true
+                font.bold: card.scenarioInfo.state !== "disabled_ok"
                 color: card.scenarioInfo.state === "error"
                        ? "#dc2626"
                        : card.scenarioInfo.state === "ok"
                          ? "#15803d"
-                         : "#4338ca"
+                         : "#94a3b8"
             }
 
             ToolTip.visible: scenarioBadgeHover.hovered
@@ -2117,6 +2133,17 @@ Rectangle {
 
                 font.pixelSize: 13 * card.sizeFactor
                 font.bold: true
+
+                elide: Text.ElideRight
+            }
+
+            Label {
+                visible: card.scenarioInfo.state === "disabled_ok"
+                text: "Scenarios not chosen"
+
+                font.pixelSize: 10 * card.sizeFactor
+                font.italic: true
+                color: "#94a3b8"
 
                 elide: Text.ElideRight
             }
