@@ -233,12 +233,10 @@ Rectangle {
         if (items.length === 0)
             return { width: root.designContentWidth, height: root.designContentHeight }
 
-        var minX = items[0].x, minY = items[0].y, maxX = items[0].x, maxY = items[0].y
+        var minY = items[0].y, maxY = items[0].y
 
         for (var i = 1; i < items.length; i++) {
-            minX = Math.min(minX, items[i].x)
             minY = Math.min(minY, items[i].y)
-            maxX = Math.max(maxX, items[i].x)
             maxY = Math.max(maxY, items[i].y)
         }
 
@@ -252,8 +250,6 @@ Rectangle {
             alignedX[m] = items[m].x
             itemIndex[items[m].name] = m
             layoutOrder.push({index: m, y: items[m].y})
-            items[m].px = padding + (items[m].x - minX) * scale
-            items[m].py = padding + (items[m].y - minY) * scale
         }
 
         layoutOrder.sort(function(a, b) { return a.y - b.y })
@@ -281,132 +277,368 @@ Rectangle {
 
         for (var r = 0; r < rowCount; r++)
             rowCenters[r] = rowYTotals[r] / rowSizes[r]
+        var itemY = []
         for (var n = 0; n < items.length; n++)
-            items[n].py = padding + (rowCenters[rowForItem[n]] - minY) * scale
+            itemY[n] = rowCenters[rowForItem[n]]
 
-        for (var row = 1; row < rowCount; row++) {
-            for (var targetIndex = 0; targetIndex < items.length; targetIndex++) {
-                if (rowForItem[targetIndex] !== row)
+        // feeders of one card (links entering its left/right side) are spread symmetrically around it
+        // vertically, keeping the farthest feeder's distance, so their midpoint lines up with the card
+        var feedersOf = ({})
+        for (var f = 0; f < connections.length; f++) {
+            var feed = connections[f]
+            var feedTarget = itemIndex[feed.to]
+            var feedSource = itemIndex[feed.from]
+            var feedSide = feed.to_anchor || "left"
+            if (feedTarget === undefined || feedSource === undefined || feedSource === feedTarget
+                    || (feedSide !== "left" && feedSide !== "right"))
+                continue
+            if (!feedersOf[feedTarget])
+                feedersOf[feedTarget] = []
+            if (feedersOf[feedTarget].indexOf(feedSource) < 0)
+                feedersOf[feedTarget].push(feedSource)
+        }
+        var minFeederOffset = 70
+        for (var targetKey in feedersOf) {
+            var feeders = feedersOf[targetKey]
+            if (feeders.length < 2)
+                continue
+            var targetY = itemY[targetKey]
+            var offset = minFeederOffset
+            for (var fo = 0; fo < feeders.length; fo++)
+                offset = Math.max(offset, Math.abs(itemY[feeders[fo]] - targetY))
+            feeders.sort(function(a, b) { return itemY[a] - itemY[b] })
+            var newY = []
+            for (var fs = 0; fs < feeders.length; fs++)
+                newY[fs] = targetY - offset + 2 * offset * fs / (feeders.length - 1)
+            for (var fa = 0; fa < feeders.length; fa++)
+                itemY[feeders[fa]] = newY[fa]
+        }
+
+        minY = itemY[0]
+        maxY = itemY[0]
+        for (var yi = 1; yi < items.length; yi++) {
+            minY = Math.min(minY, itemY[yi])
+            maxY = Math.max(maxY, itemY[yi])
+        }
+        // the whole workflow starts lower so feeders spread above their target still fit in the view
+        for (var py = 0; py < items.length; py++)
+            items[py].py = padding + (itemY[py] - minY) * scale
+
+        // children hanging below a parent's bottom edge in Design View
+        var belowChildren = []
+        for (var c = 0; c < connections.length; c++) {
+            var link = connections[c]
+            var parentIndex = itemIndex[link.from]
+            var childIndex = itemIndex[link.to]
+            if (link.from_anchor !== "bottom" || parentIndex === undefined || childIndex === undefined
+                    || rowForItem[childIndex] <= rowForItem[parentIndex])
+                continue
+            if (!belowChildren[parentIndex])
+                belowChildren[parentIndex] = []
+            belowChildren[parentIndex].push(childIndex)
+        }
+
+        // a single child goes straight below its parent; a parent with several children is centered
+        // over them (or, if the parent's own x is already fixed, the children shift to be centered under it)
+        var fixedX = []
+        for (var downRow = 0; downRow < rowCount; downRow++) {
+            for (var p = 0; p < items.length; p++) {
+                var kids = belowChildren[p]
+                if (rowForItem[p] !== downRow || !kids)
                     continue
-                var bestAbove = -1
-                var bestAboveRow = -1
-                var bestHorizontalDistance = Infinity
-                for (var c = 0; c < connections.length; c++) {
-                    var connection = connections[c]
-                    var otherName = connection.from === items[targetIndex].name
-                            ? connection.to
-                            : (connection.to === items[targetIndex].name ? connection.from : "")
-                    if (!otherName)
-                        continue
-                    var otherIndex = itemIndex[otherName]
-                    if (otherIndex === undefined || rowForItem[otherIndex] >= row)
-                        continue
-                    var otherRow = rowForItem[otherIndex]
-                    var horizontalDistance = Math.abs(items[targetIndex].x - alignedX[otherIndex])
-                    if (otherRow > bestAboveRow
-                            || (otherRow === bestAboveRow && horizontalDistance < bestHorizontalDistance)) {
-                        bestAbove = otherIndex
-                        bestAboveRow = otherRow
-                        bestHorizontalDistance = horizontalDistance
-                    }
+                if (kids.length === 1) {
+                    alignedX[kids[0]] = alignedX[p]
+                    fixedX[kids[0]] = true
+                    continue
                 }
-                if (bestAbove >= 0) {
-                    alignedX[targetIndex] = alignedX[bestAbove]
-                    items[targetIndex].px = padding + (alignedX[targetIndex] - minX) * scale
+                var kidsCenter = 0
+                for (var k = 0; k < kids.length; k++)
+                    kidsCenter += alignedX[kids[k]]
+                kidsCenter /= kids.length
+                if (fixedX[p]) {
+                    for (var s = 0; s < kids.length; s++)
+                        alignedX[kids[s]] += alignedX[p] - kidsCenter
+                } else {
+                    alignedX[p] = kidsCenter
                 }
             }
         }
 
+        // cards sharing a row must not overlap
+        var minSpacing = (150 + 60) / scale
+        for (var spreadRow = 0; spreadRow < rowCount; spreadRow++) {
+            var inRow = []
+            for (var q = 0; q < items.length; q++) {
+                if (rowForItem[q] === spreadRow)
+                    inRow.push(q)
+            }
+            inRow.sort(function(a, b) { return alignedX[a] - alignedX[b] })
+            for (var t = 1; t < inRow.length; t++)
+                alignedX[inRow[t]] = Math.max(alignedX[inRow[t]], alignedX[inRow[t - 1]] + minSpacing)
+        }
+
+        var leftX = alignedX[0], rightX = alignedX[0]
+        for (var u = 1; u < items.length; u++) {
+            leftX = Math.min(leftX, alignedX[u])
+            rightX = Math.max(rightX, alignedX[u])
+        }
+        for (var w = 0; w < items.length; w++)
+            items[w].px = padding + (alignedX[w] - leftX) * scale
+
         return {
-            width: padding * 2 + (maxX - minX) * scale + 150,
+            width: padding * 2 + (rightX - leftX) * scale + 150,
             height: padding * 2 + (maxY - minY) * scale + 74
         }
     }
 
-    // geometry shared by the connector canvas and the filter badge anchor, so a badge always sits
-    // on the actual drawn path: a straight line when both cards share a row, otherwise the elbow's
-    // vertical turn (see connectionsCanvas.drawConnection)
-    function connectionRoute(from, to) {
-        var fromCenterX = from.x + from.width / 2
-        var fromCenterY = from.y + from.height / 2
-        var toCenterX = to.x + to.width / 2
-        var toCenterY = to.y + to.height / 2
-
-        var horizontalOverlap = Math.abs(toCenterX - fromCenterX) < (from.width + to.width) / 2
-        if (horizontalOverlap && Math.abs(toCenterY - fromCenterY) > (from.height + to.height) / 2) {
-            var flowDir = toCenterY > fromCenterY ? 1 : -1
-            var startX = fromCenterX
-            var startY = flowDir > 0 ? from.y + from.height : from.y
-            var endX = toCenterX
-            var endY = flowDir > 0 ? to.y : to.y + to.height
-            var dx = endX - startX
-            var sideDir = dx > 0 ? 1 : (dx < 0 ? -1 : 0)
-            var bent = sideDir !== 0
-            var turnY = (startY + endY) / 2
-            var radius = bent ? Math.max(2, Math.min(12, Math.abs(dx) / 2, Math.abs(endY - startY) / 2)) : 0
-
-            return {
-                orientation: "v", startX: startX, startY: startY, endX: endX, endY: endY,
-                dir: sideDir, bent: bent, radius: radius, turn: turnY, approachDir: flowDir
-            }
+    // Where along a card side a connection attaches, as a 0..1 fraction of the side. Connections sharing
+    // a side get evenly spread slots ordered by the other card's position, so their lines don't cross.
+    function sideFraction(connection, cardName, side) {
+        var vertical = side === "left" || side === "right"
+        var sharing = []
+        var connections = root.workflow.connections || []
+        for (var i = 0; i < connections.length; i++) {
+            var other = connections[i]
+            var otherName = ""
+            if (other.from === cardName && (other.from_anchor || "right") === side)
+                otherName = other.to
+            else if (other.to === cardName && (other.to_anchor || "left") === side)
+                otherName = other.from
+            if (!otherName || !root.nodeItems[otherName])
+                continue
+            var otherCard = root.nodeItems[otherName]
+            sharing.push({
+                connection: other,
+                position: vertical ? otherCard.y + otherCard.height / 2 : otherCard.x + otherCard.width / 2
+            })
         }
+        sharing.sort(function(a, b) { return a.position - b.position })
+        for (var j = 0; j < sharing.length; j++) {
+            if (sharing[j].connection === connection)
+                return (j + 1) / (sharing.length + 1)
+        }
+        return 0.5
+    }
 
-        var startX = from.x + from.width
-        var startY = fromCenterY
-
-        // when the target sits behind the source, enter its right edge instead of its left edge:
-        // entering the left edge would mean looping the line back over the card to reach it
-        var backward = toCenterX < startX
-        var endX = backward ? to.x + to.width : to.x
-        var endY = toCenterY
-
-        // ignore sub-row y differences: cards that look row-aligned shouldn't get an elbow whose
-        // short vertical jog lands right on top of a filter badge
-        var rowTolerance = Math.min(from.height, to.height) / 4
-        var dy = endY - startY
-        var dir = dy > rowTolerance ? 1 : (dy < -rowTolerance ? -1 : 0)
-        var span = endX - startX
-        // bend whenever rows differ, even if the target sits behind the source (real design
-        // positions aren't always left-to-right), so we never fall back to a diagonal line
-        // that cuts straight across unrelated cards
-        var bent = dir !== 0
-        var margin = 24
-        var radius = bent ? Math.max(2, Math.min(16, Math.abs(span) / 2 || margin, Math.abs(dy) / 2)) : 0
-        var turnX
-        if (!bent)
-            turnX = (startX + endX) / 2
-        else if (!backward)
-            turnX = span > 60 ? Math.max(startX + radius, endX - Math.max(24, span * 0.15)) : startX + span / 2
-        else
-            turnX = Math.max(startX, endX) + margin  // stay clear of both cards, then drop into the target's right edge
-
-        // which way the final segment arrives at endX, so the arrowhead points the right way
-        var approachDir = bent ? (backward ? -1 : 1) : (endX >= startX ? 1 : -1)
-
-        return {
-            orientation: "h",
-            startX: startX, startY: startY, endX: endX, endY: endY,
-            dir: dir, bent: bent, radius: radius, turn: turnX, approachDir: approachDir
+    // point on the given edge of a card (fraction along it), plus the outward direction of that edge
+    function edgePoint(card, side, fraction) {
+        switch (side) {
+        case "left": return { x: card.x, y: card.y + card.height * fraction, dx: -1, dy: 0 }
+        case "top": return { x: card.x + card.width * fraction, y: card.y, dx: 0, dy: -1 }
+        case "bottom": return { x: card.x + card.width * fraction, y: card.y + card.height, dx: 0, dy: 1 }
+        default: return { x: card.x + card.width, y: card.y + card.height * fraction, dx: 1, dy: 0 }
         }
     }
 
-    // midpoint of the connector between two design cards, in the same coordinate space they live in;
-    // used to place the scenario/alternative filter badge for a connection
+    // Axis-aligned polyline from fromName's edge to toName's edge (the sides Design View uses), routed
+    // around every other card: a shortest path over the grid spanned by the cards' padded outlines,
+    // with a penalty per turn so lines stay straight where they can.
+    function connectionPath(connection) {
+        var fromCard = root.nodeItems[connection.from]
+        var toCard = root.nodeItems[connection.to]
+
+        if (!fromCard || !toCard)
+            return []
+
+        var padding = 14 * root.cardScale
+        var stub = 24 * root.cardScale
+        var turnCost = 40 * root.cardScale
+        var fromSide = connection.from_anchor || "right"
+        var toSide = connection.to_anchor || "left"
+        var start = root.edgePoint(fromCard, fromSide, root.sideFraction(connection, connection.from, fromSide))
+        var end = root.edgePoint(toCard, toSide, root.sideFraction(connection, connection.to, toSide))
+        var startOut = { x: start.x + start.dx * stub, y: start.y + start.dy * stub }
+        var endOut = { x: end.x + end.dx * stub, y: end.y + end.dy * stub }
+
+        var boxes = []
+        var xs = [startOut.x, endOut.x]
+        var ys = [startOut.y, endOut.y]
+        var names = Object.keys(root.nodeItems)
+        for (var i = 0; i < names.length; i++) {
+            var card = root.nodeItems[names[i]]
+            var box = { l: card.x - padding, r: card.x + card.width + padding,
+                        t: card.y - padding, b: card.y + card.height + padding }
+            boxes.push(box)
+            xs.push(box.l, box.r)
+            ys.push(box.t, box.b)
+        }
+
+        function unique(values) {
+            values.sort(function(a, b) { return a - b })
+            return values.filter(function(v, index) { return index === 0 || v - values[index - 1] > 0.01 })
+        }
+        xs = unique(xs)
+        ys = unique(ys)
+
+        function inside(x, y) {
+            for (var b = 0; b < boxes.length; b++) {
+                if (x > boxes[b].l + 0.01 && x < boxes[b].r - 0.01 && y > boxes[b].t + 0.01 && y < boxes[b].b - 0.01)
+                    return true
+            }
+            return false
+        }
+
+        function indexOfValue(values, value) {
+            for (var v = 0; v < values.length; v++) {
+                if (Math.abs(values[v] - value) <= 0.01)
+                    return v
+            }
+            return -1
+        }
+
+        var directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+        var width = xs.length
+        var stateCount = width * ys.length * 4
+        var cost = []
+        var previous = []
+        var done = []
+        for (var s = 0; s < stateCount; s++) {
+            cost.push(Infinity)
+            previous.push(-1)
+            done.push(false)
+        }
+
+        function stateOf(xi, yi, d) { return (yi * width + xi) * 4 + d }
+
+        var startDirection = start.dx > 0 ? 0 : start.dx < 0 ? 1 : start.dy > 0 ? 2 : 3
+        var endDirection = end.dx > 0 ? 1 : end.dx < 0 ? 0 : end.dy > 0 ? 3 : 2  // heading when entering the card
+        var startState = stateOf(indexOfValue(xs, startOut.x), indexOfValue(ys, startOut.y), startDirection)
+        var goalX = indexOfValue(xs, endOut.x)
+        var goalY = indexOfValue(ys, endOut.y)
+        cost[startState] = 0
+
+        var best = -1
+        var bestCost = Infinity
+        var heap = [{ s: startState, c: 0 }]  // binary min-heap; stale entries are skipped when popped
+        function heapPush(state, stateCost) {
+            var index = heap.length
+            heap.push({ s: state, c: stateCost })
+            while (index > 0) {
+                var parent = (index - 1) >> 1
+                if (heap[parent].c <= heap[index].c)
+                    break
+                var swap = heap[parent]
+                heap[parent] = heap[index]
+                heap[index] = swap
+                index = parent
+            }
+        }
+        function heapPop() {
+            var top = heap[0]
+            var last = heap.pop()
+            if (heap.length > 0) {
+                heap[0] = last
+                var index = 0
+                while (true) {
+                    var left = 2 * index + 1
+                    var right = left + 1
+                    var smallest = index
+                    if (left < heap.length && heap[left].c < heap[smallest].c)
+                        smallest = left
+                    if (right < heap.length && heap[right].c < heap[smallest].c)
+                        smallest = right
+                    if (smallest === index)
+                        break
+                    var swapped = heap[smallest]
+                    heap[smallest] = heap[index]
+                    heap[index] = swapped
+                    index = smallest
+                }
+            }
+            return top.s
+        }
+
+        while (heap.length > 0) {
+            var current = heapPop()
+            if (done[current])
+                continue
+            done[current] = true
+            var currentCost = cost[current]
+
+            var heading = current % 4
+            var cell = (current - heading) / 4
+            var cx = cell % width
+            var cy = (cell - cx) / width
+            if (cx === goalX && cy === goalY) {
+                var total = currentCost + (heading === endDirection ? 0 : turnCost)
+                if (total < bestCost) {
+                    bestCost = total
+                    best = current
+                }
+                continue
+            }
+
+            for (var d = 0; d < 4; d++) {
+                if (directions[d][0] === -directions[heading][0] && directions[d][1] === -directions[heading][1])
+                    continue
+                var nx = cx + directions[d][0]
+                var ny = cy + directions[d][1]
+                if (nx < 0 || ny < 0 || nx >= width || ny >= ys.length)
+                    continue
+                var midX = (xs[cx] + xs[nx]) / 2
+                var midY = (ys[cy] + ys[ny]) / 2
+                if (inside(xs[nx], ys[ny]) || inside(midX, midY))
+                    continue
+                var next = stateOf(nx, ny, d)
+                var nextCost = currentCost + Math.abs(xs[nx] - xs[cx]) + Math.abs(ys[ny] - ys[cy])
+                        + (d === heading ? 0 : turnCost)
+                if (nextCost < cost[next]) {
+                    cost[next] = nextCost
+                    previous[next] = current
+                    heapPush(next, nextCost)
+                }
+            }
+        }
+
+        var points = [{ x: end.x, y: end.y }]
+        if (best < 0) {
+            points.push({ x: endOut.x, y: endOut.y }, { x: startOut.x, y: endOut.y }, { x: startOut.x, y: startOut.y })
+        } else {
+            for (var step = best; step >= 0; step = previous[step]) {
+                var h = step % 4
+                var stepCell = (step - h) / 4
+                var sx = stepCell % width
+                points.push({ x: xs[sx], y: ys[(stepCell - sx) / width] })
+            }
+        }
+        points.push({ x: start.x, y: start.y })
+        points.reverse()
+
+        // drop points that don't change direction
+        var path = [points[0]]
+        for (var p = 1; p < points.length - 1; p++) {
+            var before = path[path.length - 1]
+            var after = points[p + 1]
+            var straight = (Math.abs(before.x - points[p].x) < 0.01 && Math.abs(points[p].x - after.x) < 0.01)
+                    || (Math.abs(before.y - points[p].y) < 0.01 && Math.abs(points[p].y - after.y) < 0.01)
+            if (!straight)
+                path.push(points[p])
+        }
+        path.push(points[points.length - 1])
+        return path
+    }
+
+    // midpoint of the longest straight stretch of the connector, so the scenario/alternative filter
+    // badge sits on a straight part of the drawn path rather than on a corner
     function connectionAnchor(fromName, toName) {
-        var fromItem = root.nodeItems[fromName]
-        var toItem = root.nodeItems[toName]
+        var connections = root.workflow.connections || []
+        for (var i = 0; i < connections.length; i++) {
+            if (connections[i].from !== fromName || connections[i].to !== toName)
+                continue
 
-        if (!fromItem || !toItem)
-            return Qt.point(0, 0)
-
-        var route = root.connectionRoute(fromItem, toItem)
-        if (route.orientation === "v")
-            return route.bent
-                ? Qt.point((route.startX + route.endX) / 2, route.turn)
-                : Qt.point(route.startX, (route.startY + route.endY) / 2)
-        return route.bent
-                ? Qt.point(route.turn, (route.startY + route.endY) / 2)
-                : Qt.point((route.startX + route.endX) / 2, (route.startY + route.endY) / 2)
+            var path = root.connectionPath(connections[i])
+            var bestLength = -1
+            var anchor = Qt.point(0, 0)
+            for (var j = 1; j < path.length; j++) {
+                var length = Math.abs(path[j].x - path[j - 1].x) + Math.abs(path[j].y - path[j - 1].y)
+                if (length > bestLength) {
+                    bestLength = length
+                    anchor = Qt.point((path[j].x + path[j - 1].x) / 2, (path[j].y + path[j - 1].y) / 2)
+                }
+            }
+            return anchor
+        }
+        return Qt.point(0, 0)
     }
 
     // fetches project.json's items/connections and lays them out on a rank/lane grid
@@ -1027,14 +1259,10 @@ Rectangle {
                             // but below a card actively being dragged (z: 10)
                             z: 5
 
-                            function drawConnection(ctx, fromItem, toItem, state) {
-                                var from = fromItem.mapToItem(connectionsCanvas, 0, 0)
-                                var to = toItem.mapToItem(connectionsCanvas, 0, 0)
-
-                                var route = root.connectionRoute(
-                                    {x: from.x, y: from.y, width: fromItem.width, height: fromItem.height},
-                                    {x: to.x, y: to.y, width: toItem.width, height: toItem.height}
-                                )
+                            function drawConnection(ctx, connection, state) {
+                                var path = root.connectionPath(connection)
+                                if (path.length < 2)
+                                    return
 
                                 // bold + saturated for a line that will actually carry data when run, thin and
                                 // pale when it's idle (another line covers the target), reddish when broken
@@ -1042,41 +1270,38 @@ Rectangle {
                                 ctx.strokeStyle = lineColor
                                 ctx.lineWidth = state === "idle" ? 1.5 : 3
 
-                                ctx.beginPath()
-                                ctx.moveTo(route.startX, route.startY)
-
-                                if (route.bent) {
-                                    if (route.orientation === "v") {
-                                        ctx.lineTo(route.startX, route.turn - route.radius * route.approachDir)
-                                        ctx.quadraticCurveTo(route.startX, route.turn, route.startX + route.radius * route.dir, route.turn)
-                                        ctx.lineTo(route.endX - route.radius * route.dir, route.turn)
-                                        ctx.quadraticCurveTo(route.endX, route.turn, route.endX, route.turn + route.radius * route.approachDir)
-                                    } else {
-                                        ctx.lineTo(route.turn - route.radius, route.startY)
-                                        ctx.quadraticCurveTo(route.turn, route.startY, route.turn, route.startY + route.radius * route.dir)
-                                        ctx.lineTo(route.turn, route.endY - route.radius * route.dir)
-                                        ctx.quadraticCurveTo(route.turn, route.endY, route.turn + route.radius * route.approachDir, route.endY)
-                                    }
+                                function segmentLength(a, b) {
+                                    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
                                 }
 
-                                ctx.lineTo(route.endX, route.endY)
+                                ctx.beginPath()
+                                ctx.moveTo(path[0].x, path[0].y)
+
+                                for (var i = 1; i < path.length - 1; i++) {
+                                    var radius = Math.min(12 * root.cardScale,
+                                                          segmentLength(path[i - 1], path[i]) / 2,
+                                                          segmentLength(path[i], path[i + 1]) / 2)
+                                    ctx.arcTo(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, radius)
+                                }
+
+                                var tip = path[path.length - 1]
+                                var tail = path[path.length - 2]
+                                ctx.lineTo(tip.x, tip.y)
 
                                 ctx.stroke()
 
-                                // Arrow head: points against the approach direction (e.g. left-pointing
-                                // when the line arrives from the right, for a connection entering a card's right edge)
+                                // arrow head points along the final segment
                                 var arrowSize = 7
+                                var directionX = Math.sign(tip.x - tail.x)
+                                var directionY = Math.sign(tip.y - tail.y)
 
                                 ctx.beginPath()
 
-                                ctx.moveTo(route.endX, route.endY)
-                                if (route.orientation === "v") {
-                                    ctx.lineTo(route.endX - arrowSize / 2, route.endY - arrowSize * route.approachDir)
-                                    ctx.lineTo(route.endX + arrowSize / 2, route.endY - arrowSize * route.approachDir)
-                                } else {
-                                    ctx.lineTo(route.endX - arrowSize * route.approachDir, route.endY - arrowSize / 2)
-                                    ctx.lineTo(route.endX - arrowSize * route.approachDir, route.endY + arrowSize / 2)
-                                }
+                                ctx.moveTo(tip.x, tip.y)
+                                ctx.lineTo(tip.x - directionX * arrowSize - directionY * arrowSize / 2,
+                                           tip.y - directionY * arrowSize + directionX * arrowSize / 2)
+                                ctx.lineTo(tip.x - directionX * arrowSize + directionY * arrowSize / 2,
+                                           tip.y - directionY * arrowSize - directionX * arrowSize / 2)
                                 ctx.closePath()
 
                                 ctx.fillStyle = lineColor
@@ -1092,14 +1317,11 @@ Rectangle {
 
                                 for (var i = 0; i < connections.length; i++) {
                                     var connection = connections[i]
-                                    var fromItem = root.nodeItems[connection.from]
-                                    var toItem = root.nodeItems[connection.to]
-
-                                    if (fromItem && toItem) {
+                                    if (root.nodeItems[connection.from] && root.nodeItems[connection.to]) {
                                         var state = connection.filter_type === null || connection.filter_state === "ok"
                                                 ? "active"
                                                 : connection.filter_state === "error" ? "error" : "idle"
-                                        drawConnection(ctx, fromItem, toItem, state)
+                                        drawConnection(ctx, connection, state)
                                     }
                                 }
                             }
