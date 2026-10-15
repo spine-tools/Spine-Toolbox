@@ -607,6 +607,8 @@ class ProjectBridge(QObject):
                 {
                     "from": from_name,
                     "to": to_name,
+                    "from_anchor": connection["from"][1] if len(connection["from"]) > 1 else "right",
+                    "to_anchor": connection["to"][1] if len(connection["to"]) > 1 else "left",
                     "filter_type": filter_type,
                     "filter_required": filter_required,
                     "filter_satisfied": filter_satisfied,
@@ -627,6 +629,23 @@ class ProjectBridge(QObject):
                 connection["filter_state"] = "disabled_ok" if siblings_satisfied else "error"
         return connections
 
+    def _stack_position(self, data: dict, members: list[str]) -> tuple[float, float]:
+        """Returns the dev mode position of the members connected to items outside the stack, so the stack
+        sits where it links to the rest of the workflow; all members count if none are connected outside."""
+        raw_items = data.get("items", {})
+        member_set = set(members)
+        connected = {
+            endpoint[0]
+            for connection in data.get("project", {}).get("connections", [])
+            if (connection["from"][0] in member_set) != (connection["to"][0] in member_set)
+            for endpoint in (connection["from"], connection["to"])
+            if endpoint[0] in member_set
+        }
+        anchors = [name for name in members if name in connected] or members
+        x = sum(raw_items[name].get("x", 0.0) for name in anchors) / len(anchors)
+        y = sum(raw_items[name].get("y", 0.0) for name in anchors) / len(anchors)
+        return x, y
+
     @Slot(result=str)
     def get_workflow(self) -> str:
         """Returns items/connections as JSON, collapsing any project.json "stacks" into a single node each."""
@@ -646,11 +665,7 @@ class ProjectBridge(QObject):
             members = [name for name in stack.get("items", []) if name in raw_items]
             if not members:
                 continue
-            x = stack.get("x")
-            y = stack.get("y")
-            if x is None or y is None:
-                x = sum(raw_items[name].get("x", 0.0) for name in members) / len(members)
-                y = sum(raw_items[name].get("y", 0.0) for name in members) / len(members)
+            x, y = self._stack_position(data, members)
             display_name = stack.get("name", stack_key)
             items.append({"name": display_name, "type": "Stack", "x": x, "y": y, "subtitle": "Stack"})
         for name, item in raw_items.items():
