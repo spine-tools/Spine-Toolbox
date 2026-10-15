@@ -710,6 +710,11 @@ class MetadataIndicatorMixin:
         bottom_row = None
         for db_map, items in db_map_data.items():
             for metadata in items:
+                if metadata["id"] is Asterisk:
+                    top_left = self.index(0, self.METADATA_INDICATOR_COLUMN)
+                    bottom_right = self.index(self.rowCount() - 1, self.METADATA_INDICATOR_COLUMN)
+                    self.dataChanged.emit(top_left, bottom_right, [Qt.ItemDataRole.DisplayRole])
+                    return
                 for sub_model in self.sub_models:
                     if sub_model.db_map is not db_map or not self.filter_accepts_model(sub_model):
                         continue

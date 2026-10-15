@@ -1111,7 +1111,7 @@ class SpineDBManager(QObject):
                 del scen_alt_ids_to_remove[id_]
         return scen_alts_to_add, set(scen_alt_ids_to_remove), errors
 
-    def purge_items(self, db_map_item_types: dict[DatabaseMapping, list[str]], **kwargs) -> None:
+    def purge_items(self, db_map_item_types: dict[DatabaseMapping, list[ItemType]], **kwargs) -> None:
         """Purges selected items from given database.
 
         Args:

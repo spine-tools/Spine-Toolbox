@@ -27,6 +27,7 @@ from spinetoolbox.spine_db_editor.mvcmodels.compound_models import (
     CompoundParameterDefinitionModel,
     CompoundParameterValueModel,
 )
+from spinetoolbox.spine_db_editor.selection_for_filtering import EntitySelection
 from tests.mock_helpers import assert_table_model_data, assert_table_model_data_pytest, fetch_model
 from ..helpers import TestBase
 
@@ -914,6 +915,54 @@ class TestCompoundParameterValueModel(TestBase):
                     ]
                 },
             )
+            waiter.wait()
+            self.assertEqual(waiter.args, (model.index(0, 3), model.index(0, 3), [Qt.ItemDataRole.DisplayRole]))
+        model.tear_down()
+
+    def test_purging_entity_classes_clears_metadata_indicators_cleanly(self):
+        model = CompoundParameterValueModel(self._db_editor, self._db_mngr, self._db_map)
+        self._db_mngr.add_items(
+            "entity_class",
+            {self._db_map: [{"name": "oc1"}, {"name": "oc2"}, {"name": "rc", "dimension_name_list": ["oc1", "oc2"]}]},
+        )
+        self._db_mngr.add_items(
+            "parameter_definition",
+            {self._db_map: [{"name": "p1", "entity_class_name": "oc1"}, {"name": "p2", "entity_class_name": "oc2"}]},
+        )
+        self._db_mngr.add_items(
+            "entity",
+            {self._db_map: [{"name": "o1", "entity_class_name": "oc1"}, {"name": "o2", "entity_class_name": "oc2"}]},
+        )
+        self._db_mngr.add_items(
+            "parameter_value",
+            {
+                self._db_map: [
+                    {
+                        "parameter_definition_name": "p1",
+                        "parsed_value": 23.0,
+                        "entity_byname": ("o1",),
+                        "entity_class_name": "oc1",
+                        "alternative_name": "Base",
+                    },
+                    {
+                        "parameter_definition_name": "p2",
+                        "parsed_value": 32.0,
+                        "entity_byname": ("o2",),
+                        "entity_class_name": "oc2",
+                        "alternative_name": "Base",
+                    },
+                ]
+            },
+        )
+        self._db_mngr.add_items("metadata", {self._db_map: [{"name": "author", "value": "A. Uthor"}]})
+        model.set_entity_selection_for_filtering(
+            {self._db_map: {self._db_map.entity_class(name="oc2")["id"]: Asterisk}}
+        )
+        while model.rowCount() == 0:
+            QApplication.processEvents()
+        assert_table_model_data(model, [[None, "oc2", "o2", "p2", "Base", "32.0", self.db_codename]], self)
+        with signal_waiter(model.dataChanged) as waiter:
+            self._db_mngr.purge_items({self._db_map: ["entity_class", "parameter_value_metadata"]})
             waiter.wait()
             self.assertEqual(waiter.args, (model.index(0, 3), model.index(0, 3), [Qt.ItemDataRole.DisplayRole]))
         model.tear_down()
