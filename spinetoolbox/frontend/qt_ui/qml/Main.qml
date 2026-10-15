@@ -377,6 +377,17 @@ Rectangle {
                 alignedX[inRow[t]] = Math.max(alignedX[inRow[t]], alignedX[inRow[t - 1]] + minSpacing)
         }
 
+        // a link leaving a card's bottom edge enters a card directly below it through the top edge, giving a
+        // straight vertical line instead of a loop round to the target's side
+        for (var vc = 0; vc < connections.length; vc++) {
+            var down = connections[vc]
+            var upper = itemIndex[down.from]
+            var lower = itemIndex[down.to]
+            if (down.from_anchor === "bottom" && upper !== undefined && lower !== undefined
+                    && itemY[lower] > itemY[upper] && Math.abs(alignedX[lower] - alignedX[upper]) < 75 / scale / 2)
+                down.to_anchor = "top"
+        }
+
         var leftX = alignedX[0], rightX = alignedX[0]
         for (var u = 1; u < items.length; u++) {
             leftX = Math.min(leftX, alignedX[u])
