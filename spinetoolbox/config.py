@@ -49,6 +49,8 @@ SPINE_TOOLBOX_REPO_URL: Literal["https://github.com/spine-tools/Spine-Toolbox"] 
 PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
 
 PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.json"
+PLOTS_DIR_ENV_VAR = "SPINETOOLBOX_PLOTS_DIR"
+"""If set, plots are saved as images into this directory instead of being shown in windows."""
 # Jupyter kernel constants
 JUPYTER_KERNEL_TIME_TO_DEAD = 20
 

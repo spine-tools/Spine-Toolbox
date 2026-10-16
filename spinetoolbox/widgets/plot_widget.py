@@ -15,10 +15,14 @@
 import csv
 import io
 import itertools
+import os
+from pathlib import Path
+import time
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolBar
 import numpy
-from PySide6.QtCore import QMetaObject, Qt
+from PySide6.QtCore import QMetaObject, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QMenu, QVBoxLayout, QWidget
+from ..config import PLOTS_DIR_ENV_VAR
 from ..helpers import busy_effect
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from .custom_qtableview import CopyPasteTableView
@@ -51,6 +55,19 @@ class PlotWidget(QWidget):
         self._layout.addWidget(self.canvas)
         self.original_xy_data = []
         QMetaObject.connectSlotsByName(self)
+
+    def show(self) -> None:
+        """Saves the plot as an image to PLOTS_DIR_ENV_VAR's directory, if set, instead of showing a window."""
+        plots_dir = os.environ.get(PLOTS_DIR_ENV_VAR)
+        if not plots_dir:
+            super().show()
+            return
+        path = Path(plots_dir) / f"plot_{time.time_ns()}.png"
+        # write under a temporary name so the Results page never reads a half-written image
+        self.canvas.figure.savefig(path.with_suffix(".tmp"), format="png")
+        path.with_suffix(".tmp").replace(path)
+        # scripts that run their own event loop would otherwise wait forever for a window to close
+        QTimer.singleShot(0, QApplication.quit)
 
     def closeEvent(self, event):
         """Removes the window from plot_windows and closes."""
