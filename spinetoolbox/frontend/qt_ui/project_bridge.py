@@ -55,6 +55,18 @@ def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
     return f"{dialect}://{host}{port}/{database}"
 
 
+def _sqlite_file_stamp(db_url: str) -> tuple[int, int] | None:
+    """Returns (mtime, size) of the SQLite file behind db_url, or None if it isn't an existing SQLite file."""
+    prefix = "sqlite:///"
+    if not db_url.startswith(prefix):
+        return None
+    try:
+        stat = os.stat(db_url[len(prefix) :])
+    except OSError:
+        return None
+    return stat.st_mtime_ns, stat.st_size
+
+
 def _data_dir(name: str, project_dir: str) -> str:
     """Mirrors spine_engine.project_item.executable_item_base's item data directory convention."""
     return os.path.join(project_dir, PROJECT_CONFIG_DIR_NAME, "items", name.lower().replace(" ", "_"))
@@ -94,6 +106,7 @@ class ProjectBridge(QObject):
         self._project_dir = Path(project_dir)
         self._config_file = self._project_dir / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._db_editor = None
+        self._filter_names_cache: dict[tuple[str, str], tuple[tuple[int, int], list[str]]] = {}
         self._setup_manager: QProcessExecutionManager | None = None
         self._setup_logger = QtLogger()
         self._setup_logger.msg.connect(lambda text: self.setupStatusChanged.emit(text, "info"))
@@ -276,12 +289,23 @@ class ProjectBridge(QObject):
         endpoint or it can't be opened."""
         db_url = self._connection_database_url(data, connection)
         if db_url:
+            # opening a database costs ~100 ms, so names are reused until the SQLite file changes
+            stamp = _sqlite_file_stamp(db_url)
+            cached = self._filter_names_cache.get((db_url, filter_type))
+            if cached is not None and stamp is not None and cached[0] == stamp:
+                return cached[1]
             from spinedb_api import DatabaseMapping  # imported lazily, same reason as get_database_contents
 
             try:
                 with DatabaseMapping(db_url) as db_map:
-                    query = db_map.scenario_sq if filter_type == "scenario" else db_map.alternative_sq
-                    return [row.name for row in db_map.query(query)]
+                    names = {
+                        "scenario": [row.name for row in db_map.query(db_map.scenario_sq)],
+                        "alternative": [row.name for row in db_map.query(db_map.alternative_sq)],
+                    }
+                if stamp is not None:
+                    for name_type, type_names in names.items():
+                        self._filter_names_cache[(db_url, name_type)] = (stamp, type_names)
+                return names[filter_type]
             except Exception:
                 pass
         return data.get("project", {}).get(filter_type + "s", [])

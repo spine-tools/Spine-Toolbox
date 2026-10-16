@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import "Router.js" as Router
 
 // root is a plain Item (Rectangle, for its color) rather than ApplicationWindow so this file can be
 // embedded as a widget (see EasyModeWidget) as well as shown via QQuickView from qml_launcher.py
@@ -402,254 +403,36 @@ Rectangle {
         }
     }
 
-    // Where along a card side a connection attaches, as a 0..1 fraction of the side. Connections sharing
-    // a side get evenly spread slots ordered by the other card's position, so their lines don't cross.
-    function sideFraction(connection, cardName, side) {
-        var vertical = side === "left" || side === "right"
-        var sharing = []
-        var connections = root.workflow.connections || []
-        for (var i = 0; i < connections.length; i++) {
-            var other = connections[i]
-            var otherName = ""
-            if (other.from === cardName && (other.from_anchor || "right") === side)
-                otherName = other.to
-            else if (other.to === cardName && (other.to_anchor || "left") === side)
-                otherName = other.from
-            if (!otherName || !root.nodeItems[otherName])
-                continue
-            var otherCard = root.nodeItems[otherName]
-            sharing.push({
-                connection: other,
-                position: vertical ? otherCard.y + otherCard.height / 2 : otherCard.x + otherCard.width / 2
-            })
-        }
-        sharing.sort(function(a, b) { return a.position - b.position })
-        for (var j = 0; j < sharing.length; j++) {
-            if (sharing[j].connection === connection)
-                return (j + 1) / (sharing.length + 1)
-        }
-        return 0.5
-    }
 
-    // point on the given edge of a card (fraction along it), plus the outward direction of that edge
-    function edgePoint(card, side, fraction) {
-        switch (side) {
-        case "left": return { x: card.x, y: card.y + card.height * fraction, dx: -1, dy: 0 }
-        case "top": return { x: card.x + card.width * fraction, y: card.y, dx: 0, dy: -1 }
-        case "bottom": return { x: card.x + card.width * fraction, y: card.y + card.height, dx: 0, dy: 1 }
-        default: return { x: card.x + card.width, y: card.y + card.height * fraction, dx: 1, dy: 0 }
-        }
-    }
+    // routed paths and badge anchors per connection ("from|to"), recomputed in one go by rebuildRoutes()
+    // instead of on every paint/binding evaluation since routing is the expensive part
+    property var routes: ({})
 
-    // Axis-aligned polyline from fromName's edge to toName's edge (the sides Design View uses), routed
-    // around every other card: a shortest path over the grid spanned by the cards' padded outlines,
-    // with a penalty per turn so lines stay straight where they can.
-    function connectionPath(connection) {
-        var fromCard = root.nodeItems[connection.from]
-        var toCard = root.nodeItems[connection.to]
-
-        if (!fromCard || !toCard)
-            return []
-
-        var padding = 14 * root.cardScale
-        var stub = 24 * root.cardScale
-        var turnCost = 40 * root.cardScale
-        var fromSide = connection.from_anchor || "right"
-        var toSide = connection.to_anchor || "left"
-        var start = root.edgePoint(fromCard, fromSide, root.sideFraction(connection, connection.from, fromSide))
-        var end = root.edgePoint(toCard, toSide, root.sideFraction(connection, connection.to, toSide))
-        var startOut = { x: start.x + start.dx * stub, y: start.y + start.dy * stub }
-        var endOut = { x: end.x + end.dx * stub, y: end.y + end.dy * stub }
-
-        var boxes = []
-        var xs = [startOut.x, endOut.x]
-        var ys = [startOut.y, endOut.y]
+    function rebuildRoutes() {
+        var cards = ({})
         var names = Object.keys(root.nodeItems)
         for (var i = 0; i < names.length; i++) {
             var card = root.nodeItems[names[i]]
-            var box = { l: card.x - padding, r: card.x + card.width + padding,
-                        t: card.y - padding, b: card.y + card.height + padding }
-            boxes.push(box)
-            xs.push(box.l, box.r)
-            ys.push(box.t, box.b)
+            cards[names[i]] = { x: card.x, y: card.y, width: card.width, height: card.height }
         }
-
-        function unique(values) {
-            values.sort(function(a, b) { return a - b })
-            return values.filter(function(v, index) { return index === 0 || v - values[index - 1] > 0.01 })
-        }
-        xs = unique(xs)
-        ys = unique(ys)
-
-        function inside(x, y) {
-            for (var b = 0; b < boxes.length; b++) {
-                if (x > boxes[b].l + 0.01 && x < boxes[b].r - 0.01 && y > boxes[b].t + 0.01 && y < boxes[b].b - 0.01)
-                    return true
-            }
-            return false
-        }
-
-        function indexOfValue(values, value) {
-            for (var v = 0; v < values.length; v++) {
-                if (Math.abs(values[v] - value) <= 0.01)
-                    return v
-            }
-            return -1
-        }
-
-        var directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-        var width = xs.length
-        var stateCount = width * ys.length * 4
-        var cost = []
-        var previous = []
-        var done = []
-        for (var s = 0; s < stateCount; s++) {
-            cost.push(Infinity)
-            previous.push(-1)
-            done.push(false)
-        }
-
-        function stateOf(xi, yi, d) { return (yi * width + xi) * 4 + d }
-
-        var startDirection = start.dx > 0 ? 0 : start.dx < 0 ? 1 : start.dy > 0 ? 2 : 3
-        var endDirection = end.dx > 0 ? 1 : end.dx < 0 ? 0 : end.dy > 0 ? 3 : 2  // heading when entering the card
-        var startState = stateOf(indexOfValue(xs, startOut.x), indexOfValue(ys, startOut.y), startDirection)
-        var goalX = indexOfValue(xs, endOut.x)
-        var goalY = indexOfValue(ys, endOut.y)
-        cost[startState] = 0
-
-        var best = -1
-        var bestCost = Infinity
-        var heap = [{ s: startState, c: 0 }]  // binary min-heap; stale entries are skipped when popped
-        function heapPush(state, stateCost) {
-            var index = heap.length
-            heap.push({ s: state, c: stateCost })
-            while (index > 0) {
-                var parent = (index - 1) >> 1
-                if (heap[parent].c <= heap[index].c)
-                    break
-                var swap = heap[parent]
-                heap[parent] = heap[index]
-                heap[index] = swap
-                index = parent
-            }
-        }
-        function heapPop() {
-            var top = heap[0]
-            var last = heap.pop()
-            if (heap.length > 0) {
-                heap[0] = last
-                var index = 0
-                while (true) {
-                    var left = 2 * index + 1
-                    var right = left + 1
-                    var smallest = index
-                    if (left < heap.length && heap[left].c < heap[smallest].c)
-                        smallest = left
-                    if (right < heap.length && heap[right].c < heap[smallest].c)
-                        smallest = right
-                    if (smallest === index)
-                        break
-                    var swapped = heap[smallest]
-                    heap[smallest] = heap[index]
-                    heap[index] = swapped
-                    index = smallest
-                }
-            }
-            return top.s
-        }
-
-        while (heap.length > 0) {
-            var current = heapPop()
-            if (done[current])
-                continue
-            done[current] = true
-            var currentCost = cost[current]
-
-            var heading = current % 4
-            var cell = (current - heading) / 4
-            var cx = cell % width
-            var cy = (cell - cx) / width
-            if (cx === goalX && cy === goalY) {
-                var total = currentCost + (heading === endDirection ? 0 : turnCost)
-                if (total < bestCost) {
-                    bestCost = total
-                    best = current
-                }
-                continue
-            }
-
-            for (var d = 0; d < 4; d++) {
-                if (directions[d][0] === -directions[heading][0] && directions[d][1] === -directions[heading][1])
-                    continue
-                var nx = cx + directions[d][0]
-                var ny = cy + directions[d][1]
-                if (nx < 0 || ny < 0 || nx >= width || ny >= ys.length)
-                    continue
-                var midX = (xs[cx] + xs[nx]) / 2
-                var midY = (ys[cy] + ys[ny]) / 2
-                if (inside(xs[nx], ys[ny]) || inside(midX, midY))
-                    continue
-                var next = stateOf(nx, ny, d)
-                var nextCost = currentCost + Math.abs(xs[nx] - xs[cx]) + Math.abs(ys[ny] - ys[cy])
-                        + (d === heading ? 0 : turnCost)
-                if (nextCost < cost[next]) {
-                    cost[next] = nextCost
-                    previous[next] = current
-                    heapPush(next, nextCost)
-                }
-            }
-        }
-
-        var points = [{ x: end.x, y: end.y }]
-        if (best < 0) {
-            points.push({ x: endOut.x, y: endOut.y }, { x: startOut.x, y: endOut.y }, { x: startOut.x, y: startOut.y })
-        } else {
-            for (var step = best; step >= 0; step = previous[step]) {
-                var h = step % 4
-                var stepCell = (step - h) / 4
-                var sx = stepCell % width
-                points.push({ x: xs[sx], y: ys[(stepCell - sx) / width] })
-            }
-        }
-        points.push({ x: start.x, y: start.y })
-        points.reverse()
-
-        // drop points that don't change direction
-        var path = [points[0]]
-        for (var p = 1; p < points.length - 1; p++) {
-            var before = path[path.length - 1]
-            var after = points[p + 1]
-            var straight = (Math.abs(before.x - points[p].x) < 0.01 && Math.abs(points[p].x - after.x) < 0.01)
-                    || (Math.abs(before.y - points[p].y) < 0.01 && Math.abs(points[p].y - after.y) < 0.01)
-            if (!straight)
-                path.push(points[p])
-        }
-        path.push(points[points.length - 1])
-        return path
+        root.routes = Router.routeAll(cards, root.workflow.connections || [], root.cardScale)
+        connectionsCanvas.requestPaint()
     }
 
-    // midpoint of the longest straight stretch of the connector, so the scenario/alternative filter
-    // badge sits on a straight part of the drawn path rather than on a corner
-    function connectionAnchor(fromName, toName) {
-        var connections = root.workflow.connections || []
-        for (var i = 0; i < connections.length; i++) {
-            if (connections[i].from !== fromName || connections[i].to !== toName)
-                continue
+    // coalesces the many x/y change signals of a layout or drag into a single rebuild
+    function scheduleRoutes() {
+        routeTimer.restart()
+    }
 
-            var path = root.connectionPath(connections[i])
-            var bestLength = -1
-            var anchor = Qt.point(0, 0)
-            for (var j = 1; j < path.length; j++) {
-                var length = Math.abs(path[j].x - path[j - 1].x) + Math.abs(path[j].y - path[j - 1].y)
-                if (length > bestLength) {
-                    bestLength = length
-                    anchor = Qt.point((path[j].x + path[j - 1].x) / 2, (path[j].y + path[j - 1].y) / 2)
-                }
-            }
-            return anchor
-        }
-        return Qt.point(0, 0)
+    Timer {
+        id: routeTimer
+        interval: 0
+        onTriggered: root.rebuildRoutes()
+    }
+
+    function connectionAnchor(fromName, toName) {
+        var route = root.routes[fromName + "|" + toName]
+        return route ? Qt.point(route.anchor.x, route.anchor.y) : Qt.point(0, 0)
     }
 
     // fetches project.json's items/connections and lays them out on a rank/lane grid
@@ -679,17 +462,20 @@ Rectangle {
         // references and making every connection line and filter badge vanish
         root.workflow = parsed
 
-        connectionsCanvas.requestPaint()
-        root.refreshScenarioWarning()
+        root.scheduleRoutes()
         root.refreshAllScenarioInfo()
     }
 
     // re-pulls each card's scenarioInfo; needed after any toggle since merge-group siblings can
     // flip between "disabled_ok" and "error" depending on each other's state, not just their own
     function refreshAllScenarioInfo() {
+        if (typeof projectBridge === "undefined")
+            return
+
+        var statuses = JSON.parse(projectBridge.get_scenario_status())
         var names = Object.keys(root.nodeItems)
         for (var i = 0; i < names.length; i++)
-            root.nodeItems[names[i]].refreshScenarioInfo()
+            root.nodeItems[names[i]].applyScenarioStatuses(statuses)
     }
 
     Component.onCompleted: {
@@ -1271,7 +1057,8 @@ Rectangle {
                             z: 5
 
                             function drawConnection(ctx, connection, state) {
-                                var path = root.connectionPath(connection)
+                                var cached = root.routes[connection.from + "|" + connection.to]
+                                var path = cached ? cached.path : []
                                 if (path.length < 2)
                                     return
 
@@ -1398,7 +1185,7 @@ Rectangle {
                                     root.nodeItems[modelData.name] = this
                                     root.nodeItemsTick += 1
                                     refreshScenarioInfo()
-                                    connectionsCanvas.requestPaint()
+                                    root.scheduleRoutes()
                                 }
                             }
                         }
@@ -2054,7 +1841,10 @@ Rectangle {
             if (typeof projectBridge === "undefined")
                 return
 
-            var statuses = JSON.parse(projectBridge.get_scenario_status())
+            card.applyScenarioStatuses(JSON.parse(projectBridge.get_scenario_status()))
+        }
+
+        function applyScenarioStatuses(statuses) {
             for (var i = 0; i < statuses.length; i++) {
                 if (statuses[i].name === card.nodeName) {
                     card.scenarioInfo = statuses[i]
@@ -2126,8 +1916,8 @@ Rectangle {
         }
 
         // redraw arrows as the card is dragged around
-        onXChanged: connectionsCanvas.requestPaint()
-        onYChanged: connectionsCanvas.requestPaint()
+        onXChanged: root.scheduleRoutes()
+        onYChanged: root.scheduleRoutes()
 
         // extra offset layers behind the card give a collapsed stack a "deck of cards" look
         Rectangle {
