@@ -75,6 +75,13 @@ Rectangle {
             root.executionRunning = running
         }
 
+        function onPlotsChanged() {
+            root.plotUrls = projectBridge.get_plots()
+
+            if (root.plotUrls.length > 0)
+                root.currentView = "results"
+        }
+
         function onExecutionLogAppended(line, kind) {
             root.executionLogModel.append({ "text": line, "kind": kind })
 
@@ -97,6 +104,9 @@ Rectangle {
 
     // "workflow" (project canvas) or "database" (data browser), switched from the sidebar
     property string currentView: "workflow"
+
+    // file URLs of the images produced by the latest run
+    property var plotUrls: []
 
     // Data page state: project.json's Data Stores, the selected one's contents, and the selected
     // entity class' parameter values, all fetched from ProjectBridge on demand
@@ -622,6 +632,18 @@ Rectangle {
 
                         if (!root.databasesLoaded)
                             root.loadDatabases()
+                    }
+                }
+
+                SidebarButton {
+                    text: "Results"
+                    iconText: "▤"
+                    selected: root.currentView === "results"
+                    compact: root.compactSidebar
+
+                    onClicked: {
+                        root.currentView = "results"
+                        root.plotUrls = projectBridge.get_plots()
                     }
                 }
 
@@ -1702,6 +1724,60 @@ Rectangle {
                                             Label { Layout.fillWidth: true; text: modelData.value; font.pixelSize: 12; elide: Text.ElideRight }
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // =================================================
+            // RESULTS PAGE (plots produced by the latest run)
+            // =================================================
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                visible: root.currentView === "results"
+                color: "#f2f8f4"
+
+                Label {
+                    anchors.centerIn: parent
+                    visible: root.plotUrls.length === 0
+                    text: "No plots yet. Run a workflow that creates plots."
+                    color: "#475569"
+                    font.pixelSize: 15
+                }
+
+                ScrollView {
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    clip: true
+                    contentWidth: availableWidth
+
+                    ColumnLayout {
+                        width: parent.width
+                        spacing: 16
+
+                        Repeater {
+                            model: root.plotUrls
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: plotImage.implicitWidth > 0
+                                    ? (width - 20) * plotImage.implicitHeight / plotImage.implicitWidth + 20 : 0
+                                radius: 10
+                                color: "white"
+
+                                Image {
+                                    id: plotImage
+
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    source: modelData
+                                    fillMode: Image.PreserveAspectFit
+                                    cache: false
                                 }
                             }
                         }

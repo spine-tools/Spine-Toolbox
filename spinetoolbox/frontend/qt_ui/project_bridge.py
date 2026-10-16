@@ -2,10 +2,13 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
-from PySide6.QtCore import QObject, QSettings, QUrl, Signal, Slot
+import time
+from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
 from ...config import (
     LATEST_PROJECT_VERSION,
+    PLOTS_DIR_ENV_VAR,
     PROJECT_CONFIG_DIR_NAME,
     PROJECT_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
@@ -17,6 +20,8 @@ from ...helpers import open_url
 from ...logger import QtLogger
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
+_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg"}
+_IMAGE_SCAN_SKIPPED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__"}
 
 # same QSettings location and "appSettings/recentProjects" format the classic Qt UI uses
 _SETTINGS_ORGANIZATION = "SpineProject"
@@ -98,6 +103,7 @@ class ProjectBridge(QObject):
     executionStateChanged = Signal(bool)
     # emitted per output line from a workflow run; kind is "stdout" or "stderr"
     executionLogAppended = Signal(str, str)
+    plotsChanged = Signal()
     # emitted when the user asks (via the User Mode switch) to go back to the classic Qt UI
     devModeRequested = Signal()
 
@@ -113,6 +119,11 @@ class ProjectBridge(QObject):
         self._setup_logger.msg_success.connect(lambda text: self.setupStatusChanged.emit(text, "success"))
         self._setup_logger.msg_error.connect(lambda text: self.setupStatusChanged.emit(text, "error"))
         self._run_manager: QProcessExecutionManager | None = None
+        self._written_images: list[Path] = []
+        self._run_started = 0.0
+        self._saved_pythonpath: str | None = None
+        self._plots_watcher = QFileSystemWatcher(self)
+        self._plots_watcher.directoryChanged.connect(self.plotsChanged)
         self._run_logger = QtLogger()
         self._run_logger.msg.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
         self._run_logger.msg_proc.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
@@ -531,6 +542,20 @@ class ProjectBridge(QObject):
         if real_names:
             args += ["--select", *real_names]
         python = _resolve_python_interpreter()
+        plots_dir = self._plots_dir()
+        shutil.rmtree(plots_dir, ignore_errors=True)
+        plots_dir.mkdir(parents=True, exist_ok=True)
+        os.environ[PLOTS_DIR_ENV_VAR] = str(plots_dir)
+        self._saved_pythonpath = os.environ.get("PYTHONPATH")
+        os.environ["PYTHONPATH"] = os.pathsep.join(
+            [str(Path(__file__).parent / "plot_capture")] + ([self._saved_pythonpath] if self._saved_pythonpath else [])
+        )
+        self._run_started = time.time()
+        self._written_images = []
+        if self._plots_watcher.directories():
+            self._plots_watcher.removePaths(self._plots_watcher.directories())
+        self._plots_watcher.addPath(str(plots_dir))
+        self.plotsChanged.emit()
         self._run_logger.msg.emit("Running: " + " ".join([python, "-m", "spinetoolbox", *args]))
         self._run_manager = QProcessExecutionManager(
             self._run_logger, python, ["-m", "spinetoolbox", *args], semisilent=True
@@ -550,13 +575,40 @@ class ProjectBridge(QObject):
         """Reports the outcome of a workflow run."""
         user_stopped = self._run_manager.user_stopped
         self._run_manager = None
+        os.environ.pop(PLOTS_DIR_ENV_VAR, None)
+        if self._saved_pythonpath is None:
+            os.environ.pop("PYTHONPATH", None)
+        else:
+            os.environ["PYTHONPATH"] = self._saved_pythonpath
+        self._written_images = self._find_written_images()
         self.executionStateChanged.emit(False)
+        self.plotsChanged.emit()
         if user_stopped:
             self.runStatusChanged.emit("Execution stopped", "info")
         elif exit_code == 0:
             self.runStatusChanged.emit("Execution finished successfully", "success")
         else:
             self.runStatusChanged.emit("Execution failed", "error")
+
+    def _plots_dir(self) -> Path:
+        return self._base_dir() / PROJECT_CONFIG_DIR_NAME / "easy_mode_plots"
+
+    def _find_written_images(self) -> list[Path]:
+        """Returns image files in the project that were written since the run started."""
+        found = []
+        for root, dirs, files in os.walk(self._base_dir()):
+            dirs[:] = [d for d in dirs if d not in _IMAGE_SCAN_SKIPPED_DIRS and d != "easy_mode_plots"]
+            for name in files:
+                path = Path(root, name)
+                if path.suffix.lower() in _IMAGE_SUFFIXES and path.stat().st_mtime >= self._run_started:
+                    found.append(path)
+        return sorted(found)
+
+    @Slot(result=list)
+    def get_plots(self) -> list:
+        """Returns file URLs of the plots and images produced by the latest run."""
+        paths = [*sorted(self._plots_dir().glob("*.png")), *self._written_images]
+        return [QUrl.fromLocalFile(str(path)).toString() for path in paths]
 
     @Slot(result=bool)
     def is_execution_running(self) -> bool:
