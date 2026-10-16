@@ -12,10 +12,16 @@
 
 """Contains FrozenTableModel class."""
 
+from collections.abc import Iterable
 from itertools import product
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, Signal
+from spinedb_api import DatabaseMapping
+from spinedb_api.temp_id import TempId
 from ...helpers import plain_to_tool_tip, rows_to_row_count_tuples
+from ...spine_db_manager import SpineDBManager
 from .colors import selected_color
+
+CellValue = tuple[DatabaseMapping, TempId | None] | DatabaseMapping
 
 
 class FrozenTableModel(QAbstractTableModel):
@@ -23,27 +29,27 @@ class FrozenTableModel(QAbstractTableModel):
 
     selected_row_changed = Signal()
 
-    def __init__(self, db_mngr, parent=None):
+    def __init__(self, db_mngr: SpineDBManager, parent: QObject | None = None):
         """
         Args:
-            db_mngr (SpineDBManager): database manager
-            parent (QObject, optional): parent object
+            db_mngr: database manager
+            parent: parent object
         """
         super().__init__(parent)
         self.db_mngr = db_mngr
-        self._data = []
-        self._selected_row = None
+        self._data: list[list[str] | CellValue] = []
+        self._selected_row: int | None = None
 
-    def set_headers(self, headers):
+    def set_headers(self, headers: Iterable[str]) -> bool:
         """Sets headers for the header row wiping data.
 
         This method does nothing if the new headers are equal to existing ones.
 
         Args:
-            headers (Iterable of str): headers
+            headers: headers
 
         Returns:
-            bool: True if model was reset, False otherwise
+            True if model was reset, False otherwise
         """
         headers = list(headers)
         if self._data and headers == self._data[0]:
@@ -54,20 +60,27 @@ class FrozenTableModel(QAbstractTableModel):
         self.endResetModel()
         return True
 
-    def clear_model(self):
+    def clear_model(self) -> None:
         self.beginResetModel()
         self._data.clear()
         self._selected_row = None
         self.endResetModel()
 
-    def add_values(self, data):
+    def add_values(self, data: set[tuple[CellValue, ...]]) -> None:
         """Adds more frozen values that aren't in the table already.
 
         Args:
-            data (set of tuple): frozen values
+            data: frozen values
         """
+        data = set(
+            row_data
+            for row_data in data
+            if all(isinstance(value, DatabaseMapping) or value[1] is not None for value in row_data)
+        )
+        if not data:
+            return
         unique_data = set(self._data[1:])
-        new_values = [value for value in data if value not in unique_data]
+        new_values = list(data - unique_data)
         if not new_values:
             return
         old_size = len(self._data)
@@ -229,7 +242,7 @@ class FrozenTableModel(QAbstractTableModel):
         self._keep_sorted()
         return True
 
-    def _keep_sorted(self, update_selected_row=True):
+    def _keep_sorted(self, update_selected_row: bool = True) -> None:
         """Sorts the data table."""
         if len(self._data) < 3:
             return
@@ -348,15 +361,15 @@ class FrozenTableModel(QAbstractTableModel):
                 tool_tip = db_map.mapped_table(table_name)[id_]["description"]
         return plain_to_tool_tip(tool_tip)
 
-    def _name_from_data(self, value, header):
+    def _name_from_data(self, value: CellValue, header: str) -> str | None:
         """Resolves item name.
 
         Args:
-            value (tuple or DatabaseMapping): cell value
-            header (str): column header
+            value: cell value
+            header: column header
 
         Returns:
-            str: value's name
+            value's name
         """
         if header == "index":
             return str(value[1])
@@ -380,5 +393,5 @@ class FrozenTableModel(QAbstractTableModel):
             return db_map.mapped_table(table_name)[id_]["name"]
 
     @property
-    def headers(self):
+    def headers(self) -> list[str]:
         return self._data[0] if self._data else []

@@ -12,274 +12,253 @@
 
 """Contains unit tests for the ``frozen_table_model`` module."""
 
-import unittest
 from unittest.mock import MagicMock
-from PySide6.QtCore import QModelIndex, QObject, Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QModelIndex, Qt
+import pytest
 from spinetoolbox.spine_db_editor.mvcmodels.frozen_table_model import FrozenTableModel
-from tests.mock_helpers import MockSpineDBManager, TestCaseWithQApplication, model_data_to_table
+from tests.mock_helpers import assert_table_model_data_pytest, model_data_to_table
 
 
-class TestFrozenTableModel(TestCaseWithQApplication):
-    db_codename = "frozen_table_model_test_db"
+@pytest.fixture()
+def model(db_mngr, parent_object):
+    yield FrozenTableModel(db_mngr, parent_object)
 
-    def setUp(self):
-        app_settings = MagicMock()
-        logger = MagicMock()
-        self._db_mngr = MockSpineDBManager(app_settings, None)
-        self._db_map = self._db_mngr.get_db_map("sqlite://", logger, create=True)
-        self._db_mngr.name_registry.register(self._db_map.sa_url, self.db_codename)
-        self._parent = QObject()
-        self._model = FrozenTableModel(self._db_mngr, self._parent)
 
-    def tearDown(self):
-        self._parent.deleteLater()
-        self._db_mngr.close_all_sessions()
-        while not self._db_map.closed:
-            QApplication.processEvents()
-        self._db_mngr.clean_up()
+class TestFrozenTableModel:
+    def test_initial_dimensions_are_zero(self, model):
+        assert model.rowCount() == 0
+        assert model.columnCount() == 0
 
-    def test_initial_dimensions_are_zero(self):
-        self.assertEqual(self._model.rowCount(), 0)
-        self.assertEqual(self._model.columnCount(), 0)
+    def test_set_headers_empty_model(self, model):
+        model.set_headers(["header 1", "header 2"])
+        assert model.rowCount() == 1
+        assert model.columnCount() == 2
+        assert model.headers == ["header 1", "header 2"]
+        assert model.index(0, 0).data() == "header 1"
+        assert model.index(0, 1).data() == "header 2"
 
-    def test_set_headers_empty_model(self):
-        self._model.set_headers(["header 1", "header 2"])
-        self.assertEqual(self._model.rowCount(), 1)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.headers, ["header 1", "header 2"])
-        self.assertEqual(self._model.index(0, 0).data(), "header 1")
-        self.assertEqual(self._model.index(0, 1).data(), "header 2")
+    def test_set_headers_renames_existing_ones(self, model):
+        model.set_headers(["header 1", "header 2"])
+        model.set_headers(["new header", "even newer"])
+        assert model.rowCount() == 1
+        assert model.columnCount() == 2
+        assert model.index(0, 0).data() == "new header"
+        assert model.index(0, 1).data() == "even newer"
 
-    def test_set_headers_renames_existing_ones(self):
-        self._model.set_headers(["header 1", "header 2"])
-        self._model.set_headers(["new header", "even newer"])
-        self.assertEqual(self._model.rowCount(), 1)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.index(0, 0).data(), "new header")
-        self.assertEqual(self._model.index(0, 1).data(), "even newer")
+    def test_clear_model(self, model):
+        model.set_headers(["header 1", "header 2"])
+        model.clear_model()
+        assert model.rowCount() == 0
+        assert model.columnCount() == 0
 
-    def test_clear_model(self):
-        self._model.set_headers(["header 1", "header 2"])
-        self._model.clear_model()
-        self.assertEqual(self._model.rowCount(), 0)
-        self.assertEqual(self._model.columnCount(), 0)
+    def test_add_values(self, model, db_map, db_name):
+        model.set_headers(["alternative", "database"])
+        alternative_id = db_map.alternative(name="Base")["id"]
+        model.add_values({((db_map, alternative_id), db_map)})
+        assert model.rowCount() == 2
+        assert model.columnCount() == 2
+        assert model.index(0, 0).data() == "alternative"
+        assert model.index(0, 1).data() == "database"
+        assert model.index(1, 0).data() == "Base"
+        assert model.index(1, 1).data() == db_name
 
-    def test_add_values(self):
-        self._model.set_headers(["alternative", "database"])
-        alternative_id = self._db_map.alternative(name="Base")["id"]
-        self._model.add_values({((self._db_map, alternative_id), self._db_map)})
-        self.assertEqual(self._model.rowCount(), 2)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.index(0, 0).data(), "alternative")
-        self.assertEqual(self._model.index(0, 1).data(), "database")
-        self.assertEqual(self._model.index(1, 0).data(), "Base")
-        self.assertEqual(self._model.index(1, 1).data(), self.db_codename)
+    def test_add_values_rejects_none_values(self, model, db_map):
+        model.set_headers(["alternative"])
+        model.add_values({((db_map, None),)})
+        expected = [["alternative"]]
+        assert_table_model_data_pytest(model, expected)
 
-    def test_remove_values_before_selected_row(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        alternatives = self._db_map.get_items("alternative")
+    def test_remove_values_before_selected_row(self, model, db_mngr, db_map):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.set_headers(["alternative", "database"])
-        values = {((self._db_map, id_), self._db_map) for id_ in ids}
-        self._model.add_values(values)
-        self.assertEqual(self._model.rowCount(), 3)
-        self._model.set_selected(2)
-        frozen_value = self._model.get_frozen_value()
+        model.set_headers(["alternative", "database"])
+        values = {((db_map, id_), db_map) for id_ in ids}
+        model.add_values(values)
+        assert model.rowCount() == 3
+        model.set_selected(2)
+        frozen_value = model.get_frozen_value()
         frozen_alternative_id = frozen_value[0][1]
         id_to_remove = next(iter(ids - {frozen_alternative_id}))
-        self._model.remove_values({((self._db_map, id_to_remove), self._db_map)})
-        self.assertEqual(self._model.rowCount(), 2)
-        self.assertEqual(self._model.get_frozen_value(), ((self._db_map, frozen_alternative_id), self._db_map))
+        model.remove_values({((db_map, id_to_remove), db_map)})
+        assert model.rowCount() == 2
+        assert model.get_frozen_value() == ((db_map, frozen_alternative_id), db_map)
 
-    def test_remove_selected_row_when_selected_row_gets_updated_during_removal(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        alternatives = self._db_map.get_items("alternative")
+    def test_remove_selected_row_when_selected_row_gets_updated_during_removal(self, model, db_mngr, db_map):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.set_headers(["alternative", "database"])
-        values = {((self._db_map, id_), self._db_map) for id_ in ids}
-        self._model.add_values(values)
-        self.assertEqual(self._model.rowCount(), 3)
-        self._model.set_selected(2)
+        model.set_headers(["alternative", "database"])
+        values = {((db_map, id_), db_map) for id_ in ids}
+        model.add_values(values)
+        assert model.rowCount() == 3
+        model.set_selected(2)
         # Simulate tabular_view_mixin and frozen table view here.
         row_removal_handler = MagicMock()
-        row_removal_handler.side_effect = lambda *args: self._model.set_selected(1)
-        self._model.rowsAboutToBeRemoved.connect(row_removal_handler)
-        frozen_value = self._model.get_frozen_value()
+        row_removal_handler.side_effect = lambda *args: model.set_selected(1)
+        model.rowsAboutToBeRemoved.connect(row_removal_handler)
+        frozen_value = model.get_frozen_value()
         id_to_remove = frozen_value[0][1]
-        self._model.remove_values({((self._db_map, id_to_remove), self._db_map)})
+        model.remove_values({((db_map, id_to_remove), db_map)})
         row_removal_handler.assert_called_once()
-        self.assertEqual(self._model.rowCount(), 2)
-        base_alternative_id = self._db_map.get_alternative_item(name="Base")["id"]
-        self.assertEqual(self._model.get_frozen_value(), ((self._db_map, base_alternative_id), self._db_map))
+        assert model.rowCount() == 2
+        base_alternative_id = db_map.get_alternative_item(name="Base")["id"]
+        assert model.get_frozen_value() == ((db_map, base_alternative_id), db_map)
 
-    def test_remove_values_after_selected_row(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        alternatives = self._db_map.get_items("alternative")
+    def test_remove_values_after_selected_row(self, model, db_mngr, db_map):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.set_headers(["alternative", "database"])
-        values = {((self._db_map, id_), self._db_map) for id_ in ids}
-        self._model.add_values(values)
-        self.assertEqual(self._model.rowCount(), 3)
-        self._model.set_selected(1)
-        frozen_value = self._model.get_frozen_value()
+        model.set_headers(["alternative", "database"])
+        values = {((db_map, id_), db_map) for id_ in ids}
+        model.add_values(values)
+        assert model.rowCount() == 3
+        model.set_selected(1)
+        frozen_value = model.get_frozen_value()
         frozen_alternative_id = frozen_value[0][1]
         id_to_remove = next(iter(ids - {frozen_alternative_id}))
-        self._model.remove_values({((self._db_map, id_to_remove), self._db_map)})
-        self.assertEqual(self._model.rowCount(), 2)
-        self.assertEqual(self._model.get_frozen_value(), ((self._db_map, frozen_alternative_id), self._db_map))
+        model.remove_values({((db_map, id_to_remove), db_map)})
+        assert model.rowCount() == 2
+        assert model.get_frozen_value() == ((db_map, frozen_alternative_id), db_map)
 
-    def test_get_frozen_value(self):
-        self._model.set_headers(["alternative", "database"])
-        self._model.add_values({((self._db_map, 1), self._db_map)})
-        self._model.set_selected(1)
-        self.assertEqual(self._model.get_frozen_value(), ((self._db_map, 1), self._db_map))
+    def test_get_frozen_value(self, model, db_map):
+        model.set_headers(["alternative", "database"])
+        model.add_values({((db_map, 1), db_map)})
+        model.set_selected(1)
+        assert model.get_frozen_value() == ((db_map, 1), db_map)
 
-    def test_insert_column_data_to_empty_model(self):
-        alternative_id = self._db_map.alternative(name="Base")["id"]
-        self._model.insert_column_data("alternative", {(self._db_map, alternative_id)}, 0)
-        self.assertEqual(self._model.columnCount(), 1)
-        self.assertEqual(self._model.rowCount(), 2)
-        self.assertEqual(self._model.index(0, 0).data(), "alternative")
-        self.assertEqual(self._model.index(1, 0).data(), "Base")
+    def test_insert_column_data_to_empty_model(self, model, db_map):
+        alternative_id = db_map.alternative(name="Base")["id"]
+        model.insert_column_data("alternative", {(db_map, alternative_id)}, 0)
+        assert model.columnCount() == 1
+        assert model.rowCount() == 2
+        assert model.index(0, 0).data() == "alternative"
+        assert model.index(1, 0).data() == "Base"
 
-    def test_insert_column_data_to_header_only_model(self):
-        self._model.set_headers(["index 1", "index 2"])
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.rowCount(), 1)
-        self._model.insert_column_data("alternative", {(self._db_map, 1)}, 1)
-        self.assertEqual(self._model.columnCount(), 3)
-        self.assertEqual(self._model.rowCount(), 1)
-        self.assertEqual(self._model.index(0, 0).data(), "index 1")
-        self.assertEqual(self._model.index(0, 1).data(), "alternative")
-        self.assertEqual(self._model.index(0, 2).data(), "index 2")
+    def test_insert_column_data_to_header_only_model(self, model, db_map):
+        model.set_headers(["index 1", "index 2"])
+        assert model.columnCount() == 2
+        assert model.rowCount() == 1
+        model.insert_column_data("alternative", {(db_map, 1)}, 1)
+        assert model.columnCount() == 3
+        assert model.rowCount() == 1
+        assert model.index(0, 0).data() == "index 1"
+        assert model.index(0, 1).data() == "alternative"
+        assert model.index(0, 2).data() == "index 2"
 
-    def test_insert_column_data_extends_existing_data_in_model(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        self.assertEqual(self._model.columnCount(), 1)
-        self.assertEqual(self._model.rowCount(), 2)
-        alternatives = self._db_map.get_items("alternative")
+    def test_insert_column_data_extends_existing_data_in_model(self, model, db_mngr, db_map, db_name):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        model.insert_column_data("database", {db_map}, 0)
+        assert model.columnCount() == 1
+        assert model.rowCount() == 2
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 1)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.rowCount(), 3)
-        self.assertEqual(self._model.headers, ["database", "alternative"])
-        expected = [[self.db_codename, "Base"], [self.db_codename, "alternative_1"]]
-        for row in range(1, self._model.rowCount()):
-            for column in range(self._model.columnCount()):
-                with self.subTest(f"row {row} column {column}"):
-                    self.assertEqual(self._model.index(row, column).data(), expected[row - 1][column])
+        model.insert_column_data("alternative", {(db_map, id_) for id_ in ids}, 1)
+        assert model.columnCount() == 2
+        assert model.rowCount() == 3
+        assert model.headers == ["database", "alternative"]
+        expected = [["database", "alternative"], [db_name, "Base"], [db_name, "alternative_1"]]
+        assert_table_model_data_pytest(model, expected)
 
-    def test_insert_column_data_extends_inserted_data(self):
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        alternatives = self._db_map.get_items("alternative")
+    def test_insert_column_data_extends_inserted_data(self, model, db_mngr, db_map, db_name):
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 0)
-        self.assertEqual(self._model.columnCount(), 1)
-        self.assertEqual(self._model.rowCount(), 3)
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.rowCount(), 3)
-        self.assertEqual(self._model.headers, ["database", "alternative"])
-        expected = [[self.db_codename, "Base"], [self.db_codename, "alternative_1"]]
-        for row in range(1, self._model.rowCount()):
-            for column in range(self._model.columnCount()):
-                with self.subTest(f"row {row} column {column}"):
-                    self.assertEqual(self._model.index(row, column).data(), expected[row - 1][column])
+        model.insert_column_data("alternative", {(db_map, id_) for id_ in ids}, 0)
+        assert model.columnCount() == 1
+        assert model.rowCount() == 3
+        model.insert_column_data("database", {db_map}, 0)
+        assert model.columnCount() == 2
+        assert model.rowCount() == 3
+        assert model.headers == ["database", "alternative"]
+        expected = [["database", "alternative"], [db_name, "Base"], [db_name, "alternative_1"]]
+        assert_table_model_data_pytest(model, expected)
 
-    def test_remove_last_column_clears_model(self):
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        self.assertEqual(self._model.columnCount(), 1)
-        self.assertEqual(self._model.rowCount(), 2)
-        self._model.remove_column(0)
-        self.assertEqual(self._model.columnCount(), 0)
-        self.assertEqual(self._model.rowCount(), 0)
+    def test_remove_last_column_clears_model(self, model, db_map):
+        model.insert_column_data("database", {db_map}, 0)
+        assert model.columnCount() == 1
+        assert model.rowCount() == 2
+        model.remove_column(0)
+        assert model.columnCount() == 0
+        assert model.rowCount() == 0
 
-    def test_remove_column_shortens_existing_data(self):
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        alternatives = self._db_map.get_items("alternative")
+    def test_remove_column_shortens_existing_data(self, model, db_mngr, db_map, db_name):
+        model.insert_column_data("database", {db_map}, 0)
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 0)
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.rowCount(), 3)
-        self._model.remove_column(0)
-        self.assertEqual(self._model.columnCount(), 1)
-        self.assertEqual(self._model.rowCount(), 2)
-        self.assertEqual(self._model.headers, ["database"])
-        self.assertEqual(self._model.index(1, 0).data(), self.db_codename)
+        model.insert_column_data("alternative", {(db_map, id_) for id_ in ids}, 0)
+        assert model.columnCount() == 2
+        assert model.rowCount() == 3
+        model.remove_column(0)
+        assert model.columnCount() == 1
+        assert model.rowCount() == 2
+        assert model.headers == ["database"]
+        assert model.index(1, 0).data() == db_name
 
-    def test_move_columns(self):
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        alternatives = self._db_map.get_items("alternative")
+    def test_move_columns(self, model, db_mngr, db_map, db_name):
+        model.insert_column_data("database", {db_map}, 0)
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 1)
-        self.assertEqual(self._model.headers, ["database", "alternative"])
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.rowCount(), 3)
-        self.assertTrue(self._model.moveColumns(QModelIndex(), 1, 1, QModelIndex(), 0))
-        self.assertEqual(self._model.columnCount(), 2)
-        self.assertEqual(self._model.rowCount(), 3)
-        self.assertEqual(self._model.headers, ["alternative", "database"])
-        expected = [["Base", self.db_codename], ["alternative_1", self.db_codename]]
-        for row in range(1, self._model.rowCount()):
-            for column in range(self._model.columnCount()):
-                with self.subTest(f"row {row} column {column}"):
-                    self.assertEqual(self._model.index(row, column).data(), expected[row - 1][column])
+        model.insert_column_data("alternative", {(db_map, id_) for id_ in ids}, 1)
+        assert model.headers == ["database", "alternative"]
+        assert model.columnCount() == 2
+        assert model.rowCount() == 3
+        assert model.moveColumns(QModelIndex(), 1, 1, QModelIndex(), 0)
+        assert model.columnCount() == 2
+        assert model.rowCount() == 3
+        assert model.headers == ["alternative", "database"]
+        expected = [["alternative", "database"], ["Base", db_name], ["alternative_1", db_name]]
+        assert_table_model_data_pytest(model, expected)
 
-    def test_table_stays_sorted(self):
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        self._db_mngr.add_items("alternative", {self._db_map: [{"name": "alternative_1"}]})
-        self._db_mngr.add_items("entity_class", {self._db_map: [{"name": "Gadget"}]})
-        self._db_mngr.add_items(
+    def test_table_stays_sorted(self, model, db_mngr, db_map, db_name):
+        model.insert_column_data("database", {db_map}, 0)
+        db_mngr.add_items("alternative", {db_map: [{"name": "alternative_1"}]})
+        db_mngr.add_items("entity_class", {db_map: [{"name": "Gadget"}]})
+        db_mngr.add_items(
             "entity",
             {
-                self._db_map: [
+                db_map: [
                     {"entity_class_name": "Gadget", "name": "fork"},
                     {"entity_class_name": "Gadget", "name": "spoon"},
                 ]
             },
         )
-        alternatives = self._db_map.get_items("alternative")
+        alternatives = db_map.get_items("alternative")
         ids = {item["id"] for item in alternatives}
-        self._model.insert_column_data("alternative", {(self._db_map, id_) for id_ in ids}, 0)
-        objects = self._db_map.get_items("entity")
+        model.insert_column_data("alternative", {(db_map, id_) for id_ in ids}, 0)
+        objects = db_map.get_items("entity")
         ids = {item["id"] for item in objects}
-        self._model.insert_column_data("Gadget", {(self._db_map, id_) for id_ in ids}, 0)
-        self.assertEqual(self._model.headers, ["Gadget", "alternative", "database"])
-        self.assertEqual(self._model.columnCount(), 3)
-        self.assertEqual(self._model.rowCount(), 5)
-        self.assertEqual(self._model.index(0, 0).data(), "Gadget")
-        self.assertEqual(self._model.index(0, 1).data(), "alternative")
-        self.assertEqual(self._model.index(0, 2).data(), "database")
-        self.assertEqual(self._model.index(1, 0).data(), "fork")
-        self.assertEqual(self._model.index(1, 1).data(), "Base")
-        self.assertEqual(self._model.index(1, 2).data(), self.db_codename)
-        self.assertEqual(self._model.index(2, 0).data(), "fork")
-        self.assertEqual(self._model.index(2, 1).data(), "alternative_1")
-        self.assertEqual(self._model.index(2, 2).data(), self.db_codename)
-        self.assertEqual(self._model.index(3, 0).data(), "spoon")
-        self.assertEqual(self._model.index(3, 1).data(), "Base")
-        self.assertEqual(self._model.index(3, 2).data(), self.db_codename)
-        self.assertEqual(self._model.index(4, 0).data(), "spoon")
-        self.assertEqual(self._model.index(4, 1).data(), "alternative_1")
-        self.assertEqual(self._model.index(4, 2).data(), self.db_codename)
+        model.insert_column_data("Gadget", {(db_map, id_) for id_ in ids}, 0)
+        assert model.headers == ["Gadget", "alternative", "database"]
+        assert model.columnCount() == 3
+        assert model.rowCount() == 5
+        assert model.index(0, 0).data() == "Gadget"
+        assert model.index(0, 1).data() == "alternative"
+        assert model.index(0, 2).data() == "database"
+        assert model.index(1, 0).data() == "fork"
+        assert model.index(1, 1).data() == "Base"
+        assert model.index(1, 2).data() == db_name
+        assert model.index(2, 0).data() == "fork"
+        assert model.index(2, 1).data() == "alternative_1"
+        assert model.index(2, 2).data() == db_name
+        assert model.index(3, 0).data() == "spoon"
+        assert model.index(3, 1).data() == "Base"
+        assert model.index(3, 2).data() == db_name
+        assert model.index(4, 0).data() == "spoon"
+        assert model.index(4, 1).data() == "alternative_1"
+        assert model.index(4, 2).data() == db_name
 
-    def test_tooltips_work_when_no_data_is_available(self):
-        self._model.insert_column_data("database", {self._db_map}, 0)
-        alternative_id = self._db_map.alternative(name="Base")["id"]
-        self._db_mngr.remove_items({self._db_map: {"alternative": [alternative_id]}})
-        self._model.insert_column_data("alternative", {(self._db_map, None)}, 1)
-        self.assertEqual(self._model.headers, ["database", "alternative"])
-        model_data = model_data_to_table(self._model)
-        expected = [["database", "alternative"], [self.db_codename, None]]
-        self.assertEqual(model_data, expected)
-        tool_tip_data = model_data_to_table(self._model, QModelIndex(), Qt.ItemDataRole.ToolTipRole)
-        expected = [["database", "alternative"], [f"<qt>{self.db_codename}</qt>", None]]
-        self.assertEqual(tool_tip_data, expected)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_tooltips_work_when_no_data_is_available(self, model, db_mngr, db_map, db_name):
+        model.insert_column_data("database", {db_map}, 0)
+        alternative_id = db_map.alternative(name="Base")["id"]
+        db_mngr.remove_items({db_map: {"alternative": [alternative_id]}})
+        model.insert_column_data("alternative", {(db_map, None)}, 1)
+        assert model.headers == ["database", "alternative"]
+        model_data = model_data_to_table(model)
+        expected = [["database", "alternative"], [db_name, None]]
+        assert model_data == expected
+        tool_tip_data = model_data_to_table(model, QModelIndex(), Qt.ItemDataRole.ToolTipRole)
+        expected = [["database", "alternative"], [f"<qt>{db_name}</qt>", None]]
+        assert tool_tip_data == expected
