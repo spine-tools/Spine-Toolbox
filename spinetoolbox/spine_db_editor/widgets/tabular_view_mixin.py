@@ -20,6 +20,7 @@ from PySide6.QtCore import QModelIndex, QObject, Qt, QTimer, Slot
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMessageBox, QWidget
 from spinedb_api import DatabaseMapping
+from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import fix_name_ambiguity
 from spinedb_api.temp_id import TempId
 from ...helpers import busy_effect, disconnect, preferred_row_height
@@ -189,14 +190,16 @@ class TabularViewMixin:
         return current_dimension_id_list
 
     @property
-    def first_current_entity_class(self):
+    def first_current_entity_class(self) -> PublicItem | None:
+        if not self.current_class_id:
+            return None
         db_map, class_id = next(iter(self.current_class_id.items()))
         return self.db_mngr.get_item(db_map, "entity_class", class_id)
 
     @property
     def current_dimension_name_list(self):
         entity_class = self.first_current_entity_class
-        if not entity_class:
+        if entity_class is None:
             return []
         if not entity_class["dimension_id_list"]:
             return [entity_class["name"]]
@@ -315,7 +318,12 @@ class TabularViewMixin:
     def _can_build_pivot_table(self):
         if self.current_input_type != self._SCENARIO_ALTERNATIVE and not self.current_class_id:
             return False
-        if self.current_input_type == self._ELEMENT and not self.first_current_entity_class["dimension_id_list"]:
+        entity_class = self.first_current_entity_class
+        if (
+            self.current_input_type == self._ELEMENT
+            and entity_class is not None
+            and not entity_class["dimension_id_list"]
+        ):
             return False
         return True
 
