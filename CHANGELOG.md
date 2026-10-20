@@ -13,6 +13,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Removed
 
+- Support for Python 3.10 has been removed. Python 3.10 reached its end-of-life.
+
 ### Fixed
 
 ### Security

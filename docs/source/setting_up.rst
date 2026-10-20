@@ -164,7 +164,7 @@ You also have the option of running Python Tools in a Conda environment. All you
 
 1. Open Anaconda Prompt and make a new Conda environment::
 
-      conda create -n test python=3.10
+      conda create -n test python=3.11
 
 2. Activate the environment::
 
