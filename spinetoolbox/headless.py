@@ -28,14 +28,16 @@ from spine_engine.exception import EngineInitFailed
 from spine_engine.load_project_items import load_item_specification_factories
 from spine_engine.logger_interface import LoggerInterface
 from spine_engine.server.util.zip_handler import ZipHandler
-from spine_engine.utils.helpers import ExecutionDirection, get_file_size
+from spine_engine.utils.helpers import ExecutionDirection, ItemExecutionFinishState, get_file_size
 from spine_engine.utils.serialization import deserialize_path
 from .config import (
     LATEST_PROJECT_VERSION,
+    PROGRESS_MARKER,
     PROJECT_CONFIG_DIR_NAME,
     PROJECT_CONSUMER_REPLAY_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_ZIP_FILENAME,
+    REPORT_PROGRESS_ENV_VAR,
 )
 from .helpers import (
     HTMLTagFilter,
@@ -69,6 +71,8 @@ from .project_upgrader import (
 )
 from .server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .spine_engine_manager import make_engine_manager
+
+_PROGRESS_STATE_NAMES = {ItemExecutionFinishState.SUCCESS: "done", ItemExecutionFinishState.FAILURE: "failed"}
 
 
 class HeadlessLogger(QObject):
@@ -479,6 +483,8 @@ class ActionsWithProject(QObject):
         if data["direction"] == ExecutionDirection.BACKWARD:
             # Currently there are no interesting messages when executing backwards.
             return
+        if os.environ.get(REPORT_PROGRESS_ENV_VAR):
+            self._logger.msg.emit(f"{PROGRESS_MARKER} running {data['item_name']}")
         self._node_messages[data["item_name"]] = {}
 
     def _handle_node_execution_finished(self, data: dict) -> None:
@@ -488,6 +494,9 @@ class ActionsWithProject(QObject):
             data: execution end data
         """
         item_name = data["item_name"]
+        if os.environ.get(REPORT_PROGRESS_ENV_VAR) and data["direction"] == ExecutionDirection.FORWARD:
+            state = _PROGRESS_STATE_NAMES.get(data["item_state"], "skipped")
+            self._logger.msg.emit(f"{PROGRESS_MARKER} {state} {item_name}")
         messages = self._node_messages.get(item_name)
         if messages is None:
             return

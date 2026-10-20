@@ -73,6 +73,16 @@ Rectangle {
 
         function onExecutionStateChanged(running) {
             root.executionRunning = running
+
+            // a new run starts from a clean slate; the bridge sends the final state of every card when it ends
+            if (running)
+                root.itemRunStates = {}
+        }
+
+        function onItemRunStateChanged(name, state) {
+            var states = Object.assign({}, root.itemRunStates)
+            states[name] = state
+            root.itemRunStates = states
         }
 
         function onPlotsChanged() {
@@ -107,6 +117,9 @@ Rectangle {
 
     // file URLs of the images produced by the latest run
     property var plotUrls: []
+
+    // card name -> "running", "done" or "failed" for the current/latest run
+    property var itemRunStates: ({})
 
     // Data page state: project.json's Data Stores, the selected one's contents, and the selected
     // entity class' parameter values, all fetched from ProjectBridge on demand
@@ -239,61 +252,72 @@ Rectangle {
         }
     }
 
-    // preserves Design View item centers while enlarging the distances to fit the larger cards
+    // groups items into ranks (rows by y, columns by x) using Design View as a hint for order and
+    // which items share a row/column -- but then places ranks on a fixed, compact grid instead of
+    // preserving Design View's often very spread out distances, so cards stay close together
+    // (gaps only grow where the grid needs the extra room to avoid overlapping cards)
+    function rankByCoordinate(items, getCoordinate, tolerance) {
+        var order = []
+        for (var i = 0; i < items.length; i++)
+            order.push({ index: i, value: getCoordinate(items[i]) })
+        order.sort(function (a, b) { return a.value - b.value })
+
+        var rankOfItem = []
+        var rankCount = 0
+        var lastValue = 0
+        for (var j = 0; j < order.length; j++) {
+            var entry = order[j]
+            if (rankCount === 0 || entry.value - lastValue >= tolerance) {
+                lastValue = entry.value
+                rankCount++
+            }
+            rankOfItem[entry.index] = rankCount - 1
+        }
+        return { rankOfItem: rankOfItem, rankCount: rankCount }
+    }
+
     function layoutWorkflow(items, connections) {
         if (items.length === 0)
             return { width: root.designContentWidth, height: root.designContentHeight }
 
-        var minY = items[0].y, maxY = items[0].y
-
-        for (var i = 1; i < items.length; i++) {
-            minY = Math.min(minY, items[i].y)
-            maxY = Math.max(maxY, items[i].y)
-        }
-
-        var scale = 1.8
         var padding = 60
-        var alignedX = []
+        var rowStep = 110   // vertical distance between adjacent rows
+        var colStep = 210   // horizontal distance between adjacent columns (card width + a gap)
+
         var itemIndex = ({})
-        var layoutOrder = []
-
-        for (var m = 0; m < items.length; m++) {
-            alignedX[m] = items[m].x
+        for (var m = 0; m < items.length; m++)
             itemIndex[items[m].name] = m
-            layoutOrder.push({index: m, y: items[m].y})
-        }
 
-        layoutOrder.sort(function(a, b) { return a.y - b.y })
+        var rows = rankByCoordinate(items, function (item) { return item.y }, rowStep / 3)
+        var rowForItem = rows.rankOfItem
+        var rowCount = rows.rankCount
 
-        var rowForItem = []
-        var rowAnchors = []
-        var rowYTotals = []
-        var rowSizes = []
-        var rowCenters = []
-        var rowCount = 0
-        var rowTolerance = 74 / scale
-        for (var j = 0; j < layoutOrder.length; j++) {
-            var rowEntry = layoutOrder[j]
-            if (rowCount === 0 || rowEntry.y - rowAnchors[rowCount - 1] >= rowTolerance) {
-                rowAnchors.push(rowEntry.y)
-                rowYTotals.push(rowEntry.y)
-                rowSizes.push(1)
-                rowCount++
-            } else {
-                rowYTotals[rowCount - 1] += rowEntry.y
-                rowSizes[rowCount - 1]++
-            }
-            rowForItem[rowEntry.index] = rowCount - 1
-        }
-
-        for (var r = 0; r < rowCount; r++)
-            rowCenters[r] = rowYTotals[r] / rowSizes[r]
         var itemY = []
         for (var n = 0; n < items.length; n++)
-            itemY[n] = rowCenters[rowForItem[n]]
+            itemY[n] = rowForItem[n] * rowStep
 
-        // feeders of one card (links entering its left/right side) are spread symmetrically around it
-        // vertically, keeping the farthest feeder's distance, so their midpoint lines up with the card
+        // columns are ranked independently within each row, so an unrelated item in a different row
+        // never eats up a "phantom" column slot between two items that are actually adjacent
+        var alignedX = []
+        for (var rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+            var rowItems = []
+            for (var ri = 0; ri < items.length; ri++) {
+                if (rowForItem[ri] === rowIdx)
+                    rowItems.push(items[ri])
+            }
+            var rowCols = rankByCoordinate(rowItems, function (item) { return item.x }, colStep / 4)
+            var ri2 = 0
+            for (var ri3 = 0; ri3 < items.length; ri3++) {
+                if (rowForItem[ri3] === rowIdx) {
+                    alignedX[ri3] = rowCols.rankOfItem[ri2] * colStep
+                    ri2++
+                }
+            }
+        }
+
+        // feeders of one card (links entering its left/right side) are spread symmetrically around it,
+        // one row step apart each, so their midpoint lines up with the card regardless of how far
+        // apart (or close together) they originally were in Design View
         var feedersOf = ({})
         for (var f = 0; f < connections.length; f++) {
             var feed = connections[f]
@@ -308,32 +332,24 @@ Rectangle {
             if (feedersOf[feedTarget].indexOf(feedSource) < 0)
                 feedersOf[feedTarget].push(feedSource)
         }
-        var minFeederOffset = 70
         for (var targetKey in feedersOf) {
             var feeders = feedersOf[targetKey]
             if (feeders.length < 2)
                 continue
             var targetY = itemY[targetKey]
-            var offset = minFeederOffset
-            for (var fo = 0; fo < feeders.length; fo++)
-                offset = Math.max(offset, Math.abs(itemY[feeders[fo]] - targetY))
-            feeders.sort(function(a, b) { return itemY[a] - itemY[b] })
-            var newY = []
+            feeders.sort(function (a, b) { return itemY[a] - itemY[b] })
             for (var fs = 0; fs < feeders.length; fs++)
-                newY[fs] = targetY - offset + 2 * offset * fs / (feeders.length - 1)
-            for (var fa = 0; fa < feeders.length; fa++)
-                itemY[feeders[fa]] = newY[fa]
+                itemY[feeders[fs]] = targetY + (fs - (feeders.length - 1) / 2) * rowStep
         }
 
-        minY = itemY[0]
-        maxY = itemY[0]
+        var minY = itemY[0], maxY = itemY[0]
         for (var yi = 1; yi < items.length; yi++) {
             minY = Math.min(minY, itemY[yi])
             maxY = Math.max(maxY, itemY[yi])
         }
         // the whole workflow starts lower so feeders spread above their target still fit in the view
         for (var py = 0; py < items.length; py++)
-            items[py].py = padding + (itemY[py] - minY) * scale
+            items[py].py = padding + (itemY[py] - minY)
 
         // children hanging below a parent's bottom edge in Design View
         var belowChildren = []
@@ -376,7 +392,7 @@ Rectangle {
         }
 
         // cards sharing a row must not overlap
-        var minSpacing = (150 + 60) / scale
+        var minSpacing = colStep
         for (var spreadRow = 0; spreadRow < rowCount; spreadRow++) {
             var inRow = []
             for (var q = 0; q < items.length; q++) {
@@ -395,7 +411,7 @@ Rectangle {
             var upper = itemIndex[down.from]
             var lower = itemIndex[down.to]
             if (down.from_anchor === "bottom" && upper !== undefined && lower !== undefined
-                    && itemY[lower] > itemY[upper] && Math.abs(alignedX[lower] - alignedX[upper]) < 75 / scale / 2)
+                    && itemY[lower] > itemY[upper] && Math.abs(alignedX[lower] - alignedX[upper]) < colStep / 4)
                 down.to_anchor = "top"
         }
 
@@ -405,11 +421,11 @@ Rectangle {
             rightX = Math.max(rightX, alignedX[u])
         }
         for (var w = 0; w < items.length; w++)
-            items[w].px = padding + (alignedX[w] - leftX) * scale
+            items[w].px = padding + (alignedX[w] - leftX)
 
         return {
-            width: padding * 2 + (rightX - leftX) * scale + 150,
-            height: padding * 2 + (maxY - minY) * scale + 74
+            width: padding * 2 + (rightX - leftX) + 150,
+            height: padding * 2 + (maxY - minY) + 74
         }
     }
 
@@ -499,14 +515,15 @@ Rectangle {
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows,
     // multiplied by a user-controlled zoom factor from the −/+/Fit buttons (or Ctrl+wheel)
     property real zoomLevel: 1.0
-    property real cardScale: root.zoomLevel * Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth))
+    // floored so the two factors combined never shrink cards past where text/line rendering breaks down
+    property real cardScale: Math.max(0.55, root.zoomLevel * Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth)))
 
     function zoomIn() {
         root.zoomLevel = Math.min(2.5, root.zoomLevel * 1.2)
     }
 
     function zoomOut() {
-        root.zoomLevel = Math.max(0.3, root.zoomLevel / 1.2)
+        root.zoomLevel = Math.max(0.55, root.zoomLevel / 1.2)
     }
 
     function zoomReset() {
@@ -608,13 +625,6 @@ Rectangle {
                 SidebarButton {
                     text: "Home"
                     iconText: "⌂"
-                    selected: false
-                    compact: root.compactSidebar
-                }
-
-                SidebarButton {
-                    text: "Projects"
-                    iconText: "▣"
                     selected: root.currentView === "workflow"
                     compact: root.compactSidebar
 
@@ -1040,11 +1050,37 @@ Rectangle {
                 // =================================================
 
                 Rectangle {
+                    id: designCanvas
+
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
                     visible: root.currentView === "workflow"
                     color: "#f2f8f4"
+
+                    focus: true
+
+                    // arrow keys nudge every selected card together, same grouping as dragging one of them
+                    Keys.onPressed: function (event) {
+                        var dx = event.key === Qt.Key_Left ? -1 : event.key === Qt.Key_Right ? 1 : 0
+                        var dy = event.key === Qt.Key_Up ? -1 : event.key === Qt.Key_Down ? 1 : 0
+                        if (dx === 0 && dy === 0)
+                            return
+
+                        var names = Object.keys(root.selectedNames)
+                        if (names.length === 0)
+                            return
+
+                        var step = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
+                        for (var i = 0; i < names.length; i++) {
+                            var nodeItem = root.nodeItems[names[i]]
+                            if (nodeItem) {
+                                nodeItem.x += dx * step
+                                nodeItem.y += dy * step
+                            }
+                        }
+                        event.accepted = true
+                    }
 
                     // Ctrl+wheel zooms the canvas in/out
                     WheelHandler {
@@ -1157,6 +1193,7 @@ Rectangle {
                             property point pressPoint
 
                             onPressed: function (mouse) {
+                                designCanvas.forceActiveFocus()
                                 pressPoint = Qt.point(mouse.x, mouse.y)
                                 root.rubberActive = true
                                 root.rubberRect = Qt.rect(mouse.x, mouse.y, 0, 0)
@@ -1980,6 +2017,39 @@ Rectangle {
 
         property bool hovered: false
 
+        property string runState: root.itemRunStates[nodeName] || ""
+
+        // run progress badge: a swinging hammer while executing, then a check mark or a cross
+        Label {
+            id: runBadge
+
+            visible: card.runState !== ""
+            z: 5
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: -8 * card.sizeFactor
+            anchors.topMargin: -12 * card.sizeFactor
+            transformOrigin: Item.BottomRight
+
+            text: card.runState === "running" ? "⚒" : (card.runState === "done" ? "✔" : (card.runState === "queued" ? "…" : "✖"))
+            color: card.runState === "done" ? "#16a34a" : (card.runState === "failed" ? "#dc2626" : (card.runState === "queued" ? "#6b7280" : "#b45309"))
+            font.pixelSize: 20 * card.sizeFactor
+            font.bold: true
+
+            SequentialAnimation on rotation {
+                running: card.runState === "running"
+                loops: Animation.Infinite
+
+                NumberAnimation { from: -25; to: 25; duration: 300; easing.type: Easing.InOutQuad }
+                NumberAnimation { from: 25; to: -25; duration: 300; easing.type: Easing.InOutQuad }
+            }
+        }
+
+        onRunStateChanged: {
+            if (runState !== "running")
+                runBadge.rotation = 0
+        }
+
         signal clicked()
 
         scale: hovered ? 1.015 : 1
@@ -2096,6 +2166,7 @@ Rectangle {
             onExited: card.hovered = false
 
             onPressed: function (mouse) {
+                designCanvas.forceActiveFocus()
                 lastX = card.x
                 lastY = card.y
 
@@ -2105,9 +2176,43 @@ Rectangle {
                     root.selectOnly(card.nodeName)
             }
 
+            // snap x/y to other unselected cards when within a few pixels
+            function snapToNeighbours() {
+                var threshold = 10 * card.sizeFactor
+                var bestX = threshold
+                var bestY = threshold
+                var snapX = card.x
+                var snapY = card.y
+
+                for (var name in root.nodeItems) {
+                    var other = root.nodeItems[name]
+
+                    if (!other || other === card || root.selectedNames[name])
+                        continue
+
+                    if (Math.abs(other.x - card.x) < bestX) {
+                        bestX = Math.abs(other.x - card.x)
+                        snapX = other.x
+                    }
+
+                    if (Math.abs(other.y - card.y) < bestY) {
+                        bestY = Math.abs(other.y - card.y)
+                        snapY = other.y
+                    }
+                }
+
+                card.x = snapX
+                card.y = snapY
+            }
+
             // while this card is dragged, move every other selected card by the same amount
             onPositionChanged: {
-                if (!drag.active || !card.selected)
+                if (!drag.active)
+                    return
+
+                snapToNeighbours()
+
+                if (!card.selected)
                     return
 
                 var dx = card.x - lastX
