@@ -1102,6 +1102,17 @@ Rectangle {
                         contentWidth: Math.max(width, root.designContentWidth * root.cardScale)
                         contentHeight: Math.max(height, root.designContentHeight * root.cardScale)
 
+                        // margins let the workflow be dragged freely, even when it fits in the window
+                        leftMargin: width
+                        rightMargin: width
+                        topMargin: height
+                        bottomMargin: height
+
+                        Component.onCompleted: {
+                            contentX = 0
+                            contentY = 0
+                        }
+
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
 
@@ -1204,16 +1215,28 @@ Rectangle {
                         MouseArea {
                             id: selectionArea
 
-                            width: designFlick.contentWidth
-                            height: designFlick.contentHeight
+                            x: -designFlick.leftMargin
+                            y: -designFlick.topMargin
+                            width: designFlick.contentWidth + designFlick.leftMargin + designFlick.rightMargin
+                            height: designFlick.contentHeight + designFlick.topMargin + designFlick.bottomMargin
 
                             property point pressPoint
+                            property point panStart
+                            property point panOrigin
+                            property bool panning: false
 
                             onPressed: function (mouse) {
                                 designCanvas.forceActiveFocus()
-                                pressPoint = Qt.point(mouse.x, mouse.y)
-                                root.rubberActive = true
-                                root.rubberRect = Qt.rect(mouse.x, mouse.y, 0, 0)
+                                pressPoint = Qt.point(mouse.x + selectionArea.x, mouse.y + selectionArea.y)
+                                panning = !(mouse.modifiers & Qt.ShiftModifier)
+
+                                if (panning) {
+                                    panStart = selectionArea.mapToItem(designFlick, mouse.x, mouse.y)
+                                    panOrigin = Qt.point(designFlick.contentX, designFlick.contentY)
+                                } else {
+                                    root.rubberActive = true
+                                    root.rubberRect = Qt.rect(pressPoint.x, pressPoint.y, 0, 0)
+                                }
 
                                 if (!(mouse.modifiers & Qt.ControlModifier))
                                     root.clearSelection()
@@ -1223,10 +1246,23 @@ Rectangle {
                                 if (!pressed)
                                     return
 
-                                var x = Math.min(pressPoint.x, mouse.x)
-                                var y = Math.min(pressPoint.y, mouse.y)
-                                var w = Math.abs(mouse.x - pressPoint.x)
-                                var h = Math.abs(mouse.y - pressPoint.y)
+                                if (panning) {
+                                    var view = selectionArea.mapToItem(designFlick, mouse.x, mouse.y)
+                                    designFlick.contentX = Math.max(-designFlick.leftMargin,
+                                                                    Math.min(designFlick.contentWidth + designFlick.rightMargin - designFlick.width,
+                                                                             panOrigin.x - (view.x - panStart.x)))
+                                    designFlick.contentY = Math.max(-designFlick.topMargin,
+                                                                    Math.min(designFlick.contentHeight + designFlick.bottomMargin - designFlick.height,
+                                                                             panOrigin.y - (view.y - panStart.y)))
+                                    return
+                                }
+
+                                var mouseX = mouse.x + selectionArea.x
+                                var mouseY = mouse.y + selectionArea.y
+                                var x = Math.min(pressPoint.x, mouseX)
+                                var y = Math.min(pressPoint.y, mouseY)
+                                var w = Math.abs(mouseX - pressPoint.x)
+                                var h = Math.abs(mouseY - pressPoint.y)
 
                                 root.rubberRect = Qt.rect(x, y, w, h)
                                 root.selectWithinRect(root.rubberRect, (mouse.modifiers & Qt.ControlModifier) !== 0)
