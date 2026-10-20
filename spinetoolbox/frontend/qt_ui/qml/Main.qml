@@ -1093,18 +1093,6 @@ Rectangle {
                         event.accepted = true
                     }
 
-                    // Ctrl+wheel zooms the canvas in/out
-                    WheelHandler {
-                        acceptedModifiers: Qt.ControlModifier
-
-                        onWheel: function (event) {
-                            if (event.angleDelta.y > 0)
-                                root.zoomIn()
-                            else if (event.angleDelta.y < 0)
-                                root.zoomOut()
-                        }
-                    }
-
                     // subtle grid, scrollable so fixed-position cards stay reachable on narrow windows
                     Flickable {
                         id: designFlick
@@ -1116,6 +1104,16 @@ Rectangle {
 
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
+
+                        // the mouse wheel zooms; scroll bars and dragging pan
+                        WheelHandler {
+                            onWheel: function (event) {
+                                if (event.angleDelta.y > 0)
+                                    root.zoomIn()
+                                else if (event.angleDelta.y < 0)
+                                    root.zoomOut()
+                            }
+                        }
 
                         ScrollBar.vertical: ScrollBar {
                             policy: designFlick.contentHeight > designFlick.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
