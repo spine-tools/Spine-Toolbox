@@ -51,6 +51,9 @@ PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "
 PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.json"
 PLOTS_DIR_ENV_VAR = "SPINETOOLBOX_PLOTS_DIR"
 """If set, plots are saved as images into this directory instead of being shown in windows."""
+REPORT_PROGRESS_ENV_VAR = "SPINETOOLBOX_REPORT_PROGRESS"
+"""If set, headless execution prints a PROGRESS_MARKER line whenever an item starts or finishes."""
+PROGRESS_MARKER = "@@spinetoolbox-progress"
 # Jupyter kernel constants
 JUPYTER_KERNEL_TIME_TO_DEAD = 20
 
