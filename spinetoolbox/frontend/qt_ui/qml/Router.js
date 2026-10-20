@@ -189,8 +189,12 @@ function routeAll(cards, connections, scale) {
         }
         var start = edgePoint(info.fromCard, info.fromSide, info.fromFraction)
         var end = edgePoint(info.toCard, info.toSide, info.toFraction)
-        var startOut = { x: start.x + start.dx * stub, y: start.y + start.dy * stub }
-        var endOut = { x: end.x + end.dx * stub, y: end.y + end.dy * stub }
+        // facing sides closer than two stubs get shorter stubs, otherwise the line would loop back on itself
+        var gap = start.dx !== 0 && end.dx === -start.dx ? (end.x - start.x) * start.dx
+                : start.dy !== 0 && end.dy === -start.dy ? (end.y - start.y) * start.dy : -1
+        var stubLength = gap > 0 ? Math.min(stub, gap / 2) : stub
+        var startOut = { x: start.x + start.dx * stubLength, y: start.y + start.dy * stubLength }
+        var endOut = { x: end.x + end.dx * stubLength, y: end.y + end.dy * stubLength }
         xValues.push(startOut.x, endOut.x)
         yValues.push(startOut.y, endOut.y)
         plans.push({ start: start, end: end, startOut: startOut, endOut: endOut })
