@@ -1117,6 +1117,14 @@ Rectangle {
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
 
+                        ScrollBar.vertical: ScrollBar {
+                            policy: designFlick.contentHeight > designFlick.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                        }
+
+                        ScrollBar.horizontal: ScrollBar {
+                            policy: designFlick.contentWidth > designFlick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
+                        }
+
                         Canvas {
                             id: connectionsCanvas
 
