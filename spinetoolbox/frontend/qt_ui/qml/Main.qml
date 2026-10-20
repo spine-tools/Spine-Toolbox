@@ -281,7 +281,7 @@ Rectangle {
             return { width: root.designContentWidth, height: root.designContentHeight }
 
         var padding = 60
-        var rowStep = 110   // vertical distance between adjacent rows
+        var rowStep = 134   // vertical distance between adjacent rows (card height + a 60 gap, like colStep)
         var colStep = 210   // horizontal distance between adjacent columns (card width + a gap)
 
         var itemIndex = ({})
@@ -355,10 +355,11 @@ Rectangle {
         var belowChildren = []
         for (var c = 0; c < connections.length; c++) {
             var link = connections[c]
-            var parentIndex = itemIndex[link.from]
-            var childIndex = itemIndex[link.to]
-            if (link.from_anchor !== "bottom" || parentIndex === undefined || childIndex === undefined
-                    || rowForItem[childIndex] <= rowForItem[parentIndex])
+            var enteringBottom = link.from_anchor !== "bottom" && link.to_anchor === "bottom"
+            var parentIndex = itemIndex[enteringBottom ? link.to : link.from]
+            var childIndex = itemIndex[enteringBottom ? link.from : link.to]
+            if ((link.from_anchor !== "bottom" && !enteringBottom) || parentIndex === undefined
+                    || childIndex === undefined || rowForItem[childIndex] <= rowForItem[parentIndex])
                 continue
             if (!belowChildren[parentIndex])
                 belowChildren[parentIndex] = []
@@ -413,6 +414,14 @@ Rectangle {
             if (down.from_anchor === "bottom" && upper !== undefined && lower !== undefined
                     && itemY[lower] > itemY[upper] && Math.abs(alignedX[lower] - alignedX[upper]) < colStep / 4)
                 down.to_anchor = "top"
+
+            // mirror case: a card below feeds the bottom edge of the card above, leaving through its top
+            var above = itemIndex[down.to]
+            var below = itemIndex[down.from]
+            if (down.from_anchor !== "bottom" && down.to_anchor === "bottom" && above !== undefined
+                    && below !== undefined && itemY[below] > itemY[above]
+                    && Math.abs(alignedX[below] - alignedX[above]) < colStep / 4)
+                down.from_anchor = "top"
         }
 
         var leftX = alignedX[0], rightX = alignedX[0]
@@ -515,6 +524,8 @@ Rectangle {
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows,
     // multiplied by a user-controlled zoom factor from the −/+/Fit buttons (or Ctrl+wheel)
     property real zoomLevel: 1.0
+
+    onCardScaleChanged: root.scheduleRoutes()
     // floored so the two factors combined never shrink cards past where text/line rendering breaks down
     property real cardScale: Math.max(0.55, root.zoomLevel * Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth)))
 
@@ -1124,7 +1135,7 @@ Rectangle {
                                 // pale when it's idle (another line covers the target), reddish when broken
                                 var lineColor = state === "idle" ? "#c7d2d6" : state === "error" ? "#dc2626" : "#2f6b4a"
                                 ctx.strokeStyle = lineColor
-                                ctx.lineWidth = state === "idle" ? 1.5 : 3
+                                ctx.lineWidth = (state === "idle" ? 1.5 : 3) * root.cardScale
 
                                 function segmentLength(a, b) {
                                     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
@@ -1147,7 +1158,7 @@ Rectangle {
                                 ctx.stroke()
 
                                 // arrow head points along the final segment
-                                var arrowSize = 7
+                                var arrowSize = 7 * root.cardScale
                                 var directionX = Math.sign(tip.x - tail.x)
                                 var directionY = Math.sign(tip.y - tail.y)
 
@@ -1271,9 +1282,9 @@ Rectangle {
                                 y: anchorPoint.y - height / 2
                                 z: 6
 
-                                width: 28
-                                height: 28
-                                radius: 14
+                                width: 28 * root.cardScale
+                                height: width
+                                radius: width / 2
 
                                 color: modelData.filter_state === "error" ? "#fee2e2" : "#ffffff"
                                 border.color: modelData.filter_state === "error"
@@ -1281,7 +1292,7 @@ Rectangle {
                                               : modelData.filter_state === "disabled_ok"
                                                 ? "#dbe3de"
                                                 : "#2f6b4a"
-                                border.width: modelData.filter_state === "disabled_ok" ? 1 : 2
+                                border.width: (modelData.filter_state === "disabled_ok" ? 1 : 2) * root.cardScale
                                 opacity: modelData.filter_state === "disabled_ok" ? 0.6 : 1.0
 
                                 Label {
@@ -1290,7 +1301,7 @@ Rectangle {
                                     text: modelData.filter_state === "error"
                                           ? "!"
                                           : (modelData.filter_type === "scenario" ? "S" : "A")
-                                    font.pixelSize: 13
+                                    font.pixelSize: 13 * root.cardScale
                                     font.bold: modelData.filter_state !== "disabled_ok"
                                     color: modelData.filter_state === "error"
                                            ? "#dc2626"
