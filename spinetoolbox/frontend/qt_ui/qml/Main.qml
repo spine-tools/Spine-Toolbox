@@ -1114,6 +1114,8 @@ Rectangle {
                         }
 
                         clip: true
+                        // the Flickable's own mouse dragging would steal box selection; panning is done manually
+                        interactive: false
                         boundsBehavior: Flickable.StopAtBounds
 
                         // the mouse wheel zooms; scroll bars and dragging pan
@@ -1228,7 +1230,7 @@ Rectangle {
                             onPressed: function (mouse) {
                                 designCanvas.forceActiveFocus()
                                 pressPoint = Qt.point(mouse.x + selectionArea.x, mouse.y + selectionArea.y)
-                                panning = !(mouse.modifiers & Qt.ShiftModifier)
+                                panning = (mouse.modifiers & Qt.ControlModifier) !== 0
 
                                 if (panning) {
                                     panStart = selectionArea.mapToItem(designFlick, mouse.x, mouse.y)
