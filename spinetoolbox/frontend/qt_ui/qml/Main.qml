@@ -1139,7 +1139,13 @@ Rectangle {
                         Canvas {
                             id: connectionsCanvas
 
-                            anchors.fill: parent
+                            // covers the pan margins too, so lines aren't clipped when cards sit outside the content area
+                            x: -designFlick.leftMargin
+                            y: -designFlick.topMargin
+                            width: designFlick.contentWidth + designFlick.leftMargin + designFlick.rightMargin
+                            height: designFlick.contentHeight + designFlick.topMargin + designFlick.bottomMargin
+                            onWidthChanged: requestPaint()
+                            onHeightChanged: requestPaint()
                             // above idle cards (z: 1) so arrows are never hidden behind them,
                             // but below a card actively being dragged (z: 10)
                             z: 5
@@ -1198,6 +1204,8 @@ Rectangle {
                                 var ctx = getContext("2d")
 
                                 ctx.clearRect(0, 0, width, height)
+                                ctx.save()
+                                ctx.translate(-x, -y)
 
                                 var connections = root.workflow.connections || []
 
@@ -1210,6 +1218,7 @@ Rectangle {
                                         drawConnection(ctx, connection, state)
                                     }
                                 }
+                                ctx.restore()
                             }
                         }
 
