@@ -2031,9 +2031,22 @@ Rectangle {
             card.scenarioInfo = { "total": 0, "enabled": 0, "state": "ok" }
         }
 
-        // initial layout from project.json; dragging then takes over and owns x/y directly
-        x: designX * sizeFactor
-        y: designY * sizeFactor
+        // x/y are set imperatively (dragging owns them), so zooming rescales them explicitly
+        property real previousSizeFactor: 1
+
+        onSizeFactorChanged: {
+            x = x * sizeFactor / previousSizeFactor
+            y = y * sizeFactor / previousSizeFactor
+            previousSizeFactor = sizeFactor
+        }
+
+        onDesignXChanged: x = designX * sizeFactor
+        onDesignYChanged: y = designY * sizeFactor
+
+        Component.onCompleted: {
+            x = designX * sizeFactor
+            y = designY * sizeFactor
+        }
 
         width: 150 * sizeFactor
         height: 74 * sizeFactor
@@ -2240,33 +2253,46 @@ Rectangle {
                     root.selectOnly(card.nodeName)
             }
 
-            // snap x/y to other unselected cards when within a few pixels
+            // snaps the moving group (every selected card, or just this one) to unselected cards within a few pixels
             function snapToNeighbours() {
                 var threshold = 10 * card.sizeFactor
                 var bestX = threshold
                 var bestY = threshold
-                var snapX = card.x
-                var snapY = card.y
+                var shiftX = 0
+                var shiftY = 0
+                var rawDx = card.selected ? card.x - lastX : 0
+                var rawDy = card.selected ? card.y - lastY : 0
+                var movers = card.selected ? Object.keys(root.selectedNames) : [card.nodeName]
 
-                for (var name in root.nodeItems) {
-                    var other = root.nodeItems[name]
+                for (var i = 0; i < movers.length; i++) {
+                    var mover = root.nodeItems[movers[i]]
 
-                    if (!other || other === card || root.selectedNames[name])
+                    if (!mover)
                         continue
 
-                    if (Math.abs(other.x - card.x) < bestX) {
-                        bestX = Math.abs(other.x - card.x)
-                        snapX = other.x
-                    }
+                    var moverX = mover === card ? mover.x : mover.x + rawDx
+                    var moverY = mover === card ? mover.y : mover.y + rawDy
 
-                    if (Math.abs(other.y - card.y) < bestY) {
-                        bestY = Math.abs(other.y - card.y)
-                        snapY = other.y
+                    for (var name in root.nodeItems) {
+                        var other = root.nodeItems[name]
+
+                        if (!other || root.selectedNames[name] || other === card)
+                            continue
+
+                        if (Math.abs(other.x - moverX) < bestX) {
+                            bestX = Math.abs(other.x - moverX)
+                            shiftX = other.x - moverX
+                        }
+
+                        if (Math.abs(other.y - moverY) < bestY) {
+                            bestY = Math.abs(other.y - moverY)
+                            shiftY = other.y - moverY
+                        }
                     }
                 }
 
-                card.x = snapX
-                card.y = snapY
+                card.x += shiftX
+                card.y += shiftY
             }
 
             // while this card is dragged, move every other selected card by the same amount
