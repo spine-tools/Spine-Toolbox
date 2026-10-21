@@ -13,7 +13,6 @@
 """Unit tests for ``tabular_view_mixin`` module."""
 
 import itertools
-import unittest
 from unittest.mock import patch
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtWidgets import QApplication
@@ -178,6 +177,9 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
         for filter_menu in self._db_editor.filter_menus.values():
             self.assertEqual(filter_menu._menu_data, {})
 
+    def test_first_current_entity_class_returns_none_if_no_class_is_selected(self):
+        self.assertIsNone(self._db_editor.first_current_entity_class)
+
     @staticmethod
     def _get_header_widget(table_view, name):
         model = table_view.model()
@@ -212,7 +214,3 @@ class TestPivotHeaderDraggingAndDropping(TestBase):
         for row, column in itertools.product(range(row_count), range(column_count)):
             with self.subTest(row=row, column=column):
                 self.assertEqual(model.index(row, column).data(), expected[row][column])
-
-
-if __name__ == "__main__":
-    unittest.main()
