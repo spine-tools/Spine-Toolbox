@@ -1,11 +1,13 @@
 """
 This script benchmarks SpineDBManager.get_icon_mngr().
 """
+
 import os
 import sys
 
 if sys.platform == "win32" and "HOMEPATH" not in os.environ:
     import pathlib
+
     os.environ["HOMEPATH"] = str(pathlib.Path(sys.executable).parent)
 
 import time
@@ -18,9 +20,7 @@ from spinetoolbox.spine_db_icon_manager import SpineDBIconManager
 from spinetoolbox.spine_db_manager import SpineDBManager
 
 
-def db_mngr_get_icon_mngr(
-    loops: int, db_mngr: SpineDBManager, db_maps: Iterable[DatabaseMapping]
-) -> float:
+def db_mngr_get_icon_mngr(loops: int, db_mngr: SpineDBManager, db_maps: Iterable[DatabaseMapping]) -> float:
     duration = 0.0
     for _ in range(loops):
         for db_map in db_maps:
