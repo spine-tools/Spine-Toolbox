@@ -32,6 +32,8 @@ class ExecutableCompoundModels(QObject):
 
     """Emitted when all kernels have been loaded."""
     all_kernels_loaded = Signal()
+    """Emitted when a Python interpreter, a Julia executable, or a Julia project is removed from the model."""
+    path_entry_removed = Signal(str, str)
 
     def __init__(self, qsettings):
         super().__init__()
@@ -122,6 +124,7 @@ class ExecutableCompoundModels(QObject):
         key = "appSettings/juliaExecutables"
         updated_julia_exes = remove_path_from_qsettings(self._qsettings, key, path_to_remove)
         self.refresh_julia_executables_model(updated_julia_exes)
+        self.path_entry_removed.emit("julia_executable", path_to_remove)
 
     def find_julia_executable_index(self, path):
         """Returns the index of the given Julia executable.
@@ -179,6 +182,7 @@ class ExecutableCompoundModels(QObject):
         key = "appSettings/juliaProjects"
         updated_julia_projects = remove_path_from_qsettings(self._qsettings, key, path_to_remove)
         self.refresh_julia_projects_model(updated_julia_projects)
+        self.path_entry_removed.emit("julia_project", path_to_remove)
 
     def find_julia_project_index(self, path):
         """Returns the index of the given Julia project.
@@ -291,6 +295,7 @@ class ExecutableCompoundModels(QObject):
         key = "appSettings/pythonInterpreters"
         updated_python_interpreters = remove_path_from_qsettings(self._qsettings, key, path_to_remove)
         self.refresh_python_interpreters_model(updated_python_interpreters)
+        self.path_entry_removed.emit("python_interpreter", path_to_remove)
 
     def find_python_interpreter_index(self, path):
         """Returns the index of the given Python interpreter.
@@ -387,7 +392,6 @@ class ExecutableCompoundModels(QObject):
     def _make_item_red_if_path_doesnt_exist(item, p):
         """Makes given items foreground color red if given path doesn't exist."""
         if not os.path.exists(p):
-            print(f"path:{p} doesn't exist")
             item.setForeground(QBrush(Qt.GlobalColor.red))
             item.setToolTip(f"[Path doesn't exist] {p}")
         return item
