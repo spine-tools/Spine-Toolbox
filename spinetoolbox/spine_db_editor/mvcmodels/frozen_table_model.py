@@ -17,6 +17,7 @@ from itertools import product
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QObject, Qt, Signal
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
+from ...exceptions import DatabaseMappingClosed
 from ...helpers import plain_to_tool_tip, rows_to_row_count_tuples
 from ...spine_db_manager import SpineDBManager
 from .colors import selected_color
@@ -386,8 +387,7 @@ class FrozenTableModel(QAbstractTableModel):
             table_name = "entity"
         try:
             db_lock = self.db_mngr.get_lock(db_map)
-        except KeyError:
-            # Happens when closing the DB editor after the frozen table dock has been shown, then hidden.
+        except DatabaseMappingClosed:
             return ""
         with db_lock:
             return db_map.mapped_table(table_name)[id_]["name"]
