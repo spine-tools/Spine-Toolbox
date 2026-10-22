@@ -18,6 +18,7 @@ from typing import ClassVar
 from PySide6.QtCore import Qt
 from spinedb_api import DatabaseMapping
 from spinedb_api.temp_id import TempId
+from ...exceptions import DatabaseMappingClosed
 from ...fetch_parent import FetchIndex, FlexibleFetchParent
 from ...helpers import bisect_chunks, order_key, rows_to_row_count_tuples
 from ...mvcmodels.minimal_tree_model import FilterableChildrenMixin, MinimalTreeModel, TreeItem
@@ -220,7 +221,7 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
         """Returns field from data for this item in given db_map or None if not found."""
         try:
             lock = self.db_mngr.get_lock(db_map)
-        except KeyError:
+        except DatabaseMappingClosed:
             return default
         with lock:
             return self.db_map_data(db_map).get(field, default)

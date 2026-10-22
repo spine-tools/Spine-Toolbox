@@ -25,6 +25,7 @@ from spinedb_api.helpers import AsteriskType, ItemType
 from spinedb_api.parameter_value import split_value_and_type
 from spinedb_api.temp_id import TempId
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR, order_key, order_key_from_names, plain_to_rich
+from ...exceptions import DatabaseMappingClosed
 from ...mvcmodels.minimal_table_model import MinimalTableModel
 from ...mvcmodels.shared import (
     DB_MAP_ROLE,
@@ -236,16 +237,16 @@ class SingleModelBase(HalfSortedTableModel):
                 if self.filter_accepts_item(item):
                     yield row
             return
-        # Acquire the db manager's lock once for the whole scan (instead of once
-        # per value cell), collect the accepted rows, then release before yielding
-        # so the lock is never held across the caller's per-row processing.
-        with self._column_filter_scan_context():
-            accepted = [
-                row
-                for row in range(self.rowCount())
-                if self.filter_accepts_item(mapped_table[self._main_data[row]])
-                and self._row_accepts_column_filters(row)
-            ]
+        try:
+            with self._column_filter_scan_context():
+                accepted = [
+                    row
+                    for row in range(self.rowCount())
+                    if self.filter_accepts_item(mapped_table[self._main_data[row]])
+                    and self._row_accepts_column_filters(row)
+                ]
+        except DatabaseMappingClosed:
+            return
         yield from accepted
 
     def _get_ref(self, db_item: PublicItem, field: str) -> PublicItem | None:
