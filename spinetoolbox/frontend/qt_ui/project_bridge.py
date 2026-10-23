@@ -9,11 +9,13 @@ from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal,
 from ...config import (
     LATEST_PROJECT_VERSION,
     PLOTS_DIR_ENV_VAR,
+    PROGRESS_MARKER,
     PROJECT_CONFIG_DIR_NAME,
     PROJECT_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
     PROJECT_SETUP_SCRIPT,
+    REPORT_PROGRESS_ENV_VAR,
 )
 from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url
@@ -104,6 +106,8 @@ class ProjectBridge(QObject):
     # emitted per output line from a workflow run; kind is "stdout" or "stderr"
     executionLogAppended = Signal(str, str)
     plotsChanged = Signal()
+    itemRunStateChanged = Signal(str, str)
+    """Emits a display name and its run state: "waiting", "running", "done", "failed", "skipped" or "excluded"."""
     # emitted when the user asks (via the User Mode switch) to go back to the classic Qt UI
     devModeRequested = Signal()
 
@@ -120,13 +124,16 @@ class ProjectBridge(QObject):
         self._setup_logger.msg_error.connect(lambda text: self.setupStatusChanged.emit(text, "error"))
         self._run_manager: QProcessExecutionManager | None = None
         self._written_images: list[Path] = []
+        self._member_states: dict[str, str] = {}
+        self._display_members: dict[str, list[str]] = {}
+        self._display_states: dict[str, str] = {}
         self._run_started = 0.0
         self._saved_pythonpath: str | None = None
         self._plots_watcher = QFileSystemWatcher(self)
         self._plots_watcher.directoryChanged.connect(self.plotsChanged)
         self._run_logger = QtLogger()
-        self._run_logger.msg.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
-        self._run_logger.msg_proc.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
+        self._run_logger.msg.connect(lambda text: self._handle_run_output(text, "stdout"))
+        self._run_logger.msg_proc.connect(lambda text: self._handle_run_output(text, "stdout"))
         self._run_logger.msg_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
         self._run_logger.msg_proc_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
 
@@ -549,6 +556,50 @@ class ProjectBridge(QObject):
         else:
             self._setup_logger.msg_error.emit("Project setup script failed")
 
+    def _handle_run_output(self, text: str, kind: str) -> None:
+        """Turns progress marker lines into item state updates and forwards everything else to the run log."""
+        if PROGRESS_MARKER not in text:
+            self.executionLogAppended.emit(text, kind)
+            return
+        lines = text.splitlines()
+        log_text = "\n".join(line for line in lines if PROGRESS_MARKER not in line)
+        if log_text.strip():
+            self.executionLogAppended.emit(log_text, kind)
+        for line in lines:
+            if PROGRESS_MARKER in line:
+                state, item_name = line.split(PROGRESS_MARKER, 1)[1].strip().split(maxsplit=1)
+                self._member_states[item_name] = state
+                self._publish_display_state(self._display_name_of(item_name))
+
+    def _included_items(self, selected: set[str], data: dict) -> set[str]:
+        """Returns the items the engine goes through for selected: those connected to a selected item
+        (same rule as the classic UI's SpineEngineWorker)."""
+        included = set()
+        for connection in data.get("project", {}).get("connections", []):
+            source, destination = connection["from"][0], connection["to"][0]
+            if source in selected or destination in selected:
+                included.update((source, destination))
+        return included or selected
+
+    def _display_state(self, display_name: str) -> str:
+        members = self._display_members[display_name]
+        states = {self._member_states[member] for member in members if member in self._member_states}
+        for state in ("failed", "running", "waiting", "done", "excluded", "skipped"):
+            if state in states:
+                return state
+        return ""
+
+    def _publish_display_state(self, display_name: str) -> None:
+        if display_name not in self._display_members:
+            return
+        state = self._display_state(display_name)
+        if state != self._display_states.get(display_name, ""):
+            self._display_states[display_name] = state
+            self.itemRunStateChanged.emit(display_name, state)
+
+    def _display_name_of(self, item_name: str) -> str:
+        return next((name for name, members in self._display_members.items() if item_name in members), item_name)
+
     @Slot(list)
     def run_workflow(self, selected_names: list) -> None:
         """Runs the project (or, if selected_names is non-empty, just those items/stacks) via the
@@ -569,6 +620,10 @@ class ProjectBridge(QObject):
         if real_names:
             args += ["--select", *real_names]
         python = _resolve_python_interpreter()
+        self._display_members = {name: self._stack_members(data, name) for name in self._visible_display_names(data)}
+        self._member_states = {name: "waiting" for name in self._included_items(set(real_names), data)}
+        self._display_states = {}
+        os.environ[REPORT_PROGRESS_ENV_VAR] = "1"
         os.environ["PYTHONUNBUFFERED"] = "1"
         plots_dir = self._plots_dir()
         shutil.rmtree(plots_dir, ignore_errors=True)
@@ -590,6 +645,8 @@ class ProjectBridge(QObject):
         )
         self._run_manager.execution_finished.connect(self._handle_run_finished)
         self.executionStateChanged.emit(True)
+        for display_name in self._display_members:
+            self._publish_display_state(display_name)
         self.runStatusChanged.emit("Running project...", "info")
         self._run_manager.start_execution(workdir=project_dir)
 
@@ -604,12 +661,21 @@ class ProjectBridge(QObject):
         user_stopped = self._run_manager.user_stopped
         self._run_manager = None
         os.environ.pop(PLOTS_DIR_ENV_VAR, None)
+        os.environ.pop(REPORT_PROGRESS_ENV_VAR, None)
         os.environ.pop("PYTHONUNBUFFERED", None)
         if self._saved_pythonpath is None:
             os.environ.pop("PYTHONPATH", None)
         else:
             os.environ["PYTHONPATH"] = self._saved_pythonpath
         self._written_images = self._find_written_images()
+        for member, state in list(self._member_states.items()):
+            if state in ("waiting", "running"):
+                if exit_code != 0 and not user_stopped:
+                    self._member_states[member] = "failed"
+                else:
+                    del self._member_states[member]
+        for display_name in self._display_members:
+            self._publish_display_state(display_name)
         self.executionStateChanged.emit(False)
         self.plotsChanged.emit()
         if user_stopped:

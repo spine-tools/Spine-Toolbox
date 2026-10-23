@@ -71,13 +71,19 @@ Rectangle {
 
         function onExecutionStateChanged(running) {
             root.executionRunning = running
+
+            if (running)
+                root.itemRunStates = {}
+        }
+
+        function onItemRunStateChanged(name, state) {
+            var states = Object.assign({}, root.itemRunStates)
+            states[name] = state
+            root.itemRunStates = states
         }
 
         function onPlotsChanged() {
             root.plotUrls = projectBridge.get_plots()
-
-            if (root.plotUrls.length > 0)
-                root.currentView = "results"
         }
 
         function onExecutionLogAppended(line, kind) {
@@ -105,6 +111,9 @@ Rectangle {
 
     // file URLs of the images produced by the latest run
     property var plotUrls: []
+
+    // card name -> "waiting", "running", "done", "failed", "skipped" or "excluded" for the latest run
+    property var itemRunStates: ({})
 
     // Data page state: project.json's Data Stores, the selected one's contents, and the selected
     // entity class' parameter values, all fetched from ProjectBridge on demand
@@ -2076,6 +2085,52 @@ Rectangle {
                       : (hovered ? 2 : 1)
 
         property bool hovered: false
+
+        property string runState: root.itemRunStates[nodeName] || ""
+
+        // same glyphs and colors as the classic UI's ExecutionIcon
+        readonly property color runColor: runState === "done" ? "green"
+                                        : runState === "failed" ? "red"
+                                        : runState === "skipped" ? "chocolate" : "orange"
+        readonly property string runSymbol: runState === "waiting" || runState === "running" ? "\u2026"
+                                          : runState === "failed" ? "\u2716"
+                                          : runState === "skipped" ? "\u00bb" : "\u2714"
+
+        Rectangle {
+            id: runBadge
+
+            visible: ["waiting", "running", "done", "failed", "skipped"].indexOf(card.runState) >= 0
+            z: 5
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: -6 * card.sizeFactor
+            anchors.bottomMargin: -6 * card.sizeFactor
+
+            width: 20 * card.sizeFactor
+            height: width
+            radius: width / 2
+
+            color: "#ffffff"
+            border.color: card.runColor
+            border.width: 2 * card.sizeFactor
+
+            Label {
+                anchors.centerIn: parent
+                text: card.runSymbol
+                color: card.runColor
+                font.pixelSize: 11 * card.sizeFactor
+                font.bold: true
+            }
+
+            ToolTip.visible: runBadgeHover.hovered
+            ToolTip.text: "Execution " + (card.runState === "waiting" || card.runState === "running"
+                                          ? "waiting for dependencies"
+                                          : card.runState === "done" ? "completed" : card.runState)
+
+            HoverHandler {
+                id: runBadgeHover
+            }
+        }
 
         scale: hovered ? 1.015 : 1
         z: dragArea.drag.active ? 10 : 1

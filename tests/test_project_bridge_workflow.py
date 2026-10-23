@@ -1,8 +1,8 @@
-import json
+﻿import json
 from pathlib import Path
 import pytest
 from PySide6.QtCore import QCoreApplication
-from spinetoolbox.config import PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME
+from spinetoolbox.config import PROGRESS_MARKER, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME
 from spinetoolbox.frontend.qt_ui.project_bridge import ProjectBridge
 
 
@@ -107,3 +107,48 @@ def test_link_leaving_stack_carries_filter_of_filterable_link_inside_stack(
     connection = json.loads(bridge.get_workflow())["connections"][0]
     assert (connection["from"], connection["to"], connection["filter_type"]) == ("Group", "Store", "scenario")
     assert json.loads(bridge.get_connection_filters("Group", "Store"))["items"] == [{"name": "Base", "enabled": True}]
+
+
+def _states_after(bridge: ProjectBridge, lines: list[str]) -> list[tuple[str, str]]:
+    states = []
+    bridge.itemRunStateChanged.connect(lambda name, state: states.append((name, state)))
+    for line in lines:
+        bridge._handle_run_output(line, "stdout")
+    return states
+
+
+def test_run_states_follow_progress_markers_and_aggregate_per_stack(
+    tmp_path: Path, application: QCoreApplication
+) -> None:
+    bridge = ProjectBridge(tmp_path)
+    bridge._display_members = {"Group": ["Source", "Importer"], "Store": ["Store"]}
+    bridge._member_states = {"Source": "waiting", "Importer": "waiting", "Store": "waiting"}
+    bridge._display_states = {"Group": "waiting", "Store": "waiting"}
+    log = []
+    bridge.executionLogAppended.connect(lambda text, kind: log.append(text))
+    states = _states_after(
+        bridge,
+        [
+            f"{PROGRESS_MARKER} running Source",
+            f"{PROGRESS_MARKER} done Source",
+            "some output",
+            f"{PROGRESS_MARKER} running Importer",
+            f"{PROGRESS_MARKER} done Importer",
+            f"{PROGRESS_MARKER} failed Store",
+        ],
+    )
+    assert states == [
+        ("Group", "running"),
+        ("Group", "waiting"),
+        ("Group", "running"),
+        ("Group", "done"),
+        ("Store", "failed"),
+    ]
+    assert log == ["some output"]
+
+
+def test_included_items_are_those_connected_to_selected_items(tmp_path: Path, application: QCoreApplication) -> None:
+    bridge = ProjectBridge(tmp_path)
+    data = {"project": {"connections": [{"from": ["A", "right"], "to": ["B", "left"]}]}}
+    assert bridge._included_items({"A"}, data) == {"A", "B"}
+    assert bridge._included_items({"C"}, data) == {"C"}
