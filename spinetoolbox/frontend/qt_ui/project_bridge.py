@@ -236,15 +236,35 @@ class ProjectBridge(QObject):
 
     def _connection_filter_type(self, data: dict, connection: dict) -> str | None:
         """Returns "scenario" or "alternative", whichever filter type is enabled on connection, or None
-        if the connection has no filters or (mirroring the classic UI's may_have_filters()) neither of its
-        endpoints is a Data Store, so it can't carry a filterable database resource."""
-        if self._connection_data_store(data, connection) is None:
+        if there is nothing to filter: like the classic UI, only a Data Store source provides a filterable
+        database resource, and the database must have scenarios/alternatives to choose from."""
+        if data.get("items", {}).get(connection["from"][0], {}).get("type") != "Data Store":
             return None
         enabled_types = connection.get("filter_settings", {}).get("enabled_filter_types", {})
         if enabled_types.get("scenario_filter"):
-            return "scenario"
-        if enabled_types.get("alternative_filter"):
-            return "alternative"
+            filter_type = "scenario"
+        elif enabled_types.get("alternative_filter"):
+            filter_type = "alternative"
+        else:
+            return None
+        return filter_type if self._connection_filter_names(data, connection, filter_type) else None
+
+    def _filter_connection(self, data: dict, connection: dict) -> dict | None:
+        """Returns the connection whose filter applies to connection: itself, or, for a link leaving a stack,
+        the first filterable link inside that stack, so the filter shows on the stack's outgoing line."""
+        if self._connection_filter_type(data, connection) is not None:
+            return connection
+        resolve = self._stack_resolver(data)
+        stack = resolve(connection["from"][0])
+        if stack == connection["from"][0]:
+            return None
+        for inner in data.get("project", {}).get("connections", []):
+            if (
+                resolve(inner["from"][0]) == stack
+                and resolve(inner["to"][0]) == stack
+                and self._connection_filter_type(data, inner) is not None
+            ):
+                return inner
         return None
 
     def _connection_requires_filter(self, connection: dict, filter_type: str) -> bool:
@@ -357,6 +377,8 @@ class ProjectBridge(QObject):
         or it has no filters enabled."""
         data = self._load()
         connection = self._find_connection(data, from_name, to_name)
+        if connection is not None:
+            connection = self._filter_connection(data, connection)
         if connection is None:
             return json.dumps({})
         filter_type = self._connection_filter_type(data, connection)
@@ -375,6 +397,8 @@ class ProjectBridge(QObject):
         spine_engine reads when actually running the project. Returns whether such a connection exists."""
         data = self._load()
         connection = self._find_connection(data, from_name, to_name)
+        if connection is not None:
+            connection = self._filter_connection(data, connection)
         if connection is None:
             return False
         resource_label = self._connection_resource_label(data, connection)
@@ -743,13 +767,14 @@ class ProjectBridge(QObject):
             if key in seen:
                 continue
             seen.add(key)
-            filter_type = self._connection_filter_type(data, connection)
-            filter_required = filter_type is not None and self._connection_requires_filter(connection, filter_type)
+            carrier = self._filter_connection(data, connection)
+            filter_type = self._connection_filter_type(data, carrier) if carrier is not None else None
+            filter_required = filter_type is not None and self._connection_requires_filter(carrier, filter_type)
             filter_satisfied = True
             if filter_type is not None:
                 # zero enabled items means nothing actually passes through the link, regardless of
                 # whether "require filter online" is set -- that flag only affects wording, not reality
-                filter_items = self._connection_filter_items(data, local_data, connection, filter_type)
+                filter_items = self._connection_filter_items(data, local_data, carrier, filter_type)
                 filter_satisfied = any(item["enabled"] for item in filter_items)
             connections.append(
                 {

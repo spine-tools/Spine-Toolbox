@@ -87,3 +87,64 @@ def test_skipped_does_not_override_done_and_final_state_completes_stack(
         bridge._handle_run_output(line, "stdout")
     assert bridge._display_state("Group", final=False) == "queued"
     assert bridge._display_state("Group", final=True) == "done"
+
+
+_SCENARIO_FILTER = {"filter_settings": {"enabled_filter_types": {"scenario_filter": True}}}
+
+
+def _filter_types(tmp_path: Path, scenarios: list[str], items: dict, connection: dict) -> list[str | None]:
+    project = {"project": {"scenarios": scenarios, "connections": [connection]}, "items": items}
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    workflow = json.loads(ProjectBridge(tmp_path).get_workflow())
+    return [connection["filter_type"] for connection in workflow["connections"]]
+
+
+@pytest.mark.parametrize(
+    ("scenarios", "source_type", "target_type", "expected"),
+    [
+        (["Base"], "Data Store", "Tool", "scenario"),
+        ([], "Data Store", "Tool", None),
+        (["Base"], "Importer", "Data Store", None),
+        (["Base"], "Data Connection", "Importer", None),
+    ],
+)
+def test_scenario_filter_is_shown_only_for_data_store_source_with_scenarios(
+    tmp_path: Path,
+    application: QCoreApplication,
+    scenarios: list[str],
+    source_type: str,
+    target_type: str,
+    expected: str | None,
+) -> None:
+    items = {"A": _item(source_type, 0.0, 0.0), "B": _item(target_type, 200.0, 0.0)}
+    connection = {"from": ["A", "right"], "to": ["B", "left"], **_SCENARIO_FILTER}
+    assert _filter_types(tmp_path, scenarios, items, connection) == [expected]
+
+
+def test_link_leaving_stack_carries_filter_of_filterable_link_inside_stack(
+    tmp_path: Path, application: QCoreApplication
+) -> None:
+    project = {
+        "project": {
+            "scenarios": ["Base"],
+            "stacks": {"group": {"name": "Group", "items": ["Source", "Importer"]}},
+            "connections": [
+                {"from": ["Source", "right"], "to": ["Importer", "left"], **_SCENARIO_FILTER},
+                {"from": ["Importer", "right"], "to": ["Store", "left"], **_SCENARIO_FILTER},
+            ],
+        },
+        "items": {
+            "Source": _item("Data Store", 0.0, 0.0),
+            "Importer": _item("Importer", 100.0, 0.0),
+            "Store": _item("Data Store", 200.0, 0.0),
+        },
+    }
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    bridge = ProjectBridge(tmp_path)
+    connection = json.loads(bridge.get_workflow())["connections"][0]
+    assert (connection["from"], connection["to"], connection["filter_type"]) == ("Group", "Store", "scenario")
+    assert json.loads(bridge.get_connection_filters("Group", "Store"))["items"] == [{"name": "Base", "enabled": True}]
