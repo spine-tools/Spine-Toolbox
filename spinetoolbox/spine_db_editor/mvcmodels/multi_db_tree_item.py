@@ -174,8 +174,8 @@ class MultiDBTreeItem(FilterableChildrenMixin, TreeItem):
             parent_index = self.index()
             top_row = 0
             bottom_row = len(visible_children) - 1
-            top_index = self.model.createIndex(top_row, 1, parent_index)
-            bottom_index = self.model.createIndex(bottom_row, 1, parent_index)
+            top_index = self.model.index(top_row, 1, parent_index)
+            bottom_index = self.model.index(bottom_row, 1, parent_index)
             self.model.dataChanged.emit(top_index, bottom_index)
 
     def deep_remove_db_map(self, db_map: DatabaseMapping) -> None:
