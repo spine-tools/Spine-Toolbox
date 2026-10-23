@@ -499,6 +499,7 @@ Rectangle {
 
         root.scheduleRoutes()
         root.refreshAllScenarioInfo()
+        root.refreshScenarioWarning()
     }
 
     // re-pulls each card's scenarioInfo; needed after any toggle since merge-group siblings can
@@ -522,7 +523,7 @@ Rectangle {
     }
 
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows,
-    // multiplied by a user-controlled zoom factor from the −/+/Fit buttons (or Ctrl+wheel)
+    // multiplied by a user-controlled zoom factor from the −/+/Fit buttons or the mouse wheel
     property real zoomLevel: 1.0
 
     onCardScaleChanged: root.scheduleRoutes()
@@ -1093,7 +1094,7 @@ Rectangle {
                         event.accepted = true
                     }
 
-                    // subtle grid, scrollable so fixed-position cards stay reachable on narrow windows
+                    // scrollable so fixed-position cards stay reachable on narrow windows
                     Flickable {
                         id: designFlick
 
@@ -1926,8 +1927,6 @@ Rectangle {
                     }
                 }
             }
-            // closes the Runs page Rectangle above; this next brace closes the WORKSPACE
-            // RowLayout itself, so each page is a sibling of the design canvas
             }
         }
     }
@@ -2000,7 +1999,6 @@ Rectangle {
         property string subtitle: ""
         property string iconText: ""
         property string accent: "#3b82f6"
-        property string status: ""
         property bool isStack: false
         property string nodeName: ""
         property bool selected: false
@@ -2126,8 +2124,6 @@ Rectangle {
             if (runState !== "running")
                 runBadge.rotation = 0
         }
-
-        signal clicked()
 
         scale: hovered ? 1.015 : 1
         z: dragArea.drag.active ? 10 : 1
@@ -2328,8 +2324,6 @@ Rectangle {
                     }
                 }
             }
-
-            onClicked: card.clicked()
 
             onDoubleClicked: {
                 if (typeof projectBridge === "undefined")
