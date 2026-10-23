@@ -2369,20 +2369,25 @@ Rectangle {
             }
         }
 
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 11 * card.sizeFactor
 
-            spacing: 6 * card.sizeFactor
+        Item {
+            width: 150
+            height: 74
+
+            scale: card.sizeFactor
+            transformOrigin: Item.TopLeft
 
             RowLayout {
-                Layout.fillWidth: true
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.margins: 11
 
                 Rectangle {
-                    width: 28 * card.sizeFactor
-                    height: 28 * card.sizeFactor
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
 
-                    radius: 8 * card.sizeFactor
+                    radius: 8
 
                     color: card.accent
 
@@ -2392,7 +2397,7 @@ Rectangle {
                         text: card.iconText
 
                         color: "white"
-                        font.pixelSize: 14 * card.sizeFactor
+                        font.pixelSize: 14
                         font.bold: true
                     }
                 }
@@ -2402,7 +2407,7 @@ Rectangle {
 
                     visible: card.subtitle.length > 0
 
-                    font.pixelSize: 11 * card.sizeFactor
+                    font.pixelSize: 11
                     opacity: 0.6
 
                     elide: Text.ElideRight
@@ -2416,34 +2421,41 @@ Rectangle {
                     text: "⋮"
 
                     opacity: 0.4
-                    font.pixelSize: 13 * card.sizeFactor
+                    font.pixelSize: 13
                 }
             }
 
-            Label {
-                text: card.title
+            ColumnLayout {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 11
 
-                Layout.fillWidth: true
+                spacing: 0
 
-                font.pixelSize: 13 * card.sizeFactor
-                font.bold: true
+                Label {
+                    text: card.title
 
-                elide: Text.ElideRight
-            }
+                    Layout.fillWidth: true
 
-            Label {
-                visible: card.scenarioInfo.state === "disabled_ok"
-                text: "Scenarios not chosen"
+                    font.pixelSize: 13
+                    font.bold: true
 
-                font.pixelSize: 10 * card.sizeFactor
-                font.italic: true
-                color: "#94a3b8"
+                    elide: Text.ElideRight
+                }
 
-                elide: Text.ElideRight
-            }
+                Label {
+                    visible: card.scenarioInfo.state === "disabled_ok"
+                    text: "Scenarios not chosen"
 
-            Item {
-                Layout.fillHeight: true
+                    Layout.fillWidth: true
+
+                    font.pixelSize: 10
+                    font.italic: true
+                    color: "#94a3b8"
+
+                    elide: Text.ElideRight
+                }
             }
         }
     }
