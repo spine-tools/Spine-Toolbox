@@ -71,16 +71,6 @@ Rectangle {
 
         function onExecutionStateChanged(running) {
             root.executionRunning = running
-
-            // a new run starts from a clean slate; the bridge sends the final state of every card when it ends
-            if (running)
-                root.itemRunStates = {}
-        }
-
-        function onItemRunStateChanged(name, state) {
-            var states = Object.assign({}, root.itemRunStates)
-            states[name] = state
-            root.itemRunStates = states
         }
 
         function onPlotsChanged() {
@@ -115,9 +105,6 @@ Rectangle {
 
     // file URLs of the images produced by the latest run
     property var plotUrls: []
-
-    // card name -> "running", "done" or "failed" for the current/latest run
-    property var itemRunStates: ({})
 
     // Data page state: project.json's Data Stores, the selected one's contents, and the selected
     // entity class' parameter values, all fetched from ProjectBridge on demand
@@ -2089,39 +2076,6 @@ Rectangle {
                       : (hovered ? 2 : 1)
 
         property bool hovered: false
-
-        property string runState: root.itemRunStates[nodeName] || ""
-
-        // run progress badge: a swinging hammer while executing, then a check mark or a cross
-        Label {
-            id: runBadge
-
-            visible: card.runState !== ""
-            z: 5
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.rightMargin: -8 * card.sizeFactor
-            anchors.topMargin: -12 * card.sizeFactor
-            transformOrigin: Item.BottomRight
-
-            text: card.runState === "running" ? "⚒" : (card.runState === "done" ? "✔" : (card.runState === "queued" ? "…" : "✖"))
-            color: card.runState === "done" ? "#16a34a" : (card.runState === "failed" ? "#dc2626" : (card.runState === "queued" ? "#6b7280" : "#b45309"))
-            font.pixelSize: 20 * card.sizeFactor
-            font.bold: true
-
-            SequentialAnimation on rotation {
-                running: card.runState === "running"
-                loops: Animation.Infinite
-
-                NumberAnimation { from: -25; to: 25; duration: 300; easing.type: Easing.InOutQuad }
-                NumberAnimation { from: 25; to: -25; duration: 300; easing.type: Easing.InOutQuad }
-            }
-        }
-
-        onRunStateChanged: {
-            if (runState !== "running")
-                runBadge.rotation = 0
-        }
 
         scale: hovered ? 1.015 : 1
         z: dragArea.drag.active ? 10 : 1
