@@ -675,6 +675,14 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.commit_session(commit_msg, *dirty_db_maps, cookie=self)
 
     @Slot(bool)
+    def commit_session_immediately(self, checked=False):
+        """Commits dirty database maps without prompting for a message."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        self.db_mngr.commit_session("Updated", *dirty_db_maps, cookie=self)
+
+    @Slot(bool)
     def rollback_session(self, checked=False):
         """Rolls back dirty database maps."""
         dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
@@ -972,6 +980,7 @@ class SpineDBEditorBase(QMainWindow):
 
     def _setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor
+        QShortcut(QKeySequence.StandardKey.Save, self).activated.connect(self.commit_session_immediately)
         QShortcut(QKeySequence("Alt+1"), self).activated.connect(lambda: self._focus_widget(self.ui.treeView_entity))
         QShortcut(QKeySequence("Alt+3"), self).activated.connect(
             lambda: self._focus_widget(self.ui.tableView_parameter_value)

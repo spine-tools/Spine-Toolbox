@@ -59,6 +59,19 @@ class TestSpineDBEditor(DBEditorTestBase):
         self.assertIn("windowState", saved_dict)
         self.assertIn("last_open", saved_dict)
 
+    def test_commit_session_immediately_uses_default_message(self):
+        self.spine_db_editor.db_maps = [self.mock_db_map]
+        self.spine_db_editor.db_mngr.dirty = mock.Mock(return_value=[self.mock_db_map])
+        self.spine_db_editor._get_commit_msg = mock.Mock()
+        self.spine_db_editor.db_mngr.commit_session = mock.Mock()
+
+        self.spine_db_editor.commit_session_immediately()
+
+        self.spine_db_editor._get_commit_msg.assert_not_called()
+        self.spine_db_editor.db_mngr.commit_session.assert_called_once_with(
+            "Updated", self.mock_db_map, cookie=self.spine_db_editor
+        )
+
     def test_open_element_name_list_editor(self):
         self.spine_db_editor.init_models()
         self.put_mock_dataset_in_db_mngr()
