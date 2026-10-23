@@ -1,22 +1,19 @@
 """Reads and writes the same project.json Data Connection file references as the classic Qt UI."""
-from collections import deque
 import json
 import os
 from pathlib import Path
 import shutil
 import sys
 import time
-from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QTimer, QUrl, Signal, Slot
+from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
 from ...config import (
     LATEST_PROJECT_VERSION,
     PLOTS_DIR_ENV_VAR,
-    PROGRESS_MARKER,
     PROJECT_CONFIG_DIR_NAME,
     PROJECT_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
     PROJECT_SETUP_SCRIPT,
-    REPORT_PROGRESS_ENV_VAR,
 )
 from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url
@@ -107,8 +104,6 @@ class ProjectBridge(QObject):
     # emitted per output line from a workflow run; kind is "stdout" or "stderr"
     executionLogAppended = Signal(str, str)
     plotsChanged = Signal()
-    itemRunStateChanged = Signal(str, str)
-    """Emits a display name and its run state: "running", "done" or "failed"."""
     # emitted when the user asks (via the User Mode switch) to go back to the classic Qt UI
     devModeRequested = Signal()
 
@@ -125,20 +120,13 @@ class ProjectBridge(QObject):
         self._setup_logger.msg_error.connect(lambda text: self.setupStatusChanged.emit(text, "error"))
         self._run_manager: QProcessExecutionManager | None = None
         self._written_images: list[Path] = []
-        self._member_states: dict[str, str] = {}
-        self._display_members: dict[str, list[str]] = {}
-        self._state_queue: deque[tuple[str, str]] = deque()
-        self._state_timer = QTimer(self)
-        self._state_timer.setSingleShot(True)
-        self._state_timer.setInterval(400)
-        self._state_timer.timeout.connect(self._emit_next_run_state)
         self._run_started = 0.0
         self._saved_pythonpath: str | None = None
         self._plots_watcher = QFileSystemWatcher(self)
         self._plots_watcher.directoryChanged.connect(self.plotsChanged)
         self._run_logger = QtLogger()
-        self._run_logger.msg.connect(lambda text: self._handle_run_output(text, "stdout"))
-        self._run_logger.msg_proc.connect(lambda text: self._handle_run_output(text, "stdout"))
+        self._run_logger.msg.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
+        self._run_logger.msg_proc.connect(lambda text: self.executionLogAppended.emit(text, "stdout"))
         self._run_logger.msg_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
         self._run_logger.msg_proc_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
 
@@ -561,55 +549,6 @@ class ProjectBridge(QObject):
         else:
             self._setup_logger.msg_error.emit("Project setup script failed")
 
-    def _handle_run_output(self, text: str, kind: str) -> None:
-        """Turns progress marker lines into item state updates and forwards everything else to the run log."""
-        if PROGRESS_MARKER not in text:
-            self.executionLogAppended.emit(text, kind)
-            return
-        lines = text.splitlines()
-        log_text = "\n".join(line for line in lines if PROGRESS_MARKER not in line)
-        if log_text.strip():
-            self.executionLogAppended.emit(log_text, kind)
-        for line in lines:
-            if PROGRESS_MARKER in line:
-                self._update_run_state(line.split(PROGRESS_MARKER, 1)[1])
-
-    def _update_run_state(self, marker_args: str) -> None:
-        state, item_name = marker_args.strip().split(maxsplit=1)
-        if state != "skipped" or self._member_states.get(item_name) not in ("done", "failed"):
-            self._member_states[item_name] = state
-        display_name = self._display_name_of(item_name)
-        if display_name not in self._display_members:
-            return
-        self._publish_run_state(display_name, self._display_state(display_name, final=False))
-
-    def _publish_run_state(self, display_name: str, state: str) -> None:
-        """Queues a card state change so that each one stays visible for a moment, even for instant items."""
-        self._state_queue.append((display_name, state))
-        if not self._state_timer.isActive():
-            self._emit_next_run_state()
-
-    def _emit_next_run_state(self) -> None:
-        if self._state_queue:
-            self.itemRunStateChanged.emit(*self._state_queue.popleft())
-            self._state_timer.start()
-
-    def _display_state(self, display_name: str, final: bool) -> str:
-        members = self._display_members.get(display_name, [display_name])
-        states = [self._member_states.get(member) for member in members]
-        if "failed" in states:
-            return "failed"
-        if "running" in states:
-            return "" if final else "running"
-        if "done" not in states:
-            return ""
-        if not final and None in states:
-            return "queued"
-        return "done"
-
-    def _display_name_of(self, item_name: str) -> str:
-        return next((name for name, members in self._display_members.items() if item_name in members), item_name)
-
     @Slot(list)
     def run_workflow(self, selected_names: list) -> None:
         """Runs the project (or, if selected_names is non-empty, just those items/stacks) via the
@@ -630,15 +569,6 @@ class ProjectBridge(QObject):
         if real_names:
             args += ["--select", *real_names]
         python = _resolve_python_interpreter()
-        self._member_states = {}
-        self._state_queue.clear()
-        self._state_timer.stop()
-        self._display_members = {}
-        for name in self._visible_display_names(data):
-            members = self._stack_members(data, name)
-            executed = [m for m in members if data["items"].get(m, {}).get("type") != "Data Connection"]
-            self._display_members[name] = executed or members
-        os.environ[REPORT_PROGRESS_ENV_VAR] = "1"
         os.environ["PYTHONUNBUFFERED"] = "1"
         plots_dir = self._plots_dir()
         shutil.rmtree(plots_dir, ignore_errors=True)
@@ -660,8 +590,6 @@ class ProjectBridge(QObject):
         )
         self._run_manager.execution_finished.connect(self._handle_run_finished)
         self.executionStateChanged.emit(True)
-        for display_name in selected_names:
-            self.itemRunStateChanged.emit(display_name, "queued")
         self.runStatusChanged.emit("Running project...", "info")
         self._run_manager.start_execution(workdir=project_dir)
 
@@ -676,15 +604,12 @@ class ProjectBridge(QObject):
         user_stopped = self._run_manager.user_stopped
         self._run_manager = None
         os.environ.pop(PLOTS_DIR_ENV_VAR, None)
-        os.environ.pop(REPORT_PROGRESS_ENV_VAR, None)
         os.environ.pop("PYTHONUNBUFFERED", None)
         if self._saved_pythonpath is None:
             os.environ.pop("PYTHONPATH", None)
         else:
             os.environ["PYTHONPATH"] = self._saved_pythonpath
         self._written_images = self._find_written_images()
-        for display_name in self._display_members:
-            self._publish_run_state(display_name, self._display_state(display_name, final=True))
         self.executionStateChanged.emit(False)
         self.plotsChanged.emit()
         if user_stopped:
