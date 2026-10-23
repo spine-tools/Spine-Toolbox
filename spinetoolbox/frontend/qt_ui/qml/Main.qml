@@ -4,8 +4,6 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 import "Router.js" as Router
 
-// root is a plain Item (Rectangle, for its color) rather than ApplicationWindow so this file can be
-// embedded as a widget (see EasyModeWidget) as well as shown via QQuickView from qml_launcher.py
 Rectangle {
     id: root
 
