@@ -72,7 +72,12 @@ from .project_upgrader import (
 from .server.engine_client import ClientSecurityModel, EngineClient, RemoteEngineInitFailed
 from .spine_engine_manager import make_engine_manager
 
-_PROGRESS_STATE_NAMES = {ItemExecutionFinishState.SUCCESS: "done", ItemExecutionFinishState.FAILURE: "failed"}
+_PROGRESS_STATE_NAMES = {
+    ItemExecutionFinishState.SUCCESS: "done",
+    ItemExecutionFinishState.FAILURE: "failed",
+    ItemExecutionFinishState.SKIPPED: "skipped",
+    ItemExecutionFinishState.EXCLUDED: "excluded",
+}
 
 
 class HeadlessLogger(QObject):
