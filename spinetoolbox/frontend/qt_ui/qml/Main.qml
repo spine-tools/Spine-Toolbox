@@ -30,19 +30,14 @@ Rectangle {
     property ListModel executionLogModel: ListModel {}
 
     // surfaces projectBridge.has_unselected_scenarios() in the top bar, refreshed whenever the
-    // workflow reloads or a scenario checkbox is toggled (see refreshScenarioWarning())
+    // workflow reloads or a link filter checkbox is toggled (see refreshScenarioWarning())
     property bool hasUnselectedScenarios: false
-
-    // surfaces projectBridge.has_starved_scenarios(): true when some item has no scenarios enabled
-    // and nothing else feeding the same downstream target does either, so it would run with no data
-    property bool hasStarvedScenarios: false
 
     function refreshScenarioWarning() {
         if (typeof projectBridge === "undefined")
             return
 
         root.hasUnselectedScenarios = projectBridge.has_unselected_scenarios()
-        root.hasStarvedScenarios = projectBridge.has_starved_scenarios()
     }
 
     // installs/runs a project's bundled setup script automatically, if it has one
@@ -444,20 +439,7 @@ Rectangle {
         root.workflow = parsed
 
         root.scheduleRoutes()
-        root.refreshAllScenarioInfo()
         root.refreshScenarioWarning()
-    }
-
-    // re-pulls each card's scenarioInfo; needed after any toggle since merge-group siblings can
-    // flip between "disabled_ok" and "error" depending on each other's state, not just their own
-    function refreshAllScenarioInfo() {
-        if (typeof projectBridge === "undefined")
-            return
-
-        var statuses = JSON.parse(projectBridge.get_scenario_status())
-        var names = Object.keys(root.nodeItems)
-        for (var i = 0; i < names.length; i++)
-            root.nodeItems[names[i]].applyScenarioStatuses(statuses)
     }
 
     Component.onCompleted: {
@@ -782,55 +764,6 @@ Rectangle {
 
                         HoverHandler {
                             id: scenarioWarningHover
-                        }
-                    }
-
-                    Rectangle {
-                        visible: root.hasStarvedScenarios
-
-                        Layout.preferredWidth: starvedWarningRow.width + 20
-                        Layout.preferredHeight: 30
-
-                        radius: 15
-                        color: "#dc2626"
-
-                        RowLayout {
-                            id: starvedWarningRow
-                            anchors.centerIn: parent
-                            spacing: 6
-
-                            Label {
-                                text: "\u26A0"
-                                color: "white"
-                                font.bold: true
-                            }
-
-                            Label {
-                                text: "No scenarios selected to run"
-                                color: "white"
-                                font.pixelSize: 12
-                                font.bold: true
-                            }
-                        }
-
-                        ToolTip.visible: starvedWarningHover.hovered
-                        ToolTip.text: {
-                            if (typeof projectBridge === "undefined")
-                                return ""
-
-                            var statuses = JSON.parse(projectBridge.get_scenario_status())
-                            var names = []
-                            for (var i = 0; i < statuses.length; i++) {
-                                if (statuses[i].state === "error")
-                                    names.push(statuses[i].name)
-                            }
-                            return names.length > 0
-                                    ? names.join(", ") + ": nothing will run for " + (names.length === 1 ? "this item" : "these items") + " \u2013 no other source supplies them either."
-                                    : ""
-                        }
-
-                        HoverHandler {
-                            id: starvedWarningHover
                         }
                     }
 
@@ -1257,7 +1190,6 @@ Rectangle {
                                 Component.onCompleted: {
                                     root.nodeItems[modelData.name] = this
                                     root.nodeItemsTick += 1
-                                    refreshScenarioInfo()
                                     root.scheduleRoutes()
                                 }
                             }
@@ -1400,72 +1332,6 @@ Rectangle {
 
                         ToolTip.visible: hovered
                         ToolTip.text: "Add item"
-                    }
-
-                    // -------------------------------------------------
-                    // Scenario selection dialog (double-click on Tool/Stack items listed in
-                    // project.json's "scenario_selectable_items")
-                    // -------------------------------------------------
-
-                    Dialog {
-                        id: scenarioDialog
-
-                        anchors.centerIn: parent
-                        modal: true
-                        width: 320
-
-                        property string itemName: ""
-                        property var scenarios: []
-
-                        title: "Scenarios – " + scenarioDialog.itemName
-                        standardButtons: Dialog.Close
-
-                        function openFor(name) {
-                            scenarioDialog.itemName = name
-                            scenarioDialog.scenarios = []
-
-                            if (typeof projectBridge === "undefined")
-                                return
-
-                            var raw = projectBridge.get_item_scenarios(name)
-                            var parsed = raw ? JSON.parse(raw) : []
-
-                            if (parsed.length === 0)
-                                return
-
-                            scenarioDialog.scenarios = parsed
-                            scenarioDialog.open()
-                        }
-
-                        contentItem: ColumnLayout {
-                            spacing: 4
-
-                            Label {
-                                text: "Select which scenarios " + scenarioDialog.itemName + " runs:"
-                                wrapMode: Text.WordWrap
-                                Layout.fillWidth: true
-                                Layout.bottomMargin: 6
-                                opacity: 0.7
-                            }
-
-                            Repeater {
-                                model: scenarioDialog.scenarios
-
-                                CheckBox {
-                                    text: modelData.name
-                                    checked: modelData.enabled
-
-                                    onToggled: {
-                                        if (typeof projectBridge !== "undefined") {
-                                            projectBridge.set_item_scenario_enabled(
-                                                scenarioDialog.itemName, modelData.name, checked)
-                                            root.refreshScenarioWarning()
-                                            root.refreshAllScenarioInfo()
-                                        }
-                                    }
-                                }
-                            }
-                        }
                     }
 
                     // -------------------------------------------------
@@ -1765,28 +1631,6 @@ Rectangle {
         property real designY: 0
         property real sizeFactor: 1
 
-        // {total, enabled, state}: this item's scenario selection, where state is "ok" (will run),
-        // "disabled_ok" (none enabled, but a merge-group sibling covers it) or "error" (nothing
-        // will reach whatever this feeds); refreshed via refreshScenarioInfo()
-        property var scenarioInfo: ({ "total": 0, "enabled": 0, "state": "ok" })
-
-        function refreshScenarioInfo() {
-            if (typeof projectBridge === "undefined")
-                return
-
-            card.applyScenarioStatuses(JSON.parse(projectBridge.get_scenario_status()))
-        }
-
-        function applyScenarioStatuses(statuses) {
-            for (var i = 0; i < statuses.length; i++) {
-                if (statuses[i].name === card.nodeName) {
-                    card.scenarioInfo = statuses[i]
-                    return
-                }
-            }
-            card.scenarioInfo = { "total": 0, "enabled": 0, "state": "ok" }
-        }
-
         // x/y are set imperatively (dragging owns them), so zooming rescales them explicitly
         property real previousSizeFactor: 1
 
@@ -1827,24 +1671,20 @@ Rectangle {
 
         color: active ? "#ffffff" : "#e5e7eb"
 
-        // a card that will actually run (scenarios selected) gets a bold green highlight so the active
-        // path through a multi-branch workflow is traceable; one that's idle because a sibling covers
-        // its target instead fades out; errors stay red regardless of selection
-        opacity: scenarioInfo.state === "disabled_ok" ? 0.55 : 1.0
+        // a card that will actually run (filters chosen) gets a bold green highlight so the active
+        // path through a multi-branch workflow is traceable
 
-        // stacks and plain items share the same neutral default look; only active/error/selection state
+        // stacks and plain items share the same neutral default look; only active/selection state
         // (not item kind) should stand out, so the accent color here is type-coded only for hover/icons
-        property bool active: scenarioInfo.state === "ok" && !filtersUnchosen
+        property bool active: !filtersUnchosen
 
-        border.color: scenarioInfo.state === "error"
-                      ? "#dc2626"
-                      : selected
-                        ? "#2563eb"
-                        : active
-                          ? "#2f6b4a"
-                          : (hovered ? accent : "#e2e8f0")
+        border.color: selected
+                      ? "#2563eb"
+                      : active
+                        ? "#2f6b4a"
+                        : (hovered ? accent : "#e2e8f0")
 
-        border.width: (scenarioInfo.state === "error" || selected || active)
+        border.width: (selected || active)
                       ? 3
                       : (hovered ? 2 : 1)
 
@@ -1936,60 +1776,6 @@ Rectangle {
             color: "#ffffff"
             border.color: "#e2e8f0"
             border.width: 1
-        }
-
-        // marks whether this item/stack is set to run (green), harmlessly idle because a sibling
-        // branch covers the same target (neutral), or starved with nothing else to cover it (red)
-        Rectangle {
-            visible: card.scenarioInfo.total > 0
-
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.topMargin: -7 * card.sizeFactor
-            anchors.rightMargin: -7 * card.sizeFactor
-
-            z: 5
-
-            width: scenarioBadgeLabel.implicitWidth + 12 * card.sizeFactor
-            height: 18 * card.sizeFactor
-            radius: height / 2
-
-            color: card.scenarioInfo.state === "error"
-                   ? "#fee2e2"
-                   : card.scenarioInfo.state === "ok"
-                     ? "#dcfce7"
-                     : "#f1f5f9"
-            border.color: card.scenarioInfo.state === "error"
-                          ? "#dc2626"
-                          : card.scenarioInfo.state === "ok"
-                            ? "#15803d"
-                            : "#cbd5e1"
-            border.width: card.scenarioInfo.state === "disabled_ok" ? 1 : 2
-
-            Label {
-                id: scenarioBadgeLabel
-                anchors.centerIn: parent
-                text: (card.scenarioInfo.state === "error" ? "! " : card.scenarioInfo.state === "ok" ? "\u2713 " : "")
-                        + card.scenarioInfo.enabled + "/" + card.scenarioInfo.total
-                font.pixelSize: 10 * card.sizeFactor
-                font.bold: card.scenarioInfo.state !== "disabled_ok"
-                color: card.scenarioInfo.state === "error"
-                       ? "#dc2626"
-                       : card.scenarioInfo.state === "ok"
-                         ? "#15803d"
-                         : "#94a3b8"
-            }
-
-            ToolTip.visible: scenarioBadgeHover.hovered
-            ToolTip.text: card.scenarioInfo.state === "error"
-                    ? "No scenarios selected and no other source supplies data here; nothing will run for " + card.title + "."
-                    : card.scenarioInfo.state === "disabled_ok"
-                      ? "No scenarios selected for " + card.title + ", but another connected source still supplies data."
-                      : card.scenarioInfo.enabled + " of " + card.scenarioInfo.total + " scenarios selected to run for " + card.title
-
-            HoverHandler {
-                id: scenarioBadgeHover
-            }
         }
 
         MouseArea {
@@ -2107,15 +1893,12 @@ Rectangle {
 
                 if (card.subtitle === "Data Store") {
                     projectBridge.open_database(card.nodeName)
-                    return
                 }
-
-                scenarioDialog.openFor(card.nodeName)
             }
         }
 
         ToolTip {
-            visible: card.hovered
+            visible: card.hovered && text !== ""
             text: {
                 // item-specific guidance for double-click actions
                 if (card.title === "Excel input")
@@ -2124,13 +1907,7 @@ Rectangle {
                     return "Double-click to open the data connection directory"
                 if (card.subtitle === "Data Store")
                     return "Double-click to open in the database editor"
-                if (typeof projectBridge !== "undefined") {
-                    var raw = projectBridge.get_item_scenarios(card.title)
-                    var parsed = raw ? JSON.parse(raw) : []
-                    if (parsed.length > 0)
-                        return "Double-click to choose scenarios to run"
-                }
-                return "Double-click to open"
+                return ""
             }
         }
 
@@ -2205,19 +1982,6 @@ Rectangle {
 
                     font.pixelSize: 13
                     font.bold: true
-
-                    elide: Text.ElideRight
-                }
-
-                Label {
-                    visible: card.scenarioInfo.state === "disabled_ok"
-                    text: "Scenarios not chosen"
-
-                    Layout.fillWidth: true
-
-                    font.pixelSize: 10
-                    font.italic: true
-                    color: "#94a3b8"
 
                     elide: Text.ElideRight
                 }
