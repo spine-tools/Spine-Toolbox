@@ -159,14 +159,6 @@ class ProjectBridge(QObject):
                 return name, item
         return None, None
 
-    def _scenario_selectable_name(self, data: dict, display_name: str) -> str | None:
-        """Returns display_name if it (or the stack it names) is listed in project.json's
-        "scenario_selectable_items", None otherwise."""
-        project = data.get("project", {})
-        if display_name in project.get("scenario_selectable_items", []):
-            return display_name
-        return None
-
     def _stack_resolver(self, data: dict):
         """Returns a function mapping a raw project.json item name to the display name of the stack
         it belongs to, or to itself if it isn't part of one."""
@@ -193,34 +185,6 @@ class ProjectBridge(QObject):
         resolve = self._stack_resolver(data)
         hidden = set(data.get("project", {}).get("hidden_items", []))
         return {resolve(name) for name in data.get("items", {})} - hidden
-
-    def _direct_predecessors(self, data: dict, display_name: str) -> list[str]:
-        """Resolved display names with a direct connection into display_name."""
-        resolve = self._stack_resolver(data)
-        return [
-            resolve(connection["from"][0])
-            for connection in data.get("project", {}).get("connections", [])
-            if resolve(connection["to"][0]) == display_name
-        ]
-
-    def _direct_successors(self, data: dict, display_name: str) -> list[str]:
-        """Resolved display names with a direct connection out of display_name."""
-        resolve = self._stack_resolver(data)
-        return [
-            resolve(connection["to"][0])
-            for connection in data.get("project", {}).get("connections", [])
-            if resolve(connection["from"][0]) == display_name
-        ]
-
-    def _merge_group(self, data: dict, display_name: str) -> list[str]:
-        """Returns display_name plus any other scenario-selectable item that shares a direct downstream
-        target with it (single-hop only), so starvation can be judged per shared target rather than
-        per item in isolation."""
-        selectable = set(data.get("project", {}).get("scenario_selectable_items", []))
-        group = {display_name}
-        for target in self._direct_successors(data, display_name):
-            group.update(name for name in self._direct_predecessors(data, target) if name in selectable)
-        return list(group)
 
     def _find_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
         """Finds the raw project.json connection whose (possibly stacked) endpoints resolve to
@@ -416,79 +380,13 @@ class ProjectBridge(QObject):
         self._save_local_data(local_data)
         return True
 
-    @Slot(str, result=str)
-    def get_item_scenarios(self, display_name: str) -> str:
-        """Returns [{"name": ..., "enabled": ...}, ...] for display_name, demo-only: scenarios and their
-        per-item enabled state both come straight from project.json ("scenarios"/"item_scenario_selection"),
-        no database is queried. Returns an empty list if display_name isn't scenario-selectable."""
-        data = self._load()
-        project = data.get("project", {})
-        name = self._scenario_selectable_name(data, display_name)
-        if name is None:
-            return json.dumps([])
-
-        scenarios = project.get("scenarios", [])
-        selection = project.get("item_scenario_selection", {}).get(name, {})
-        return json.dumps([{"name": scenario, "enabled": selection.get(scenario, True)} for scenario in scenarios])
-
-    @Slot(result=str)
-    def get_scenario_status(self) -> str:
-        """Returns [{"name", "total", "enabled", "state"}, ...] for every visible scenario-selectable
-        item. state is "ok" (it has scenarios enabled), "disabled_ok" (none enabled here, but another
-        item feeding the same direct downstream target does), or "error" (none enabled here and nothing
-        else feeding the same target(s) does either, so that target would get no data from this side)."""
-        data = self._load()
-        project = data.get("project", {})
-        visible = self._visible_display_names(data)
-        scenarios = project.get("scenarios", [])
-        selections = project.get("item_scenario_selection", {})
-
-        counts = {}
-        for name in project.get("scenario_selectable_items", []):
-            if name not in visible:
-                continue
-            selection = selections.get(name, {})
-            enabled = sum(1 for scenario in scenarios if selection.get(scenario, True))
-            counts[name] = enabled
-
-        statuses = []
-        for name, enabled in counts.items():
-            if enabled > 0:
-                state = "ok"
-            elif any(counts.get(sibling, 0) > 0 for sibling in self._merge_group(data, name) if sibling != name):
-                state = "disabled_ok"
-            else:
-                state = "error"
-            statuses.append({"name": name, "total": len(scenarios), "enabled": enabled, "state": state})
-        return json.dumps(statuses)
-
-    @Slot(result=bool)
-    def has_starved_scenarios(self) -> bool:
-        """Returns whether any visible scenario-selectable item is in get_scenario_status()'s "error" state."""
-        return any(item["state"] == "error" for item in json.loads(self.get_scenario_status()))
-
     @Slot(result=bool)
     def has_unselected_scenarios(self) -> bool:
         """Returns whether any visible connection's scenario/alternative filter is in an "error" state
         (nothing enabled on it, and no sibling line into the same target covers it either). Hidden
-        items/connections are ignored since they don't run in User Mode. Item-level scenario starvation
-        is covered separately by has_starved_scenarios()."""
+        items/connections are ignored since they don't run in User Mode."""
         data = self._load()
         return any(connection["filter_state"] == "error" for connection in self._connection_filter_states(data))
-
-    @Slot(str, str, bool, result=bool)
-    def set_item_scenario_enabled(self, display_name: str, scenario_name: str, enabled: bool) -> bool:
-        """Stores whether scenario_name is enabled for display_name in project.json's
-        "item_scenario_selection". Returns whether display_name is scenario-selectable."""
-        data = self._load()
-        project = data.setdefault("project", {})
-        name = self._scenario_selectable_name(data, display_name)
-        if name is None:
-            return False
-
-        project.setdefault("item_scenario_selection", {}).setdefault(name, {})[scenario_name] = enabled
-        self._save(data)
-        return True
 
     def _base_dir(self) -> Path:
         """Returns the project directory items are relative to, falling back to the bundled example's own
