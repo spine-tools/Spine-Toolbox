@@ -3,9 +3,11 @@ import json
 import os
 from pathlib import Path
 import shutil
-import sys
 import time
 from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
+from spine_engine.utils.helpers import resolve_python_interpreter, shorten
+from spine_engine.utils.serialization import deserialize_path, serialize_path
+from spine_items.utils import database_label
 from ...config import (
     LATEST_PROJECT_VERSION,
     PLOTS_DIR_ENV_VAR,
@@ -35,26 +37,13 @@ _EXAMPLE_PROJECT_FILE = Path(__file__).parent / "examples" / "project.json"
 _EXAMPLE_PROJECT_NAME = "FlexTool (example)"
 
 
-def _serialize_path(path: str, project_dir: str) -> dict:
-    """Mirrors spine_engine.utils.serialization.serialize_path without importing the heavy spine_engine package."""
-    is_relative = os.path.commonpath([os.path.abspath(path), project_dir]) == project_dir
-    stored = os.path.relpath(path, project_dir) if is_relative else path
-    return {"type": "path", "relative": is_relative, "path": stored.replace(os.sep, "/")}
-
-
-def _deserialize_path(serialized: dict, project_dir: str) -> str:
-    """Mirrors spine_engine.utils.serialization.deserialize_path."""
-    path = serialized["path"]
-    return os.path.normpath(os.path.join(project_dir, path) if serialized["relative"] else path)
-
-
 def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
     """Builds a SQLAlchemy URL string from a Data Store item's "url" dict."""
     database = url_dict.get("database")
     if not database:
         return None
     if isinstance(database, dict):
-        database = _deserialize_path(database, project_dir)
+        database = deserialize_path(database, project_dir)
     dialect = url_dict.get("dialect") or "sqlite"
     if dialect == "sqlite":
         return "sqlite:///" + database.replace(os.sep, "/")
@@ -73,26 +62,6 @@ def _sqlite_file_stamp(db_url: str) -> tuple[int, int] | None:
     except OSError:
         return None
     return stat.st_mtime_ns, stat.st_size
-
-
-def _data_dir(name: str, project_dir: str) -> str:
-    """Mirrors spine_engine.project_item.executable_item_base's item data directory convention."""
-    return os.path.join(project_dir, PROJECT_CONFIG_DIR_NAME, "items", name.lower().replace(" ", "_"))
-
-
-def _database_resource_label(item_name: str) -> str:
-    """Mirrors spine_items.utils.database_label: the resource label spine_engine keys "known_filters" by."""
-    return "db_url@" + item_name
-
-
-def _resolve_python_interpreter() -> str:
-    """Returns the Python interpreter configured in Spine Toolbox settings, or the current one if none is set.
-
-    Reimplemented locally instead of using spine_engine.utils.helpers.resolve_python_interpreter: importing
-    spine_engine here (which pulls in networkx) after PySide6 triggers a very slow shiboken signature scan.
-    """
-    settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
-    return settings.value("appSettings/pythonPath") or sys.executable
 
 
 class ProjectBridge(QObject):
@@ -186,13 +155,13 @@ class ProjectBridge(QObject):
         hidden = set(data.get("project", {}).get("hidden_items", []))
         return {resolve(name) for name in data.get("items", {})} - hidden
 
-    def _find_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
-        """Finds the raw project.json connection whose (possibly stacked) endpoints resolve to
-        from_name/to_name, as returned by get_workflow."""
+    def _find_filter_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
+        """Returns the connection carrying the filter of the link from_name -> to_name, as returned by
+        get_workflow, or None if there is no such link or it has no filter."""
         resolve = self._stack_resolver(data)
         for connection in data.get("project", {}).get("connections", []):
             if resolve(connection["from"][0]) == from_name and resolve(connection["to"][0]) == to_name:
-                return connection
+                return self._filter_connection(data, connection)
         return None
 
     def _connection_filter_type(self, data: dict, connection: dict) -> str | None:
@@ -228,31 +197,6 @@ class ProjectBridge(QObject):
                 return inner
         return None
 
-    def _connection_requires_filter(self, connection: dict, filter_type: str) -> bool:
-        return bool(connection.get("options", {}).get(f"require_{filter_type}_filter"))
-
-    def _connection_data_store(self, data: dict, connection: dict) -> tuple[str, dict] | None:
-        """Returns (name, item) of whichever endpoint of connection is a Data Store, or None if neither is."""
-        raw_items = data.get("items", {})
-        for raw_name in (connection["from"][0], connection["to"][0]):
-            item = raw_items.get(raw_name, {})
-            if item.get("type") == "Data Store":
-                return raw_name, item
-        return None
-
-    def _connection_database_url(self, data: dict, connection: dict) -> str | None:
-        """Returns the URL of whichever endpoint of connection is a Data Store, or None if neither is."""
-        endpoint = self._connection_data_store(data, connection)
-        if endpoint is None:
-            return None
-        return _data_store_url(endpoint[1].get("url") or {}, str(self._base_dir()))
-
-    def _connection_resource_label(self, data: dict, connection: dict) -> str | None:
-        """Returns the resource label spine_engine uses to key "known_filters" for connection's Data Store
-        endpoint, or None if neither endpoint is one."""
-        endpoint = self._connection_data_store(data, connection)
-        return _database_resource_label(endpoint[0]) if endpoint is not None else None
-
     def _local_data_path(self) -> Path:
         """Path to this project's local_data.json, which (like the classic Qt UI) holds per-user data such as
         connections' scenario/alternative filter selections, kept out of the shared project.json."""
@@ -271,30 +215,12 @@ class ProjectBridge(QObject):
         with local_data_path.open("w", encoding="utf-8") as output_file:
             json.dump(local_data, output_file, indent=4)
 
-    def _connection_filter_selection(
-        self, local_data: dict, connection: dict, resource_label: str, filter_type: str
-    ) -> dict:
-        """Returns the stored online-state overrides (name -> bool) for resource_label/filter_type, read from
-        local_data.json's "known_filters" -- the same file and schema spine_engine itself reads when running
-        (see spine_engine.project_item.connection.FilterSettings and spinetoolbox.load_project)."""
-        raw_from, raw_to = connection["from"][0], connection["to"][0]
-        known_filters = (
-            local_data.get("project", {})
-            .get("connections", {})
-            .get(raw_from, {})
-            .get(raw_to, {})
-            .get("filter_settings", {})
-            .get("known_filters", {})
-            .get(resource_label, {})
-        )
-        return known_filters.get(f"{filter_type}_filter", {})
-
     def _connection_filter_names(self, data: dict, connection: dict, filter_type: str) -> list[str]:
         """Returns available scenario/alternative names for connection's filter_type, read live from
-        whichever endpoint is a Data Store. Falls back to project.json's flat "scenarios"/"alternatives"
-        list (used by the bundled demo project, which has no real database) if there's no Data Store
-        endpoint or it can't be opened."""
-        db_url = self._connection_database_url(data, connection)
+        the Data Store the connection leaves. Falls back to project.json's flat "scenarios"/"alternatives"
+        list (used by the bundled demo project, which has no real database) if the database can't be opened."""
+        source = data.get("items", {}).get(connection["from"][0], {})
+        db_url = _data_store_url(source.get("url") or {}, str(self._base_dir()))
         if db_url:
             # opening a database costs ~100 ms, so names are reused until the SQLite file changes
             stamp = _sqlite_file_stamp(db_url)
@@ -322,12 +248,18 @@ class ProjectBridge(QObject):
         connected database, online state from local_data.json's "known_filters", defaulting to the link's
         "auto_online" setting for names with no stored override (mirrors spine_engine's own behavior)."""
         names = self._connection_filter_names(data, connection, filter_type)
-        resource_label = self._connection_resource_label(data, connection)
         auto_online = connection.get("filter_settings", {}).get("auto_online", True)
+        raw_from, raw_to = connection["from"][0], connection["to"][0]
+        # same file and schema spine_engine reads when running (see spine_engine's FilterSettings)
         selection = (
-            self._connection_filter_selection(local_data, connection, resource_label, filter_type)
-            if resource_label is not None
-            else {}
+            local_data.get("project", {})
+            .get("connections", {})
+            .get(raw_from, {})
+            .get(raw_to, {})
+            .get("filter_settings", {})
+            .get("known_filters", {})
+            .get(database_label(raw_from), {})
+            .get(f"{filter_type}_filter", {})
         )
         return [{"name": name, "enabled": selection.get(name, auto_online)} for name in names]
 
@@ -337,16 +269,14 @@ class ProjectBridge(QObject):
         with item names read live from the connected database. Returns {} if there's no such connection
         or it has no filters enabled."""
         data = self._load()
-        connection = self._find_connection(data, from_name, to_name)
-        if connection is not None:
-            connection = self._filter_connection(data, connection)
+        connection = self._find_filter_connection(data, from_name, to_name)
         if connection is None:
             return json.dumps({})
         filter_type = self._connection_filter_type(data, connection)
         if filter_type is None:
             return json.dumps({})
         items = self._connection_filter_items(data, self._load_local_data(), connection, filter_type)
-        required = self._connection_requires_filter(connection, filter_type)
+        required = bool(connection.get("options", {}).get(f"require_{filter_type}_filter"))
         return json.dumps({"filter_type": filter_type, "required": required, "items": items})
 
     @Slot(str, str, str, str, bool, result=bool)
@@ -356,14 +286,8 @@ class ProjectBridge(QObject):
         """Stores whether item_name is online for filter_type ("scenario"/"alternative") on the connection
         between from_name and to_name, in local_data.json's "known_filters" -- the same place and schema
         spine_engine reads when actually running the project. Returns whether such a connection exists."""
-        data = self._load()
-        connection = self._find_connection(data, from_name, to_name)
-        if connection is not None:
-            connection = self._filter_connection(data, connection)
+        connection = self._find_filter_connection(self._load(), from_name, to_name)
         if connection is None:
-            return False
-        resource_label = self._connection_resource_label(data, connection)
-        if resource_label is None:
             return False
         raw_from, raw_to = connection["from"][0], connection["to"][0]
         local_data = self._load_local_data()
@@ -374,19 +298,11 @@ class ProjectBridge(QObject):
             .setdefault(raw_to, {})
             .setdefault("filter_settings", {})
             .setdefault("known_filters", {})
-            .setdefault(resource_label, {})
+            .setdefault(database_label(raw_from), {})
         )
         known_filters.setdefault(f"{filter_type}_filter", {})[item_name] = enabled
         self._save_local_data(local_data)
         return True
-
-    @Slot(result=bool)
-    def has_unselected_scenarios(self) -> bool:
-        """Returns whether any visible connection's scenario/alternative filter is in an "error" state
-        (nothing enabled on it, and no sibling line into the same target covers it either). Hidden
-        items/connections are ignored since they don't run in User Mode."""
-        data = self._load()
-        return any(connection["filter_state"] == "error" for connection in self._connection_filter_states(data))
 
     def _base_dir(self) -> Path:
         """Returns the project directory items are relative to, falling back to the bundled example's own
@@ -417,7 +333,7 @@ class ProjectBridge(QObject):
     def install_project_dependencies(self) -> None:
         """Editable-installs the project directory, then runs its setup script once that finishes."""
         project_dir = str(self._base_dir())
-        python = _resolve_python_interpreter()
+        python = resolve_python_interpreter(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION))
         self._setup_manager = QProcessExecutionManager(
             self._setup_logger, python, ["-m", "pip", "install", "--upgrade", "-e", project_dir], semisilent=True
         )
@@ -433,7 +349,7 @@ class ProjectBridge(QObject):
         if exit_code != 0:
             self._setup_logger.msg_error.emit("Installing project dependencies failed, setup script was not run")
             return
-        python = _resolve_python_interpreter()
+        python = resolve_python_interpreter(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION))
         script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
         self._setup_manager = QProcessExecutionManager(
             self._setup_logger, python, [script_path, "--skip-git"], semisilent=True
@@ -519,7 +435,7 @@ class ProjectBridge(QObject):
         args = [project_dir, "--execute-only"]
         if real_names:
             args += ["--select", *real_names]
-        python = _resolve_python_interpreter()
+        python = resolve_python_interpreter(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION))
         self._display_members = {name: self._stack_members(data, name) for name in self._visible_display_names(data)}
         self._member_states = {name: "waiting" for name in self._included_items(set(real_names), data)}
         self._display_states = {}
@@ -639,7 +555,7 @@ class ProjectBridge(QObject):
         return ""
 
     def _connection_filter_states(self, data: dict) -> list[dict]:
-        """Returns {"from", "to", "filter_type", "filter_required", "filter_satisfied", "filter_state"} for
+        """Returns {"from", "to", "filter_type", "filter_satisfied", "filter_state"} for
         every visible, de-duplicated (stack-collapsed) connection. filter_state is None when the connection
         has no filter, else "ok"/"disabled_ok"/"error" -- an unsatisfied filter is only an "error" if no
         sibling line into the same target is satisfied either (that sibling still supplies the target)."""
@@ -661,7 +577,6 @@ class ProjectBridge(QObject):
             seen.add(key)
             carrier = self._filter_connection(data, connection)
             filter_type = self._connection_filter_type(data, carrier) if carrier is not None else None
-            filter_required = filter_type is not None and self._connection_requires_filter(carrier, filter_type)
             filter_satisfied = True
             if filter_type is not None:
                 # zero enabled items means nothing actually passes through the link, regardless of
@@ -675,7 +590,6 @@ class ProjectBridge(QObject):
                     "from_anchor": connection["from"][1] if len(connection["from"]) > 1 else "right",
                     "to_anchor": connection["to"][1] if len(connection["to"]) > 1 else "left",
                     "filter_type": filter_type,
-                    "filter_required": filter_required,
                     "filter_satisfied": filter_satisfied,
                 }
             )
@@ -752,11 +666,11 @@ class ProjectBridge(QObject):
         """Prefers the item's real (executed) data directory, then the folder holding its first file
         reference, then falls back to the project root; returns None if nothing usable exists."""
         project_dir = self._base_dir()
-        data_dir = Path(_data_dir(name, str(project_dir)))
+        data_dir = Path(project_dir, PROJECT_CONFIG_DIR_NAME, "items", shorten(name))
         if data_dir.is_dir():
             return data_dir
         for reference in item.get("file_references") or []:
-            reference_path = Path(_deserialize_path(reference, str(project_dir)))
+            reference_path = Path(deserialize_path(reference, str(project_dir)))
             if reference_path.exists():
                 return reference_path.parent
         return project_dir if project_dir.is_dir() else None
@@ -944,7 +858,7 @@ class ProjectBridge(QObject):
         references = item.get("file_references") or item.get("references") or []
         if not references:
             return ""
-        return _deserialize_path(references[0], str(self._project_dir))
+        return deserialize_path(references[0], str(self._project_dir))
 
     @Slot(str, result=str)
     def set_input_reference(self, file_url: str) -> str:
@@ -956,7 +870,7 @@ class ProjectBridge(QObject):
             name = _INPUT_DATA_CONNECTION_NAME
             item = {"type": "Data Connection", "description": "", "x": 0.0, "y": 0.0, "db_references": []}
             data["items"][name] = item
-        item["file_references"] = [_serialize_path(local_path, str(self._project_dir))]
+        item["file_references"] = [serialize_path(local_path, str(self._project_dir))]
         self._save(data)
         return os.path.basename(local_path)
 

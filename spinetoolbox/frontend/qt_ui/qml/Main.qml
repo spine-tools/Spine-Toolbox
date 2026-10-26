@@ -29,15 +29,10 @@ Rectangle {
     property bool executionRunning: false
     property ListModel executionLogModel: ListModel {}
 
-    // surfaces projectBridge.has_unselected_scenarios() in the top bar, refreshed whenever the
-    // workflow reloads or a link filter checkbox is toggled (see refreshScenarioWarning())
-    property bool hasUnselectedScenarios: false
-
-    function refreshScenarioWarning() {
-        if (typeof projectBridge === "undefined")
-            return
-
-        root.hasUnselectedScenarios = projectBridge.has_unselected_scenarios()
+    // true when a link's scenario/alternative filter has nothing chosen and no sibling link covers it
+    property bool hasUnselectedScenarios: {
+        var connections = root.workflow.connections || []
+        return connections.some(function (connection) { return connection.filter_state === "error" })
     }
 
     // installs/runs a project's bundled setup script automatically, if it has one
@@ -439,7 +434,6 @@ Rectangle {
         root.workflow = parsed
 
         root.scheduleRoutes()
-        root.refreshScenarioWarning()
     }
 
     Component.onCompleted: {
@@ -829,7 +823,7 @@ Rectangle {
                                 projectBridge.stop_workflow()
                             else {
                                 var selectedNames = Object.keys(root.selectedNames)
-                                if (selectedNames.length === 0 && projectBridge.has_unselected_scenarios())
+                                if (selectedNames.length === 0 && root.hasUnselectedScenarios)
                                     unselectedScenariosDialog.open()
                                 else
                                     projectBridge.run_workflow(selectedNames)
