@@ -1,0 +1,70 @@
+flowchart TB
+  subgraph QML["Main.qml (UI)"]
+    LW["loadWorkflow()"]
+    WF["root.workflow<br/>(connections[] + filter_state)"]
+    HUS["hasUnselectedScenarios<br/>(sidottu: jokin filter_state == error)"]
+    BADGE["S/A-merkki linkillä"]
+    LINE["linkin väri / tila"]
+    CARD["kortin filtersUnchosen / active"]
+    TOPBAR["yläpalkin varoitus"]
+    RUN["Run-painike<br/>(varoitusdialogi)"]
+    OPEN["linkFiltersDialog.openFor(from, to)"]
+    TOG["linkFiltersDialog.toggle(name, checked)"]
+  end
+
+  subgraph SLOTS["ProjectBridge: @Slot-metodit (QML kutsuu)"]
+    GW["get_workflow()"]
+    GCF["get_connection_filters(from, to)"]
+    SCFE["set_connection_filter_enabled(from, to, type, name, enabled)"]
+  end
+
+  subgraph CORE["ProjectBridge: laskenta"]
+    CFS["_connection_filter_states(data)<br/>ok / disabled_ok / error / None"]
+    FFC["_find_filter_connection(from, to)"]
+    FC["_filter_connection<br/>(pino: sisäinen filtteri-linkki)"]
+    CFT["_connection_filter_type<br/>scenario / alternative / None"]
+    CFI["_connection_filter_items<br/>[{name, enabled}]"]
+    VIS["_visible_display_names<br/>_stack_resolver"]
+  end
+
+  subgraph DATA["Tiedon haku ja tallennus"]
+    CFN["_connection_filter_names<br/>(DB, välimuisti, project.json-varalista)"]
+    LLD["_load_local_data / _save_local_data<br/>_local_data_path"]
+  end
+
+  PJ[("project.json")]
+  LD[("local_data.json<br/>known_filters")]
+  DB[("Data Store -tietokanta")]
+
+  LW --> GW
+  GW -- "connections[]" --> WF
+  WF --> HUS
+  WF --> LINE
+  WF --> BADGE
+  WF --> CARD
+  HUS --> TOPBAR
+  HUS --> RUN
+  BADGE -- "klikkaus" --> OPEN --> GCF
+  OPEN --> TOG --> SCFE
+  TOG -- "päivitys" --> LW
+
+  GW --> CFS
+  GCF --> FFC
+  GCF --> CFT
+  GCF --> CFI
+  SCFE --> FFC
+  SCFE --> LLD
+
+  FFC --> FC
+  FFC --> PJ
+  CFS --> VIS
+  CFS --> FC
+  CFS --> CFT
+  CFS --> CFI
+  FC --> CFT
+  CFT --> CFN
+  CFI --> CFN
+  CFI --> LLD
+  CFN --> DB
+  CFN --> PJ
+  LLD --> LD
