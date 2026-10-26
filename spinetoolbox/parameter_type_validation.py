@@ -12,7 +12,7 @@
 """Contains utilities for validating parameter types."""
 
 from dataclasses import dataclass
-from multiprocessing import Process, Queue, get_context
+from multiprocessing import Process, Queue
 import queue
 from typing import Any, Iterable, Optional, Tuple
 from PySide6.QtCore import QObject, QTimer, Signal, Slot
@@ -45,12 +45,9 @@ class ParameterTypeValidator(QObject):
             parent (QObject, optional): parent object
         """
         super().__init__(parent)
-        multiprocessing_context = get_context("spawn")
-        self._sender = multiprocessing_context.Queue()
-        self._receiver = multiprocessing_context.Queue()
-        self._process = multiprocessing_context.Process(
-            target=schedule, name="Type validation worker", args=(self._receiver, self._sender)
-        )
+        self._sender = Queue()
+        self._receiver = Queue()
+        self._process = Process(target=schedule, name="Type validation worker", args=(self._receiver, self._sender))
         self._timer = QTimer(self)
         self._timer.setInterval(100)
         self._timer.timeout.connect(self._communicate)
