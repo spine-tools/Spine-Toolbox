@@ -1,7 +1,8 @@
-﻿import json
+import json
 from pathlib import Path
-import pytest
 from PySide6.QtCore import QCoreApplication
+import pytest
+from spinedb_api import DatabaseMapping
 from spinetoolbox.config import PROGRESS_MARKER, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME
 from spinetoolbox.frontend.qt_ui.project_bridge import ProjectBridge
 
@@ -152,3 +153,49 @@ def test_included_items_are_those_connected_to_selected_items(tmp_path: Path, ap
     data = {"project": {"connections": [{"from": ["A", "right"], "to": ["B", "left"]}]}}
     assert bridge._included_items({"A"}, data) == {"A", "B"}
     assert bridge._included_items({"C"}, data) == {"C"}
+
+
+@pytest.fixture
+def database_url(tmp_path: Path) -> str:
+    url = f"sqlite:///{tmp_path / 'data.sqlite'}"
+    with DatabaseMapping(url, create=True) as db_map:
+        db_map.add_entity_class(name="Widget")
+        db_map.add_entity(entity_class_name="Widget", name="knob")
+        db_map.add_parameter_definition(entity_class_name="Widget", name="weight")
+        db_map.add_parameter_value(
+            entity_class_name="Widget",
+            entity_byname=("knob",),
+            parameter_definition_name="weight",
+            alternative_name="Base",
+            parsed_value=2.5,
+        )
+        db_map.add_alternative(name="Heavy", description="Heavier")
+        db_map.add_scenario(name="Scenario")
+        db_map.add_scenario_alternative(scenario_name="Scenario", alternative_name="Heavy", rank=2)
+        db_map.add_scenario_alternative(scenario_name="Scenario", alternative_name="Base", rank=1)
+        db_map.commit_session("Set up")
+    return url
+
+
+def test_database_contents_list_scenario_alternatives_in_rank_order(
+    tmp_path: Path, application: QCoreApplication, database_url: str
+) -> None:
+    bridge = ProjectBridge(tmp_path)
+    contents = json.loads(bridge.get_database_contents(database_url))
+    assert contents["entity_classes"] == [{"name": "Widget", "entity_count": 1}]
+    assert contents["alternatives"] == ["Base", "Heavy"]
+    (scenario,) = contents["scenario_tree"]
+    assert scenario["name"] == "Scenario"
+    assert scenario["alternatives"] == [
+        {"name": "Base", "description": scenario["alternatives"][0]["description"]},
+        {"name": "Heavy", "description": "Heavier"},
+    ]
+
+
+def test_entity_class_values_are_read_from_database(
+    tmp_path: Path, application: QCoreApplication, database_url: str
+) -> None:
+    bridge = ProjectBridge(tmp_path)
+    assert json.loads(bridge.get_entity_class_values(database_url, "Widget")) == [
+        {"entity": "knob", "parameter": "weight", "alternative": "Base", "value": "2.5"}
+    ]
