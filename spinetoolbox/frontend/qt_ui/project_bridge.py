@@ -20,6 +20,7 @@ from ...config import (
 from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url
 from ...logger import QtLogger
+from .database_editor_backend import DatabaseEditorBackend
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
 _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg"}
@@ -116,6 +117,7 @@ class ProjectBridge(QObject):
         self._project_dir = Path(project_dir)
         self._config_file = self._project_dir / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._db_editor = None
+        self._database_editor = DatabaseEditorBackend()
         self._filter_names_cache: dict[tuple[str, str], tuple[tuple[int, int], list[str]]] = {}
         self._setup_manager: QProcessExecutionManager | None = None
         self._setup_logger = QtLogger()
@@ -668,6 +670,7 @@ class ProjectBridge(QObject):
         else:
             os.environ["PYTHONPATH"] = self._saved_pythonpath
         self._written_images = self._find_written_images()
+        self._database_editor.refresh_sessions()
         for member, state in list(self._member_states.items()):
             if state in ("waiting", "running"):
                 if exit_code != 0 and not user_stopped:
@@ -918,6 +921,7 @@ class ProjectBridge(QObject):
         local_path = Path(QUrl(folder_url).toLocalFile() or folder_url)
         if not (local_path / PROJECT_CONFIG_DIR_NAME).is_dir():
             return ""
+        self._close_sessions()
         self._project_dir = local_path
         self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._add_recent_project(local_path.name, str(local_path))
@@ -969,73 +973,68 @@ class ProjectBridge(QObject):
 
     @Slot(result=str)
     def get_databases(self) -> str:
-        """Returns [{"name": ..., "url": ...}, ...] for every Data Store in the project."""
-        data = self._load()
-        project_dir = str(self._base_dir())
-        databases = []
-        for name, item in data.get("items", {}).items():
-            if item.get("type") != "Data Store":
-                continue
-            url = _data_store_url(item.get("url") or {}, project_dir)
-            if url:
-                databases.append({"name": name, "url": url})
-        return json.dumps(databases)
+        return self._database_editor.get_databases(self._load(), str(self._base_dir()), _data_store_url)
 
     @Slot(str, result=str)
     def get_database_contents(self, url: str) -> str:
-        """Returns {"entity_classes": [{"name": ..., "entity_count": ...}], "alternatives": [...],
-        "scenarios": [...]} read live from the database at url, or {"error": ...} if it couldn't be opened."""
-        from spinedb_api import DatabaseMapping  # imported lazily: only needed once the user opens this page
-
-        try:
-            with DatabaseMapping(url) as db_map:
-                entity_classes = []
-                for row in db_map.query(db_map.entity_class_sq):
-                    count = db_map.query(db_map.entity_sq).filter_by(class_id=row.id).count()
-                    entity_classes.append({"name": row.name, "entity_count": count})
-                alternatives = [row.name for row in db_map.query(db_map.alternative_sq)]
-                scenarios = [row.name for row in db_map.query(db_map.scenario_sq)]
-        except Exception as error:
-            return json.dumps({"error": str(error)})
-        return json.dumps({"entity_classes": entity_classes, "alternatives": alternatives, "scenarios": scenarios})
+        return self._database_editor.get_database_contents(url)
 
     @Slot(str, str, result=str)
     def get_entity_class_values(self, url: str, class_name: str) -> str:
-        """Returns [{"entity": ..., "parameter": ..., "alternative": ..., "value": ...}, ...] for every
-        parameter value of class_name's entities in the database at url."""
-        from spinedb_api import DatabaseMapping, from_database  # imported lazily, same reason as above
+        return self._database_editor.get_entity_class_values(url, class_name)
 
-        try:
-            with DatabaseMapping(url) as db_map:
-                class_row = db_map.query(db_map.entity_class_sq).filter_by(name=class_name).first()
-                if class_row is None:
-                    return json.dumps([])
-                entities = {row.id: row.name for row in db_map.query(db_map.entity_sq).filter_by(class_id=class_row.id)}
-                definitions = {
-                    row.id: row.name
-                    for row in db_map.query(db_map.parameter_definition_sq).filter_by(entity_class_id=class_row.id)
-                }
-                alternatives = {row.id: row.name for row in db_map.query(db_map.alternative_sq)}
+    @Slot(str, str, str, result=str)
+    def get_pivot(self, url: str, class_name: str, alternative: str) -> str:
+        return self._database_editor.get_pivot(url, class_name, alternative)
 
-                rows = []
-                for value_row in db_map.query(db_map.parameter_value_sq):
-                    if value_row.entity_id not in entities or value_row.parameter_definition_id not in definitions:
-                        continue
-                    try:
-                        parsed_value = from_database(value_row.value, value_row.type)
-                    except Exception:
-                        parsed_value = None
-                    rows.append(
-                        {
-                            "entity": entities[value_row.entity_id],
-                            "parameter": definitions[value_row.parameter_definition_id],
-                            "alternative": alternatives.get(value_row.alternative_id, ""),
-                            "value": str(parsed_value),
-                        }
-                    )
-        except Exception:
-            return json.dumps([])
-        return json.dumps(rows)
+    def _close_sessions(self) -> None:
+        self._database_editor.close_sessions()
+
+    @Slot(str, result=str)
+    def reload_database(self, url: str) -> str:
+        return self._database_editor.reload_database(url)
+
+    @Slot(str, result=str)
+    def get_session_state(self, url: str) -> str:
+        return self._database_editor.get_session_state(url)
+
+    @Slot(str, str, str, result=str)
+    def add_item(self, url: str, item_type: str, fields_json: str) -> str:
+        return self._database_editor.add_item(url, item_type, fields_json)
+
+    @Slot(str, str, str, str, result=str)
+    def update_item(self, url: str, item_type: str, key_json: str, fields_json: str) -> str:
+        return self._database_editor.update_item(url, item_type, key_json, fields_json)
+
+    @Slot(str, str, str, result=str)
+    def remove_item(self, url: str, item_type: str, key_json: str) -> str:
+        return self._database_editor.remove_item(url, item_type, key_json)
+
+    @Slot(str, str, str, result=str)
+    def set_scenario_alternatives(self, url: str, scenario_name: str, alternative_names_json: str) -> str:
+        return self._database_editor.set_scenario_alternatives(url, scenario_name, alternative_names_json)
+
+    @Slot(str, str, str, str, str, str, result=str)
+    def set_parameter_value(
+        self, url: str, class_name: str, entity: str, parameter: str, alternative: str, text: str
+    ) -> str:
+        return self._database_editor.set_parameter_value(url, class_name, entity, parameter, alternative, text)
+
+    @Slot(str, result=str)
+    def undo_edit(self, url: str) -> str:
+        return self._database_editor.undo_edit(url)
+
+    @Slot(str, result=str)
+    def redo_edit(self, url: str) -> str:
+        return self._database_editor.redo_edit(url)
+
+    @Slot(str, str, result=str)
+    def commit_edits(self, url: str, comment: str) -> str:
+        return self._database_editor.commit_edits(url, comment)
+
+    @Slot(str, result=str)
+    def discard_edits(self, url: str) -> str:
+        return self._database_editor.discard_edits(url)
 
     @Slot(result=str)
     def get_input_reference(self) -> str:
