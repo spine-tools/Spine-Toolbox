@@ -41,6 +41,7 @@ _IMAGE_SCAN_SKIPPED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache_
 # QSettings organization and application names; recent projects are stored under "appSettings/recentProjects"
 _SETTINGS_ORGANIZATION = "SpineProject"
 _SETTINGS_APPLICATION = "Spine Toolbox"
+_TOUR_SEEN_KEY = "appSettings/easyModeTourSeen"
 
 # shown until the user opens a real project, so the UI has something to demonstrate
 _EXAMPLE_PROJECT_FILE = Path(__file__).parent / "examples" / "project.json"
@@ -327,6 +328,16 @@ class ProjectBridge(QObject):
         return QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).value(
             f"appSettings/projectSetupDone/{project_dir}", defaultValue=False, type=bool
         )
+
+    @Slot(result=bool)
+    def is_tour_seen(self) -> bool:
+        """Returns whether the first-run tour has been finished or skipped."""
+        settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
+        return settings.value(_TOUR_SEEN_KEY, defaultValue=False, type=bool)
+
+    @Slot()
+    def mark_tour_seen(self) -> None:
+        QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).setValue(_TOUR_SEEN_KEY, True)
 
     @Slot()
     def install_project_dependencies(self) -> None:

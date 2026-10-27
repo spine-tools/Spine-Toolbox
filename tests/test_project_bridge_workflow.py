@@ -1,6 +1,7 @@
+from collections.abc import Iterator
 import json
 from pathlib import Path
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QSettings
 import pytest
 from spinedb_api import DatabaseMapping
 from spinetoolbox.config import LATEST_PROJECT_VERSION, PROGRESS_MARKER, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME
@@ -138,6 +139,23 @@ def test_outdated_project_is_upgraded_in_memory_and_not_rewritten_by_saving(
     assert bridge._load()["project"]["version"] == LATEST_PROJECT_VERSION
     bridge.set_input_reference(str(tmp_path / "input.csv"))
     assert json.loads(config_file.read_text(encoding="utf-8"))["project"]["version"] == LATEST_PROJECT_VERSION - 1
+
+
+@pytest.fixture
+def isolated_settings(tmp_path: Path) -> Iterator[None]:
+    QSettings.setDefaultFormat(QSettings.Format.IniFormat)
+    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(tmp_path / "settings"))
+    yield
+    QSettings.setDefaultFormat(QSettings.Format.NativeFormat)
+
+
+def test_tour_is_unseen_until_marked_seen(
+    tmp_path: Path, application: QCoreApplication, isolated_settings: None
+) -> None:
+    bridge = ProjectBridge(tmp_path)
+    assert not bridge.is_tour_seen()
+    bridge.mark_tour_seen()
+    assert bridge.is_tour_seen()
 
 
 def _states_after(bridge: ProjectBridge, lines: list[str]) -> list[tuple[str, str]]:
