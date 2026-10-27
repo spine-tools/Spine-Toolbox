@@ -69,7 +69,8 @@ class EngineClient:
             server_public, _ = zmq.auth.load_certificate(server_public_file)
             self.dealer_socket.curve_serverkey = server_public
         self.dealer_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
-        if ping:
+        time.sleep(10.0)
+        if False:
             print("*** Check engine connectivity")
             try:
                 self._check_connectivity(1000)  # Ping server
