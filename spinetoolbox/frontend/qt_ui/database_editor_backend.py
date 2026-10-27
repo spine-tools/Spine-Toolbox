@@ -156,7 +156,9 @@ class DatabaseEditorBackend:
             if alternative not in alternatives:
                 alternative = "Base" if "Base" in alternatives else next(iter(alternatives), "")
             parameters = [
-                item["name"] for item in session.items("parameter_definition") if item["entity_class_name"] == class_name
+                item["name"]
+                for item in session.items("parameter_definition")
+                if item["entity_class_name"] == class_name
             ]
             values = {
                 ("__".join(item["entity_byname"]), item["parameter_definition_name"]): item["parsed_value"]
@@ -178,7 +180,9 @@ class DatabaseEditorBackend:
                 rows.append({"entity": entity, "cells": cells})
         except Exception as error:
             return json.dumps({"error": str(error)})
-        return json.dumps({"alternatives": alternatives, "alternative": alternative, "parameters": parameters, "rows": rows})
+        return json.dumps(
+            {"alternatives": alternatives, "alternative": alternative, "parameters": parameters, "rows": rows}
+        )
 
     def _session(self, url: str) -> DatabaseSession:
         session = self._sessions.get(url)
@@ -260,7 +264,9 @@ class DatabaseEditorBackend:
                     session.update("scenario_alternative", item["id"], rank=rank)
                 for rank, name in enumerate(names, start=1):
                     if name not in existing:
-                        session.add("scenario_alternative", scenario_name=scenario_name, alternative_name=name, rank=rank)
+                        session.add(
+                            "scenario_alternative", scenario_name=scenario_name, alternative_name=name, rank=rank
+                        )
 
         return self._edit(url, set_alternatives)
 

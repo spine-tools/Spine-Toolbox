@@ -1,4 +1,5 @@
 """Starts Spine Toolbox's main window directly in easy (QML) mode, in the given or default project."""
+
 from pathlib import Path
 import sys
 import fluentpyside
