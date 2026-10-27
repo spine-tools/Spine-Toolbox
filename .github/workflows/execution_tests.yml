@@ -59,4 +59,4 @@ jobs:
           ${{ inputs.post-installation-command }}
       - name: Run tests
         run:
-          pytest execution_tests/ --cov --verbose
+          pytest execution_tests/ --verbose --capture=tee-sys
