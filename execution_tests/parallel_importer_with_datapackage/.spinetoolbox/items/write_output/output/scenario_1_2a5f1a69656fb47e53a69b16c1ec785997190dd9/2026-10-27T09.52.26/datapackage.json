@@ -1,0 +1,12 @@
+{
+  "resources": [
+    {
+      "name": "out",
+      "type": "table",
+      "path": "out.csv",
+      "scheme": "file",
+      "format": "csv",
+      "mediatype": "text/csv"
+    }
+  ]
+}
