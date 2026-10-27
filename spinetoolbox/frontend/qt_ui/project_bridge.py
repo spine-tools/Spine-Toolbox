@@ -6,7 +6,7 @@ import shutil
 import time
 from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
 from spine_engine.project_item.connection import FilterSettings
-from spine_engine.utils.helpers import resolve_python_interpreter, shorten
+from spine_engine.utils.helpers import connections_to_selected_items, resolve_python_interpreter, shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_items.utils import convert_to_sqlalchemy_url, database_label
 from ...config import (
@@ -24,6 +24,7 @@ from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url
 from ...load_project import load_local_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
+from ...project_item.logging_connection import HeadlessConnection
 from .database_editor_backend import DatabaseEditorBackend
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
@@ -373,11 +374,12 @@ class ProjectBridge(QObject):
 
     def _included_items(self, selected: set[str], data: dict) -> set[str]:
         """Returns the items the engine goes through for selected: those connected to a selected item."""
-        included = set()
-        for connection in data.get("project", {}).get("connections", []):
-            source, destination = connection["from"][0], connection["to"][0]
-            if source in selected or destination in selected:
-                included.update((source, destination))
+        connections = [HeadlessConnection.from_dict(d) for d in data.get("project", {}).get("connections", [])]
+        included = {
+            name
+            for connection in connections_to_selected_items(connections, selected)
+            for name in (connection.source, connection.destination)
+        }
         return included or selected
 
     def _display_state(self, display_name: str) -> str:
