@@ -1,4 +1,3 @@
-from collections.abc import Iterator
 import json
 from pathlib import Path
 from PySide6.QtCore import QCoreApplication, QSettings
@@ -142,11 +141,12 @@ def test_outdated_project_is_upgraded_in_memory_and_not_rewritten_by_saving(
 
 
 @pytest.fixture
-def isolated_settings(tmp_path: Path) -> Iterator[None]:
-    QSettings.setDefaultFormat(QSettings.Format.IniFormat)
-    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(tmp_path / "settings"))
-    yield
-    QSettings.setDefaultFormat(QSettings.Format.NativeFormat)
+def isolated_settings(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    ini_file = str(tmp_path / "settings.ini")
+    monkeypatch.setattr(
+        "spinetoolbox.frontend.qt_ui.project_bridge.QSettings",
+        lambda organization, application: QSettings(ini_file, QSettings.Format.IniFormat),
+    )
 
 
 def test_tour_is_unseen_until_marked_seen(

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import "Router.js" as Router
+import "TourSteps.js" as TourSteps
 
 Rectangle {
     id: root
@@ -436,12 +437,54 @@ Rectangle {
         root.scheduleRoutes()
     }
 
+    // starts the first-run tour; the delay lets the layout and the routes settle before targets are measured
+    function startTour() {
+        root.currentView = "workflow"
+        tourStartTimer.restart()
+    }
+
+    Timer {
+        id: tourStartTimer
+        interval: 300
+        onTriggered: root.beginTour()
+    }
+
+    // first filter badge that is fully inside the visible part of the canvas, or null
+    function visibleFilterBadge() {
+        for (var i = 0; i < filterBadges.count; i++) {
+            var badge = filterBadges.itemAt(i)
+            if (!badge || !badge.visible)
+                continue
+
+            var position = badge.mapToItem(designFlick, 0, 0)
+            if (position.x >= 0 && position.y >= 0
+                    && position.x + badge.width <= designFlick.width
+                    && position.y + badge.height <= designFlick.height)
+                return badge
+        }
+        return null
+    }
+
+    function beginTour() {
+        tour.start(TourSteps.buildSteps({
+            openProject: openProjectButton,
+            canvas: designCanvas,
+            filterBadge: root.visibleFilterBadge(),
+            runButton: runProjectButton,
+            runsNav: runsNavButton,
+            help: helpNavButton
+        }))
+    }
+
     Component.onCompleted: {
         if (typeof projectBridge !== "undefined")
             currentProjectName = projectBridge.get_project_name()
 
         loadWorkflow()
         offerProjectSetup()
+
+        if (typeof projectBridge !== "undefined" && !projectBridge.is_tour_seen())
+            root.startTour()
     }
 
     // shrink workflow cards so they keep fitting without horizontal scrolling on narrow windows,
@@ -590,6 +633,8 @@ Rectangle {
                 }
 
                 SidebarButton {
+                    id: runsNavButton
+
                     text: "Runs"
                     iconText: "▶"
                     selected: root.currentView === "runs"
@@ -615,9 +660,13 @@ Rectangle {
                 }
 
                 SidebarButton {
+                    id: helpNavButton
+
                     text: "Help"
                     iconText: "?"
                     compact: root.compactSidebar
+
+                    onClicked: root.startTour()
                 }
 
                 // -------------------------------------------------
@@ -762,6 +811,8 @@ Rectangle {
                     }
 
                     Button {
+                        id: openProjectButton
+
                         text: "Open project"
 
                         onClicked: dataPage.guardUnsaved(function () { openProjectDialog.open() })
@@ -1196,6 +1247,8 @@ Rectangle {
                         // =================================================
 
                         Repeater {
+                            id: filterBadges
+
                             model: root.workflow.connections
 
                             Rectangle {
@@ -1546,6 +1599,17 @@ Rectangle {
                 }
             }
             }
+        }
+    }
+
+    GuidedTour {
+        id: tour
+
+        anchors.fill: parent
+
+        onFinished: {
+            if (typeof projectBridge !== "undefined")
+                projectBridge.mark_tour_seen()
         }
     }
 
