@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import QCoreApplication
 import pytest
 from spinedb_api import DatabaseMapping
-from spinetoolbox.config import PROGRESS_MARKER, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME
+from spinetoolbox.config import LATEST_PROJECT_VERSION, PROGRESS_MARKER, PROJECT_CONFIG_DIR_NAME, PROJECT_FILENAME
 from spinetoolbox.frontend.qt_ui.project_bridge import ProjectBridge
 
 
@@ -125,6 +125,19 @@ def test_required_filter_is_read_from_connection_options(
     config_file.parent.mkdir()
     config_file.write_text(json.dumps(project), encoding="utf-8")
     assert json.loads(ProjectBridge(tmp_path).get_connection_filters("A", "B"))["required"] is expected
+
+
+def test_outdated_project_is_upgraded_in_memory_and_not_rewritten_by_saving(
+    tmp_path: Path, application: QCoreApplication
+) -> None:
+    project = {"project": {"version": LATEST_PROJECT_VERSION - 1}, "items": {}}
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    bridge = ProjectBridge(tmp_path)
+    assert bridge._load()["project"]["version"] == LATEST_PROJECT_VERSION
+    bridge.set_input_reference(str(tmp_path / "input.csv"))
+    assert json.loads(config_file.read_text(encoding="utf-8"))["project"]["version"] == LATEST_PROJECT_VERSION - 1
 
 
 def _states_after(bridge: ProjectBridge, lines: list[str]) -> list[tuple[str, str]]:
