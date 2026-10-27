@@ -266,7 +266,7 @@ class ProjectBridge(QObject):
         if filter_type is None:
             return json.dumps({})
         items = self._connection_filter_items(data, connection, filter_type)
-        required = bool(connection.get("options", {}).get(f"require_{filter_type}_filter"))
+        required = bool(HeadlessConnection.from_dict(connection).require_filter_online(f"{filter_type}_filter"))
         return json.dumps({"filter_type": filter_type, "required": required, "items": items})
 
     @Slot(str, str, str, str, bool, result=bool)

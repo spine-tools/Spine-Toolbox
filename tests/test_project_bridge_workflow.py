@@ -110,6 +110,23 @@ def test_link_leaving_stack_carries_filter_of_filterable_link_inside_stack(
     assert json.loads(bridge.get_connection_filters("Group", "Store"))["items"] == [{"name": "Base", "enabled": True}]
 
 
+@pytest.mark.parametrize(("options", "expected"), [({"require_scenario_filter": True}, True), ({}, False)])
+def test_required_filter_is_read_from_connection_options(
+    tmp_path: Path, application: QCoreApplication, options: dict, expected: bool
+) -> None:
+    project = {
+        "project": {
+            "scenarios": ["Base"],
+            "connections": [{"from": ["A", "right"], "to": ["B", "left"], "options": options, **_SCENARIO_FILTER}],
+        },
+        "items": {"A": _item("Data Store", 0.0, 0.0), "B": _item("Tool", 200.0, 0.0)},
+    }
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    assert json.loads(ProjectBridge(tmp_path).get_connection_filters("A", "B"))["required"] is expected
+
+
 def _states_after(bridge: ProjectBridge, lines: list[str]) -> list[tuple[str, str]]:
     states = []
     bridge.itemRunStateChanged.connect(lambda name, state: states.append((name, state)))
