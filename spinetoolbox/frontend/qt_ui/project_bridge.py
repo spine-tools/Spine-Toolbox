@@ -6,7 +6,12 @@ import shutil
 import time
 from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
 from spine_engine.project_item.connection import FilterSettings
-from spine_engine.utils.helpers import connections_to_selected_items, resolve_python_interpreter, shorten
+from spine_engine.utils.helpers import (
+    connections_to_selected_items,
+    gather_leaf_data,
+    resolve_python_interpreter,
+    shorten,
+)
 from spine_engine.utils.serialization import deserialize_path, serialize_path
 from spine_items.utils import convert_to_sqlalchemy_url, database_label
 from ...config import (
@@ -274,18 +279,16 @@ class ProjectBridge(QObject):
         connection = self._find_filter_connection(self._load_merged(), from_name, to_name)
         if connection is None:
             return False
-        raw_from, raw_to = connection["from"][0], connection["to"][0]
-        local_data = load_local_project_dict(self._base_dir())
-        known_filters = (
-            local_data.setdefault("project", {})
-            .setdefault("connections", {})
-            .setdefault(raw_from, {})
-            .setdefault(raw_to, {})
-            .setdefault("filter_settings", {})
-            .setdefault("known_filters", {})
-            .setdefault(database_label(raw_from), {})
+        engine_connection = HeadlessConnection.from_dict(connection)
+        engine_connection.set_filter_enabled(
+            database_label(engine_connection.source), f"{filter_type}_filter", item_name, enabled
         )
-        known_filters.setdefault(f"{filter_type}_filter", {})[item_name] = enabled
+        local_entries = gather_leaf_data(
+            engine_connection.to_dict(), HeadlessConnection.connection_dict_local_entries()
+        )
+        local_data = load_local_project_dict(self._base_dir())
+        local_connections = local_data.setdefault("project", {}).setdefault("connections", {})
+        local_connections.setdefault(engine_connection.source, {})[engine_connection.destination] = local_entries
         self._save_local_data(local_data)
         return True
 
