@@ -1,4 +1,5 @@
 """Reads and writes the same project.json Data Connection file references as the classic Qt UI."""
+
 import json
 import os
 from pathlib import Path
@@ -631,7 +632,13 @@ class ProjectBridge(QObject):
                 continue
             item_type = item.get("type", "")
             items.append(
-                {"name": name, "type": item_type, "x": item.get("x", 0.0), "y": item.get("y", 0.0), "subtitle": item_type}
+                {
+                    "name": name,
+                    "type": item_type,
+                    "x": item.get("x", 0.0),
+                    "y": item.get("y", 0.0),
+                    "subtitle": item_type,
+                }
             )
 
         # items/stacks listed here stay in project.json untouched, just hidden from this simplified view
@@ -715,7 +722,9 @@ class ProjectBridge(QObject):
         self._close_sessions()
         self._project_dir = local_path
         self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
-        update_recent_projects(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION), local_path.name, str(local_path))
+        update_recent_projects(
+            QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION), local_path.name, str(local_path)
+        )
         return local_path.name
 
     @Slot()
@@ -852,4 +861,3 @@ class ProjectBridge(QObject):
         item["file_references"] = [serialize_path(local_path, str(self._project_dir))]
         self._save(data)
         return os.path.basename(local_path)
-

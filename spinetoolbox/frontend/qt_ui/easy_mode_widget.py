@@ -1,4 +1,5 @@
 """Embeds the easy-mode QML UI as a widget, so it can share a window with the classic Qt UI."""
+
 from pathlib import Path
 from PySide6.QtCore import QUrl
 from PySide6.QtQuickWidgets import QQuickWidget
