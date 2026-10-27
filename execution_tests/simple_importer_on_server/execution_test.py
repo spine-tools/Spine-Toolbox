@@ -52,6 +52,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
             entities = db_map.get_items("entity")
             self.assertEqual(0, len(entities))
         db_map.close()
+        print("*** Starting Toolbox subprocess")
         completed = subprocess.run(
             (
                 sys.executable,
@@ -63,6 +64,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
                 str(self._root_path),
             )
         )
+        print("*** Subprocess finished")
         self.assertEqual(completed.returncode, 0)
         # Check that entities are now in DB
         with DatabaseMapping(self._db_url) as db_map:
