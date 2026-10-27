@@ -26,7 +26,7 @@ from ...config import (
     REPORT_PROGRESS_ENV_VAR,
 )
 from ...execution_managers import QProcessExecutionManager
-from ...helpers import open_url
+from ...helpers import open_url, update_recent_projects
 from ...load_project import load_local_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
@@ -515,24 +515,6 @@ class ProjectBridge(QObject):
         """Returns whether a workflow run is currently in progress."""
         return self._run_manager is not None
 
-    def _add_recent_project(self, name: str, project_dir: str) -> None:
-        """Moves the project to the front of the shared recent-projects list (QSettings "appSettings/recentProjects")."""
-        settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
-        entry = name + "<>" + project_dir
-        recents = settings.value("appSettings/recentProjects", defaultValue=None)
-        if not recents:
-            recents_list = [entry]
-        else:
-            recents_list = str(recents).split("\n")
-            normalized = [os.path.normcase(item) for item in recents_list]
-            try:
-                recents_list.insert(0, recents_list.pop(normalized.index(os.path.normcase(entry))))
-            except ValueError:
-                recents_list.insert(0, entry)
-                del recents_list[20:]
-        settings.setValue("appSettings/recentProjects", "\n".join(recents_list))
-        settings.sync()
-
     @Slot(result=str)
     def get_project_name(self) -> str:
         """Returns the current project's name, falling back to the bundled example when none is open yet."""
@@ -723,7 +705,7 @@ class ProjectBridge(QObject):
         self._close_sessions()
         self._project_dir = local_path
         self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
-        self._add_recent_project(local_path.name, str(local_path))
+        update_recent_projects(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION), local_path.name, str(local_path))
         return local_path.name
 
     @Slot()
