@@ -4,7 +4,6 @@ from collections import Counter
 from collections.abc import Callable
 import json
 from typing import Any
-
 from .db_session import DatabaseSession, DatabaseSessionError
 
 _EDITABLE_ITEM_TYPES = {"entity_class", "entity", "alternative", "scenario"}
