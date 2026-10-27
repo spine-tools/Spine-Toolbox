@@ -188,10 +188,10 @@ class ProjectBridge(QObject):
         database resource, and the database must have scenarios/alternatives to choose from."""
         if data.get("items", {}).get(connection["from"][0], {}).get("type") != "Data Store":
             return None
-        enabled_types = FilterSettings.from_dict(connection.get("filter_settings", {})).enabled_filter_types
-        if enabled_types.get("scenario_filter"):
+        engine_connection = HeadlessConnection.from_dict(connection)
+        if engine_connection.is_filter_type_enabled("scenario_filter"):
             filter_type = "scenario"
-        elif enabled_types.get("alternative_filter"):
+        elif engine_connection.is_filter_type_enabled("alternative_filter"):
             filter_type = "alternative"
         else:
             return None
