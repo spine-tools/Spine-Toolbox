@@ -16,6 +16,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
     _zip_fpath = _root_path.parent / _zip_fname
 
     def setUp(self):
+        print("*** creating server instance")
         self.service = EngineServer("tcp", 50003, ServerSecurityModel.NONE, "")
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.DEALER)
