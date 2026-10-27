@@ -70,6 +70,7 @@ class EngineClient:
             self.dealer_socket.curve_serverkey = server_public
         self.dealer_socket.connect(self.protocol + "://" + self.host + ":" + str(self.port))
         if ping:
+            print("*** Check engine connectivity")
             try:
                 self._check_connectivity(1000)  # Ping server
             except RemoteEngineInitFailed:
@@ -101,14 +102,11 @@ class EngineClient:
                     return self.dealer_socket.recv_multipart()
                 continue
 
-    def _check_connectivity(self, timeout):
+    def _check_connectivity(self, timeout: int) -> None:
         """Pings server, waits for the response, and acts accordingly.
 
         Args:
-            timeout (int): Time to wait for a response before giving up [ms]
-
-        Returns:
-            void
+            timeout: Time to wait for a response before giving up [ms]
 
         Raises:
             RemoteEngineInitFailed if the server is not responding.
@@ -128,7 +126,7 @@ class EngineClient:
                 f"Ping failed. Request Id '{random_id}' does not match reply Id '{response_id}'"
             )
 
-    def set_start_time(self):
+    def set_start_time(self) -> None:
         """Sets a start time for an operation. Call get_elapsed_time() after
         an operation has finished to get the elapsed time string."""
         self.start_time = round(time.time() * 1000.0)
