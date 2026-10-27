@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
-import pytest
 from PySide6.QtCore import QCoreApplication
+import pytest
 from spinedb_api import DatabaseMapping
 from spinetoolbox.frontend.qt_ui.project_bridge import ProjectBridge
 

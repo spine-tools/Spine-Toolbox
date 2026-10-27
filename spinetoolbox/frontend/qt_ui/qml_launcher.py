@@ -1,15 +1,11 @@
 """Starts Spine Toolbox's main window directly in easy (QML) mode, in the given or default project."""
-import sys
-
-from PySide6.QtWidgets import QApplication
-
 from pathlib import Path
+import sys
 import fluentpyside
-
+from PySide6.QtWidgets import QApplication
 from ...config import PROJECT_CONFIG_DIR_NAME
 from ...font import TOOLBOX_FONT
 from ...ui_main import ToolboxUI
-
 
 _DEFAULT_PROJECT_DIR = Path(r"C:\Users\enessi\flextool")
 
