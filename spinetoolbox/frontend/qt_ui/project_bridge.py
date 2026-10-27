@@ -27,7 +27,7 @@ from ...config import (
 )
 from ...execution_managers import QProcessExecutionManager
 from ...helpers import open_url, update_recent_projects
-from ...load_project import load_local_project_dict, merge_local_dict_to_project_dict
+from ...load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
 from .database_editor_backend import DatabaseEditorBackend
@@ -112,8 +112,7 @@ class ProjectBridge(QObject):
 
     def _load(self) -> dict:
         if self._config_file.exists():
-            with self._config_file.open(encoding="utf-8") as input_file:
-                return json.load(input_file)
+            return load_project_dict(self._project_dir)
         if _EXAMPLE_PROJECT_FILE.exists():
             with _EXAMPLE_PROJECT_FILE.open(encoding="utf-8") as input_file:
                 return json.load(input_file)
