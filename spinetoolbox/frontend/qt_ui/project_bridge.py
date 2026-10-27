@@ -7,7 +7,7 @@ import time
 from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
 from spine_engine.utils.helpers import resolve_python_interpreter, shorten
 from spine_engine.utils.serialization import deserialize_path, serialize_path
-from spine_items.utils import database_label
+from spine_items.utils import convert_to_sqlalchemy_url, database_label
 from ...config import (
     LATEST_PROJECT_VERSION,
     PLOTS_DIR_ENV_VAR,
@@ -38,18 +38,12 @@ _EXAMPLE_PROJECT_NAME = "FlexTool (example)"
 
 
 def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
-    """Builds a SQLAlchemy URL string from a Data Store item's "url" dict."""
+    """Builds a SQLAlchemy URL string from a Data Store item's "url" dict, or None if the dict is incomplete."""
     database = url_dict.get("database")
-    if not database:
-        return None
     if isinstance(database, dict):
-        database = deserialize_path(database, project_dir)
-    dialect = url_dict.get("dialect") or "sqlite"
-    if dialect == "sqlite":
-        return "sqlite:///" + database.replace(os.sep, "/")
-    host = url_dict.get("host") or ""
-    port = f":{url_dict['port']}" if url_dict.get("port") else ""
-    return f"{dialect}://{host}{port}/{database}"
+        url_dict = {**url_dict, "database": deserialize_path(database, project_dir)}
+    sa_url = convert_to_sqlalchemy_url(url_dict)
+    return sa_url.render_as_string(hide_password=False) if sa_url is not None else None
 
 
 def _sqlite_file_stamp(db_url: str) -> tuple[int, int] | None:
