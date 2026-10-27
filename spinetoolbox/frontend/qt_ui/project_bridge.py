@@ -30,6 +30,7 @@ from ...helpers import open_url, update_recent_projects
 from ...load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
+from ...project_upgrader import upgrade_to_latest
 from .database_editor_backend import DatabaseEditorBackend
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
@@ -110,13 +111,23 @@ class ProjectBridge(QObject):
         self._run_logger.msg_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
         self._run_logger.msg_proc_error.connect(lambda text: self.executionLogAppended.emit(text, "stderr"))
 
-    def _load(self) -> dict:
+    def _load_raw(self) -> dict:
+        """Returns project data as stored, without upgrading; use this when the result is going to be saved."""
         if self._config_file.exists():
             return load_project_dict(self._project_dir)
         if _EXAMPLE_PROJECT_FILE.exists():
             with _EXAMPLE_PROJECT_FILE.open(encoding="utf-8") as input_file:
                 return json.load(input_file)
         return {"project": {"version": LATEST_PROJECT_VERSION, "settings": {}}, "items": {}}
+
+    def _load(self) -> dict:
+        """Returns project data upgraded to the latest version in memory; the file on disk is left as is."""
+        data = self._load_raw()
+        version = data.get("project", {}).get("version", LATEST_PROJECT_VERSION)
+        # versions 1 and 2 need item factories, which the bridge does not have
+        if version >= LATEST_PROJECT_VERSION or version < 3:
+            return data
+        return upgrade_to_latest(version, data, self._project_dir, {}, lambda message: None)
 
     def _load_merged(self) -> dict:
         """Returns project data with local_data.json merged in. The result holds per-user data and must not be saved."""
@@ -832,7 +843,7 @@ class ProjectBridge(QObject):
     def set_input_reference(self, file_url: str) -> str:
         """Stores file_url as the project's Data Connection file reference and returns its display name."""
         local_path = QUrl(file_url).toLocalFile() or file_url
-        data = self._load()
+        data = self._load_raw()
         name, item = self._find_data_connection(data)
         if item is None:
             name = _INPUT_DATA_CONNECTION_NAME
