@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 from sqlalchemy.engine.url import URL
 from spine_engine.utils.helpers import urls_equal
 from spinedb_api import Asterisk, DatabaseMapping, SpineDBAPIError, SpineDBVersionError, export_data
-from spinedb_api.helpers import vacuum
+from spinedb_api.helpers import sqlite_url_string, vacuum
 from spinedb_api.spine_io.importers.excel_reader import get_mapped_data_from_xlsx
 from ...config import APPLICATION_PATH, SPINE_TOOLBOX_REPO_URL
 from ...helpers import (
@@ -257,7 +257,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return None
-        return "sqlite:///" + file_path
+        return sqlite_url_string(file_path)
 
     @Slot(bool)
     def open_db_file(self, _=False):
@@ -294,7 +294,7 @@ class SpineDBEditorBase(QMainWindow):
         self.qsettings.endGroup()
         if not file_path:
             return
-        url = "sqlite:///" + file_path
+        url = sqlite_url_string(file_path)
         self.load_db_urls(self.db_urls + [url])
 
     @Slot()
@@ -310,7 +310,7 @@ class SpineDBEditorBase(QMainWindow):
             os.remove(file_path)
         except OSError:
             pass
-        url = "sqlite:///" + file_path
+        url = sqlite_url_string(file_path)
         self.load_db_urls([url], create=True)
 
     @Slot()

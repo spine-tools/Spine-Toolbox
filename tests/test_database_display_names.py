@@ -13,6 +13,7 @@ import sys
 import unittest
 from unittest import mock
 from sqlalchemy.engine.url import make_url
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.database_display_names import NameRegistry, suggest_display_name
 from spinetoolbox.helpers import signal_waiter
 from tests.mock_helpers import TestCaseWithQApplication
@@ -88,7 +89,7 @@ class TestSuggestDisplayName(unittest.TestCase):
 
     def test_sqlite_url_returns_file_name_without_extension(self):
         path = r"c:\path\to\my_lovely_db.sqlite" if sys.platform == "win32" else "/path/to/my_lovely_db.sqlite"
-        sa_url = make_url(r"sqlite:///" + path)
+        sa_url = make_url(sqlite_url_string(path))
         self.assertEqual(suggest_display_name(sa_url), "my_lovely_db")
 
     def test_in_memory_sqlite_url_returns_random_hash(self):

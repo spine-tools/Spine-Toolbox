@@ -22,7 +22,7 @@ from tests.mock_helpers import TestCaseWithQApplication
 
 class TestMassRemoveItemsDialog(TestCaseWithQApplication):
     def setUp(self):
-        url = "sqlite:///"
+        url = "sqlite://"
         with (
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.restore_ui"),
             mock.patch("spinetoolbox.spine_db_editor.widgets.spine_db_editor.SpineDBEditor.show"),

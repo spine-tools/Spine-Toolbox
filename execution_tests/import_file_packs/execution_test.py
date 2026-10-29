@@ -4,6 +4,7 @@ import subprocess
 import sys
 import unittest
 from spinedb_api import DatabaseMapping, create_new_spine_database, from_database
+from spinedb_api.helpers import sqlite_url_string
 
 
 class ModifyConnectionFilterByScript(unittest.TestCase):
@@ -18,7 +19,7 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._database_path.exists():
             self._database_path.unlink()
-        self._url = "sqlite:///" + str(self._database_path)
+        self._url = sqlite_url_string(self._database_path)
         engine = create_new_spine_database(self._url)
         engine.dispose()
 

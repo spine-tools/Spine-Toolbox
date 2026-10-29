@@ -16,6 +16,7 @@ from unittest.mock import MagicMock
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 from spinedb_api import DatabaseMapping, to_database
+from spinedb_api.helpers import sqlite_url_string
 from spinedb_api.import_functions import import_data
 from spinetoolbox.fetch_parent import ItemTypeFetchParent
 
@@ -339,7 +340,7 @@ class TestSpineDBFetcher:
         in-memory mapping starts empty and must load from the DB query.
         """
         entity_count = 1200
-        db_url = "sqlite:///" + str(tmp_path / "test.sqlite")
+        db_url = sqlite_url_string(tmp_path / "test.sqlite")
         with DatabaseMapping(db_url, create=True) as db_map:
             import_data(
                 db_map, entity_classes=(("oc",),), entities=[("oc", f"entity_{i:04d}") for i in range(entity_count)]

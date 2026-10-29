@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence, QPalette, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QLineEdit, QWidget, QMessageBox
+from PySide6.QtWidgets import QLineEdit, QMessageBox, QWidget
 import pytest
 from spinetoolbox.helpers import (
     DB_ITEM_SEPARATOR,
@@ -28,6 +28,7 @@ from spinetoolbox.helpers import (
     LogMessageHtmlParser,
     add_keyboard_shortcut_to_tool_tip,
     add_keyboard_shortcuts_to_action_tool_tips,
+    clear_recent_projects,
     copy_files,
     create_dir,
     dir_is_valid,
@@ -52,6 +53,7 @@ from spinetoolbox.helpers import (
     plain_to_rich,
     plain_to_tool_tip,
     recursive_overwrite,
+    remove_path_from_recent_projects,
     rename_dir,
     rows_to_row_count_tuples,
     select_directory_with_dialog,
@@ -63,8 +65,6 @@ from spinetoolbox.helpers import (
     tuple_itemgetter,
     unique_name,
     update_recent_projects,
-    remove_path_from_recent_projects,
-    clear_recent_projects,
 )
 from tests.mock_helpers import TestCaseWithQApplication, q_object
 
@@ -614,12 +614,13 @@ class TestNormcaseDatabaseUrlPath:
         assert normcase_database_url_path("sqlite://") == "sqlite://"
         if sys.platform == "win32":
             assert (
-                normcase_database_url_path("sqlite:///C:\\Users\\SansSerif\\in.sqlite")
-                == "sqlite:///c:\\users\\sansserif\\in.sqlite"
+                normcase_database_url_path("sqlite:///C:/Users/SansSerif/in.sqlite")
+                == "sqlite:///c:/users/sansserif/in.sqlite"
             )
         else:
             assert (
-                normcase_database_url_path("sqlite:///home/SansSerif/in.sqlite") == "sqlite:///home/SansSerif/in.sqlite"
+                normcase_database_url_path("sqlite:////home/SansSerif/in.sqlite")
+                == "sqlite:////home/SansSerif/in.sqlite"
             )
 
 

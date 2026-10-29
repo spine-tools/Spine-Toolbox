@@ -4,6 +4,7 @@ import subprocess
 import sys
 import unittest
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import sqlite_url_string
 
 
 class ExportEntitiesWithEntityAlternatives(unittest.TestCase):
@@ -17,7 +18,7 @@ class ExportEntitiesWithEntityAlternatives(unittest.TestCase):
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._database_path.exists():
             self._database_path.unlink()
-        url = "sqlite:///" + str(self._database_path)
+        url = sqlite_url_string(self._database_path)
         with DatabaseMapping(url, create=True) as db_map:
             self._assert_item_added(db_map.add_entity_class_item(name="Object", active_by_default=True))
             self._assert_item_added(db_map.add_entity_item(entity_class_name="Object", name="none_none"))
