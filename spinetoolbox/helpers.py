@@ -34,6 +34,7 @@ import sys
 import tempfile
 import time
 from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeAlias, Union
+from urllib.request import url2pathname
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -93,7 +94,7 @@ from spine_engine.logger_interface import LoggerInterface
 from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
-from spinedb_api.helpers import group_consecutive
+from spinedb_api.helpers import group_consecutive, sqlite_url_string
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
@@ -2036,7 +2037,7 @@ def normcase_database_url_path(url: str) -> str:
     if not url.startswith("sqlite:///"):
         return url
     path = url[len("sqlite:///") :]
-    return "sqlite:///" + os.path.normcase(path)
+    return sqlite_url_string(os.path.normcase(path))
 
 
 def find_section_in_table_model_header(

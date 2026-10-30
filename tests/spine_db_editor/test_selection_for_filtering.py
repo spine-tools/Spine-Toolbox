@@ -13,6 +13,7 @@ from unittest import mock
 from PySide6.QtCore import QItemSelection, QItemSelectionModel
 from PySide6.QtWidgets import QApplication
 from spinedb_api import Asterisk, DatabaseMapping
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.selection_for_filtering import EntitySelectionForFiltering
 from tests.conftest import parent_object
@@ -76,12 +77,12 @@ class TestEntitySelectionForFiltering:
             mock_signal.emit.assert_not_called()
 
     def test_select_entity_class_with_multiple_db_maps(self, db_editor, tmp_path, logger):
-        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        url1 = sqlite_url_string(tmp_path / "db1.sqlite")
         with DatabaseMapping(url1, create=True) as db_map:
             db_map.add_entity_class(name="Gadget")
             db_map.add_entity_class(name="Widget")
             db_map.commit_session("Add test data.")
-        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        url2 = sqlite_url_string(tmp_path / "db2.sqlite")
         with DatabaseMapping(url2, create=True) as db_map:
             entity_class2 = db_map.add_entity_class(name="Gadget")
             db_map.commit_session("Add test data.")
@@ -150,13 +151,13 @@ class TestEntitySelectionForFiltering:
             mock_signal.emit.assert_called_once_with({db_map: {entity_class["id"]: {entity["id"]}}})
 
     def test_select_entity_with_multiple_db_maps(self, db_editor, tmp_path, logger):
-        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        url1 = sqlite_url_string(tmp_path / "db1.sqlite")
         with DatabaseMapping(url1, create=True) as db_map:
             db_map.add_entity_class(name="Gadget")
             db_map.add_entity(entity_class_name="Gadget", name="watch")
             db_map.add_entity(entity_class_name="Gadget", name="iron")
             db_map.commit_session("Add test data.")
-        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        url2 = sqlite_url_string(tmp_path / "db2.sqlite")
         with DatabaseMapping(url2, create=True) as db_map:
             db_map.add_entity_class(name="Gadget")
             db_map.add_entity(entity_class_name="Gadget", name="watch")
@@ -203,12 +204,12 @@ class TestEntitySelectionForFiltering:
             )
 
     def test_select_entity_in_one_and_class_in_other_db_map(self, db_editor, tmp_path, logger):
-        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        url1 = sqlite_url_string(tmp_path / "db1.sqlite")
         with DatabaseMapping(url1, create=True) as db_map:
             db_map.add_entity_class(name="Gadget")
             db_map.add_entity(entity_class_name="Gadget", name="watch")
             db_map.commit_session("Add test data.")
-        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        url2 = sqlite_url_string(tmp_path / "db2.sqlite")
         with DatabaseMapping(url2, create=True) as db_map:
             db_map.add_entity_class(name="Widget")
             db_map.commit_session("Add test data.")
@@ -303,13 +304,13 @@ class TestEntitySelectionForFiltering:
             mock_signal.emit.assert_called_once_with(expected_selection)
 
     def test_update_secondary_entity_selection(self, db_editor, tmp_path, logger):
-        url1 = "sqlite:///" + str(tmp_path / "db1.sqlite")
+        url1 = sqlite_url_string(tmp_path / "db1.sqlite")
         with DatabaseMapping(url1, create=True) as db_map:
             db_map.add_entity_class(name="Class1")
             db_map.add_entity(name="e1", entity_class_name="Class1")
             db_map.add_entity(name="e2", entity_class_name="Class1")
             db_map.commit_session("Add test data.")
-        url2 = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        url2 = sqlite_url_string(tmp_path / "db2.sqlite")
         with DatabaseMapping(url2, create=True) as db_map:
             db_map.add_entity_class(name="Class1")
             db_map.add_entity(name="e1", entity_class_name="Class1")

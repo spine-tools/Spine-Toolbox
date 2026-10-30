@@ -18,6 +18,7 @@ from unittest import mock
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 import pytest
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model import MetadataTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.metadata_table_model_base import Column
 from tests.mock_helpers import assert_table_model_data_pytest, fetch_model
@@ -75,7 +76,7 @@ class TestMetadataTableModel:
         db_mngr.add_items("metadata", db_map_data)
         logger = mock.MagicMock()
         database_path = Path(tmp_path, "db.sqlite")
-        url = "sqlite:///" + str(database_path)
+        url = sqlite_url_string(database_path)
         try:
             db_map_2 = db_mngr.get_db_map(url, logger, create=True)
             db_mngr.name_registry.register(url, "2nd database")

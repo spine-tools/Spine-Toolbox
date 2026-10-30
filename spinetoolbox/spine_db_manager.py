@@ -63,6 +63,7 @@ from spinedb_api.spine_io.exporters.excel import export_spine_database_to_xlsx
 from spinedb_api.temp_id import TempId
 from .cache_graphs import EntityScenarioActivityGraph, RelationshipClassGraph, RelationshipGraph
 from .database_display_names import NameRegistry
+from .exceptions import DatabaseMappingClosed
 from .fetch_parent import FetchParent
 from .helpers import DBMapDictItems, DBMapPublicItems, busy_effect, normcase_database_url_path, plain_to_tool_tip
 from .mvcmodels.shared import INVALID_TYPE, PARAMETER_TYPE_VALIDATION_ROLE, PARSED_ROLE, TYPE_NOT_VALIDATED, VALID_TYPE
@@ -212,7 +213,10 @@ class SpineDBManager(QObject):
                     pass
 
     def get_lock(self, db_map: DatabaseMapping) -> RLock:
-        return self._db_locks[db_map]
+        try:
+            return self._db_locks[db_map]
+        except KeyError:
+            raise DatabaseMappingClosed()
 
     def register_fetch_parent(self, db_map: DatabaseMapping, parent: FetchParent) -> None:
         """Registers a fetch parent.

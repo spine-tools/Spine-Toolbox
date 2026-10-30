@@ -20,6 +20,7 @@ from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
 from PySide6.QtWidgets import QAbstractItemView, QApplication, QMessageBox
 import pytest
 from spinedb_api import Array, DatabaseMapping, import_functions
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.helpers import DB_ITEM_SEPARATOR
 from spinetoolbox.mvcmodels.shared import ITEM_ID_ROLE
 from spinetoolbox.spine_db_editor.empty_table_size_hint_provider import calculate_table_height
@@ -383,7 +384,7 @@ class TestParameterValueTableWithExistingData:
 
     @pytest.fixture()
     def db_map(self, db_name, db_mngr, logger, tmp_path, limited_chunk_size):
-        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
+        url = sqlite_url_string(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             # 1-D entity class
             self._n_entities = 12

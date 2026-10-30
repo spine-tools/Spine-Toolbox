@@ -2,6 +2,7 @@ import pathlib
 import subprocess
 import sys
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import sqlite_url_string
 
 
 class TestRemovingDBItemsFromUpstreamTool:
@@ -12,7 +13,7 @@ class TestRemovingDBItemsFromUpstreamTool:
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._database_path.exists():
             self._database_path.unlink()
-        url = "sqlite:///" + str(self._database_path)
+        url = sqlite_url_string(self._database_path)
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="Fish")
             db_map.add_entity(entity_class_name="Fish", name="gold_fish")

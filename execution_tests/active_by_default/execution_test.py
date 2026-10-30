@@ -4,6 +4,7 @@ import subprocess
 import sys
 import unittest
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import sqlite_url_string
 
 
 class ActiveByDefault(unittest.TestCase):
@@ -21,7 +22,7 @@ class ActiveByDefault(unittest.TestCase):
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._database_path.exists():
             self._database_path.unlink()
-        url = "sqlite:///" + str(self._database_path)
+        url = sqlite_url_string(self._database_path)
         with DatabaseMapping(url, create=True) as db_map:
             self._check_addition(db_map.add_entity_class_item(name="HiddenByDefault", active_by_default=False))
             self._check_addition(db_map.add_entity_item(name="hidden", entity_class_name="HiddenByDefault"))

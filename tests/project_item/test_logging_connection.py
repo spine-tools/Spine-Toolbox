@@ -12,6 +12,7 @@
 
 """Unit tests for the ``logging_connection`` module."""
 
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
@@ -20,6 +21,7 @@ import pytest
 from spine_engine.project_item.connection import FilterSettings
 from spine_engine.project_item.project_item_resource import database_resource
 from spinedb_api.filters.scenario_filter import SCENARIO_FILTER_TYPE
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.project_item.logging_connection import LoggingConnection
 from spinetoolbox.project_item.project_item import ProjectItem
@@ -31,7 +33,7 @@ from tests.mock_helpers import TestCaseWithQApplication, clean_up_toolbox, creat
 
 @pytest.fixture()
 def url(tmp_path):
-    return "sqlite:///" + str(tmp_path / "db.sqlite")
+    return sqlite_url_string(tmp_path / "db.sqlite")
 
 
 @pytest.fixture()
@@ -99,7 +101,9 @@ class TestLoggingConnectionWithToolbox(TestCaseWithQApplication):
     def test_removing_connection_that_has_None_db_map_does_not_raise(self):
         project = self._toolbox.project()
         self._toolbox.item_factories[_DataStore.item_type()] = _DataStoreFactory
-        self._toolbox._item_properties_uis[_DataStore.item_type()] = _DataStoreFactory.make_properties_widget(self)
+        self._toolbox._item_properties_uis[_DataStore.item_type()] = _DataStoreFactory.make_properties_widget(
+            self._toolbox
+        )
         store_1 = _DataStore("Store 1", project)
         project.add_item(store_1)
         store_2 = _DataStore("Store 2", project)
@@ -189,11 +193,10 @@ class _DataStore(ProjectItem):
         return "Mock Data Store"
 
     def resources_for_direct_successors(self):
-        return [
-            database_resource(
-                self.name, "sqlite:///non/existent/database.sqlite", label=self.resource_label(), filterable=True
-            )
-        ]
+        url = sqlite_url_string(
+            "c:\\non\\existent\\database.sqlite" if sys.platform == "win32" else "/non/existent/database.sqlite"
+        )
+        return [database_resource(self.name, url, label=self.resource_label(), filterable=True)]
 
     def resource_label(self):
         return f"database@{self.name}"
