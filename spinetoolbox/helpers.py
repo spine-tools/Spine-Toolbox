@@ -89,7 +89,9 @@ from PySide6.QtWidgets import (
     QStyle,
     QWidget,
 )
+from spinetoolbox.widgets.notification import Notification
 from spine_engine.logger_interface import LoggerInterface
+from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive, sqlite_url_string
@@ -101,6 +103,7 @@ from .font import TOOLBOX_FONT
 
 if TYPE_CHECKING:
     from .ui_main import ToolboxUI
+    from PySide6.QtWidgets import QComboBox
 
 if sys.platform == "win32":
     import ctypes
@@ -120,6 +123,8 @@ if _matplotlib_version[0] == 3 and _matplotlib_version[1] == 0:
 DBMapPublicItems = dict[DatabaseMapping, list[PublicItem]]
 DBMapDictItems = dict[DatabaseMapping, list[dict]]
 DBMapTypedDictItems = dict[DatabaseMapping, dict[str, list[dict]]]
+
+COMBOBOX_VALID_ROLE = Qt.ItemDataRole.UserRole + 10
 
 
 @unique
@@ -1019,6 +1024,81 @@ def select_python_interpreter(parent: QWidget | None, line_edit: QLineEdit) -> N
     return
 
 
+def select_file_path(parent, title, initial_path=None, check_file=None):
+    """Opens file browser where user can select a file path.
+
+    Args:
+        parent (QWidget): Parent widget for the file dialog and message boxes
+        title (str): File dialog title
+        initial_path (str, optional): Initial directory for the file dialog
+        check_file (str, optional): If given, selected file must begin with the given string
+
+    Returns:
+         str: Full path to the selected file or None if the operation was cancelled or does not match check_file thing.
+    """
+    init_path = initial_path if initial_path is not None else home_dir()
+    if sys.platform == "win32":
+        answer = get_path_from_native_open_file_dialog(parent, init_path, title)
+    else:
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getOpenFileName(parent, title, init_path)
+    if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
+        return None
+    # Check that the selected file name starts with given check_file argument if given
+    if check_file is not None:
+        _, selected_file = os.path.split(answer[0])
+        if not selected_file.lower().startswith(check_file):
+            msg = f"Selected file <b>{selected_file}</b> is not a valid {check_file.capitalize()} Executable"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(parent, f"Invalid {check_file.capitalize()} Executable", msg)
+            return None
+    return answer[0]
+
+
+def select_dir(parent, title, initial_path=None):
+    """Shows directory browser and returns the new directory.
+
+    Args:
+        parent (QWidget): Parent of QFileDialog
+        title (str): Directory browser title
+        initial_path (str, optional): Initial directory for the directory browser
+    """
+    init_path = initial_path if initial_path is not None else home_dir()
+    answer = QFileDialog.getExistingDirectory(parent, title, init_path)
+    if not answer:  # Canceled (american-english), cancelled (british-english)
+        return None
+    return answer
+
+
+# def browse_new_python_interpreter(parent, start_dir):
+#     """Opens file browser where user can select a python interpreter (i.e. python.exe on Windows).
+#
+#     Args:
+#         parent (QWidget): Parent widget for the file dialog and message boxes
+#         start_dir (str): Initial path for the file dialog
+#
+#     Returns:
+#         str: Path to a Python interpreter or None if cancelled
+#     """
+#     title = "Select Python Interpreter"
+#     if sys.platform == "win32":
+#         answer = get_path_from_native_open_file_dialog(parent, start_dir, title + " (e.g. python.exe on Windows)")
+#     else:
+#         initial_path = start_dir if start_dir is not None else home_dir()
+#         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+#         answer = QFileDialog.getOpenFileName(parent, title, initial_path)
+#     if answer[0] == "":  # Canceled
+#         return None
+#     # Check that selected file starts with string 'python'
+#     _, selected_file = os.path.split(answer[0])
+#     if not selected_file.lower().startswith("python"):
+#         msg = f"Selected file <b>{selected_file}</b> is not a valid Python interpreter"
+#         # noinspection PyCallByClass, PyArgumentList
+#         QMessageBox.warning(parent, "Invalid Python Interpreter", msg)
+#         return None
+#     return answer[0]
+
+
 def select_conda_executable(parent: QWidget | None, line_edit: QLineEdit) -> None:
     """Opens file browser where user can select a conda executable.
 
@@ -1153,7 +1233,7 @@ def file_is_valid(parent, file_path, msgbox_title, extra_check=None):
     In addition, can be used to check if the file name in given file path starts with
     the given extra_check string. Needed in SettingsWidget and KernelEditor because
     the QLineEdits are editable. Returns True when file_path is an empty string so that
-    we can use default values (e.g. from line edit place holder text). Returns also True
+    we can use default values (e.g. from line edit placeholder text). Returns also True
     when file_path is just 'python' or 'julia' so that user's can use the python or julia
     in PATH.
 
@@ -1803,6 +1883,145 @@ def clear_qsettings(settings: QSettings) -> None:
     s1.clear()
 
 
+def load_list_of_paths_from_qsettings(qsettings, key):
+    """Returns a list of items that are stored in given QSettings
+    key as a string, where each item is separated by '<>'.
+
+    Args:
+        qsettings (QSettings): Settings object
+        key (str): Key in QSettings object
+
+    Returns:
+        list: List of strings or an empty list
+    """
+    interpreters = qsettings.value(key, defaultValue=None)
+    if not interpreters:
+        return list()
+    return split_string_to_list(interpreters)
+
+
+def split_string_to_list(stri):
+    """Splits a string where each item is separated by a '<>' into a list."""
+    item_list = list()
+    if not stri:
+        return list()
+    s = str(stri)
+    s_list = s.split("<>")
+    for item in s_list:
+        item_list.append(item)
+    return item_list
+
+
+def save_path_to_qsettings(qsettings, key, new_entry):
+    """Adds a new entry to the QSettings key that contains a string
+    which represents a list of strings, where each string is separated
+    by '<>'.
+
+    Args:
+        qsettings (QSettings): Settings object
+        key (str): Key in QSettings object
+        new_entry (str): Item to append to the string
+
+    Returns:
+        list: Updated paths list
+    """
+    paths = qsettings.value(key, defaultValue=None)
+    if not new_entry:
+        return split_string_to_list(paths)
+    if not paths:
+        paths_list = [new_entry]
+        updated_paths = new_entry
+    else:
+        paths = str(paths)
+        paths_list = paths.split("<>")
+        normalized_paths = list(map(os.path.normcase, paths_list))
+        try:
+            index = normalized_paths.index(os.path.normcase(new_entry))
+        except ValueError:
+            # Add new path only if it's not in the list already
+            paths_list.insert(0, new_entry)
+            if len(paths_list) > 20:
+                paths_list.pop()
+        updated_paths = "<>".join(paths_list)
+    qsettings.setValue(key, updated_paths)  # Save updated paths
+    qsettings.sync()  # Commit change immediately
+    return paths_list
+
+
+def remove_path_from_qsettings(qsettings, key, path_to_remove):
+    """Removes a given path from a list of items that are stored in
+    given QSettings key as a string where each path is separated by '<>'.
+
+    Args:
+        qsettings (QSettings): Settings object
+        key (str): Key in QSettings object
+        path (str): Path to remove
+
+    Returns:
+        list: Updated paths list
+    """
+    print(f"Removing {path_to_remove} from key {key}")
+    paths = qsettings.value(key, defaultValue=None)
+    if not paths:
+        return list()
+    paths = str(paths)
+    paths_list = paths.split("<>")
+    for entry in paths_list:
+        if same_path(entry, path_to_remove):
+            paths_list.pop(paths_list.index(entry))
+            break
+    updated_paths = "<>".join(paths_list)
+    qsettings.setValue(key, updated_paths)  # Save updated paths
+    qsettings.sync()  # Commit change immediately
+    return paths_list
+
+
+@Slot()
+def restore_override_cursor():
+    """Restores default mouse cursor."""
+    while QApplication.overrideCursor() is not None:
+        QApplication.restoreOverrideCursor()
+
+
+def get_current_item(combobox: QComboBox, model: QStandardItemModel):
+    """Returns the current item from the given comboBox which uses the given model."""
+    index = model.index(combobox.currentIndex(), 0)
+    if not index.isValid():
+        return None
+    item = model.itemFromIndex(index)
+    return item
+
+
+def get_current_item_data(combobox: QComboBox, model: QStandardItemModel):
+    """Returns the data of the current item in the given comboBox."""
+    item = get_current_item(combobox, model)
+    return item.data() if item is not None else None
+
+
+def set_combobox_item_invalid_property(combo: QComboBox, item: QStandardItem):
+    """Sets the 'invalid' property of item in the given ComboBox and polishes the style to reflect that.
+    This requires that the combobox has a stylesheet with an 'invalid' property."""
+    item_invalid = item.data(COMBOBOX_VALID_ROLE) is False
+    combo.setProperty("invalid", item_invalid)
+    combo.style().unpolish(combo)
+    combo.style().polish(combo)
+
+
+def path_in_list(p, p_list):
+    """Returns True if given path p is in the list of paths. Returns False otherwise."""
+    for pp in p_list:
+        if issamefile(p, pp):
+            return True
+    return False
+
+
+def issamefile(a, b):
+    try:
+        return os.path.samefile(os.path.realpath(a), os.path.realpath(b))
+    except FileNotFoundError:
+        return False
+
+
 def display_byte_size(size_bytes: int) -> tuple[float | int, str]:
     size_names = ("B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
     if size_bytes == 0:
@@ -1898,3 +2117,71 @@ def update_recent_projects(settings: QSettings, project_name: str, project_dir: 
     # Save updated recent paths
     settings.setValue("appSettings/recentProjects", updated_recents)
     settings.sync()  # Commit change immediately
+
+
+def restore_saved_python_kernel(parent, models, combobox, saved_python_kernel):
+    """Restores previously selected Python kernel."""
+    if models.python_kernel_fetcher is not None and not models.python_kernel_fetcher.keep_going:
+        return
+    index = models.find_python_kernel_index(saved_python_kernel)
+    if not index.isValid():
+        Notification(
+            parent,
+            f"Could not activate Python kernel {saved_python_kernel}.\nIt may have been removed.",
+        ).show()
+        index = models.python_kernel_model.index(0, 0)
+    combobox.setCurrentIndex(index.row())
+
+
+def restore_saved_julia_kernel(parent, models, combobox, saved_julia_kernel):
+    """Restores previously selected Python kernel."""
+    if models.julia_kernel_fetcher is not None and not models.julia_kernel_fetcher.keep_going:
+        return
+    index = models.find_julia_kernel_index(saved_julia_kernel)
+    if not index.isValid():
+        Notification(parent, f"Could not activate Julia kernel {saved_julia_kernel}.\nIt may have been removed.").show()
+        index = models.julia_kernel_model.index(0, 0)
+    combobox.setCurrentIndex(index.row())
+
+
+def select_and_add_python_interpreter(combobox, models, file_dialog_parent):
+    current_path = combobox.currentText()
+    if not current_path:
+        current_path = resolve_current_python_interpreter()
+    init_dir, _ = os.path.split(current_path)
+    new_python = select_file_path(file_dialog_parent, "Add Python Interpreter...", init_dir, "python")
+    if not new_python:
+        return
+    ind = models.add_python_interpreter(new_python)
+    if not ind.isValid():
+        Notification(file_dialog_parent, f"Adding Python {new_python} failed!").show()
+        ind = models.python_interpreters_model.index(0, 0)
+    combobox.setCurrentIndex(ind.row())
+
+
+def select_and_add_julia_executable(combobox, models, file_dialog_parent):
+    current_path = combobox.currentText()
+    if not current_path:
+        current_path = resolve_default_julia_executable()
+    init_dir, _ = os.path.split(current_path)
+    fpath = select_file_path(file_dialog_parent, "Select Julia Executable...", init_dir, "julia")
+    if not fpath:
+        return
+    ind = models.add_julia_executable(fpath)
+    if not ind.isValid():
+        Notification(file_dialog_parent, f"Adding Julia {fpath} failed!").show()
+        ind = models.julia_executables_model.index(0, 0)
+    combobox.setCurrentIndex(ind.row())
+
+
+def select_and_add_julia_project(combobox, models, file_dialog_parent):
+    dpath = select_dir(file_dialog_parent, "Select Julia project directory...")
+    if not dpath:
+        return
+    ind = models.add_julia_project(dpath)
+    if not ind.isValid():
+        Notification(
+            file_dialog_parent, f"Could not find Julia project {dpath}.\nActivating the default project."
+        ).show()
+        ind = models.julia_projects_model.index(0, 0)
+    combobox.setCurrentIndex(ind.row())
