@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.1
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -481,6 +481,7 @@ class Ui_SettingsForm(object):
         sizePolicy6.setHeightForWidth(self.comboBox_python_interpreters.sizePolicy().hasHeightForWidth())
         self.comboBox_python_interpreters.setSizePolicy(sizePolicy6)
         self.comboBox_python_interpreters.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.comboBox_python_interpreters.setStyleSheet(u"QComboBox[invalid=\"true\"] {color: red;}")
 
         self.horizontalLayout_8.addWidget(self.comboBox_python_interpreters)
 
@@ -579,6 +580,7 @@ class Ui_SettingsForm(object):
         sizePolicy6.setHeightForWidth(self.comboBox_julia_path.sizePolicy().hasHeightForWidth())
         self.comboBox_julia_path.setSizePolicy(sizePolicy6)
         self.comboBox_julia_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.comboBox_julia_path.setStyleSheet(u"QComboBox[invalid=\"true\"] {color: red;}")
 
         self.horizontalLayout_5.addWidget(self.comboBox_julia_path)
 
@@ -604,6 +606,7 @@ class Ui_SettingsForm(object):
         sizePolicy6.setHeightForWidth(self.comboBox_julia_project_path.sizePolicy().hasHeightForWidth())
         self.comboBox_julia_project_path.setSizePolicy(sizePolicy6)
         self.comboBox_julia_project_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.comboBox_julia_project_path.setStyleSheet(u"QComboBox[invalid=\"true\"] {color: red;}")
 
         self.horizontalLayout_7.addWidget(self.comboBox_julia_project_path)
 

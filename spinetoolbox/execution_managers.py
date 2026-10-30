@@ -53,14 +53,14 @@ class QProcessExecutionManager(ExecutionManager):
             logger (LoggerInterface): a logger instance
             program (str): Path to program to run in the subprocess (e.g. julia.exe)
             args (list, optional): List of argument for the program (e.g. path to script file)
-            silent (bool): Whether or not to emit logger msg signals
-            semisilent (bool): If True, show Process Log messages
+            silent (bool): Whether to emit logger msg signals
+            semisilent (bool): If True, show only Process Log messages
         """
         super().__init__(logger)
         self._program = program
         self._args = args if args is not None else []
-        self._silent = silent  # Do not show Event Log nor Process Log messages
-        self._semisilent = semisilent  # Do not show Event Log messages but show Process Log messages
+        self._silent = silent  # Mute Event Log and Process Log messages
+        self._semisilent = semisilent  # Mute Event Log messages but show Process Log messages
         self.process_failed = False
         self.process_failed_to_start = False
         self.user_stopped = False

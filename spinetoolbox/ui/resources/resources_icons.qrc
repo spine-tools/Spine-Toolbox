@@ -16,6 +16,7 @@
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="/icons">
+    <file>menu_icons/check_green.svg</file>
     <file>folder.svg</file>
     <file>menu_icons/terminal.svg</file>
     <file>menu_icons/bolt-lightning.svg</file>

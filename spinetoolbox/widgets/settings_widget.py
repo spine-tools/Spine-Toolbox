@@ -18,11 +18,10 @@ import shutil
 from enum import Enum
 from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Signal, Slot, QUrl
 from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
-from PySide6.QtWidgets import QColorDialog, QMenu, QMessageBox, QWidget
+from PySide6.QtWidgets import QColorDialog, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
     get_julia_env,
     resolve_conda_executable,
-    resolve_current_python_interpreter,
     resolve_default_julia_executable,
     resolve_gams_executable,
 )
@@ -36,20 +35,24 @@ from ..helpers import (
     get_current_item_data,
     is_valid_conda_executable,
     load_list_of_paths_from_qsettings,
-    open_url,
     path_in_list,
     save_path_to_qsettings,
     select_certificate_directory,
     select_conda_executable,
-    select_dir,
-    select_file_path,
     select_gams_executable,
     select_work_directory,
+    set_combobox_item_invalid_property,
+    restore_saved_python_kernel,
+    restore_saved_julia_kernel,
+    select_and_add_python_interpreter,
+    select_and_add_julia_executable,
+    select_and_add_julia_project,
 )
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
 from ..spine_db_editor.editors import db_editor_registry
 from ..widgets.kernel_editor import MiniJuliaKernelEditor, MiniPythonKernelEditor
+from ..widgets.custom_menus import PythonContextMenu, JuliaContextMenu
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard
 from .notification import Notification
@@ -374,25 +377,25 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         super().connect_signals()
         self.ui.toolButton_reset_all_settings.clicked.connect(self._remove_all_settings)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_button_clicked)
-        self.ui.toolButton_browse_julia.clicked.connect(self._add_julia_executable)
-        self.ui.toolButton_browse_julia_project.clicked.connect(self._add_julia_project)
-        self.ui.toolButton_browse_python.clicked.connect(self._add_python_interpreter)
+        self.ui.toolButton_browse_julia.clicked.connect(self._on_add_julia_executable_clicked)
+        self.ui.toolButton_browse_julia_project.clicked.connect(self._on_add_julia_project_clicked)
+        self.ui.toolButton_browse_python.clicked.connect(self._on_add_python_interpreter_clicked)
         self.ui.toolButton_browse_conda.clicked.connect(self.browse_conda_button_clicked)
         self.ui.toolButton_pick_secfolder.clicked.connect(self.browse_certificate_directory_clicked)
         self.ui.toolButton_make_python_kernel.clicked.connect(self.add_python_kernel)
         self.ui.toolButton_make_julia_kernel.clicked.connect(self.make_julia_kernel)
         self.ui.comboBox_julia_path.customContextMenuRequested.connect(self._show_julia_path_context_menu)
-        self.ui.comboBox_julia_path.currentIndexChanged.connect(self._set_combobox_tooltip)
+        self.ui.comboBox_julia_path.currentIndexChanged.connect(self._update_combobox_appearance)
         self.ui.comboBox_julia_project_path.customContextMenuRequested.connect(self._show_julia_projects_context_menu)
-        self.ui.comboBox_julia_project_path.currentIndexChanged.connect(self._set_combobox_tooltip)
+        self.ui.comboBox_julia_project_path.currentIndexChanged.connect(self._update_combobox_appearance)
         self.ui.comboBox_julia_kernel.customContextMenuRequested.connect(self._show_julia_kernel_context_menu)
-        self.ui.comboBox_julia_kernel.currentIndexChanged.connect(self._set_combobox_tooltip)
+        self.ui.comboBox_julia_kernel.currentIndexChanged.connect(self._update_combobox_appearance)
         self.ui.comboBox_python_interpreters.customContextMenuRequested.connect(
             self._show_python_interpreters_context_menu
         )
-        self.ui.comboBox_python_interpreters.currentIndexChanged.connect(self._set_combobox_tooltip)
+        self.ui.comboBox_python_interpreters.currentIndexChanged.connect(self._update_combobox_appearance)
         self.ui.comboBox_python_kernels.customContextMenuRequested.connect(self._show_python_kernel_context_menu)
-        self.ui.comboBox_python_kernels.currentIndexChanged.connect(self._set_combobox_tooltip)
+        self.ui.comboBox_python_kernels.currentIndexChanged.connect(self._update_combobox_appearance)
         self.ui.lineEdit_conda_path.textEdited.connect(self._refresh_kernels)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_directory_button_clicked)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
@@ -499,7 +502,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Calls static method that shows a file browser for selecting the security folder for Engine Server."""
         select_certificate_directory(self, self.ui.lineEdit_secfolder)
 
-    def _set_execution_method(self, combo, execution_method):
+    @staticmethod
+    def _set_execution_method(combo, execution_method):
         """Sets given combobox selection according to given execution method."""
         index = combo.findData(execution_method)
         if index >= 0:
@@ -507,7 +511,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot(bool)
     def add_python_kernel(self, _=False):
-        """Makes a Python kernel for Jupyter Console based on selected Python interpreter.
+        """Opens the Kernel Manager window.
         If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
         d = self._get_python_settings()
         # python_kernel_found = _get_python_kernel_name_by_exe(python_exe, self._models.python_kernel_model)
@@ -522,8 +526,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if not ind.isValid():
             ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
+        Notification(self, "Reloading Python kernels").show()
         conda = self.ui.lineEdit_conda_path.text().strip()
-        self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected, conda)
+        self._models.start_fetching_python_kernels(self._on_python_kernels_reloaded, conda)
 
     @Slot(bool)
     def make_julia_kernel(self, _=False):
@@ -547,8 +552,19 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if not index.isValid():
             index = self._models.julia_projects_model.index(0, 0)
         self.ui.comboBox_julia_project_path.setCurrentIndex(index.row())
+        Notification(self, "Reloading Python kernels").show()
         conda = self.ui.lineEdit_conda_path.text().strip()
-        self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected, conda)
+        self._models.start_fetching_julia_kernels(self._on_julia_kernels_reloaded, conda)
+
+    def solve_current_julia_dir(self):
+        """Returns the folder path of the current Julia executable."""
+        julia_settings = self._get_julia_settings()
+        current_julia = julia_settings["julia_exe"]
+        if not current_julia:
+            path, _ = os.path.split(resolve_default_julia_executable())
+        else:
+            path, _ = os.path.split(current_julia)
+        return path
 
     @Slot(QPoint)
     def _show_julia_path_context_menu(self, pos, index=None):
@@ -560,11 +576,13 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             data = item.data()
         path = data["exe"]
         global_pos = self.ui.comboBox_julia_path.mapToGlobal(pos)
-        self._show_julia_context_menu(self.ui.comboBox_julia_path, global_pos, path, 0)
+        current_julia_dir = self.solve_current_julia_dir()
+        menu = JuliaContextMenu(self.ui.comboBox_julia_path, self, self._models, path, False, 0, current_julia_dir)
+        menu.popup(global_pos)
 
     @Slot(QPoint)
     def _show_julia_projects_context_menu(self, pos, index=None):
-        """Shows the context-menu on Julia projects combobox."""
+        """Shows the context-menu on Julia projects/environments combobox."""
         if not index:
             data = get_current_item_data(self.ui.comboBox_julia_project_path, self._models.julia_projects_model)
         else:
@@ -572,7 +590,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             data = item.data()
         path = data["path"]
         global_pos = self.ui.comboBox_julia_project_path.mapToGlobal(pos)
-        self._show_julia_context_menu(self.ui.comboBox_julia_project_path, global_pos, path, 1)
+        current_julia_dir = self.solve_current_julia_dir()
+        menu = JuliaContextMenu(self.ui.comboBox_julia_project_path, self, self._models, path, False, 1, current_julia_dir)
+        menu.popup(global_pos)
 
     @Slot(QPoint)
     def _show_julia_kernel_context_menu(self, pos, index=None):
@@ -583,40 +603,10 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             item = self._models.julia_kernel_model.itemFromIndex(index)
         global_pos = self.ui.comboBox_julia_kernel.mapToGlobal(pos)
         path = item.toolTip()
-        self._show_julia_context_menu(self.ui.comboBox_julia_kernel, global_pos, path, 2)
-
-    def _show_julia_context_menu(self, menu_parent, global_pos, path, menu_mode):
-        """Creates and shows the context menu for Julia comboBoxes."""
-        m = QMenu(menu_parent)
-        if menu_mode == 0:
-            m.addAction(
-                QIcon(":icons/menu_icons/trash-alt.svg"),
-                "Remove from list",
-                lambda p=path: self._remove_julia_executable(p),
-            )
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open containing folder...",
-                lambda p=path: self._open_julia_executable_dir(p),
-            )
-        elif menu_mode == 1:
-            m.addAction(
-                QIcon(":icons/menu_icons/trash-alt.svg"),
-                "Remove from list",
-                lambda p=path: self._remove_julia_project(p),
-            )
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open folder...",
-                lambda p=path: self._open_julia_project_dir(p),
-            )
-        else:
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open resource folder...",
-                lambda p=path: self._open_kernel_resource_dir(p),
-            )
-        m.popup(global_pos)
+        is_conda = False if not item.data() else item.data()["is_conda"]
+        current_julia_dir = self.solve_current_julia_dir()
+        menu = JuliaContextMenu(self.ui.comboBox_julia_project_path, self, self._models, path, is_conda, 2, current_julia_dir)
+        menu.popup(global_pos)
 
     @Slot(QPoint)
     def _show_python_interpreters_context_menu(self, pos, index=None):
@@ -627,7 +617,8 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             data = item.data()
         global_pos = self.ui.comboBox_python_interpreters.mapToGlobal(pos)
         path = data["exe"]
-        self._show_python_context_menu(self.ui.comboBox_python_interpreters, global_pos, path, 0)
+        menu = PythonContextMenu(self.ui.comboBox_python_interpreters, self, self._models, path, False, 0)
+        menu.popup(global_pos)
 
     @Slot(QPoint)
     def _show_python_kernel_context_menu(self, pos, index=None):
@@ -637,38 +628,20 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             item = self._models.python_kernel_model.itemFromIndex(index)
         global_pos = self.ui.comboBox_python_kernels.mapToGlobal(pos)
         path = item.toolTip()
-        self._show_python_context_menu(self.ui.comboBox_python_kernels, global_pos, path, 1)
-
-    def _show_python_context_menu(self, menu_parent, global_pos, path, menu_mode):
-        """Creates and shows the context menu for both python interpreters and kernels comboBoxes."""
-        m = QMenu(menu_parent)
-        if menu_mode == 0:
-            m.addAction(
-                QIcon(":icons/menu_icons/trash-alt.svg"),
-                "Remove from list",
-                lambda p=path: self._remove_python_system_interpreter(p),
-            )
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open containing folder...",
-                lambda p=path: self._open_python_interpreter_dir(p),
-            )
-        else:
-            m.addAction(
-                QIcon(":icons/menu_icons/folder-open-solid.svg"),
-                "Open resource folder...",
-                lambda p=path: self._open_kernel_resource_dir(p),
-            )
-        m.popup(global_pos)
+        is_conda = False if not item.data() else item.data()["is_conda"]
+        menu = PythonContextMenu(self.ui.comboBox_python_kernels, self, self._models, path, is_conda, 1)
+        menu.popup(global_pos)
 
     @Slot(int)
-    def _set_combobox_tooltip(self, row):
-        """Sets the current items tooltip as the combobox tooltip."""
+    def _update_combobox_appearance(self, row):
+        """Updates the combobox tooltip and visual appearance for the selected item."""
         if row == -1:
             return
-        model = self.sender().model()
-        tp = model.itemFromIndex(model.index(row, 0)).toolTip()
-        self.sender().setToolTip(tp)
+        combo = self.sender()
+        model = combo.model()
+        item = model.itemFromIndex(model.index(row, 0))
+        combo.setToolTip(item.toolTip())
+        set_combobox_item_invalid_property(combo, item)
 
     @Slot(bool)
     def show_color_dialog(self, _=False):
@@ -1198,127 +1171,35 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._remote_host = new
 
     @Slot(bool)
-    def _add_julia_executable(self, _=False):
-        """Calls static method that shows a file browser for selecting a Julia path."""
-        current_path = self.ui.comboBox_julia_path.currentText()
-        if not current_path:
-            current_path = resolve_default_julia_executable()
-        init_dir, _ = os.path.split(current_path)
-        fpath = select_file_path(self, "Select Julia Executable", init_dir, "julia")
-        if not fpath:
-            return
-        ind = self._models.add_julia_executable(fpath)
-        if not ind.isValid():
-            Notification(self, f"Adding Julia executable {fpath} failed").show()
-            ind = self._models.julia_executables_model.index(0, 0)
-        self.ui.comboBox_julia_path.setCurrentIndex(ind.row())
+    def _on_add_python_interpreter_clicked(self, _=False):
+        select_and_add_python_interpreter(self.ui.comboBox_python_interpreters, self._models, self)
 
     @Slot(bool)
-    def _add_julia_project(self, _=False):
+    def _on_add_julia_executable_clicked(self, _=False):
+        select_and_add_julia_executable(self.ui.comboBox_julia_path, self._models, self)
+
+    @Slot(bool)
+    def _on_add_julia_project_clicked(self, _=False):
         """Calls static method that shows a folder browser for selecting a Julia project."""
-        dpath = select_dir(self, "Select Julia project directory")
-        if not dpath:
-            return
-        ind = self._models.add_julia_project(dpath)
-        if not ind.isValid():
-            Notification(self, f"Could not find Julia project {dpath}.\nActivating the default project.").show()
-            ind = self._models.julia_projects_model.index(0, 0)
-        self.ui.comboBox_julia_project_path.setCurrentIndex(ind.row())
+        select_and_add_julia_project(self.ui.comboBox_julia_project_path, self._models, self)
 
-    def _remove_julia_executable(self, p):
-        """Removes a Julia from the list of known Julias."""
-        if not p:
-            Notification(self, "This is the Julia in PATH and cannot be removed").show()
-            return
-        else:
-            self._models.remove_julia_executable(p)
-            self.ui.comboBox_julia_path.setCurrentIndex(0)
+    def reload_python_kernels(self):
+        """Starts reloading Python kernels."""
+        conda = self.ui.lineEdit_conda_path.text().strip()
+        p = self._get_python_settings()
+        self._saved_python_kernel = p["python_kernel"]
+        self._models.start_fetching_python_kernels(finalize_slot=self._on_python_kernels_reloaded, conda=conda)
 
-    def _remove_julia_project(self, p):
-        """Removes a Julia environment/project from known environments."""
-        if p == "@." or p == "":
-            Notification(self, "This is a default environment and cannot be removed.").show()
-            return
-        else:
-            self._models.remove_julia_project(p)
-            self.ui.comboBox_julia_project_path.setCurrentIndex(0)
-
-    def _open_julia_executable_dir(self, p):
-        if p == "":
-            path, _ = os.path.split(resolve_default_julia_executable())
-        else:
-            path, _ = os.path.split(p)
-        self.open_rsc_dir(path)
-
-    def _open_julia_project_dir(self, p):
-        if p == "@." or p == "":
-            # Open the dir that contains the current Julia executable
-            current_julia_data = get_current_item_data(
-                self.ui.comboBox_julia_path, self._models.julia_executables_model
-            )
-            current_julia = current_julia_data["exe"]
-            if not current_julia:
-                path, _ = os.path.split(resolve_default_julia_executable())
-            else:
-                path, _ = os.path.split(current_julia)
-        else:
-            path = p
-        self.open_rsc_dir(path)
-
-    @Slot(bool)
-    def _add_python_interpreter(self, _=False):
-        current_path = self.ui.comboBox_python_interpreters.currentText()
-        if not current_path:
-            current_path = resolve_current_python_interpreter()
-        init_dir, _ = os.path.split(current_path)
-        new_python = select_file_path(self, "Select Python Interpreter", init_dir, "python")
-        if not new_python:
-            return
-        ind = self._models.add_python_interpreter(new_python)
-        if not ind.isValid():
-            Notification(
-                self, f"Could not find Python {new_python}.\nActivating the current Spine Toolbox Python."
-            ).show()
-            ind = self._models.python_interpreters_model.index(0, 0)
-        self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
-
-    def _remove_python_system_interpreter(self, path):
-        """Removes given Python interpreter from the list of known Pythons."""
-        if not path:
-            Notification(self, "This is the current Spine Toolbox interpreter and cannot be removed").show()
-        else:
-            self._models.remove_python_interpreter(path)
-            self.ui.comboBox_python_interpreters.setCurrentIndex(0)
-
-    def _open_python_interpreter_dir(self, p):
-        """Opens given Python interpreter folder in File Explorer."""
-        if p == "":
-            path, _ = os.path.split(resolve_current_python_interpreter())
-        else:
-            path, _ = os.path.split(p)
-        self.open_rsc_dir(path)
-
-    def _open_kernel_resource_dir(self, path):
-        """Opens given kernel's resource folder in File Explorer."""
-        if not path:
-            Notification(self, "Please select a Jupyter kernel").show()
-        else:
-            self.open_rsc_dir(path)
-
-    def open_rsc_dir(self, path):
-        """Opens given path in file browser."""
-        if not os.path.exists(path):
-            Notification(self, f"Path '{path}' does not exist").show()
-            return
-        url = "file:///" + path
-        res = open_url(url)
-        if not res:
-            Notification(self, f"Opening directory '{path}' failed").show()
-            return
+    def reload_julia_kernels(self):
+        """Starts reloading Julia kernels."""
+        conda = self.ui.lineEdit_conda_path.text().strip()
+        j = self._get_julia_settings()
+        self._saved_julia_kernel = j["julia_kernel"]
+        self._models.start_fetching_julia_kernels(finalize_slot=self._on_julia_kernels_reloaded, conda=conda)
 
     @Slot(str)
     def _refresh_kernels(self, new_conda_path):
-        """Reloads kernels when the conda line edit points to a valid conda
+        """Reloads Python and Julia kernels. Used when the conda line edit points to a valid conda
         executable or when the line edit is cleared.
 
         Args:
@@ -1327,39 +1208,24 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         conda = new_conda_path.strip()
         if conda and not os.path.exists(conda):
             return
+        Notification(self, "Reloading kernels").show()
         p = self._get_python_settings()
         j = self._get_julia_settings()
         self._saved_python_kernel = p["python_kernel"]
         self._saved_julia_kernel = j["julia_kernel"]
-        self._models.start_fetching_python_kernels(self._set_saved_python_kernel_selected, conda)
-        self._models.start_fetching_julia_kernels(self._set_saved_julia_kernel_selected, conda)
+        self._models.start_fetching_python_kernels(self._on_python_kernels_reloaded, conda)
+        self._models.start_fetching_julia_kernels(self._on_julia_kernels_reloaded, conda)
 
     @Slot()
-    def _set_saved_python_kernel_selected(self):
+    def _on_python_kernels_reloaded(self):
         """Sets previous Python selected after Python kernels have been reloaded."""
-        if self._models.python_kernel_fetcher is not None and not self._models.python_kernel_fetcher.keep_going:
-            # Settings widget closed while thread still running
-            return
-        index = self._models.find_python_kernel_index(self._saved_python_kernel)
-        if not index.isValid():
-            Notification(
-                self, f"Could not activate Python kernel {self._saved_python_kernel}.\n It may have been removed."
-            ).show()
-            index = self._models.python_kernel_model.index(0, 0)
-        self.ui.comboBox_python_kernels.setCurrentIndex(index.row())
+        restore_saved_python_kernel(self, self._models, self.ui.comboBox_python_kernels, self._saved_python_kernel)
         self._saved_python_kernel = None
 
     @Slot()
-    def _set_saved_julia_kernel_selected(self):
+    def _on_julia_kernels_reloaded(self):
         """Sets previous Julia selected after Julia kernels have been reloaded."""
-        if self._models.julia_kernel_fetcher is not None and not self._models.julia_kernel_fetcher.keep_going:
-            # Settings widget closed while thread still running
-            return
-        ind = self._models.find_julia_kernel_index(self._saved_julia_kernel)
-        if not ind.isValid():
-            Notification(self, f"Julia kernel {self._saved_julia_kernel} not found").show()
-            ind = self._models.julia_kernel_model.index(0, 0)
-        self.ui.comboBox_julia_kernel.setCurrentIndex(ind.row())
+        restore_saved_julia_kernel(self, self._models, self.ui.comboBox_julia_kernel, self._saved_julia_kernel)
         self._saved_julia_kernel = None
 
     def closeEvent(self, ev):

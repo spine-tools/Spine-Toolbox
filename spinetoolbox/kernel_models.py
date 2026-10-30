@@ -23,6 +23,7 @@ from .helpers import (
     load_list_of_paths_from_qsettings,
     restore_override_cursor,
     is_valid_conda_executable,
+    COMBOBOX_VALID_ROLE,
 )
 from spine_engine.utils.helpers import resolve_default_julia_executable, resolve_current_python_interpreter
 
@@ -390,8 +391,10 @@ class ExecutableCompoundModels(QObject):
 
     @staticmethod
     def _make_item_red_if_path_doesnt_exist(item, p):
-        """Makes given items foreground color red if given path doesn't exist."""
-        if not os.path.exists(p):
+        """Makes given item's foreground color red if given path doesn't exist."""
+        exists = os.path.exists(p)
+        item.setData(exists, COMBOBOX_VALID_ROLE)
+        if not exists:
             item.setForeground(QBrush(Qt.GlobalColor.red))
             item.setToolTip(f"[Path doesn't exist] {p}")
         return item

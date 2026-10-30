@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mini_kernel_editor_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.11.1
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -102,21 +102,10 @@ class Ui_Dialog(object):
 
         self.formLayout_3.setWidget(2, QFormLayout.ItemRole.FieldRole, self.comboBox_python_interpreter)
 
-        self.label = QLabel(self.stackedWidgetPage1)
-        self.label.setObjectName(u"label")
-
-        self.formLayout_3.setWidget(5, QFormLayout.ItemRole.LabelRole, self.label)
-
-        self.lineEdit_python_kernel_name_prefix = QLineEdit(self.stackedWidgetPage1)
-        self.lineEdit_python_kernel_name_prefix.setObjectName(u"lineEdit_python_kernel_name_prefix")
-        self.lineEdit_python_kernel_name_prefix.setEnabled(True)
-
-        self.formLayout_3.setWidget(5, QFormLayout.ItemRole.FieldRole, self.lineEdit_python_kernel_name_prefix)
-
         self.label_python_kernel_name = QLabel(self.stackedWidgetPage1)
         self.label_python_kernel_name.setObjectName(u"label_python_kernel_name")
 
-        self.formLayout_3.setWidget(6, QFormLayout.ItemRole.FieldRole, self.label_python_kernel_name)
+        self.formLayout_3.setWidget(4, QFormLayout.ItemRole.LabelRole, self.label_python_kernel_name)
 
         self.stackedWidget.addWidget(self.stackedWidgetPage1)
         self.stackedWidgetPage2 = QWidget()
@@ -178,8 +167,7 @@ class Ui_Dialog(object):
         self.verticalLayout_2.addWidget(self.buttonBox)
 
         QWidget.setTabOrder(self.textBrowser_process, self.comboBox_python_interpreter)
-        QWidget.setTabOrder(self.comboBox_python_interpreter, self.lineEdit_python_kernel_name_prefix)
-        QWidget.setTabOrder(self.lineEdit_python_kernel_name_prefix, self.comboBox_julia_executable)
+        QWidget.setTabOrder(self.comboBox_python_interpreter, self.comboBox_julia_executable)
         QWidget.setTabOrder(self.comboBox_julia_executable, self.comboBox_julia_project)
         QWidget.setTabOrder(self.comboBox_julia_project, self.lineEdit_julia_kernel_name_prefix)
 
@@ -197,7 +185,6 @@ class Ui_Dialog(object):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Kernel specification editor", None))
         self.label_message.setText(QCoreApplication.translate("Dialog", u"Finalizing tool configuration...", None))
         self.label_3.setText(QCoreApplication.translate("Dialog", u"Interpreter", None))
-        self.label.setText(QCoreApplication.translate("Dialog", u"Kernel name prefix", None))
         self.label_python_kernel_name.setText(QCoreApplication.translate("Dialog", u"Kernel name", None))
         self.label_6.setText(QCoreApplication.translate("Dialog", u"Executable", None))
         self.label_9.setText(QCoreApplication.translate("Dialog", u"Project", None))

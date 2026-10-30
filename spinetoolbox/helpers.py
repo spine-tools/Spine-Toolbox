@@ -83,13 +83,14 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLineEdit,
     QMainWindow,
-    QMenu,
     QMessageBox,
     QSplitter,
     QStyle,
     QWidget,
 )
+from spinetoolbox.widgets.notification import Notification
 from spine_engine.logger_interface import LoggerInterface
+from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive
@@ -101,6 +102,7 @@ from .font import TOOLBOX_FONT
 
 if TYPE_CHECKING:
     from .ui_main import ToolboxUI
+    from PySide6.QtWidgets import QComboBox
 
 if sys.platform == "win32":
     import ctypes
@@ -121,6 +123,7 @@ DBMapPublicItems = dict[DatabaseMapping, list[PublicItem]]
 DBMapDictItems = dict[DatabaseMapping, list[dict]]
 DBMapTypedDictItems = dict[DatabaseMapping, dict[str, list[dict]]]
 
+COMBOBOX_VALID_ROLE = Qt.ItemDataRole.UserRole + 10
 
 @unique
 class LinkType(Enum):
@@ -1978,7 +1981,7 @@ def restore_override_cursor():
         QApplication.restoreOverrideCursor()
 
 
-def get_current_item(combobox, model):
+def get_current_item(combobox: QComboBox, model: QStandardItemModel):
     """Returns the current item from the given comboBox which uses the given model."""
     index = model.index(combobox.currentIndex(), 0)
     if not index.isValid():
@@ -1987,10 +1990,19 @@ def get_current_item(combobox, model):
     return item
 
 
-def get_current_item_data(combobox, model):
-    """Returns the data of the current item in the given QComboBox."""
+def get_current_item_data(combobox: QComboBox, model: QStandardItemModel):
+    """Returns the data of the current item in the given comboBox."""
     item = get_current_item(combobox, model)
     return item.data() if item is not None else None
+
+
+def set_combobox_item_invalid_property(combo: QComboBox, item: QStandardItem):
+    """Sets the 'invalid' property of item in the given ComboBox and polishes the style to reflect that.
+    This requires that the combobox has a stylesheet with an 'invalid' property."""
+    item_invalid = item.data(COMBOBOX_VALID_ROLE) is False
+    combo.setProperty("invalid", item_invalid)
+    combo.style().unpolish(combo)
+    combo.style().polish(combo)
 
 
 def path_in_list(p, p_list):
@@ -2103,3 +2115,71 @@ def update_recent_projects(settings: QSettings, project_name: str, project_dir: 
     # Save updated recent paths
     settings.setValue("appSettings/recentProjects", updated_recents)
     settings.sync()  # Commit change immediately
+
+
+def restore_saved_python_kernel(parent, models, combobox, saved_python_kernel):
+    """Restores previously selected Python kernel."""
+    if models.python_kernel_fetcher is not None and not models.python_kernel_fetcher.keep_going:
+        return
+    index = models.find_python_kernel_index(saved_python_kernel)
+    if not index.isValid():
+        Notification(
+            parent,
+            f"Could not activate Python kernel {saved_python_kernel}.\nIt may have been removed.",
+        ).show()
+        index = models.python_kernel_model.index(0, 0)
+    combobox.setCurrentIndex(index.row())
+
+
+def restore_saved_julia_kernel(parent, models, combobox, saved_julia_kernel):
+    """Restores previously selected Python kernel."""
+    if models.julia_kernel_fetcher is not None and not models.julia_kernel_fetcher.keep_going:
+        return
+    index = models.find_julia_kernel_index(saved_julia_kernel)
+    if not index.isValid():
+        Notification(
+            parent, f"Could not activate Julia kernel {saved_julia_kernel}.\nIt may have been removed."
+        ).show()
+        index = models.julia_kernel_model.index(0, 0)
+    combobox.setCurrentIndex(index.row())
+
+
+def select_and_add_python_interpreter(combobox, models, file_dialog_parent):
+    current_path = combobox.currentText()
+    if not current_path:
+        current_path = resolve_current_python_interpreter()
+    init_dir, _ = os.path.split(current_path)
+    new_python = select_file_path(file_dialog_parent, "Add Python Interpreter...", init_dir, "python")
+    if not new_python:
+        return
+    ind = models.add_python_interpreter(new_python)
+    if not ind.isValid():
+        Notification(file_dialog_parent, f"Adding Python {new_python} failed!").show()
+        ind = models.python_interpreters_model.index(0, 0)
+    combobox.setCurrentIndex(ind.row())
+
+
+def select_and_add_julia_executable(combobox, models, file_dialog_parent):
+    current_path = combobox.currentText()
+    if not current_path:
+        current_path = resolve_default_julia_executable()
+    init_dir, _ = os.path.split(current_path)
+    fpath = select_file_path(file_dialog_parent, "Select Julia Executable...", init_dir, "julia")
+    if not fpath:
+        return
+    ind = models.add_julia_executable(fpath)
+    if not ind.isValid():
+        Notification(file_dialog_parent, f"Adding Julia {fpath} failed!").show()
+        ind = models.julia_executables_model.index(0, 0)
+    combobox.setCurrentIndex(ind.row())
+
+
+def select_and_add_julia_project(combobox, models, file_dialog_parent):
+    dpath = select_dir(file_dialog_parent, "Select Julia project directory...")
+    if not dpath:
+        return
+    ind = models.add_julia_project(dpath)
+    if not ind.isValid():
+        Notification(file_dialog_parent, f"Could not find Julia project {dpath}.\nActivating the default project.").show()
+        ind = models.julia_projects_model.index(0, 0)
+    combobox.setCurrentIndex(ind.row())

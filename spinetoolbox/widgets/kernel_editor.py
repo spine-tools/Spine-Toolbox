@@ -12,6 +12,7 @@
 
 """Widget for showing the progress of making a Julia or Python kernel."""
 
+import os
 import subprocess
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QGuiApplication, QIcon
@@ -29,7 +30,9 @@ from spinetoolbox.helpers import (
     get_datetime,
     get_current_item_data,
     issamefile,
+    set_combobox_item_invalid_property,
 )
+from spinetoolbox.widgets.notification import Notification
 
 
 class KernelEditorBase(QDialog):
@@ -49,14 +52,8 @@ class KernelEditorBase(QDialog):
             models (ExecutableCompoundModels): Python and Julia models
         """
         super().__init__(parent=parent)
-        from ..ui import mini_kernel_editor_dialog  # pylint: disable=import-outside-toplevel
-
-        self.ui = mini_kernel_editor_dialog.Ui_Dialog()
-        self.ui.setupUi(self)
-        self.make_kernel_button = QPushButton("Make kernel")
-        self.ui.buttonBox.addButton(self.make_kernel_button, QDialogButtonBox.ButtonRole.ActionRole)
-        self.setWindowFlags(Qt.WindowType.Window)
-        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        # self.make_kernel_button = QPushButton("Make kernel")
+        # self.ui.buttonBox.addButton(self.make_kernel_button, QDialogButtonBox.ButtonRole.ActionRole)
         # Class attributes
         self._parent = parent
         self._models = models
@@ -75,11 +72,10 @@ class KernelEditorBase(QDialog):
         self._ready_to_install_kernel = False
         self.kernel_names_before = custom_find_kernel_specs().keys()
         self._new_kernel_name = ""
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
-        for widget in self._cursors:
-            widget.setCursor(Qt.CursorShape.BusyCursor)
-        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
+        # self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
+        # for widget in self._cursors:
+        #     widget.setCursor(Qt.CursorShape.BusyCursor)
+        # self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -88,24 +84,16 @@ class KernelEditorBase(QDialog):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_error.connect(self.add_process_error_message)
-        self.make_kernel_button.clicked.connect(self.make_kernel)
+        # self.make_kernel_button.clicked.connect(self.make_kernel)
 
-    def _show_close_button(self, failed=False):
-        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
-        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
-        self.make_kernel_button.setVisible(False)
-        for widget, cursor in self._cursors.items():
-            widget.setCursor(cursor)
-        msg = "Done" if not failed else "Failed"
-        self.ui.label_message.setText(self.ui.label_message.text() + msg)
-
-    @Slot(bool)
-    def make_kernel(self, _=False):
-        if not self._activate_selections():
-            return
-        for widget in self._cursors:
-            widget.setCursor(Qt.CursorShape.BusyCursor)
-        self._do_make_kernel()
+    # def _show_close_button(self, failed=False):
+    #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
+    #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
+    #     self.make_kernel_button.setVisible(False)
+    #     for widget, cursor in self._cursors.items():
+    #         widget.setCursor(cursor)
+    #     msg = "Done" if not failed else "Failed"
+    #     self.ui.label_message.setText(self.ui.label_message.text() + msg)
 
     def _do_make_kernel(self):
         raise NotImplementedError()
@@ -125,21 +113,19 @@ class KernelEditorBase(QDialog):
         except IndexError:
             pass
 
-    @Slot(bool)
-    def make_python_kernel(self, _=False):
+    def make_python_kernel(self):
         """Makes a new Python kernel. Offers to install ipykernel package if it is
         missing from the selected Python environment. Overwrites existing kernel
         with the same name if this is ok by user."""
-        if not self._python_exe:
-            self.msg.emit("Please select a Python interpreter")
-            return False
+        self.ui.stackedWidget.setCurrentIndex(1)
         if self._ipykernel_install_failed:
             # Makes sure that there's no never-ending loop if ipykernel installation fails for some reason
             self.msg_error.emit(f"Installing iPyKernel for {self._python_exe} failed. Please install it manually.")
             self._ipykernel_install_failed = False
             return False
-        # Check if ipykernel is installed
         try:
+            self.ui.progressBar.setRange(0, 0)
+            # Check if ipykernel is installed
             if not self.is_package_installed("ipykernel"):
                 message = (
                     f"Python environment<br><br><b>{self._python_exe}</b><br><br>is missing the <b>ipykernel</b> "
@@ -191,20 +177,19 @@ class KernelEditorBase(QDialog):
         installed_packages = [r.decode().split("==")[0] for r in response.split()]
         return package_name in installed_packages
 
-    @busy_effect
     def start_package_install_process(self, package_name):
         """Starts installing the given package using pip.
 
         Args:
             package_name (str): Package name to install using pip
         """
+        self.ui.label_status.setText("Installing ipykernel")
         self.msg.emit(f"Installing {package_name} into {self._python_exe}")
         args = ["-m", "pip", "install", package_name]
-        self._install_package_process = QProcessExecutionManager(self, self._python_exe, args)
+        self._install_package_process = QProcessExecutionManager(self, self._python_exe, args, semisilent=True)
         self._install_package_process.execution_finished.connect(self.handle_package_install_process_finished)
         self._install_package_process.start_execution()
 
-    @busy_effect
     @Slot(int)
     def handle_package_install_process_finished(self, retval):
         """Handles installing package finished.
@@ -217,49 +202,41 @@ class KernelEditorBase(QDialog):
         self._install_package_process = None
         if retval != 0:
             self._ipykernel_install_failed = True
-            self.add_process_error_message("Failed")
+            self.msg_error.emit("Failed")
         else:
             self._ipykernel_install_failed = False
-            self.add_success_message("Package installation succeeded.")
         self.make_python_kernel()  # Try installing kernel specs now
 
-    @busy_effect
     def start_kernelspec_install_process(self):
-        r"""Installs kernel specifications for the given Python environment.
-        Runs e.g. this command in QProcess
+        r"""Installs a Jupyter kernel specification for the configured Python interpreter.
 
-        python -m ipykernel install --user --name python-X.Y --display-name PythonX.Y
+        Starts a QProcess that runs a command similar to:
 
-        Creates new kernel specs into %APPDATA%\jupyter\kernels. Existing directory will be overwritten.
+            python -m ipykernel install --user --name python-X.Y --display-name python-X.Y_spinetoolbox
 
-        Note: We cannot use --sys.prefix here because if we are creating a kernel for a python that was
-        NOT used in launching the app, the kernel will be created into a location that is not discoverable
-        by jupyter and hence not by Spine Toolbox. E.g. when sys.executable is C:\Python36\python.exe, and we have
-        selected that as the python for Spine Toolbox (Settings->Tools->Python interpreter is empty), creating a
-        kernel with --sys-prefix creates kernel specs into C:\Python36\share\jupyter\kernels\python-3.6. This is ok and
-        the kernel spec is discoverable by jupyter and Spine Toolbox.
+        The ``--user`` option is used instead of ``--sys-prefix`` to ensure
+        that the kernel specification is installed into the user's Jupyter
+        kernels directory (for example, ``%APPDATA%\jupyter\kernels`` on
+        Windows). This makes the kernel discoverable regardless of which
+        Python interpreter was used to launch Spine Toolbox.
 
-        BUT when sys.executable is C:\Python36\python.exe, and we have selected another python for Spine
-        Toolbox (Settings->Tools->Python interpreter is C:\Python38\python.exe), creating a
-        kernel with --sys-prefix creates a kernel into C:\Python38\share\jupyter\kernels\python-3.8-sys-prefix. This
-        is not discoverable by jupyter nor Spine Toolbox. You would need to start the app using C:\Python38\python.exe
-        to see and use that kernel spec.
-
-        Using --user option instead, creates kernel specs that are discoverable by any python that was used in starting
-        Spine Toolbox.
+        Using ``--sys-prefix`` could install the kernel specification into
+        the selected interpreter's environment-specific Jupyter directory,
+        making it visible only when Jupyter is started from that same
+        interpreter environment.
         """
+        self.ui.label_status.setText(f"Creating kernel {self._python_kernel_name}")
         k_name = self._python_kernel_name
         kd_name = k_name + "_spinetoolbox"
         self.msg.emit("Starting Python kernel spec install process")
         args = ["-m", "ipykernel", "install", "--user", "--name", k_name, "--display-name", kd_name]
-        self._install_kernel_process = QProcessExecutionManager(self, self._python_exe, args)  # semisilent=True
+        self._install_kernel_process = QProcessExecutionManager(self, self._python_exe, args, semisilent=True)
         self._install_kernel_process.execution_finished.connect(self.handle_kernelspec_install_process_finished)
         self._install_kernel_process.start_execution()
 
-    @busy_effect
     @Slot(int)
     def handle_kernelspec_install_process_finished(self, retval):
-        """Handles case when the process for installing the kernel has finished.
+        """Handles cleaning up after the kernel creation process has finished.
 
         Args:
             retval (int): Process return value. 0: success, !0: failure
@@ -267,13 +244,18 @@ class KernelEditorBase(QDialog):
         self._install_kernel_process.execution_finished.disconnect()
         self._install_kernel_process.deleteLater()
         self._install_kernel_process = None
-        self._show_close_button(failed=retval != 0)
         if retval != 0:
-            self.msg_error.emit("Installing kernel specs failed. Please install them manually.")
+            self.ui.label_status.setText(f"Creating Kernel {self._python_kernel_name} failed!")
+            self.ui.label_in_progress_msg.setText(
+                "Please see details below. You may try again or install the kernel manually")
+            self.ui.progressBar.reset()
             return
-        self.msg_success.emit("New kernel installed")
+        self.ui.progressBar.setRange(0, 100)
+        self.ui.progressBar.setValue(100)
+        self.ui.stackedWidget.setCurrentIndex(2)
+        self.ui.label_success_status.setText(f"Kernel {self._python_kernel_name} created successfully!")
         self._solve_new_kernel_name()  # TODO: This is probably not necessary for Python kernels
-        self.ui.label_python_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
+        self.ui.label_interpreter.setText(f"{self._python_exe}")
 
     @Slot(bool)
     def make_julia_kernel(self, _=False):
@@ -346,16 +328,16 @@ class KernelEditorBase(QDialog):
         exec_mngr = QProcessExecutionManager(self, self._julia_exe, args, silent=True)
         exec_mngr.start_execution()
         if not exec_mngr.wait_for_process_finished(msecs=8000):
-            self.add_process_error_message(
+            self.msg_error.emit(
                 f"Couldn't start Julia to check IJulia status. "
                 f"Please make sure that Julia {self._julia_exe} is correctly installed and try again."
             )
-            self.add_process_error_message("Failed")
+            self.msg_error.emit("Failed")
             return 0
         if exec_mngr.process_output == "True":
-            self.add_message("IJulia is installed")
+            self.msg.emit("IJulia is installed")
             return 1
-        self.add_warning_message("IJulia is not installed")
+        self.msg_warning.emit("IJulia is not installed")
         return 2
 
     @busy_effect
@@ -380,10 +362,10 @@ class KernelEditorBase(QDialog):
         self._install_ijulia_process.deleteLater()
         self._install_ijulia_process = None
         if ret != 0:
-            self.add_process_error_message("Installing IJulia failed. Please try again later.")
+            self.msg_error.emit("Installing IJulia failed. Please try again later.")
             self._ready_to_install_kernel = False
             return
-        self.add_success_message("IJulia installed")
+        self.msg_success.emit("IJulia installed")
         self._ready_to_install_kernel = True
         self.make_julia_kernel()
 
@@ -409,10 +391,10 @@ class KernelEditorBase(QDialog):
         self._rebuild_ijulia_process.deleteLater()
         self._rebuild_ijulia_process = None
         if ret != 0:
-            self.add_process_error_message("Rebuilding IJulia failed. Please try again later.")
+            self.msg_error.emit("Rebuilding IJulia failed. Please try again later.")
             self._ready_to_install_kernel = False
             return
-        self.add_success_message("IJulia rebuilt")
+        self.msg_success.emit("IJulia rebuilt")
         self._ready_to_install_kernel = True
         self.make_julia_kernel()
 
@@ -423,7 +405,7 @@ class KernelEditorBase(QDialog):
         uncapitalizes this to make the kernel name automatically. Julia version is
         concatenated to both kernel and display names automatically (This cannot be changed).
         """
-        self.add_message("Installing Julia kernel")
+        self.msg.emit("Installing Julia kernel")
         args = [
             f"--project={self._julia_project}",
             "-e",
@@ -457,8 +439,10 @@ class KernelEditorBase(QDialog):
         self._solve_new_kernel_name()
         self.ui.label_julia_kernel_name.setText(f"Click Close to activate kernel {self._new_kernel_name}")
 
-    def make_kernel_name(self, exe, prefix):
+    def make_kernel_name(self, exe):
         """Retrieves Python or Julia version in a subprocess and makes a kernel name based on it."""
+        if not os.path.exists(exe):
+            return None
         manager = QProcessExecutionManager(self, exe, args=["--version"], silent=True)
         manager.start_execution()
         manager.wait_for_process_finished()
@@ -468,14 +452,13 @@ class KernelEditorBase(QDialog):
         try:
             name = out.split()[0].lower()
             ver_list = out.split()[-1].split(".")
-            prefix = prefix.lower().replace(" ", "-")
             if name == "python":
                 ver = ver_list[0] + ver_list[1]
             else:
                 ver = f"-{ver_list[0]}.{ver_list[1]}"
         except IndexError:
             return None
-        return prefix + ver
+        return name + ver
 
     def restore_dialog_dimensions(self):
         """Restore widget location, dimensions, and state from previous session."""
@@ -510,7 +493,7 @@ class KernelEditorBase(QDialog):
             msg (str): String written to QTextBrowser
         """
         message = format_event_message("msg", msg)
-        self.ui.textBrowser_process.append(message)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_success_message(self, msg):
@@ -520,7 +503,7 @@ class KernelEditorBase(QDialog):
             msg (str): String written to QTextBrowser
         """
         message = format_event_message("msg_success", msg)
-        self.ui.textBrowser_process.append(message)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_error_message(self, msg):
@@ -530,7 +513,7 @@ class KernelEditorBase(QDialog):
             msg (str): String written to QTextBrowser
         """
         message = format_event_message("msg_error", msg)
-        self.ui.textBrowser_process.append(message)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_warning_message(self, msg):
@@ -540,7 +523,7 @@ class KernelEditorBase(QDialog):
             msg (str): String written to QTextBrowser
         """
         message = format_event_message("msg_warning", msg)
-        self.ui.textBrowser_process.append(message)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_process_message(self, msg):
@@ -550,7 +533,7 @@ class KernelEditorBase(QDialog):
             msg (str): String written to QTextBrowser
         """
         message = format_process_message("msg", msg)
-        self.ui.textBrowser_process.append(message)
+        self.ui.textBrowser.append(message)
 
     @Slot(str)
     def add_process_error_message(self, msg):
@@ -560,7 +543,7 @@ class KernelEditorBase(QDialog):
             msg (str): String written to QTextBrowser
         """
         message = format_process_message("msg_error", msg)
-        self.ui.textBrowser_process.append(message)
+        self.ui.textBrowser.append(message)
 
     def _save_ui(self):
         self._app_settings.setValue("kernelEditor/windowSize", self.size())
@@ -576,92 +559,131 @@ class MiniPythonKernelEditor(KernelEditorBase):
 
     def __init__(self, parent, models):
         super().__init__(parent, models)
-        self.setWindowTitle("Python Jupyter Kernel Creator")
-        self.ui.label_message.setText("Select a Python interpreter and click Make kernel...")
+        from ..ui import python_kernel_manager  # pylint: disable=import-outside-toplevel
+
+        self.ui = python_kernel_manager.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.setWindowFlags(Qt.WindowType.Window)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setWindowTitle("Python Kernel Manager")
         self.ui.stackedWidget.setCurrentIndex(0)
         self.ui.comboBox_python_interpreter.setModel(self._models.python_interpreters_model)
         self._models.refresh_python_interpreters_model(show_select_item=True)
         self.ui.comboBox_python_interpreter.setCurrentIndex(0)
-        self.ui.lineEdit_python_kernel_name_prefix.setText("python")
-        self.ui.label_python_kernel_name.clear()
         self.connect_signals()
 
     def connect_signals(self):
         super().connect_signals()
+        self.ui.pushButton_make_kernel.clicked.connect(self.make_kernel)
+        self.ui.pushButton_close.clicked.connect(self.close)
         self.ui.comboBox_python_interpreter.currentIndexChanged.connect(self._set_python_exe)
-        self.ui.lineEdit_python_kernel_name_prefix.textEdited.connect(self._set_kernel_name)
+
+    @Slot(bool)
+    def make_kernel(self, _=False):
+        if not self._activate_selections():
+            return
+        # Check if current kernel name already exists
+        index = self._models.find_python_kernel_index(self._python_kernel_name)
+        if not index.isValid():
+            if not self.make_python_kernel():
+                self.ui.progressBar.reset()
+        else:
+            message_box = QMessageBox(
+                QMessageBox.Icon.Question,
+                f"Overwrite kernel {self._python_kernel_name}?",
+                f"Kernel {self._python_kernel_name} already exists. By clicking <b>Make kernel</b>, the "
+                f"existing kernel will be overwritten. Continue?",
+                parent=self,
+            )
+            yes_button = message_box.addButton("Make kernel", QMessageBox.ButtonRole.YesRole)
+            cancel_button = message_box.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
+            message_box.setDefaultButton(cancel_button)
+            message_box.exec_()
+            if message_box.clickedButton() is yes_button:
+                if not self.make_python_kernel():
+                    self.ui.progressBar.reset()
 
     def _activate_selections(self):
-        if not self._set_python_exe(0):
-            self.msg_warning.emit("Please select a Python interpreter")
+        current_index = self.ui.comboBox_python_interpreter.currentIndex()
+        if not self._set_python_exe(current_index):
+            Notification(self, "Please select a valid Python interpreter").show()
             return False
-        self.ui.label_message.setText("Finalizing Python configuration... ")
         return True
 
     @Slot(int)
     def _set_python_exe(self, _ind):
-        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
-        self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(True)
-        self.make_kernel_button.setVisible(True)
+        """Updates the selected python interpreter and kernel name for that python.
+        Sets the combobox current item red if the python interpreter path doesn't exist."""
+        combo = self.ui.comboBox_python_interpreter
+        model = combo.model()
+        item = model.itemFromIndex(model.index(_ind, 0))
+        set_combobox_item_invalid_property(combo, item)
         data = get_current_item_data(self.ui.comboBox_python_interpreter, self._models.python_interpreters_model)
         if not data:
             self._python_exe = None
-            self.ui.label_python_kernel_name.clear()
+            self.ui.pushButton_make_kernel.setText("Make kernel")
             return False
         self._python_exe = data["exe"]
         if not self._python_exe:
             self._python_exe = resolve_current_python_interpreter()
-        python_kernel_found = _get_python_kernel_name_by_exe(self._python_exe, self._models.python_kernel_model)
-        if python_kernel_found:
-            self.msg.emit(
-                f"Python kernel <b>{python_kernel_found}</b> using Python "
-                f"<b>{self._python_exe}</b> already exists. Click Close to activate it or edit "
-                f"kernel name below to make a new one."
-            )
-            self._new_kernel_name = python_kernel_found
-            self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
-            self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
-            self.make_kernel_button.setVisible(False)
-            self.ui.label_python_kernel_name.setText(f"Click Close to activate kernel {python_kernel_found}")
-            return False
-        prefix = self.ui.lineEdit_python_kernel_name_prefix.text().strip()
-        self._python_kernel_name = self.make_kernel_name(self._python_exe, prefix)
+        # python_kernel_found = _get_python_kernel_name_by_exe(self._python_exe, self._models.python_kernel_model)
+        # if python_kernel_found:
+        #     self.msg.emit(
+        #         f"Python kernel <b>{python_kernel_found}</b> using Python "
+        #         f"<b>{self._python_exe}</b> already exists. Click Close to activate it."
+        #     )
+        #     self._new_kernel_name = python_kernel_found
+        #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
+        #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
+        #     self.make_kernel_button.setVisible(False)
+        #     self.ui.label_python_kernel_name.setText(f"Click Close to activate kernel {python_kernel_found}")
+        #     return False
+
+        self._python_kernel_name = self.make_kernel_name(self._python_exe)
         if not self._python_kernel_name:
-            self.msg_error.emit(
-                f"Something went wrong. Retrieving version of python {self._python_exe} failed. "
-                f"Please select another Python or try reinstalling"
-            )
-            self.ui.label_python_kernel_name.setText("Kernel name unavailable")
+            self.ui.pushButton_make_kernel.setText("Make kernel")
             return False
-        self.ui.label_python_kernel_name.setText(f"New kernel name will be {self._python_kernel_name}")
+        # if not self._python_kernel_name:
+        #     self.msg_error.emit(
+        #         f"Something went wrong. Retrieving version of python {self._python_exe} failed. "
+        #         f"Please select another Python or try reinstalling"
+        #     )
+        #     self.ui.label_kernel_name.setText("Kernel name unavailable")
+        #     return False
+        self.ui.pushButton_make_kernel.setText(f"Make kernel {self._python_kernel_name}")
         return True
 
-    @Slot(str)
-    def _set_kernel_name(self, edited_text):
-        kname = self.make_kernel_name(self._python_exe, edited_text)
-        self._python_kernel_name = kname
-        knames = _get_kernel_names(self._models.python_kernel_model)
-        if kname in knames:
-            self.ui.label_python_kernel_name.setText(f"Kernel {kname} already exists. Click Close to activate it.")
-            self._new_kernel_name = kname
-            self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
-            self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
-            self.make_kernel_button.setVisible(False)
-        else:
-            self.ui.label_python_kernel_name.setText(f"New kernel name will be: {kname}")
-            self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
-            self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(True)
-            self.make_kernel_button.setVisible(True)
+    # @Slot(str)
+    # def _set_kernel_name(self, edited_text):
+    #     kname = self.make_kernel_name(self._python_exe, edited_text)
+    #     self._python_kernel_name = kname
+    #     knames = _get_kernel_names(self._models.python_kernel_model)
+    #     if kname in knames:
+    #         self.ui.label_python_kernel_name.setText(f"Kernel {kname} already exists. Click Close to activate it.")
+    #         self._new_kernel_name = kname
+    #         self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
+    #         self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
+    #         self.make_kernel_button.setVisible(False)
+    #     else:
+    #         self.ui.label_python_kernel_name.setText(f"New kernel name will be: {kname}")
+    #         self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
+    #         self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(True)
+    #         self.make_kernel_button.setVisible(True)
 
-    def _do_make_kernel(self):
-        if not self.make_python_kernel():
-            self._show_close_button(failed=True)
+    # def _do_make_kernel(self):
+    #     if not self.make_python_kernel():
+    #         self._show_close_button(failed=True)
 
 
 class MiniJuliaKernelEditor(KernelEditorBase):
     """A Simple Julia Kernel maker."""
 
     def __init__(self, parent, models):
+        from ..ui import mini_kernel_editor_dialog  # pylint: disable=import-outside-toplevel
+
+        self.ui = mini_kernel_editor_dialog.Ui_Dialog()
+        self.ui.setupUi(self)
         super().__init__(parent, models)
         self._julia_kernel_name_prefix = "julia"
         self.setWindowTitle("Julia Jupyter Kernel Creator")
@@ -704,7 +726,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         if not self._julia_exe:
             self._julia_exe = resolve_default_julia_executable()
         prefix = self.ui.lineEdit_julia_kernel_name_prefix.text().strip()
-        kernel_name = self.make_kernel_name(self._julia_exe, prefix)
+        kernel_name = self.make_kernel_name(self._julia_exe)
         if not kernel_name:
             self.msg_error.emit(
                 f"Something went wrong. Retrieving version of Julia {self._julia_exe} failed. "
@@ -726,7 +748,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
         prefix = self.ui.lineEdit_julia_kernel_name_prefix.text().strip()
         if not self._julia_exe:
             return False
-        kernel_name = self.make_kernel_name(self._julia_exe, prefix)
+        kernel_name = self.make_kernel_name(self._julia_exe)
         if not kernel_name:
             self.msg_error.emit(
                 f"Something went wrong. Retrieving version of Julia {self._julia_exe} failed. "
@@ -743,7 +765,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
 
     @Slot(str)
     def _set_kernel_name(self, edited_text):
-        kname = self.make_kernel_name(self._julia_exe, edited_text)
+        kname = self.make_kernel_name(self._julia_exe)
         self._julia_kernel_name_prefix = edited_text
         # Check if the resolved kernel_name already exists
         if self._kernel_exists(kname):
@@ -827,7 +849,7 @@ class MiniJuliaKernelEditor(KernelEditorBase):
             self._show_close_button(failed=True)
 
 
-def format_event_message(msg_type, message, show_datetime=True):
+def format_event_message(msg_type, message, show_datetime=False):
     """Formats message for the kernel editor text browser.
     This is a copy of helpers.format_event_message() but the colors
     have been edited for a text browser with a white background.
@@ -862,8 +884,6 @@ def _get_julia_kernel_name_by_exe(p, kernel_model):
 
 
 def _get_python_kernel_name_by_exe(p, kernel_model):
-    if not p:
-        p = resolve_current_python_interpreter()
     return _get_kernel_name_by_exe(p, kernel_model)
 
 
@@ -886,6 +906,7 @@ def _get_kernel_name_by_exe(p, kernel_model):
         if not deats:
             continue
         try:
+            print(f"[{name}] {deats['exe']}")
             if issamefile(deats["exe"], p):
                 return name
         except KeyError:

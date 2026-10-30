@@ -306,8 +306,8 @@ class SpineEngineWorker(QObject):
             self._logger.persistent_console_requested.emit(item, msg["filter_id"], msg["key"], msg["language"])
         elif msg_type == "persistent_failed_to_start":
             msg_text = (
-                f"Unable to start persistent process <b>{msg['args']}</b>: {msg['error']}."
-                "Please go to Settings->Tools and check your setup."
+                f"Unable to start process <b>{msg['args']}</b>: {msg['error']}. "
+                "Please check your setup in <b>Tool Properties</b> or in <b>File->Settings->Tools</b>."
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_error", msg_text)
         elif msg_type == "persistent_killed":
@@ -320,7 +320,7 @@ class SpineEngineWorker(QObject):
             self._logger.add_persistent_stderr(item, msg["filter_id"], msg["data"])
         elif msg_type == "execution_started":
             self._event_message_arrived.emit(
-                item, msg["filter_id"], "msg", f"*** Starting execution on persistent process <b>{msg['args']}</b> ***"
+                item, msg["filter_id"], "msg", f"*** Starting execution on process <b>{msg['args']}</b> ***"
             )
             self._event_message_arrived.emit(item, msg["filter_id"], "msg_warning", "See Console for messages")
         else:

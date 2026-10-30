@@ -808,6 +808,9 @@
                <property name="whatsThis">
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to the default Python interpreter. First entry in the list is the Python that is currently running Spine Toolbox.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:700;&quot;&gt;global setting&lt;/span&gt; for Python Tools. You can override this for each Tool separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
+               <property name="styleSheet">
+                <string notr="true">QComboBox[invalid=&quot;true&quot;] {color: red;}</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -963,6 +966,9 @@
                <property name="whatsThis">
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to the Julia executable. Leave blank to use the Julia in your system PATH env. If Julia is not in your PATH, this line edit will be empty, indicating that Julia Tools won't execute.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:700;&quot;&gt;global setting&lt;/span&gt; for Julia Tools. You can override this for each Tool separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
+               <property name="styleSheet">
+                <string notr="true">QComboBox[invalid=&quot;true&quot;] {color: red;}</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -1006,6 +1012,9 @@
                </property>
                <property name="whatsThis">
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia environment/project directory for Julia Tool specifications. Leave blank to use the default environment.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;NOTE:&lt;/span&gt; This is the &lt;span style=&quot; font-weight:700;&quot;&gt;global setting&lt;/span&gt; for Julia Tool specs. You can override this for each Tool spec separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QComboBox[invalid=&quot;true&quot;] {color: red;}</string>
                </property>
               </widget>
              </item>
