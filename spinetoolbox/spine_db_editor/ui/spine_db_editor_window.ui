@@ -1008,7 +1008,7 @@
   </widget>
   <action name="actionCommit">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
@@ -1030,7 +1030,7 @@
    </property>
    <property name="icon">
     <iconset resource="../../ui/resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
+     <normaloff>:/icons/menu_icons/check-fast.svg</normaloff>:/icons/menu_icons/check-fast.svg</iconset>
    </property>
    <property name="text">
     <string>&amp;Quick commit</string>
