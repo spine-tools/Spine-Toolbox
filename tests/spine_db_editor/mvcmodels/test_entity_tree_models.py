@@ -11,6 +11,7 @@
 ######################################################################################################################
 from PySide6.QtWidgets import QApplication
 from spinedb_api import DatabaseMapping
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.spine_db_editor.mvcmodels.entity_tree_models import EntityTreeModel
 
@@ -69,11 +70,11 @@ class TestEntityTreeModel:
     def test_same_class_in_two_databases_but_one_has_superclass(
         self, parent_object, app_settings, db_mngr, logger, tmp_path
     ):
-        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        url = sqlite_url_string(tmp_path / "db.sqlite")
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.commit_session("Add entity class.")
-        url_with_superclass = "sqlite:///" + str(tmp_path / "db_with_superclass.sqlite")
+        url_with_superclass = sqlite_url_string(tmp_path / "db_with_superclass.sqlite")
         with DatabaseMapping(url_with_superclass, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity_class(name="Superclass")
@@ -93,7 +94,7 @@ class TestEntityTreeModel:
         assert [child.display_data for child in model.root_item.children] == ["A", "A (Superclass)", "Superclass"]
 
     def test_entity_groups(self, parent_object, app_settings, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        url = sqlite_url_string(tmp_path / "db.sqlite")
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity(entity_class_name="A", name="group_leader")
@@ -130,7 +131,7 @@ class TestEntityTreeModel:
         assert not member_item.is_group
 
     def test_fetch_hidden_entity_group(self, parent_object, app_settings, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        url = sqlite_url_string(tmp_path / "db.sqlite")
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity(entity_class_name="A", name="group_leader")
@@ -172,7 +173,7 @@ class TestEntityTreeModel:
         assert not member_item.is_group
 
     def test_entity_group_removed(self, parent_object, app_settings, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        url = sqlite_url_string(tmp_path / "db.sqlite")
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity(entity_class_name="A", name="group_leader")
@@ -218,7 +219,7 @@ class TestEntityTreeModel:
         assert not group_item.is_group
 
     def test_remove_regex_filtered_entity(self, parent_object, app_settings, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        url = sqlite_url_string(tmp_path / "db.sqlite")
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity(entity_class_name="A", name="a")
@@ -253,7 +254,7 @@ class TestEntityTreeModel:
         assert class_item.children[0].display_data == "a"
 
     def test_remove_regex_unfiltered_entity_from_middle(self, parent_object, app_settings, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / "db.sqlite")
+        url = sqlite_url_string(tmp_path / "db.sqlite")
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_entity_class(name="A")
             db_map.add_entity(entity_class_name="A", name="a")

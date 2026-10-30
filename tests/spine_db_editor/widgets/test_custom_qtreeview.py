@@ -13,7 +13,7 @@
 """Unit tests for DB editor's custom ``QTreeView`` classes."""
 
 from unittest import mock
-from PySide6.QtCore import QItemSelection, QItemSelectionModel, QModelIndex, Qt
+from PySide6.QtCore import QItemSelection, QItemSelectionModel, Qt
 from PySide6.QtWidgets import QApplication
 import pytest
 from spinedb_api import (
@@ -23,6 +23,7 @@ from spinedb_api import (
     import_entity_classes,
     import_parameter_value_lists,
 )
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.mvcmodels.shared import DB_MAP_ROLE
 from spinetoolbox.spine_db_editor.widgets.add_items_dialogs import AddEntitiesDialog, AddEntityClassesDialog
@@ -368,7 +369,7 @@ def entity_tree_model(db_editor):
 class TestEntityTreeViewWithExistingZeroDimensionalEntities:
     @pytest.fixture()
     def db_map(self, db_name, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
+        url = sqlite_url_string(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("entity_class_1",),))
             import_entities(db_map, (("entity_class_1", "entity_1"), ("entity_class_1", "entity_2")))
@@ -518,7 +519,7 @@ class TestEntityTreeViewWithExistingZeroDimensionalEntities:
 class TestEntityTreeViewWithExistingMultidimensionalEntities:
     @pytest.fixture()
     def db_map(self, db_name, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
+        url = sqlite_url_string(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("object_class_1",), ("object_class_2",)))
             import_entities(
@@ -798,7 +799,7 @@ class TestEntityTreeViewSorting:
 
     @pytest.fixture()
     def db_map(self, db_name, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
+        url = sqlite_url_string(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("entity_class",), ("P_entity_class",), ("P_entity_class (1)",)))
             import_entities(
@@ -918,7 +919,7 @@ class TestParameterValueListTreeViewWithInitiallyEmptyDatabase(TestBase):
 class TestParameterValueListTreeViewWithExistingData:
     @pytest.fixture()
     def db_map(self, db_name, db_mngr, logger, tmp_path):
-        url = "sqlite:///" + str(tmp_path / (db_name + ".sqlite"))
+        url = sqlite_url_string(tmp_path / (db_name + ".sqlite"))
         with DatabaseMapping(url, create=True) as db_map:
             import_parameter_value_lists(db_map, (("value_list_1", "value_1"), ("value_list_1", "value_2")))
             db_map.commit_session("Add parameter value list.")
@@ -1097,7 +1098,7 @@ class TestAlternativeTreeView:
         db_map = db_mngr.get_db_map("sqlite://", logger)
         db_mngr.register_listener(fake_db_listener, db_map)
         db_path = tmp_path / "db.sqlite"
-        url = "sqlite:///" + str(db_path)
+        url = sqlite_url_string(db_path)
         with DatabaseMapping(url, create=True) as db_map:
             db_map.add_alternative(name="Other")
             db_map.commit_session("Add alternative to foreign database.")

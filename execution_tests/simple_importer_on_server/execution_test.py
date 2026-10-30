@@ -6,6 +6,7 @@ import unittest
 import zmq
 from spine_engine.server.engine_server import EngineServer, ServerSecurityModel
 from spinedb_api import DatabaseMapping, create_new_spine_database
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.config import PROJECT_ZIP_FILENAME
 
 
@@ -42,7 +43,7 @@ class RunSimpleImporterOnServer(unittest.TestCase):
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         if self._db_path.exists():
             self._db_path.unlink()
-        self._db_url = "sqlite:///" + str(self._db_path)
+        self._db_url = sqlite_url_string(self._db_path)
         engine = create_new_spine_database(self._db_url)
         engine.dispose()
 

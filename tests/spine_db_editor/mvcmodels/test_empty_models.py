@@ -9,19 +9,18 @@
 # Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
-import unittest
 from unittest import mock
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QApplication
 import pytest
 from spinedb_api import TimeSeriesVariableResolution, to_database
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.helpers import signal_waiter
 from spinetoolbox.mvcmodels.minimal_table_model import MinimalTableModel
 from spinetoolbox.spine_db_editor.mvcmodels.empty_models import (
     DelayedDataSetter,
     EmptyEntityAlternativeModel,
-    EmptyModelBase,
     EmptyModelWithEntityClass,
     EmptyParameterDefinitionModel,
     EmptyParameterValueModel,
@@ -345,7 +344,7 @@ class TestEmptyParameterDefinitionModel:
     def test_change_db_maps_by_reset_db_maps(
         self, empty_parameter_definition_model, db_mngr, db_map, db_name, tmp_path, logger
     ):
-        url = "sqlite:///" + str(tmp_path / "db2.sqlite")
+        url = sqlite_url_string(tmp_path / "db2.sqlite")
         with db_map:
             db_map.add_entity_class(name="my class")
         db_map2 = db_mngr.get_db_map(url, logger, create=True)

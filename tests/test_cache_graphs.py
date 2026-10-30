@@ -90,7 +90,7 @@ class TestRelationshipClassGraph:
             a_b = db_map.add_entity_class(dimension_name_list=["A", "B"])
         assert graph.is_any_id_reachable(db_map, a_b["id"], {a["id"]})
         b_a = db_map.add_entity_class(dimension_name_list=["B", "A"])
-        other_db_map = DatabaseMapping("sqlite:///", create=True)
+        other_db_map = DatabaseMapping("sqlite://", create=True)
         graph.invalidate_caches(other_db_map)
         with pytest.raises(nx.exception.NetworkXError):
             graph.is_any_id_reachable(db_map, b_a["id"], {a["id"]})
@@ -108,7 +108,7 @@ class TestRelationshipClassGraph:
         graph.maybe_invalidate_caches_after_data_changed("alternative", {db_map: [db_map.alternative(name="Base")]})
         with pytest.raises(nx.exception.NetworkXError):
             graph.is_any_id_reachable(db_map, b_a["id"], {a["id"]})
-        other_db_map = DatabaseMapping("sqlite:///", create=True)
+        other_db_map = DatabaseMapping("sqlite://", create=True)
         graph.maybe_invalidate_caches_after_data_changed("entity_class", {other_db_map: []})
         with pytest.raises(nx.exception.NetworkXError):
             graph.is_any_id_reachable(db_map, b_a["id"], {a["id"]})
@@ -138,7 +138,7 @@ class TestRelationshipClassGraph:
         graph.maybe_invalidate_caches_after_fetch("alternative", db_map)
         with pytest.raises(nx.exception.NetworkXError):
             graph.is_any_id_reachable(db_map, b_a["id"], {a["id"]})
-        other_db_map = DatabaseMapping("sqlite:///", create=True)
+        other_db_map = DatabaseMapping("sqlite://", create=True)
         graph.maybe_invalidate_caches_after_fetch("entity_class", other_db_map)
         with pytest.raises(nx.exception.NetworkXError):
             graph.is_any_id_reachable(db_map, b_a["id"], {a["id"]})

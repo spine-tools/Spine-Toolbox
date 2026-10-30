@@ -15,6 +15,7 @@ from spinedb_api import (
     import_scenario_alternatives,
     import_scenarios,
 )
+from spinedb_api.helpers import sqlite_url_string
 
 
 class ParallelImporter(unittest.TestCase):
@@ -29,7 +30,7 @@ class ParallelImporter(unittest.TestCase):
         self._source_database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._source_database_path.exists():
             self._source_database_path.unlink()
-        url = "sqlite:///" + str(self._source_database_path)
+        url = sqlite_url_string(self._source_database_path)
         with DatabaseMapping(url, create=True) as db_map:
             import_alternatives(db_map, ("alternative_1", "alternative_2"))
             import_scenarios(db_map, (("scenario_1", True), ("scenario_2", True)))
@@ -49,7 +50,7 @@ class ParallelImporter(unittest.TestCase):
         self._sink_database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._sink_database_path.exists():
             self._sink_database_path.unlink()
-        self._sink_url = "sqlite:///" + str(self._sink_database_path)
+        self._sink_url = sqlite_url_string(self._sink_database_path)
         engine = create_new_spine_database(self._sink_url)
         engine.dispose()
 

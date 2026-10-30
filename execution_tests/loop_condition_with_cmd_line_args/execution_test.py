@@ -4,6 +4,7 @@ import subprocess
 import sys
 import unittest
 from spinedb_api import DatabaseMapping, Map, create_new_spine_database, from_database
+from spinedb_api.helpers import sqlite_url_string
 
 
 class LoopConditionWithCmdLineArgs(unittest.TestCase):
@@ -15,8 +16,8 @@ class LoopConditionWithCmdLineArgs(unittest.TestCase):
     def setUp(self):
         if self._tool_output_path.exists():
             shutil.rmtree(self._tool_output_path)
-        self._loop_counter_database_url = "sqlite:///" + str(self._loop_counter_database_path)
-        self._output_database_url = "sqlite:///" + str(self._output_database_path)
+        self._loop_counter_database_url = sqlite_url_string(self._loop_counter_database_path)
+        self._output_database_url = sqlite_url_string(self._output_database_path)
         for database_path, url in (
             (self._loop_counter_database_path, self._loop_counter_database_url),
             (self._output_database_path, self._output_database_url),

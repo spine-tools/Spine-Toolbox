@@ -10,9 +10,10 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 from unittest import mock
-from PySide6.QtCore import QObject, QTimer, QSettings
+from PySide6.QtCore import QObject, QSettings, QTimer
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest
+from spinedb_api.helpers import sqlite_url_string
 from spinetoolbox.spine_db_editor.widgets.spine_db_editor import SpineDBEditor
 from tests.mock_helpers import MockSpineDBManager, clean_up_toolbox, create_toolboxui, create_toolboxui_with_project
 
@@ -118,7 +119,7 @@ class DBMapGenerator:
     def __call__(self):
         name = f"{self._name_prefix}_{self._next_id}"
         self._next_id += 1
-        url = "sqlite:///" + str(self._tmp_path / f"{name}.sqlite")
+        url = sqlite_url_string(self._tmp_path / f"{name}.sqlite")
         db_map = self._db_mngr.get_db_map(url, self._logger, create=True)
         self._db_mngr.name_registry.register(db_map.sa_url, name)
         return db_map

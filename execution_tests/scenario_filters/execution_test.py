@@ -4,6 +4,7 @@ import subprocess
 import sys
 import unittest
 from spinedb_api import DatabaseMapping, import_alternatives, import_scenario_alternatives, import_scenarios
+from spinedb_api.helpers import sqlite_url_string
 
 
 class ScenarioFilters(unittest.TestCase):
@@ -17,7 +18,7 @@ class ScenarioFilters(unittest.TestCase):
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._database_path.exists():
             self._database_path.unlink()
-        url = "sqlite:///" + str(self._database_path)
+        url = sqlite_url_string(self._database_path)
         with DatabaseMapping(url, create=True) as db_map:
             import_alternatives(db_map, ("alternative_1", "alternative_2"))
             import_scenarios(db_map, (("scenario_1", True), ("scenario_2", True)))

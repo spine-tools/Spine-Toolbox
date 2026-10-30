@@ -15,6 +15,7 @@ from spinedb_api import (
     import_scenario_alternatives,
     import_scenarios,
 )
+from spinedb_api.helpers import sqlite_url_string
 
 
 class ModifyConnectionFilterByScript(unittest.TestCase):
@@ -29,7 +30,7 @@ class ModifyConnectionFilterByScript(unittest.TestCase):
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
         if self._database_path.exists():
             self._database_path.unlink()
-        url = "sqlite:///" + str(self._database_path)
+        url = sqlite_url_string(self._database_path)
         with DatabaseMapping(url, create=True) as db_map:
             import_entity_classes(db_map, (("object_class",),))
             import_entities(db_map, (("object_class", "object"),))

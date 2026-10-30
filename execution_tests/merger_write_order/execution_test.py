@@ -3,6 +3,7 @@ import subprocess
 import sys
 import unittest
 from spinedb_api import DatabaseMapping, create_new_spine_database, from_database, import_functions
+from spinedb_api.helpers import sqlite_url_string
 
 
 class MergerWriteOrder(unittest.TestCase):
@@ -19,7 +20,7 @@ class MergerWriteOrder(unittest.TestCase):
                 database_path.unlink()
         spoon_volumes = {self._source_database_1_path: 1.0, self._source_database_2_path: 99.0}
         for database_path, spoon_volume in spoon_volumes.items():
-            url = "sqlite:///" + str(database_path)
+            url = sqlite_url_string(database_path)
             with DatabaseMapping(url, create=True) as db_map:
                 import_functions.import_entity_classes(db_map, ("Widget",))
                 import_functions.import_entities(db_map, (("Widget", "spoon"),))
@@ -27,7 +28,7 @@ class MergerWriteOrder(unittest.TestCase):
                 import_functions.import_parameter_values(db_map, (("Widget", "spoon", "volume", spoon_volume, "Base"),))
                 db_map.commit_session("Add test data.")
             db_map.close()
-        self._sink_url = "sqlite:///" + str(self._sink_database_path)
+        self._sink_url = sqlite_url_string(self._sink_database_path)
         engine = create_new_spine_database(self._sink_url)
         engine.dispose()
 
