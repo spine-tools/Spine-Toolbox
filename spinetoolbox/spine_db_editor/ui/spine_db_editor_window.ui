@@ -843,6 +843,7 @@
      <string>Sess&amp;ion</string>
     </property>
     <addaction name="actionCommit"/>
+    <addaction name="actionQuick_commit"/>
     <addaction name="actionRollback"/>
     <addaction name="separator"/>
     <addaction name="actionView_history"/>
@@ -1021,6 +1022,24 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Return</string>
+   </property>
+  </action>
+  <action name="actionQuick_commit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="../../ui/resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Quick commit</string>
+   </property>
+   <property name="toolTip">
+    <string>Commit changes without prompting for a message</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionRollback">

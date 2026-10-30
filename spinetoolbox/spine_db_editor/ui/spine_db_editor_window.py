@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'spine_db_editor_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -55,6 +55,10 @@ class Ui_MainWindow(object):
         icon = QIcon()
         icon.addFile(u":/icons/menu_icons/check.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.actionCommit.setIcon(icon)
+        self.actionQuick_commit = QAction(MainWindow)
+        self.actionQuick_commit.setObjectName(u"actionQuick_commit")
+        self.actionQuick_commit.setEnabled(False)
+        self.actionQuick_commit.setIcon(icon)
         self.actionRollback = QAction(MainWindow)
         self.actionRollback.setObjectName(u"actionRollback")
         self.actionRollback.setEnabled(False)
@@ -642,6 +646,7 @@ class Ui_MainWindow(object):
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionVacuum)
         self.menuSession.addAction(self.actionCommit)
+        self.menuSession.addAction(self.actionQuick_commit)
         self.menuSession.addAction(self.actionRollback)
         self.menuSession.addSeparator()
         self.menuSession.addAction(self.actionView_history)
@@ -672,6 +677,13 @@ class Ui_MainWindow(object):
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(shortcut)
         self.actionCommit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+Return", None))
+#endif // QT_CONFIG(shortcut)
+        self.actionQuick_commit.setText(QCoreApplication.translate("MainWindow", u"&Quick commit", None))
+#if QT_CONFIG(tooltip)
+        self.actionQuick_commit.setToolTip(QCoreApplication.translate("MainWindow", u"Commit changes without prompting for a message", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(shortcut)
+        self.actionQuick_commit.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+S", None))
 #endif // QT_CONFIG(shortcut)
         self.actionRollback.setText(QCoreApplication.translate("MainWindow", u"Roll&back", None))
 #if QT_CONFIG(tooltip)

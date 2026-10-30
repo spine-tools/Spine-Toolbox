@@ -345,6 +345,7 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.items_removed.connect(self._handle_items_removed)
         self.db_mngr.name_registry.display_name_changed.connect(self._update_title)
         self.ui.actionCommit.triggered.connect(self.commit_session)
+        self.ui.actionQuick_commit.triggered.connect(self.commit_session_immediately)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionView_history.triggered.connect(self._browse_commits)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
@@ -414,6 +415,7 @@ class SpineDBEditorBase(QMainWindow):
         dirty = any(self.db_mngr.is_dirty(db_map) for db_map in self.db_maps)
         self.ui.actionExport_session.setEnabled(dirty)
         self.ui.actionCommit.setEnabled(dirty)
+        self.ui.actionQuick_commit.setEnabled(dirty)
         self.ui.actionRollback.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
@@ -980,7 +982,6 @@ class SpineDBEditorBase(QMainWindow):
 
     def _setup_focus_shortcuts(self):
         # Direct focus shortcuts for widgets in the DB editor
-        QShortcut(QKeySequence.StandardKey.Save, self).activated.connect(self.commit_session_immediately)
         QShortcut(QKeySequence("Alt+1"), self).activated.connect(lambda: self._focus_widget(self.ui.treeView_entity))
         QShortcut(QKeySequence("Alt+3"), self).activated.connect(
             lambda: self._focus_widget(self.ui.tableView_parameter_value)
