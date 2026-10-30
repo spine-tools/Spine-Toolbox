@@ -345,6 +345,7 @@ class SpineDBEditorBase(QMainWindow):
         self.db_mngr.items_removed.connect(self._handle_items_removed)
         self.db_mngr.name_registry.display_name_changed.connect(self._update_title)
         self.ui.actionCommit.triggered.connect(self.commit_session)
+        self.ui.actionQuick_commit.triggered.connect(self.commit_session_immediately)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionView_history.triggered.connect(self._browse_commits)
         self.ui.actionNew_db_file.triggered.connect(self.create_db_file)
@@ -414,6 +415,7 @@ class SpineDBEditorBase(QMainWindow):
         dirty = any(self.db_mngr.is_dirty(db_map) for db_map in self.db_maps)
         self.ui.actionExport_session.setEnabled(dirty)
         self.ui.actionCommit.setEnabled(dirty)
+        self.ui.actionQuick_commit.setEnabled(dirty)
         self.ui.actionRollback.setEnabled(dirty)
         self.setWindowModified(dirty)
         self.windowTitleChanged.emit(self.windowTitle())
@@ -673,6 +675,14 @@ class SpineDBEditorBase(QMainWindow):
         if not commit_msg:
             return
         self.db_mngr.commit_session(commit_msg, *dirty_db_maps, cookie=self)
+
+    @Slot(bool)
+    def commit_session_immediately(self, checked=False):
+        """Commits dirty database maps without prompting for a message."""
+        dirty_db_maps = self.db_mngr.dirty(*self.db_maps)
+        if not dirty_db_maps:
+            return
+        self.db_mngr.commit_session("Updated", *dirty_db_maps, cookie=self)
 
     @Slot(bool)
     def rollback_session(self, checked=False):
