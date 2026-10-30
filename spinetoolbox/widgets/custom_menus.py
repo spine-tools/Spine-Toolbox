@@ -388,6 +388,7 @@ class JuliaPopupMenu(CustomPopupMenu):
 
 class SharedContextMenu(QMenu):
     """Superclass for Python and Julia context menus."""
+
     def __init__(self, menu_parent, owner_widget, models, path, is_conda):
         super().__init__(menu_parent)
         self._owner_widget = owner_widget
@@ -436,7 +437,8 @@ class SharedContextMenu(QMenu):
             return False
         if self._is_conda:
             Notification(
-                self._owner_widget, "This is a dynamically created Conda Jupyter kernel and cannot be removed from Spine Toolbox."
+                self._owner_widget,
+                "This is a dynamically created Conda Jupyter kernel and cannot be removed from Spine Toolbox.",
             ).show()
             return False
         _, kernel_name = os.path.split(self._path)
@@ -468,6 +470,7 @@ class SharedContextMenu(QMenu):
 
 class PythonContextMenu(SharedContextMenu):
     """Provides a context menu for the Python interpreters and Python kernels comboBoxes and their list views."""
+
     def __init__(self, menu_parent, owner_widget, models, path, is_conda, menu_mode):
         super().__init__(menu_parent, owner_widget, models, path, is_conda)
         if menu_mode == 0:
@@ -537,6 +540,7 @@ class PythonContextMenu(SharedContextMenu):
 class JuliaContextMenu(SharedContextMenu):
     """Provides a context menu for the Julia executable, Julia Project,
     and Julia kernel comboBoxes and their list views."""
+
     def __init__(self, menu_parent, owner_widget, models, path, is_conda, menu_mode, current_julia_dir):
         super().__init__(menu_parent, owner_widget, models, path, is_conda)
         self._current_julia_dir = current_julia_dir
@@ -549,16 +553,24 @@ class JuliaContextMenu(SharedContextMenu):
 
     def _make_executable_menu(self):
         self.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_executable)
-        self.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open containing folder...", self._open_julia_executable_dir)
+        self.addAction(
+            QIcon(":icons/menu_icons/folder-open-solid.svg"),
+            "Open containing folder...",
+            self._open_julia_executable_dir,
+        )
 
     def _make_projects_menu(self):
         self.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_project)
         self.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open folder...", self._open_julia_project_dir)
 
     def _make_kernels_menu(self):
-        self.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open resource folder...", self._open_kernel_resource_dir)
+        self.addAction(
+            QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open resource folder...", self._open_kernel_resource_dir
+        )
         self.addAction(QIcon(":icons/menu_icons/edit.svg"), "Open kernel.json...", self._open_kernel_json_file)
-        self.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove kernel...", self._delete_julia_kernel_resource_dir)
+        self.addAction(
+            QIcon(":icons/menu_icons/trash-alt.svg"), "Remove kernel...", self._delete_julia_kernel_resource_dir
+        )
         self.addAction(QIcon(":icons/menu_icons/sync.svg"), "Reload kernels", self._owner_widget.reload_julia_kernels)
 
     def _remove_julia_executable(self):

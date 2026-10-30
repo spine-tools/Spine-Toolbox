@@ -591,7 +591,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         path = data["path"]
         global_pos = self.ui.comboBox_julia_project_path.mapToGlobal(pos)
         current_julia_dir = self.solve_current_julia_dir()
-        menu = JuliaContextMenu(self.ui.comboBox_julia_project_path, self, self._models, path, False, 1, current_julia_dir)
+        menu = JuliaContextMenu(
+            self.ui.comboBox_julia_project_path, self, self._models, path, False, 1, current_julia_dir
+        )
         menu.popup(global_pos)
 
     @Slot(QPoint)
@@ -605,7 +607,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         path = item.toolTip()
         is_conda = False if not item.data() else item.data()["is_conda"]
         current_julia_dir = self.solve_current_julia_dir()
-        menu = JuliaContextMenu(self.ui.comboBox_julia_project_path, self, self._models, path, is_conda, 2, current_julia_dir)
+        menu = JuliaContextMenu(
+            self.ui.comboBox_julia_project_path, self, self._models, path, is_conda, 2, current_julia_dir
+        )
         menu.popup(global_pos)
 
     @Slot(QPoint)

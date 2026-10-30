@@ -126,6 +126,7 @@ DBMapTypedDictItems = dict[DatabaseMapping, dict[str, list[dict]]]
 
 COMBOBOX_VALID_ROLE = Qt.ItemDataRole.UserRole + 10
 
+
 @unique
 class LinkType(Enum):
     """Graphics scene's link types."""
@@ -2138,9 +2139,7 @@ def restore_saved_julia_kernel(parent, models, combobox, saved_julia_kernel):
         return
     index = models.find_julia_kernel_index(saved_julia_kernel)
     if not index.isValid():
-        Notification(
-            parent, f"Could not activate Julia kernel {saved_julia_kernel}.\nIt may have been removed."
-        ).show()
+        Notification(parent, f"Could not activate Julia kernel {saved_julia_kernel}.\nIt may have been removed.").show()
         index = models.julia_kernel_model.index(0, 0)
     combobox.setCurrentIndex(index.row())
 
@@ -2181,6 +2180,8 @@ def select_and_add_julia_project(combobox, models, file_dialog_parent):
         return
     ind = models.add_julia_project(dpath)
     if not ind.isValid():
-        Notification(file_dialog_parent, f"Could not find Julia project {dpath}.\nActivating the default project.").show()
+        Notification(
+            file_dialog_parent, f"Could not find Julia project {dpath}.\nActivating the default project."
+        ).show()
         ind = models.julia_projects_model.index(0, 0)
     combobox.setCurrentIndex(ind.row())

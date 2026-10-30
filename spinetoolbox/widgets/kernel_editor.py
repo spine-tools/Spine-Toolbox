@@ -247,7 +247,8 @@ class KernelEditorBase(QDialog):
         if retval != 0:
             self.ui.label_status.setText(f"Creating Kernel {self._python_kernel_name} failed!")
             self.ui.label_in_progress_msg.setText(
-                "Please see details below. You may try again or install the kernel manually")
+                "Please see details below. You may try again or install the kernel manually"
+            )
             self.ui.progressBar.reset()
             return
         self.ui.progressBar.setRange(0, 100)
