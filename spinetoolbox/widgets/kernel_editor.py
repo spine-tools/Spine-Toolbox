@@ -255,7 +255,7 @@ class KernelEditorBase(QDialog):
         self.ui.progressBar.setValue(100)
         self.ui.stackedWidget.setCurrentIndex(2)
         self.ui.label_success_status.setText(f"Kernel {self._python_kernel_name} created successfully!")
-        self._solve_new_kernel_name()  # TODO: This is probably not necessary for Python kernels
+        self._new_kernel_name = self._python_kernel_name
         self.ui.label_interpreter.setText(f"{self._python_exe}")
 
     @Slot(bool)
@@ -582,14 +582,12 @@ class MiniPythonKernelEditor(KernelEditorBase):
 
     @Slot(bool)
     def make_kernel(self, _=False):
+        """Checks that selections are valid and asks for confirmation
+        to overwrite an existing kernel if necessary."""
         if not self._activate_selections():
             return
-        # Check if current kernel name already exists
         index = self._models.find_python_kernel_index(self._python_kernel_name)
-        if not index.isValid():
-            if not self.make_python_kernel():
-                self.ui.progressBar.reset()
-        else:
+        if index.isValid():
             message_box = QMessageBox(
                 QMessageBox.Icon.Question,
                 f"Overwrite kernel {self._python_kernel_name}?",
@@ -601,13 +599,13 @@ class MiniPythonKernelEditor(KernelEditorBase):
             cancel_button = message_box.addButton("Cancel", QMessageBox.ButtonRole.NoRole)
             message_box.setDefaultButton(cancel_button)
             message_box.exec_()
-            if message_box.clickedButton() is yes_button:
-                if not self.make_python_kernel():
-                    self.ui.progressBar.reset()
+            if message_box.clickedButton() is not yes_button:
+                return
+        if not self.make_python_kernel():
+            self.ui.progressBar.reset()
 
     def _activate_selections(self):
-        current_index = self.ui.comboBox_python_interpreter.currentIndex()
-        if not self._set_python_exe(current_index):
+        if not self._python_exe or not self._python_kernel_name:
             Notification(self, "Please select a valid Python interpreter").show()
             return False
         return True
@@ -624,36 +622,16 @@ class MiniPythonKernelEditor(KernelEditorBase):
         if not data:
             self._python_exe = None
             self.ui.pushButton_make_kernel.setText("Make kernel")
-            return False
+            return
         self._python_exe = data["exe"]
         if not self._python_exe:
             self._python_exe = resolve_current_python_interpreter()
-        # python_kernel_found = _get_python_kernel_name_by_exe(self._python_exe, self._models.python_kernel_model)
-        # if python_kernel_found:
-        #     self.msg.emit(
-        #         f"Python kernel <b>{python_kernel_found}</b> using Python "
-        #         f"<b>{self._python_exe}</b> already exists. Click Close to activate it."
-        #     )
-        #     self._new_kernel_name = python_kernel_found
-        #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)
-        #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Cancel).setVisible(False)
-        #     self.make_kernel_button.setVisible(False)
-        #     self.ui.label_python_kernel_name.setText(f"Click Close to activate kernel {python_kernel_found}")
-        #     return False
-
         self._python_kernel_name = self.make_kernel_name(self._python_exe)
         if not self._python_kernel_name:
             self.ui.pushButton_make_kernel.setText("Make kernel")
-            return False
-        # if not self._python_kernel_name:
-        #     self.msg_error.emit(
-        #         f"Something went wrong. Retrieving version of python {self._python_exe} failed. "
-        #         f"Please select another Python or try reinstalling"
-        #     )
-        #     self.ui.label_kernel_name.setText("Kernel name unavailable")
-        #     return False
+            return
         self.ui.pushButton_make_kernel.setText(f"Make kernel {self._python_kernel_name}")
-        return True
+        return
 
     # @Slot(str)
     # def _set_kernel_name(self, edited_text):
