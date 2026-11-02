@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
+- Allow committing changes in DB Editor with Ctrl+S using the default commit message.
+
 ### Changed
 
 ### Deprecated

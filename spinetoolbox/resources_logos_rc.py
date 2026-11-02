@@ -11,7 +11,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 # Created by: object code
-# Created by: The Resource Compiler for Qt version 6.11.1
+# Created by: The Resource Compiler for Qt version 6.12.0
 # WARNING! All changes made in this file will be lost!
 
 from PySide6 import QtCore
