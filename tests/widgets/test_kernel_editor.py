@@ -49,8 +49,12 @@ class TestKernelEditorBase(TestCaseWithQApplication):
     def test_make_python_kernel(self):
         with TemporaryDirectory() as environment_dir:
             venv.create(environment_dir, system_site_packages=True)
-            python_exec = "python.exe" if sys.platform == "win32" else "python"
-            python_path = pathlib.Path(environment_dir, "Scripts", python_exec)
+            env_path = pathlib.Path(environment_dir)
+            python_path = (
+                env_path / "Scripts" / "python.exe"
+                if sys.platform == "win32"
+                else env_path / "bin" / "python"
+            )
             kernel_name = "spinetoolbox_test_make_python_kernel"
             with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box:
                 mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
