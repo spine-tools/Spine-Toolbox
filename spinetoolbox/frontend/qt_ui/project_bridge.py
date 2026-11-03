@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 import shutil
 import time
-from PySide6.QtCore import QFileSystemWatcher, QObject, QSettings, QUrl, Signal, Slot
+from PySide6.QtCore import QFileSystemWatcher, QObject, QRect, QSettings, Qt, QUrl, Signal, Slot
+from PySide6.QtWidgets import QWidget
 from spine_engine.project_item.connection import FilterSettings
 from spine_engine.utils.helpers import (
     connections_to_selected_items,
@@ -85,12 +86,16 @@ class ProjectBridge(QObject):
     """Emits a display name and its run state: "waiting", "running", "done", "failed", "skipped" or "excluded"."""
     # emitted when the user asks (via the User Mode switch) to go back to the classic Qt UI
     devModeRequested = Signal()
+    # emitted when the Data view should be shown, e.g. after a Data Store is opened from the workflow
+    dataViewRequested = Signal()
 
     def __init__(self, project_dir: str | Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._project_dir = Path(project_dir)
         self._config_file = self._project_dir / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
         self._db_editor = None
+        self._data_area = QRect()
+        self._data_area_visible = False
         self._database_editor = DatabaseEditorBackend()
         self._filter_names_cache: dict[tuple[str, str], tuple[tuple[int, int], list[str]]] = {}
         self._setup_manager: QProcessExecutionManager | None = None
@@ -729,11 +734,9 @@ class ProjectBridge(QObject):
         url = _data_store_url(item.get("url") or {}, str(self._base_dir()))
         if not url:
             return False
-        self._ensure_db_editor()
+        self.open_database_editor()
         self._db_editor.open_url_in_new_tab(url)
-        self._db_editor.show()
-        self._db_editor.raise_()
-        self._db_editor.activateWindow()
+        self.dataViewRequested.emit()
         return True
 
     @Slot(str, result=str)
@@ -741,6 +744,8 @@ class ProjectBridge(QObject):
         """Switches to the project at folder_url and registers it as a recent project; empty string means invalid."""
         local_path = Path(QUrl(folder_url).toLocalFile() or folder_url)
         if not (local_path / PROJECT_CONFIG_DIR_NAME).is_dir():
+            return ""
+        if self._db_editor is not None and not self._db_editor.close():
             return ""
         self._close_sessions()
         self._project_dir = local_path
@@ -777,19 +782,33 @@ class ProjectBridge(QObject):
         settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
         db_mngr = SpineDBManager(settings, None)
         editor = MultiSpineDBEditor(db_mngr)
+        host = self.parent()
+        if isinstance(host, QWidget):
+            editor.setParent(host, Qt.WindowType.Widget)
         editor.destroyed.connect(self._forget_db_editor)
         self._db_editor = editor
+        self._place_db_editor()
+
+    @Slot(float, float, float, float, bool)
+    def set_data_area(self, x: float, y: float, width: float, height: float, visible: bool) -> None:
+        """Sets where the Data view is on screen; the DB editor is shown there."""
+        self._data_area = QRect(round(x), round(y), round(width), round(height))
+        self._data_area_visible = visible
+        self._place_db_editor()
+
+    def _place_db_editor(self) -> None:
+        if self._db_editor is None:
+            return
+        self._db_editor.setGeometry(self._data_area)
+        self._db_editor.setVisible(self._data_area_visible)
 
     @Slot()
     def open_database_editor(self) -> None:
-        """Opens the classic Qt DB Editor (in-process) with every Data Store in the project, each in its own tab."""
-        is_new = self._db_editor is None
+        """Creates the classic DB Editor, if it doesn't exist, with every Data Store in the project in its own tab."""
+        if self._db_editor is not None:
+            return
         self._ensure_db_editor()
-        if is_new:
-            self._db_editor.add_new_tab(self._database_urls())
-        self._db_editor.show()
-        self._db_editor.raise_()
-        self._db_editor.activateWindow()
+        self._db_editor.add_new_tab(self._database_urls())
 
     def _forget_db_editor(self) -> None:
         self._db_editor = None

@@ -77,6 +77,10 @@ Rectangle {
             root.plotUrls = projectBridge.get_plots()
         }
 
+        function onDataViewRequested() {
+            root.currentView = "database"
+        }
+
         function onExecutionLogAppended(line, kind) {
             root.executionLogModel.append({ "text": line, "kind": kind })
 
@@ -616,7 +620,7 @@ Rectangle {
 
                     onClicked: {
                         root.currentView = "database"
-                        dataPage.open()
+                        projectBridge.open_database_editor()
                     }
                 }
 
@@ -815,7 +819,7 @@ Rectangle {
 
                         text: "Open project"
 
-                        onClicked: dataPage.guardUnsaved(function () { openProjectDialog.open() })
+                        onClicked: openProjectDialog.open()
 
                         FolderDialog {
                             id: openProjectDialog
@@ -827,10 +831,9 @@ Rectangle {
 
                                 if (name) {
                                     root.currentProjectName = name
-                                    dataPage.reset()
 
                                     if (root.currentView === "database")
-                                        dataPage.open()
+                                        projectBridge.open_database_editor()
                                 }
 
                                 root.loadWorkflow()
@@ -1470,16 +1473,34 @@ Rectangle {
                     }
                 }
             // =================================================
-            // DATA PAGE (Entity/Alternative/Scenario browser, real spinedb_api reads)
+            // DATA PAGE (the classic DB editor widget is shown over this area, see ProjectBridge.set_data_area)
             // =================================================
 
-            DataPage {
-                id: dataPage
+            Item {
+                id: dataArea
 
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
                 visible: root.currentView === "database"
+
+                function report() {
+                    var origin = dataArea.mapToItem(null, 0, 0)
+                    projectBridge.set_data_area(origin.x, origin.y, dataArea.width, dataArea.height, dataArea.visible)
+                }
+
+                onXChanged: Qt.callLater(report)
+                onYChanged: Qt.callLater(report)
+                onWidthChanged: Qt.callLater(report)
+                onHeightChanged: Qt.callLater(report)
+                onVisibleChanged: Qt.callLater(report)
+
+                Connections {
+                    target: root
+
+                    function onWidthChanged() { Qt.callLater(dataArea.report) }
+                    function onHeightChanged() { Qt.callLater(dataArea.report) }
+                }
             }
 
             // =================================================
