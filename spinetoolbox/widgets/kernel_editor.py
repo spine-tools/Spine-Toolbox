@@ -71,10 +71,7 @@ class KernelEditorBase(QDialog):
         self._install_julia_kernel_process = None
         self._ready_to_install_kernel = False
         self.kernel_names_before = custom_find_kernel_specs().keys()
-        self._new_kernel_name = ""
-        # self._cursors = {w: w.cursor() for w in self.findChildren(QWidget)}
-        # for widget in self._cursors:
-        #     widget.setCursor(Qt.CursorShape.BusyCursor)
+        self._new_kernel_name = None
         # self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(False)
 
     def connect_signals(self):
@@ -84,7 +81,6 @@ class KernelEditorBase(QDialog):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_error.connect(self.add_process_error_message)
-        # self.make_kernel_button.clicked.connect(self.make_kernel)
 
     # def _show_close_button(self, failed=False):
     #     self.ui.buttonBox.button(QDialogButtonBox.StandardButton.Close).setVisible(True)

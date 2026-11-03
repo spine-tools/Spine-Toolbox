@@ -304,10 +304,10 @@ class ExecutableCompoundModels(QObject):
         Args:
             path (str): Path to Python interpreter
         """
-        if not path:
-            return self.python_interpreters_model.index(0, 0)
         for row in range(self.python_interpreters_model.rowCount()):
             item = self.python_interpreters_model.item(row, 0)
+            if not item.data():
+                continue
             if item.data()["exe"] == path:
                 return item.index()
         return QModelIndex()

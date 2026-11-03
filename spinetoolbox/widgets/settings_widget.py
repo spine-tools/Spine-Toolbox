@@ -514,21 +514,19 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Opens the Kernel Manager window.
         If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
         d = self._get_python_settings()
-        # python_kernel_found = _get_python_kernel_name_by_exe(python_exe, self._models.python_kernel_model)
-        # if not python_kernel_found:
+        p_interpreter = d["python_exe"]
         mpke = MiniPythonKernelEditor(self, self._models)
         mpke.exec()
-        self._saved_python_kernel = d["python_kernel"] if not mpke.new_kernel_name() else mpke.new_kernel_name()
-        execution_method = ExecutionMethod.DIRECT if mpke.new_kernel_name() else ExecutionMethod.JUPYTER
-        self._set_execution_method(self.ui.comboBox_python_execution_method, execution_method)
-        self._models.refresh_python_interpreters_model()
-        ind = self._models.find_python_interpreter_index(d["python_exe"])
+        ind = self._models.find_python_interpreter_index(p_interpreter)
         if not ind.isValid():
+            # Restore Python interpreter selection after the dialog has closed
             ind = self._models.python_interpreters_model.index(0, 0)
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
-        Notification(self, "Reloading Python kernels").show()
-        conda = self.ui.lineEdit_conda_path.text().strip()
-        self._models.start_fetching_python_kernels(self._on_python_kernels_reloaded, conda)
+        if mpke.new_kernel_name() is not None:
+            self._saved_python_kernel = mpke.new_kernel_name()
+            Notification(self, "Reloading Python kernels").show()
+            conda = self.ui.lineEdit_conda_path.text().strip()
+            self._models.start_fetching_python_kernels(self._on_python_kernels_reloaded, conda)
 
     @Slot(bool)
     def make_julia_kernel(self, _=False):
