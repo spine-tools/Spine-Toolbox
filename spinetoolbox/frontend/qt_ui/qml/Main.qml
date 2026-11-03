@@ -899,28 +899,6 @@ Rectangle {
 
                         onAccepted: projectBridge.run_workflow([])
                     }
-
-                    ToolButton {
-                        text: "⋮"
-                        font.pixelSize: 22
-                    }
-
-                    Rectangle {
-                        width: 34
-                        height: 34
-                        radius: 17
-
-                        visible: root.width >= 640
-
-                        color: "#e0e7ff"
-
-                        Label {
-                            anchors.centerIn: parent
-                            text: "JD"
-                            font.pixelSize: 11
-                            font.bold: true
-                        }
-                    }
                 }
             }
 
