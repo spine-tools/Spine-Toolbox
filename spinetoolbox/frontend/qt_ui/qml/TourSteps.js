@@ -1,5 +1,6 @@
 // Text of the first-run tour. Steps whose target is missing (e.g. no filter badge in the project) are left out.
-function buildSteps(targets) {
+// instructions is a list of {name, text} written by the workflow author; each gets a step on its item's box.
+function buildSteps(targets, instructions, nodeItems) {
     var welcome = {
         target: null,
         title: qsTr("Welcome to User Mode"),
@@ -24,17 +25,19 @@ function buildSteps(targets) {
             title: qsTr("Choose scenarios"),
             text: qsTr("The S and A badges on a line choose which scenarios or alternatives are used. "
                        + "Click a badge to select them. A red ! means at least one must be selected before you run.")
-        },
+        }
+    ]
+
+    var authored = (instructions || []).map(function (instruction) {
+        return {target: nodeItems[instruction.name], title: instruction.name, text: instruction.text}
+    })
+
+    var closing = [
         {
             target: targets.runButton,
             title: qsTr("Run the project"),
             text: qsTr("Run the whole workflow, or select some boxes first to run only those. "
                        + "While a run is in progress, the same button stops it.")
-        },
-        {
-            target: targets.runsNav,
-            title: qsTr("Follow the run"),
-            text: qsTr("The Runs page shows the log of the latest run.")
         },
         {
             target: targets.help,
@@ -43,5 +46,5 @@ function buildSteps(targets) {
         }
     ]
 
-    return [welcome].concat(targeted.filter(function (step) { return !!step.target }))
+    return [welcome].concat(targeted, authored, closing).filter(function (step) { return step === welcome || !!step.target })
 }

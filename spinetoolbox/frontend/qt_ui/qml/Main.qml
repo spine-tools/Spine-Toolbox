@@ -466,14 +466,14 @@ Rectangle {
     }
 
     function beginTour() {
+        var instructions = typeof projectBridge !== "undefined" ? JSON.parse(projectBridge.get_instructions()) : []
         tour.start(TourSteps.buildSteps({
             openProject: openProjectButton,
             canvas: designCanvas,
             filterBadge: root.visibleFilterBadge(),
             runButton: runProjectButton,
-            runsNav: runsNavButton,
             help: helpNavButton
-        }))
+        }, instructions, root.nodeItems))
     }
 
     Component.onCompleted: {

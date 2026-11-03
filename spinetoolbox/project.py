@@ -112,8 +112,11 @@ class SpineToolboxProject(MetaObject):
     item_about_to_be_removed = Signal(str)
     """Emitted before project item removal."""
     item_renamed = Signal(str, str)
-
+    """Emitted after project item has been renamed."""
     item_hidden_changed = Signal(str, bool)
+    item_instruction_changed = Signal(str)
+    """Emitted after project item instruction has changed."""
+    item_renamed = Signal(str, str)
     """Emitted after project item has been renamed."""
     specification_added = Signal(str)
     """Emitted after a specification has been added."""
@@ -146,6 +149,7 @@ class SpineToolboxProject(MetaObject):
         self._jumps = []
         self._stacks: dict[str, dict] = {}
         self._hidden_items: set[str] = set()
+        self._item_instructions: dict[str, str] = {}
         self._logger = logger
         self._app_settings = app_settings
         self._settings = settings
@@ -299,6 +303,7 @@ class SpineToolboxProject(MetaObject):
             "jumps": [jump.to_dict() for jump in self._jumps],
             "stacks": self._stacks,
             "hidden_items": sorted(self._hidden_items),
+            "instructions": {"items": dict(self._item_instructions)},
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
@@ -477,6 +482,7 @@ class SpineToolboxProject(MetaObject):
             self.add_jump(jump, silent=True)
         self._stacks = project_info["project"].get("stacks", {})
         self._hidden_items = set(project_info["project"].get("hidden_items", []))
+        self._item_instructions = dict(project_info["project"].get("instructions", {}).get("items", {}))
         if self._settings.mode == "consumer":
             replay_file_path = pathlib.Path(
                 self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_CONSUMER_REPLAY_FILENAME
@@ -768,6 +774,8 @@ class SpineToolboxProject(MetaObject):
             self._project_items[previous_name] = item
             return False
         self._project_items[new_name] = item
+        if previous_name in self._item_instructions:
+            self._item_instructions[new_name] = self._item_instructions.pop(previous_name)
         for connection in self._connections:
             if connection.source == previous_name:
                 connection.source = new_name
@@ -849,6 +857,16 @@ class SpineToolboxProject(MetaObject):
         else:
             self._hidden_items.discard(item_name)
         self.item_hidden_changed.emit(item_name, hidden)
+
+    def item_instruction(self, item_name: str) -> str:
+        return self._item_instructions.get(item_name, "")
+
+    def set_item_instruction(self, item_name: str, text: str) -> None:
+        if text:
+            self._item_instructions[item_name] = text
+        else:
+            self._item_instructions.pop(item_name, None)
+        self.item_instruction_changed.emit(item_name)
 
     @property
     def connections(self):

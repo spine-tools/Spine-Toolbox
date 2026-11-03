@@ -242,6 +242,24 @@ class HideProjectItemCommand(SpineToolboxCommand):
         self._project.set_item_hidden(self._item_name, not self._hidden)
 
 
+class SetItemInstructionCommand(SpineToolboxCommand):
+    """Command to set or clear the User Mode instruction of a project item."""
+
+    def __init__(self, project, item_name: str, text: str):
+        super().__init__()
+        self._project = project
+        self._item_name = item_name
+        self._text = text
+        self._previous_text = project.item_instruction(item_name)
+        self.setText(f"edit instruction of '{item_name}'")
+
+    def redo(self) -> None:
+        self._project.set_item_instruction(self._item_name, self._text)
+
+    def undo(self) -> None:
+        self._project.set_item_instruction(self._item_name, self._previous_text)
+
+
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     """Command to remove all items from project."""
 

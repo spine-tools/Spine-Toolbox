@@ -126,6 +126,7 @@ from .project_commands import (
     RenameProjectItemCommand,
     ReplaceSpecificationCommand,
     SaveSpecificationAsCommand,
+    SetItemInstructionCommand,
     SpineToolboxCommand,
     UngroupProjectItemsCommand,
 )
@@ -142,6 +143,7 @@ from .widgets import toolbars
 from .widgets.about_widget import AboutWidget
 from .widgets.custom_menus import KernelsPopupMenu, RecentProjectsPopupMenu
 from .widgets.custom_qwidgets import ToolBarWidgetAction
+from .widgets.item_instruction_dialog import ItemInstructionDialog
 from .widgets.jump_properties_widget import JumpPropertiesWidget
 from .widgets.jupyter_console_widget import JupyterConsoleWidget
 from .widgets.link_properties_widget import LinkPropertiesWidget
@@ -2037,6 +2039,10 @@ class ToolboxUI(QMainWindow):
             hidden = all(self._project.is_item_hidden(target) for target in hide_targets)
             label = "Show in User Mode" if hidden else "Hide from User Mode"
             menu.addAction(label, lambda: self._toggle_hidden_selected_items(not hidden))
+            if len(self._selected_item_names) <= 1:
+                target = self._hide_target(item.name)
+                label = "Edit instruction..." if self._project.item_instruction(target) else "Add instruction..."
+                menu.addAction(label, lambda: self._edit_item_instruction(target))
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)
@@ -2469,6 +2475,13 @@ class ToolboxUI(QMainWindow):
         for target in targets:
             self.undo_stack.push(HideProjectItemCommand(self._project, target, hidden))
         self.undo_stack.endMacro()
+
+    def _edit_item_instruction(self, target: str) -> None:
+        dialog = ItemInstructionDialog(self, target, self._project.item_instruction(target))
+        dialog.accepted.connect(
+            lambda: self.undo_stack.push(SetItemInstructionCommand(self._project, target, dialog.text))
+        )
+        dialog.show()
 
     def _hide_target(self, item_name: str) -> str:
         """Returns the name project.json's hidden_items is keyed by for item_name: its stack's display

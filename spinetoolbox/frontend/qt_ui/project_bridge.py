@@ -659,6 +659,18 @@ class ProjectBridge(QObject):
 
         return json.dumps({"items": items, "connections": connections})
 
+    @Slot(result=str)
+    def get_instructions(self) -> str:
+        """Returns the instructions of the items shown in User Mode as a JSON list of name/text, in workflow order."""
+        data = self._load_merged()
+        instructions = data.get("project", {}).get("instructions", {}).get("items", {})
+        resolve = self._stack_resolver(data)
+        shown = self._visible_display_names(data)
+        names = dict.fromkeys(resolve(name) for name in data.get("items", {}))
+        return json.dumps(
+            [{"name": name, "text": instructions[name]} for name in names if name in shown and name in instructions]
+        )
+
     def _resolve_item_directory(self, name: str, item: dict) -> Path | None:
         """Prefers the item's real (executed) data directory, then the folder holding its first file
         reference, then falls back to the project root; returns None if nothing usable exists."""

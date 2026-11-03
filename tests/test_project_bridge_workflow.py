@@ -49,6 +49,33 @@ def test_connections_keep_design_view_anchors(workflow: dict) -> None:
     assert (connection["from_anchor"], connection["to_anchor"]) == ("bottom", "top")
 
 
+def test_instructions_are_listed_in_workflow_order_for_shown_items_only(
+    tmp_path: Path, application: QCoreApplication
+) -> None:
+    project = {
+        "project": {
+            "stacks": {"group": {"name": "Group", "items": ["Source", "Importer"]}},
+            "hidden_items": ["Store"],
+            "instructions": {
+                "items": {"Store": "hidden", "Group": "stack text", "Gone": "removed", "Other": "other text"}
+            },
+        },
+        "items": {
+            "Source": _item("Data Connection", 0.0, 0.0),
+            "Importer": _item("Importer", 100.0, 40.0),
+            "Store": _item("Data Store", 100.0, 200.0),
+            "Other": _item("Tool", 300.0, 0.0),
+        },
+    }
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    assert json.loads(ProjectBridge(tmp_path).get_instructions()) == [
+        {"name": "Group", "text": "stack text"},
+        {"name": "Other", "text": "other text"},
+    ]
+
+
 _SCENARIO_FILTER = {"filter_settings": {"enabled_filter_types": {"scenario_filter": True}}}
 
 
