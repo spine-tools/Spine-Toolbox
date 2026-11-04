@@ -127,6 +127,7 @@ from .project_commands import (
     ReplaceSpecificationCommand,
     SaveSpecificationAsCommand,
     SetItemInstructionCommand,
+    SetResultDataStoreCommand,
     SpineToolboxCommand,
     UngroupProjectItemsCommand,
 )
@@ -2043,6 +2044,12 @@ class ToolboxUI(QMainWindow):
                 target = self._hide_target(item.name)
                 label = "Edit instruction..." if self._project.item_instruction(target) else "Add instruction..."
                 menu.addAction(label, lambda: self._edit_item_instruction(target))
+                if self._project.get_item(item.name).item_type() == "Data Store":
+                    is_result = self._project.is_result_data_store(item.name)
+                    menu.addAction(
+                        "Unmark as result database" if is_result else "Mark as result database",
+                        lambda: self.undo_stack.push(SetResultDataStoreCommand(self._project, item.name, not is_result)),
+                    )
         menu.setToolTipsVisible(True)
         menu.aboutToShow.connect(self.refresh_edit_action_states)
         menu.aboutToHide.connect(self.enable_edit_actions)

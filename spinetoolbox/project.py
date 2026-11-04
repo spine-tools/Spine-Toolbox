@@ -150,6 +150,7 @@ class SpineToolboxProject(MetaObject):
         self._stacks: dict[str, dict] = {}
         self._hidden_items: set[str] = set()
         self._item_instructions: dict[str, str] = {}
+        self._result_data_stores: set[str] = set()
         self._logger = logger
         self._app_settings = app_settings
         self._settings = settings
@@ -304,6 +305,7 @@ class SpineToolboxProject(MetaObject):
             "stacks": self._stacks,
             "hidden_items": sorted(self._hidden_items),
             "instructions": {"items": dict(self._item_instructions)},
+            "result_data_stores": sorted(self._result_data_stores),
         }
         items_dict = {name: item.item_dict() for name, item in self._project_items.items()}
         local_items_data = self._pop_local_data_from_items_dict(items_dict)
@@ -483,6 +485,7 @@ class SpineToolboxProject(MetaObject):
         self._stacks = project_info["project"].get("stacks", {})
         self._hidden_items = set(project_info["project"].get("hidden_items", []))
         self._item_instructions = dict(project_info["project"].get("instructions", {}).get("items", {}))
+        self._result_data_stores = set(project_info["project"].get("result_data_stores", []))
         if self._settings.mode == "consumer":
             replay_file_path = pathlib.Path(
                 self.config_dir, PROJECT_LOCAL_DATA_DIR_NAME, PROJECT_CONSUMER_REPLAY_FILENAME
@@ -776,6 +779,9 @@ class SpineToolboxProject(MetaObject):
         self._project_items[new_name] = item
         if previous_name in self._item_instructions:
             self._item_instructions[new_name] = self._item_instructions.pop(previous_name)
+        if previous_name in self._result_data_stores:
+            self._result_data_stores.remove(previous_name)
+            self._result_data_stores.add(new_name)
         for connection in self._connections:
             if connection.source == previous_name:
                 connection.source = new_name
@@ -867,6 +873,15 @@ class SpineToolboxProject(MetaObject):
         else:
             self._item_instructions.pop(item_name, None)
         self.item_instruction_changed.emit(item_name)
+
+    def is_result_data_store(self, item_name: str) -> bool:
+        return item_name in self._result_data_stores
+
+    def set_result_data_store(self, item_name: str, is_result: bool) -> None:
+        if is_result:
+            self._result_data_stores.add(item_name)
+        else:
+            self._result_data_stores.discard(item_name)
 
     @property
     def connections(self):

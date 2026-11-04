@@ -260,6 +260,23 @@ class SetItemInstructionCommand(SpineToolboxCommand):
         self._project.set_item_instruction(self._item_name, self._previous_text)
 
 
+class SetResultDataStoreCommand(SpineToolboxCommand):
+    """Command to mark or unmark a Data Store as a result database."""
+
+    def __init__(self, project, item_name: str, is_result: bool):
+        super().__init__()
+        self._project = project
+        self._item_name = item_name
+        self._is_result = is_result
+        self.setText(f"{'mark' if is_result else 'unmark'} '{item_name}' as result database")
+
+    def redo(self) -> None:
+        self._project.set_result_data_store(self._item_name, self._is_result)
+
+    def undo(self) -> None:
+        self._project.set_result_data_store(self._item_name, not self._is_result)
+
+
 class RemoveAllProjectItemsCommand(SpineToolboxCommand):
     """Command to remove all items from project."""
 

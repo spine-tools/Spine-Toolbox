@@ -28,7 +28,7 @@ from ...config import (
     REPORT_PROGRESS_ENV_VAR,
 )
 from ...execution_managers import QProcessExecutionManager
-from ...helpers import open_url, update_recent_projects
+from ...helpers import normcase_database_url_path, open_url, update_recent_projects
 from ...load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
@@ -93,9 +93,8 @@ class ProjectBridge(QObject):
         super().__init__(parent)
         self._project_dir = Path(project_dir)
         self._config_file = self._project_dir / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
-        self._db_editor = None
-        self._data_area = QRect()
-        self._data_area_visible = False
+        self._db_editors: dict[str, QWidget] = {}
+        self._data_areas: dict[str, tuple[QRect, bool]] = {}
         self._database_editor = DatabaseEditorBackend()
         self._filter_names_cache: dict[tuple[str, str], tuple[tuple[int, int], list[str]]] = {}
         self._setup_manager: QProcessExecutionManager | None = None
@@ -722,10 +721,26 @@ class ProjectBridge(QObject):
             return False
         return open_url(directory.as_uri())
 
-    @Slot(str, result=bool)
-    def open_database(self, display_name: str) -> bool:
-        """Opens the Data Store item called display_name (or the first Data Store inside the stack it names)
-        in the classic Qt DB Editor, reusing the same tab if that database is already open there."""
+    @Slot(str, result=str)
+    def get_data_stores(self, view: str) -> str:
+        """Returns the names of the Data Store items shown in User Mode as a JSON list.
+
+        With view "results" only the Data Stores marked as result databases are included.
+        """
+        data = self._load()
+        resolve = self._stack_resolver(data)
+        hidden = set(data.get("project", {}).get("hidden_items", []))
+        results = set(data.get("project", {}).get("result_data_stores", []))
+        names = [
+            name
+            for name, item in data.get("items", {}).items()
+            if item.get("type") == "Data Store"
+            and resolve(name) not in hidden
+            and (view != "results" or name in results)
+        ]
+        return json.dumps(names)
+
+    def _open_database_in(self, view: str, display_name: str) -> bool:
         data = self._load()
         found = self._stack_member_of_type(data, display_name, "Data Store")
         if found is None:
@@ -734,10 +749,32 @@ class ProjectBridge(QObject):
         url = _data_store_url(item.get("url") or {}, str(self._base_dir()))
         if not url:
             return False
-        self.open_database_editor()
-        self._db_editor.open_url_in_new_tab(url)
+        self._ensure_db_editor(view)
+        editor = self._db_editors[view]
+        normcased_url = normcase_database_url_path(url)
+        for index in range(editor.tab_widget.count()):
+            tab = editor.tab_widget.widget(index)
+            if tab.db_urls == [normcased_url]:
+                editor.set_current_tab(tab)
+                return True
+        # not open_url_in_new_tab(): it would switch to the same database open in the other view's editor
+        editor.add_new_tab([url])
+        return True
+
+    @Slot(str, result=bool)
+    def open_database(self, display_name: str) -> bool:
+        """Opens the Data Store item called display_name (or the first Data Store inside the stack it names)
+        in the Data view's classic Qt DB Editor, reusing the same tab if that database is already open there."""
+        if not self._open_database_in("data", display_name):
+            return False
         self.dataViewRequested.emit()
         return True
+
+    @Slot()
+    def open_result_databases(self) -> None:
+        """Opens every Data Store marked as a result database in the Results view's DB Editor."""
+        for name in json.loads(self.get_data_stores("results")):
+            self._open_database_in("results", name)
 
     @Slot(str, result=str)
     def open_project(self, folder_url: str) -> str:
@@ -745,8 +782,10 @@ class ProjectBridge(QObject):
         local_path = Path(QUrl(folder_url).toLocalFile() or folder_url)
         if not (local_path / PROJECT_CONFIG_DIR_NAME).is_dir():
             return ""
-        if self._db_editor is not None and not self._db_editor.close():
-            return ""
+        for view in list(self._db_editors):
+            if not self._db_editors[view].close():
+                return ""
+            del self._db_editors[view]
         self._close_sessions()
         self._project_dir = local_path
         self._config_file = local_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
@@ -760,20 +799,9 @@ class ProjectBridge(QObject):
         """Requests switching to the classic Qt UI; the embedder decides how (see devModeRequested)."""
         self.devModeRequested.emit()
 
-    def _database_urls(self) -> list[str]:
-        data = self._load()
-        urls = []
-        for item in data["items"].values():
-            if item.get("type") != "Data Store":
-                continue
-            url = _data_store_url(item.get("url") or {}, str(self._project_dir))
-            if url:
-                urls.append(url)
-        return urls
-
-    def _ensure_db_editor(self) -> None:
-        """Creates self._db_editor, with no tabs open yet, if it doesn't already exist."""
-        if self._db_editor is not None:
+    def _ensure_db_editor(self, view: str) -> None:
+        """Creates the DB editor of view ("data" or "results"), with no tabs open yet, if it doesn't exist."""
+        if view in self._db_editors:
             return
         # imported lazily: pulls in the full widget/spinedb_api stack, only needed once the user asks for it
         from ...spine_db_editor.widgets.multi_spine_db_editor import MultiSpineDBEditor
@@ -785,33 +813,26 @@ class ProjectBridge(QObject):
         host = self.parent()
         if isinstance(host, QWidget):
             editor.setParent(host, Qt.WindowType.Widget)
-        editor.destroyed.connect(self._forget_db_editor)
-        self._db_editor = editor
-        self._place_db_editor()
+        editor.destroyed.connect(lambda _=None: self._forget_db_editor(view))
+        self._db_editors[view] = editor
+        self._place_db_editor(view)
 
-    @Slot(float, float, float, float, bool)
-    def set_data_area(self, x: float, y: float, width: float, height: float, visible: bool) -> None:
-        """Sets where the Data view is on screen; the DB editor is shown there."""
-        self._data_area = QRect(round(x), round(y), round(width), round(height))
-        self._data_area_visible = visible
-        self._place_db_editor()
+    @Slot(str, float, float, float, float, bool)
+    def set_data_area(self, view: str, x: float, y: float, width: float, height: float, visible: bool) -> None:
+        """Sets where view's DB editor ("data" or "results") is on screen."""
+        self._data_areas[view] = (QRect(round(x), round(y), round(width), round(height)), visible)
+        self._place_db_editor(view)
 
-    def _place_db_editor(self) -> None:
-        if self._db_editor is None:
+    def _place_db_editor(self, view: str) -> None:
+        editor = self._db_editors.get(view)
+        if editor is None:
             return
-        self._db_editor.setGeometry(self._data_area)
-        self._db_editor.setVisible(self._data_area_visible)
+        area, visible = self._data_areas.get(view, (QRect(), False))
+        editor.setGeometry(area)
+        editor.setVisible(visible)
 
-    @Slot()
-    def open_database_editor(self) -> None:
-        """Creates the classic DB Editor, if it doesn't exist, with every Data Store in the project in its own tab."""
-        if self._db_editor is not None:
-            return
-        self._ensure_db_editor()
-        self._db_editor.add_new_tab(self._database_urls())
-
-    def _forget_db_editor(self) -> None:
-        self._db_editor = None
+    def _forget_db_editor(self, view: str) -> None:
+        self._db_editors.pop(view, None)
 
     @Slot(result=str)
     def get_databases(self) -> str:

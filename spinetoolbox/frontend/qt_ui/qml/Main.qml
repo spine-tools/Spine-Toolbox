@@ -106,6 +106,9 @@ Rectangle {
 
     // file URLs of the images produced by the latest run
     property var plotUrls: []
+    property var dataStores: []
+    property var resultDataStores: []
+    property string currentDataStore: ""
 
     // card name -> "waiting", "running", "done", "failed", "skipped" or "excluded" for the latest run
     property var itemRunStates: ({})
@@ -618,10 +621,7 @@ Rectangle {
                     selected: root.currentView === "database"
                     compact: root.compactSidebar
 
-                    onClicked: {
-                        root.currentView = "database"
-                        projectBridge.open_database_editor()
-                    }
+                    onClicked: root.currentView = "database"
                 }
 
                 SidebarButton {
@@ -831,9 +831,12 @@ Rectangle {
 
                                 if (name) {
                                     root.currentProjectName = name
+                                    root.dataStores = JSON.parse(projectBridge.get_data_stores("data"))
+                                    root.currentDataStore = ""
+                                    root.resultDataStores = JSON.parse(projectBridge.get_data_stores("results"))
 
-                                    if (root.currentView === "database")
-                                        projectBridge.open_database_editor()
+                                    if (resultsDataArea.visible)
+                                        projectBridge.open_result_databases()
                                 }
 
                                 root.loadWorkflow()
@@ -1476,42 +1479,109 @@ Rectangle {
             // DATA PAGE (the classic DB editor widget is shown over this area, see ProjectBridge.set_data_area)
             // =================================================
 
-            Item {
-                id: dataArea
+            ColumnLayout {
+                id: dataPage
 
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
+                spacing: 0
                 visible: root.currentView === "database"
 
-                function report() {
-                    var origin = dataArea.mapToItem(null, 0, 0)
-                    projectBridge.set_data_area(origin.x, origin.y, dataArea.width, dataArea.height, dataArea.visible)
+                onVisibleChanged: {
+                    if (visible)
+                        root.dataStores = JSON.parse(projectBridge.get_data_stores("data"))
                 }
 
-                onXChanged: Qt.callLater(report)
-                onYChanged: Qt.callLater(report)
-                onWidthChanged: Qt.callLater(report)
-                onHeightChanged: Qt.callLater(report)
-                onVisibleChanged: Qt.callLater(report)
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.margins: 8
 
-                Connections {
-                    target: root
+                    Label {
+                        text: "Database"
+                    }
 
-                    function onWidthChanged() { Qt.callLater(dataArea.report) }
-                    function onHeightChanged() { Qt.callLater(dataArea.report) }
+                    ComboBox {
+                        id: dataStoreCombo
+
+                        Layout.preferredWidth: 260
+
+                        model: root.dataStores
+                        currentIndex: root.dataStores.indexOf(root.currentDataStore)
+                        displayText: root.currentDataStore || "Choose database..."
+
+                        onActivated: function (index) {
+                            root.currentDataStore = root.dataStores[index]
+                            projectBridge.open_database(root.currentDataStore)
+                        }
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                }
+
+                Item {
+                    id: dataArea
+
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    // the editor is a widget drawn above all QML, so it is hidden while the dropdown is open
+                    function report() {
+                        var origin = dataArea.mapToItem(null, 0, 0)
+                        projectBridge.set_data_area("data", origin.x, origin.y, dataArea.width, dataArea.height,
+                                                    dataArea.visible && !dataStoreCombo.popup.visible)
+                    }
+
+                    onXChanged: Qt.callLater(report)
+                    onYChanged: Qt.callLater(report)
+                    onWidthChanged: Qt.callLater(report)
+                    onHeightChanged: Qt.callLater(report)
+                    onVisibleChanged: Qt.callLater(report)
+
+                    Connections {
+                        target: dataStoreCombo.popup
+
+                        function onVisibleChanged() { Qt.callLater(dataArea.report) }
+                    }
+
+                    Connections {
+                        target: root
+
+                        function onWidthChanged() { Qt.callLater(dataArea.report) }
+                        function onHeightChanged() { Qt.callLater(dataArea.report) }
+                    }
                 }
             }
 
             // =================================================
-            // RESULTS PAGE (plots produced by the latest run)
+            // RESULTS PAGE (Plottings: plots produced by the latest run; Data: result databases)
             // =================================================
+
+            ColumnLayout {
+                id: resultsPage
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                spacing: 0
+                visible: root.currentView === "results"
+
+                TabBar {
+                    id: resultsTabBar
+
+                    Layout.fillWidth: true
+
+                    TabButton { text: "Plottings" }
+                    TabButton { text: "Data" }
+                }
 
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                visible: root.currentView === "results"
+                visible: resultsTabBar.currentIndex === 0
                 color: "#f2f8f4"
 
                 Label {
@@ -1555,6 +1625,51 @@ Rectangle {
                         }
                     }
                 }
+            }
+
+            Item {
+                id: resultsDataArea
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                visible: resultsTabBar.currentIndex === 1
+
+                function report() {
+                    var origin = resultsDataArea.mapToItem(null, 0, 0)
+                    projectBridge.set_data_area("results", origin.x, origin.y, resultsDataArea.width,
+                                                resultsDataArea.height, resultsDataArea.visible)
+                }
+
+                onXChanged: Qt.callLater(report)
+                onYChanged: Qt.callLater(report)
+                onWidthChanged: Qt.callLater(report)
+                onHeightChanged: Qt.callLater(report)
+
+                onVisibleChanged: {
+                    if (visible) {
+                        root.resultDataStores = JSON.parse(projectBridge.get_data_stores("results"))
+                        projectBridge.open_result_databases()
+                    }
+
+                    Qt.callLater(report)
+                }
+
+                Label {
+                    anchors.centerIn: parent
+                    visible: root.resultDataStores.length === 0
+                    text: "No result databases. Mark a Data Store as a result database in the classic UI."
+                    color: "#475569"
+                    font.pixelSize: 15
+                }
+
+                Connections {
+                    target: root
+
+                    function onWidthChanged() { Qt.callLater(resultsDataArea.report) }
+                    function onHeightChanged() { Qt.callLater(resultsDataArea.report) }
+                }
+            }
             }
 
             // =================================================
@@ -1848,6 +1963,7 @@ Rectangle {
 
             property real lastX: 0
             property real lastY: 0
+            property bool wasSelectedOnPress: false
 
             onEntered: card.hovered = true
             onExited: card.hovered = false
@@ -1856,11 +1972,18 @@ Rectangle {
                 designCanvas.forceActiveFocus()
                 lastX = card.x
                 lastY = card.y
+                wasSelectedOnPress = card.selected
 
                 if (mouse.modifiers & Qt.ControlModifier)
                     root.toggleSelection(card.nodeName)
                 else if (!card.selected)
                     root.selectOnly(card.nodeName)
+            }
+
+            // a plain click (no drag) on a card that was already selected deselects it
+            onClicked: function (mouse) {
+                if (wasSelectedOnPress && !(mouse.modifiers & Qt.ControlModifier))
+                    root.toggleSelection(card.nodeName)
             }
 
             // snaps the moving group (every selected card, or just this one) to unselected cards within a few pixels
@@ -1940,6 +2063,8 @@ Rectangle {
             }
 
             onDoubleClicked: {
+                wasSelectedOnPress = false
+
                 if (typeof projectBridge === "undefined")
                     return
 

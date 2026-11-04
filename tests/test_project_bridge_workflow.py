@@ -49,6 +49,36 @@ def test_connections_keep_design_view_anchors(workflow: dict) -> None:
     assert (connection["from_anchor"], connection["to_anchor"]) == ("bottom", "top")
 
 
+def test_data_stores_lists_visible_data_store_items(tmp_path: Path, application: QCoreApplication) -> None:
+    project = {
+        "project": {"hidden_items": ["Hidden"]},
+        "items": {
+            "Examples": _item("Data Store", 0.0, 0.0),
+            "Hidden": _item("Data Store", 100.0, 0.0),
+            "Importer": _item("Importer", 200.0, 0.0),
+        },
+    }
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    assert json.loads(ProjectBridge(tmp_path).get_data_stores("data")) == ["Examples"]
+
+
+def test_data_stores_of_results_view_are_only_those_marked_as_results(
+    tmp_path: Path, application: QCoreApplication
+) -> None:
+    project = {
+        "project": {"result_data_stores": ["Results"]},
+        "items": {"Examples": _item("Data Store", 0.0, 0.0), "Results": _item("Data Store", 100.0, 0.0)},
+    }
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    bridge = ProjectBridge(tmp_path)
+    assert json.loads(bridge.get_data_stores("results")) == ["Results"]
+    assert json.loads(bridge.get_data_stores("data")) == ["Examples", "Results"]
+
+
 def test_instructions_are_listed_in_workflow_order_for_shown_items_only(
     tmp_path: Path, application: QCoreApplication
 ) -> None:
