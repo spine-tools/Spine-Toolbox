@@ -46,38 +46,6 @@ We provide multiple options for installing Spine Toolbox.
 - [MacOS from source files using Homebrew](#macos-installation-from-sources-with-homebrew)
   Use this option if you are on Mac.
 
-### Pre-installation
-
-These steps apply to both [Python/pipx](#installation-with-python-and-pipx) option and to 
-[From source files](#installation-from-sources-using-git) option.
-
-1. If you don't have Python installed, please install it e.g. from 
-[Python.org](https://www.python.org/downloads/).
-Please note that we support Python versions from 3.11 to 3.14.
-
-2. Test that python is now in your PATH. Open a new terminal (e.g. Command Prompt) window and type 
-
-       python --version
-
-    The output should be the Python version. If it did not work (e.g. the output is *'python' command not found* or 
-similar or the [Microsoft Store opens](https://learn.microsoft.com/en-us/windows/python/faqs#why-does-running-python-exe-open-the-microsoft-store-)),
-you need to add the Python installation folder into the PATH environment variable. On Windows, this can be done 
-from Windows Control Panel (use search with 'environment').
-[See specific instructions for all operating systems from this link](https://realpython.com/add-python-to-path/).
-
-3. Install Git. Windows version can be found here: https://git-scm.com/download/win.
-
-4. Test that Git is now in your PATH. Open a new terminal after installing Git and type
-
-       git --version
-
-    If the output from this command is not the Git version, you need to add  `<git-install-path>/Git/cmd` into 
-your PATH environment variable.
-
-5. Upgrade `pip` to the latest version (pip is a package manager for Python)
-
-       python -m pip install --upgrade pip
-
 ### Installation with Python and pipx
 
 This installation methods is for users on Linux systems
