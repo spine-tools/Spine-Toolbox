@@ -202,6 +202,9 @@ class Ui_Dialog(object):
 
         self.verticalLayout_3.addLayout(self.horizontalLayout)
 
+        QWidget.setTabOrder(self.comboBox_python_interpreter, self.pushButton_make_kernel)
+        QWidget.setTabOrder(self.pushButton_make_kernel, self.pushButton_close)
+        QWidget.setTabOrder(self.pushButton_close, self.textBrowser)
 
         self.retranslateUi(Dialog)
 

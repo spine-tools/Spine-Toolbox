@@ -133,10 +133,10 @@ class ExecutableCompoundModels(QObject):
         Args:
             path (str): Path to Julia executable
         """
-        if not path:
-            return self.julia_executables_model.index(0, 0)
         for row in range(self.julia_executables_model.rowCount()):
             item = self.julia_executables_model.item(row, 0)
+            if not item.data():
+                continue
             if item.data()["exe"] == path:
                 return item.index()
         return QModelIndex()

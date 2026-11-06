@@ -511,12 +511,14 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
 
     @Slot(bool)
     def add_python_kernel(self, _=False):
-        """Opens the Kernel Manager window.
-        If a kernel using this Python interpreter already exists, sets that kernel selected in the comboBox."""
+        """Opens the Python kernel manager widget. After the dialog is closed, restores Python interpreter selection
+        and sets the new Python kernel selected if available."""
         d = self._get_python_settings()
         p_interpreter = d["python_exe"]
         mpke = MiniPythonKernelEditor(self, self._models)
         mpke.exec()
+        # Refresh model to remove the 'Select Python intepreter...' item
+        self._models.refresh_python_interpreters_model()
         ind = self._models.find_python_interpreter_index(p_interpreter)
         if not ind.isValid():
             # Restore Python interpreter selection after the dialog has closed
@@ -524,35 +526,31 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.comboBox_python_interpreters.setCurrentIndex(ind.row())
         if mpke.new_kernel_name() is not None:
             self._saved_python_kernel = mpke.new_kernel_name()
-            Notification(self, "Reloading Python kernels").show()
+            Notification(self, "Reloading Python kernels...").show()
             conda = self.ui.lineEdit_conda_path.text().strip()
             self._models.start_fetching_python_kernels(self._on_python_kernels_reloaded, conda)
 
     @Slot(bool)
     def make_julia_kernel(self, _=False):
-        """Makes a Julia kernel for Jupyter Console based on selected Julia executable and Julia project.
-        If a kernel using the selected Julia executable and project already exists, sets that kernel
-        selected in the comboBox."""
+        """Opens the Julia kernel manager widget. After the dialog is closed, restores Julia executable selection
+        and sets the new Julia kernel selected if available."""
         d = self._get_julia_settings()
-        # Make new kernel or (possibly) overwrite existing one
+        j_executable = d["julia_exe"]
         mjke = MiniJuliaKernelEditor(self, self._models)
         mjke.exec()
-        self._saved_julia_kernel = d["julia_kernel"] if not mjke.new_kernel_name() else mjke.new_kernel_name()
-        execution_method = ExecutionMethod.DIRECT if mjke.new_kernel_name() else ExecutionMethod.JUPYTER
-        self._set_execution_method(self.ui.comboBox_julia_execution_method, execution_method)
+        # Refresh models to remove the 'Select Julia ... ' items
         self._models.refresh_julia_executables_model()
         self._models.refresh_julia_projects_model()
-        ind = self._models.find_julia_executable_index(d["julia_exe"])
+        ind = self._models.find_julia_executable_index(j_executable)
         if not ind.isValid():
+            # Restore Julia executable selection after the dialog has closed
             ind = self._models.julia_executables_model.index(0, 0)
         self.ui.comboBox_julia_path.setCurrentIndex(ind.row())
-        index = self._models.find_julia_project_index(d["julia_project"])
-        if not index.isValid():
-            index = self._models.julia_projects_model.index(0, 0)
-        self.ui.comboBox_julia_project_path.setCurrentIndex(index.row())
-        Notification(self, "Reloading Python kernels").show()
-        conda = self.ui.lineEdit_conda_path.text().strip()
-        self._models.start_fetching_julia_kernels(self._on_julia_kernels_reloaded, conda)
+        if mjke.new_kernel_name() is not None:
+            self._saved_julia_kernel = mjke.new_kernel_name()
+            Notification(self, "Reloading Julia kernels...").show()
+            conda = self.ui.lineEdit_conda_path.text().strip()
+            self._models.start_fetching_julia_kernels(self._on_julia_kernels_reloaded, conda)
 
     def solve_current_julia_dir(self):
         """Returns the folder path of the current Julia executable."""

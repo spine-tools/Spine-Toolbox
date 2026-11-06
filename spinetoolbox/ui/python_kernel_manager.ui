@@ -308,6 +308,12 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>comboBox_python_interpreter</tabstop>
+  <tabstop>pushButton_make_kernel</tabstop>
+  <tabstop>pushButton_close</tabstop>
+  <tabstop>textBrowser</tabstop>
+ </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
  </resources>

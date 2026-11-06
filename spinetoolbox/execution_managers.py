@@ -137,11 +137,11 @@ class QProcessExecutionManager(ExecutionManager):
             new_state (int): Process state number (``QProcess::ProcessState``)
         """
         if new_state == QProcess.Starting:
-            self._logger.msg.emit(f"\tStarting program <b>{self._program}</b>")
+            self._logger.msg.emit(f"Starting program <b>{self._program}</b>")
             arg_str = " ".join(self._args)
-            self._logger.msg.emit(f"\tArguments: <b>{arg_str}</b>")
+            self._logger.msg.emit(f"Arguments: <b>{arg_str}</b>")
         elif new_state == QProcess.Running:
-            self._logger.msg_warning.emit("\tExecution in progress...")
+            self._logger.msg_warning.emit("Execution in progress...")
         elif new_state == QProcess.NotRunning:
             # logging.debug("Process is not running")
             pass
@@ -220,7 +220,7 @@ class QProcessExecutionManager(ExecutionManager):
             return
         if exit_status == QProcess.CrashExit:
             if not self._silent:
-                self._logger.msg_error.emit("\tProcess crashed")
+                self._logger.msg_error.emit("Process crashed")
             exit_code = -1
         elif exit_status == QProcess.NormalExit:
             pass
