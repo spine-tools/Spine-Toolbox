@@ -13,7 +13,7 @@
 """Custom QWidgets for Filtering and Zooming."""
 
 from typing import Generic, ParamSpec, TypeVar
-from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot
+from PySide6.QtCore import QEvent, QRect, QSize, Qt, QTimer, Signal, Slot, QItemSelectionModel
 from PySide6.QtGui import (
     QAction,
     QFont,
@@ -778,3 +778,27 @@ class SelectDatabaseItemsDialog(QDialog):
 
 class PurgeSettingsDialog(SelectDatabaseItemsDialog):
     _ok_button_can_be_disabled = False
+
+
+class ComboListView(QListView):
+    """Widget for replacing the combobox popup menu to enable showing a context menu."""
+
+    def __init__(self, combo, context_menu_callback):
+        super().__init__()
+        self._combo = combo
+        self._context_menu_callback = context_menu_callback
+
+    def mousePressEvent(self, event):
+        """Sets item selected and opens the context menu when right-mouse button
+        is clicked in the comboBox popup menu."""
+        if event.button() == Qt.MouseButton.RightButton:
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                self.selectionModel().setCurrentIndex(index, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+            # Do some position mapping to show the menu in the correct place
+            global_pos = self.viewport().mapToGlobal(event.pos())
+            combo_pos = self._combo.mapFromGlobal(global_pos)
+            self._context_menu_callback(combo_pos, index=index)
+            event.accept()
+            return
+        super().mousePressEvent(event)
