@@ -20,9 +20,9 @@ from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
-from spinetoolbox.kernel_models import ExecutableCompoundModels
+from spinetoolbox.kernel_models import ExecutionModels
 from spine_engine.utils.helpers import resolve_default_julia_executable
-from spinetoolbox.widgets.kernel_editor import KernelEditorBase, MiniPythonKernelEditor
+from spinetoolbox.widgets.kernel_editor import KernelManagerBase, MiniPythonKernelManager
 from tests.mock_helpers import TestCaseWithQApplication
 
 
@@ -32,7 +32,7 @@ class MockSettingsWidget(QWidget):
         self.qsettings = MagicMock()
 
 
-class TestKernelEditorBase(TestCaseWithQApplication):
+class TestKernelManagerBase(TestCaseWithQApplication):
     def setUp(self):
         self._settings_widget = MockSettingsWidget()
 
@@ -40,8 +40,8 @@ class TestKernelEditorBase(TestCaseWithQApplication):
         self._settings_widget.deleteLater()
 
     def test_is_package_installed(self):
-        models = ExecutableCompoundModels(MagicMock())
-        keb = KernelEditorBase(self._settings_widget, models)
+        models = ExecutionModels(MagicMock())
+        keb = KernelManagerBase(self._settings_widget, models)
         keb._python_exe = sys.executable
         self.assertTrue(keb.is_package_installed("PySide6"))
         self.assertFalse(keb.is_package_installed("nonexistenttestpackageXYZ"))
@@ -58,14 +58,14 @@ class TestKernelEditorBase(TestCaseWithQApplication):
             kernel_name = "spinetoolbox_test_make_python_kernel"
             with patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box:
                 mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
-                models = ExecutableCompoundModels(MagicMock())
+                models = ExecutionModels(MagicMock())
                 models.load_python_system_interpreters([str(python_path)], show_select_item=True)
                 # Mock refresh_python_interpreters_model() because it clears the model and reloads it from QSettings
                 with patch.object(models, "refresh_python_interpreters_model") as refresh_mock:
-                    editor = MiniPythonKernelEditor(self._settings_widget, models)
+                    editor = MiniPythonKernelManager(self._settings_widget, models)
                     refresh_mock.assert_called_once()
                 # Patch make_kernel_name to use a custom kernel name
-                with patch("spinetoolbox.widgets.kernel_editor.KernelEditorBase.make_kernel_name") as mock_mkn:
+                with patch("spinetoolbox.widgets.kernel_editor.KernelManagerBase.make_kernel_name") as mock_mkn:
                     mock_mkn.return_value = kernel_name
                     editor.ui.comboBox_python_interpreter.setCurrentIndex(2)  # Set venv python selected in the comboBox
                     mock_mkn.assert_called_once()
@@ -94,8 +94,8 @@ class TestKernelEditorBase(TestCaseWithQApplication):
         kernel_name = "spinetoolbox_test_make_julia_kernel"
         with (patch("spinetoolbox.widgets.kernel_editor.QMessageBox") as mock_message_box,):
             mock_message_box.exec.return_value = QMessageBox.StandardButton.Ok
-            models = ExecutableCompoundModels(MagicMock())
-            editor = KernelEditorBase(self._settings_widget, models)
+            models = ExecutionModels(MagicMock())
+            editor = KernelManagerBase(self._settings_widget, models)
             editor._julia_exe = julia_exec
             editor._julia_project = ""
             editor._julia_kernel_name_prefix = kernel_name

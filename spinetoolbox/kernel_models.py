@@ -28,7 +28,7 @@ from .helpers import (
 from spine_engine.utils.helpers import resolve_default_julia_executable, resolve_current_python_interpreter
 
 
-class ExecutableCompoundModels(QObject):
+class ExecutionModels(QObject):
     """Class for storing execution methods (Pythons, Julias and other kernels)."""
 
     """Emitted when all kernels have been loaded."""

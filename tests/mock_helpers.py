@@ -39,7 +39,7 @@ def create_toolboxui():
     """Returns ToolboxUI for tests."""
     with (
         mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
-        mock.patch("spinetoolbox.ui_main.ExecutableCompoundModels.load_all") as mock_load_all,
+        mock.patch("spinetoolbox.ui_main.ExecutionModels.load_all") as mock_load_all,
         mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
     ):
         mock_set_app_style.return_value = True
@@ -64,7 +64,7 @@ def create_toolboxui_with_project(project_dir):
     QSettings among others has been mocked."""
     with (
         mock.patch("spinetoolbox.ui_main.ToolboxUI.set_app_style") as mock_set_app_style,
-        mock.patch("spinetoolbox.ui_main.ExecutableCompoundModels.load_all") as mock_load_all,
+        mock.patch("spinetoolbox.ui_main.ExecutionModels.load_all") as mock_load_all,
         mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project"),
         mock.patch("spinetoolbox.plugin_manager.PluginManager.load_installed_plugins"),
     ):

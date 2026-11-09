@@ -84,7 +84,7 @@ from .helpers import (
     unique_name,
     update_recent_projects,
 )
-from .kernel_models import ExecutableCompoundModels
+from .kernel_models import ExecutionModels
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
 from .load_project import ProjectLoadingFailed, load_project_dict
@@ -252,9 +252,9 @@ class ToolboxUI(QMainWindow):
         self._anchor_callbacks: dict[str, Callable[[], None]] = {}
         self.ui.textBrowser_eventlog.set_toolbox(self)
         self.shutdown_and_clear_settings = False
-        self.exec_compound_models = ExecutableCompoundModels(self._qsettings)
-        self.exec_compound_models.all_kernels_loaded.connect(self._check_tool_notifications)
-        self.exec_compound_models.load_all()
+        self.execution_models = ExecutionModels(self._qsettings)
+        self.execution_models.all_kernels_loaded.connect(self._check_tool_notifications)
+        self.execution_models.load_all()
         # DB manager
         self.db_mngr = SpineDBManager(self._qsettings, self)
         # Widget and form references

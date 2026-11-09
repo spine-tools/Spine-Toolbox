@@ -320,12 +320,12 @@ class PythonPopupMenu(CustomPopupMenu):
         super().__init__(parent=parent)
         self._parent = parent
         self.setToolTipsVisible(True)
-        self._model = self._parent.exec_compound_models.python_interpreters_model
+        self._model = self._parent.execution_models.python_interpreters_model
 
     @Slot()
     def populate_menu(self):
         self.clear()
-        self._parent.exec_compound_models.refresh_python_interpreters_model()
+        self._parent.execution_models.refresh_python_interpreters_model()
         for r in range(self._model.rowCount()):
             item_data = self._model.itemFromIndex(self._model.index(r, 0)).data()
             path = item_data["exe"]
@@ -350,14 +350,14 @@ class JuliaPopupMenu(CustomPopupMenu):
         super().__init__(parent=parent)
         self._parent = parent
         self.setToolTipsVisible(True)
-        self._julia_model = self._parent.exec_compound_models.julia_executables_model
-        self._project_model = self._parent.exec_compound_models.julia_projects_model
+        self._julia_model = self._parent.execution_models.julia_executables_model
+        self._project_model = self._parent.execution_models.julia_projects_model
 
     @Slot()
     def populate_menu(self):
         self.clear()
-        self._parent.exec_compound_models.refresh_julia_executables_model()
-        self._parent.exec_compound_models.refresh_julia_projects_model()
+        self._parent.execution_models.refresh_julia_executables_model()
+        self._parent.execution_models.refresh_julia_projects_model()
         for julia_row in range(self._julia_model.rowCount()):
             julia_item_data = self._julia_model.itemFromIndex(self._julia_model.index(julia_row, 0)).data()
             if not julia_item_data:
