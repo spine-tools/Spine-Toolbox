@@ -294,8 +294,8 @@ class ToolboxUI(QMainWindow):
         self._jupyter_consoles: dict[str, JupyterConsoleWidget] = {}
         self._current_execution_keys: dict[ProjectItem, str] = {}
         self._project_setup_manager: QProcessExecutionManager | None = None
-        self._easy_mode_widget = None
-        self._docks_hidden_for_easy_mode: list[QDockWidget] = []
+        self._user_mode_widget = None
+        self._docks_hidden_for_user_mode: list[QDockWidget] = []
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
@@ -845,7 +845,7 @@ class ToolboxUI(QMainWindow):
         """Reports the outcome of the project setup script."""
         self._project_setup_manager = None
         if exit_code == 0:
-            # same QSettings key the QML easy-mode UI sets, so switching modes won't offer to install again
+            # same QSettings key the QML user-mode UI sets, so switching modes won't offer to install again
             self._qsettings.setValue(f"appSettings/projectSetupDone/{project_dir}", True)
             self.msg_success.emit("Project setup finished successfully")
         else:
@@ -1586,39 +1586,39 @@ class ToolboxUI(QMainWindow):
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(zoom_action)
 
-    def show_easy_mode(self, project_dir: str | None = None) -> None:
-        """Swaps this same window's content to the easy-mode (QML) UI.
+    def show_user_mode(self, project_dir: str | None = None) -> None:
+        """Swaps this same window's content to the user-mode (QML) UI.
 
         Args:
             project_dir: project to show; defaults to the currently open classic project, if any
         """
-        from .frontend.qt_ui.easy_mode_widget import EasyModeWidget  # imported lazily: pulls in QtQuick
+        from .frontend.qt_ui.user_mode_widget import UserModeWidget  # imported lazily: pulls in QtQuick
 
         if project_dir is None:
             project_dir = self._project.project_dir if self._project is not None else ""
-        self._easy_mode_widget = EasyModeWidget(project_dir, self)
+        self._user_mode_widget = UserModeWidget(project_dir, self)
         # deferred: devModeRequested fires from inside the QML widget's own event handling, so destroying
         # it synchronously here would be a use-after-free; let that call unwind first
-        self._easy_mode_widget.project_bridge.devModeRequested.connect(lambda: QTimer.singleShot(0, self._show_dev_mode))
+        self._user_mode_widget.project_bridge.devModeRequested.connect(lambda: QTimer.singleShot(0, self._show_dev_mode))
         self.menuBar().setVisible(False)
         for toolbar in (self.items_toolbar, self.spec_toolbar, self.execute_toolbar, self.mode_toolbar):
             toolbar.setVisible(False)
-        self._docks_hidden_for_easy_mode = [dock for dock in self.findChildren(QDockWidget) if dock.isVisible()]
-        for dock in self._docks_hidden_for_easy_mode:
+        self._docks_hidden_for_user_mode = [dock for dock in self.findChildren(QDockWidget) if dock.isVisible()]
+        for dock in self._docks_hidden_for_user_mode:
             dock.setVisible(False)
-        self.setCentralWidget(self._easy_mode_widget)
+        self.setCentralWidget(self._user_mode_widget)
 
     def _show_dev_mode(self) -> None:
-        """Swaps back to the classic UI in this same window, switching project if it changed in easy mode."""
-        new_project_dir = self._easy_mode_widget.project_bridge.project_dir
+        """Swaps back to the classic UI in this same window, switching project if it changed in user mode."""
+        new_project_dir = self._user_mode_widget.project_bridge.project_dir
         self.takeCentralWidget().deleteLater()
-        self._easy_mode_widget = None
+        self._user_mode_widget = None
         self.menuBar().setVisible(True)
         for toolbar in (self.items_toolbar, self.spec_toolbar, self.execute_toolbar, self.mode_toolbar):
             toolbar.setVisible(True)
-        for dock in self._docks_hidden_for_easy_mode:
+        for dock in self._docks_hidden_for_user_mode:
             dock.setVisible(True)
-        self._docks_hidden_for_easy_mode = []
+        self._docks_hidden_for_user_mode = []
         # the central widget swap leaves the design view/event log split skewed, so reapply dock proportions
         vert_docks = (self.ui.dockWidget_design_view, self.ui.dockWidget_eventlog)
         height = sum(d.size().height() for d in vert_docks)
@@ -1685,10 +1685,10 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.insertAction(before, undo_action)
         self.ui.menuEdit.insertAction(before, redo_action)
         self.ui.menuEdit.insertSeparator(before)
-        easy_mode_action = QAction("Switch to easy mode", self)
-        easy_mode_action.triggered.connect(lambda: self.show_easy_mode())
+        user_mode_action = QAction("Switch to user mode", self)
+        user_mode_action.triggered.connect(lambda: self.show_user_mode())
         self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(easy_mode_action)
+        self.ui.menuView.addAction(user_mode_action)
 
     @Slot()
     def toggle_properties_tabbar_visibility(self):
@@ -2251,8 +2251,8 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("appSettings/toolbarIconOrdering", self.items_toolbar.icon_ordering())
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
-        if self._easy_mode_widget is None:
-            # don't persist easy mode's dock/toolbar visibility, or the classic UI would start up hidden
+        if self._user_mode_widget is None:
+            # don't persist user mode's dock/toolbar visibility, or the classic UI would start up hidden
             self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
         self._qsettings.setValue("mainWindow/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized)
         # Save number of screens

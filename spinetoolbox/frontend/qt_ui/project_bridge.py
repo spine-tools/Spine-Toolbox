@@ -42,7 +42,7 @@ _IMAGE_SCAN_SKIPPED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache_
 # QSettings organization and application names; recent projects are stored under "appSettings/recentProjects"
 _SETTINGS_ORGANIZATION = "SpineProject"
 _SETTINGS_APPLICATION = "Spine Toolbox"
-_TOUR_SEEN_KEY = "appSettings/easyModeTourSeen"
+_TOUR_SEEN_KEY = "appSettings/userModeTourSeen"
 
 # shown until the user opens a real project, so the UI has something to demonstrate
 _EXAMPLE_PROJECT_FILE = Path(__file__).parent / "examples" / "project.json"
@@ -538,13 +538,13 @@ class ProjectBridge(QObject):
             self.runStatusChanged.emit("Execution failed", "error")
 
     def _plots_dir(self) -> Path:
-        return self._base_dir() / PROJECT_CONFIG_DIR_NAME / "easy_mode_plots"
+        return self._base_dir() / PROJECT_CONFIG_DIR_NAME / "user_mode_plots"
 
     def _find_written_images(self) -> list[Path]:
         """Returns image files in the project that were written since the run started."""
         found = []
         for root, dirs, files in os.walk(self._base_dir()):
-            dirs[:] = [d for d in dirs if d not in _IMAGE_SCAN_SKIPPED_DIRS and d != "easy_mode_plots"]
+            dirs[:] = [d for d in dirs if d not in _IMAGE_SCAN_SKIPPED_DIRS and d != "user_mode_plots"]
             for name in files:
                 path = Path(root, name)
                 if path.suffix.lower() in _IMAGE_SUFFIXES and path.stat().st_mtime >= self._run_started:

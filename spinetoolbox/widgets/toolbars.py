@@ -445,6 +445,6 @@ class ModeToolBar(ToolBar):
         self._make_tool_button(
             QIcon(CharIconEngine("\uf015", color=Qt.GlobalColor.darkGreen)),
             "User mode",
-            lambda: self._toolbox.show_easy_mode(),
+            lambda: self._toolbox.show_user_mode(),
             "Switch to User mode",
         )

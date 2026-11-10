@@ -1,4 +1,4 @@
-"""Starts Spine Toolbox's main window directly in easy (QML) mode, in the given or default project."""
+"""Starts Spine Toolbox's main window directly in user (QML) mode, in the given or default project."""
 
 from pathlib import Path
 import sys
@@ -36,10 +36,10 @@ def main():
         project_dir = _find_project_dir(Path.cwd())
 
     # the classic UI's project (self._project) is loaded lazily, only if/when the user switches to dev
-    # mode (see ToolboxUI._show_dev_mode); starting directly in easy mode skips that heavier machinery
+    # mode (see ToolboxUI._show_dev_mode); starting directly in user mode skips that heavier machinery
     window = ToolboxUI()
     window.show()
-    window.show_easy_mode(str(project_dir))
+    window.show_user_mode(str(project_dir))
 
     sys.exit(app.exec())
 
