@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'open_project_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -84,14 +84,14 @@ class Ui_Dialog(object):
 
         self.comboBox_current_path = OpenProjectDialogComboBox(Dialog)
         self.comboBox_current_path.setObjectName(u"comboBox_current_path")
-        self.comboBox_current_path.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.comboBox_current_path.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.comboBox_current_path.setEditable(True)
 
         self.verticalLayout.addWidget(self.comboBox_current_path)
 
         self.treeView_file_system = QTreeView(Dialog)
         self.treeView_file_system.setObjectName(u"treeView_file_system")
-        self.treeView_file_system.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.treeView_file_system.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.treeView_file_system.setUniformRowHeights(True)
         self.treeView_file_system.setSortingEnabled(True)
         self.treeView_file_system.setAnimated(False)
@@ -104,14 +104,14 @@ class Ui_Dialog(object):
         font.setPointSize(7)
         font.setItalic(True)
         self.label.setFont(font)
-        self.label.setAlignment(Qt.AlignCenter)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label)
 
         self.buttonBox = QDialogButtonBox(Dialog)
         self.buttonBox.setObjectName(u"buttonBox")
-        self.buttonBox.setOrientation(Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Cancel|QDialogButtonBox.StandardButton.Ok)
 
         self.verticalLayout.addWidget(self.buttonBox)
 
@@ -124,8 +124,6 @@ class Ui_Dialog(object):
         self.retranslateUi(Dialog)
         self.buttonBox.accepted.connect(Dialog.accept)
         self.buttonBox.rejected.connect(Dialog.reject)
-
-        QMetaObject.connectSlotsByName(Dialog)
     # setupUi
 
     def retranslateUi(self, Dialog):
