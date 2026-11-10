@@ -571,7 +571,7 @@ class JuliaContextMenu(SharedContextMenu):
         self.addAction(
             QIcon(":icons/menu_icons/trash-alt.svg"), "Remove kernel...", self._delete_julia_kernel_resource_dir
         )
-        self.addAction(QIcon(":icons/menu_icons/sync.svg"), "Reload kernels", self._owner_widget.reload_julia_kernels)
+        self.addAction(QIcon(":icons/menu_icons/sync.svg"), "Reload kernels", self._reload_julia_kernels)
 
     def _remove_julia_executable(self):
         """Removes a Julia from the list of known Julias."""
