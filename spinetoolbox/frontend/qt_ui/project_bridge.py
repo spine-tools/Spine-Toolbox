@@ -28,7 +28,7 @@ from ...config import (
     REPORT_PROGRESS_ENV_VAR,
 )
 from ...execution_managers import QProcessExecutionManager
-from ...helpers import normcase_database_url_path, open_url, update_recent_projects
+from ...helpers import is_spine_toolbox_project_dir, normcase_database_url_path, open_url, update_recent_projects
 from ...load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
@@ -56,6 +56,27 @@ def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
         url_dict = {**url_dict, "database": deserialize_path(database, project_dir)}
     sa_url = convert_to_sqlalchemy_url(url_dict)
     return sa_url.render_as_string(hide_password=False) if sa_url is not None else None
+
+
+def _find_project_folder(folder: Path, max_depth: int = 2) -> Path | None:
+    """Returns folder or its nearest subfolder, up to max_depth levels down, that is a Spine Toolbox project."""
+    level = [folder]
+    for _ in range(max_depth + 1):
+        for candidate in level:
+            if is_spine_toolbox_project_dir(str(candidate)):
+                return candidate
+        children = []
+        for parent in level:
+            try:
+                children += sorted(
+                    child
+                    for child in parent.iterdir()
+                    if child.is_dir() and not child.name.startswith(".") and child.name not in _IMAGE_SCAN_SKIPPED_DIRS
+                )
+            except OSError:
+                continue
+        level = children
+    return None
 
 
 def _sqlite_file_stamp(db_url: str) -> tuple[int, int] | None:
@@ -627,12 +648,7 @@ class ProjectBridge(QObject):
         project = data.get("project", {})
         raw_items = data.get("items", {})
         stacks = project.get("stacks", {})
-
-        item_to_stack = {}
-        for stack_key, stack in stacks.items():
-            display_name = stack.get("name", stack_key)
-            for member in stack.get("items", []):
-                item_to_stack[member] = display_name
+        stacked_names = {member for stack in stacks.values() for member in stack.get("items", [])}
 
         items = []
         for stack_key, stack in stacks.items():
@@ -643,7 +659,7 @@ class ProjectBridge(QObject):
             display_name = stack.get("name", stack_key)
             items.append({"name": display_name, "type": "Stack", "x": x, "y": y, "subtitle": "Stack"})
         for name, item in raw_items.items():
-            if name in item_to_stack:
+            if name in stacked_names:
                 continue
             item_type = item.get("type", "")
             items.append(
@@ -778,12 +794,21 @@ class ProjectBridge(QObject):
 
     @Slot(str, result=str)
     def open_project(self, folder_url: str) -> str:
-        """Switches to the project at folder_url and registers it as a recent project; empty string means invalid."""
-        local_path = Path(QUrl(folder_url).toLocalFile() or folder_url)
-        if not (local_path / PROJECT_CONFIG_DIR_NAME).is_dir():
+        """Switches to the project in folder_url or up to two levels below it and registers it as a recent project.
+
+        Returns an empty string and reports the reason through setupStatusChanged if no project can be opened.
+        """
+        chosen_path = Path(QUrl(folder_url).toLocalFile() or folder_url)
+        local_path = _find_project_folder(chosen_path)
+        if local_path is None:
+            self.setupStatusChanged.emit(
+                f"{chosen_path} is not a Spine Toolbox project: no {PROJECT_CONFIG_DIR_NAME} folder found in it ",
+                "error",
+            )
             return ""
         for view in list(self._db_editors):
             if not self._db_editors[view].close():
+                self.setupStatusChanged.emit("Close the open database editors before switching project", "error")
                 return ""
             del self._db_editors[view]
         self._close_sessions()
