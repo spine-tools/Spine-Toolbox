@@ -84,7 +84,7 @@ from .helpers import (
     unique_name,
     update_recent_projects,
 )
-from .kernel_models import ExecutionModels
+from .execution_models import ExecutionModels
 from .kernel_fetcher import KernelFetcher
 from .link import JUMP_COLOR, LINK_COLOR, JumpLink, JumpOrLink, Link
 from .load_project import ProjectLoadingFailed, load_project_dict

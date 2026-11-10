@@ -53,6 +53,7 @@ class KernelManagerBase(QDialog):
         self._exec_models = execution_models
         self._app_settings = self._parent.qsettings
         self._new_kernel_name = None
+        self.version_collector = None
 
     def connect_signals(self):
         """Connects signals to slots."""
@@ -61,6 +62,7 @@ class KernelManagerBase(QDialog):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_error.connect(self.add_process_error_message)
+        self.ui.pushButton_close.clicked.connect(self.close)
 
     def _check_selections(self):
         raise NotImplementedError()
@@ -207,6 +209,20 @@ class KernelManagerBase(QDialog):
         message = format_process_message("msg_error", msg)
         self.ui.textBrowser.append(message)
 
+    def _shutdown_thread(self):
+        if self.version_collector is not None:
+            self.version_collector.wait()
+
+    def done(self, result):
+        """Handles cleaning up when the dialog is closed with the Esc key."""
+        self._shutdown_thread()
+        super().done(result)
+
+    def closeEvent(self, event):
+        """Handles cleaning up when the dialog is closed with the Close or the X buttons."""
+        self._shutdown_thread()
+        super().closeEvent(event)
+
 
 class MiniPythonKernelManager(KernelManagerBase):
     """A Simple Python kernel manager."""
@@ -236,15 +252,14 @@ class MiniPythonKernelManager(KernelManagerBase):
         self._exec_models.refresh_python_interpreters_model(show_select_item=True)
         self.ui.comboBox_python_interpreter.setCurrentIndex(0)
         python_interpreters = self._get_list_of_executables(self._exec_models.python_interpreters_model, "python")
-        self.kernel_name_creator = VersionCollector(python_interpreters)
-        self.kernel_name_creator.versions_collected.connect(self.on_versions_collected)
-        self.kernel_name_creator.start()
+        self.version_collector = VersionCollector(python_interpreters)
+        self.version_collector.versions_collected.connect(self.on_versions_collected)
+        self.version_collector.start()
         self.connect_signals()
 
     def connect_signals(self):
         super().connect_signals()
         self.ui.pushButton_make_kernel.clicked.connect(self.make_python_kernel)
-        self.ui.pushButton_close.clicked.connect(self.close)
         self.ui.comboBox_python_interpreter.currentIndexChanged.connect(self._set_python_exe)
 
     @Slot(dict)
@@ -460,9 +475,9 @@ class MiniJuliaKernelManager(KernelManagerBase):
         self._install_ijulia_process = None
         self._install_julia_kernel_process = None
         julia_executables = self._get_list_of_executables(self._exec_models.julia_executables_model, "julia")
-        self.kernel_name_creator = VersionCollector(julia_executables)
-        self.kernel_name_creator.versions_collected.connect(self.on_versions_collected)
-        self.kernel_name_creator.start()
+        self.version_collector = VersionCollector(julia_executables)
+        self.version_collector.versions_collected.connect(self.on_versions_collected)
+        self.version_collector.start()
         self.connect_signals()
 
     def connect_signals(self):
@@ -470,7 +485,6 @@ class MiniJuliaKernelManager(KernelManagerBase):
         self.ui.pushButton_make_kernel.clicked.connect(self.make_julia_kernel)
         self.ui.comboBox_julia_executable.currentIndexChanged.connect(self._set_julia_exe)
         self.ui.comboBox_julia_environment.currentIndexChanged.connect(self._set_julia_project)
-        self.ui.pushButton_close.clicked.connect(self.close)
 
     @Slot(dict)
     def on_versions_collected(self, julia_versions):
@@ -796,7 +810,7 @@ class VersionCollector(QThread):
         """Retrieves given Python or Julia version in a subprocess."""
         if not os.path.exists(exe):
             return None
-        manager = QProcessExecutionManager(self, exe, args=["--version"], silent=True)
+        manager = QProcessExecutionManager(None, exe, args=["--version"], silent=True)
         manager.start_execution()
         manager.wait_for_process_finished()
         out = manager.process_output  # e.g. 'Python 3.10.8' or 'julia version 1.11.3'

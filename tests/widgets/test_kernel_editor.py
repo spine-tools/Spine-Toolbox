@@ -20,7 +20,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 import venv
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
-from spinetoolbox.kernel_models import ExecutionModels
+from spinetoolbox.execution_models import ExecutionModels
 from spine_engine.utils.helpers import resolve_default_julia_executable
 from spinetoolbox.widgets.kernel_editor import KernelManagerBase, MiniPythonKernelManager
 from tests.mock_helpers import TestCaseWithQApplication
