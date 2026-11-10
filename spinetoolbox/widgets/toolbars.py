@@ -435,3 +435,16 @@ class ExecuteToolBar(ToolBar):
         self._add_button_from_action(self._toolbox.ui.actionExecute_project)
         self._add_button_from_action(self._toolbox.ui.actionExecute_selection)
         self._add_button_from_action(self._toolbox.ui.actionStop_execution)
+
+
+class ModeToolBar(ToolBar):
+    def __init__(self, parent):
+        super().__init__("Mode", parent)
+
+    def setup(self) -> None:
+        self._make_tool_button(
+            QIcon(CharIconEngine("\uf015", color=Qt.GlobalColor.darkGreen)),
+            "User mode",
+            lambda: self._toolbox.show_easy_mode(),
+            "Switch to User mode",
+        )

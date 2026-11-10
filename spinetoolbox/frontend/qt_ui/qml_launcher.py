@@ -39,7 +39,7 @@ def main():
     # mode (see ToolboxUI._show_dev_mode); starting directly in easy mode skips that heavier machinery
     window = ToolboxUI()
     window.show()
-    window._show_easy_mode(str(project_dir))
+    window.show_easy_mode(str(project_dir))
 
     sys.exit(app.exec())
 

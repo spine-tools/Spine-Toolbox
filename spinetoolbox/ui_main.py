@@ -284,6 +284,7 @@ class ToolboxUI(QMainWindow):
         self.items_toolbar = toolbars.ItemsToolBar(self)
         self.spec_toolbar = toolbars.SpecToolBar(self)
         self.execute_toolbar = toolbars.ExecuteToolBar(self)
+        self.mode_toolbar = toolbars.ModeToolBar(self)
         self._original_execute_project_action_tooltip = self.ui.actionExecute_project.toolTip()
         self.setStatusBar(None)
         # Additional consoles for item execution
@@ -317,6 +318,7 @@ class ToolboxUI(QMainWindow):
         self.items_toolbar.setup()
         self.spec_toolbar.setup()
         self.execute_toolbar.setup()
+        self.mode_toolbar.setup()
         self.link_properties_widgets = {
             LoggingConnection: LinkPropertiesWidget(self, base_color=LINK_COLOR),
             LoggingJump: JumpPropertiesWidget(self, base_color=JUMP_COLOR),
@@ -911,6 +913,9 @@ class ToolboxUI(QMainWindow):
         self.execute_toolbar.set_color(base)
         if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
             self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
+        self.mode_toolbar.set_color(QApplication.palette().color(QPalette.ColorRole.Button))
+        if self.toolBarArea(self.mode_toolbar) == Qt.NoToolBarArea:
+            self.addToolBar(Qt.TopToolBarArea, self.mode_toolbar)
 
     @Slot()
     def show_recent_projects_menu(self):
@@ -1581,7 +1586,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(zoom_action)
 
-    def _show_easy_mode(self, project_dir: str | None = None) -> None:
+    def show_easy_mode(self, project_dir: str | None = None) -> None:
         """Swaps this same window's content to the easy-mode (QML) UI.
 
         Args:
@@ -1596,7 +1601,7 @@ class ToolboxUI(QMainWindow):
         # it synchronously here would be a use-after-free; let that call unwind first
         self._easy_mode_widget.project_bridge.devModeRequested.connect(lambda: QTimer.singleShot(0, self._show_dev_mode))
         self.menuBar().setVisible(False)
-        for toolbar in (self.items_toolbar, self.spec_toolbar, self.execute_toolbar):
+        for toolbar in (self.items_toolbar, self.spec_toolbar, self.execute_toolbar, self.mode_toolbar):
             toolbar.setVisible(False)
         self._docks_hidden_for_easy_mode = [dock for dock in self.findChildren(QDockWidget) if dock.isVisible()]
         for dock in self._docks_hidden_for_easy_mode:
@@ -1609,7 +1614,7 @@ class ToolboxUI(QMainWindow):
         self.takeCentralWidget().deleteLater()
         self._easy_mode_widget = None
         self.menuBar().setVisible(True)
-        for toolbar in (self.items_toolbar, self.spec_toolbar, self.execute_toolbar):
+        for toolbar in (self.items_toolbar, self.spec_toolbar, self.execute_toolbar, self.mode_toolbar):
             toolbar.setVisible(True)
         for dock in self._docks_hidden_for_easy_mode:
             dock.setVisible(True)
@@ -1665,6 +1670,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuToolbars.addAction(self.items_toolbar.toggleViewAction())
         self.ui.menuToolbars.addAction(self.spec_toolbar.toggleViewAction())
         self.ui.menuToolbars.addAction(self.execute_toolbar.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.mode_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_design_view.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
@@ -1680,7 +1686,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.insertAction(before, redo_action)
         self.ui.menuEdit.insertSeparator(before)
         easy_mode_action = QAction("Switch to easy mode", self)
-        easy_mode_action.triggered.connect(lambda: self._show_easy_mode())
+        easy_mode_action.triggered.connect(lambda: self.show_easy_mode())
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(easy_mode_action)
 
