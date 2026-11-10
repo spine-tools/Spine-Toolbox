@@ -2,13 +2,12 @@
 name = "spinetoolbox"
 dynamic = ["version"]
 authors = [{name = "Spine Project consortium", email = "spine_info@vtt.fi"}]
-license = {text = "LGPL-3.0-or-later"}
+license = "LGPL-3.0-or-later"
 description = "An application to define, manage, and execute various energy system simulation models"
 keywords = ["energy system modelling", "workflow", "optimisation", "database"]
 readme = {file = "README.md", content-type = "text/markdown"}
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
     "Operating System :: OS Independent",
 ]
 requires-python = ">=3.11"  # Remember to bump Black's target-version below if bumping this.
