@@ -259,6 +259,31 @@ Rectangle {
             }
         }
 
+        // a branch continues from its source: a target entering by its left side and lying to the right of its
+        // source in Design View must sit at least one column right of it, even when it is alone in its row
+        for (var pass = 0; pass < items.length; pass++) {
+            var moved = false
+            for (var e = 0; e < connections.length; e++) {
+                var edge = connections[e]
+                var src = itemIndex[edge.from]
+                var dst = itemIndex[edge.to]
+                if (src === undefined || dst === undefined || src === dst)
+                    continue
+                var enterSide = edge.to_anchor || "left"
+                if (enterSide === "left" && items[dst].x > items[src].x
+                        && alignedX[dst] < alignedX[src] + colStep) {
+                    alignedX[dst] = alignedX[src] + colStep
+                    moved = true
+                } else if (enterSide === "right" && items[src].x > items[dst].x
+                        && alignedX[src] < alignedX[dst] + colStep) {
+                    alignedX[src] = alignedX[dst] + colStep
+                    moved = true
+                }
+            }
+            if (!moved)
+                break
+        }
+
         // feeders of one card (links entering its left/right side) are spread symmetrically around it,
         // one row step apart each, so their midpoint lines up with the card regardless of how far
         // apart (or close together) they originally were in Design View
@@ -271,16 +296,17 @@ Rectangle {
             if (feedTarget === undefined || feedSource === undefined || feedSource === feedTarget
                     || (feedSide !== "left" && feedSide !== "right"))
                 continue
-            if (!feedersOf[feedTarget])
-                feedersOf[feedTarget] = []
-            if (feedersOf[feedTarget].indexOf(feedSource) < 0)
-                feedersOf[feedTarget].push(feedSource)
+            var feedKey = feedTarget + ":" + feedSide
+            if (!feedersOf[feedKey])
+                feedersOf[feedKey] = []
+            if (feedersOf[feedKey].indexOf(feedSource) < 0)
+                feedersOf[feedKey].push(feedSource)
         }
-        for (var targetKey in feedersOf) {
-            var feeders = feedersOf[targetKey]
+        for (var feedKey2 in feedersOf) {
+            var feeders = feedersOf[feedKey2]
             if (feeders.length < 2)
                 continue
-            var targetY = itemY[targetKey]
+            var targetY = itemY[parseInt(feedKey2)]
             feeders.sort(function (a, b) { return itemY[a] - itemY[b] })
             for (var fs = 0; fs < feeders.length; fs++)
                 itemY[feeders[fs]] = targetY + (fs - (feeders.length - 1) / 2) * rowStep
@@ -837,10 +863,10 @@ Rectangle {
 
                                     if (resultsDataArea.visible)
                                         projectBridge.open_result_databases()
-                                }
 
-                                root.loadWorkflow()
-                                root.offerProjectSetup()
+                                    root.loadWorkflow()
+                                    root.offerProjectSetup()
+                                }
                             }
                         }
                     }
