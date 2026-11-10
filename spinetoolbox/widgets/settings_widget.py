@@ -51,7 +51,7 @@ from ..helpers import (
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
 from ..spine_db_editor.editors import db_editor_registry
-from ..widgets.kernel_editor import MiniJuliaKernelManager, MiniPythonKernelManager
+from ..widgets.kernel_manager import MiniJuliaKernelManager, MiniPythonKernelManager
 from ..widgets.custom_menus import PythonContextMenu, JuliaContextMenu
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
 from .install_julia_wizard import InstallJuliaWizard

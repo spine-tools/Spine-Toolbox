@@ -317,10 +317,9 @@ class MiniPythonKernelManager(KernelManagerBase):
         checking if ipykernel is installed."""
         if not self._check_selections():
             return
-        kname = self._complete_kernel_name()
-        index = self._exec_models.find_python_kernel_index(kname)
+        index = self._exec_models.find_python_kernel_index(self._python_kernel_name)
         if index.isValid():
-            if not self.ask_permission_to_overwrite(kname):
+            if not self.ask_permission_to_overwrite(self._python_kernel_name):
                 return
         self.ui.pushButton_make_kernel.setEnabled(False)
         self.ui.stackedWidget.setCurrentIndex(1)
@@ -388,7 +387,7 @@ class MiniPythonKernelManager(KernelManagerBase):
         self._install_package_process.deleteLater()
         self._install_package_process = None
         if retval != 0:
-            self.set_failed_state("Kernel creation failed", "ipykernel installation failed. See details below")
+            self.set_failed_state("Creating kernel failed", "ipykernel installation failed. See details below")
             return
         self.start_kernelspec_install_process()
 
