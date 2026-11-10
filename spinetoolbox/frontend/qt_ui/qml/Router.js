@@ -161,7 +161,7 @@ function pathAnchor(path) {
 }
 
 // cards: name -> {x, y, width, height}; connections: [{from, to, from_anchor, to_anchor}].
-// Returns "from|to" -> {path: [{x, y}, ...], anchor: {x, y}}.
+// Returns "from|to" -> {path, anchor, line, arrow}: line/arrow are SVG path strings in the same coordinates.
 function routeAll(cards, connections, scale) {
     var padding = 14 * scale
     var stub = 24 * scale
@@ -240,9 +240,52 @@ function routeAll(cards, connections, scale) {
         if (!plan)
             continue
         var path = routeOne(plan, xs, ys, width, height, nodeBlocked, hBlocked, vBlocked, turnCost)
-        routes[connections[c].from + "|" + connections[c].to] = { path: path, anchor: pathAnchor(path) }
+        routes[connections[c].from + "|" + connections[c].to] = {
+            path: path, anchor: pathAnchor(path),
+            line: roundedPathSvg(path, 12 * scale), arrow: arrowSvg(path, 7 * scale)
+        }
     }
     return routes
+}
+
+// polyline with its corners rounded by quadratic curves of at most the given radius
+function roundedPathSvg(path, radius) {
+    if (path.length < 2)
+        return ""
+    var d = "M " + path[0].x + " " + path[0].y
+    for (var i = 1; i < path.length - 1; i++) {
+        var prev = path[i - 1]
+        var cur = path[i]
+        var next = path[i + 1]
+        var inX = Math.sign(cur.x - prev.x)
+        var inY = Math.sign(cur.y - prev.y)
+        var outX = Math.sign(next.x - cur.x)
+        var outY = Math.sign(next.y - cur.y)
+        var r = Math.min(radius, (Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y)) / 2,
+                         (Math.abs(next.x - cur.x) + Math.abs(next.y - cur.y)) / 2)
+        var cross = inX * outY - inY * outX
+        if (cross === 0 || r <= 0) {
+            d += " L " + cur.x + " " + cur.y
+            continue
+        }
+        d += " L " + (cur.x - inX * r) + " " + (cur.y - inY * r)
+        d += " Q " + cur.x + " " + cur.y + " " + (cur.x + outX * r) + " " + (cur.y + outY * r)
+    }
+    var tip = path[path.length - 1]
+    return d + " L " + tip.x + " " + tip.y
+}
+
+// triangle at the end of the path pointing along its final segment
+function arrowSvg(path, size) {
+    if (path.length < 2)
+        return ""
+    var tip = path[path.length - 1]
+    var tail = path[path.length - 2]
+    var dx = Math.sign(tip.x - tail.x)
+    var dy = Math.sign(tip.y - tail.y)
+    return "M " + tip.x + " " + tip.y
+            + " L " + (tip.x - dx * size - dy * size / 2) + " " + (tip.y - dy * size + dx * size / 2)
+            + " L " + (tip.x - dx * size + dy * size / 2) + " " + (tip.y - dy * size - dx * size / 2) + " Z"
 }
 
 function routeOne(plan, xs, ys, width, height, nodeBlocked, hBlocked, vBlocked, turnCost) {

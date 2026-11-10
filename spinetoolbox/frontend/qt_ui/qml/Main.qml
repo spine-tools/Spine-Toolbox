@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import QtQuick.Shapes
 import "Router.js" as Router
 import "TourSteps.js" as TourSteps
 
@@ -409,8 +410,8 @@ Rectangle {
     }
 
 
-    // routed paths and badge anchors per connection ("from|to"), recomputed in one go by rebuildRoutes()
-    // instead of on every paint/binding evaluation since routing is the expensive part
+    // routed paths and badge anchors per connection ("from|to") in unscaled design units, recomputed in one go
+    // by rebuildRoutes() since routing is the expensive part; connectionsLayer scales them with cardScale
     property var routes: ({})
 
     function rebuildRoutes() {
@@ -418,10 +419,10 @@ Rectangle {
         var names = Object.keys(root.nodeItems)
         for (var i = 0; i < names.length; i++) {
             var card = root.nodeItems[names[i]]
-            cards[names[i]] = { x: card.x, y: card.y, width: card.width, height: card.height }
+            var s = card.sizeFactor
+            cards[names[i]] = { x: card.x / s, y: card.y / s, width: card.width / s, height: card.height / s }
         }
-        root.routes = Router.routeAll(cards, root.workflow.connections || [], root.cardScale)
-        connectionsCanvas.requestPaint()
+        root.routes = Router.routeAll(cards, root.workflow.connections || [], 1)
     }
 
     // coalesces the many x/y change signals of a layout or drag into a single rebuild
@@ -524,7 +525,6 @@ Rectangle {
     // multiplied by a user-controlled zoom factor from the −/+/Fit buttons or the mouse wheel
     property real zoomLevel: 1.0
 
-    onCardScaleChanged: root.scheduleRoutes()
     // floored so the two factors combined never shrink cards past where text/line rendering breaks down
     property real cardScale: Math.max(0.55, root.zoomLevel * Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth)))
 
@@ -1074,89 +1074,57 @@ Rectangle {
                             policy: designFlick.contentWidth > designFlick.width ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff
                         }
 
-                        Canvas {
-                            id: connectionsCanvas
+                        // lines are routed in design units and scaled with the cards, so they follow a window
+                        // resize or zoom in the same frame without being re-routed
+                        Item {
+                            id: connectionsLayer
 
-                            // covers the pan margins too, so lines aren't clipped when cards sit outside the content area
-                            x: -designFlick.leftMargin
-                            y: -designFlick.topMargin
-                            width: designFlick.contentWidth + designFlick.leftMargin + designFlick.rightMargin
-                            height: designFlick.contentHeight + designFlick.topMargin + designFlick.bottomMargin
-                            onWidthChanged: requestPaint()
-                            onHeightChanged: requestPaint()
+                            scale: root.cardScale
+                            transformOrigin: Item.TopLeft
                             // above idle cards (z: 1) so arrows are never hidden behind them,
                             // but below a card actively being dragged (z: 10)
                             z: 5
 
-                            function drawConnection(ctx, connection, state) {
-                                var cached = root.routes[connection.from + "|" + connection.to]
-                                var path = cached ? cached.path : []
-                                if (path.length < 2)
-                                    return
+                            Repeater {
+                                model: root.workflow.connections || []
 
-                                // bold + saturated for a line that will actually carry data when run, thin and
-                                // pale when it's idle (another line covers the target), reddish when broken
-                                var lineColor = state === "idle" ? "#c7d2d6" : state === "error" ? "#dc2626" : "#2f6b4a"
-                                ctx.strokeStyle = lineColor
-                                ctx.lineWidth = (state === "idle" ? 1.5 : 3) * root.cardScale
+                                Shape {
+                                    id: connectionShape
 
-                                function segmentLength(a, b) {
-                                    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
-                                }
+                                    // bold + saturated for a line that will actually carry data when run, thin and
+                                    // pale when it's idle (another line covers the target), reddish when broken
+                                    readonly property string lineState: modelData.filter_type === null
+                                            || modelData.filter_state === "ok"
+                                            ? "active" : modelData.filter_state === "error" ? "error" : "idle"
+                                    readonly property color lineColor: lineState === "idle" ? "#c7d2d6"
+                                            : lineState === "error" ? "#dc2626" : "#2f6b4a"
+                                    readonly property var route: root.nodeItemsTick >= 0
+                                            && root.nodeItems[modelData.from] && root.nodeItems[modelData.to]
+                                            ? root.routes[modelData.from + "|" + modelData.to] : undefined
 
-                                ctx.beginPath()
-                                ctx.moveTo(path[0].x, path[0].y)
+                                    visible: !!route
+                                    preferredRendererType: Shape.CurveRenderer
 
-                                for (var i = 1; i < path.length - 1; i++) {
-                                    var radius = Math.min(12 * root.cardScale,
-                                                          segmentLength(path[i - 1], path[i]) / 2,
-                                                          segmentLength(path[i], path[i + 1]) / 2)
-                                    ctx.arcTo(path[i].x, path[i].y, path[i + 1].x, path[i + 1].y, radius)
-                                }
+                                    ShapePath {
+                                        strokeColor: connectionShape.lineColor
+                                        strokeWidth: connectionShape.lineState === "idle" ? 1.5 : 3
+                                        fillColor: "transparent"
+                                        capStyle: ShapePath.FlatCap
 
-                                var tip = path[path.length - 1]
-                                var tail = path[path.length - 2]
-                                ctx.lineTo(tip.x, tip.y)
+                                        PathSvg {
+                                            path: connectionShape.route ? connectionShape.route.line : ""
+                                        }
+                                    }
 
-                                ctx.stroke()
+                                    ShapePath {
+                                        strokeColor: "transparent"
+                                        fillColor: connectionShape.lineColor
 
-                                // arrow head points along the final segment
-                                var arrowSize = 7 * root.cardScale
-                                var directionX = Math.sign(tip.x - tail.x)
-                                var directionY = Math.sign(tip.y - tail.y)
-
-                                ctx.beginPath()
-
-                                ctx.moveTo(tip.x, tip.y)
-                                ctx.lineTo(tip.x - directionX * arrowSize - directionY * arrowSize / 2,
-                                           tip.y - directionY * arrowSize + directionX * arrowSize / 2)
-                                ctx.lineTo(tip.x - directionX * arrowSize + directionY * arrowSize / 2,
-                                           tip.y - directionY * arrowSize - directionX * arrowSize / 2)
-                                ctx.closePath()
-
-                                ctx.fillStyle = lineColor
-                                ctx.fill()
-                            }
-
-                            onPaint: {
-                                var ctx = getContext("2d")
-
-                                ctx.clearRect(0, 0, width, height)
-                                ctx.save()
-                                ctx.translate(-x, -y)
-
-                                var connections = root.workflow.connections || []
-
-                                for (var i = 0; i < connections.length; i++) {
-                                    var connection = connections[i]
-                                    if (root.nodeItems[connection.from] && root.nodeItems[connection.to]) {
-                                        var state = connection.filter_type === null || connection.filter_state === "ok"
-                                                ? "active"
-                                                : connection.filter_state === "error" ? "error" : "idle"
-                                        drawConnection(ctx, connection, state)
+                                        PathSvg {
+                                            path: connectionShape.route ? connectionShape.route.arrow : ""
+                                        }
                                     }
                                 }
-                                ctx.restore()
                             }
                         }
 
@@ -1270,8 +1238,8 @@ Rectangle {
                                 property point anchorPoint: visible
                                         ? root.connectionAnchor(modelData.from, modelData.to) : Qt.point(0, 0)
 
-                                x: anchorPoint.x - width / 2
-                                y: anchorPoint.y - height / 2
+                                x: anchorPoint.x * root.cardScale - width / 2
+                                y: anchorPoint.y * root.cardScale - height / 2
                                 z: 6
 
                                 width: 28 * root.cardScale
@@ -1831,10 +1799,13 @@ Rectangle {
 
         // x/y are set imperatively (dragging owns them), so zooming rescales them explicitly
         property real previousSizeFactor: 1
+        property bool rescaling: false
 
         onSizeFactorChanged: {
+            rescaling = true
             x = x * sizeFactor / previousSizeFactor
             y = y * sizeFactor / previousSizeFactor
+            rescaling = false
             previousSizeFactor = sizeFactor
         }
 
@@ -1943,9 +1914,9 @@ Rectangle {
             }
         }
 
-        // redraw arrows as the card is dragged around
-        onXChanged: root.scheduleRoutes()
-        onYChanged: root.scheduleRoutes()
+        // redraw arrows as the card is dragged around; rescaling moves cards but not in design units
+        onXChanged: if (!rescaling) root.scheduleRoutes()
+        onYChanged: if (!rescaling) root.scheduleRoutes()
 
         // extra offset layers behind the card give a collapsed stack a "deck of cards" look
         Rectangle {

@@ -44,10 +44,6 @@ _SETTINGS_ORGANIZATION = "SpineProject"
 _SETTINGS_APPLICATION = "Spine Toolbox"
 _TOUR_SEEN_KEY = "appSettings/userModeTourSeen"
 
-# shown until the user opens a real project, so the UI has something to demonstrate
-_EXAMPLE_PROJECT_FILE = Path(__file__).parent / "examples" / "project.json"
-_EXAMPLE_PROJECT_NAME = "FlexTool (example)"
-
 
 def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
     """Builds a SQLAlchemy URL string from a Data Store item's "url" dict, or None if the dict is incomplete."""
@@ -142,9 +138,6 @@ class ProjectBridge(QObject):
         """Returns project data as stored, without upgrading; use this when the result is going to be saved."""
         if self._config_file.exists():
             return load_project_dict(self._project_dir)
-        if _EXAMPLE_PROJECT_FILE.exists():
-            with _EXAMPLE_PROJECT_FILE.open(encoding="utf-8") as input_file:
-                return json.load(input_file)
         return {"project": {"version": LATEST_PROJECT_VERSION, "settings": {}}, "items": {}}
 
     def _load(self) -> dict:
@@ -330,15 +323,11 @@ class ProjectBridge(QObject):
         return True
 
     def _base_dir(self) -> Path:
-        """Returns the project directory items are relative to, falling back to the bundled example's own
-        folder when no real project is open (self._project_dir is then just the launch cwd)."""
-        if self._config_file.exists():
-            return self._project_dir
-        return _EXAMPLE_PROJECT_FILE.parent
+        return self._project_dir
 
     @property
     def project_dir(self) -> str:
-        """Directory of the project currently open, or "" if none (e.g. the bundled example is shown instead)."""
+        """Directory of the project currently open, or "" if none."""
         return str(self._project_dir) if self._config_file.exists() else ""
 
     @Slot(result=bool)
@@ -564,11 +553,9 @@ class ProjectBridge(QObject):
 
     @Slot(result=str)
     def get_project_name(self) -> str:
-        """Returns the current project's name, falling back to the bundled example when none is open yet."""
+        """Returns the current project's name, or "" when none is open."""
         if (self._project_dir / PROJECT_CONFIG_DIR_NAME).is_dir():
             return self._project_dir.name
-        if _EXAMPLE_PROJECT_FILE.exists():
-            return _EXAMPLE_PROJECT_NAME
         return ""
 
     def _connection_filter_states(self, data: dict) -> list[dict]:

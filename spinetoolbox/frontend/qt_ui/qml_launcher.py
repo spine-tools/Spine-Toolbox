@@ -1,22 +1,10 @@
-"""Starts Spine Toolbox's main window directly in user (QML) mode, in the given or default project."""
+"""Starts Spine Toolbox's main window directly in user (QML) mode, in the given project or none."""
 
-from pathlib import Path
 import sys
 import fluentpyside
 from PySide6.QtWidgets import QApplication
-from ...config import PROJECT_CONFIG_DIR_NAME
 from ...font import TOOLBOX_FONT
 from ...ui_main import ToolboxUI
-
-_DEFAULT_PROJECT_DIR = Path(r"C:\Users\enessi\flextool")
-
-
-def _find_project_dir(start: Path) -> Path:
-    """Walks up from start looking for a .spinetoolbox project; falls back to start."""
-    for candidate in (start, *start.parents):
-        if (candidate / PROJECT_CONFIG_DIR_NAME).is_dir():
-            return candidate
-    return start
 
 
 def main():
@@ -28,18 +16,13 @@ def main():
     # Apply FluentPySide styling before creating the window
     fluentpyside.apply()
 
-    if len(sys.argv) > 1:
-        project_dir = Path(sys.argv[1])
-    elif _DEFAULT_PROJECT_DIR.is_dir():
-        project_dir = _DEFAULT_PROJECT_DIR
-    else:
-        project_dir = _find_project_dir(Path.cwd())
+    project_dir = sys.argv[1] if len(sys.argv) > 1 else ""
 
     # the classic UI's project (self._project) is loaded lazily, only if/when the user switches to dev
     # mode (see ToolboxUI._show_dev_mode); starting directly in user mode skips that heavier machinery
     window = ToolboxUI()
     window.show()
-    window.show_user_mode(str(project_dir))
+    window.show_user_mode(project_dir)
 
     sys.exit(app.exec())
 
