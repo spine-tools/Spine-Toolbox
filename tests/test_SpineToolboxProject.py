@@ -37,7 +37,7 @@ from spinetoolbox.config import (
     PROJECT_LOCAL_DATA_FILENAME,
 )
 from spinetoolbox.helpers import SignalWaiter
-from spinetoolbox.project import node_successors
+from spinetoolbox.project import SpineToolboxProject, node_successors
 from spinetoolbox.project_commands import MoveIconCommand
 from spinetoolbox.project_item.logging_connection import LoggingConnection, LoggingJump
 from spinetoolbox.project_item.project_item import ProjectItem
@@ -57,6 +57,16 @@ from tests.mock_helpers import (
     clean_up_toolbox,
     create_toolboxui_with_project,
 )
+
+
+class TestSpineToolboxProjectPyTest:
+    def test_name_is_not_empty_when_project_dir_name_ends_with_path_separator(
+        self, tmp_path, app_settings, parent_object, logger
+    ):
+        project_setting = ProjectSettings()
+        project_dir = str(tmp_path) + os.path.sep
+        project = SpineToolboxProject(parent_object, project_dir, [], app_settings, project_setting, logger)
+        assert project.name == tmp_path.name
 
 
 # noinspection PyUnusedLocal
