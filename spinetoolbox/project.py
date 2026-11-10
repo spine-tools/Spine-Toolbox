@@ -135,7 +135,7 @@ class SpineToolboxProject(MetaObject):
             settings (ProjectSettings): project settings
             logger (LoggerInterface): a logger instance
         """
-        _, name = os.path.split(p_dir)
+        name = pathlib.Path(p_dir).name
         super().__init__(name, "")
         self._toolbox = toolbox
         self._project_items = {}
