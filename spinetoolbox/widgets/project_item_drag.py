@@ -85,10 +85,10 @@ class NiceButton(QToolButton):
     def set_orientation(self, orientation):
         if orientation == Qt.Orientation.Horizontal:
             self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-            self.setStyleSheet("QToolButton{margin: 16px 2px 2px 2px;}")
+            # self.setStyleSheet("QToolButton{margin: 16px 2px 2px 2px;}")
         else:
             self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-            self.setStyleSheet("QToolButton{margin: 2px;}")
+            # self.setStyleSheet("QToolButton{margin: 2px;}")
 
 
 class ProjectItemButtonBase(ProjectItemDragMixin, NiceButton):
