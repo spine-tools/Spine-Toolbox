@@ -27,6 +27,8 @@ from .helpers import (
 )
 from spine_engine.utils.helpers import resolve_default_julia_executable, resolve_current_python_interpreter
 
+DEFAULT_SUFFIX = " (default)"
+
 
 class ExecutionModels(QObject):
     """Class for storing execution methods (Pythons, Julias and other kernels)."""
@@ -89,20 +91,23 @@ class ExecutionModels(QObject):
             julia_executables (list): Julia executable paths in a list
             show_select_item (bool): If True, adds a 'Select Julia executable...' item as the first item
         """
+        default_julia = self._qsettings.value("appSettings/juliaPath", "")
         if show_select_item:
             select_item = QStandardItem("Select Julia executable...")
             self._julia_executables_model.appendRow(select_item)
         current = resolve_default_julia_executable()
         if current:
+            is_default = (default_julia == "")
             first_item = QStandardItem(current)
-            first_item.setData({"is_jupyter": False, "is_conda": False, "exe": ""})
+            first_item.setData({"is_jupyter": False, "is_conda": False, "exe": "", "base_text": current, "default": is_default})
             first_item.setIcon(QIcon(":/symbols/julia-logo.svg"))
             first_item.setToolTip(f"This is the Julia from Path ({current})")
             self._julia_executables_model.appendRow(first_item)
         for path in julia_executables:
             displayed_path = path.replace("/", os.sep)
+            is_default = (default_julia == path)
             item = QStandardItem(displayed_path)
-            item.setData({"is_jupyter": False, "is_conda": False, "exe": path})
+            item.setData({"is_jupyter": False, "is_conda": False, "exe": path, "base_text": displayed_path, "default": is_default})
             item.setIcon(QIcon(":/symbols/julia-logo.svg"))
             item.setToolTip(displayed_path)
             item = self._make_item_red_if_path_doesnt_exist(item, displayed_path)
@@ -148,23 +153,27 @@ class ExecutionModels(QObject):
             julia_projects (list): Julia project directory paths in a list
             show_select_item (bool): If True, adds a 'Select Julia project...' item as the first item
         """
+        default_project = self._qsettings.value("appSettings/juliaProjectPath", "")
         if show_select_item:
             select_item = QStandardItem("Select Julia environment...")
             self._julia_projects_model.appendRow(select_item)
+        is_default = (default_project == "")
         first_item = QStandardItem("Default Julia environment (@v1.x)")
-        first_item.setData({"is_project": True, "path": ""})
+        first_item.setData({"is_project": True, "path": "", "base_text": "Default Julia environment (@v1.x)", "default": is_default})
         first_item.setIcon(QIcon(":/icons/folder.svg"))
         first_item.setToolTip(f"This is the default Julia environment")
+        is_default = (default_project == "@.")
         second_item = QStandardItem("Current project environment (@.)")
-        second_item.setData({"is_project": True, "path": "@."})
+        second_item.setData({"is_project": True, "path": "@.", "base_text": "Current project environment (@.)", "default": is_default})
         second_item.setIcon(QIcon(":/icons/folder.svg"))
         second_item.setToolTip(f"This is the Julia @. environment")
         self._julia_projects_model.appendRow(first_item)
         self._julia_projects_model.appendRow(second_item)
         for path in julia_projects:
             displayed_path = path.replace("/", os.sep)
+            is_default = (path == default_project)
             item = QStandardItem(displayed_path)
-            item.setData({"is_project": True, "path": path})
+            item.setData({"is_project": True, "path": path, "base_text": displayed_path, "default": is_default})
             item.setIcon(QIcon(":/icons/folder.svg"))
             item.setToolTip(displayed_path)
             item = self._make_item_red_if_path_doesnt_exist(item, path)
@@ -234,11 +243,15 @@ class ExecutionModels(QObject):
         if self.julia_kernel_fetcher is not None and not self.julia_kernel_fetcher.keep_going:
             # Settings widget closed while thread still running
             return
+        default_kernel = self._qsettings.value("appSettings/juliaKernel", "")
         item = QStandardItem(kernel_name)
+        is_default = (default_kernel == kernel_name)
         item.setIcon(icon)
         item.setToolTip(resource_dir)
         deats["is_jupyter"] = True
         deats["is_conda"] = conda
+        deats["base_text"] = kernel_name
+        deats["default"] = is_default
         item.setData(deats)
         self.julia_kernel_model.appendRow(item)
 
@@ -246,10 +259,13 @@ class ExecutionModels(QObject):
         """Finds and returns the index of given kernel name item."""
         if not kname:
             return self.julia_kernel_model.index(0, 0)
-        items = self.julia_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
-        if not items:
-            return QModelIndex()
-        return items[0].index()
+        for row in range(self.julia_kernel_model.rowCount()):
+            item = self.julia_kernel_model.item(row, 0)
+            if not item.data():
+                continue
+            if item.data()["base_text"] == kname:
+                return item.index()
+        return QModelIndex()
 
     def refresh_python_interpreters_model(self, python_interpreters=None, show_select_item=False):
         """Clears and populates the Python interpreters model with the given list of Python interpreter paths."""
@@ -263,21 +279,31 @@ class ExecutionModels(QObject):
 
         Args:
             python_interpreters (list): Python interpreter paths in a list
-            show_select_item (bool): If True, adds a 'Select Python interpreter...' item as the first item
+            show_select_item (bool): If True, adds a 'Select Python interpreter...' item
+                as the first item
         """
+        default_python = self._qsettings.value("appSettings/pythonPath", "")
         if show_select_item:
             select_item = QStandardItem("Select Python interpreter...")
             self._python_interpreters_model.appendRow(select_item)
         current = resolve_current_python_interpreter()
-        first_item = QStandardItem(current)
-        first_item.setData({"is_jupyter": False, "is_conda": False, "exe": ""})
+        is_default = (default_python == "")
+        current_text = current
+        if is_default:
+            current_text += DEFAULT_SUFFIX
+        first_item = QStandardItem(current_text)
+        first_item.setData({"is_jupyter": False, "is_conda": False, "exe": "", "base_text": current, "default": is_default})
         first_item.setIcon(QIcon(":/symbols/app.ico"))
         first_item.setToolTip("This is the current Python Interpreter")
         self._python_interpreters_model.appendRow(first_item)
         for path in python_interpreters:
             displayed_path = path.replace("/", os.sep)
-            item = QStandardItem(displayed_path)
-            item.setData({"is_jupyter": False, "is_conda": False, "exe": path})
+            is_default = (path == default_python)
+            text = displayed_path
+            if is_default:
+                text += DEFAULT_SUFFIX
+            item = QStandardItem(text)
+            item.setData({"is_jupyter": False, "is_conda": False, "exe": path, "base_text": displayed_path, "default": is_default})
             item.setIcon(QIcon(":/symbols/python-logo.svg"))
             item.setToolTip(displayed_path)
             item = self._make_item_red_if_path_doesnt_exist(item, path)
@@ -317,10 +343,13 @@ class ExecutionModels(QObject):
         in Python kernel model or an invalid index if not found."""
         if not kname:
             return self.python_kernel_model.index(0, 0)
-        items = self.python_kernel_model.findItems(kname, Qt.MatchFlag.MatchExactly)
-        if not items:
-            return QModelIndex()
-        return items[0].index()
+        for row in range(self.python_kernel_model.rowCount()):
+            item = self.python_kernel_model.item(row, 0)
+            if not item.data():
+                continue
+            if item.data()["base_text"] == kname:
+                return item.index()
+        return QModelIndex()
 
     def start_fetching_python_kernels(self, finalize_slot, conda):
         """Starts a thread for fetching Python kernels."""
@@ -359,11 +388,15 @@ class ExecutionModels(QObject):
         if self.python_kernel_fetcher is not None and not self.python_kernel_fetcher.keep_going:
             # Settings widget closed while thread still running
             return
+        default_kernel = self._qsettings.value("appSettings/pythonKernel", "")
         item = QStandardItem(kernel_name)
+        is_default = (default_kernel == kernel_name)
         item.setIcon(icon)
         item.setToolTip(resource_dir)
         deats["is_jupyter"] = True
         deats["is_conda"] = conda
+        deats["base_text"] = kernel_name
+        deats["default"] = is_default
         item.setData(deats)
         self._python_kernel_model.appendRow(item)
 

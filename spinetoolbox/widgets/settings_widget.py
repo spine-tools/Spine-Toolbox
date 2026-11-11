@@ -385,17 +385,17 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.ui.toolButton_make_python_kernel.clicked.connect(self.open_python_kernel_manager)
         self.ui.toolButton_make_julia_kernel.clicked.connect(self.open_julia_kernel_manager)
         self.ui.comboBox_julia_path.customContextMenuRequested.connect(self._show_julia_path_context_menu)
-        self.ui.comboBox_julia_path.currentIndexChanged.connect(self._update_combobox_appearance)
+        self.ui.comboBox_julia_path.currentIndexChanged.connect(self._update_default_combobox_item)
         self.ui.comboBox_julia_project_path.customContextMenuRequested.connect(self._show_julia_projects_context_menu)
-        self.ui.comboBox_julia_project_path.currentIndexChanged.connect(self._update_combobox_appearance)
+        self.ui.comboBox_julia_project_path.currentIndexChanged.connect(self._update_default_combobox_item)
         self.ui.comboBox_julia_kernel.customContextMenuRequested.connect(self._show_julia_kernel_context_menu)
-        self.ui.comboBox_julia_kernel.currentIndexChanged.connect(self._update_combobox_appearance)
+        self.ui.comboBox_julia_kernel.currentIndexChanged.connect(self._update_default_combobox_item)
         self.ui.comboBox_python_interpreters.customContextMenuRequested.connect(
             self._show_python_interpreters_context_menu
         )
-        self.ui.comboBox_python_interpreters.currentIndexChanged.connect(self._update_combobox_appearance)
+        self.ui.comboBox_python_interpreters.currentIndexChanged.connect(self._update_default_combobox_item)
         self.ui.comboBox_python_kernels.customContextMenuRequested.connect(self._show_python_kernel_context_menu)
-        self.ui.comboBox_python_kernels.currentIndexChanged.connect(self._update_combobox_appearance)
+        self.ui.comboBox_python_kernels.currentIndexChanged.connect(self._update_default_combobox_item)
         self.ui.lineEdit_conda_path.textEdited.connect(self._refresh_kernels)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_directory_button_clicked)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
@@ -464,7 +464,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if d["julia_project"] != "@." and not dir_is_valid(
             self,
             d["julia_project"],
-            "Invalid Julia Project",
+            "Invalid Julia Environment",
             "Julia project must be an existing directory, @., or empty",
         ):
             return
@@ -633,15 +633,26 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         menu.popup(global_pos)
 
     @Slot(int)
-    def _update_combobox_appearance(self, row):
-        """Updates the combobox tooltip and visual appearance for the selected item."""
+    def _update_default_combobox_item(self, row):
+        """Updates the combobox displayed text, tooltip and visual appearance for the selected item."""
         if row == -1:
             return
         combo = self.sender()
         model = combo.model()
-        item = model.itemFromIndex(model.index(row, 0))
-        combo.setToolTip(item.toolTip())
-        set_combobox_item_invalid_property(combo, item)
+        for r in range(model.rowCount()):
+            item = model.item(r)
+            data = item.data()
+            if data is None:
+                continue
+            if r == row:
+                data["default"] = True
+                item.setText(f"{data['base_text']} (default)")
+                combo.setToolTip(item.toolTip())
+                set_combobox_item_invalid_property(combo, item)
+            else:
+                data["default"] = False
+                item.setText(data["base_text"])
+            item.setData(data)
 
     @Slot(bool)
     def show_color_dialog(self, _=False):
@@ -953,7 +964,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
             return False
         self._qsettings.setValue("appSettings/juliaPath", j["julia_exe"])
         # Check julia project is a directory and it exists
-        if j["julia_project"] != "@." and not dir_is_valid(self, j["julia_project"], "Invalid Julia Project"):
+        if j["julia_project"] != "@." and not dir_is_valid(self, j["julia_project"], "Invalid Julia Environment"):
             return False
         self._qsettings.setValue("appSettings/juliaProjectPath", j["julia_project"])
         self._qsettings.setValue("appSettings/juliaKernel", j["julia_kernel"])
