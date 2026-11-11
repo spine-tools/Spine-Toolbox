@@ -12,54 +12,11 @@
 
 """Functions to make and handle QToolBars."""
 
-from PySide6.QtCore import QModelIndex, QPoint, QSize, Qt, Slot
-from PySide6.QtGui import QFontMetrics, QIcon, QPainter, QPainterPath, QPalette, QPen
-from PySide6.QtWidgets import QMenu, QToolBar, QToolButton, QWidget
+from PySide6.QtCore import QModelIndex, QSize, Qt, Slot
+from PySide6.QtGui import QIcon, QPainter
+from PySide6.QtWidgets import QLabel, QMenu, QToolBar, QToolButton, QWidget
 from ..helpers import CharIconEngine, ColoredIcon, make_icon_toolbar_ss
 from .project_item_drag import NiceButton, ProjectItemButton, ProjectItemSpecButton
-
-
-class _TitleWidget(QWidget):
-    def __init__(self, title, toolbar):
-        self._toolbar = toolbar
-        super().__init__()
-        self._title = title
-        font = self.font()
-        font.setPointSize(8)
-        self.setFont(font)
-        self.setMaximumSize(1, 1)
-        fm = QFontMetrics(self.font())
-        height = fm.height()
-        self.margin = 0.25 * height
-        self.desired_height = height + 2 * self.margin
-        self.desired_width = fm.horizontalAdvance(self._title) + 2 * self.margin
-
-    def sizeHint(self):
-        if self._toolbar.orientation() == Qt.Horizontal:
-            return QSize(1, 1)
-        return QSize(self.desired_width, self.desired_height)
-
-    def paintEvent(self, ev):
-        self.setFixedSize(self.sizeHint())
-        painter = QPainter(self)
-        self.do_paint(painter)
-        painter.end()
-
-    def do_paint(self, painter, x=None):
-        if x is None:
-            x = self.margin
-        pos = QPoint(x, self.desired_height - self.margin)
-        painter.save()
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setFont(self.font())
-        path = QPainterPath()
-        path.addText(pos, self.font(), self._title)
-        pen_color = self.palette().color(QPalette.ColorRole.Mid)
-        painter.setPen(QPen(pen_color, 0.5))
-        painter.drawPath(path)
-        painter.setPen(self.palette().color(QPalette.ColorRole.WindowText))
-        painter.drawText(pos, self._title)
-        painter.restore()
 
 
 class ToolBar(QToolBar):
@@ -75,26 +32,10 @@ class ToolBar(QToolBar):
         self._name = name
         self.setObjectName(name.replace(" ", "_"))
         self._toolbox = toolbox
-        self.addWidget(_TitleWidget(self.name(), self))
         self.setIconSize(QSize(20, 20))
 
     def name(self):
         return self._name
-
-    def paintEvent(self, ev):
-        super().paintEvent(ev)
-        if self.orientation() == Qt.Orientation.Vertical:
-            return
-        layout = self.layout()
-        title_pos_x = (
-            (w, layout.itemAt(i + 1).widget().pos().x())
-            for i in range(layout.count())
-            if isinstance((w := layout.itemAt(i).widget()), _TitleWidget)
-        )
-        painter = QPainter(self)
-        for w, x in title_pos_x:
-            w.do_paint(painter, x)
-        painter.end()
 
     def set_colored_icons(self, colored):
         for w in self.buttons():
@@ -195,6 +136,14 @@ class PluginToolBar(ToolBar):
         super().__init__(name, parent)  # Inherits stylesheet from ToolboxUI
         self._buttons = {}
         self._toolbox.specification_model.specification_replaced.connect(self._update_spec_button_name)
+        self._title_label = QLabel(self.name().replace(" ", "\n"), self)
+        self._title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title_font = self._title_label.font()
+        title_font.setPointSize(8)
+        title_font.setBold(True)
+        self._title_label.setFont(title_font)
+        self.addWidget(self._title_label)
+        self.orientationChanged.connect(self.adjust_title_to_orientation)
 
     def name(self):
         return self._name + " plugin"
@@ -228,6 +177,16 @@ class PluginToolBar(ToolBar):
             return
         self._buttons[new_name] = button
         button.spec_name = new_name
+
+    @Slot(int)
+    def adjust_title_to_orientation(self, orientation: Qt.Orientation) -> None:
+        match orientation:
+            case Qt.Orientation.Horizontal:
+                title = self._title_label.text()
+                self._title_label.setText(title.replace(" ", "\n"))
+            case Qt.Orientation.Vertical:
+                title = self._title_label.text()
+                self._title_label.setText(title.replace("\n", " "))
 
 
 class SpecToolBar(ToolBar):
@@ -303,7 +262,9 @@ class SpecToolBar(ToolBar):
         menu.addAction("From specification file...", self._toolbox.import_specification).setIcon(
             QIcon(CharIconEngine("\uf067", color=Qt.GlobalColor.darkGreen))
         )
-        button = self._make_tool_button(QIcon(CharIconEngine("\uf067", color=Qt.GlobalColor.darkGreen)), "New...")
+        button = self._make_tool_button(
+            QIcon(CharIconEngine("\uf067", color=Qt.GlobalColor.darkGreen)), "New specification..."
+        )
         button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         button.setMenu(menu)
 

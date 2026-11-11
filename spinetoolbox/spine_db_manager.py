@@ -567,6 +567,7 @@ class SpineDBManager(QObject):
             self.undo_stack[db_map].clear()
             if is_dirty:
                 self.undo_stack[db_map].resetClean()
+            self.database_refreshed.emit(db_map)
             reset_db_maps.add(db_map)
         if reset_db_maps:
             self.receive_session_refreshed(reset_db_maps)
