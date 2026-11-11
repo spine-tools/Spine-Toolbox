@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.10.0
+## Created by: Qt User Interface Compiler version 6.12.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -65,24 +65,24 @@ class Ui_SettingsForm(object):
         icon = QIcon()
         icon.addFile(u":/icons/sliders-h.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem.setIcon(icon);
-        __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled);
+        __qlistwidgetitem.setIcon(icon)
+        __qlistwidgetitem.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled)
         icon1 = QIcon()
         icon1.addFile(u":/icons/project_item_icons/hammer.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem1 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem1.setIcon(icon1);
+        __qlistwidgetitem1.setIcon(icon1)
         icon2 = QIcon()
         icon2.addFile(u":/icons/database.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem2 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem2.setIcon(icon2);
+        __qlistwidgetitem2.setIcon(icon2)
         icon3 = QIcon()
         icon3.addFile(u":/icons/wrench.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem3 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem3.setIcon(icon3);
+        __qlistwidgetitem3.setIcon(icon3)
         icon4 = QIcon()
         icon4.addFile(u":/icons/tractor.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         __qlistwidgetitem4 = QListWidgetItem(self.listWidget)
-        __qlistwidgetitem4.setIcon(icon4);
+        __qlistwidgetitem4.setIcon(icon4)
         self.listWidget.setObjectName(u"listWidget")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(1)
@@ -1171,15 +1171,15 @@ class Ui_SettingsForm(object):
         __sortingEnabled = self.listWidget.isSortingEnabled()
         self.listWidget.setSortingEnabled(False)
         ___qlistwidgetitem = self.listWidget.item(0)
-        ___qlistwidgetitem.setText(QCoreApplication.translate("SettingsForm", u"General", None));
+        ___qlistwidgetitem.setText(QCoreApplication.translate("SettingsForm", u"General", None))
         ___qlistwidgetitem1 = self.listWidget.item(1)
-        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsForm", u"Tools", None));
+        ___qlistwidgetitem1.setText(QCoreApplication.translate("SettingsForm", u"Tools", None))
         ___qlistwidgetitem2 = self.listWidget.item(2)
-        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None));
+        ___qlistwidgetitem2.setText(QCoreApplication.translate("SettingsForm", u"Db editor", None))
         ___qlistwidgetitem3 = self.listWidget.item(3)
-        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None));
+        ___qlistwidgetitem3.setText(QCoreApplication.translate("SettingsForm", u"Spec. editors", None))
         ___qlistwidgetitem4 = self.listWidget.item(4)
-        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Engine", None));
+        ___qlistwidgetitem4.setText(QCoreApplication.translate("SettingsForm", u"Engine", None))
         self.listWidget.setSortingEnabled(__sortingEnabled)
 
         self.groupBox_general.setTitle(QCoreApplication.translate("SettingsForm", u"Main", None))

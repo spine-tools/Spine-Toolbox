@@ -2,6 +2,7 @@
 <!--
 ######################################################################################################################
 # Copyright (C) 2017-2022 Spine project consortium
+# Copyright Spine Toolbox contributors
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and\/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -11,7 +12,7 @@
 # this program. If not, see <http:\/\/www.gnu.org\/licenses\/>.
 ######################################################################################################################
 -->
-<ui version="4.0">
+<ui version="4.0" connectslotsbyname="false">
  <class>Dialog</class>
  <widget class="QDialog" name="Dialog">
   <property name="geometry">
@@ -78,7 +79,7 @@
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
@@ -93,7 +94,7 @@
    <item>
     <widget class="OpenProjectDialogComboBox" name="comboBox_current_path">
      <property name="contextMenuPolicy">
-      <enum>Qt::CustomContextMenu</enum>
+      <enum>Qt::ContextMenuPolicy::CustomContextMenu</enum>
      </property>
      <property name="editable">
       <bool>true</bool>
@@ -103,7 +104,7 @@
    <item>
     <widget class="QTreeView" name="treeView_file_system">
      <property name="verticalScrollMode">
-      <enum>QAbstractItemView::ScrollPerPixel</enum>
+      <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
      </property>
      <property name="uniformRowHeights">
       <bool>true</bool>
@@ -128,17 +129,17 @@
       <string>Select Spine Toolbox project directory</string>
      </property>
      <property name="alignment">
-      <set>Qt::AlignCenter</set>
+      <set>Qt::AlignmentFlag::AlignCenter</set>
      </property>
     </widget>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
      </property>
     </widget>
    </item>
@@ -170,8 +171,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>260</x>
+     <y>445</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -186,8 +187,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
+     <x>328</x>
+     <y>445</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
