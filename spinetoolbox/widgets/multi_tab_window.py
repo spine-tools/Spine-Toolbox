@@ -38,14 +38,14 @@ class MultiTabWindow(QMainWindow):
         self.tab_bar = TabBarPlus(self)
         self.tab_widget.setTabBar(self.tab_bar)
         self.setCentralWidget(self.tab_widget)
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self._hot_spot = None
         self._timer_id = None
         self._accepting_new_tabs = True
         self.restore_ui()
         self.connect_signals()
         for w in self.findChildren(QWidget):
-            w.setFocusPolicy(Qt.ClickFocus)
+            w.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
     @property
     def accepting_new_tabs(self):
@@ -433,7 +433,7 @@ class MultiTabWindow(QMainWindow):
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
         ensure_window_is_on_screen(self, original_size)
         if window_maximized == "true":
-            self.setWindowState(Qt.WindowMaximized)
+            self.setWindowState(Qt.WindowState.WindowMaximized)
 
     def save_window_state(self):
         """Save window state parameters (size, position, state) via QSettings."""
@@ -441,7 +441,7 @@ class MultiTabWindow(QMainWindow):
         self.qsettings.setValue("windowSize", self.size())
         self.qsettings.setValue("windowPosition", self.pos())
         self.qsettings.setValue("windowState", self.saveState(version=1))
-        self.qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowMaximized)
+        self.qsettings.setValue("windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized)
         self.qsettings.setValue("n_screens", len(QGuiApplication.screens()))
         self.qsettings.endGroup()
 
@@ -485,7 +485,7 @@ class TabBarPlus(QTabBar):
         self.setShape(QTabBar.Shape.RoundedNorth)
         self.setTabsClosable(True)
         self.setMovable(True)
-        self.setElideMode(Qt.ElideLeft)
+        self.setElideMode(Qt.TextElideMode.ElideLeft)
         self.drag_index = None
         self._tab_hot_spot_x = None
         self._hot_spot_y = None
@@ -545,7 +545,13 @@ class TabBarPlus(QTabBar):
             pos (QPoint)
         """
         self.drag_index = None
-        release_event = QMouseEvent(QEvent.MouseButtonRelease, pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        release_event = QMouseEvent(
+            QEvent.Type.MouseButtonRelease,
+            pos,
+            Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
         QApplication.sendEvent(self, release_event)
 
     def mouseReleaseEvent(self, event):
@@ -565,12 +571,24 @@ class TabBarPlus(QTabBar):
         """
         self.drag_index = index
         press_pos = self.tabRect(self.drag_index).center()
-        press_event = QMouseEvent(QEvent.MouseButtonPress, press_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+        press_event = QMouseEvent(
+            QEvent.Type.MouseButtonPress,
+            press_pos,
+            Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
         QApplication.sendEvent(self, press_event)
         QApplication.processEvents()
         move_pos = self.mapFromGlobal(QCursor.pos())
         if self.geometry().contains(move_pos):
-            move_event = QMouseEvent(QEvent.MouseMove, move_pos, Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+            move_event = QMouseEvent(
+                QEvent.Type.MouseMove,
+                move_pos,
+                Qt.MouseButton.LeftButton,
+                Qt.MouseButton.LeftButton,
+                Qt.KeyboardModifier.NoModifier,
+            )
             QApplication.sendEvent(self, move_event)
         self.grabMouse()
 
@@ -594,7 +612,7 @@ class TabBarPlus(QTabBar):
         if self._plus_button.underMouse():
             self._parent.show_plus_button_context_menu(event.globalPos())
             return
-        tab_button = self.tabButton(index, QTabBar.RightSide)
+        tab_button = self.tabButton(index, QTabBar.ButtonPosition.RightSide)
         if tab_button is None or tab_button.underMouse():
             return
         menu = self._parent.make_context_menu(index)
