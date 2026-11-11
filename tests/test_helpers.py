@@ -44,6 +44,7 @@ from spinetoolbox.helpers import (
     home_dir,
     interpret_icon_id,
     list_to_rich_text,
+    macos_tooltip_style_sheet,
     make_icon_id,
     merge_dicts,
     normcase_database_url_path,
@@ -750,3 +751,10 @@ class TestRecentProjects:
         remove_path_from_recent_projects(qsettings_file, "C:/Projects/DoesNotExist")
         recents = qsettings_file.value("appSettings/recentProjects")
         assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
+
+
+class TestMacosTooltipStyleSheet(TestCaseWithQApplication):
+    def test_forces_a_square_frame(self):
+        style_sheet = macos_tooltip_style_sheet()
+        self.assertTrue(style_sheet.startswith("QToolTip {"))
+        self.assertIn("border-radius: 0px;", style_sheet)

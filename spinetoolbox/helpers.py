@@ -1719,6 +1719,23 @@ def list_to_rich_text(data: Iterable[str]) -> str:
     return plain_to_rich("<br>".join(data))
 
 
+def macos_tooltip_style_sheet() -> str:
+    """QToolTip rule that forces a square, opaque frame in place of the rounded native macOS tooltip."""
+    palette = QApplication.palette()
+    background = palette.color(QPalette.ColorRole.ToolTipBase).name()
+    text = palette.color(QPalette.ColorRole.ToolTipText).name()
+    border = palette.color(QPalette.ColorRole.Mid).name()
+    return (
+        "QToolTip {"
+        f" background-color: {background};"
+        f" color: {text};"
+        f" border: 1px solid {border};"
+        " border-radius: 0px;"
+        " padding: 2px;"
+        "}"
+    )
+
+
 def plain_to_tool_tip(text: str | None) -> str | None:
     """Turns plain strings into rich text and empty strings/Nones to None.
 
