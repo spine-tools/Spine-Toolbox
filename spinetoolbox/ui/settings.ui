@@ -767,6 +767,9 @@
        <layout class="QVBoxLayout" name="verticalLayout_13">
         <item>
          <widget class="QGroupBox" name="groupBox_python">
+          <property name="toolTip">
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700; vertical-align:top;&quot;&gt;Default settings&lt;/span&gt;&lt;span style=&quot; vertical-align:top;&quot;&gt; for newly created Python Tools. You can override these settings in each Tool's Properties.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
           <property name="title">
            <string>Python</string>
           </property>
@@ -781,14 +784,18 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_12">
              <item>
-              <widget class="QComboBox" name="comboBox_python_execution_method"/>
+              <widget class="QComboBox" name="comboBox_python_execution_method">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the default execution method for Python Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
            <item>
             <widget class="QLabel" name="label_21">
              <property name="text">
-              <string>Python interpreter</string>
+              <string>Default Python interpreter</string>
              </property>
             </widget>
            </item>
@@ -835,7 +842,7 @@
            <item>
             <widget class="QLabel" name="label_22">
              <property name="text">
-              <string>Python Jupyter kernel</string>
+              <string>Default Python Jupyter kernel</string>
              </property>
             </widget>
            </item>
@@ -860,7 +867,7 @@
              <item>
               <widget class="QToolButton" name="toolButton_make_python_kernel">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add a Python Jupyter kernel into the list&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Opens a dialog for creating Jupyter kernels using existing Python interpreters&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>Manage Python kernels</string>
@@ -882,7 +889,7 @@
         <item>
          <widget class="QGroupBox" name="groupBox_julia">
           <property name="toolTip">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Default settings&lt;/span&gt; for new Julia Tool specs. Defaults can be changed for each Tool specification separately.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700; vertical-align:top;&quot;&gt;Default settings&lt;/span&gt;&lt;span style=&quot; vertical-align:top;&quot;&gt; for newly created Julia Tools. You can override these settings in each Tool's Properties.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
           <property name="title">
            <string>Julia</string>
@@ -939,14 +946,18 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_11">
              <item>
-              <widget class="QComboBox" name="comboBox_julia_execution_method"/>
+              <widget class="QComboBox" name="comboBox_julia_execution_method">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select the default execution method for Julia Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
            <item>
             <widget class="QLabel" name="label_23">
              <property name="text">
-              <string>Julia executable</string>
+              <string>Default Julia executable</string>
              </property>
             </widget>
            </item>
@@ -993,7 +1004,7 @@
            <item>
             <widget class="QLabel" name="label_24">
              <property name="text">
-              <string>Julia environment</string>
+              <string>Default Julia environment</string>
              </property>
             </widget>
            </item>
@@ -1040,7 +1051,7 @@
            <item>
             <widget class="QLabel" name="label_25">
              <property name="text">
-              <string>Julia Jupyter kernel</string>
+              <string>Default Julia Jupyter kernel</string>
              </property>
             </widget>
            </item>
@@ -1074,7 +1085,7 @@
              <item>
               <widget class="QToolButton" name="toolButton_make_julia_kernel">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add a Julia Jupyter kernel into the list&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Opens a dialog for creating Jupyter kernels using existing Julia executables / environments&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>Manage Julia kernels</string>

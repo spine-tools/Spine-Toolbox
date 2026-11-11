@@ -11,6 +11,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Changed
 
+- Execution method configuration for Julia and Python Tools has been redesigned. 
+  Default execution methods are now configured in File → Settings → Tools, while 
+  individual Tools can inherit the default or use a Tool-specific override in 
+  Tool Properties.
+- Moved execution method selection for Julia, Python, and Executable Tools from 
+  the Tool Specification Editor to Tool Properties.
+- Execution method selections are now stored in project-local settings rather 
+  than Tool Specification settings, allowing different projects to use different 
+  execution methods for the same Tool specification.
+
 ### Deprecated
 
 ### Removed
@@ -25,7 +35,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- Tutorial on running Spine Toolbox projects on High-Perfomance Computing (HPC) systems.
+- Tutorial on running Spine Toolbox projects on High-Performance Computing (HPC) systems.
 - Added a per-column regex search row to the stacked tables (Parameter value, Parameter definition,
   Entity, Entity alternative) in the Spine database editor for live, case-insensitive filtering.
 - Added a per-level regex filter to the Entity, Scenario, Alternative and Parameter value list trees.
