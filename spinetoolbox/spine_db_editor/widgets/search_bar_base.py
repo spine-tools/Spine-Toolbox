@@ -16,8 +16,9 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QApplication, QLineEdit
 
 # A search field that holds a pattern is highlighted so it stands out in both light and dark themes.
-# Explicit colors override the theme deliberately.
-SEARCH_FIELD_ACTIVE_STYLE = "QLineEdit { background: #8b0000; color: white; }"
+# Explicit colors override the theme deliberately. The border forces Qt off the native macOS
+# text field, which otherwise ignores the background and leaves white text on a white field.
+SEARCH_FIELD_ACTIVE_STYLE = "QLineEdit { background-color: #8b0000; color: white; border: 1px solid #8b0000; }"
 
 
 def is_unmapped_alt(event) -> bool:
