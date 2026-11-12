@@ -1262,10 +1262,15 @@ def make_icon_background(color):
     return f"qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 {color0}, stop: 1 {color1});"
 
 
-def make_icon_toolbar_ss(color):
+def make_icon_toolbar_ss(color: QColor) -> str:
     icon_background = make_icon_background(color)
+    disabled_text = QColor(QApplication.palette().color(QPalette.ColorRole.WindowText))
+    disabled_text.setAlphaF(0.6)
     # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
-    return f"QToolBar{{spacing: 0px; background: {icon_background}; padding: 3px; border-style: solid;}}"
+    return (
+        f"QToolBar{{spacing: 0px; background: {icon_background}; padding: 3px; border-style: solid;}}"
+        f"QToolButton:disabled{{color: {disabled_text.name(QColor.NameFormat.HexArgb)};}}"
+    )
 
 
 def color_from_index(i, count, base_hue=0.0, saturation=1.0, value=1.0):

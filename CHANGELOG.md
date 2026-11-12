@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Fixed
 
+- Disabled toolbar buttons are easier to read, and toolbars no longer pick up a tinted button color
+  from some Linux desktop themes (#3383).
+
 ### Security
 
 ## [0.10.10]

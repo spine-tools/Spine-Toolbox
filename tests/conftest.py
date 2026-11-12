@@ -11,6 +11,7 @@
 ######################################################################################################################
 from unittest import mock
 from PySide6.QtCore import QObject, QSettings, QTimer
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 import pytest
 from spinedb_api.helpers import sqlite_url_string
@@ -26,6 +27,13 @@ def application():
     yield application_instance
     QTimer.singleShot(0, lambda: application_instance.quit())
     application_instance.exec()
+
+
+@pytest.fixture
+def restore_app_palette(application):
+    palette = QPalette(QApplication.palette())
+    yield
+    QApplication.setPalette(palette)
 
 
 @pytest.fixture
