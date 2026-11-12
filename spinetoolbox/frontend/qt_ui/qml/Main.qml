@@ -24,6 +24,7 @@ Rectangle {
     // status is "info", "success" or "error"
     property string setupStatusMessage: ""
     property string setupStatusKind: "info"
+    property bool setupRunning: false
 
     // transient banner shown while/after a workflow run; status is "info", "success" or "error"
     property string runStatusMessage: ""
@@ -52,7 +53,15 @@ Rectangle {
         function onSetupStatusChanged(message, status) {
             root.setupStatusMessage = message
             root.setupStatusKind = status
-            setupStatusTimer.restart()
+            // progress lines stay up until the final success/error message, which then lingers
+            if (status === "info")
+                setupStatusTimer.stop()
+            else
+                setupStatusTimer.restart()
+        }
+
+        function onSetupRunningChanged(running) {
+            root.setupRunning = running
         }
 
         function onRunStatusChanged(message, status) {
@@ -92,7 +101,7 @@ Rectangle {
 
     Timer {
         id: setupStatusTimer
-        interval: 6000
+        interval: root.setupStatusKind === "error" ? 20000 : 8000
         onTriggered: root.setupStatusMessage = ""
     }
 
@@ -501,8 +510,7 @@ Rectangle {
 
     function beginTour() {
         var instructions = typeof projectBridge !== "undefined" ? JSON.parse(projectBridge.get_instructions()) : []
-        tour.start(TourSteps.buildSteps({
-            openProject: openProjectButton,
+        tour.start(TourSteps.buildSteps(!!root.currentProjectName, {
             canvas: designCanvas,
             filterBadge: root.visibleFilterBadge(),
             runButton: runProjectButton,
@@ -517,7 +525,7 @@ Rectangle {
         loadWorkflow()
         offerProjectSetup()
 
-        if (typeof projectBridge !== "undefined" && !projectBridge.is_tour_seen())
+        if (typeof projectBridge !== "undefined" && root.currentProjectName && !projectBridge.is_tour_seen())
             root.startTour()
     }
 
@@ -942,7 +950,7 @@ Rectangle {
                 Layout.fillWidth: true
                 height: 32
 
-                visible: root.setupStatusMessage !== ""
+                visible: root.setupStatusMessage !== "" && !root.setupRunning
 
                 color: root.setupStatusKind === "error" ? "#fee2e2"
                      : root.setupStatusKind === "success" ? "#dcfce7" : "#e0e7ff"
@@ -1029,6 +1037,19 @@ Rectangle {
                             }
                         }
                         event.accepted = true
+                    }
+
+                    Label {
+                        anchors.centerIn: parent
+                        width: Math.min(parent.width - 48, 420)
+                        visible: !root.currentProjectName
+                        z: 1
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        color: "#4b5563"
+                        font.pixelSize: 16
+                        text: qsTr("No project open.\nClick \"Open project\" and choose a folder that contains a .spinetoolbox project. "
+                                   + "Click Help for a tour with an example project.")
                     }
 
                     // scrollable so fixed-position cards stay reachable on narrow windows
@@ -1718,6 +1739,69 @@ Rectangle {
         onFinished: {
             if (typeof projectBridge !== "undefined")
                 projectBridge.mark_tour_seen()
+        }
+    }
+
+    // blocks the whole UI while the project's dependencies are being installed
+    Rectangle {
+        anchors.fill: parent
+        z: 10000
+        visible: root.setupRunning
+        color: "#99000000"
+        focus: visible
+
+        Keys.onPressed: function (event) { event.accepted = true }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            preventStealing: true
+            onWheel: function (wheel) { wheel.accepted = true }
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: Math.min(480, parent.width - 48)
+            height: setupColumn.implicitHeight + 48
+            radius: 12
+            color: "#ffffff"
+
+            ColumnLayout {
+                id: setupColumn
+                anchors.fill: parent
+                anchors.margins: 24
+                spacing: 12
+
+                BusyIndicator {
+                    Layout.alignment: Qt.AlignHCenter
+                    running: root.setupRunning
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    text: "Installing dependencies of the project"
+                    font.pixelSize: 17
+                    font.bold: true
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
+                    opacity: 0.6
+                    text: root.setupStatusMessage
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    opacity: 0.6
+                    font.pixelSize: 12
+                    text: "This can take several minutes. Please wait until it finishes; the full log is in Runs."
+                }
+            }
         }
     }
 

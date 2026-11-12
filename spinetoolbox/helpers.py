@@ -96,6 +96,8 @@ from spinedb_api.helpers import group_consecutive, sqlite_url_string
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
 from .config import (
     DEFAULT_WORK_DIR,
+    PROJECT_PACKAGE_FILES,
+    PROJECT_SETUP_SCRIPTS,
 )
 from .font import TOOLBOX_FONT
 
@@ -761,6 +763,16 @@ class ProjectDirectoryIconProvider(QFileIconProvider):
 def is_spine_toolbox_project_dir(p):
     """Returns True when given path looks like it contains a valid Spine Toolbox project."""
     return os.path.isfile(os.path.join(p, ".spinetoolbox", "project.json"))
+
+
+def find_project_setup_script(project_dir: str) -> str | None:
+    """Returns the file name of the project's bundled setup script, or None if it has none."""
+    return next((name for name in PROJECT_SETUP_SCRIPTS if os.path.isfile(os.path.join(project_dir, name))), None)
+
+
+def is_installable_project(project_dir: str) -> bool:
+    """Returns True if the project directory can be pip-installed."""
+    return any(os.path.isfile(os.path.join(project_dir, name)) for name in PROJECT_PACKAGE_FILES)
 
 
 def basic_console_icon(language: str) -> QIcon:

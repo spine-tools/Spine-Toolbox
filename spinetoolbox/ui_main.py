@@ -73,7 +73,6 @@ from .config import (
     DEFAULT_WORK_DIR,
     LATEST_PROJECT_VERSION,
     ONLINE_DOCUMENTATION_URL,
-    PROJECT_SETUP_SCRIPT,
     SPINE_DB_API_DOCUMENTATION_URL,
     SPINE_TOOLBOX_REPO_URL,
 )
@@ -88,7 +87,9 @@ from .helpers import (
     clear_qsettings,
     create_dir,
     ensure_window_is_on_screen,
+    find_project_setup_script,
     format_log_message,
+    is_installable_project,
     make_icons_theme_aware,
     open_url,
     recursive_overwrite,
@@ -798,15 +799,15 @@ class ToolboxUI(QMainWindow):
 
     def _offer_project_setup(self, project_dir: str) -> None:
         """Asks the user whether to install/update the current project's own dependencies and run its setup script."""
-        script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
-        if not os.path.isfile(script_path):
+        script_name = find_project_setup_script(project_dir)
+        if script_name is None:
             return
         if self._qsettings.value(f"appSettings/projectSetupDone/{project_dir}", defaultValue=False, type=bool):
             return
         button = QMessageBox.question(
             self,
             "Install project dependencies?",
-            f"This project bundles a setup script (<b>{PROJECT_SETUP_SCRIPT}</b>). <br><br>Install/update its "
+            f"This project bundles a setup script (<b>{script_name}</b>). <br><br>Install/update its "
             f"dependencies into the current Python environment and run the setup script now?",
         )
         if button != QMessageBox.StandardButton.Yes:
@@ -814,7 +815,10 @@ class ToolboxUI(QMainWindow):
         self._install_project_dependencies(project_dir)
 
     def _install_project_dependencies(self, project_dir: str) -> None:
-        """Editable-installs the project directory so its setup script can be imported and run."""
+        """Editable-installs the project directory if it is installable, then runs its setup script."""
+        if not is_installable_project(project_dir):
+            self._handle_project_install_finished(0, project_dir)
+            return
         python = resolve_python_interpreter(self._qsettings)
         args = ["-m", "pip", "install", "--upgrade", "-e", project_dir]
         self._project_setup_manager = QProcessExecutionManager(self, python, args, semisilent=True)
@@ -831,14 +835,15 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Installing project dependencies failed, setup script was not run")
             return
         python = resolve_python_interpreter(self._qsettings)
-        script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
+        script_name = find_project_setup_script(project_dir)
+        script_path = os.path.join(project_dir, script_name)
         self._project_setup_manager = QProcessExecutionManager(
             self, python, [script_path, "--skip-git"], semisilent=True
         )
         self._project_setup_manager.execution_finished.connect(
             lambda exit_code: self._handle_project_setup_finished(exit_code, project_dir)
         )
-        self.msg.emit(f"Running <b>{PROJECT_SETUP_SCRIPT}</b>...")
+        self.msg.emit(f"Running <b>{script_name}</b>...")
         self._project_setup_manager.start_execution(workdir=project_dir)
 
     def _handle_project_setup_finished(self, exit_code: int, project_dir: str) -> None:

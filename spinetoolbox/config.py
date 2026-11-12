@@ -66,7 +66,9 @@ PROJECT_CONSUMER_REPLAY_FILENAME: Literal["consumer_replay.json"] = "consumer_re
 SPECIFICATION_LOCAL_DATA_FILENAME: Literal["specification_local_data.json"] = "specification_local_data.json"
 PROJECT_ZIP_FILENAME: Literal["project_package"] = "project_package"  # ZIP-file name for remote execution
 
-# Marker file identifying a project that bundles its own dependency/setup script (e.g. FlexTool)
-PROJECT_SETUP_SCRIPT: Literal["update_flextool.py"] = "update_flextool.py"
+# Files identifying a project that bundles its own dependency/setup script, in order of preference
+PROJECT_SETUP_SCRIPTS: tuple[str, ...] = ("update_flextool.py", "setup_project.py")
+# A project with one of these can be pip-installed in editable mode
+PROJECT_PACKAGE_FILES: tuple[str, ...] = ("pyproject.toml", "setup.py", "setup.cfg")
 
 FG_COLOR = "#F0F0F0"

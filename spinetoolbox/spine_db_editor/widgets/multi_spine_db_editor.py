@@ -31,11 +31,12 @@ from .spine_db_editor import SpineDBEditor
 class MultiSpineDBEditor(MultiTabWindow):
     """Database editor's tabbed main window."""
 
-    def __init__(self, db_mngr, db_urls=None):
+    def __init__(self, db_mngr, db_urls=None, register: bool = True):
         """
         Args:
             db_mngr (SpineDBManager): database manager
             db_urls (Iterable of str, optional): URLs of database to load
+            register: if False, the window is left out of db_editor_registry
         """
         super().__init__(db_mngr.qsettings, "spineDBEditor")
         self.db_mngr = db_mngr
@@ -49,7 +50,8 @@ class MultiSpineDBEditor(MultiTabWindow):
         if db_urls is not None:
             if not self.add_new_tab(db_urls):
                 self.tab_load_success = False
-        db_editor_registry.register_window(self)
+        if register:
+            db_editor_registry.register_window(self)
 
     def _make_other(self):
         return MultiSpineDBEditor(self.db_mngr)

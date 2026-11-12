@@ -1,5 +1,6 @@
 """Reads and writes the same project.json Data Connection file references as the classic Qt UI."""
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,11 +25,17 @@ from ...config import (
     PROJECT_FILENAME,
     PROJECT_LOCAL_DATA_DIR_NAME,
     PROJECT_LOCAL_DATA_FILENAME,
-    PROJECT_SETUP_SCRIPT,
     REPORT_PROGRESS_ENV_VAR,
 )
 from ...execution_managers import QProcessExecutionManager
-from ...helpers import is_spine_toolbox_project_dir, normcase_database_url_path, open_url, update_recent_projects
+from ...helpers import (
+    find_project_setup_script,
+    is_installable_project,
+    is_spine_toolbox_project_dir,
+    normcase_database_url_path,
+    open_url,
+    update_recent_projects,
+)
 from ...load_project import load_local_project_dict, load_project_dict, merge_local_dict_to_project_dict
 from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
@@ -92,6 +99,8 @@ class ProjectBridge(QObject):
 
     # emitted for setup progress/result; status is "info", "success" or "error"
     setupStatusChanged = Signal(str, str)
+    # emitted when the project's dependency installation starts or ends
+    setupRunningChanged = Signal(bool)
     # emitted for run progress/result; status is "info", "success" or "error"
     runStatusChanged = Signal(str, str)
     # emitted whenever a workflow run starts or stops
@@ -116,9 +125,12 @@ class ProjectBridge(QObject):
         self._filter_names_cache: dict[tuple[str, str], tuple[tuple[int, int], list[str]]] = {}
         self._setup_manager: QProcessExecutionManager | None = None
         self._setup_logger = QtLogger()
-        self._setup_logger.msg.connect(lambda text: self.setupStatusChanged.emit(text, "info"))
-        self._setup_logger.msg_success.connect(lambda text: self.setupStatusChanged.emit(text, "success"))
-        self._setup_logger.msg_error.connect(lambda text: self.setupStatusChanged.emit(text, "error"))
+        self._setup_logger.msg.connect(lambda text: self._report_setup(text, "info"))
+        self._setup_logger.msg_success.connect(lambda text: self._report_setup(text, "success"))
+        self._setup_logger.msg_error.connect(lambda text: self._report_setup(text, "error"))
+        self._setup_logger.msg_proc.connect(self._show_setup_output)
+        self._setup_logger.msg_proc_error.connect(self._remember_setup_error)
+        self._setup_last_error = ""
         self._run_manager: QProcessExecutionManager | None = None
         self._written_images: list[Path] = []
         self._member_states: dict[str, str] = {}
@@ -333,14 +345,19 @@ class ProjectBridge(QObject):
     @Slot(result=bool)
     def has_setup_script(self) -> bool:
         """Returns whether the open project bundles a dependency/setup script (e.g. FlexTool's update_flextool.py)."""
-        return (self._base_dir() / PROJECT_SETUP_SCRIPT).is_file()
+        return find_project_setup_script(str(self._base_dir())) is not None
+
+    def _setup_script_digest(self, project_dir: str) -> str:
+        script_name = find_project_setup_script(project_dir)
+        return hashlib.sha256(Path(project_dir, script_name).read_bytes()).hexdigest() if script_name else ""
 
     @Slot(result=bool)
     def is_project_setup_done(self) -> bool:
-        """Returns whether the setup script has already completed successfully for the open project."""
+        """Returns whether the current version of the setup script has already completed successfully."""
         project_dir = str(self._base_dir())
-        return QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).value(
-            f"appSettings/projectSetupDone/{project_dir}", defaultValue=False, type=bool
+        return (
+            QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).value(f"appSettings/projectSetupDigest/{project_dir}")
+            == self._setup_script_digest(project_dir)
         )
 
     @Slot(result=bool)
@@ -355,8 +372,13 @@ class ProjectBridge(QObject):
 
     @Slot()
     def install_project_dependencies(self) -> None:
-        """Editable-installs the project directory, then runs its setup script once that finishes."""
+        """Editable-installs the project directory if it is installable, then runs its setup script."""
         project_dir = str(self._base_dir())
+        self._setup_last_error = ""
+        self.setupRunningChanged.emit(True)
+        if not is_installable_project(project_dir):
+            self._handle_install_finished(0, project_dir)
+            return
         python = resolve_python_interpreter(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION))
         self._setup_manager = QProcessExecutionManager(
             self._setup_logger, python, ["-m", "pip", "install", "--upgrade", "-e", project_dir], semisilent=True
@@ -371,30 +393,55 @@ class ProjectBridge(QObject):
         """Runs the project's setup script once its dependencies have been installed."""
         self._setup_manager = None
         if exit_code != 0:
-            self._setup_logger.msg_error.emit("Installing project dependencies failed, setup script was not run")
+            self.setupRunningChanged.emit(False)
+            self._setup_logger.msg_error.emit("Installing dependencies failed, setup script was not run")
             return
         python = resolve_python_interpreter(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION))
-        script_path = os.path.join(project_dir, PROJECT_SETUP_SCRIPT)
+        script_name = find_project_setup_script(project_dir)
+        script_path = os.path.join(project_dir, script_name)
         self._setup_manager = QProcessExecutionManager(
             self._setup_logger, python, [script_path, "--skip-git"], semisilent=True
         )
         self._setup_manager.execution_finished.connect(
             lambda exit_code: self._handle_setup_finished(exit_code, project_dir)
         )
-        self._setup_logger.msg.emit(f"Running {PROJECT_SETUP_SCRIPT}...")
+        self._setup_logger.msg.emit(f"Running {script_name}...")
         self._setup_manager.start_execution(workdir=project_dir)
+
+    def _report_setup(self, text: str, status: str) -> None:
+        """Shows text in the banner and appends it to the Runs log."""
+        self.setupStatusChanged.emit(text, status)
+        self.executionLogAppended.emit(text, "stderr" if status == "error" else "stdout")
+
+    def _show_setup_output(self, text: str) -> None:
+        self.executionLogAppended.emit(text, "stdout")
+        lines = text.strip().splitlines()
+        if lines:
+            self.setupStatusChanged.emit(lines[-1], "info")
+
+    def _remember_setup_error(self, text: str) -> None:
+        self.executionLogAppended.emit(text, "stderr")
+        lines = text.strip().splitlines()
+        if lines:
+            self._setup_last_error = lines[-1]
 
     def _handle_setup_finished(self, exit_code: int, project_dir: str) -> None:
         """Reports the outcome of the project setup script."""
         self._setup_manager = None
+        self.setupRunningChanged.emit(False)
         if exit_code == 0:
             # stored under the shared QSettings key, so setup is not offered again for this project
             QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).setValue(
+                f"appSettings/projectSetupDigest/{project_dir}", self._setup_script_digest(project_dir)
+            )
+            QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION).setValue(
                 f"appSettings/projectSetupDone/{project_dir}", True
             )
-            self._setup_logger.msg_success.emit("Project setup finished successfully")
+            self._setup_logger.msg_success.emit("Installing dependencies succeeded")
         else:
-            self._setup_logger.msg_error.emit("Project setup script failed")
+            self._setup_logger.msg_error.emit(
+                f"Installing dependencies failed: {self._setup_last_error or 'see the Runs log'}"
+            )
 
     def _handle_run_output(self, text: str, kind: str) -> None:
         """Turns progress marker lines into item state updates and forwards everything else to the run log."""
@@ -465,6 +512,8 @@ class ProjectBridge(QObject):
         self._display_states = {}
         os.environ[REPORT_PROGRESS_ENV_VAR] = "1"
         os.environ["PYTHONUNBUFFERED"] = "1"
+        # piped output defaults to the Windows code page, which cannot encode e.g. the check marks tools print
+        os.environ["PYTHONIOENCODING"] = "utf-8"
         plots_dir = self._plots_dir()
         shutil.rmtree(plots_dir, ignore_errors=True)
         plots_dir.mkdir(parents=True, exist_ok=True)
@@ -503,6 +552,7 @@ class ProjectBridge(QObject):
         os.environ.pop(PLOTS_DIR_ENV_VAR, None)
         os.environ.pop(REPORT_PROGRESS_ENV_VAR, None)
         os.environ.pop("PYTHONUNBUFFERED", None)
+        os.environ.pop("PYTHONIOENCODING", None)
         if self._saved_pythonpath is None:
             os.environ.pop("PYTHONPATH", None)
         else:
@@ -789,7 +839,7 @@ class ProjectBridge(QObject):
         local_path = _find_project_folder(chosen_path)
         if local_path is None:
             self.setupStatusChanged.emit(
-                f"{chosen_path} is not a Spine Toolbox project: no {PROJECT_CONFIG_DIR_NAME} folder found in it ",
+                f"{chosen_path} is not a Spine Toolbox project: no {PROJECT_CONFIG_DIR_NAME} folder found in it or in the two folder levels below it",
                 "error",
             )
             return ""
@@ -821,7 +871,7 @@ class ProjectBridge(QObject):
 
         settings = QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION)
         db_mngr = SpineDBManager(settings, None)
-        editor = MultiSpineDBEditor(db_mngr)
+        editor = MultiSpineDBEditor(db_mngr, register=False)
         host = self.parent()
         if isinstance(host, QWidget):
             editor.setParent(host, Qt.WindowType.Widget)

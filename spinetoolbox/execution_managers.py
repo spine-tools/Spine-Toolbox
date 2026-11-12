@@ -236,6 +236,8 @@ class QProcessExecutionManager(ExecutionManager):
             if out is not None:
                 if not self._silent:
                     self._logger.msg_proc.emit(out.strip())
+                    if errout.strip():
+                        self._logger.msg_proc_error.emit(errout.strip())
                 else:
                     self.process_output = out.strip()
                     self.process_error = errout.strip()

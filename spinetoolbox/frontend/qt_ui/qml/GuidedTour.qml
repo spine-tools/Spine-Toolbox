@@ -62,34 +62,9 @@ Item {
         }
     }
 
-    // position of the bubble: next to the spotlight, on the first side where it fits
+    // the bubble stays in the same place on every step; only the spotlight moves
     function bubblePosition() {
-        var w = bubble.width
-        var h = bubble.height
-
-        if (!hasTarget)
-            return Qt.point((width - w) / 2, (height - h) / 2)
-
-        var gap = 14
-        var centerX = Math.max(margin, Math.min(width - w - margin, spot.x + spot.width / 2 - w / 2))
-        var centerY = Math.max(margin, Math.min(height - h - margin, spot.y + spot.height / 2 - h / 2))
-        var candidates = {
-            below: Qt.point(centerX, spot.y + spot.height + gap),
-            above: Qt.point(centerX, spot.y - gap - h),
-            right: Qt.point(spot.x + spot.width + gap, centerY),
-            left: Qt.point(spot.x - gap - w, centerY)
-        }
-        var order = spot.x + spot.width / 2 < width * 0.2
-            ? ["right", "below", "above", "left"]
-            : ["below", "above", "right", "left"]
-
-        for (var i = 0; i < order.length; i++) {
-            var p = candidates[order[i]]
-            if (p.x >= margin && p.y >= margin && p.x + w <= width - margin && p.y + h <= height - margin)
-                return p
-        }
-        // no side has room (e.g. the target is most of the window): sit inside it, at the bottom
-        return Qt.point(centerX, Math.max(margin, Math.min(height - h - margin, spot.y + spot.height - h - gap)))
+        return Qt.point((width - bubble.width) / 2, (height - bubble.height) / 2)
     }
 
     onIndexChanged: updateSpot()
