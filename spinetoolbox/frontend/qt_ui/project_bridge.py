@@ -617,36 +617,75 @@ class ProjectBridge(QObject):
         resolve = self._stack_resolver(data)
         visible = self._visible_display_names(data)
 
+        edges = [
+            (resolve(connection["from"][0]), resolve(connection["to"][0]), connection)
+            for connection in project.get("connections", [])
+        ]
+        outgoing: dict[str, list[tuple[str, dict]]] = {}
+        for from_name, to_name, connection in edges:
+            if from_name != to_name:
+                outgoing.setdefault(from_name, []).append((to_name, connection))
+
         connections = []
         seen = set()
-        for connection in project.get("connections", []):
-            from_name = resolve(connection["from"][0])
-            to_name = resolve(connection["to"][0])
-            if from_name == to_name or from_name not in visible or to_name not in visible:
-                continue  # internal to a stack, hidden while collapsed, or not shown in User Mode
-            key = (from_name, to_name)
-            if key in seen:
-                continue
-            seen.add(key)
-            carrier = self._filter_connection(data, connection)
-            filter_type = self._connection_filter_type(data, carrier) if carrier is not None else None
-            filter_satisfied = True
-            if filter_type is not None:
-                # zero enabled items means nothing actually passes through the link, regardless of
-                # whether "require filter online" is set -- that flag only affects wording, not reality
-                filter_items = self._connection_filter_items(data, carrier, filter_type)
-                filter_satisfied = any(item["enabled"] for item in filter_items)
-            connections.append(
-                {
-                    "from": from_name,
-                    "to": to_name,
-                    "from_anchor": connection["from"][1] if len(connection["from"]) > 1 else "right",
-                    "to_anchor": connection["to"][1] if len(connection["to"]) > 1 else "left",
-                    "filter_type": filter_type,
-                    "filter_satisfied": filter_satisfied,
-                }
-            )
+        for from_name, to_name, connection in edges:
+            if from_name == to_name or from_name not in visible:
+                continue  # internal to a stack or not shown in User Mode
+            # links through hidden items are bridged to the next visible item
+            targets = []
+            pending = [(to_name, connection, True)]
+            passed = set()
+            while pending:
+                name, last, direct = pending.pop()
+                if name in visible:
+                    targets.append((name, last, direct))
+                elif name not in passed:
+                    passed.add(name)
+                    pending.extend((next_name, next_edge, False) for next_name, next_edge in outgoing.get(name, []))
+            for target_name, last_connection, direct in targets:
+                if target_name != from_name:
+                    self._append_connection(
+                        data, connections, seen, from_name, target_name, connection, last_connection, direct
+                    )
+        return self._with_filter_states(connections)
 
+    def _append_connection(
+        self,
+        data: dict,
+        connections: list[dict],
+        seen: set,
+        from_name: str,
+        to_name: str,
+        first: dict,
+        last: dict,
+        direct: bool,
+    ) -> None:
+        """Appends the link from_name -> to_name unless present; bridged links carry no filter."""
+        key = (from_name, to_name)
+        if key in seen:
+            return
+        seen.add(key)
+        carrier = self._filter_connection(data, first) if direct else None
+        filter_type = self._connection_filter_type(data, carrier) if carrier is not None else None
+        filter_satisfied = True
+        if filter_type is not None:
+            # zero enabled items means nothing actually passes through the link, regardless of
+            # whether "require filter online" is set -- that flag only affects wording, not reality
+            filter_items = self._connection_filter_items(data, carrier, filter_type)
+            filter_satisfied = any(item["enabled"] for item in filter_items)
+        connections.append(
+            {
+                "from": from_name,
+                "to": to_name,
+                "from_anchor": first["from"][1] if len(first["from"]) > 1 else "right",
+                "to_anchor": last["to"][1] if len(last["to"]) > 1 else "left",
+                "filter_type": filter_type,
+                "filter_satisfied": filter_satisfied,
+            }
+        )
+
+    @staticmethod
+    def _with_filter_states(connections: list[dict]) -> list[dict]:
         for connection in connections:
             if connection["filter_type"] is None:
                 connection["filter_state"] = None
