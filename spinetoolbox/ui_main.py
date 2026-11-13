@@ -817,9 +817,9 @@ class ToolboxUI(QMainWindow):
         self.ui.open_project_settings_action.setEnabled(True)
         self._unset_execution_in_progress()
 
-    def refresh_toolbars(self):
+    def refresh_toolbars(self) -> None:
         """Set toolbars' color using subtle palette-derived shades."""
-        base = QApplication.palette().color(QPalette.ColorRole.Button)
+        base = QApplication.palette().color(QPalette.ColorRole.Window)
         all_toolbars = list(self._toolbars())
         for k, toolbar in enumerate(all_toolbars):
             factor = 100 + (k - len(all_toolbars) // 2) * 5
@@ -827,7 +827,7 @@ class ToolboxUI(QMainWindow):
             toolbar.set_color(color)
             if self.toolBarArea(toolbar) == Qt.NoToolBarArea:
                 self.addToolBar(Qt.TopToolBarArea, toolbar)
-        self.execute_toolbar.set_color(QApplication.palette().color(QPalette.ColorRole.Button))
+        self.execute_toolbar.set_color(base)
         if self.toolBarArea(self.execute_toolbar) == Qt.NoToolBarArea:
             self.addToolBar(Qt.TopToolBarArea, self.execute_toolbar)
 
