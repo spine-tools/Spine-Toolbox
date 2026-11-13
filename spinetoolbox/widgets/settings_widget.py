@@ -50,6 +50,7 @@ from ..helpers import (
 )
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
+from ..execution_models import DEFAULT_SUFFIX
 from ..spine_db_editor.editors import db_editor_registry
 from ..widgets.kernel_manager import MiniJuliaKernelManager, MiniPythonKernelManager
 from ..widgets.custom_menus import PythonContextMenu, JuliaContextMenu
@@ -646,12 +647,12 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                 continue
             if r == row:
                 data["default"] = True
-                item.setText(f"{data['base_text']} (default)")
+                item.setText(f"{data['base_text']}{DEFAULT_SUFFIX}")
                 combo.setToolTip(item.toolTip())
                 set_combobox_item_invalid_property(combo, item)
             else:
                 data["default"] = False
-                item.setText(data["base_text"])
+                item.setText(data["display_text"])
             item.setData(data)
 
     @Slot(bool)
