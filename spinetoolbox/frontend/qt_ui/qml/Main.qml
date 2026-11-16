@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtQuick.Shapes
+import "Layout.js" as CardLayout
 import "Router.js" as Router
 import "TourSteps.js" as TourSteps
 
@@ -206,216 +207,9 @@ Rectangle {
         }
     }
 
-    // groups items into ranks (rows by y, columns by x) using Design View as a hint for order and
-    // which items share a row/column -- but then places ranks on a fixed, compact grid instead of
-    // preserving Design View's often very spread out distances, so cards stay close together
-    // (gaps only grow where the grid needs the extra room to avoid overlapping cards)
-    function rankByCoordinate(items, getCoordinate, tolerance) {
-        var order = []
-        for (var i = 0; i < items.length; i++)
-            order.push({ index: i, value: getCoordinate(items[i]) })
-        order.sort(function (a, b) { return a.value - b.value })
-
-        var rankOfItem = []
-        var rankCount = 0
-        var lastValue = 0
-        for (var j = 0; j < order.length; j++) {
-            var entry = order[j]
-            if (rankCount === 0 || entry.value - lastValue >= tolerance) {
-                lastValue = entry.value
-                rankCount++
-            }
-            rankOfItem[entry.index] = rankCount - 1
-        }
-        return { rankOfItem: rankOfItem, rankCount: rankCount }
-    }
-
-    function layoutWorkflow(items, connections) {
-        if (items.length === 0)
-            return { width: root.designContentWidth, height: root.designContentHeight }
-
-        var padding = 60
-        var rowStep = 134   // vertical distance between adjacent rows (card height + a 60 gap, like colStep)
-        var colStep = 210   // horizontal distance between adjacent columns (card width + a gap)
-
-        var itemIndex = ({})
-        for (var m = 0; m < items.length; m++)
-            itemIndex[items[m].name] = m
-
-        var rows = rankByCoordinate(items, function (item) { return item.y }, rowStep / 3)
-        var rowForItem = rows.rankOfItem
-        var rowCount = rows.rankCount
-
-        var itemY = []
-        for (var n = 0; n < items.length; n++)
-            itemY[n] = rowForItem[n] * rowStep
-
-        // columns are ranked independently within each row, so an unrelated item in a different row
-        // never eats up a "phantom" column slot between two items that are actually adjacent
-        var alignedX = []
-        for (var rowIdx = 0; rowIdx < rowCount; rowIdx++) {
-            var rowItems = []
-            for (var ri = 0; ri < items.length; ri++) {
-                if (rowForItem[ri] === rowIdx)
-                    rowItems.push(items[ri])
-            }
-            var rowCols = rankByCoordinate(rowItems, function (item) { return item.x }, colStep / 4)
-            var ri2 = 0
-            for (var ri3 = 0; ri3 < items.length; ri3++) {
-                if (rowForItem[ri3] === rowIdx) {
-                    alignedX[ri3] = rowCols.rankOfItem[ri2] * colStep
-                    ri2++
-                }
-            }
-        }
-
-        // a branch continues from its source: a target entering by its left side and lying to the right of its
-        // source in Design View must sit at least one column right of it, even when it is alone in its row
-        for (var pass = 0; pass < items.length; pass++) {
-            var moved = false
-            for (var e = 0; e < connections.length; e++) {
-                var edge = connections[e]
-                var src = itemIndex[edge.from]
-                var dst = itemIndex[edge.to]
-                if (src === undefined || dst === undefined || src === dst)
-                    continue
-                var enterSide = edge.to_anchor || "left"
-                if (enterSide === "left" && items[dst].x > items[src].x
-                        && alignedX[dst] < alignedX[src] + colStep) {
-                    alignedX[dst] = alignedX[src] + colStep
-                    moved = true
-                } else if (enterSide === "right" && items[src].x > items[dst].x
-                        && alignedX[src] < alignedX[dst] + colStep) {
-                    alignedX[src] = alignedX[dst] + colStep
-                    moved = true
-                }
-            }
-            if (!moved)
-                break
-        }
-
-        // feeders of one card (links entering its left/right side) are spread symmetrically around it,
-        // one row step apart each, so their midpoint lines up with the card regardless of how far
-        // apart (or close together) they originally were in Design View
-        var feedersOf = ({})
-        for (var f = 0; f < connections.length; f++) {
-            var feed = connections[f]
-            var feedTarget = itemIndex[feed.to]
-            var feedSource = itemIndex[feed.from]
-            var feedSide = feed.to_anchor || "left"
-            if (feedTarget === undefined || feedSource === undefined || feedSource === feedTarget
-                    || (feedSide !== "left" && feedSide !== "right"))
-                continue
-            var feedKey = feedTarget + ":" + feedSide
-            if (!feedersOf[feedKey])
-                feedersOf[feedKey] = []
-            if (feedersOf[feedKey].indexOf(feedSource) < 0)
-                feedersOf[feedKey].push(feedSource)
-        }
-        for (var feedKey2 in feedersOf) {
-            var feeders = feedersOf[feedKey2]
-            if (feeders.length < 2)
-                continue
-            var targetY = itemY[parseInt(feedKey2)]
-            feeders.sort(function (a, b) { return itemY[a] - itemY[b] })
-            for (var fs = 0; fs < feeders.length; fs++)
-                itemY[feeders[fs]] = targetY + (fs - (feeders.length - 1) / 2) * rowStep
-        }
-
-        var minY = itemY[0], maxY = itemY[0]
-        for (var yi = 1; yi < items.length; yi++) {
-            minY = Math.min(minY, itemY[yi])
-            maxY = Math.max(maxY, itemY[yi])
-        }
-        // the whole workflow starts lower so feeders spread above their target still fit in the view
-        for (var py = 0; py < items.length; py++)
-            items[py].py = padding + (itemY[py] - minY)
-
-        // children hanging below a parent's bottom edge in Design View
-        var belowChildren = []
-        for (var c = 0; c < connections.length; c++) {
-            var link = connections[c]
-            var enteringBottom = link.from_anchor !== "bottom" && link.to_anchor === "bottom"
-            var parentIndex = itemIndex[enteringBottom ? link.to : link.from]
-            var childIndex = itemIndex[enteringBottom ? link.from : link.to]
-            if ((link.from_anchor !== "bottom" && !enteringBottom) || parentIndex === undefined
-                    || childIndex === undefined || rowForItem[childIndex] <= rowForItem[parentIndex])
-                continue
-            if (!belowChildren[parentIndex])
-                belowChildren[parentIndex] = []
-            belowChildren[parentIndex].push(childIndex)
-        }
-
-        // a single child goes straight below its parent; a parent with several children is centered
-        // over them (or, if the parent's own x is already fixed, the children shift to be centered under it)
-        var fixedX = []
-        for (var downRow = 0; downRow < rowCount; downRow++) {
-            for (var p = 0; p < items.length; p++) {
-                var kids = belowChildren[p]
-                if (rowForItem[p] !== downRow || !kids)
-                    continue
-                if (kids.length === 1) {
-                    alignedX[kids[0]] = alignedX[p]
-                    fixedX[kids[0]] = true
-                    continue
-                }
-                var kidsCenter = 0
-                for (var k = 0; k < kids.length; k++)
-                    kidsCenter += alignedX[kids[k]]
-                kidsCenter /= kids.length
-                if (fixedX[p]) {
-                    for (var s = 0; s < kids.length; s++)
-                        alignedX[kids[s]] += alignedX[p] - kidsCenter
-                } else {
-                    alignedX[p] = kidsCenter
-                }
-            }
-        }
-
-        // cards sharing a row must not overlap
-        var minSpacing = colStep
-        for (var spreadRow = 0; spreadRow < rowCount; spreadRow++) {
-            var inRow = []
-            for (var q = 0; q < items.length; q++) {
-                if (rowForItem[q] === spreadRow)
-                    inRow.push(q)
-            }
-            inRow.sort(function(a, b) { return alignedX[a] - alignedX[b] })
-            for (var t = 1; t < inRow.length; t++)
-                alignedX[inRow[t]] = Math.max(alignedX[inRow[t]], alignedX[inRow[t - 1]] + minSpacing)
-        }
-
-        // a link leaving a card's bottom edge enters a card directly below it through the top edge, giving a
-        // straight vertical line instead of a loop round to the target's side
-        for (var vc = 0; vc < connections.length; vc++) {
-            var down = connections[vc]
-            var upper = itemIndex[down.from]
-            var lower = itemIndex[down.to]
-            if (down.from_anchor === "bottom" && upper !== undefined && lower !== undefined
-                    && itemY[lower] > itemY[upper] && Math.abs(alignedX[lower] - alignedX[upper]) < colStep / 4)
-                down.to_anchor = "top"
-
-            // mirror case: a card below feeds the bottom edge of the card above, leaving through its top
-            var above = itemIndex[down.to]
-            var below = itemIndex[down.from]
-            if (down.from_anchor !== "bottom" && down.to_anchor === "bottom" && above !== undefined
-                    && below !== undefined && itemY[below] > itemY[above]
-                    && Math.abs(alignedX[below] - alignedX[above]) < colStep / 4)
-                down.from_anchor = "top"
-        }
-
-        var leftX = alignedX[0], rightX = alignedX[0]
-        for (var u = 1; u < items.length; u++) {
-            leftX = Math.min(leftX, alignedX[u])
-            rightX = Math.max(rightX, alignedX[u])
-        }
-        for (var w = 0; w < items.length; w++)
-            items[w].px = padding + (alignedX[w] - leftX)
-
-        return {
-            width: padding * 2 + (rightX - leftX) + 150,
-            height: padding * 2 + (maxY - minY) + 74
-        }
+    function layoutWorkflow(items, connections, compactRows) {
+        return CardLayout.layoutWorkflow(
+            items, connections, { width: root.designContentWidth, height: root.designContentHeight }, compactRows)
     }
 
 
@@ -465,7 +259,7 @@ Rectangle {
         var connections = parsed.connections || []
 
         if (items.length > 0) {
-            var size = layoutWorkflow(items, connections)
+            var size = layoutWorkflow(items, connections, !!parsed.compact_rows)
 
             root.designContentWidth = size.width + 110
             root.designContentHeight = size.height + 34
@@ -534,14 +328,14 @@ Rectangle {
     property real zoomLevel: 1.0
 
     // floored so the two factors combined never shrink cards past where text/line rendering breaks down
-    property real cardScale: Math.max(0.55, root.zoomLevel * Math.max(0.5, Math.min(1, designFlick.width / root.designContentWidth)))
+    property real cardScale: Math.max(0.35, root.zoomLevel * Math.max(0.35, Math.min(1, designFlick.width / root.designContentWidth)))
 
     function zoomIn() {
         root.zoomLevel = Math.min(2.5, root.zoomLevel * 1.2)
     }
 
     function zoomOut() {
-        root.zoomLevel = Math.max(0.55, root.zoomLevel / 1.2)
+        root.zoomLevel = Math.max(0.35, root.zoomLevel / 1.2)
     }
 
     function zoomReset() {
@@ -1128,7 +922,7 @@ Rectangle {
 
                                     ShapePath {
                                         strokeColor: connectionShape.lineColor
-                                        strokeWidth: connectionShape.lineState === "idle" ? 1.5 : 3
+                                        strokeWidth: connectionShape.lineState === "idle" ? 3 : 5
                                         fillColor: "transparent"
                                         capStyle: ShapePath.FlatCap
 
@@ -1901,8 +1695,8 @@ Rectangle {
             y = designY * sizeFactor
         }
 
-        width: 150 * sizeFactor
-        height: 74 * sizeFactor
+        width: 100 * sizeFactor
+        height: 100 * sizeFactor
 
         radius: 10 * sizeFactor
 
@@ -2176,8 +1970,8 @@ Rectangle {
 
 
         Item {
-            width: 150
-            height: 74
+            width: 100
+            height: 100
 
             scale: card.sizeFactor
             transformOrigin: Item.TopLeft
@@ -2211,15 +2005,12 @@ Rectangle {
                     text: card.subtitle
 
                     visible: card.subtitle.length > 0
+                    Layout.fillWidth: true
 
                     font.pixelSize: 11
                     opacity: 0.6
 
                     elide: Text.ElideRight
-                }
-
-                Item {
-                    Layout.fillWidth: true
                 }
 
                 Label {
@@ -2246,6 +2037,8 @@ Rectangle {
                     font.pixelSize: 13
                     font.bold: true
 
+                    wrapMode: Text.WrapAnywhere
+                    maximumLineCount: 2
                     elide: Text.ElideRight
                 }
             }

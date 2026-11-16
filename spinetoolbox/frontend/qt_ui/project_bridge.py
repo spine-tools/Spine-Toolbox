@@ -753,7 +753,9 @@ class ProjectBridge(QObject):
         items = [item for item in items if item["name"] not in hidden]
         connections = self._connection_filter_states(data)
 
-        return json.dumps({"items": items, "connections": connections})
+        # stacks and hidden items leave gaps that the layout may close
+        compact_rows = bool(stacked_names or hidden & raw_items.keys())
+        return json.dumps({"items": items, "connections": connections, "compact_rows": compact_rows})
 
     @Slot(result=str)
     def get_instructions(self) -> str:
