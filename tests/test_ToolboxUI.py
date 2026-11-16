@@ -22,7 +22,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import QMimeData, QPoint, QPointF, QSettings, Qt
-from PySide6.QtGui import QDropEvent
+from PySide6.QtGui import QColor, QDropEvent, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox
 from spinetoolbox.link import Link
@@ -883,6 +883,15 @@ class TestToolboxUIWithTestSettings(TestCaseWithQApplication):
         with toolbox_with_settings(settings_dict) as toolbox:
             settings = toolbox.qsettings()
             self.assertEqual(settings.value("appSettings/saveAtExit"), "automatic")
+
+
+def test_refresh_toolbars_uses_window_color(spine_toolbox, restore_app_palette):
+    palette = QApplication.palette()
+    palette.setColor(QPalette.ColorRole.Button, QColor(0, 0, 255))
+    palette.setColor(QPalette.ColorRole.Window, QColor(240, 240, 240))
+    QApplication.setPalette(palette)
+    spine_toolbox.refresh_toolbars()
+    assert "#f0f0f0" in spine_toolbox.execute_toolbar.styleSheet()
 
 
 @contextmanager
