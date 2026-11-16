@@ -10,7 +10,7 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-"""Contains a class for storing saved Python and Julia executables in a model."""
+"""Contains a class for storing execution models."""
 
 import os
 from PySide6.QtWidgets import QApplication
@@ -31,7 +31,7 @@ DEFAULT_SUFFIX = " (default)"
 
 
 class ExecutionModels(QObject):
-    """Class for storing execution methods (Pythons, Julias and other kernels)."""
+    """Class for storing execution models (Pythons, Julias and other kernels)."""
 
     """Emitted when all kernels have been loaded."""
     all_kernels_loaded = Signal()
@@ -138,11 +138,12 @@ class ExecutionModels(QObject):
         Args:
             path (str): Path to Julia executable
         """
+        norm_path = path.replace(os.sep, "/")
         for row in range(self.julia_executables_model.rowCount()):
             item = self.julia_executables_model.item(row, 0)
             if not item.data():
                 continue
-            if item.data()["exe"] == path:
+            if item.data()["exe"] == norm_path:
                 return item.index()
         return QModelIndex()
 
@@ -202,9 +203,10 @@ class ExecutionModels(QObject):
         Args:
             path (str): Path to Julia project directory
         """
+        norm_path = path.replace(os.sep, "/")
         for row in range(self.julia_projects_model.rowCount()):
             item = self.julia_projects_model.item(row, 0)
-            if item.data()["path"] == path:
+            if item.data()["path"] == norm_path:
                 return item.index()
         return QModelIndex()
 
@@ -326,11 +328,12 @@ class ExecutionModels(QObject):
         Args:
             path (str): Path to Python interpreter
         """
+        norm_path = path.replace(os.sep, "/")
         for row in range(self.python_interpreters_model.rowCount()):
             item = self.python_interpreters_model.item(row, 0)
             if not item.data():
                 continue
-            if item.data()["exe"] == path:
+            if item.data()["exe"] == norm_path:
                 return item.index()
         return QModelIndex()
 

@@ -647,7 +647,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
                 continue
             if r == row:
                 data["default"] = True
-                item.setText(f"{data['base_text']}{DEFAULT_SUFFIX}")
+                item.setText(f"{data['display_text']}{DEFAULT_SUFFIX}")
                 combo.setToolTip(item.toolTip())
                 set_combobox_item_invalid_property(combo, item)
             else:
