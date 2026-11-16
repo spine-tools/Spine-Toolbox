@@ -574,14 +574,18 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         path = data["exe"]
         global_pos = self.ui.comboBox_julia_path.mapToGlobal(pos)
         current_julia_dir = self.solve_current_julia_dir()
-        menu = JuliaContextMenu(self.ui.comboBox_julia_path, self, self._execution_models, path, False, 0, current_julia_dir)
+        menu = JuliaContextMenu(
+            self.ui.comboBox_julia_path, self, self._execution_models, path, False, 0, current_julia_dir
+        )
         menu.popup(global_pos)
 
     @Slot(QPoint)
     def _show_julia_projects_context_menu(self, pos, index=None):
         """Shows the context-menu on Julia projects/environments combobox."""
         if not index:
-            data = get_current_item_data(self.ui.comboBox_julia_project_path, self._execution_models.julia_projects_model)
+            data = get_current_item_data(
+                self.ui.comboBox_julia_project_path, self._execution_models.julia_projects_model
+            )
         else:
             item = self._execution_models.julia_projects_model.itemFromIndex(index)
             data = item.data()
@@ -612,7 +616,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot(QPoint)
     def _show_python_interpreters_context_menu(self, pos, index=None):
         if not index:
-            data = get_current_item_data(self.ui.comboBox_python_interpreters, self._execution_models.python_interpreters_model)
+            data = get_current_item_data(
+                self.ui.comboBox_python_interpreters, self._execution_models.python_interpreters_model
+            )
         else:
             item = self._execution_models.python_interpreters_model.itemFromIndex(index)
             data = item.data()
@@ -1047,12 +1053,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         use_julia_jupyter_console = "2" if method == ExecutionMethod.JUPYTER else "0"
         data = get_current_item_data(self.ui.comboBox_julia_path, self._execution_models.julia_executables_model)
         julia_exe = data["exe"] if data is not None else ""
-        project_data = get_current_item_data(self.ui.comboBox_julia_project_path, self._execution_models.julia_projects_model)
+        project_data = get_current_item_data(
+            self.ui.comboBox_julia_project_path, self._execution_models.julia_projects_model
+        )
         julia_project = project_data["path"] if project_data is not None else ""
         julia_kernel = ""
         is_julia_conda_kernel = "0"
         if self.ui.comboBox_julia_kernel.currentIndex() != 0:
-            kernel_data = get_current_item_data(self.ui.comboBox_julia_kernel, self._execution_models.julia_kernel_model)
+            kernel_data = get_current_item_data(
+                self.ui.comboBox_julia_kernel, self._execution_models.julia_kernel_model
+            )
             julia_kernel = kernel_data["kernel_name"] if kernel_data is not None else ""
             is_conda = kernel_data["is_conda"] if kernel_data is not None else False
             is_julia_conda_kernel = "2" if is_conda else "0"
@@ -1068,12 +1078,16 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         """Returns current Python settings on Settings->Tools page."""
         method = self.ui.comboBox_python_execution_method.currentData()
         use_python_jupyter_console = "2" if method == ExecutionMethod.JUPYTER else "0"
-        data = get_current_item_data(self.ui.comboBox_python_interpreters, self._execution_models.python_interpreters_model)
+        data = get_current_item_data(
+            self.ui.comboBox_python_interpreters, self._execution_models.python_interpreters_model
+        )
         python_exe = data["exe"] if data is not None else ""
         python_kernel = ""
         is_python_conda_kernel = "0"
         if self.ui.comboBox_python_kernels.currentIndex() != 0:
-            kernel_data = get_current_item_data(self.ui.comboBox_python_kernels, self._execution_models.python_kernel_model)
+            kernel_data = get_current_item_data(
+                self.ui.comboBox_python_kernels, self._execution_models.python_kernel_model
+            )
             python_kernel = kernel_data["kernel_name"] if kernel_data is not None else ""
             is_conda = kernel_data["is_conda"] if kernel_data is not None else False
             is_python_conda_kernel = "2" if is_conda else "0"
@@ -1200,7 +1214,9 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         conda = self.ui.lineEdit_conda_path.text().strip()
         p = self._get_python_settings()
         self._saved_python_kernel = p["python_kernel"]
-        self._execution_models.start_fetching_python_kernels(finalize_slot=self._on_python_kernels_reloaded, conda=conda)
+        self._execution_models.start_fetching_python_kernels(
+            finalize_slot=self._on_python_kernels_reloaded, conda=conda
+        )
 
     def reload_julia_kernels(self):
         """Starts reloading Julia kernels."""
@@ -1231,13 +1247,17 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot()
     def _on_python_kernels_reloaded(self):
         """Sets previous Python selected after Python kernels have been reloaded."""
-        restore_saved_python_kernel(self, self._execution_models, self.ui.comboBox_python_kernels, self._saved_python_kernel)
+        restore_saved_python_kernel(
+            self, self._execution_models, self.ui.comboBox_python_kernels, self._saved_python_kernel
+        )
         self._saved_python_kernel = None
 
     @Slot()
     def _on_julia_kernels_reloaded(self):
         """Sets previous Julia selected after Julia kernels have been reloaded."""
-        restore_saved_julia_kernel(self, self._execution_models, self.ui.comboBox_julia_kernel, self._saved_julia_kernel)
+        restore_saved_julia_kernel(
+            self, self._execution_models, self.ui.comboBox_julia_kernel, self._saved_julia_kernel
+        )
         self._saved_julia_kernel = None
 
     def closeEvent(self, ev):

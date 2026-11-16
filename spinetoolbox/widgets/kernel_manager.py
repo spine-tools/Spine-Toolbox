@@ -329,7 +329,7 @@ class MiniPythonKernelManager(KernelManagerBase):
 
     def is_ipykernel_installed(self):
         """Checks if ipykernel is installed. If not, asks permission to install it.
-         If ipykernel is installed, starts creating the kernel specs."""
+        If ipykernel is installed, starts creating the kernel specs."""
         try:
             subprocess.run(
                 [self._python_exe, "-c", "import ipykernel"],
@@ -429,7 +429,10 @@ class MiniPythonKernelManager(KernelManagerBase):
         self._install_kernel_process.deleteLater()
         self._install_kernel_process = None
         if retval != 0:
-            self.set_failed_state(f"Creating Kernel {self._python_kernel_name} failed!", "Please see details below. You may try again or install the kernel manually")
+            self.set_failed_state(
+                f"Creating Kernel {self._python_kernel_name} failed!",
+                "Please see details below. You may try again or install the kernel manually",
+            )
             return
         self.ui.progressBar.setRange(0, 100)
         self.ui.progressBar.setValue(100)
@@ -497,9 +500,7 @@ class MiniJuliaKernelManager(KernelManagerBase):
             Notification(self, "Please select a Julia executable").show()
             return False
         if not os.path.isfile(self._julia_exe):
-            Notification(
-                self, f"Path {self._julia_exe} doesn't exist. Please select another Julia executable"
-            ).show()
+            Notification(self, f"Path {self._julia_exe} doesn't exist. Please select another Julia executable").show()
             return False
         if self._julia_project is None:
             Notification(self, "Please select a Julia environment").show()
@@ -646,12 +647,12 @@ class MiniJuliaKernelManager(KernelManagerBase):
         if exit_status == QProcess.ExitStatus.CrashExit:
             self.msg_error.emit(errout)
             self.msg.emit(f"Julia process {julia} crashed. Please check that Julia is installed correctly.")
-            self.set_failed_state("Creating kernel failed","Julia process crashed. See details below.")
+            self.set_failed_state("Creating kernel failed", "Julia process crashed. See details below.")
             return
         if exit_code != 0:
             self.msg_error.emit(errout)
             self.msg.emit(f"Julia process {self._julia_exe} failed. See details above.")
-            self.set_failed_state("Creating kernel failed","Julia process failed. See details below.")
+            self.set_failed_state("Creating kernel failed", "Julia process failed. See details below.")
             return
         if out.strip() == "True":  # IJulia already installed
             self.msg.emit("IJulia is installed")
@@ -746,7 +747,10 @@ class MiniJuliaKernelManager(KernelManagerBase):
         self._install_julia_kernel_process.deleteLater()
         self._install_julia_kernel_process = None
         if retval != 0:
-            self.set_failed_state(f"Creating kernel {self._complete_kernel_name()} failed!", "Please see details below. You may try again or install the kernel manually.")
+            self.set_failed_state(
+                f"Creating kernel {self._complete_kernel_name()} failed!",
+                "Please see details below. You may try again or install the kernel manually.",
+            )
             return
         self.ui.progressBar.setRange(0, 100)
         self.ui.progressBar.setValue(100)

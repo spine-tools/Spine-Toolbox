@@ -54,16 +54,14 @@ class TestKernelManagers:
             venv.create(environment_dir, system_site_packages=True)
             env_path = pathlib.Path(environment_dir)
             python_path = (
-                env_path / "Scripts" / "python.exe"
-                if sys.platform == "win32"
-                else env_path / "bin" / "python"
+                env_path / "Scripts" / "python.exe" if sys.platform == "win32" else env_path / "bin" / "python"
             )
             kernel_name = "spinetoolbox_test_python_kernel"
             models = ExecutionModels(MagicMock())
             models.load_python_system_interpreters([str(python_path)], show_select_item=True)
             with (
                 patch.object(models, "refresh_python_interpreters_model") as refresh_mock,
-                patch("spinetoolbox.widgets.kernel_manager.VersionCollector") as mock_version_collector
+                patch("spinetoolbox.widgets.kernel_manager.VersionCollector") as mock_version_collector,
             ):
                 editor = MiniPythonKernelManager(settings_widget, models)
                 refresh_mock.assert_called_once()
@@ -92,7 +90,7 @@ class TestKernelManagers:
         models.load_julia_executables([julia_exec], show_select_item=True)
         with (
             patch.object(models, "refresh_julia_executables_model") as refresh_mock,
-            patch("spinetoolbox.widgets.kernel_manager.VersionCollector") as mock_version_collector
+            patch("spinetoolbox.widgets.kernel_manager.VersionCollector") as mock_version_collector,
         ):
             editor = MiniJuliaKernelManager(settings_widget, models)
             refresh_mock.assert_called_once()
@@ -102,7 +100,7 @@ class TestKernelManagers:
         editor._julia_kernel_name_prefix = kernel_name
         with (
             patch("os.path.isfile") as mock_isfile,
-            patch("spinetoolbox.widgets.kernel_manager.MiniJuliaKernelManager._complete_kernel_name") as mock_kname
+            patch("spinetoolbox.widgets.kernel_manager.MiniJuliaKernelManager._complete_kernel_name") as mock_kname,
         ):
             mock_isfile.return_value = True
             mock_kname.return_value = kernel_name

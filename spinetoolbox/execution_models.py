@@ -99,7 +99,9 @@ class ExecutionModels(QObject):
         if current:
             is_default = default_julia == ""
             first_item = QStandardItem(self._with_default_suffix(current, is_default))
-            first_item.setData({"is_jupyter": False, "is_conda": False, "exe": "", "display_text": current, "default": is_default})
+            first_item.setData(
+                {"is_jupyter": False, "is_conda": False, "exe": "", "display_text": current, "default": is_default}
+            )
             first_item.setIcon(QIcon(":/symbols/julia-logo.svg"))
             first_item.setToolTip(f"This is the Julia from Path ({current})")
             self._julia_executables_model.appendRow(first_item)
@@ -107,7 +109,15 @@ class ExecutionModels(QObject):
             display_text = executable_path.replace("/", os.sep)
             is_default = default_julia == executable_path
             item = QStandardItem(self._with_default_suffix(display_text, is_default))
-            item.setData({"is_jupyter": False, "is_conda": False, "exe": executable_path, "display_text": display_text, "default": is_default})
+            item.setData(
+                {
+                    "is_jupyter": False,
+                    "is_conda": False,
+                    "exe": executable_path,
+                    "display_text": display_text,
+                    "default": is_default,
+                }
+            )
             item.setIcon(QIcon(":/symbols/julia-logo.svg"))
             item.setToolTip(display_text)
             item = self._make_item_red_if_path_doesnt_exist(item, executable_path)
@@ -176,7 +186,9 @@ class ExecutionModels(QObject):
             display_text = project_path.replace("/", os.sep)
             is_default = default_project == project_path
             item = QStandardItem(self._with_default_suffix(display_text, is_default))
-            item.setData({"is_project": True, "path": project_path, "display_text": display_text, "default": is_default})
+            item.setData(
+                {"is_project": True, "path": project_path, "display_text": display_text, "default": is_default}
+            )
             item.setIcon(QIcon(":/icons/folder.svg"))
             item.setToolTip(display_text)
             item = self._make_item_red_if_path_doesnt_exist(item, project_path)
@@ -293,7 +305,9 @@ class ExecutionModels(QObject):
         current = resolve_current_python_interpreter()
         is_default = default_python == ""
         first_item = QStandardItem(self._with_default_suffix(current, is_default))
-        first_item.setData({"is_jupyter": False, "is_conda": False, "exe": "", "display_text": current, "default": is_default})
+        first_item.setData(
+            {"is_jupyter": False, "is_conda": False, "exe": "", "display_text": current, "default": is_default}
+        )
         first_item.setIcon(QIcon(":/symbols/app.ico"))
         first_item.setToolTip("This is the current Python Interpreter")
         self._python_interpreters_model.appendRow(first_item)
@@ -301,7 +315,15 @@ class ExecutionModels(QObject):
             display_text = interpreter_path.replace("/", os.sep)
             is_default = default_python == interpreter_path
             item = QStandardItem(self._with_default_suffix(display_text, is_default))
-            item.setData({"is_jupyter": False, "is_conda": False, "exe": interpreter_path, "display_text": display_text, "default": is_default})
+            item.setData(
+                {
+                    "is_jupyter": False,
+                    "is_conda": False,
+                    "exe": interpreter_path,
+                    "display_text": display_text,
+                    "default": is_default,
+                }
+            )
             item.setIcon(QIcon(":/symbols/python-logo.svg"))
             item.setToolTip(display_text)
             item = self._make_item_red_if_path_doesnt_exist(item, interpreter_path)
