@@ -217,6 +217,111 @@ Rectangle {
     // by rebuildRoutes() since routing is the expensive part; connectionsLayer scales them with cardScale
     property var routes: ({})
 
+    // card moves for Ctrl+Z, each entry holds the design positions the moved cards had before
+    property var moveUndoStack: []
+    property var moveRedoStack: []
+    property var moveSnapshot: ({})
+    // name -> {x, y} design position of every card the user has moved, kept in the project's user mode file
+    property var savedPositions: ({})
+
+    Timer {
+        id: savePositionsTimer
+        interval: 400
+        onTriggered: projectBridge.set_user_positions(JSON.stringify(root.savedPositions))
+    }
+
+    function cardPositions() {
+        var positions = ({})
+        for (var name in root.nodeItems) {
+            var card = root.nodeItems[name]
+            if (card)
+                positions[name] = { x: card.x / card.sizeFactor, y: card.y / card.sizeFactor }
+        }
+        return positions
+    }
+
+    function recordMove(before) {
+        var after = root.cardPositions()
+        var changed = ({})
+        var any = false
+        for (var name in before) {
+            if (after[name] && (Math.abs(before[name].x - after[name].x) > 0.01
+                                || Math.abs(before[name].y - after[name].y) > 0.01)) {
+                changed[name] = { x: before[name].x, y: before[name].y, wasSaved: !!root.savedPositions[name] }
+                root.savedPositions[name] = after[name]
+                any = true
+            }
+        }
+        if (any) {
+            root.moveUndoStack = root.moveUndoStack.slice(-99).concat([changed])
+            root.moveRedoStack = []
+            savePositionsTimer.restart()
+        }
+    }
+
+    // puts the cards in entry back as it describes and returns the entry that reverses that
+    function applyMoveEntry(entry) {
+        var inverse = ({})
+        for (var name in entry) {
+            var card = root.nodeItems[name]
+            if (!card)
+                continue
+            inverse[name] = { x: card.x / card.sizeFactor, y: card.y / card.sizeFactor,
+                              wasSaved: !!root.savedPositions[name] }
+            card.x = entry[name].x * card.sizeFactor
+            card.y = entry[name].y * card.sizeFactor
+            if (entry[name].wasSaved)
+                root.savedPositions[name] = { x: entry[name].x, y: entry[name].y }
+            else
+                delete root.savedPositions[name]
+        }
+        savePositionsTimer.restart()
+        return inverse
+    }
+
+    function undoMove() {
+        if (root.moveUndoStack.length === 0)
+            return
+        var entry = root.moveUndoStack[root.moveUndoStack.length - 1]
+        root.moveUndoStack = root.moveUndoStack.slice(0, -1)
+        root.moveRedoStack = root.moveRedoStack.concat([root.applyMoveEntry(entry)])
+    }
+
+    function redoMove() {
+        if (root.moveRedoStack.length === 0)
+            return
+        var entry = root.moveRedoStack[root.moveRedoStack.length - 1]
+        root.moveRedoStack = root.moveRedoStack.slice(0, -1)
+        root.moveUndoStack = root.moveUndoStack.concat([root.applyMoveEntry(entry)])
+    }
+
+    function resetLayout() {
+        if (typeof projectBridge === "undefined")
+            return
+        projectBridge.reset_user_positions()
+        root.loadWorkflow()
+        // a card moved by hand keeps its place unless its design position changed, so put every card back
+        for (var name in root.nodeItems) {
+            var card = root.nodeItems[name]
+            if (card) {
+                card.x = card.designX * card.sizeFactor
+                card.y = card.designY * card.sizeFactor
+            }
+        }
+    }
+
+    Shortcut {
+        sequences: [StandardKey.Undo]
+        enabled: root.currentView === "workflow"
+        onActivated: root.undoMove()
+    }
+
+    Shortcut {
+        sequences: [StandardKey.Redo, "Ctrl+Shift+Z"]
+        enabled: root.currentView === "workflow"
+        onActivated: root.redoMove()
+    }
+
     function rebuildRoutes() {
         var cards = ({})
         var names = Object.keys(root.nodeItems)
@@ -261,6 +366,22 @@ Rectangle {
         if (items.length > 0) {
             var size = layoutWorkflow(items, connections, !!parsed.compact_rows)
 
+            // cards the user has moved keep their saved place; names that no longer exist are ignored
+            try {
+                root.savedPositions = JSON.parse(projectBridge.get_user_positions())
+            } catch (error) {
+                root.savedPositions = ({})
+            }
+            for (var i = 0; i < items.length; i++) {
+                var saved = root.savedPositions[items[i].name]
+                if (saved) {
+                    items[i].px = saved.x
+                    items[i].py = saved.y
+                    size.width = Math.max(size.width, saved.x + 160)
+                    size.height = Math.max(size.height, saved.y + 160)
+                }
+            }
+
             root.designContentWidth = size.width + 110
             root.designContentHeight = size.height + 34
         }
@@ -270,7 +391,8 @@ Rectangle {
         // populates nodeItems) wouldn't refire and repopulate them, permanently losing valid
         // references and making every connection line and filter badge vanish
         root.workflow = parsed
-
+        root.moveUndoStack = []
+        root.moveRedoStack = []
         root.scheduleRoutes()
     }
 
@@ -823,6 +945,7 @@ Rectangle {
                             return
 
                         var step = (event.modifiers & Qt.ShiftModifier) ? 10 : 1
+                        var before = root.cardPositions()
                         for (var i = 0; i < names.length; i++) {
                             var nodeItem = root.nodeItems[names[i]]
                             if (nodeItem) {
@@ -830,6 +953,7 @@ Rectangle {
                                 nodeItem.y += dy * step
                             }
                         }
+                        root.recordMove(before)
                         event.accepted = true
                     }
 
@@ -1153,6 +1277,15 @@ Rectangle {
                             text: "Fit"
 
                             onClicked: root.zoomReset()
+                        }
+
+                        ToolButton {
+                            text: "Reset layout"
+
+                            ToolTip.visible: hovered
+                            ToolTip.text: "Forget the card positions you have moved"
+
+                            onClicked: root.resetLayout()
                         }
                     }
 
@@ -1845,6 +1978,7 @@ Rectangle {
 
             onPressed: function (mouse) {
                 designCanvas.forceActiveFocus()
+                root.moveSnapshot = root.cardPositions()
                 lastX = card.x
                 lastY = card.y
                 wasSelectedOnPress = card.selected
@@ -1854,6 +1988,8 @@ Rectangle {
                 else if (!card.selected)
                     root.selectOnly(card.nodeName)
             }
+
+            onReleased: root.recordMove(root.moveSnapshot)
 
             // a plain click (no drag) on a card that was already selected deselects it
             onClicked: function (mouse) {

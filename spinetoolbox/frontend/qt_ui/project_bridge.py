@@ -50,6 +50,7 @@ _IMAGE_SCAN_SKIPPED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache_
 _SETTINGS_ORGANIZATION = "SpineProject"
 _SETTINGS_APPLICATION = "Spine Toolbox"
 _TOUR_SEEN_KEY = "appSettings/userModeTourSeen"
+_USER_POSITIONS_FILENAME = "user_mode.json"
 
 
 def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
@@ -336,6 +337,26 @@ class ProjectBridge(QObject):
 
     def _base_dir(self) -> Path:
         return self._project_dir
+
+    def _user_positions_file(self) -> Path:
+        return self._project_dir / PROJECT_CONFIG_DIR_NAME / _USER_POSITIONS_FILENAME
+
+    @Slot(result=str)
+    def get_user_positions(self) -> str:
+        """Returns the saved User Mode card positions as JSON of display name -> {x, y}."""
+        try:
+            return json.dumps(json.loads(self._user_positions_file().read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            return "{}"
+
+    @Slot(str)
+    def set_user_positions(self, positions: str) -> None:
+        if self._config_file.exists():
+            self._user_positions_file().write_text(positions, encoding="utf-8")
+
+    @Slot()
+    def reset_user_positions(self) -> None:
+        self._user_positions_file().unlink(missing_ok=True)
 
     @property
     def project_dir(self) -> str:
