@@ -125,6 +125,20 @@ function shrinkLongLinks(a, b, links, separationA, separationB, maxDistance) {
     }
 }
 
+// A link leaving a card's bottom and entering a side of the target needs the target beside the source,
+// as there is no top connection point to enter from above.
+function keepSideEntry(sideLinks, x) {
+    var minimum = 0.75 * CARD_WIDTH
+    for (var i = 0; i < sideLinks.length; i++) {
+        var source = sideLinks[i][0]
+        var target = sideLinks[i][1]
+        if (sideLinks[i][2] === "left")
+            x[target] = Math.max(x[target], x[source] + minimum)
+        else
+            x[target] = Math.min(x[target], x[source] - minimum)
+    }
+}
+
 // sets items[].px/py; items need dev mode x/y. compactRows allows shrinking vertical distances, which is
 // only wanted when stacks or hidden items have left gaps. Returns the size of the laid out area.
 function layoutWorkflow(items, connections, defaultSize, compactRows) {
@@ -141,7 +155,7 @@ function layoutWorkflow(items, connections, defaultSize, compactRows) {
     }
 
     var rowLinks = []
-    var columnLinks = []
+    var sideLinks = []
     var allLinks = []
     for (var d = 0; d < connections.length; d++) {
         var link = connections[d]
@@ -150,18 +164,25 @@ function layoutWorkflow(items, connections, defaultSize, compactRows) {
         if (source === undefined || target === undefined || source === target)
             continue
         allLinks.push([source, target])
-        if ((link.from_anchor || "right") === "bottom")
-            columnLinks.push([source, target])
-        else if ((link.to_anchor || "left") === "left")
+        var toSide = link.to_anchor || "left"
+        if ((link.from_anchor || "right") === "bottom") {
+            if (toSide === "left" || toSide === "right")
+                sideLinks.push([source, target, toSide])
+        } else if (toSide === "left") {
             rowLinks.push([source, target])
+        }
     }
     snapChains(items.length, rowLinks, y)
-    snapChains(items.length, columnLinks, x)
 
+    keepSideEntry(sideLinks, x)
     separateCards(x, y)
+    keepSideEntry(sideLinks, x)
     shrinkLongLinks(x, y, allLinks, SEPARATION_X, SEPARATION_Y, MAX_LINK_X)
     if (compactRows)
         shrinkLongLinks(y, x, allLinks, SEPARATION_Y, SEPARATION_X, MAX_LINK_Y)
+    // shrinking moves whole columns, which can pull a target back under its source
+    keepSideEntry(sideLinks, x)
+    separateCards(x, y)
 
     var left = Math.min.apply(null, x)
     var right = Math.max.apply(null, x)

@@ -328,6 +328,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self._remote_host = ""
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
+        self._bg_color_picked = False
         for item in self.ui.listWidget.findItems("*", Qt.MatchFlag.MatchWildcard):
             item.setSizeHint(QSize(128, 44))
         # Ensure this window gets garbage-collected when closed
@@ -672,6 +673,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if not color.isValid():
             return  # Canceled
         self.bg_color = color
+        self._bg_color_picked = True
         self.update_bg_color()
 
     def update_bg_color(self):
@@ -915,7 +917,7 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         if theme != old_theme:
             # Reset bg color to palette default when theme changes
             self._qsettings.remove("appSettings/bgColor")
-        else:
+        elif self._bg_color_picked:
             self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         self._qsettings.setValue("appSettings/theme", theme)
         save_spec = str(self.ui.checkBox_save_spec_before_closing.checkState().value)
