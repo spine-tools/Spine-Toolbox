@@ -109,3 +109,32 @@ def test_positions_saved_before_chains_belong_to_the_whole_workflow(bridge: Proj
         json.dumps({"A": {"x": 5, "y": 6}}), encoding="utf-8"
     )
     assert json.loads(bridge.get_user_positions("")) == {"A": {"x": 5, "y": 6}}
+
+
+@pytest.fixture
+def store_bridge(tmp_path: Path, application: QCoreApplication) -> ProjectBridge:
+    both = [{"item": "T"}, {"item": "S"}]
+    project = {
+        "project": {
+            "chains": {"default": None, "items": {"a": {"name": "A", "entries": both}, "b": {"name": "B", "entries": both}}},
+            "connections": [{"from": ["T", "right"], "to": ["S", "left"]}],
+        },
+        "items": {"T": _item("Tool", 0.0), "S": _item("Data Store", 100.0)},
+    }
+    config_file = tmp_path / PROJECT_CONFIG_DIR_NAME / PROJECT_FILENAME
+    config_file.parent.mkdir()
+    config_file.write_text(json.dumps(project), encoding="utf-8")
+    return ProjectBridge(tmp_path)
+
+
+def test_database_written_by_another_chain_is_warned_about(store_bridge: ProjectBridge) -> None:
+    store_bridge._write_store_chains({"S": "a"})
+    assert json.loads(store_bridge.get_store_warnings("b")) == {"S": "A"}
+    assert json.loads(store_bridge.get_store_warnings("a")) == {}
+
+
+def test_written_stores_leave_out_connections_that_purge_themselves(store_bridge: ProjectBridge) -> None:
+    data = store_bridge._load()
+    assert set(store_bridge._written_stores(data, {"T"})) == {"S"}
+    data["project"]["connections"][0]["options"] = {"purge_before_writing": True}
+    assert store_bridge._written_stores(data, {"T"}) == {}

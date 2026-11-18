@@ -92,6 +92,10 @@ Rectangle {
             root.currentView = "database"
         }
 
+        function onStoreWarningsChanged() {
+            root.loadStoreWarnings()
+        }
+
         function onExecutionLogAppended(line, kind) {
             root.executionLogModel.append({ "text": line, "kind": kind })
 
@@ -226,6 +230,13 @@ Rectangle {
 
     // chain shown on the canvas, "" is the whole workflow; chainList holds {key, name} of the defined chains
     property string currentChain: ""
+    // Data Store name -> name of the chain whose run last filled it, for stores shown in the current chain
+    property var storeWarnings: ({})
+
+    function loadStoreWarnings() {
+        if (typeof projectBridge !== "undefined")
+            root.storeWarnings = JSON.parse(projectBridge.get_store_warnings(root.currentChain))
+    }
     property string defaultChain: ""
     property var chainList: []
 
@@ -429,6 +440,7 @@ Rectangle {
         // references and making every connection line and filter badge vanish
         root.workflow = parsed
         root.moveUndoStack = []
+        root.loadStoreWarnings()
         root.moveRedoStack = []
         root.scheduleRoutes()
     }
@@ -1528,6 +1540,16 @@ Rectangle {
                         }
                     }
 
+                    Button {
+                        text: "Purge..."
+                        enabled: root.currentDataStore !== ""
+
+                        ToolTip.visible: hovered
+                        ToolTip.text: "Remove data from this database"
+
+                        onClicked: projectBridge.purge_data_store(root.currentDataStore)
+                    }
+
                     Item {
                         Layout.fillWidth: true
                     }
@@ -1898,8 +1920,8 @@ Rectangle {
             y = designY * sizeFactor
         }
 
-        width: 100 * sizeFactor
-        height: 100 * sizeFactor
+        width: 150 * sizeFactor
+        height: 74 * sizeFactor
 
         radius: 10 * sizeFactor
 
@@ -1983,6 +2005,41 @@ Rectangle {
 
             HoverHandler {
                 id: runBadgeHover
+            }
+        }
+
+        Rectangle {
+            id: storeBadge
+
+            visible: card.nodeName in root.storeWarnings
+            z: 5
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: -6 * card.sizeFactor
+            anchors.bottomMargin: -6 * card.sizeFactor
+
+            width: 20 * card.sizeFactor
+            height: width
+            radius: width / 2
+
+            color: "#fef3c7"
+            border.color: "#d97706"
+            border.width: 2 * card.sizeFactor
+
+            Label {
+                anchors.centerIn: parent
+                text: "!"
+                color: "#b45309"
+                font.pixelSize: 12 * card.sizeFactor
+                font.bold: true
+            }
+
+            ToolTip.visible: storeBadgeHover.hovered
+            ToolTip.text: "Holds data from chain \"" + root.storeWarnings[card.nodeName]
+                          + "\". Purge it before running this chain if the old data should not be used."
+
+            HoverHandler {
+                id: storeBadgeHover
             }
         }
 
@@ -2160,6 +2217,21 @@ Rectangle {
             }
         }
 
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            enabled: card.subtitle === "Data Store"
+            onTapped: cardMenu.popup()
+        }
+
+        Menu {
+            id: cardMenu
+
+            MenuItem {
+                text: "Purge database..."
+                onTriggered: projectBridge.purge_data_store(card.nodeName)
+            }
+        }
+
         ToolTip {
             visible: card.hovered && text !== ""
             text: {
@@ -2176,8 +2248,8 @@ Rectangle {
 
 
         Item {
-            width: 100
-            height: 100
+            width: 150
+            height: 74
 
             scale: card.sizeFactor
             transformOrigin: Item.TopLeft
@@ -2211,12 +2283,15 @@ Rectangle {
                     text: card.subtitle
 
                     visible: card.subtitle.length > 0
-                    Layout.fillWidth: true
 
                     font.pixelSize: 11
                     opacity: 0.6
 
                     elide: Text.ElideRight
+                }
+
+                Item {
+                    Layout.fillWidth: true
                 }
 
                 Label {
@@ -2243,8 +2318,6 @@ Rectangle {
                     font.pixelSize: 13
                     font.bold: true
 
-                    wrapMode: Text.WrapAnywhere
-                    maximumLineCount: 2
                     elide: Text.ElideRight
                 }
             }

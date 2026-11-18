@@ -108,6 +108,14 @@ class SelectDatabaseItems(QWidget):
             self._ui.item_grid_layout,
         )
 
+    @classmethod
+    def data_item_types(cls) -> tuple[str, ...]:
+        return cls._DATA_ITEMS
+
+    @classmethod
+    def scenario_item_types(cls) -> tuple[str, ...]:
+        return cls._SCENARIO_ITEMS
+
     def checked_states(self):
         """Collects the checked states of database items.
 

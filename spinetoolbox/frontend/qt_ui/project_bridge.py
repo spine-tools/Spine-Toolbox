@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import time
 from PySide6.QtCore import QFileSystemWatcher, QObject, QRect, QSettings, Qt, QUrl, Signal, Slot
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 from spine_engine.project_item.connection import FilterSettings
 from spine_engine.utils.helpers import (
     connections_to_selected_items,
@@ -51,6 +51,7 @@ _SETTINGS_ORGANIZATION = "SpineProject"
 _SETTINGS_APPLICATION = "Spine Toolbox"
 _TOUR_SEEN_KEY = "appSettings/userModeTourSeen"
 _USER_POSITIONS_FILENAME = "user_mode.json"
+_STORE_CHAINS_FILENAME = "user_mode_stores.json"
 
 
 def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
@@ -115,6 +116,8 @@ class ProjectBridge(QObject):
     devModeRequested = Signal()
     # emitted when the Data view should be shown, e.g. after a Data Store is opened from the workflow
     dataViewRequested = Signal()
+    # emitted when the record of which chain filled which database changes
+    storeWarningsChanged = Signal()
 
     def __init__(self, project_dir: str | Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -558,6 +561,8 @@ class ProjectBridge(QObject):
         real_names = sorted(
             {name for display_name in selected_names for name in self._stack_members(data, display_name)}
         )
+        if not self._prepare_databases_for_run(data, set(real_names), chain_key):
+            return
         project_dir = str(self._base_dir())
         args = [project_dir, "--execute-only"]
         if real_names:
@@ -1075,6 +1080,170 @@ class ProjectBridge(QObject):
     @Slot(str, result=str)
     def discard_edits(self, url: str) -> str:
         return self._database_editor.discard_edits(url)
+
+    def _open_editor_tabs(self, url: str) -> list:
+        normcased_url = normcase_database_url_path(url)
+        return [
+            editor.tab_widget.widget(index)
+            for editor in self._db_editors.values()
+            for index in range(editor.tab_widget.count())
+            if editor.tab_widget.widget(index).db_urls == [normcased_url]
+        ]
+
+    def _purge_now(self, url: str, settings: dict[str, bool], label: str) -> bool:
+        """Purges the database at url and refreshes the Data view tabs showing it; reports failures to the user."""
+        # imported lazily, same reason as _ensure_db_editor
+        from spinedb_api.purge import purge_url
+
+        host = self.parent() if isinstance(self.parent(), QWidget) else None
+        tabs = self._open_editor_tabs(url)
+        if any(tab.db_mngr.dirty(*tab.db_maps) for tab in tabs):
+            QMessageBox.warning(
+                host, "Uncommitted changes", "Commit or roll back the changes open in Data view before purging."
+            )
+            return False
+        errors: list[str] = []
+        logger = QtLogger()
+        logger.msg_error.connect(errors.append)
+        logger.msg_warning.connect(errors.append)
+        purged = purge_url(url, settings, logger)
+        for tab in tabs:
+            tab.refresh_session()
+        if not purged:
+            QMessageBox.warning(host, "Purge failed", "<br>".join(errors) or f"Purging {label} failed.")
+        return purged
+
+    def _purge_database(self, url: str, label: str) -> bool:
+        """Lets the user choose what to purge from the database at url, then purges it.
+        Returns whether anything was purged."""
+        from ...widgets.custom_qwidgets import PurgeSettingsDialog
+        from ...widgets.select_database_items import SelectDatabaseItems
+
+        host = self.parent() if isinstance(self.parent(), QWidget) else None
+        dialog = PurgeSettingsDialog({item: True for item in SelectDatabaseItems.data_item_types()}, parent=host)
+        dialog.setWindowTitle(f"Purge {label}")
+        dialog.setWindowModality(Qt.WindowModality.ApplicationModal)
+        chosen: dict[str, bool] = {}
+        dialog.accepted.connect(lambda: chosen.update(dialog.get_checked_states()))
+        dialog.exec()
+        if not any(chosen.values()):
+            return False
+        answer = QMessageBox.question(
+            host,
+            "Purge database",
+            f"Remove the selected items from <b>{label}</b>? This cannot be undone.",
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return False
+        purged = self._purge_now(url, chosen, label)
+        if purged and any(chosen.get(item) for item in SelectDatabaseItems.data_item_types()):
+            self._forget_store_chain(label)
+        return purged
+
+    def _read_store_chains(self) -> dict[str, str]:
+        """Returns Data Store name -> key of the chain whose run last wrote to it ("" is the whole workflow)."""
+        try:
+            records = json.loads(
+                (self._project_dir / PROJECT_CONFIG_DIR_NAME / _STORE_CHAINS_FILENAME).read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            return {}
+        return records if isinstance(records, dict) else {}
+
+    def _write_store_chains(self, records: dict[str, str]) -> None:
+        if self._config_file.exists():
+            path = self._project_dir / PROJECT_CONFIG_DIR_NAME / _STORE_CHAINS_FILENAME
+            path.write_text(json.dumps(records), encoding="utf-8")
+            self.storeWarningsChanged.emit()
+
+    def _forget_store_chain(self, store_name: str) -> None:
+        records = self._read_store_chains()
+        if records.pop(store_name, None) is not None:
+            self._write_store_chains(records)
+
+    @staticmethod
+    def _chain_name(data: dict, chain_key: str) -> str:
+        if not chain_key:
+            return "All items"
+        return data.get("project", {}).get("chains", {}).get("items", {}).get(chain_key, {}).get("name", chain_key)
+
+    @staticmethod
+    def _written_stores(data: dict, real_names: set[str]) -> dict[str, dict]:
+        """Returns the Data Stores items in real_names write to, leaving out those a connection purges itself."""
+        items = data.get("items", {})
+        stores = {}
+        for connection in data.get("project", {}).get("connections", []):
+            source, destination = connection["from"][0], connection["to"][0]
+            if source not in real_names or items.get(destination, {}).get("type") != "Data Store":
+                continue
+            if not (connection.get("options") or {}).get("purge_before_writing"):
+                stores[destination] = items[destination]
+        return stores
+
+    def _prepare_databases_for_run(self, data: dict, real_names: set[str], chain_key: str) -> bool:
+        """Warns about databases the run writes to that hold the data of another chain and purges them on request.
+        Records the chain as their writer. Returns False if the user cancelled the run."""
+        from ...widgets.select_database_items import SelectDatabaseItems
+
+        stores = self._written_stores(data, real_names)
+        records = self._read_store_chains()
+        stale = {name: records[name] for name in stores if records.get(name, chain_key) != chain_key}
+        if stale:
+            host = self.parent() if isinstance(self.parent(), QWidget) else None
+            listing = "<br>".join(
+                f"<b>{name}</b>: data from chain <b>{self._chain_name(data, key)}</b>" for name, key in stale.items()
+            )
+            box = QMessageBox(
+                QMessageBox.Icon.Warning,
+                "Database holds data from another chain",
+                f"{listing}<br><br>Chain <b>{self._chain_name(data, chain_key)}</b> writes to the same database, "
+                "so the old data stays in it and may not match this chain's inputs. "
+                "Purge the value and scenario items first?",
+                parent=host,
+            )
+            purge_button = box.addButton("Purge and run", QMessageBox.ButtonRole.AcceptRole)
+            box.addButton("Run without purging", QMessageBox.ButtonRole.DestructiveRole)
+            cancel_button = box.addButton(QMessageBox.StandardButton.Cancel)
+            box.exec()
+            clicked = box.clickedButton()
+            if clicked is None or clicked is cancel_button:
+                return False
+            if clicked is purge_button:
+                settings = {
+                    item: True
+                    for item in SelectDatabaseItems.data_item_types() + SelectDatabaseItems.scenario_item_types()
+                }
+                for name in stale:
+                    url = _data_store_url(stores[name].get("url") or {}, str(self._base_dir()))
+                    if url and not self._purge_now(url, settings, name):
+                        return False
+        records.update({name: chain_key for name in stores})
+        self._write_store_chains(records)
+        return True
+
+    @Slot(str, result=str)
+    def get_store_warnings(self, chain_key: str) -> str:
+        """Returns the Data Stores shown in a chain that were last written by another chain as JSON of
+        store name -> that chain's name."""
+        data = self._load()
+        visible = self._visible_display_names(data, chain_key)
+        return json.dumps(
+            {
+                name: self._chain_name(data, key)
+                for name, key in self._read_store_chains().items()
+                if key != chain_key and name in visible
+            }
+        )
+
+    @Slot(str, result=bool)
+    def purge_data_store(self, display_name: str) -> bool:
+        """Purges the Data Store item called display_name (or the first one inside the stack it names)."""
+        found = self._stack_member_of_type(self._load(), display_name, "Data Store")
+        if found is None:
+            return False
+        name, item = found
+        url = _data_store_url(item.get("url") or {}, str(self._base_dir()))
+        return bool(url) and self._purge_database(url, name)
 
     @Slot(result=str)
     def get_input_reference(self) -> str:

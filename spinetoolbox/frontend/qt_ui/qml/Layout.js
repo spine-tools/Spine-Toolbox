@@ -3,8 +3,8 @@
 // User Mode card layout: starts from the dev mode (Design View) positions, then straightens near-linear
 // chains and shrinks links that are too long without changing the order of the cards.
 
-var CARD_WIDTH = 100
-var CARD_HEIGHT = 100
+var CARD_WIDTH = 150
+var CARD_HEIGHT = 74
 var DEV_SCALE = 1.5
 var SEPARATION_X = CARD_WIDTH + 30
 var SEPARATION_Y = CARD_HEIGHT + 30
