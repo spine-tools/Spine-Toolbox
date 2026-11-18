@@ -15,7 +15,7 @@
 import os
 import subprocess
 from PySide6.QtCore import Qt, Signal, Slot, QThread, QProcess
-from PySide6.QtGui import QGuiApplication, QIcon
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QDialog, QMessageBox
 from spine_engine.utils.helpers import (
     custom_find_kernel_specs,
@@ -24,7 +24,6 @@ from spine_engine.utils.helpers import (
 )
 from spinetoolbox.execution_managers import QProcessExecutionManager
 from spinetoolbox.helpers import (
-    ensure_window_is_on_screen,
     get_datetime,
     get_current_item_data,
     set_combobox_item_invalid_property,
@@ -120,35 +119,6 @@ class KernelManagerBase(QDialog):
         self.ui.progressBar.setValue(0)
         self.ui.pushButton_close.show()
 
-    def _save_ui(self):
-        self._app_settings.setValue("kernelEditor/windowSize", self.size())
-        self._app_settings.setValue("kernelEditor/windowPosition", self.pos())
-        self._app_settings.setValue(
-            "kernelEditor/windowMaximized", self.windowState() == Qt.WindowState.WindowMaximized
-        )
-
-    def restore_dialog_dimensions(self):
-        """Restore widget location, dimensions, and state from previous session."""
-        dialog_size = self._app_settings.value("kernelEditor/windowSize", defaultValue="false")
-        dialog_pos = self._app_settings.value("kernelEditor/windowPosition", defaultValue="false")
-        dialog_maximized = self._app_settings.value("kernelEditor/windowMaximized", defaultValue="false")
-        n_screens = self._app_settings.value("mainWindow/n_screens", defaultValue=1)  # Yes, mainWindow
-        # noinspection PyArgumentList
-        n_screens_now = len(QGuiApplication.screens())  # Number of screens now
-        original_size = self.size()
-        # Note: cannot use booleans since Windows saves them as strings to registry
-        if dialog_size != "false":
-            self.resize(dialog_size)  # Expects QSize
-        if dialog_pos != "false":
-            self.move(dialog_pos)  # Expects QPoint
-        if n_screens_now < int(n_screens):
-            # There are less screens available now than on previous application startup
-            # Move dialog to position 0,0 to make sure that it is not lost on another screen that does not exist
-            self.move(0, 0)
-        ensure_window_is_on_screen(self, original_size)
-        if dialog_maximized == "true":
-            self.setWindowState(Qt.WindowState.WindowMaximized)
-
     @Slot(str)
     def add_message(self, msg):
         """Append regular message to kernel editor text browser.
@@ -238,7 +208,7 @@ class MiniPythonKernelManager(KernelManagerBase):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowTitle("Python Kernel Manager")
         Notification(self, "Setting things up...").show()
-        # Disable combobox and button until versions have been received
+        # Disable combobox and button until versions have been collected
         self.ui.comboBox_python_interpreter.setEnabled(False)
         self.ui.pushButton_make_kernel.setEnabled(False)
         self._python_exe = None
@@ -283,7 +253,7 @@ class MiniPythonKernelManager(KernelManagerBase):
         """Creates the Python kernel name based on Python version."""
         try:
             version = self._python_versions[self._python_exe]
-        except IndexError:
+        except KeyError:
             raise RuntimeError(f"Python version check failed for {self._python_exe}")
         return f"python{version}"
 
@@ -516,7 +486,7 @@ class MiniJuliaKernelManager(KernelManagerBase):
         """Creates the final julia kernel name based on julia version and environment."""
         try:
             version = self._julia_versions[self._julia_exe]
-        except IndexError:
+        except KeyError:
             raise RuntimeError(f"Julia version check failed for {self._julia_exe}")
         return f"{self._julia_kernel_name_prefix}-{version}"
 
@@ -809,7 +779,8 @@ class VersionCollector(QThread):
             versions[p] = ver
         self.versions_collected.emit(versions)
 
-    def _get_version(self, exe):
+    @staticmethod
+    def _get_version(exe):
         """Retrieves given Python or Julia version in a subprocess."""
         if not os.path.exists(exe):
             return None

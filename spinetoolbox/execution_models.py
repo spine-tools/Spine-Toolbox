@@ -218,6 +218,8 @@ class ExecutionModels(QObject):
         norm_path = path.replace(os.sep, "/")
         for row in range(self.julia_projects_model.rowCount()):
             item = self.julia_projects_model.item(row, 0)
+            if not item.data():
+                continue
             if item.data()["path"] == norm_path:
                 return item.index()
         return QModelIndex()
