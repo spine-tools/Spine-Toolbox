@@ -349,6 +349,79 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_chains">
+   <property name="windowTitle">
+    <string>Workflow Chains</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>4</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_chains">
+    <layout class="QVBoxLayout" name="verticalLayout_chains">
+     <item>
+      <widget class="QLabel" name="label_chains_help">
+       <property name="text">
+        <string>Select items in Design View and click New. User Mode shows one chain at a time.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QListWidget" name="listWidget_chains"/>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_chains">
+       <item>
+        <widget class="QPushButton" name="pushButton_chain_new">
+         <property name="toolTip">
+          <string>Create a chain from the items selected in Design View</string>
+         </property>
+         <property name="text">
+          <string>New</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_chain_update">
+         <property name="toolTip">
+          <string>Replace the chain's items with the items selected in Design View</string>
+         </property>
+         <property name="text">
+          <string>Update</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_chain_rename">
+         <property name="text">
+          <string>Rename</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_chain_default">
+         <property name="toolTip">
+          <string>The default chain is shown first in User Mode</string>
+         </property>
+         <property name="text">
+          <string>Set default</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_chain_delete">
+         <property name="text">
+          <string>Delete</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <widget class="QDockWidget" name="dockWidget_item">
    <property name="minimumSize">
     <size>

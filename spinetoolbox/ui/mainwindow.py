@@ -14,7 +14,7 @@
 ################################################################################
 ## Form generated from reading UI file 'mainwindow.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.12.0
+## Created by: Qt User Interface Compiler version 6.11.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -28,8 +28,9 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QDockWidget, QFrame, QGraphicsView,
-    QHeaderView, QLabel, QMainWindow, QMenu,
-    QMenuBar, QSizePolicy, QSplitter, QStatusBar,
+    QHBoxLayout, QHeaderView, QLabel, QListWidget,
+    QListWidgetItem, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QSizePolicy, QSplitter, QStatusBar,
     QTabWidget, QToolButton, QTreeView, QVBoxLayout,
     QWidget)
 
@@ -335,6 +336,55 @@ class Ui_MainWindow(object):
 
         self.dockWidget_design_view.setWidget(self.dockWidgetContents_5)
         MainWindow.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget_design_view)
+        self.dockWidget_chains = QDockWidget(MainWindow)
+        self.dockWidget_chains.setObjectName(u"dockWidget_chains")
+        self.dockWidgetContents_chains = QWidget()
+        self.dockWidgetContents_chains.setObjectName(u"dockWidgetContents_chains")
+        self.verticalLayout_chains = QVBoxLayout(self.dockWidgetContents_chains)
+        self.verticalLayout_chains.setObjectName(u"verticalLayout_chains")
+        self.label_chains_help = QLabel(self.dockWidgetContents_chains)
+        self.label_chains_help.setObjectName(u"label_chains_help")
+        self.label_chains_help.setWordWrap(True)
+
+        self.verticalLayout_chains.addWidget(self.label_chains_help)
+
+        self.listWidget_chains = QListWidget(self.dockWidgetContents_chains)
+        self.listWidget_chains.setObjectName(u"listWidget_chains")
+
+        self.verticalLayout_chains.addWidget(self.listWidget_chains)
+
+        self.horizontalLayout_chains = QHBoxLayout()
+        self.horizontalLayout_chains.setObjectName(u"horizontalLayout_chains")
+        self.pushButton_chain_new = QPushButton(self.dockWidgetContents_chains)
+        self.pushButton_chain_new.setObjectName(u"pushButton_chain_new")
+
+        self.horizontalLayout_chains.addWidget(self.pushButton_chain_new)
+
+        self.pushButton_chain_update = QPushButton(self.dockWidgetContents_chains)
+        self.pushButton_chain_update.setObjectName(u"pushButton_chain_update")
+
+        self.horizontalLayout_chains.addWidget(self.pushButton_chain_update)
+
+        self.pushButton_chain_rename = QPushButton(self.dockWidgetContents_chains)
+        self.pushButton_chain_rename.setObjectName(u"pushButton_chain_rename")
+
+        self.horizontalLayout_chains.addWidget(self.pushButton_chain_rename)
+
+        self.pushButton_chain_default = QPushButton(self.dockWidgetContents_chains)
+        self.pushButton_chain_default.setObjectName(u"pushButton_chain_default")
+
+        self.horizontalLayout_chains.addWidget(self.pushButton_chain_default)
+
+        self.pushButton_chain_delete = QPushButton(self.dockWidgetContents_chains)
+        self.pushButton_chain_delete.setObjectName(u"pushButton_chain_delete")
+
+        self.horizontalLayout_chains.addWidget(self.pushButton_chain_delete)
+
+
+        self.verticalLayout_chains.addLayout(self.horizontalLayout_chains)
+
+        self.dockWidget_chains.setWidget(self.dockWidgetContents_chains)
+        MainWindow.addDockWidget(Qt.DockWidgetArea.TopDockWidgetArea, self.dockWidget_chains)
         self.dockWidget_item = QDockWidget(MainWindow)
         self.dockWidget_item.setObjectName(u"dockWidget_item")
         self.dockWidget_item.setMinimumSize(QSize(139, 101))
@@ -641,6 +691,22 @@ class Ui_MainWindow(object):
         self.dockWidget_console.setWindowTitle(QCoreApplication.translate("MainWindow", u"Console", None))
         self.label_no_console.setText(QCoreApplication.translate("MainWindow", u"Select an executing item to see its console", None))
         self.dockWidget_design_view.setWindowTitle(QCoreApplication.translate("MainWindow", u"Design View", None))
+        self.dockWidget_chains.setWindowTitle(QCoreApplication.translate("MainWindow", u"Workflow Chains", None))
+        self.label_chains_help.setText(QCoreApplication.translate("MainWindow", u"Select items in Design View and click New. User Mode shows one chain at a time.", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_chain_new.setToolTip(QCoreApplication.translate("MainWindow", u"Create a chain from the items selected in Design View", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_chain_new.setText(QCoreApplication.translate("MainWindow", u"New", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_chain_update.setToolTip(QCoreApplication.translate("MainWindow", u"Replace the chain's items with the items selected in Design View", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_chain_update.setText(QCoreApplication.translate("MainWindow", u"Update", None))
+        self.pushButton_chain_rename.setText(QCoreApplication.translate("MainWindow", u"Rename", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_chain_default.setToolTip(QCoreApplication.translate("MainWindow", u"The default chain is shown first in User Mode", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_chain_default.setText(QCoreApplication.translate("MainWindow", u"Set default", None))
+        self.pushButton_chain_delete.setText(QCoreApplication.translate("MainWindow", u"Delete", None))
         self.dockWidget_item.setWindowTitle(QCoreApplication.translate("MainWindow", u"Properties", None))
         self.label_no_selection.setText(QCoreApplication.translate("MainWindow", u"Select an item to view its properties", None))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QCoreApplication.translate("MainWindow", u"No Selection", None))

@@ -593,11 +593,16 @@ class TestSpineToolboxProject(TestCaseWithQApplication):
             {
                 "items": {"test item": {"type": "Tester", "a": {"c": 2}}},
                 "project": {
+                    "chains": {"default": None, "items": {}},
                     "connections": [],
                     "description": "",
+                    "hidden_items": [],
+                    "instructions": {"items": {}},
                     "jumps": [],
+                    "result_data_stores": [],
                     "settings": {"enable_execute_all": True, "store_external_paths_as_relative": False},
                     "specifications": {},
+                    "stacks": {},
                     "version": LATEST_PROJECT_VERSION,
                 },
             },

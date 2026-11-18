@@ -12,6 +12,7 @@
 
 """QUndoCommand subclasses for modifying the project."""
 
+import json
 import typing
 from PySide6.QtGui import QUndoCommand
 from spine_engine.project_item.connection import Jump
@@ -240,6 +241,25 @@ class HideProjectItemCommand(SpineToolboxCommand):
 
     def undo(self):
         self._project.set_item_hidden(self._item_name, not self._hidden)
+
+
+class SetChainsCommand(SpineToolboxCommand):
+    """Command to replace the User Mode chains and the default chain."""
+
+    def __init__(self, project, chains: dict[str, dict], default_chain: str | None, text: str):
+        super().__init__()
+        self._project = project
+        self._chains = chains
+        self._default_chain = default_chain
+        self._previous_chains = json.loads(json.dumps(project.chains))
+        self._previous_default_chain = project.default_chain
+        self.setText(text)
+
+    def redo(self):
+        self._project.set_chains(self._chains, self._default_chain)
+
+    def undo(self):
+        self._project.set_chains(self._previous_chains, self._previous_default_chain)
 
 
 class SetItemInstructionCommand(SpineToolboxCommand):

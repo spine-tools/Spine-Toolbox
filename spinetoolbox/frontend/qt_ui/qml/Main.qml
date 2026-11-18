@@ -224,10 +224,54 @@ Rectangle {
     // name -> {x, y} design position of every card the user has moved, kept in the project's user mode file
     property var savedPositions: ({})
 
+    // chain shown on the canvas, "" is the whole workflow; chainList holds {key, name} of the defined chains
+    property string currentChain: ""
+    property string defaultChain: ""
+    property var chainList: []
+
+    function loadChains(useDefault) {
+        if (typeof projectBridge === "undefined")
+            return
+        var info = JSON.parse(projectBridge.get_chains())
+        root.chainList = info.chains
+        root.defaultChain = info.default || ""
+        var stillExists = info.chains.some(function (chain) { return chain.key === root.currentChain })
+        if (useDefault || (root.currentChain !== "" && !stillExists))
+            root.currentChain = root.defaultChain
+    }
+
+    function savePositions() {
+        if (typeof projectBridge !== "undefined")
+            projectBridge.set_user_positions(root.currentChain, JSON.stringify(root.savedPositions))
+    }
+
+    function selectChain(key) {
+        if (key === root.currentChain)
+            return
+        if (savePositionsTimer.running) {
+            savePositionsTimer.stop()
+            root.savePositions()
+        }
+        root.currentChain = key
+        root.loadWorkflow()
+        root.snapCardsToDesign()
+    }
+
+    // a card moved by hand keeps its place unless its design position changed, so put every card back
+    function snapCardsToDesign() {
+        for (var name in root.nodeItems) {
+            var card = root.nodeItems[name]
+            if (card) {
+                card.x = card.designX * card.sizeFactor
+                card.y = card.designY * card.sizeFactor
+            }
+        }
+    }
+
     Timer {
         id: savePositionsTimer
         interval: 400
-        onTriggered: projectBridge.set_user_positions(JSON.stringify(root.savedPositions))
+        onTriggered: root.savePositions()
     }
 
     function cardPositions() {
@@ -298,16 +342,9 @@ Rectangle {
     function resetLayout() {
         if (typeof projectBridge === "undefined")
             return
-        projectBridge.reset_user_positions()
+        projectBridge.reset_user_positions(root.currentChain)
         root.loadWorkflow()
-        // a card moved by hand keeps its place unless its design position changed, so put every card back
-        for (var name in root.nodeItems) {
-            var card = root.nodeItems[name]
-            if (card) {
-                card.x = card.designX * card.sizeFactor
-                card.y = card.designY * card.sizeFactor
-            }
-        }
+        root.snapCardsToDesign()
     }
 
     Shortcut {
@@ -354,7 +391,7 @@ Rectangle {
         if (typeof projectBridge === "undefined")
             return
 
-        var raw = projectBridge.get_workflow()
+        var raw = projectBridge.get_workflow(root.currentChain)
 
         if (!raw)
             return
@@ -368,7 +405,7 @@ Rectangle {
 
             // cards the user has moved keep their saved place; names that no longer exist are ignored
             try {
-                root.savedPositions = JSON.parse(projectBridge.get_user_positions())
+                root.savedPositions = JSON.parse(projectBridge.get_user_positions(root.currentChain))
             } catch (error) {
                 root.savedPositions = ({})
             }
@@ -438,6 +475,7 @@ Rectangle {
         if (typeof projectBridge !== "undefined")
             currentProjectName = projectBridge.get_project_name()
 
+        loadChains(true)
         loadWorkflow()
         offerProjectSetup()
 
@@ -788,6 +826,7 @@ Rectangle {
                                     if (resultsDataArea.visible)
                                         projectBridge.open_result_databases()
 
+                                    root.loadChains(true)
                                     root.loadWorkflow()
                                     root.offerProjectSetup()
                                 }
@@ -833,7 +872,7 @@ Rectangle {
                                 if (selectedNames.length === 0 && root.hasUnselectedScenarios)
                                     unselectedScenariosDialog.open()
                                 else
-                                    projectBridge.run_workflow(selectedNames)
+                                    projectBridge.run_workflow(selectedNames, root.currentChain)
                             }
                         }
                     }
@@ -853,7 +892,7 @@ Rectangle {
                             padding: 12
                         }
 
-                        onAccepted: projectBridge.run_workflow([])
+                        onAccepted: projectBridge.run_workflow([], root.currentChain)
                     }
                 }
             }
@@ -1154,6 +1193,11 @@ Rectangle {
                                     root.nodeItemsTick += 1
                                     root.scheduleRoutes()
                                 }
+
+                                Component.onDestruction: {
+                                    if (root.nodeItems[nodeName] === this)
+                                        delete root.nodeItems[nodeName]
+                                }
                             }
                         }
 
@@ -1259,6 +1303,32 @@ Rectangle {
 
                         Item {
                             Layout.fillWidth: true
+                        }
+
+                        ComboBox {
+                            id: chainBox
+
+                            visible: root.chainList.length > 0
+                            implicitWidth: 220
+
+                            ToolTip.visible: hovered
+                            ToolTip.text: "Workflow chain shown on the canvas; Run runs this chain"
+
+                            textRole: "name"
+                            valueRole: "key"
+                            model: [{ "key": "", "name": "All items" }].concat(root.chainList.map(function (chain) {
+                                return { "key": chain.key,
+                                         "name": chain.key === root.defaultChain ? chain.name + " (default)" : chain.name }
+                            }))
+                            currentIndex: {
+                                for (var i = 0; i < model.length; i++) {
+                                    if (model[i].key === root.currentChain)
+                                        return i
+                                }
+                                return 0
+                            }
+
+                            onActivated: root.selectChain(currentValue)
                         }
 
                         ToolButton {

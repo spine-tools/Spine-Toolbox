@@ -155,6 +155,7 @@ from .widgets.persistent_console_widget import ConsoleWindow, PersistentConsoleW
 from .widgets.project_settings_dialog import ProjectSettingsDialog
 from .widgets.properties_widget import PropertiesWidgetBase
 from .widgets.settings_widget import SettingsWidget
+from .widgets.workflow_chains_panel import WorkflowChainsPanel
 
 
 def _make_dark_palette():
@@ -300,6 +301,9 @@ class ToolboxUI(QMainWindow):
         # Setup main window menu
         self.add_zoom_action()
         self.add_menu_actions()
+        self.tabifyDockWidget(self.ui.dockWidget_item, self.ui.dockWidget_chains)
+        self.ui.dockWidget_item.raise_()
+        self._chains_panel = WorkflowChainsPanel(self)
         self.ui.menuFile.setToolTipsVisible(True)
         self.ui.menuEdit.setToolTipsVisible(True)
         self.ui.menuConsoles.setToolTipsVisible(True)
@@ -792,6 +796,7 @@ class ToolboxUI(QMainWindow):
         # Reset zoom on Design View
         self.ui.graphicsView.reset_zoom()
         self._rebuild_group_frames()
+        self._chains_panel.refresh()
         update_recent_projects(self._qsettings, self._project.name, self._project.project_dir)
         self.msg.emit(f"Project <b>{self._project.name}</b> is now open")
         self._offer_project_setup(self._project.project_dir)
@@ -1025,6 +1030,7 @@ class ToolboxUI(QMainWindow):
         self.clear_ui()
         self._project.tear_down()
         self._project = None
+        self._chains_panel.refresh()
         self._disable_project_actions()
         self.undo_stack.clear()
         self.update_window_title()
@@ -1680,6 +1686,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_console.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_chains.toggleViewAction())
         undo_action = self.undo_stack.createUndoAction(self)
         redo_action = self.undo_stack.createRedoAction(self)
         undo_action.setShortcuts(QKeySequence.Undo)
@@ -2426,6 +2433,7 @@ class ToolboxUI(QMainWindow):
         self._project.item_added.connect(self.ui.graphicsView.add_icon)
         self._project.item_added.connect(self._apply_item_hidden_appearance)
         self._project.item_hidden_changed.connect(self._update_item_hidden_appearance)
+        self._project.chains_changed.connect(self._chains_panel.refresh)
         self._project.item_about_to_be_removed.connect(self.ui.graphicsView.remove_icon)
         self._project.connection_established.connect(self.ui.graphicsView.do_add_link)
         self._project.connection_updated.connect(self.ui.graphicsView.do_update_link)

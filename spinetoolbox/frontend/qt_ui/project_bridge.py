@@ -179,16 +179,23 @@ class ProjectBridge(QObject):
                 return name, item
         return None, None
 
-    def _stack_resolver(self, data: dict):
+    @staticmethod
+    def _chain(data: dict, chain_key: str) -> dict | None:
+        return data.get("project", {}).get("chains", {}).get("items", {}).get(chain_key)
+
+    def _stack_resolver(self, data: dict, chain_key: str = ""):
         """Returns a function mapping a raw project.json item name to the display name of the stack
-        it belongs to, or to itself if it isn't part of one."""
+        it belongs to, or to itself if it isn't part of one. Items a chain lists on their own
+        are not collapsed into their stack."""
         stacks = data.get("project", {}).get("stacks", {})
         item_to_stack = {}
         for stack_key, stack in stacks.items():
             display_name = stack.get("name", stack_key)
             for member in stack.get("items", []):
                 item_to_stack[member] = display_name
-        return lambda name: item_to_stack.get(name, name)
+        chain = self._chain(data, chain_key)
+        single_items = {entry["item"] for entry in chain["entries"] if "item" in entry} if chain else set()
+        return lambda name: name if name in single_items else item_to_stack.get(name, name)
 
     def _stack_members(self, data: dict, display_name: str) -> list[str]:
         """Returns the raw project.json item names display_name stands for (inverse of _stack_resolver);
@@ -199,12 +206,22 @@ class ProjectBridge(QObject):
                 return list(stack.get("items", []))
         return [display_name]
 
-    def _visible_display_names(self, data: dict) -> set[str]:
+    def _visible_display_names(self, data: dict, chain_key: str = "") -> set[str]:
         """Returns the display names shown on the User Mode canvas (stacks collapsed to their display
-        name), minus anything listed in project.json's "hidden_items"."""
-        resolve = self._stack_resolver(data)
+        name), minus anything listed in project.json's "hidden_items". A chain limits them to its entries."""
+        resolve = self._stack_resolver(data, chain_key)
         hidden = set(data.get("project", {}).get("hidden_items", []))
-        return {resolve(name) for name in data.get("items", {})} - hidden
+        names = {resolve(name) for name in data.get("items", {})}
+        chain = self._chain(data, chain_key)
+        if chain:
+            stacks = data.get("project", {}).get("stacks", {})
+            names &= {entry["item"] for entry in chain["entries"] if "item" in entry} | {
+                stacks[entry["stack"]].get("name", entry["stack"])
+                for entry in chain["entries"]
+                if entry.get("stack") in stacks
+            }
+        stack_of = self._stack_resolver(data)
+        return {name for name in names if name not in hidden and stack_of(name) not in hidden}
 
     def _find_filter_connection(self, data: dict, from_name: str, to_name: str) -> dict | None:
         """Returns the connection carrying the filter of the link from_name -> to_name, as returned by
@@ -341,22 +358,40 @@ class ProjectBridge(QObject):
     def _user_positions_file(self) -> Path:
         return self._project_dir / PROJECT_CONFIG_DIR_NAME / _USER_POSITIONS_FILENAME
 
-    @Slot(result=str)
-    def get_user_positions(self) -> str:
-        """Returns the saved User Mode card positions as JSON of display name -> {x, y}."""
+    def _read_user_layouts(self) -> dict[str, dict]:
+        """Returns the saved card positions per chain key ("" is the whole workflow)."""
         try:
-            return json.dumps(json.loads(self._user_positions_file().read_text(encoding="utf-8")))
+            data = json.loads(self._user_positions_file().read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            return "{}"
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        # files from before chains hold the positions of the whole workflow directly
+        return data["layouts"] if "layouts" in data else {"": data}
+
+    def _write_user_layouts(self, layouts: dict[str, dict]) -> None:
+        if layouts:
+            self._user_positions_file().write_text(json.dumps({"layouts": layouts}), encoding="utf-8")
+        else:
+            self._user_positions_file().unlink(missing_ok=True)
+
+    @Slot(str, result=str)
+    def get_user_positions(self, chain_key: str) -> str:
+        """Returns the saved User Mode card positions of a chain as JSON of display name -> {x, y}."""
+        return json.dumps(self._read_user_layouts().get(chain_key, {}))
+
+    @Slot(str, str)
+    def set_user_positions(self, chain_key: str, positions: str) -> None:
+        if self._config_file.exists():
+            layouts = self._read_user_layouts()
+            layouts[chain_key] = json.loads(positions)
+            self._write_user_layouts(layouts)
 
     @Slot(str)
-    def set_user_positions(self, positions: str) -> None:
-        if self._config_file.exists():
-            self._user_positions_file().write_text(positions, encoding="utf-8")
-
-    @Slot()
-    def reset_user_positions(self) -> None:
-        self._user_positions_file().unlink(missing_ok=True)
+    def reset_user_positions(self, chain_key: str) -> None:
+        layouts = self._read_user_layouts()
+        if layouts.pop(chain_key, None) is not None:
+            self._write_user_layouts(layouts)
 
     @property
     def project_dir(self) -> str:
@@ -508,18 +543,18 @@ class ProjectBridge(QObject):
     def _display_name_of(self, item_name: str) -> str:
         return next((name for name, members in self._display_members.items() if item_name in members), item_name)
 
-    @Slot(list)
-    def run_workflow(self, selected_names: list) -> None:
+    @Slot(list, str)
+    def run_workflow(self, selected_names: list, chain_key: str = "") -> None:
         """Runs the project (or, if selected_names is non-empty, just those items/stacks) via the
         existing headless CLI, so execution reuses the real engine instead of reimplementing it here.
         An empty selected_names means "run project": defaults to every item visible in User Mode,
-        excluding anything hidden there."""
+        excluding anything hidden there, limited to the chain chain_key if it is given."""
         if self._run_manager is not None:
             self.runStatusChanged.emit("A run is already in progress", "error")
             return
         data = self._load()
         if not selected_names:
-            selected_names = self._visible_display_names(data)
+            selected_names = self._visible_display_names(data, chain_key)
         real_names = sorted(
             {name for display_name in selected_names for name in self._stack_members(data, display_name)}
         )
@@ -528,7 +563,9 @@ class ProjectBridge(QObject):
         if real_names:
             args += ["--select", *real_names]
         python = resolve_python_interpreter(QSettings(_SETTINGS_ORGANIZATION, _SETTINGS_APPLICATION))
-        self._display_members = {name: self._stack_members(data, name) for name in self._visible_display_names(data)}
+        self._display_members = {
+            name: self._stack_members(data, name) for name in self._visible_display_names(data, chain_key)
+        }
         self._member_states = {name: "waiting" for name in self._included_items(set(real_names), data)}
         self._display_states = {}
         os.environ[REPORT_PROGRESS_ENV_VAR] = "1"
@@ -629,14 +666,14 @@ class ProjectBridge(QObject):
             return self._project_dir.name
         return ""
 
-    def _connection_filter_states(self, data: dict) -> list[dict]:
+    def _connection_filter_states(self, data: dict, chain_key: str = "") -> list[dict]:
         """Returns {"from", "to", "filter_type", "filter_satisfied", "filter_state"} for
         every visible, de-duplicated (stack-collapsed) connection. filter_state is None when the connection
         has no filter, else "ok"/"disabled_ok"/"error" -- an unsatisfied filter is only an "error" if no
         sibling line into the same target is satisfied either (that sibling still supplies the target)."""
         project = data.get("project", {})
-        resolve = self._stack_resolver(data)
-        visible = self._visible_display_names(data)
+        resolve = self._stack_resolver(data, chain_key)
+        visible = self._visible_display_names(data, chain_key)
 
         edges = [
             (resolve(connection["from"][0]), resolve(connection["to"][0]), connection)
@@ -738,14 +775,16 @@ class ProjectBridge(QObject):
         y = sum(raw_items[name].get("y", 0.0) for name in anchors) / len(anchors)
         return x, y
 
-    @Slot(result=str)
-    def get_workflow(self) -> str:
-        """Returns items/connections as JSON, collapsing any project.json "stacks" into a single node each."""
+    @Slot(str, result=str)
+    def get_workflow(self, chain_key: str = "") -> str:
+        """Returns items/connections as JSON, collapsing any project.json "stacks" into a single node each.
+        A chain limits them to its entries; links through the items left out are bridged."""
         data = self._load_merged()
         project = data.get("project", {})
         raw_items = data.get("items", {})
         stacks = project.get("stacks", {})
         stacked_names = {member for stack in stacks.values() for member in stack.get("items", [])}
+        resolve = self._stack_resolver(data, chain_key)
 
         items = []
         for stack_key, stack in stacks.items():
@@ -756,7 +795,7 @@ class ProjectBridge(QObject):
             display_name = stack.get("name", stack_key)
             items.append({"name": display_name, "type": "Stack", "x": x, "y": y, "subtitle": "Stack"})
         for name, item in raw_items.items():
-            if name in stacked_names:
+            if resolve(name) != name:
                 continue
             item_type = item.get("type", "")
             items.append(
@@ -769,14 +808,28 @@ class ProjectBridge(QObject):
                 }
             )
 
-        # items/stacks listed here stay in project.json untouched, just hidden from this simplified view
-        hidden = set(project.get("hidden_items", []))
-        items = [item for item in items if item["name"] not in hidden]
-        connections = self._connection_filter_states(data)
+        # items/stacks left out stay in project.json untouched, just hidden from this simplified view
+        visible = self._visible_display_names(data, chain_key)
+        items = [item for item in items if item["name"] in visible]
+        connections = self._connection_filter_states(data, chain_key)
 
-        # stacks and hidden items leave gaps that the layout may close
-        compact_rows = bool(stacked_names or hidden & raw_items.keys())
+        # stacks, hidden items and chains leave gaps that the layout may close
+        hidden = set(project.get("hidden_items", []))
+        compact_rows = bool(stacked_names or hidden & raw_items.keys() or self._chain(data, chain_key))
         return json.dumps({"items": items, "connections": connections, "compact_rows": compact_rows})
+
+    @Slot(result=str)
+    def get_chains(self) -> str:
+        """Returns the User Mode chains as JSON: {"default": key or null, "chains": [{"key", "name"}]}."""
+        chains = self._load().get("project", {}).get("chains", {})
+        default = chains.get("default")
+        items = chains.get("items", {})
+        return json.dumps(
+            {
+                "default": default if default in items else None,
+                "chains": [{"key": key, "name": chain.get("name", key)} for key, chain in items.items()],
+            }
+        )
 
     @Slot(result=str)
     def get_instructions(self) -> str:

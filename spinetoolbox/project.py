@@ -114,6 +114,7 @@ class SpineToolboxProject(MetaObject):
     item_renamed = Signal(str, str)
     """Emitted after project item has been renamed."""
     item_hidden_changed = Signal(str, bool)
+    chains_changed = Signal()
     item_instruction_changed = Signal(str)
     """Emitted after project item instruction has changed."""
     item_renamed = Signal(str, str)
@@ -149,6 +150,8 @@ class SpineToolboxProject(MetaObject):
         self._jumps = []
         self._stacks: dict[str, dict] = {}
         self._hidden_items: set[str] = set()
+        self._chains: dict[str, dict] = {}
+        self._default_chain: str | None = None
         self._item_instructions: dict[str, str] = {}
         self._result_data_stores: set[str] = set()
         self._logger = logger
@@ -304,6 +307,7 @@ class SpineToolboxProject(MetaObject):
             "jumps": [jump.to_dict() for jump in self._jumps],
             "stacks": self._stacks,
             "hidden_items": sorted(self._hidden_items),
+            "chains": {"default": self._default_chain, "items": self._chains},
             "instructions": {"items": dict(self._item_instructions)},
             "result_data_stores": sorted(self._result_data_stores),
         }
@@ -484,6 +488,9 @@ class SpineToolboxProject(MetaObject):
             self.add_jump(jump, silent=True)
         self._stacks = project_info["project"].get("stacks", {})
         self._hidden_items = set(project_info["project"].get("hidden_items", []))
+        chains_info = project_info["project"].get("chains", {})
+        self._chains = chains_info.get("items", {})
+        self._default_chain = chains_info.get("default")
         self._item_instructions = dict(project_info["project"].get("instructions", {}).get("items", {}))
         self._result_data_stores = set(project_info["project"].get("result_data_stores", []))
         if self._settings.mode == "consumer":
@@ -779,6 +786,10 @@ class SpineToolboxProject(MetaObject):
         self._project_items[new_name] = item
         if previous_name in self._item_instructions:
             self._item_instructions[new_name] = self._item_instructions.pop(previous_name)
+        for chain in self._chains.values():
+            for entry in chain["entries"]:
+                if entry.get("item") == previous_name:
+                    entry["item"] = new_name
         if previous_name in self._result_data_stores:
             self._result_data_stores.remove(previous_name)
             self._result_data_stores.add(new_name)
@@ -851,6 +862,20 @@ class SpineToolboxProject(MetaObject):
     def remove_stack(self, key: str) -> None:
         """Removes the stack with the given key."""
         del self._stacks[key]
+
+    @property
+    def chains(self) -> dict[str, dict]:
+        """User Mode chains: key -> {"name": str, "entries": [{"stack": key} or {"item": name}]}."""
+        return self._chains
+
+    @property
+    def default_chain(self) -> str | None:
+        return self._default_chain
+
+    def set_chains(self, chains: dict[str, dict], default_chain: str | None) -> None:
+        self._chains = json.loads(json.dumps(chains))
+        self._default_chain = default_chain
+        self.chains_changed.emit()
 
     def is_item_hidden(self, item_name: str) -> bool:
         """Returns whether item_name is hidden from the QML User Mode UI."""
