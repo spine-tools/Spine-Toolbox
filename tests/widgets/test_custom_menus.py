@@ -13,8 +13,9 @@
 """Unit tests for the ``custom_menus`` module."""
 
 from unittest import mock
-from PySide6.QtWidgets import QMessageBox
-from spinetoolbox.widgets.custom_menus import RecentProjectsPopupMenu
+from PySide6.QtWidgets import QMessageBox, QWidget
+from spinetoolbox.widgets.custom_menus import RecentProjectsPopupMenu, PythonContextMenu, JuliaContextMenu
+from spinetoolbox.execution_models import ExecutionModels
 from spinetoolbox.helpers import update_recent_projects
 from spinetoolbox.config import LATEST_PROJECT_VERSION
 
@@ -106,3 +107,184 @@ class TestRecentProjectsPopUpMenu:
         ):
             menu = RecentProjectsPopupMenu(parent_widget_with_settings)
         return menu
+
+
+class TestPythonContextMenu:
+    def test_python_interpreter_context_menu(self, application):
+        parent = QWidget()
+        owner = QWidget()
+        models = ExecutionModels(mock.MagicMock())
+        menu = PythonContextMenu(parent, owner, models, "", False, 0)
+        action = self._get_action(menu, "remove_python_interpreter")
+        with mock.patch("spinetoolbox.widgets.custom_menus.Notification") as mock_notification:
+            action.trigger()
+            mock_notification.assert_called_once()
+        menu = PythonContextMenu(parent, owner, models, "some/path", False, 0)
+        action = self._get_action(menu, "open_python_interpreter_folder")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+
+    def test_python_kernel_context_menu(self, application):
+        parent = QWidget()
+        owner = QWidget()
+        models = ExecutionModels(mock.MagicMock())
+        menu = PythonContextMenu(parent, owner, models, "/kernel/path", False, 1)
+        action = self._get_action(menu, "open_kernel_resource_folder")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+        action = self._get_action(menu, "open_kernel_json_file")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+        action = self._get_action(menu, "remove_kernel")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.QMessageBox") as mock_mb_cls,
+            mock.patch("shutil.rmtree") as mock_rmtree,
+            mock.patch(
+                "spinetoolbox.widgets.custom_menus.PythonContextMenu._reload_python_kernels"
+            ) as mock_reload_kernels,
+        ):
+            message_box = mock.MagicMock()
+            mock_mb_cls.return_value = message_box
+            yes_button = object()
+            cancel_button = object()
+            message_box.addButton.side_effect = [yes_button, cancel_button]  # addButton() is called twice
+            message_box.clickedButton.return_value = yes_button  # Simulate user clicking Yes
+            mock_exists.return_value = True
+            mock_rmtree.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_rmtree.assert_called_once()
+            mock_reload_kernels.assert_called_once()
+        action = self._get_action(menu, "reload_kernels")
+        with mock.patch(
+            "spinetoolbox.widgets.custom_menus.PythonContextMenu._reload_python_kernels"
+        ) as mock_reload_kernels:
+            action.trigger()
+            mock_reload_kernels.assert_called_once()
+
+    def _get_action(self, menu, action_object_name):
+        action = next(a for a in menu.actions() if a.objectName() == action_object_name)
+        return action
+
+
+class TestJuliaContextMenu:
+    def test_julia_executable_context_menu(self, application):
+        parent = QWidget()
+        owner = QWidget()
+        models = ExecutionModels(mock.MagicMock())
+        menu = JuliaContextMenu(parent, owner, models, "", False, 0, "")
+        action = self._get_action(menu, "remove_julia_executable")
+        with mock.patch("spinetoolbox.widgets.custom_menus.Notification") as mock_notification:
+            action.trigger()
+            mock_notification.assert_called_once()
+        menu = JuliaContextMenu(parent, owner, models, "some/path", False, 0, "")
+        action = self._get_action(menu, "open_julia_executable_dir")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+
+    def test_julia_projects_context_menu(self, application):
+        parent = QWidget()
+        owner = QWidget()
+        models = ExecutionModels(mock.MagicMock())
+        menu = JuliaContextMenu(parent, owner, models, "", False, 1, "")
+        action = self._get_action(menu, "remove_julia_project")
+        with mock.patch("spinetoolbox.widgets.custom_menus.Notification") as mock_notification:
+            action.trigger()
+            mock_notification.assert_called_once()
+        menu = JuliaContextMenu(parent, owner, models, "some/path", False, 1, "")
+        action = self._get_action(menu, "open_julia_project_dir")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+
+    def test_julia_kernel_context_menu(self, application):
+        parent = QWidget()
+        owner = QWidget()
+        models = ExecutionModels(mock.MagicMock())
+        menu = JuliaContextMenu(parent, owner, models, "/kernel/path", False, 2, "")
+        action = self._get_action(menu, "open_kernel_resource_dir")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+        action = self._get_action(menu, "open_kernel_json_file")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.open_url") as mock_open_url,
+        ):
+            mock_exists.return_value = True
+            mock_open_url.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_open_url.assert_called_once()
+        action = self._get_action(menu, "delete_julia_kernel_resource_dir")
+        with (
+            mock.patch("os.path.exists") as mock_exists,
+            mock.patch("spinetoolbox.widgets.custom_menus.QMessageBox") as mock_mb_cls,
+            mock.patch("shutil.rmtree") as mock_rmtree,
+            mock.patch(
+                "spinetoolbox.widgets.custom_menus.JuliaContextMenu._reload_julia_kernels"
+            ) as mock_reload_kernels,
+        ):
+            message_box = mock.MagicMock()
+            mock_mb_cls.return_value = message_box
+            yes_button = object()
+            cancel_button = object()
+            message_box.addButton.side_effect = [yes_button, cancel_button]  # addButton() is called twice
+            message_box.clickedButton.return_value = yes_button  # Simulate user clicking Yes
+            mock_exists.return_value = True
+            mock_rmtree.return_value = True
+            action.trigger()
+            mock_exists.assert_called_once()
+            mock_rmtree.assert_called_once()
+            mock_reload_kernels.assert_called_once()
+        action = self._get_action(menu, "reload_julia_kernels")
+        with mock.patch(
+            "spinetoolbox.widgets.custom_menus.JuliaContextMenu._reload_julia_kernels"
+        ) as mock_reload_kernels:
+            action.trigger()
+            mock_reload_kernels.assert_called_once()
+
+    def _get_action(self, menu, action_object_name):
+        action = next(a for a in menu.actions() if a.objectName() == action_object_name)
+        return action

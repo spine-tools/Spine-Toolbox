@@ -97,7 +97,10 @@ class TestKernelManagers:
         editor.ui.comboBox_python_interpreter.setCurrentIndex(index.row())
         assert editor._python_kernel_name == "python320"
         assert editor._python_exe == "/some/pythonista"
-        with (patch("os.path.isfile") as mock_isfile, patch("spinetoolbox.widgets.kernel_manager.Notification") as mock_notification):
+        with (
+            patch("os.path.isfile") as mock_isfile,
+            patch("spinetoolbox.widgets.kernel_manager.Notification") as mock_notification,
+        ):
             mock_isfile.return_value = False
             editor._check_selections()  # Stops at os.path.isfile because _python_exe is just a dummy
             mock_isfile.assert_called_once()
@@ -195,7 +198,10 @@ class TestKernelManagers:
         assert editor._julia_project == "/some/julia/env"
         assert editor._julia_kernel_name_prefix == "julia-env"
         assert editor._complete_kernel_name() == "julia-env-2.20"
-        with (patch("os.path.isfile") as mock_isfile, patch("spinetoolbox.widgets.kernel_manager.Notification") as mock_notification):
+        with (
+            patch("os.path.isfile") as mock_isfile,
+            patch("spinetoolbox.widgets.kernel_manager.Notification") as mock_notification,
+        ):
             mock_isfile.return_value = False
             editor._check_selections()  # Stops at os.path.isfile because _julia_exe is just a dummy
             mock_isfile.assert_called_once()
@@ -214,7 +220,7 @@ class TestVersionCollector:
         collector = VersionCollector(["a", "b"])
         slot = Mock()
         collector.versions_collected.connect(slot)
-        with patch.object(VersionCollector,"_get_version", side_effect=["310", None]):
+        with patch.object(VersionCollector, "_get_version", side_effect=["310", None]):
             collector.run()
         slot.assert_called_once_with({"a": "310", "b": "x.x"})
 
@@ -223,7 +229,7 @@ class TestVersionCollector:
         manager.process_output = "Python 3.10.8"
         with (
             patch("os.path.exists") as mock_exists,
-            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls
+            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls,
         ):
             manager_cls.return_value = manager
             mock_exists.return_value = True
@@ -238,7 +244,7 @@ class TestVersionCollector:
         manager.process_output = "julia version 1.13.3"
         with (
             patch("os.path.exists") as mock_exists,
-            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls
+            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls,
         ):
             manager_cls.return_value = manager
             mock_exists.return_value = True
@@ -259,7 +265,7 @@ class TestVersionCollector:
         manager.process_output = ""
         with (
             patch("os.path.exists") as mock_exists,
-            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls
+            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls,
         ):
             manager_cls.return_value = manager
             mock_exists.return_value = True
@@ -271,7 +277,7 @@ class TestVersionCollector:
         manager.process_output = "Python"
         with (
             patch("os.path.exists") as mock_exists,
-            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls
+            patch("spinetoolbox.widgets.kernel_manager.QProcessExecutionManager") as manager_cls,
         ):
             manager_cls.return_value = manager
             mock_exists.return_value = True

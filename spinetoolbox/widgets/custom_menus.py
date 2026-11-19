@@ -480,39 +480,45 @@ class PythonContextMenu(SharedContextMenu):
 
     def _make_interpreter_menu(self):
         """Adds actions for python interpreter comboBox context menu."""
-        self.addAction(
+        remove_action = self.addAction(
             QIcon(":icons/menu_icons/trash-alt.svg"),
             "Remove from list",
             self._remove_python_system_interpreter,
         )
-        self.addAction(
+        remove_action.setObjectName("remove_python_interpreter")
+        open_action = self.addAction(
             QIcon(":icons/menu_icons/folder-open-solid.svg"),
             "Open containing folder...",
             self._open_python_interpreter_dir,
         )
+        open_action.setObjectName("open_python_interpreter_folder")
 
     def _make_kernel_menu(self):
         """Adds actions for a Python kernel comboBox context menu."""
-        self.addAction(
+        open_rsc_folder_action = self.addAction(
             QIcon(":icons/menu_icons/folder-open-solid.svg"),
             "Open resource folder...",
             self._open_kernel_resource_dir,
         )
-        self.addAction(
+        open_rsc_folder_action.setObjectName("open_kernel_resource_folder")
+        open_kernel_file_action = self.addAction(
             QIcon(":icons/menu_icons/edit.svg"),
             "Open kernel.json...",
             self._open_kernel_json_file,
         )
-        self.addAction(
+        open_kernel_file_action.setObjectName("open_kernel_json_file")
+        delete_kernel_rsc_folder_action = self.addAction(
             QIcon(":icons/menu_icons/trash-alt.svg"),
             "Remove kernel...",
             self._delete_python_kernel_resource_dir,
         )
-        self.addAction(
+        delete_kernel_rsc_folder_action.setObjectName("remove_kernel")
+        reload_action = self.addAction(
             QIcon(":icons/menu_icons/sync.svg"),
             "Reload kernels",
             self._reload_python_kernels,
         )
+        reload_action.setObjectName("reload_kernels")
 
     def _remove_python_system_interpreter(self):
         """Removes Python interpreter from the list of known Pythons."""
@@ -552,26 +558,44 @@ class JuliaContextMenu(SharedContextMenu):
             self._make_kernels_menu()
 
     def _make_executable_menu(self):
-        self.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_executable)
-        self.addAction(
+        remove_action = self.addAction(
+            QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_executable
+        )
+        remove_action.setObjectName("remove_julia_executable")
+        open_action = self.addAction(
             QIcon(":icons/menu_icons/folder-open-solid.svg"),
             "Open containing folder...",
             self._open_julia_executable_dir,
         )
+        open_action.setObjectName("open_julia_executable_dir")
 
     def _make_projects_menu(self):
-        self.addAction(QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_project)
-        self.addAction(QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open folder...", self._open_julia_project_dir)
+        remove_action = self.addAction(
+            QIcon(":icons/menu_icons/trash-alt.svg"), "Remove from list", self._remove_julia_project
+        )
+        remove_action.setObjectName("remove_julia_project")
+        open_action = self.addAction(
+            QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open folder...", self._open_julia_project_dir
+        )
+        open_action.setObjectName("open_julia_project_dir")
 
     def _make_kernels_menu(self):
-        self.addAction(
+        open_dir_action = self.addAction(
             QIcon(":icons/menu_icons/folder-open-solid.svg"), "Open resource folder...", self._open_kernel_resource_dir
         )
-        self.addAction(QIcon(":icons/menu_icons/edit.svg"), "Open kernel.json...", self._open_kernel_json_file)
-        self.addAction(
+        open_dir_action.setObjectName("open_kernel_resource_dir")
+        open_file_action = self.addAction(
+            QIcon(":icons/menu_icons/edit.svg"), "Open kernel.json...", self._open_kernel_json_file
+        )
+        open_file_action.setObjectName("open_kernel_json_file")
+        delete_action = self.addAction(
             QIcon(":icons/menu_icons/trash-alt.svg"), "Remove kernel...", self._delete_julia_kernel_resource_dir
         )
-        self.addAction(QIcon(":icons/menu_icons/sync.svg"), "Reload kernels", self._reload_julia_kernels)
+        delete_action.setObjectName("delete_julia_kernel_resource_dir")
+        reload_action = self.addAction(
+            QIcon(":icons/menu_icons/sync.svg"), "Reload kernels", self._reload_julia_kernels
+        )
+        reload_action.setObjectName("reload_julia_kernels")
 
     def _remove_julia_executable(self):
         """Removes a Julia from the list of known Julias."""
