@@ -12,11 +12,13 @@
 
 """Widget for controlling user settings."""
 
+from __future__ import annotations
+from enum import Enum
 import os
 import pathlib
 import shutil
-from enum import Enum
-from PySide6.QtCore import QPoint, QSettings, QSize, Qt, Signal, Slot, QUrl
+from typing import TYPE_CHECKING
+from PySide6.QtCore import QPoint, QSettings, QSize, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QIcon, QPixmap
 from PySide6.QtWidgets import QColorDialog, QMessageBox, QWidget
 from spine_engine.utils.helpers import (
@@ -25,7 +27,8 @@ from spine_engine.utils.helpers import (
     resolve_default_julia_executable,
     resolve_gams_executable,
 )
-from ..config import DEFAULT_WORK_DIR, PYTHON_EXECUTION_MODES, JULIA_EXECUTION_MODES
+from ..config import DEFAULT_WORK_DIR, JULIA_EXECUTION_MODES, PYTHON_EXECUTION_MODES
+from ..execution_models import DEFAULT_SUFFIX
 from ..file_size_aggregator import AggregatorProcess
 from ..helpers import (
     dir_is_valid,
@@ -36,28 +39,30 @@ from ..helpers import (
     is_valid_conda_executable,
     load_list_of_paths_from_qsettings,
     path_in_list,
+    restore_saved_julia_kernel,
+    restore_saved_python_kernel,
     save_path_to_qsettings,
+    select_and_add_julia_executable,
+    select_and_add_julia_project,
+    select_and_add_python_interpreter,
     select_certificate_directory,
     select_conda_executable,
     select_gams_executable,
     select_work_directory,
     set_combobox_item_invalid_property,
-    restore_saved_python_kernel,
-    restore_saved_julia_kernel,
-    select_and_add_python_interpreter,
-    select_and_add_julia_executable,
-    select_and_add_julia_project,
 )
 from ..link import JumpLink, Link
 from ..project_item_icon import ProjectItemIcon
-from ..execution_models import DEFAULT_SUFFIX
 from ..spine_db_editor.editors import db_editor_registry
+from ..widgets.custom_menus import JuliaContextMenu, PythonContextMenu
 from ..widgets.kernel_manager import MiniJuliaKernelManager, MiniPythonKernelManager
-from ..widgets.custom_menus import PythonContextMenu, JuliaContextMenu
 from .add_up_spine_opt_wizard import AddUpSpineOptWizard
+from .custom_qwidgets import ComboListView
 from .install_julia_wizard import InstallJuliaWizard
 from .notification import Notification
-from .custom_qwidgets import ComboListView
+
+if TYPE_CHECKING:
+    from ..ui_main import ToolboxUI
 
 
 class ExecutionMethod(Enum):
@@ -319,10 +324,10 @@ class SpineDBEditorSettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase
 class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     """A widget to change user's preferred settings."""
 
-    def __init__(self, toolbox):
+    def __init__(self, toolbox: ToolboxUI):
         """
         Args:
-            toolbox (ToolboxUI): Parent widget.
+            toolbox: Parent widget.
         """
         super().__init__(toolbox.qsettings())
         self.ui.stackedWidget.setCurrentIndex(0)
@@ -451,11 +456,19 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
         self.close()
         self._toolbox.close()
 
+    @Slot(str)
+    def _add_and_select_julia(self, julia_path: str) -> None:
+        index = self._execution_models.add_julia_executable(julia_path)
+        if not index.isValid():
+            Notification(self, f"Adding Julia {julia_path} failed!").show()
+            return
+        self.ui.comboBox_julia_path.setCurrentIndex(index.row())
+
     @Slot(bool)
-    def _show_install_julia_wizard(self, _=False):
+    def _show_install_julia_wizard(self, _: bool = False) -> None:
         """Opens Install Julia Wizard."""
         wizard = InstallJuliaWizard(self)
-        wizard.julia_exe_selected.connect(self.ui.comboBox_julia_path.setCurrentText)
+        wizard.julia_exe_selected.connect(self._add_and_select_julia)
         wizard.show()
 
     @Slot(bool)

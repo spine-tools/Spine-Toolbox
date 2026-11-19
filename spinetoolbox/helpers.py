@@ -34,7 +34,6 @@ import sys
 import tempfile
 import time
 from typing import TYPE_CHECKING, Any, Literal, Optional, Sequence, TypeAlias, Union
-from urllib.request import url2pathname
 from xml.etree import ElementTree
 import matplotlib
 from PySide6.QtCore import (
@@ -89,21 +88,22 @@ from PySide6.QtWidgets import (
     QStyle,
     QWidget,
 )
-from spinetoolbox.widgets.notification import Notification
 from spine_engine.logger_interface import LoggerInterface
 from spine_engine.utils.helpers import resolve_current_python_interpreter, resolve_default_julia_executable
 from spinedb_api import DatabaseMapping
 from spinedb_api.db_mapping_base import PublicItem
 from spinedb_api.helpers import group_consecutive, sqlite_url_string
 from spinedb_api.spine_io.gdx_utils import find_gams_directory
+from spinetoolbox.widgets.notification import Notification
 from .config import (
     DEFAULT_WORK_DIR,
 )
 from .font import TOOLBOX_FONT
 
 if TYPE_CHECKING:
-    from .ui_main import ToolboxUI
     from PySide6.QtWidgets import QComboBox
+    from .execution_models import ExecutionModels
+    from .ui_main import ToolboxUI
 
 if sys.platform == "win32":
     import ctypes
@@ -2119,7 +2119,9 @@ def update_recent_projects(settings: QSettings, project_name: str, project_dir: 
     settings.sync()  # Commit change immediately
 
 
-def restore_saved_python_kernel(parent, models, combobox, saved_python_kernel):
+def restore_saved_python_kernel(
+    parent: QWidget, models: ExecutionModels, combobox: QComboBox, saved_python_kernel: str
+) -> None:
     """Restores previously selected Python kernel."""
     if models.python_kernel_fetcher is not None and not models.python_kernel_fetcher.keep_going:
         return
@@ -2133,7 +2135,9 @@ def restore_saved_python_kernel(parent, models, combobox, saved_python_kernel):
     combobox.setCurrentIndex(index.row())
 
 
-def restore_saved_julia_kernel(parent, models, combobox, saved_julia_kernel):
+def restore_saved_julia_kernel(
+    parent: QWidget, models: ExecutionModels, combobox: QComboBox, saved_julia_kernel: str
+) -> None:
     """Restores previously selected Python kernel."""
     if models.julia_kernel_fetcher is not None and not models.julia_kernel_fetcher.keep_going:
         return
@@ -2144,7 +2148,9 @@ def restore_saved_julia_kernel(parent, models, combobox, saved_julia_kernel):
     combobox.setCurrentIndex(index.row())
 
 
-def select_and_add_python_interpreter(combobox, models, file_dialog_parent):
+def select_and_add_python_interpreter(
+    combobox: QComboBox, models: ExecutionModels, file_dialog_parent: QWidget
+) -> None:
     current_path = combobox.currentText()
     if not current_path:
         current_path = resolve_current_python_interpreter()
@@ -2159,7 +2165,7 @@ def select_and_add_python_interpreter(combobox, models, file_dialog_parent):
     combobox.setCurrentIndex(ind.row())
 
 
-def select_and_add_julia_executable(combobox, models, file_dialog_parent):
+def select_and_add_julia_executable(combobox: QComboBox, models: ExecutionModels, file_dialog_parent: QWidget) -> None:
     current_path = combobox.currentText()
     if not current_path:
         current_path = resolve_default_julia_executable()
@@ -2174,7 +2180,7 @@ def select_and_add_julia_executable(combobox, models, file_dialog_parent):
     combobox.setCurrentIndex(ind.row())
 
 
-def select_and_add_julia_project(combobox, models, file_dialog_parent):
+def select_and_add_julia_project(combobox: QComboBox, models: ExecutionModels, file_dialog_parent: QWidget) -> None:
     dpath = select_dir(file_dialog_parent, "Select Julia project directory...")
     if not dpath:
         return
