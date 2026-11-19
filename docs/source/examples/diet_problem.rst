@@ -21,6 +21,13 @@ In this tutorial, you will be guided through how to use an existing Spine Toolbo
 to solve the `Diet problem <https://github.com/Pyomo/pyomo-gallery/blob/main/diet/DietProblem.ipynb>`_
 which is one of the use-case examples of the `Pyomo <https://pyomo.readthedocs.io/en/stable/>`_ optimization package for Python.
 
+.. note::
+
+   If you feel like something is not working or you just want to restart from the beginning,
+   feel free to delete the project directory and unzip the repository again.
+   You can even keep multiple copies of the project directory around
+   as they will all be treated as separate projects.
+
 .. _Setting Up the Project:
 
 Setting Up the Project
@@ -43,13 +50,6 @@ and the Python version you are using.
 After activating the environment, install :literal:`pyomo`, :literal:`highspy` and :literal:`spinedb_api` with::
 
    pip install pyomo highspy spinedb_api
-
-.. note::
-
-   If you feel like something is not working or you just want to restart from the beginning,
-   feel free to delete the project directory and unzip the repository again.
-   You can even keep multiple copies of the project directory around
-   as they will all be treated as separate projects.
 
 We have now finished all preparations outside of Spine Toolbox.
 It is time to get to the real bread and butter of this tutorial.
@@ -76,7 +76,7 @@ to ensure that you are ready to proceed.
 Taking a Tour of the Project
 ============================
 
-The project consists of six project items.
+The project consists of five project items.
 They are, from left-to-right: Input data, Import input, Model, Solver and Results.
 The yellow link arrows show the direction of the "flow" of the workflow
 while the numbers on the top right corners of the project items
@@ -98,6 +98,8 @@ and select :menuselection:`Open project directory...` from the context menu that
 The action should open the project directory in the system's file manager.
 You should see some files in the root of the directory like :file:`diet.py` and :file:`Foods and nutrients.xlsx`.
 There should also be a :file:`.venv/` directory which contains the Python environment you created previously.
+Note, that directory and file names starting with a dot are hidden by default on MacOS and Linux systems.
+You may need to unhide such files to see :file:`.venv/`.
 
 The idea of the project directory is that you can store all input files, scripts, documentation
 and whatever is needed by the project in a single place.
@@ -200,7 +202,7 @@ You can now close the spreadsheet and focus back to Spine Toolbox.
 Basics of Spine Data Model
 ==========================
 
-We need import :file:`Foods and nutrients.xlsx` into the input Spine database.
+We need to import :file:`Foods and nutrients.xlsx` into the input Spine database.
 Before doing that,
 we need to understand some basics of Spine data model
 so we can create the necessary transformation mappings from the tabular source data to the graph-like Spine data.
@@ -215,16 +217,16 @@ The concrete instances of objects and relationships are called entities.
 For example, a Food class could have an entity called cheeseburger.
 
 Entity classes have parameter definitions
-which determine the set parameters an entity of each class can have.
-The concrete values for the parameter are defined for each entity.
+which determine the set parameters an entity of each class can have. The food class in this tutorial has two parameters: cost and volume.
+The concrete values for the parameter are defined for each entity. For example, cheeseburger which is an entity in the food class costs 1.84 and has a volume of 4 units.
 
 Another important building block of Spine data is alternatives.
 Basically, alternatives are named dimensions.
 Every parameter value belongs to an alternative
 which allows multiple instances of a single value to be present in the data.
 Conversely, a parameter has at least one alternative value.
-There could, for example, be a parameter called cost
-which has two different values in alternatives called low inflation and high inflation.
+For example, the cost of cheeseburger
+could have two different values in alternatives called low inflation and high inflation.
 As we saw in :ref:`Checking Input Data`,
 our input database already has one alternative, Base.
 
@@ -354,11 +356,11 @@ On the mappings table, select the Source ref. cell on the Alternative names row,
 then type :literal:`Base` on it and press enter to accept the edit.
 Note, that Source type for the row automatically changes to Constant
 which means that all parameter values will be imported to a fixed alternative called Base.
-You may recall that the target database, even though otherwise empty,
+You may recall that the target database
 already contains the Base alternative
 so we do not need to import or create it explicitly.
 
-The parameter names for Food, cost and volume, can be found in the header.
+The parameter names for Food, cost and volume can be found in the header.
 We could import these parameters column-by-column using the same Column Header Source type
 we used for Entity class names.
 However, this would require a separate mapping for each parameter.
@@ -507,8 +509,7 @@ In **Entity tree**, click the |add_entities| icon next to the Constraint class
 which opens **Add entities** dialog.
 Our model does not really care what the name of the entity is
 but you can type :literal:`typical` to the entity name cell and accept the dialog.
-Check that the entity got created by expanding the Constraint class in **Entity tree**
-The entity should be in the list under Constraint.
+Check that the entity got created by expanding the Constraint class in **Entity tree**.
 
 Now that we have the entity,
 we can create the value for volume max.
@@ -563,7 +564,7 @@ Switch to the **Entity alternative** table (:kbd:`Alt+4`).
 The table is currently empty
 which means that the activity of all of our entities depends on the default activity set for their classes.
 We have not modified the default activities so all entities are always visible.
-That will change that now.
+We will change that now.
 Select fries under the Food class in **Entity tree**,
 then double-click the alternative cell on the single row in the **Entity alternative** table.
 Select no fries from the popup list.
@@ -646,7 +647,7 @@ Lastly, starting from line 86, we write the results back to the output database.
 
 The URLs of input and output databases are given to the script as command line arguments.
 
-Note, that the script has now notion of scenarios or alternatives.
+Note, that the script has no notion of scenarios or alternatives.
 Spine Engine and `spinedb_api` together ensure that the script "sees" only
 relevant data when it reads the input database.
 
@@ -656,6 +657,8 @@ We need to set the Tool to use that environment when we execute it.
 Click the |open_file| button on the left of :guilabel:`Interpreter` to open a file dialog.
 The exact location of the Python interpreter in the :literal:`.venv` environment depends on your system,
 but if you are on Windows, browse to :file:`<project root>/.venv/Scripts` and select :file:`python.exe`.
+Python interpreter is :file:`<project root>/.venv/bin/python` on Linux and MacOS.
+Note, that you may need to unhide the :literal:`.venv` directory before it is shown in the file dialog.
 
 Press :kbd:`Ctrl+S` to save the specification and close the editor.
 
@@ -706,12 +709,12 @@ if you want to compare the results between scenarios or executions.
 The value column in the **Parameter value** table says Map for all rows.
 Map is a Spine-specific dataframe-like multidimensional data container.
 Double-clicking any of the Maps in the table opens a value editor
-which shows you a table of the daily quantities of each food that the optimal solution recommends.
-Click :kbd:`Cancel` to close the editor without making any changes.
+which shows you a table of the daily quantities of each food which the optimal solution recommends.
+Click :guilabel:`Cancel` to close the editor without making any changes.
 
-Right-click any of the Maps and select :guilabel:`Plot...` from the popup menu.
+Right-click any of the Maps and select :menuselection:`Plot...` from the popup menu.
 This opens a plot window which lets you visualize the daily quantities.
-Right-clicking any other Map and selecting :guilabel:`Plot in window --> value`
+Right-clicking any other Map and selecting :menuselection:`Plot in window --> value`
 adds that Map to the existing plot for comparison.
 You can also select multiple Maps by holding :kbd:`Ctrl` or :kbd:`Shift`
 before plotting.

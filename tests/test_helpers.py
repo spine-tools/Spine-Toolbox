@@ -19,8 +19,8 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
 from PySide6.QtCore import QObject, Qt, Signal
-from PySide6.QtGui import QAction, QKeySequence, QPalette, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QLineEdit, QMessageBox, QWidget
+from PySide6.QtGui import QAction, QColor, QKeySequence, QPalette, QStandardItem, QStandardItemModel
+from PySide6.QtWidgets import QApplication, QLineEdit, QMessageBox, QWidget
 import pytest
 from spinetoolbox.helpers import (
     DB_ITEM_SEPARATOR,
@@ -45,6 +45,7 @@ from spinetoolbox.helpers import (
     interpret_icon_id,
     list_to_rich_text,
     make_icon_id,
+    make_icon_toolbar_ss,
     merge_dicts,
     normcase_database_url_path,
     order_key,
@@ -750,3 +751,10 @@ class TestRecentProjects:
         remove_path_from_recent_projects(qsettings_file, "C:/Projects/DoesNotExist")
         recents = qsettings_file.value("appSettings/recentProjects")
         assert recents.split("\n") == ["ProjectA<>C:/Projects/A", "ProjectB<>C:/Projects/B"]
+
+
+def test_make_icon_toolbar_ss_makes_disabled_labels_translucent_window_text(restore_app_palette):
+    palette = QApplication.palette()
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(10, 20, 30))
+    QApplication.setPalette(palette)
+    assert "QToolButton:disabled{color: #990a141e;}" in make_icon_toolbar_ss(QColor(240, 240, 240))

@@ -7,8 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Added
 
-- Allow committing changes in DB Editor with Ctrl+S using the default commit message.
-
 ### Changed
 
 - Execution method configuration for Julia and Python Tools has been redesigned. 
@@ -25,11 +23,25 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.1.0/)
 
 ### Removed
 
-- Support for Python 3.10 has been removed. Python 3.10 reached its end-of-life.
-
 ### Fixed
 
 ### Security
+
+## [0.10.11]
+
+### Added
+
+- Allow quickly committing changes in DB Editor with Ctrl+S
+  using the default commit message "Updated".
+
+### Removed
+
+- Support for Python 3.10 has been removed as it has reached its end-of-life.
+
+### Fixed
+
+- Disabled toolbar buttons are easier to read, and toolbars no longer pick up a tinted button color
+  from some Linux desktop themes (#3383).
 
 ## [0.10.10]
 
