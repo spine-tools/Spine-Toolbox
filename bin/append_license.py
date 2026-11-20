@@ -63,6 +63,6 @@ def _append_license_xml(path):
         output_file.writelines(contents[1:])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     file_name = sys.argv[1]
     append_license(file_name)
