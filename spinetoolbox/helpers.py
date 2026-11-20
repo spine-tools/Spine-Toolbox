@@ -1024,24 +1024,34 @@ def select_python_interpreter(parent: QWidget | None, line_edit: QLineEdit) -> N
     return
 
 
-def select_file_path(parent, title, initial_path=None, check_file=None):
+def select_file_path(
+    parent: QWidget,
+    title: str,
+    initial_path: str | None = None,
+    check_file: str | None = None,
+    follow_symlinks: bool = True,
+) -> str | None:
     """Opens file browser where user can select a file path.
 
     Args:
-        parent (QWidget): Parent widget for the file dialog and message boxes
-        title (str): File dialog title
-        initial_path (str, optional): Initial directory for the file dialog
-        check_file (str, optional): If given, selected file must begin with the given string
+        parent: Parent widget for the file dialog and message boxes
+        title: File dialog title
+        initial_path: Initial directory for the file dialog
+        check_file: If given, selected file must begin with the given string
+        follow_symlinks: Wether file dialog will follow symlinks.
 
     Returns:
-         str: Full path to the selected file or None if the operation was cancelled or does not match check_file thing.
+         Full path to the selected file or None if the operation was cancelled or does not match check_file thing.
     """
     init_path = initial_path if initial_path is not None else home_dir()
     if sys.platform == "win32":
         answer = get_path_from_native_open_file_dialog(parent, init_path, title)
     else:
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(parent, title, init_path)
+        options = QFileDialog.Option(0)
+        if not follow_symlinks:
+            options |= QFileDialog.Option.DontResolveSymlinks
+        answer = QFileDialog.getOpenFileName(parent, title, init_path, options=options)
     if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
         return None
     # Check that the selected file name starts with given check_file argument if given
@@ -2160,7 +2170,9 @@ def select_and_add_python_interpreter(
     if not current_path:
         current_path = resolve_current_python_interpreter()
     init_dir, _ = os.path.split(current_path)
-    new_python = select_file_path(file_dialog_parent, "Add Python Interpreter...", init_dir, "python")
+    new_python = select_file_path(
+        file_dialog_parent, "Add Python Interpreter...", init_dir, "python", follow_symlinks=False
+    )
     if not new_python:
         return
     ind = models.add_python_interpreter(new_python)
