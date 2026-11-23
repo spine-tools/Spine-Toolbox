@@ -96,6 +96,13 @@ Rectangle {
             root.loadStoreWarnings()
         }
 
+        function onRunResultsChanged() {
+            root.loadRunResults()
+
+            if (runResultsTab.visible)
+                projectBridge.open_run_results(root.currentChain)
+        }
+
         function onExecutionLogAppended(line, kind) {
             root.executionLogModel.append({ "text": line, "kind": kind })
 
@@ -121,6 +128,42 @@ Rectangle {
 
     // file URLs of the images produced by the latest run
     property var plotUrls: []
+    // plots the user has saved, shown instead of the latest run's plots when showSavedPlots is set
+    property bool showSavedPlots: false
+    property var savedPlots: []
+    property var savedPlotFilters: ({ "chains": [], "runs": [] })
+    property string savedPlotChain: "*"
+    property string savedPlotRun: "*"
+    property string savedPlotQuery: ""
+    // what the latest run of the current chain produced, see ProjectBridge.get_run_results
+    property var runResults: ({})
+
+    function loadSavedPlots() {
+        if (typeof projectBridge === "undefined")
+            return
+        root.savedPlotFilters = JSON.parse(projectBridge.get_saved_plot_filters())
+        root.savedPlots = JSON.parse(projectBridge.get_saved_plots(root.savedPlotChain, root.savedPlotRun,
+                                                                    root.savedPlotQuery))
+    }
+
+    function loadRunResults() {
+        if (typeof projectBridge !== "undefined")
+            root.runResults = JSON.parse(projectBridge.get_run_results(root.currentChain))
+    }
+
+    function runResultsSummary() {
+        var run = root.runResults
+        if (!run.stores)
+            return "This chain has not been run yet."
+        var scenarios = []
+        for (var store in run.stores)
+            scenarios = scenarios.concat(run.stores[store])
+        return run.chain_name + " - run " + run.started_label + (scenarios.length > 0
+            ? " - scenarios: " + scenarios.join(", ")
+            : " - no new scenarios found, showing the whole database")
+    }
+
+    onCurrentChainChanged: loadRunResults()
     property var dataStores: []
     property var resultDataStores: []
     property string currentDataStore: ""
@@ -228,8 +271,12 @@ Rectangle {
     // name -> {x, y} design position of every card the user has moved, kept in the project's user mode file
     property var savedPositions: ({})
 
-    // chain shown on the canvas, "" is the whole workflow; chainList holds {key, name} of the defined chains
-    property string currentChain: ""
+    // chains highlighted on the canvas, none means the whole workflow; chainList holds {key, name} of the defined chains
+    property var selectedChains: []
+    // the selected chain keys as one key for the bridge
+    readonly property string currentChain: root.selectedChains.join("\u001f")
+    // name -> true for the cards the selected chains cover, null while no chain is selected
+    property var chainMembers: null
     // Data Store name -> name of the chain whose run last filled it, for stores shown in the current chain
     property var storeWarnings: ({})
 
@@ -237,6 +284,21 @@ Rectangle {
         if (typeof projectBridge !== "undefined")
             root.storeWarnings = JSON.parse(projectBridge.get_store_warnings(root.currentChain))
     }
+
+    function loadChainMembers() {
+        if (!root.currentChain || typeof projectBridge === "undefined") {
+            root.chainMembers = null
+            return
+        }
+        var members = ({})
+        JSON.parse(projectBridge.get_chain_members(root.currentChain)).forEach(function (name) { members[name] = true })
+        root.chainMembers = members
+    }
+
+    function isDimmed(name) {
+        return root.chainMembers !== null && root.chainMembers[name] !== true
+    }
+
     property string defaultChain: ""
     property var chainList: []
 
@@ -246,26 +308,29 @@ Rectangle {
         var info = JSON.parse(projectBridge.get_chains())
         root.chainList = info.chains
         root.defaultChain = info.default || ""
-        var stillExists = info.chains.some(function (chain) { return chain.key === root.currentChain })
-        if (useDefault || (root.currentChain !== "" && !stillExists))
-            root.currentChain = root.defaultChain
+        if (useDefault)
+            root.selectedChains = root.defaultChain ? [root.defaultChain] : []
+        else
+            root.selectedChains = root.selectedChains.filter(function (key) {
+                return info.chains.some(function (chain) { return chain.key === key })
+            })
     }
 
     function savePositions() {
         if (typeof projectBridge !== "undefined")
-            projectBridge.set_user_positions(root.currentChain, JSON.stringify(root.savedPositions))
+            projectBridge.set_user_positions("", JSON.stringify(root.savedPositions))
     }
 
-    function selectChain(key) {
-        if (key === root.currentChain)
-            return
-        if (savePositionsTimer.running) {
-            savePositionsTimer.stop()
-            root.savePositions()
-        }
-        root.currentChain = key
-        root.loadWorkflow()
-        root.snapCardsToDesign()
+    // adds the chain to the highlighted ones or removes it; "" clears the selection
+    function toggleChain(key) {
+        if (!key)
+            root.selectedChains = []
+        else if (root.selectedChains.indexOf(key) >= 0)
+            root.selectedChains = root.selectedChains.filter(function (selected) { return selected !== key })
+        else
+            root.selectedChains = root.selectedChains.concat([key])
+        root.loadChainMembers()
+        root.loadStoreWarnings()
     }
 
     // a card moved by hand keeps its place unless its design position changed, so put every card back
@@ -353,7 +418,7 @@ Rectangle {
     function resetLayout() {
         if (typeof projectBridge === "undefined")
             return
-        projectBridge.reset_user_positions(root.currentChain)
+        projectBridge.reset_user_positions("")
         root.loadWorkflow()
         root.snapCardsToDesign()
     }
@@ -402,7 +467,7 @@ Rectangle {
         if (typeof projectBridge === "undefined")
             return
 
-        var raw = projectBridge.get_workflow(root.currentChain)
+        var raw = projectBridge.get_workflow("")
 
         if (!raw)
             return
@@ -416,18 +481,32 @@ Rectangle {
 
             // cards the user has moved keep their saved place; names that no longer exist are ignored
             try {
-                root.savedPositions = JSON.parse(projectBridge.get_user_positions(root.currentChain))
+                root.savedPositions = JSON.parse(projectBridge.get_user_positions(""))
             } catch (error) {
                 root.savedPositions = ({})
             }
+            var placed = items.map(function (item) { return { x: item.px, y: item.py } })
             for (var i = 0; i < items.length; i++) {
                 var saved = root.savedPositions[items[i].name]
                 if (saved) {
                     items[i].px = saved.x
                     items[i].py = saved.y
-                    size.width = Math.max(size.width, saved.x + 160)
-                    size.height = Math.max(size.height, saved.y + 160)
                 }
+            }
+            // a saved place that now lies on top of another card is stale, so the card goes back to the layout
+            for (var a = 0; a < items.length; a++) {
+                var overlaps = root.savedPositions[items[a].name] && items.some(function (other, b) {
+                    return b !== a && Math.abs(other.px - items[a].px) < 150 && Math.abs(other.py - items[a].py) < 74
+                })
+                if (overlaps) {
+                    delete root.savedPositions[items[a].name]
+                    items[a].px = placed[a].x
+                    items[a].py = placed[a].y
+                }
+            }
+            for (var c = 0; c < items.length; c++) {
+                size.width = Math.max(size.width, items[c].px + 160)
+                size.height = Math.max(size.height, items[c].py + 160)
             }
 
             root.designContentWidth = size.width + 110
@@ -440,8 +519,9 @@ Rectangle {
         // references and making every connection line and filter badge vanish
         root.workflow = parsed
         root.moveUndoStack = []
-        root.loadStoreWarnings()
         root.moveRedoStack = []
+        root.loadChainMembers()
+        root.loadStoreWarnings()
         root.scheduleRoutes()
     }
 
@@ -489,6 +569,7 @@ Rectangle {
 
         loadChains(true)
         loadWorkflow()
+        loadRunResults()
         offerProjectSetup()
 
         if (typeof projectBridge !== "undefined" && root.currentProjectName && !projectBridge.is_tour_seen())
@@ -1093,6 +1174,7 @@ Rectangle {
                                             ? root.routes[modelData.from + "|" + modelData.to] : undefined
 
                                     visible: !!route
+                                    opacity: root.isDimmed(modelData.from) || root.isDimmed(modelData.to) ? 0.2 : 1
                                     preferredRendererType: Shape.CurveRenderer
 
                                     ShapePath {
@@ -1199,7 +1281,7 @@ Rectangle {
                                 isStack: modelData.type === "Stack"
                                 nodeName: modelData.name
                                 selected: root.selectedNames[modelData.name] === true
-
+                                opacity: root.isDimmed(modelData.name) ? 0.35 : 1
                                 Component.onCompleted: {
                                     root.nodeItems[modelData.name] = this
                                     root.nodeItemsTick += 1
@@ -1248,7 +1330,8 @@ Rectangle {
                                                 ? "#dbe3de"
                                                 : "#2f6b4a"
                                 border.width: (modelData.filter_state === "disabled_ok" ? 1 : 2) * root.cardScale
-                                opacity: modelData.filter_state === "disabled_ok" ? 0.6 : 1.0
+                                opacity: root.isDimmed(modelData.from) || root.isDimmed(modelData.to)
+                                         ? 0.2 : modelData.filter_state === "disabled_ok" ? 0.6 : 1.0
 
                                 Label {
                                     anchors.centerIn: parent
@@ -1317,30 +1400,48 @@ Rectangle {
                             Layout.fillWidth: true
                         }
 
-                        ComboBox {
+                        Button {
                             id: chainBox
 
                             visible: root.chainList.length > 0
                             implicitWidth: 220
 
                             ToolTip.visible: hovered
-                            ToolTip.text: "Workflow chain shown on the canvas; Run runs this chain"
+                            ToolTip.text: "Chains highlighted on the canvas; Run runs the highlighted chains"
 
-                            textRole: "name"
-                            valueRole: "key"
-                            model: [{ "key": "", "name": "All items" }].concat(root.chainList.map(function (chain) {
-                                return { "key": chain.key,
-                                         "name": chain.key === root.defaultChain ? chain.name + " (default)" : chain.name }
-                            }))
-                            currentIndex: {
-                                for (var i = 0; i < model.length; i++) {
-                                    if (model[i].key === root.currentChain)
-                                        return i
-                                }
-                                return 0
+                            text: {
+                                if (root.selectedChains.length === 0)
+                                    return "All items"
+                                if (root.selectedChains.length > 1)
+                                    return root.selectedChains.length + " chains"
+                                var chain = root.chainList.find(function (c) { return c.key === root.selectedChains[0] })
+                                return chain ? chain.name : root.selectedChains[0]
                             }
 
-                            onActivated: root.selectChain(currentValue)
+                            onClicked: chainMenu.popup(chainBox, 0, chainBox.height)
+
+                            Menu {
+                                id: chainMenu
+
+                                MenuItem {
+                                    text: "All items"
+                                    checkable: true
+                                    checked: root.selectedChains.length === 0
+                                    onTriggered: root.toggleChain("")
+                                }
+
+                                Repeater {
+                                    model: root.chainList
+
+                                    MenuItem {
+                                        text: modelData.key === root.defaultChain ? modelData.name + " (default)"
+                                                                                  : modelData.name
+                                        checkable: true
+                                        checked: root.selectedChains.indexOf(modelData.key) >= 0
+                                        onTriggered: root.toggleChain(modelData.key)
+                                    }
+                                }
+                            }
                         }
 
                         ToolButton {
@@ -1607,54 +1708,353 @@ Rectangle {
 
                     Layout.fillWidth: true
 
-                    TabButton { text: "Plottings" }
-                    TabButton { text: "Data" }
+                    TabButton { text: "Plots" }
+                    TabButton { text: "Results" }
+                    TabButton { text: "Files" }
+                    TabButton { text: "All databases" }
                 }
 
             Rectangle {
+                id: plotsTab
+
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
                 visible: resultsTabBar.currentIndex === 0
                 color: "#f2f8f4"
 
+                // the plots of the latest run, or the ones the user has saved
+                readonly property var plotItems: root.showSavedPlots
+                    ? root.savedPlots.map(function (plot) {
+                        return { "url": plot.url, "name": plot.name, "file": plot.file, "label": plot.run_label }
+                    })
+                    : root.plotUrls.map(function (url) {
+                        return { "url": url, "name": decodeURIComponent(url.split("/").pop()), "file": "", "label": "" }
+                    })
+
+                onVisibleChanged: {
+                    if (visible && root.showSavedPlots)
+                        root.loadSavedPlots()
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 20
+                    spacing: 12
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Button {
+                            text: "Latest run"
+                            checkable: true
+                            checked: !root.showSavedPlots
+                            onClicked: root.showSavedPlots = false
+                        }
+
+                        Button {
+                            text: "Saved"
+                            checkable: true
+                            checked: root.showSavedPlots
+                            onClicked: {
+                                root.showSavedPlots = true
+                                root.loadSavedPlots()
+                            }
+                        }
+
+                        ComboBox {
+                            visible: root.showSavedPlots
+                            implicitWidth: 200
+                            textRole: "name"
+                            valueRole: "key"
+                            model: [{ "key": "*", "name": "All chains" }].concat(root.savedPlotFilters.chains)
+                            currentIndex: {
+                                for (var i = 0; i < model.length; i++) {
+                                    if (model[i].key === root.savedPlotChain)
+                                        return i
+                                }
+                                return 0
+                            }
+                            onActivated: {
+                                root.savedPlotChain = currentValue
+                                root.loadSavedPlots()
+                            }
+                        }
+
+                        ComboBox {
+                            visible: root.showSavedPlots
+                            implicitWidth: 260
+                            textRole: "label"
+                            valueRole: "started"
+                            model: [{ "started": "*", "label": "All runs" }].concat(root.savedPlotFilters.runs)
+                            currentIndex: {
+                                for (var i = 0; i < model.length; i++) {
+                                    if (String(model[i].started) === root.savedPlotRun)
+                                        return i
+                                }
+                                return 0
+                            }
+                            onActivated: {
+                                root.savedPlotRun = String(currentValue)
+                                root.loadSavedPlots()
+                            }
+                        }
+
+                        TextField {
+                            visible: root.showSavedPlots
+                            Layout.fillWidth: true
+                            placeholderText: "Search by name"
+                            text: root.savedPlotQuery
+                            onTextEdited: {
+                                root.savedPlotQuery = text
+                                root.loadSavedPlots()
+                            }
+                        }
+
+                        Item {
+                            visible: !root.showSavedPlots
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    Label {
+                        visible: plotsTab.plotItems.length === 0
+                        Layout.alignment: Qt.AlignHCenter
+                        text: root.showSavedPlots ? "No saved plots match. Save plots from the latest run to keep them."
+                                                  : "No plots yet. Run a workflow that creates plots."
+                        color: "#475569"
+                        font.pixelSize: 15
+                    }
+
+                    ScrollView {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        contentWidth: availableWidth
+
+                        ColumnLayout {
+                            width: parent.width
+                            spacing: 16
+
+                            Repeater {
+                                model: plotsTab.plotItems
+
+                                Rectangle {
+                                    id: plotCard
+
+                                    property bool justSaved: false
+
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: plotImage.implicitWidth > 0
+                                        ? (width - 20) * plotImage.implicitHeight / plotImage.implicitWidth + 20 : 0
+                                    radius: 10
+                                    color: "white"
+
+                                    Image {
+                                        id: plotImage
+
+                                        anchors.fill: parent
+                                        anchors.margins: 10
+                                        source: modelData.url
+                                        fillMode: Image.PreserveAspectFit
+                                        cache: false
+                                    }
+
+                                    Timer {
+                                        id: savedMessageTimer
+                                        interval: 2000
+                                        onTriggered: plotCard.justSaved = false
+                                    }
+
+                                    RowLayout {
+                                        anchors.top: parent.top
+                                        anchors.right: parent.right
+                                        anchors.margins: 12
+                                        spacing: 6
+
+                                        Label {
+                                            visible: modelData.label !== ""
+                                            text: modelData.label
+                                            color: "#475569"
+                                            font.pixelSize: 12
+                                        }
+
+                                        Button {
+                                            visible: !root.showSavedPlots
+                                            text: plotCard.justSaved ? "Saved" : "Save"
+                                            onClicked: {
+                                                if (projectBridge.save_plot(modelData.url)) {
+                                                    plotCard.justSaved = true
+                                                    savedMessageTimer.restart()
+                                                }
+                                            }
+                                        }
+
+                                        Button {
+                                            text: "Save as..."
+                                            onClicked: projectBridge.save_plot_as(modelData.url)
+                                        }
+
+                                        Button {
+                                            visible: root.showSavedPlots
+                                            text: "Delete"
+                                            onClicked: {
+                                                confirmDeletePlotDialog.plotFile = modelData.file
+                                                confirmDeletePlotDialog.open()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Dialog {
+                    id: confirmDeletePlotDialog
+
+                    property string plotFile: ""
+
+                    anchors.centerIn: parent
+                    implicitWidth: 320
+                    modal: true
+                    title: "Delete saved plot"
+                    standardButtons: Dialog.Ok | Dialog.Cancel
+
+                    contentItem: Label {
+                        text: "Delete this saved plot?"
+                        padding: 12
+                    }
+
+                    onAccepted: {
+                        projectBridge.delete_saved_plot(plotFile)
+                        root.loadSavedPlots()
+                    }
+                }
+            }
+
+            ColumnLayout {
+                id: runResultsTab
+
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                spacing: 0
+                visible: resultsTabBar.currentIndex === 1
+
+                onVisibleChanged: {
+                    if (visible)
+                        projectBridge.open_run_results(root.currentChain)
+                }
+
+                Connections {
+                    target: root
+
+                    function onCurrentChainChanged() {
+                        if (runResultsTab.visible)
+                            projectBridge.open_run_results(root.currentChain)
+                    }
+                }
+
+                Label {
+                    Layout.fillWidth: true
+                    Layout.margins: 8
+                    wrapMode: Text.WordWrap
+                    text: root.runResultsSummary()
+                    color: "#334155"
+                }
+
+                Item {
+                    id: resultsRunArea
+
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    function report() {
+                        var origin = resultsRunArea.mapToItem(null, 0, 0)
+                        projectBridge.set_data_area("run", origin.x, origin.y, resultsRunArea.width,
+                                                    resultsRunArea.height, resultsRunArea.visible)
+                    }
+
+                    onXChanged: Qt.callLater(report)
+                    onYChanged: Qt.callLater(report)
+                    onWidthChanged: Qt.callLater(report)
+                    onHeightChanged: Qt.callLater(report)
+                    onVisibleChanged: Qt.callLater(report)
+
+                    Label {
+                        anchors.centerIn: parent
+                        visible: !root.runResults.stores || Object.keys(root.runResults.stores).length === 0
+                        text: "Run a chain that writes to a result database to see its results here."
+                        color: "#475569"
+                        font.pixelSize: 15
+                    }
+
+                    Connections {
+                        target: root
+
+                        function onWidthChanged() { Qt.callLater(resultsRunArea.report) }
+                        function onHeightChanged() { Qt.callLater(resultsRunArea.report) }
+                    }
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                visible: resultsTabBar.currentIndex === 2
+                color: "#f2f8f4"
+
                 Label {
                     anchors.centerIn: parent
-                    visible: root.plotUrls.length === 0
-                    text: "No plots yet. Run a workflow that creates plots."
+                    visible: !root.runResults.files || root.runResults.files.length === 0
+                    text: "No exported files from the latest run of this chain."
                     color: "#475569"
                     font.pixelSize: 15
                 }
 
-                ScrollView {
+                ListView {
                     anchors.fill: parent
                     anchors.margins: 20
                     clip: true
-                    contentWidth: availableWidth
+                    spacing: 8
+                    model: root.runResults.files || []
 
-                    ColumnLayout {
-                        width: parent.width
-                        spacing: 16
+                    delegate: Rectangle {
+                        width: ListView.view.width
+                        height: 48
+                        radius: 8
+                        color: "white"
 
-                        Repeater {
-                            model: root.plotUrls
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            spacing: 8
 
-                            Rectangle {
+                            Label {
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: plotImage.implicitWidth > 0
-                                    ? (width - 20) * plotImage.implicitHeight / plotImage.implicitWidth + 20 : 0
-                                radius: 10
-                                color: "white"
+                                text: modelData.split("\\").pop().split("/").pop()
+                                elide: Text.ElideMiddle
 
-                                Image {
-                                    id: plotImage
+                                ToolTip.visible: fileHover.hovered
+                                ToolTip.text: modelData
 
-                                    anchors.fill: parent
-                                    anchors.margins: 10
-                                    source: modelData
-                                    fillMode: Image.PreserveAspectFit
-                                    cache: false
+                                HoverHandler {
+                                    id: fileHover
                                 }
+                            }
+
+                            Button {
+                                text: "Open file"
+                                onClicked: projectBridge.open_file(modelData)
+                            }
+
+                            Button {
+                                text: "Open folder"
+                                onClicked: projectBridge.open_folder(modelData)
                             }
                         }
                     }
@@ -1667,7 +2067,7 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                visible: resultsTabBar.currentIndex === 1
+                visible: resultsTabBar.currentIndex === 3
 
                 function report() {
                     var origin = resultsDataArea.mapToItem(null, 0, 0)

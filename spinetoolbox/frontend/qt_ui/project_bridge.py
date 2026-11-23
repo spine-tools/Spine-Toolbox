@@ -1,13 +1,26 @@
 """Reads and writes the same project.json Data Connection file references as the classic Qt UI."""
 
 import hashlib
+from datetime import datetime
 import json
 import os
 from pathlib import Path
 import shutil
 import time
-from PySide6.QtCore import QFileSystemWatcher, QObject, QRect, QSettings, Qt, QUrl, Signal, Slot
-from PySide6.QtWidgets import QMessageBox, QWidget
+from PySide6.QtCore import (
+    QFileSystemWatcher,
+    QItemSelectionModel,
+    QModelIndex,
+    QObject,
+    QRect,
+    QSettings,
+    Qt,
+    QTimer,
+    QUrl,
+    Signal,
+    Slot,
+)
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from spine_engine.project_item.connection import FilterSettings
 from spine_engine.utils.helpers import (
     connections_to_selected_items,
@@ -41,6 +54,7 @@ from ...logger import QtLogger
 from ...project_item.logging_connection import HeadlessConnection
 from ...project_upgrader import upgrade_to_latest
 from .database_editor_backend import DatabaseEditorBackend
+from .saved_plots import SavedPlots
 
 _INPUT_DATA_CONNECTION_NAME = "Input data"
 _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".svg"}
@@ -52,6 +66,9 @@ _SETTINGS_APPLICATION = "Spine Toolbox"
 _TOUR_SEEN_KEY = "appSettings/userModeTourSeen"
 _USER_POSITIONS_FILENAME = "user_mode.json"
 _STORE_CHAINS_FILENAME = "user_mode_stores.json"
+_RUN_RESULTS_FILENAME = "user_mode_runs.json"
+# joins the keys of several selected chains into one key
+CHAIN_KEY_SEPARATOR = "\x1f"
 
 
 def _data_store_url(url_dict: dict, project_dir: str) -> str | None:
@@ -118,6 +135,8 @@ class ProjectBridge(QObject):
     dataViewRequested = Signal()
     # emitted when the record of which chain filled which database changes
     storeWarningsChanged = Signal()
+    # emitted when a run has finished and its results were recorded
+    runResultsChanged = Signal()
 
     def __init__(self, project_dir: str | Path, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -141,6 +160,7 @@ class ProjectBridge(QObject):
         self._display_members: dict[str, list[str]] = {}
         self._display_states: dict[str, str] = {}
         self._run_started = 0.0
+        self._run_info: dict = {}
         self._saved_pythonpath: str | None = None
         self._plots_watcher = QFileSystemWatcher(self)
         self._plots_watcher.directoryChanged.connect(self.plotsChanged)
@@ -184,7 +204,12 @@ class ProjectBridge(QObject):
 
     @staticmethod
     def _chain(data: dict, chain_key: str) -> dict | None:
-        return data.get("project", {}).get("chains", {}).get("items", {}).get(chain_key)
+        """Returns the chain of chain_key; several keys joined by CHAIN_KEY_SEPARATOR give their combined entries."""
+        chains = data.get("project", {}).get("chains", {}).get("items", {})
+        selected = [chains[key] for key in chain_key.split(CHAIN_KEY_SEPARATOR) if key in chains]
+        if len(selected) < 2:
+            return selected[0] if selected else None
+        return {"entries": [entry for chain in selected for entry in chain.get("entries", [])]}
 
     def _stack_resolver(self, data: dict, chain_key: str = ""):
         """Returns a function mapping a raw project.json item name to the display name of the stack
@@ -586,6 +611,8 @@ class ProjectBridge(QObject):
             [str(Path(__file__).parent / "plot_capture")] + ([self._saved_pythonpath] if self._saved_pythonpath else [])
         )
         self._run_started = time.time()
+        self._write_latest_run(chain_key, data)
+        self._run_info = self._start_run_info(data, set(real_names), chain_key)
         self._written_images = []
         if self._plots_watcher.directories():
             self._plots_watcher.removePaths(self._plots_watcher.directories())
@@ -621,6 +648,7 @@ class ProjectBridge(QObject):
         else:
             os.environ["PYTHONPATH"] = self._saved_pythonpath
         self._written_images = self._find_written_images()
+        self._record_run_results(exit_code)
         self._database_editor.refresh_sessions()
         for member, state in list(self._member_states.items()):
             if state in ("waiting", "running"):
@@ -646,7 +674,9 @@ class ProjectBridge(QObject):
         """Returns image files in the project that were written since the run started."""
         found = []
         for root, dirs, files in os.walk(self._base_dir()):
-            dirs[:] = [d for d in dirs if d not in _IMAGE_SCAN_SKIPPED_DIRS and d != "user_mode_plots"]
+            dirs[:] = [
+                d for d in dirs if d not in _IMAGE_SCAN_SKIPPED_DIRS and d not in ("user_mode_plots", "user_mode_saved_plots")
+            ]
             for name in files:
                 path = Path(root, name)
                 if path.suffix.lower() in _IMAGE_SUFFIXES and path.stat().st_mtime >= self._run_started:
@@ -658,6 +688,174 @@ class ProjectBridge(QObject):
         """Returns file URLs of the plots and images produced by the latest run."""
         paths = [*sorted(self._plots_dir().glob("*.png")), *self._written_images]
         return [QUrl.fromLocalFile(str(path)).toString() for path in paths]
+
+    def _saved_plots(self) -> SavedPlots:
+        # outside the plots folder, which is emptied at the start of every run
+        return SavedPlots(self._project_dir / PROJECT_CONFIG_DIR_NAME / "user_mode_saved_plots")
+
+    def _write_latest_run(self, chain_key: str, data: dict) -> None:
+        run = {"chain": chain_key, "chain_name": self._chain_name(data, chain_key), "started": self._run_started}
+        (self._plots_dir() / "latest_run.json").write_text(json.dumps(run), encoding="utf-8")
+
+    def _latest_run(self) -> dict:
+        try:
+            return json.loads((self._plots_dir() / "latest_run.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {"chain": "", "chain_name": "All items", "started": 0.0}
+
+    @Slot(str, result=bool)
+    def save_plot(self, url: str) -> bool:
+        """Keeps a plot of the latest run in the project, tagged with the chain and run it came from."""
+        source = Path(QUrl(url).toLocalFile())
+        if not source.is_file():
+            return False
+        run = self._latest_run()
+        self._saved_plots().save(source, run["chain"], run["chain_name"], run["started"])
+        return True
+
+    @Slot(str, result=bool)
+    def save_plot_as(self, url: str) -> bool:
+        """Copies a plot to a file the user chooses."""
+        source = Path(QUrl(url).toLocalFile())
+        host = self.parent() if isinstance(self.parent(), QWidget) else None
+        target, _ = QFileDialog.getSaveFileName(
+            host, "Save plot", str(Path.home() / source.name), "PNG image (*.png);;All files (*)"
+        )
+        if not target:
+            return False
+        shutil.copy2(source, target)
+        return True
+
+    @Slot(str, str, str, result=str)
+    def get_saved_plots(self, chain_key: str, run: str, query: str) -> str:
+        """Returns the saved plots as JSON; "*" as chain_key or run means any."""
+        entries = self._saved_plots().entries(
+            None if chain_key == "*" else chain_key, None if run == "*" else float(run), query
+        )
+        return json.dumps([{**entry, "url": QUrl.fromLocalFile(entry["path"]).toString()} for entry in entries])
+
+    @Slot(result=str)
+    def get_saved_plot_filters(self) -> str:
+        return json.dumps(self._saved_plots().filters())
+
+    @Slot(str)
+    def delete_saved_plot(self, file_name: str) -> None:
+        self._saved_plots().delete(file_name)
+
+    def _run_results_file(self) -> Path:
+        return self._project_dir / PROJECT_CONFIG_DIR_NAME / _RUN_RESULTS_FILENAME
+
+    def _read_run_records(self) -> dict[str, dict]:
+        """Returns what the latest run of each chain produced, keyed by chain key (\"\" is the whole workflow)."""
+        try:
+            records = json.loads(self._run_results_file().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return records if isinstance(records, dict) else {}
+
+    def _result_stores(self, data: dict, real_names: set[str]) -> dict[str, dict]:
+        """Returns the Data Stores the run writes to, only the result databases if it writes to any."""
+        written = self._written_stores(data, real_names, include_purging=True)
+        results = set(data.get("project", {}).get("result_data_stores", []))
+        return {name: item for name, item in written.items() if name in results} or written
+
+    def _start_run_info(self, data: dict, real_names: set[str], chain_key: str) -> dict:
+        """Notes the state of the result databases before a run, to tell afterwards what the run changed."""
+        from .run_results import commit_mark
+
+        marks = {}
+        for name, item in self._result_stores(data, real_names).items():
+            url = _data_store_url(item.get("url") or {}, str(self._base_dir()))
+            if url:
+                marks[name] = (url, commit_mark(url))
+        return {
+            "chain": chain_key,
+            "chain_name": self._chain_name(data, chain_key),
+            "real_names": real_names,
+            "marks": marks,
+        }
+
+    def _record_run_results(self, exit_code: int) -> None:
+        """Saves the scenarios and exported files the finished run produced."""
+        from .run_results import changed_scenarios, files_written_since
+
+        info = self._run_info
+        if not info:
+            return
+        items = self._load().get("items", {})
+        files = []
+        for name in sorted(info["real_names"]):
+            if items.get(name, {}).get("type") == "Exporter":
+                item_dir = self._base_dir() / PROJECT_CONFIG_DIR_NAME / "items" / shorten(name)
+                files += files_written_since(item_dir, self._run_started)
+        records = self._read_run_records()
+        records[info["chain"]] = {
+            "chain_name": info["chain_name"],
+            "started": self._run_started,
+            "finished": time.time(),
+            "exit_code": exit_code,
+            "stores": {name: changed_scenarios(url, mark) for name, (url, mark) in info["marks"].items()},
+            "files": files,
+        }
+        self._run_results_file().write_text(json.dumps(records), encoding="utf-8")
+        self._run_info = {}
+        self.runResultsChanged.emit()
+
+    @Slot(str, result=str)
+    def get_run_results(self, chain_key: str) -> str:
+        """Returns what the latest run of a chain produced as JSON, or "{}" if it has not run."""
+        record = self._read_run_records().get(chain_key)
+        if record is None:
+            return "{}"
+        started = datetime.fromtimestamp(record["started"]).strftime("%d.%m.%Y %H:%M")
+        return json.dumps({**record, "started_label": started})
+
+    @Slot(str, result=bool)
+    def open_run_results(self, chain_key: str) -> bool:
+        """Opens the result databases of a chain's latest run, with the scenarios of the run selected."""
+        record = self._read_run_records().get(chain_key)
+        if not record or not record["stores"]:
+            return False
+        items = self._load().get("items", {})
+        for name, scenarios in record["stores"].items():
+            if not self._open_database_in("run", name):
+                continue
+            url = _data_store_url(items.get(name, {}).get("url") or {}, str(self._base_dir()))
+            for tab in self._open_editor_tabs(url, "run"):
+                self._select_scenarios(tab, scenarios)
+        return True
+
+    def _select_scenarios(self, tab, names: list[str], attempts: int = 25) -> None:
+        """Selects the scenarios called names in the scenario tree of an editor tab; the tree fills in
+        gradually, so this waits for them to appear."""
+        try:
+            view = tab.ui.scenario_tree_view
+            model = view.model()
+            found = []
+            for row in range(model.rowCount(QModelIndex())):
+                database_index = model.index(row, 0, QModelIndex())
+                found += [
+                    model.index(child, 0, database_index)
+                    for child in range(model.rowCount(database_index))
+                    if model.index(child, 0, database_index).data() in names
+                ]
+            if len(found) < len(names) and attempts > 0:
+                QTimer.singleShot(400, lambda: self._select_scenarios(tab, names, attempts - 1))
+                return
+            selection_model = view.selectionModel()
+            selection_model.clearSelection()
+            for index in found:
+                selection_model.select(index, QItemSelectionModel.SelectionFlag.Select)
+        except RuntimeError:
+            return  # the tab was closed meanwhile
+
+    @Slot(str, result=bool)
+    def open_file(self, path: str) -> bool:
+        return open_url(Path(path).as_uri())
+
+    @Slot(str, result=bool)
+    def open_folder(self, path: str) -> bool:
+        return open_url(Path(path).parent.as_uri())
 
     @Slot(result=bool)
     def is_execution_running(self) -> bool:
@@ -822,6 +1020,13 @@ class ProjectBridge(QObject):
         hidden = set(project.get("hidden_items", []))
         compact_rows = bool(stacked_names or hidden & raw_items.keys() or self._chain(data, chain_key))
         return json.dumps({"items": items, "connections": connections, "compact_rows": compact_rows})
+
+    @Slot(str, result=str)
+    def get_chain_members(self, chain_key: str) -> str:
+        """Returns the names of the cards of the whole workflow that the chain(s) of chain_key cover, as JSON."""
+        data = self._load_merged()
+        stack_of = self._stack_resolver(data)
+        return json.dumps(sorted({stack_of(name) for name in self._visible_display_names(data, chain_key)}))
 
     @Slot(result=str)
     def get_chains(self) -> str:
@@ -1081,11 +1286,12 @@ class ProjectBridge(QObject):
     def discard_edits(self, url: str) -> str:
         return self._database_editor.discard_edits(url)
 
-    def _open_editor_tabs(self, url: str) -> list:
+    def _open_editor_tabs(self, url: str, view: str | None = None) -> list:
         normcased_url = normcase_database_url_path(url)
+        editors = [self._db_editors[view]] if view in self._db_editors else self._db_editors.values()
         return [
             editor.tab_widget.widget(index)
-            for editor in self._db_editors.values()
+            for editor in editors
             for index in range(editor.tab_widget.count())
             if editor.tab_widget.widget(index).db_urls == [normcased_url]
         ]
@@ -1165,18 +1371,20 @@ class ProjectBridge(QObject):
     def _chain_name(data: dict, chain_key: str) -> str:
         if not chain_key:
             return "All items"
-        return data.get("project", {}).get("chains", {}).get("items", {}).get(chain_key, {}).get("name", chain_key)
+        chains = data.get("project", {}).get("chains", {}).get("items", {})
+        return " + ".join(chains.get(key, {}).get("name", key) for key in chain_key.split(CHAIN_KEY_SEPARATOR))
 
     @staticmethod
-    def _written_stores(data: dict, real_names: set[str]) -> dict[str, dict]:
-        """Returns the Data Stores items in real_names write to, leaving out those a connection purges itself."""
+    def _written_stores(data: dict, real_names: set[str], include_purging: bool = False) -> dict[str, dict]:
+        """Returns the Data Stores items in real_names write to, leaving out those a connection purges itself
+        unless include_purging is set."""
         items = data.get("items", {})
         stores = {}
         for connection in data.get("project", {}).get("connections", []):
             source, destination = connection["from"][0], connection["to"][0]
             if source not in real_names or items.get(destination, {}).get("type") != "Data Store":
                 continue
-            if not (connection.get("options") or {}).get("purge_before_writing"):
+            if include_purging or not (connection.get("options") or {}).get("purge_before_writing"):
                 stores[destination] = items[destination]
         return stores
 

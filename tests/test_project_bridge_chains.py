@@ -80,6 +80,11 @@ def test_no_chain_shows_the_whole_workflow(bridge: ProjectBridge) -> None:
     assert _names(json.loads(bridge.get_workflow())) == {"A", "Group", "C"}
 
 
+def test_chain_members_cover_the_selected_chains_on_the_whole_workflow(bridge: ProjectBridge) -> None:
+    assert set(json.loads(bridge.get_chain_members("first"))) == {"A", "C"}
+    assert set(json.loads(bridge.get_chain_members("first\x1fmember"))) == {"A", "C", "Group"}
+
+
 def test_hidden_items_stay_hidden_in_a_chain(tmp_path: Path, application: QCoreApplication) -> None:
     project = {
         "project": {
