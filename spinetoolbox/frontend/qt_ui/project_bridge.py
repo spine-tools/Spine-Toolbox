@@ -1317,6 +1317,8 @@ class ProjectBridge(QObject):
             tab.refresh_session()
         if not purged:
             QMessageBox.warning(host, "Purge failed", "<br>".join(errors) or f"Purging {label} failed.")
+        else:
+            self.runStatusChanged.emit(f"Purged {label}", "success")
         return purged
 
     def _purge_database(self, url: str, label: str) -> bool:
@@ -1435,11 +1437,16 @@ class ProjectBridge(QObject):
         store name -> that chain's name."""
         data = self._load()
         visible = self._visible_display_names(data, chain_key)
+        purged_on_write = {
+            connection["to"][0]
+            for connection in data.get("project", {}).get("connections", [])
+            if (connection.get("options") or {}).get("purge_before_writing")
+        }
         return json.dumps(
             {
                 name: self._chain_name(data, key)
                 for name, key in self._read_store_chains().items()
-                if key != chain_key and name in visible
+                if key != chain_key and name in visible and name not in purged_on_write
             }
         )
 
