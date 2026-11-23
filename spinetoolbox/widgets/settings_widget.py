@@ -474,22 +474,29 @@ class SettingsWidget(SpineDBEditorSettingsMixin, SettingsWidgetBase):
     @Slot(bool)
     def _show_add_up_spine_opt_wizard(self, _=False):
         """Opens the add/update SpineOpt wizard."""
-        d = self._get_julia_settings()
-        if d["julia_project"] != "@." and not dir_is_valid(
-            self,
-            d["julia_project"],
-            "Invalid Julia Environment",
-            "Julia project must be an existing directory, @., or empty",
-        ):
-            return
-        use_jupyter_console = True if d["use_julia_jupyter_console"] == "2" else False
-        julia_env = get_julia_env(use_jupyter_console, d["julia_kernel"], d["julia_exe"], d["julia_project"])
-        if julia_env is None:
-            julia_exe = julia_project = ""
+        exe_data = get_current_item_data(self.ui.comboBox_julia_path, self._execution_models.julia_executables_model)
+        old_exe = exe_data["exe"]
+        project_data = get_current_item_data(
+            self.ui.comboBox_julia_project_path, self._execution_models.julia_projects_model
+        )
+        old_project = project_data["path"]
+        wizard = AddUpSpineOptWizard(self, self._execution_models)
+        if wizard.exec():  # Wizard completed successfully
+            exe = wizard.julia_executable()
+            project = wizard.julia_project()
         else:
-            julia_exe, julia_project = julia_env
-        wizard = AddUpSpineOptWizard(self, julia_exe, julia_project)
-        wizard.show()
+            exe = old_exe
+            project = old_project
+        # Refresh models to remove the temporary 'Select Julia...' items
+        self._execution_models.refresh_julia_executables_model()
+        self._execution_models.refresh_julia_projects_model()
+        # Set combobox selections
+        exe_index = self._execution_models.find_julia_executable_index(exe)
+        project_index = self._execution_models.find_julia_project_index(project)
+        if exe_index.isValid():
+            self.ui.comboBox_julia_path.setCurrentIndex(exe_index.row())
+        if project_index.isValid():
+            self.ui.comboBox_julia_project_path.setCurrentIndex(project_index.row())
 
     @property
     def db_mngr(self):
