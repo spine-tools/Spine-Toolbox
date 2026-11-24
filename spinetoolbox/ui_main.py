@@ -61,6 +61,7 @@ from .config import (
     LATEST_PROJECT_VERSION,
     ONLINE_DOCUMENTATION_URL,
     SPINE_DB_API_DOCUMENTATION_URL,
+    SPINE_OPT_DOCUMENTATION_URL,
     SPINE_TOOLBOX_REPO_URL,
 )
 from .helpers import (
@@ -368,6 +369,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
         self.ui.open_spinedb_api_reference_action.triggered.connect(self.show_db_api_reference)
         self.ui.actionGitHub.triggered.connect(lambda: open_url(SPINE_TOOLBOX_REPO_URL))
+        self.ui.open_spine_opt_documentation_action.triggered.connect(self.show_spine_opt_documentation)
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionRetrieve_project.triggered.connect(self.retrieve_project)
         self.ui.menuEdit.aboutToShow.connect(self.refresh_edit_action_states)
@@ -1801,8 +1803,11 @@ class ToolboxUI(QMainWindow):
 
     @Slot()
     def show_db_api_reference(self) -> None:
-        index_url = f"{SPINE_DB_API_DOCUMENTATION_URL}"
-        open_url(index_url)
+        open_url(SPINE_DB_API_DOCUMENTATION_URL)
+
+    @Slot()
+    def show_spine_opt_documentation(self) -> None:
+        open_url(SPINE_OPT_DOCUMENTATION_URL)
 
     @Slot()
     def retrieve_project(self):
