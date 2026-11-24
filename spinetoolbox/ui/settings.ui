@@ -914,10 +914,20 @@
              <item>
               <widget class="QPushButton" name="pushButton_add_up_spine_opt">
                <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Adds or updates &lt;span style=&quot; font-weight:700;&quot;&gt;SpineOpt.jl&lt;/span&gt; package using the Julia executable &amp;amp; project selected above&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Opens the wizard for adding or updating the &lt;span style=&quot; font-weight:700;&quot;&gt;SpineOpt.jl&lt;/span&gt; package.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
                <property name="text">
                 <string>Add/Update SpineOpt</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/symbols/MOPO_logo_spineopt_edited.svg</normaloff>:/symbols/MOPO_logo_spineopt_edited.svg</iconset>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>16</width>
+                 <height>16</height>
+                </size>
                </property>
               </widget>
              </item>
@@ -1904,7 +1914,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="engine_processes_button_group"/>
   <buttongroup name="persistent_processes_button_group"/>
+  <buttongroup name="engine_processes_button_group"/>
  </buttongroups>
 </ui>

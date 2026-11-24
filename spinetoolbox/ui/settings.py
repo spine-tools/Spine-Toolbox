@@ -543,6 +543,10 @@ class Ui_SettingsForm(object):
 
         self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
         self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
+        icon10 = QIcon()
+        icon10.addFile(u":/symbols/MOPO_logo_spineopt_edited.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton_add_up_spine_opt.setIcon(icon10)
+        self.pushButton_add_up_spine_opt.setIconSize(QSize(16, 16))
 
         self.horizontalLayout_31.addWidget(self.pushButton_add_up_spine_opt)
 
@@ -1281,7 +1285,7 @@ class Ui_SettingsForm(object):
 #endif // QT_CONFIG(tooltip)
         self.pushButton_install_julia.setText(QCoreApplication.translate("SettingsForm", u"Install Julia", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_add_up_spine_opt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Adds or updates <span style=\" font-weight:700;\">SpineOpt.jl</span> package using the Julia executable &amp; project selected above</p></body></html>", None))
+        self.pushButton_add_up_spine_opt.setToolTip(QCoreApplication.translate("SettingsForm", u"<html><head/><body><p>Opens the wizard for adding or updating the <span style=\" font-weight:700;\">SpineOpt.jl</span> package.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_add_up_spine_opt.setText(QCoreApplication.translate("SettingsForm", u"Add/Update SpineOpt", None))
         self.label_19.setText(QCoreApplication.translate("SettingsForm", u"Default execution method", None))
