@@ -72,6 +72,8 @@
     <addaction name="open_spinedb_api_reference_action"/>
     <addaction name="actionGitHub"/>
     <addaction name="separator"/>
+    <addaction name="open_spine_opt_documentation_action"/>
+    <addaction name="separator"/>
     <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout"/>
    </widget>
@@ -149,7 +151,7 @@
    <property name="minimumSize">
     <size>
      <width>82</width>
-     <height>106</height>
+     <height>108</height>
     </size>
    </property>
    <property name="features">
@@ -913,6 +915,15 @@
    </property>
    <property name="text">
     <string>Spine DB API reference</string>
+   </property>
+  </action>
+  <action name="open_spine_opt_documentation_action">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/symbols/SpineOpt.png</normaloff>:/symbols/SpineOpt.png</iconset>
+   </property>
+   <property name="text">
+    <string>SpineOpt documentation</string>
    </property>
   </action>
  </widget>

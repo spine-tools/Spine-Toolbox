@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="/symbols">
     <file>Spine_symbol.png</file>
+    <file>SpineOpt.png</file>
     <file>julia-logo.svg</file>
     <file>python-logo.svg</file>
     <file>spinetoolbox_on_wht.png</file>

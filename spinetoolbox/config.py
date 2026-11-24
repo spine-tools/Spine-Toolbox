@@ -45,7 +45,9 @@ SPINE_DB_API_DOCUMENTATION_URL: Literal["https://spine-database-api.readthedocs.
 SPINE_TOOLBOX_REPO_URL: Literal["https://github.com/spine-tools/Spine-Toolbox"] = (
     "https://github.com/spine-tools/Spine-Toolbox"
 )
-
+SPINE_OPT_DOCUMENTATION_URL: Literal["https://spine-tools.github.io/SpineOpt.jl/latest/index.html"] = (
+    "https://spine-tools.github.io/SpineOpt.jl/latest/index.html"
+)
 PLUGINS_PATH = os.path.abspath(os.path.join(str(Path.home()), ".spinetoolbox", "plugins"))
 
 PLUGIN_REGISTRY_URL = "https://spine-tools.github.io/PluginRegistry/registry.json"
