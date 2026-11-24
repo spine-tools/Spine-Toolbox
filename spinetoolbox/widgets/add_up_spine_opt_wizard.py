@@ -12,6 +12,7 @@
 
 """Classes for custom QDialogs for julia setup."""
 
+import os
 from enum import IntEnum, auto
 from typing import Literal, TypeAlias
 from PySide6.QtCore import Qt, Slot
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
+    QMessageBox,
 )
 from spine_engine.logger_interface import LoggerInterface
 from spine_engine.utils.helpers import resolve_default_julia_executable
@@ -161,6 +163,7 @@ class SelectJuliaPage(QWizardPage):
         self._julia_project_combobox.setCurrentIndex(0)
 
     def isComplete(self):
+        """Enables the Next button when True."""
         exe_item = self._execution_models.julia_executables_model.item(self._julia_exe_combobox.currentIndex())
         if not exe_item or not exe_item.data():
             return False
@@ -170,12 +173,20 @@ class SelectJuliaPage(QWizardPage):
         return True
 
     def validatePage(self):
+        """Validates page after Next button is clicked. Note that there's no need
+        to check for the existence of the Julia project path. Julia should create
+        the path if it doesn't exist."""
         exe_item = self._execution_models.julia_executables_model.item(self._julia_exe_combobox.currentIndex())
         project_item = self._execution_models.julia_projects_model.item(self._julia_project_combobox.currentIndex())
         if exe_item.data()["exe"] == "":
             exe = resolve_default_julia_executable()
         else:
             exe = exe_item.data()["exe"]
+        if not os.path.exists(exe):
+            QMessageBox.warning(
+                self, "Julia executable not found", f"The Julia executable '{exe}' does not exist."
+            )
+            return False
         self.wizard().setProperty("julia_exe", exe)
         self.wizard().setProperty("julia_project", project_item.data()["path"])
         return True
@@ -199,7 +210,6 @@ class CheckPreviousInstallPage(QWizardPage):
 
     def initializePage(self):
         _clear_layout(self.layout())
-        print(f"julia:{self.wizard().property('julia_exe')} project:{self.wizard().property('julia_project')}")
         self._exec_mngr = _create_exec_manager_to_resolve_spine_opt_version(
             self.wizard().property("julia_exe"), self.wizard().property("julia_project"), self
         )
@@ -500,7 +510,7 @@ class TroubleshootSolutionPage(QWizardPage):
         action = {"add": "Install SpineOpt", "update": "Update SpineOpt"}[self.wizard().required_action]
         julia = self.wizard().property("julia_exe")
         env = self.wizard().property("julia_project")
-        if not env:
+        if not env or env == "@.":
             install_cmds = f"""
             <span style="color:green;">julia> </span><span>import Pkg</span><br>
             <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
@@ -512,7 +522,7 @@ class TroubleshootSolutionPage(QWizardPage):
             <span style="color:green;">julia> </span><span>Pkg.activate(".")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.Registry.add("General")</span><br>
             <span style="color:green;">julia> </span><span>Pkg.add("SpineOpt")</span><br>"""
-        if not env:
+        if not env or env == "@.":
             update_cmds = """
             <span style="color:green;">julia> </span><span>import Pkg</span><br>
             <span style="color:green;">julia> </span><span>Pkg.update("SpineInterface")</span><br>
@@ -561,7 +571,7 @@ class TroubleshootSolutionPage(QWizardPage):
             "other problems, please <a href=https://github.com/spine-tools/SpineOpt.jl/issues>open an issue "
             "with SpineOpt</a>.</p>"
         )
-        if not env:
+        if not env or env == "@.":
             install_cmds = f"""
             <span style="color:green;">julia> </span><span>using Pkg</span><br>
             <span style="color:green;">julia> </span><span>ENV["JULIA_SSL_CA_ROOTS_PATH"] = ""</span><br>
