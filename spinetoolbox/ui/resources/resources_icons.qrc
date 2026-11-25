@@ -1,6 +1,6 @@
 <RCC>
   <qresource prefix="/symbols">
-    <file>MOPO_logo_spineopt_edited.svg</file>
+    <file>SpineOpt.png</file>
     <file>Jupyter-logo.svg</file>
     <file>Spine_symbol.png</file>
     <file>julia-logo.svg</file>

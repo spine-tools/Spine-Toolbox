@@ -544,7 +544,7 @@ class Ui_SettingsForm(object):
         self.pushButton_add_up_spine_opt = QPushButton(self.groupBox_julia)
         self.pushButton_add_up_spine_opt.setObjectName(u"pushButton_add_up_spine_opt")
         icon10 = QIcon()
-        icon10.addFile(u":/symbols/MOPO_logo_spineopt_edited.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon10.addFile(u":/symbols/SpineOpt.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         self.pushButton_add_up_spine_opt.setIcon(icon10)
         self.pushButton_add_up_spine_opt.setIconSize(QSize(16, 16))
 

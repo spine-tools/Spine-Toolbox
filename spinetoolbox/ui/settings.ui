@@ -921,7 +921,7 @@
                </property>
                <property name="icon">
                 <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/symbols/MOPO_logo_spineopt_edited.svg</normaloff>:/symbols/MOPO_logo_spineopt_edited.svg</iconset>
+                 <normaloff>:/symbols/SpineOpt.png</normaloff>:/symbols/SpineOpt.png</iconset>
                </property>
                <property name="iconSize">
                 <size>
@@ -1914,7 +1914,7 @@
   </connection>
  </connections>
  <buttongroups>
-  <buttongroup name="persistent_processes_button_group"/>
   <buttongroup name="engine_processes_button_group"/>
+  <buttongroup name="persistent_processes_button_group"/>
  </buttongroups>
 </ui>
