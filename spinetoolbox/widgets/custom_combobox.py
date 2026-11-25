@@ -46,6 +46,29 @@ class ElidedCombobox(QComboBox):
         p.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, opt)
 
 
+class ElideLeftComboBox(QComboBox):
+    """A QComboBox that left-elides the currently selected item."""
+
+    def paintEvent(self, event):
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        text_rect = self.style().subControlRect(
+            QStyle.ComplexControl.CC_ComboBox,
+            option,
+            QStyle.SubControl.SC_ComboBoxEditField,
+            self,
+        )
+        margin = self.style().pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, option, self)
+        option.currentText = self.fontMetrics().elidedText(
+            option.currentText,
+            Qt.TextElideMode.ElideLeft,
+            text_rect.width() - 2 * margin - 20,
+        )
+        painter = QStylePainter(self)
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
+        painter.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, option)
+
+
 class OpenProjectDialogComboBox(QComboBox):
     def keyPressEvent(self, e):
         """Interrupts Enter and Return key presses when QComboBox is in focus.
