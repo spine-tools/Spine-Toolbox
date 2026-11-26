@@ -88,7 +88,7 @@ Creating a Tool Specification
 .. note:: Just like the main window, the **Tool specification editor** consists of dock widgets that you can reorganize
    however you like.
 
-Since there are no Tool specifications in the project yet, click on the |black_plus| button
+Since there are no Tool specifications in the project yet, click on the green |black_plus| button
 in **Specifications** Toolbar and select **Tool** from the popup menu to open the **Tool specification editor**.
 Follow the instructions below to create a minimal Tool specification:
 
@@ -99,7 +99,7 @@ Follow the instructions below to create a minimal Tool specification:
   to the 'hello world' project directory or to a folder of your choice.
 
 We have just created a ``hello_world.py`` Python script file, but at the moment the file is empty. Spine Toolbox provides
-an mini **IDE** where you can view and edit the contents of Tool specification files. Let's try it out.
+a mini **IDE** where you can view and edit the contents of Tool specification files. Let's try it out.
 
 Select ``hello_world.py`` below the *Main Program File*. Click on the (black) editor dock widget with the title
 'hello_world.py'.
@@ -124,7 +124,7 @@ This is indicated by the star (*) character next to hello_world.py* and the Tool
 * Close **Tool specification editor** by pressing **Alt+F4** or by clicking on 'X' in the top right corner of the
   window.
 
-The new 'hello_world' tool has now been added to the **Specifications** Toolbar
+The new 'hello_world' Tool specification has now been added to the **Specifications** Toolbar
 and your main window should look similar to this:
 
 .. image:: img/getting_started_first_tool_spec_created.png
@@ -133,14 +133,14 @@ and your main window should look similar to this:
 Tool specifications are saved by default in JSON format into a dedicated directory under the project directory. If you
 want, you can open the newly created ``hello_world.json`` file by clicking on the file path in the Event log message.
 The file will open in an external editor provided that you have selected a default program for files with the .json
-extension (e.g in Windows 10 you can do this in **Windows Settings -> Apps -> Default apps**). In general, you don't need
-to worry about *the contents* of the JSON Tool specification files. Editing these is done under the hood by the app.
+extension. In general, user's don't need to worry about *the contents* of the JSON Tool specification files. Editing
+these is done under the hood by the app.
 
-If you want to save ``hello_world.json`` somewhere else, you can do this by clicking the white [change] link
-after the path in the Event Log.
+If you want to save ``hello_world.json`` somewhere else, you can do this by clicking the [change] link after the path
+in the Event Log.
 
 .. tip:: A Tool specification (and any other specification) can be reused in another project.
-   To do this, you just need to click the |plus| button in the **Specifications** Toolbar
+   To do this, you just need to click the |plus| button in the Toolbar
    and select **From specification file...** from the popup menu.
    This opens a file browser dialog that lets you select the specification file (.json) from your system.
 
@@ -153,7 +153,7 @@ Adding a Tool Item to the Project
 .. note:: The Tool project item is used to run Tool specifications.
 
 Let's add a Tool item to our project, so that we're able to run the Tool specification we created above.
-To add a Tool item, drag-and-drop the Tool icon |tool_icon| from the **Generic items** Toolbar onto the **Design View**.
+To add a Tool item, drag-and-drop the Tool icon |tool_icon| from the Toolbar onto the **Design View**.
 
 The **Add Tool** dialog will popup. Change name of the Tool to 'say hello world', and select 'hello_world' from the
 dropdown list just below, and click **Ok**. Now you should see the newly added Tool item as an icon in the
@@ -165,7 +165,7 @@ dropdown list just below, and click **Ok**. Now you should see the newly added T
 |
 
 Another way to do the same thing is to drag the |tool_icon| with the 'hello world' text
-from the **Specifications** Toolbar onto the **Design View**.
+from the Toolbar onto the **Design View**.
 Similarly, the **Add Tool** form will popup but the 'hello world' tool specification is already
 selected from the dropdown list.
 
@@ -178,31 +178,29 @@ selected from the dropdown list.
 Executing a Tool
 ----------------
 
-Select the 'say hello world' Tool on **Design View**, and you will see its *Properties* in the dedicated dock
-widget. It looks similar to this:
+Select the 'say hello world' Tool in the **Design View** (if it is not already selected). Its properties will be
+displayed in the **Properties** dock widget. Each project item (Data Connection, Data Store, Tool, etc.) has its own
+set of properties that can be viewed and edited in the **Properties** dock widget. Note that you may need to scroll
+down within the **Properties** dock widget to see all available options.
 
-.. image:: img/getting_started_tool_properties.png
-   :align: center
-   
-|
+Press the |execute| **Project** button on the toolbar. This executes the *Hello World* project, which currently
+consists of a single Tool, 'say hello world'. The Tool is associated with the 'hello_world' Tool specification.
+During execution, Spine Toolbox runs the main program file, ``hello_world.py``, which was defined as the main program
+in the 'hello_world' Tool specification. The program is executed in a separate process.
 
-Press **execute project** |execute| button on the **Execute** Toolbar.
-This will execute the 'say hello world' Tool project item
-which now has the 'hello world' Tool specification associated to it. In actuality, this will run the main program
-file ``hello_world.py`` in a dedicated process.
-
-Once the execution is finished, you can see the details about the item execution as well as the whole execution in
-**Event Log**. The **Console** contains the output of the executed program file.
+Once the execution has finished, you can view details about both the Tool execution and the overall project execution
+in the **Event Log**. The **Console** contains the output produced by the executed program.
 
 .. image:: img/getting_started_after_first_execution.png
    :align: center
-   
+
 |
 
-.. note:: For more information about setting up Consoles in Spine Toolbox, please see :ref:`Setting up Consoles and External Tools`
-   for help.
+.. note::
 
-Congratulations, you just executed your first Spine Toolbox project.
+   For more information about setting up consoles in Spine Toolbox, see :ref:`Setting up Consoles and External Tools`.
+
+Congratulations! You have successfully executed your first Spine Toolbox project.
 
 Editing a Tool Specification
 ----------------------------
@@ -213,14 +211,14 @@ To make things more interesting, we will now specify an *input file* for our 'he
    input data for the Tool's execution. When executed, a Tool item looks for input files in **Data Connection**,
    and **Exporter** project items connected to its input.
 
-Open the Tool specification editor for the 'hello world' Tool spec. You can do this, for example, by double-clicking
+Open the Tool specification editor for the 'hello_world' Tool spec. You can do this, for example, by double-clicking
 the 'say hello world' Tool in **Design View**, or from the **Tool Properties** by clicking the
 Tool specification options button (|wrench|) next to the specification and selecting **Edit specification**.
 
-In **Input & Output files** dock widget, click the |plus| button next to the `Input Files` text. A dialog appears,
+In **Input & output files** dock widget, click the |plus| button next to the `Input files` text. A dialog appears,
 that lets you enter a name for an input file. Type 'input.txt' and press Enter.
 
-So far so good. Now let's use this input file in our program. Still in the Tool specification editor, replace the
+So far so good. Now, let's use this input file in our program. Still in the Tool specification editor, replace the
 text in the main program file (``hello_world.py``), with the following::
 
     with open("input.txt") as input_file:
@@ -242,7 +240,7 @@ Save the specification and close the editor by pressing **Ctrl+S** and then **Al
 
 Back in the main window, note the exclamation mark on the Tool icon in **Design View**, if you hover the mouse over
 this mark, you will see a tooltip telling you in detail what is wrong. If you want you can try and execute the
-Tool anyway by pressing |execute| in the **Execute** Toolbar.
+Tool anyway by pressing |execute| **Project** Toolbar.
 *The execution will fail* because the file ``input.txt`` is not made available for the Tool:
 
 .. image:: img/getting_started_say_hello_world_failed.png
@@ -258,7 +256,7 @@ Adding a Data Connection Item to the Project
 
 Let's add a Data Connection item to our project, so that we're able to pass the file ``input.txt`` to
 'say hello world'. To add a Data Connection item, drag-and-drop the Data Connection icon (|dc_icon|)
-from the **Generic items** Toolbar onto the **Design View**.
+from the Toolbar onto the **Design View**.
 
 The *Add Data Connection* form will show up. Type 'pass input txt' in the name field and click **Ok**. The newly
 added Data Connection item is now in the **Design View**.
@@ -284,7 +282,7 @@ There's now a new file in the *Data* list:
    
 |
 
-Double click this file to open it in your default text editor. Then enter the following into the file's content::
+Double click this file and open it in your default text file editor. Then enter the following into the file's content::
 
     Hello again, World!
 
@@ -303,12 +301,14 @@ you now need to create a connection from 'pass input txt' to 'say hello world'. 
    
 |
 
-Press |execute| once again. The project will be executed successfully this time:
+Press |execute| **Project** once again. The project will be executed successfully this time:
 
 .. image:: img/getting_started_final_execution_successful.png
    :align: center
    
 |
+
+Save the project by pressing **Ctrl+S**.
 
 That's all for now. I hope you've enjoyed following this guide as much as I enjoyed writing it. See you next time.
 
