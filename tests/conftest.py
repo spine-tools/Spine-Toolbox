@@ -133,7 +133,7 @@ class DBMapGenerator:
         return db_map
 
 
-@pytest.fixture()
+@pytest.fixture
 def db_map_generator(db_mngr, tmp_path, db_name, logger):
     return DBMapGenerator(db_mngr, tmp_path, db_name, logger)
 

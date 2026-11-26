@@ -110,7 +110,7 @@ directory where the main program file is located. **Source code root directory**
 source directory which is useful e.g. if the Tool is a software package that should be run from the package root
 instead of the location of the main program file. In **Reuse console id**, a free console name can be given.
 This can be used to execute multiple Tools in the workflow using the same console, which can be useful for limiting
-the number of concurrent processes Spine Toolbox spawns (See also **File->Settings->Engine**) or for debugging. When
+the number of concurrent processes Spine Toolbox spawns (See also **File -> Settings -> Engine**) or for debugging. When
 no console id is given, the Tool is executed in its own console. The executable used in executing the Tool is shown
 below the console id. Below that, there is a checkbox with the choice to **kill consoles at the end of execution**
 which might be useful to constraint memory usage. **Log process output to a file** redirects the Tool's stdout &

@@ -60,6 +60,7 @@ class InstallJuliaWizard(QWizard):
             parent: the parent widget (SettingsWidget)
         """
         super().__init__(parent)
+        self.setOption(QWizard.WizardOption.NoBackButtonOnStartPage, True)
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         if jill_install is None:
             self.addPage(JillNotFoundPage(self))
