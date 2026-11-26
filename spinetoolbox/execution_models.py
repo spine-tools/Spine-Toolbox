@@ -124,7 +124,7 @@ class ExecutionModels(QObject):
             self._julia_executables_model.appendRow(item)
         if self._julia_executables_model.rowCount() == 0:
             item = QStandardItem("Add path to Julia Executable...")
-            item.setToolTip("Add Julia into the Path environment variable or click 'Add Julia executable' button.")
+            item.setToolTip("Add Julia into the Path environment variable or click 'Add Existing Julia' button.")
             self._julia_executables_model.appendRow(item)
 
     def add_julia_executable(self, path_to_add):
